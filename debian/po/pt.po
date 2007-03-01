@@ -1,15 +1,16 @@
-# Galician translation of dbmail's debconf templates
+# Portuguese translation of dbmail debconf messages.
+# Copyright (C) 2007 Carlos Lisboa
 # This file is distributed under the same license as the dbmail package.
-# Jacobo Tarrio <jtarrio@debian.org>, 2007.
+# Carlos Lisboa <carloslisboa@gmail.com>
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: dbmail\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-28 18:17+0100\n"
-"PO-Revision-Date: 2007-02-25 15:39+0100\n"
-"Last-Translator: Jacobo Tarrio <jtarrio@debian.org>\n"
-"Language-Team: Galician <proxecto@trasno.net>\n"
+"POT-Creation-Date: 2007-02-25 08:21+0100\n"
+"PO-Revision-Date: 2007-02-28 22:28+0000\n"
+"Last-Translator: Carlos Lisboa <carloslisboa@gmail.com>\n"
+"Language-Team: Portuguese <traduz@debianpt.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -18,7 +19,7 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:1001
 msgid "Use debconf to manage dbmail configuration?"
-msgstr "¿Empregar debconf para xestionar a configuración de dbmail?"
+msgstr "Utilizar o debconf para gerir a configuração do dbmail?"
 
 #. Type: boolean
 #. Description
@@ -29,15 +30,16 @@ msgid ""
 "will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
 "dbmail."
 msgstr ""
-"Confirme se quere permitir que debconf xestione partes da configuración de "
-"dbmail. Teña en conta que os cambios que faga a dbmail.conf á man NON se han "
-"sobrescribir se despois executa dpkg-reconfigure dbmail."
+"Por favor confirme se deseja permitir que o debconf gira algumas partes da "
+"sua configuração do dbmail. Repare que alterações que faça no dbmail.conf à "
+"mão NÃO serão reescritas caso mais tarde caso escolha voltar a correr "
+"dpkg-reconfigure dbmail. "
 
 #. Type: select
 #. Description
 #: ../dbmail.templates:2001
 msgid "Authentication driver to activate:"
-msgstr "Controlador de autenticación a activar:"
+msgstr "Controlador de autenticação a activar:"
 
 #. Type: select
 #. Description
@@ -46,14 +48,14 @@ msgid ""
 "Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
 "instead."
 msgstr ""
-"Por defecto, dbmail emprega autenticación baseada en SQL, pero pode empregar "
-"LDAP no seu canto."
+"O dbmail por omissão utiliza autenticação baseada em SQL. No entanto pode "
+"utilizar LDAP ao invés."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:3001
 msgid "Postmaster's email address:"
-msgstr "Enderezo de email do postmaster:"
+msgstr "Endereço de email do Postmaster:"
 
 #. Type: string
 #. Description
@@ -62,20 +64,20 @@ msgid ""
 "Please choose a valid email address read by the person responsible for this "
 "email server."
 msgstr ""
-"Introduza un enderezo de email válido que lea a persoa responsable deste "
-"servidor de email."
+"Por favor escolha um endereço de email válido que seja lido pela pessoa "
+"responsável por este servidor de email."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:3001
 msgid "Example: postmaster@yourdomain.tld"
-msgstr "Exemplo: postmaster@dominio.tld"
+msgstr "Exemplo: postmaster@seudominio.tld"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:4001
 msgid "Hostname of the SQL database server:"
-msgstr "Nome do servidor de bases de datos SQL:"
+msgstr "Nome da máquina do servidor de base de dados SQL:"
 
 #. Type: string
 #. Description
@@ -85,34 +87,34 @@ msgid ""
 "created. You should grant full read/write permissions on this database to "
 "the dbmail user."
 msgstr ""
-"Introduza o servidor no que se ha crear unha base de datos para conter as "
-"táboas de dbmail. Debería dar permisos completos de lectura/escritura nesta "
-"base de datos ao usuario dbmail."
+"Por favor mencione o servidor onde a base de dados na qual as tabelas do "
+"dbmail serão criadas. Deverá dar permissões completas de leitura/escrita "
+"nesta base de dados ao utilizador dbmail."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:5001
 msgid "The name of the database:"
-msgstr "Nome da base de datos:"
+msgstr "O nome da base de dados:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:5001
 msgid "Please mention the name of the database that holds the dbmail tables."
-msgstr "Introduza o nome da base de datos que contén as táboas de dbmail."
+msgstr "Por favor mencione o nome da base de dados que alberga as tabelas do dbmail."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:5001
 msgid "If you're using sqlite, this should be the path to the database file."
-msgstr ""
-"Se emprega sqlite, esta debería ser a ruta ao ficheiro coa base de datos."
+msgstr "Se estiver a utilizar sqlite, este deverá ser o caminho para o ficheiro da base "
+"de dados."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:6001
 msgid "Database user:"
-msgstr "Usuario da base de datos:"
+msgstr "Utilizador da base de dados:"
 
 #. Type: string
 #. Description
@@ -121,14 +123,14 @@ msgid ""
 "Please mention the username dbmail will use to connect to the database "
 "server."
 msgstr ""
-"Introduza o nome de usuario que ha empregar dbmail para se conectar ao "
-"servidor de bases de datos."
+"Por favor mencione o nome de utilizador dbmail que irá ser usado para ligar "
+"à base de dados."
 
 #. Type: password
 #. Description
 #: ../dbmail.templates:7001
 msgid "Password for the database connection:"
-msgstr "Contrasinal para a conexión á base de datos:"
+msgstr "Password para a ligação à base de dados:"
 
 #. Type: password
 #. Description
@@ -137,14 +139,14 @@ msgid ""
 "Please mention the password dbmail will use to connect to the database "
 "server."
 msgstr ""
-"Introduza o contrasinal que ha empregar dbmail para se conectar ao servidor "
-"de bases de datos."
+"Por favor mencione a password que o dbmail irá utilizar para se ligar à base "
+"de dados."
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:8001
 msgid "Start the IMAP server after reboot?"
-msgstr "¿Iniciar o servidor IMAP tralo reinicio?"
+msgstr "Iniciar o servidor IMAP após o reinicio?"
 
 #. Type: boolean
 #. Description
@@ -155,14 +157,14 @@ msgid ""
 "Dbmail supports both IMAP and POP3 services. You can choose to run either "
 "one or both services."
 msgstr ""
-"Dbmail soporta os servizos IMAP e POP3. Pode executar calquera deles ou os "
-"dous."
+"Dbmail suporta serviços IMAP e POP3. Poderá escolher qualquer um ou ambos os "
+"serviços."
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:9001
 msgid "Start the LMTP server after reboot?"
-msgstr "¿Iniciar o servidor LMTP tralo reinicio?"
+msgstr "Iniciar o servidor LMTP após o reinicio?"
 
 #. Type: boolean
 #. Description
@@ -171,20 +173,21 @@ msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
 "This is only needed when you like to feed the email to Dbmail by LMTP."
 msgstr ""
-"Indique se quere que se inicie o servidor LMTP despois de reiniciar. Só é "
-"necesario se quere pasar o email a dbmail mediante LMTP."
+"Por favor escolha se o servidor LMTP deverá ser iniciado após o reinicio. "
+"Isto é apenas necessário quando deseja que o email seja enviado para o "
+"dbmail pelo LMTP."
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:10001
 msgid "Start the POP3 server after reboot?"
-msgstr "¿Iniciar o servidor POP3 tralo reinicio?"
+msgstr "Iniciar o servidor POP3 após o reinicio?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
 msgid "Start the timsieve server after reboot?"
-msgstr "¿Iniciar o servidor timsieve tralo reinicio?"
+msgstr "Iniciar o servidor timsieve após o reinicio?"
 
 #. Type: boolean
 #. Description
@@ -195,16 +198,16 @@ msgid ""
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
 msgstr ""
-"Indique se quere que se inicie o servidor timsieve despois de reiniciar. Só "
-"é necesario se quere que os usuarios poidan xestionar os seus propios "
-"scripts de filtrado sieve mediante un cliente compatible coma kmail, horde/"
-"ingo ou squirrelmail/avelsieve."
+"Por favor escolha se o servidor timsieve deverá ser iniciado após o reinicio."
+"Isto é apenas necessário se desejar permitir aos utilizadores a gestão dos "
+"seus scripts sieve utilizando um cliente compatível como o kmail, horde/ingo "
+"ou squirrelmail/avelsieve."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:12001
 msgid "Port used by the LDAP server:"
-msgstr "Porto empregado polo servidor LDAP:"
+msgstr "Porta utilizada pelo servidor LDAP:"
 
 #. Type: string
 #. Description
@@ -213,39 +216,41 @@ msgid ""
 "Please enter the port which your LDAP server is listening on. The default "
 "port is 389."
 msgstr ""
-"Introduza o porto no que está a escoitar o seu servidor LDAP. O porto por "
-"defecto é o 389."
+"Por favor introduza a porta na qual o servidor LDAP está a escutar. "
+"Por omissão a porta é 389."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:13001
 msgid "Hostname of the LDAP server:"
-msgstr "Nome do servidor LDAP:"
+msgstr "Nome da máquina do servidor LDAP:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:13001
 msgid "Please enter the name of the host your LDAP server is running at."
-msgstr "Introduza o nome do servidor LDAP."
+msgstr "Por favor introduza o nome da máquina onde o seu servidor LDAP está a correr."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:14001
 msgid "LDAP base DN:"
-msgstr "DN base de LDAP:"
+msgstr "Base DN do LDAP:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:14001
 msgid ""
 "Please enter the DN where Dbmail should start searching for user accounts."
-msgstr "Introduza o DN no que dbmail ha buscar as contas de usuario."
+msgstr ""
+"Por favor introduza o DN onde o dbmail deverá começar a procurar por contas "
+"dos utilizadores."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:15001
 msgid "Field which contains the user login name of the user:"
-msgstr "Campo que contén o nome de conexión de cada usuario:"
+msgstr "Campo que contém o nome do login do utilizador:"
 
 #. Type: string
 #. Description
@@ -254,14 +259,14 @@ msgid ""
 "Please enter the LDAP attribute that will contain the username. The standard "
 "account uses uid."
 msgstr ""
-"Introduza o atributo LDAP que contén o nome de usuario. A conta estándar "
-"emprega \"uid\"."
+"Por favor introduza o atributo LDAP que irá conter o nome de utilizador. "
+"A conta padrão usa o uid."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:16001
 msgid "Field which contains the group id number of the user:"
-msgstr "Campo que contén o número do grupo do usuario:"
+msgstr "O campo que contém o número de identificação de grupo do utilizador:"
 
 #. Type: string
 #. Description
@@ -270,14 +275,14 @@ msgid ""
 "Please enter the LDAP attribute that will contain the group id number. The "
 "standard account uses gidNumber."
 msgstr ""
-"Introduza o atributo LDAP que contén o número de ID de grupo. A conta "
-"estándar emprega \"gidNumber\"."
+"Por favor introduza o atributo LDAP que irá conter o número de identificação "
+"de grupo. A conta padrão utiliza o gidNumber."
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:17001
 msgid "Use an anonymous connection to the LDAP server?"
-msgstr "¿Empregar unha conexión anónima ao servidor LDAP?"
+msgstr "Utilizar uma ligação anónima ao servidor LDAP?"
 
 #. Type: boolean
 #. Description
@@ -286,26 +291,27 @@ msgid ""
 "Please choose this option if the LDAP server does not require authentication "
 "to search the LDAP tree."
 msgstr ""
-"Escolla esta opción se o servidor LDAP non precisa de autenticación para "
-"buscar na árbore LDAP."
+"Por favor escolha esta opção se o servidor LDAP não necessitar de "
+"autenticação para procurar na árvore LDAP."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:18001
 msgid "DN used to bind to the LDAP server:"
-msgstr "DN para se conectar ao servidor LDAP:"
+msgstr "DN utilizado para ligar ao servidor LDAP:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:18001
 msgid "Please enter the DN which should be used to connect to the LDAP server."
-msgstr "Introduza o DN que se debe empregar para se conectar ao servidor LDAP."
+msgstr "Por favor introduza o DN que deve ser utilizado para se ligar ao "
+"servidor LDAP."
 
 #. Type: password
 #. Description
 #: ../dbmail.templates:19001
 msgid "Password to bind to the LDAP server:"
-msgstr "Contrasinal para seconectar ao servidor LDAP:"
+msgstr "Password para ligar ao servidor LDAP:"
 
 #. Type: password
 #. Description
@@ -313,11 +319,5 @@ msgstr "Contrasinal para seconectar ao servidor LDAP:"
 msgid ""
 "Please enter the password which should be used to connect to the LDAP server."
 msgstr ""
-"Introduza o contrasinal que se ha empregar para se conectar ao servidor LDAP."
-
-#~ msgid ""
-#~ "Dbmail support both imap and pop3 services. You can choose to run either "
-#~ "one or both services."
-#~ msgstr ""
-#~ "Dbmail soporta os servizos IMAP e POP3. Pode executar calquera deles ou "
-#~ "os dous."
+"Por favor introduza password que deverá ser utilizada para ligar ao servidor "
+"LDAP."

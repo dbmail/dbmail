@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2430 2007-01-31 21:57:49Z paul $
+/*	$Id: misc.c 2441 2007-03-01 11:35:19Z paul $
  *
  *	Miscelaneous functions */
 
@@ -170,6 +170,7 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	size_t ns_user_len;
 	size_t ns_publ_len;
 	size_t fq_name_len;
+	char t;
 
 	if (username) *username = NULL;
 	if (namespace) *namespace = NULL;
@@ -181,6 +182,10 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	// i.e. '#Users/someuser/foldername'
 	if (fq_name_len >= ns_user_len && strncasecmp(fq_name, NAMESPACE_USER, ns_user_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_USER;
+		t = fq_name[ns_user_len];
+		if (t == '*' || t == '%') { // treat search patterns differently (FIXME)
+			return &fq_name[ns_user_len];
+		} 
 		user = strstr(fq_name, MAILBOX_SEPARATOR);
 		if (user == NULL || strlen(user) <= 1) {
 			TRACE(TRACE_MESSAGE, "illegal mailbox name");
@@ -205,6 +210,10 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	// i.e. '#Public/foldername'
 	if (fq_name_len >= ns_publ_len && strncasecmp(fq_name, NAMESPACE_PUBLIC, ns_publ_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_PUBLIC;
+		t = fq_name[ns_publ_len];
+		if (t == '*' || t == '%') { // FIXME
+			return &fq_name[ns_publ_len]; 
+		} 
 		temp = strstr(fq_name, MAILBOX_SEPARATOR);
 		if (temp == NULL || strlen(temp) <= 1) {
 			TRACE(TRACE_MESSAGE, "illegal mailbox name");

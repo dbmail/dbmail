@@ -1,0 +1,323 @@
+# English translation of dbmail.
+# Copyright (C) 2007, പ്രവീണ്‍|Praveen എ|A <pravi.a@gmail.com>
+# This file is distributed under the same license as the dbmail package.
+# 
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: dbmail VERSION\n"
+"Report-Msgid-Bugs-To: paul@nfg.nl\n"
+"POT-Creation-Date: 2007-02-28 18:17+0100\n"
+"PO-Revision-Date: 2007-02-26 14:42+0530\n"
+"Last-Translator: പ്രവീണ്‍|Praveen എ|A <pravi.a@gmail.com>\n"
+"Language-Team: സ്വതന്ത്ര മലയാളം കമ്പ്യൂട്ടിങ്ങ്|Swathanthra Malayalam Computing <smc-"
+"discuss@googlegroups.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:1001
+msgid "Use debconf to manage dbmail configuration?"
+msgstr "dbmail ക്രമീകരണം കൈകാര്യം ചെയ്യാന്‍ ഡെബ്കോണ്‍ഫ് ഉപയോഗിക്കണോ?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:1001
+msgid ""
+"Please confirm if you want to allow debconf to manage some parts of your "
+"dbmail configuration. Notice that changes you make to dbmail.conf by hand "
+"will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
+"dbmail."
+msgstr ""
+"ദയവായി നിങ്ങളുടെ dbmail ക്രമീകരണത്തിന്റെ ചില ഭാഗങ്ങള്‍ കൈകാര്യം ചെയ്യാന്‍ ഡെബ്കോണ്‍ഫിനെ "
+"അനുവദിക്കണമെന്ന് നിങ്ങളാഗ്രഹിക്കുന്നുണ്ടോ എന്ന് ഉറപ്പാക്കുക. നിങ്ങള്‍ dbmail.conf ന് കൈകൊണ്ട് "
+"വരുത്തുന്ന മാറ്റങ്ങള്‍ നിങ്ങള്‍ പിന്നീട് dpkg-reconfigure dbmail എന്ന് വീണ്ടും പ്രവര്‍ത്തിപ്പിക്കാന്‍ "
+"തിരഞ്ഞെടുത്താലും മാറ്റി എഴുതപ്പെടില്ല എന്ന് മനസ്സിലാക്കുക."
+
+#. Type: select
+#. Description
+#: ../dbmail.templates:2001
+msgid "Authentication driver to activate:"
+msgstr "സജീവമാക്കേണ്ട ആധികാരികതാ പ്രവര്‍ത്തകം:"
+
+#. Type: select
+#. Description
+#: ../dbmail.templates:2001
+msgid ""
+"Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
+"instead."
+msgstr ""
+"Dbmail ഡിഫാള്‍ട്ടായി SQL അടിസ്ഥാനമാക്കിയിട്ടുള്ള ആധികാരിത ഉപയോഗിക്കുന്നു. പക്ഷേ നിങ്ങള്‍ക്ക് "
+"പകരം LDAP ഉം ഉപയോഗിക്കാവുന്നതാണ്."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid "Postmaster's email address:"
+msgstr "പോസ്റ്റ്മാസ്റ്ററിന്റെ ഇമെയില്‍ വിലാസം:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid ""
+"Please choose a valid email address read by the person responsible for this "
+"email server."
+msgstr ""
+"ദയവായി ഈ ഇമെയില്‍ സേവകന് ഉത്തരവാദിയായ ആള്‍ വായിക്കുന്ന യോഗ്യമായ ഒരു ഇമെയില്‍ വിലാസം "
+"തിരഞ്ഞെടുക്കുക."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid "Example: postmaster@yourdomain.tld"
+msgstr "ഉദാഹരണം: postmaster@yourdomain.tld"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:4001
+msgid "Hostname of the SQL database server:"
+msgstr "SQL ഡാറ്റാബേസ് സേവകന്റെ ഹോസ്റ്റ്നാമം:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:4001
+msgid ""
+"Please mention the server where a database to hold dbmail's tables will be "
+"created. You should grant full read/write permissions on this database to "
+"the dbmail user."
+msgstr ""
+"ദയവായി dbmail ന്റെ പട്ടികകള്‍ സൂക്ഷിക്കേണ്ട ഡാറ്റാബേസ് സൃഷ്ടിക്കാന്‍ പോകുന്ന സേവകനെ "
+"സൂചിപ്പിക്കുക. നിങ്ങള്‍ ഈ ഡാറ്റാബേസില്‍ dbmail ഉപയോക്താവിന് മുഴുവന്‍ എഴുത്ത്/വായന അനുവാദങ്ങള്‍ "
+"നല്‍കേണ്ടതുണ്ട്."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "The name of the database:"
+msgstr "ഡാറ്റാബേസിന്റെ പേര്:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "Please mention the name of the database that holds the dbmail tables."
+msgstr "ദയവായി dbmail പട്ടികകള്‍ സൂക്ഷിച്ചിരിക്കുന്ന ഡാറ്റാബേസിന്റെ പേര് സൂചിപ്പിക്കുക."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "If you're using sqlite, this should be the path to the database file."
+msgstr ""
+"നിങ്ങള്‍ sqlite ആണ് ഉപയോഗിക്കുന്നതെങ്കില്‍, ഇത് ഡാറ്റാബേസ് ഫയലിലേക്കുള്ള വഴി ആയിരിക്കണം."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:6001
+msgid "Database user:"
+msgstr "ഡാറ്റാബേസ് ഉപയോക്താവ്:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:6001
+msgid ""
+"Please mention the username dbmail will use to connect to the database "
+"server."
+msgstr ""
+"ദയവായി ഡാറ്റാബേസ് സേവകനുമായി ബന്ധപ്പെടാന്‍ dbmail ഉപയോഗിക്കാന്‍ പോകുന്ന ഉപയോക്തൃനാമം "
+"സൂചിപ്പിക്കുക."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:7001
+msgid "Password for the database connection:"
+msgstr "ഡാറ്റാബേസ് ബന്ധത്തിനായുള്ള അടയാള വാക്ക്:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:7001
+msgid ""
+"Please mention the password dbmail will use to connect to the database "
+"server."
+msgstr ""
+"ദയവായി ഡാറ്റാബേസ് സേവകനുമായി ബന്ധപ്പെടാന്‍ dbmail ഉപയോഗിക്കാന്‍ പോകുന്ന അടയാള വാക്ക് "
+"സൂചിപ്പിക്കുക."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001
+msgid "Start the IMAP server after reboot?"
+msgstr "റീബൂട്ടിന് ശേഷം IMAP സേവകന്‍ തുടങ്ങണോ?"
+
+#. Type: boolean
+#. Description
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001 ../dbmail.templates:10001
+msgid ""
+"Dbmail supports both IMAP and POP3 services. You can choose to run either "
+"one or both services."
+msgstr ""
+"IMAP POP3 എന്നീ രണ്ട് സേവനങ്ങളേയും dbmail പിന്തുണയ്ക്കുന്നു. നിങ്ങള്‍ക്ക് ഈ സേവനങ്ങളില്‍ "
+"ഏതെങ്കിലുമൊന്നോ രണ്ടുമൊരുമിച്ചോ പ്രവര്‍ത്തിപ്പിക്കാന്‍ തിരഞ്ഞെടുക്കാം."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:9001
+msgid "Start the LMTP server after reboot?"
+msgstr "റീബൂട്ടിന് ശേഷം LMTP സേവകന്‍ തുടങ്ങണോ?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:9001
+msgid ""
+"Please choose whether the LMTP server should be started after rebooting. "
+"This is only needed when you like to feed the email to Dbmail by LMTP."
+msgstr ""
+"ദയവായി റീബൂട്ടിന് ശേഷം LMTP സേവകന്‍ തുടങ്ങണോ എന്ന് തിരഞ്ഞെടുക്കുക. LMTP വഴി dbmail ലേക്ക് "
+"ഇമെയില്‍ നല്‍കാന്‍ നിങ്ങളാഗ്രഹിക്കുമ്പോള്‍ മാത്രമേ ഇതാവശ്യമുള്ളൂ."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:10001
+msgid "Start the POP3 server after reboot?"
+msgstr "റീബൂട്ടിന് ശേഷം POP3 സേവകന്‍ തുടങ്ങണോ?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:11001
+msgid "Start the timsieve server after reboot?"
+msgstr "റീബൂട്ടിന് ശേഷം timsieve സേവകന്‍ തുടങ്ങണോ?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:11001
+msgid ""
+"Please choose whether the timsieve server should be started after rebooting. "
+"This is only needed if you want to allow users to manage their sieve scripts "
+"using a compatible client such as kmail, horde/ingo or squirrelmail/"
+"avelsieve."
+msgstr ""
+"ദയവായി റീബൂട്ടിന് ശേഷം timsieve സേവകന്‍ തുടങ്ങണോ എന്ന് തിരഞ്ഞെടുക്കുക. kmail, horde/ingo "
+"അല്ലെങ്കില്‍ squirrelmail/avelsieve തുടങ്ങിയ പൊരുത്തമുള്ളൊരു ക്ലയന്റ് ഉപയോഗിച്ച് സ്വന്തം sieve "
+"സ്ക്രിപ്റ്റുകള്‍ കൈകാര്യം ചെയ്യാന്‍ ഉപയോക്താക്കളെ അനുവദിക്കണമെന്ന് നിങ്ങളാഗ്രഹിക്കുന്നെങ്കില്‍ മാത്രമേ "
+"ഇത് ആവശ്യമുള്ളൂ."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:12001
+msgid "Port used by the LDAP server:"
+msgstr "LDAP ഉപയോഗിക്കുന്ന പോര്‍ട്ട്:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:12001
+msgid ""
+"Please enter the port which your LDAP server is listening on. The default "
+"port is 389."
+msgstr ""
+"നിങ്ങളുടെ LDAP സേവകന്‍ ശ്രദ്ധിച്ചു കൊണ്ടിരിക്കുന്ന പോര്‍ട്ട് നല്കുക. ഡിഫാള്‍ട്ട് പോര്‍ട്ട് 389 ആണ്."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:13001
+msgid "Hostname of the LDAP server:"
+msgstr "LDAP സേവകന്റെ ഹോസ്റ്റ്നാമം:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:13001
+msgid "Please enter the name of the host your LDAP server is running at."
+msgstr "നിങ്ങളുടെ LDAP സേവകന്‍ പ്രവര്‍ത്തിച്ചു കൊണ്ടിരിക്കുന്ന ഹോസ്റ്റിന്റെ പേര് നല്കുക."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:14001
+msgid "LDAP base DN:"
+msgstr "LDAP ബേസ് DN"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:14001
+msgid ""
+"Please enter the DN where Dbmail should start searching for user accounts."
+msgstr "ദയവായി dbmail ഉപയോക്തൃ അക്കൌണ്ടുകള്‍ക്കായി തിരയാന്‍ തുടങ്ങേണ്ട DN നല്കുക."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:15001
+msgid "Field which contains the user login name of the user:"
+msgstr "ഉപയോക്തൃ ലോഗിന്‍ നാമം ഉള്‍‌ക്കൊള്ളുന്ന കളം:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:15001
+msgid ""
+"Please enter the LDAP attribute that will contain the username. The standard "
+"account uses uid."
+msgstr ""
+"ദയവായി ഉപയോക്തൃനാമം ഉള്‍‌ക്കൊള്ളുന്ന LDAP ഗുണം നല്കുക. സാധാരണ അക്കൌണ്ട് uid ആണ് ഉപയോഗിക്കുന്നത്."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:16001
+msgid "Field which contains the group id number of the user:"
+msgstr "ഗ്രൂപ്പ് എഡി നമ്പര്‍ ഉള്‍‌ക്കൊള്ളുന്ന കളം:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:16001
+msgid ""
+"Please enter the LDAP attribute that will contain the group id number. The "
+"standard account uses gidNumber."
+msgstr ""
+"ദയവായി ഗ്രൂപ്പ് എഡി നമ്പര്‍ ഉള്‍‌ക്കൊള്ളുന്ന LDAP ഗുണം നല്കുക. സാധാരണ അക്കൌണ്ട് gidNumber ആണ് "
+"ഉപയോഗിക്കുന്നത്."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:17001
+msgid "Use an anonymous connection to the LDAP server?"
+msgstr "LDAP സേവകനിലേക്ക് പേര് വയ്കാത്ത ബന്ധം ഉപയോഗിക്കണോ?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:17001
+msgid ""
+"Please choose this option if the LDAP server does not require authentication "
+"to search the LDAP tree."
+msgstr ""
+"LDAP tree പരിശോദിക്കാന്‍ LDAP സേവകന്‍ ആധികാരികത ആവശ്യപ്പെടുന്നില്ലെങ്കില്‍ ദയവായി ഈ "
+"തിരഞ്ഞെടുക്കാവുന്ന വില തിരഞ്ഞെടുക്കുക."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:18001
+msgid "DN used to bind to the LDAP server:"
+msgstr "LDAP സേവകനുമായി bind ചെയ്യാന്‍ വേണ്ട DN:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:18001
+msgid "Please enter the DN which should be used to connect to the LDAP server."
+msgstr "ദയവായി LDAP സേവകനുമായി ബന്ധപ്പെടാന്‍ ഉപയോഗിക്കാന്‍ പോകുന്ന DN നല്കുക."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:19001
+msgid "Password to bind to the LDAP server:"
+msgstr "LDAP സേവകനുമായി bind ചെയ്യാന്‍ വേണ്ട അടയാള വാക്ക്:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:19001
+msgid ""
+"Please enter the password which should be used to connect to the LDAP server."
+msgstr "ദയവായി LDAP സേവകനുമായി ബന്ധപ്പെടാന്‍ ഉപയോഗിക്കാന്‍ പോകുന്ന അടയാള വാക്ക് നല്കുക."
+
+#~ msgid ""
+#~ "Dbmail support both imap and pop3 services. You can choose to run either "
+#~ "one or both services."
+#~ msgstr ""
+#~ "IMAP POP3 എന്നീ രണ്ട് സേവനങ്ങളേയും dbmail പിന്തുണയ്ക്കുന്നു. നിങ്ങള്‍ക്ക് ഈ സേവനങ്ങളില്‍ "
+#~ "ഏതെങ്കിലുമൊന്നോ രണ്ടുമൊരുമിച്ചോ പ്രവര്‍ത്തിപ്പിക്കാന്‍ തിരഞ്ഞെടുക്കാം."

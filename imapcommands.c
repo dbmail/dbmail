@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapcommands.c 2434 2007-02-08 12:52:20Z paul $
+/* $Id: imapcommands.c 2441 2007-03-01 11:35:19Z paul $
  *
  * imapcommands.c
  * 
@@ -240,11 +240,8 @@ int _ic_select(struct ImapSession *self)
 
 	/* show idx of first unseen msg (if present) */
 	if (ud->mailbox.exists) {
-		if (! (key = db_first_unseen(ud->mailbox.uid))) {
-			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			return -1;
-		}
-		if ((msn = g_tree_lookup(self->mailbox->ids, &key))) {
+		key = db_first_unseen(ud->mailbox.uid);
+		if ( (key > 0) && (msn = g_tree_lookup(self->mailbox->ids, &key))) {
 			dbmail_imap_session_printf(self,
 				"* OK [UNSEEN %llu] first unseen message\r\n", *msn);
 		}
@@ -1539,6 +1536,7 @@ int _ic_store(struct ImapSession *self)
 
 	for (; self->args[i] && strcmp(self->args[i], ")") != 0; i++) {
 		for (j = 0; j < IMAP_NFLAGS; j++) {
+			/* storing the recent flag explicitely is not allowed */
 			if (MATCH(self->args[i],"\\Recent")) {
 				j = IMAP_NFLAGS;
 				break;
@@ -1556,7 +1554,7 @@ int _ic_store(struct ImapSession *self)
 		}
 	}
 
-  /** check ACL's for STORE */
+	/** check ACL's for STORE */
 	if (cmd.flaglist[IMAP_FLAG_SEEN] == 1) {
 		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result < 0) {

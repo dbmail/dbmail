@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: user.c 2440 2007-02-28 10:34:22Z paul $
+/* $Id: user.c 2441 2007-03-01 11:35:19Z paul $
  * This is the dbmail-user program
  * It makes adding users easier 
  *
@@ -35,6 +35,7 @@ char *configFile = DEFAULT_CONFIG_FILE;
 extern db_param_t _db_params;
 
 /* UI policy */
+extern int yes_to_all;
 extern int no_to_all;
 extern int verbose;
 extern int quiet; 		/* Don't be helpful. */
@@ -72,7 +73,8 @@ int do_showhelp(void) {
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -q        quietly skip interactive prompts\n"
 	       "               use twice to suppress error messages\n");
-	printf("     -n        show the intended action but do not perform it\n");
+	printf("     -n        show the intended action but do not perform it, no to all\n");
+	printf("     -y        perform all proposed actions, as though yes to all\n");
 	printf("     -v        verbose details\n");
 	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
@@ -106,7 +108,7 @@ int main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv,
 		"-a:d:c:e:l::x:" /* Major modes */
 		"W::w:P::p:u:g:m:t:s:S:T:" /* Minor options */
-		"i" "f:qnvVh" /* Common options */ )) != -1) {
+		"i" "f:qnyvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		if (opt == 1)
@@ -251,6 +253,10 @@ int main(int argc, char *argv[])
 			no_to_all = 1;
 			break;
 
+		case 'y':
+			yes_to_all = 1;
+			break;
+
 		case 'q':
 			/* If we get q twice, be really quiet! */
 			if (quiet)
@@ -267,7 +273,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* Show the version and return non-zero. */
 			printf("\n*** DBMAIL: dbmail-users version "
-			       "$Revision: 2440 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2441 $ %s\n\n", COPYRIGHT);
 			result = 1;
 			break;
 
@@ -284,16 +290,11 @@ int main(int argc, char *argv[])
 	}	
 
 	/* If nothing is happening, show the help text. */
-	if (!mode || mode_toomany || show_help ) {
+	if (!mode || mode_toomany || show_help || (no_to_all && yes_to_all)) {
 		do_showhelp();
 		result = 1;
 		goto freeall;
 	}
-
- 	/* dry-run mode */
- 	if (no_to_all) {
-		qprintf("Choosing dry-run mode.\n");
- 	}
 
 	/* read the config file */
         if (config_read(configFile) == -1) {

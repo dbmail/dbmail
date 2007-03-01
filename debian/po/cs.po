@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 2.2.1-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-28 10:57+0100\n"
+"POT-Creation-Date: 2007-02-28 18:17+0100\n"
 "PO-Revision-Date: 2007-02-25 11:03+0100\n"
 "Last-Translator: Martin Sin <martin.sin@zshk.cz>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -14,13 +14,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:3
+#: ../dbmail.templates:1001
 msgid "Use debconf to manage dbmail configuration?"
 msgstr "Použít debconf pro konfiguraci dbmailu?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:3
+#: ../dbmail.templates:1001
 msgid ""
 "Please confirm if you want to allow debconf to manage some parts of your "
 "dbmail configuration. Notice that changes you make to dbmail.conf by hand "
@@ -34,13 +34,13 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../dbmail.templates:13
+#: ../dbmail.templates:2001
 msgid "Authentication driver to activate:"
 msgstr "Autentizační ovladač, který si přejete aktivovat:"
 
 #. Type: select
 #. Description
-#: ../dbmail.templates:13
+#: ../dbmail.templates:2001
 msgid ""
 "Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
 "instead."
@@ -50,13 +50,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:19
+#: ../dbmail.templates:3001
 msgid "Postmaster's email address:"
 msgstr "Emailová adresa postmastera:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:19
+#: ../dbmail.templates:3001
 msgid ""
 "Please choose a valid email address read by the person responsible for this "
 "email server."
@@ -66,19 +66,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:19
+#: ../dbmail.templates:3001
 msgid "Example: postmaster@yourdomain.tld"
 msgstr "Například: postmaster@vaše_doména.cz"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:27
+#: ../dbmail.templates:4001
 msgid "Hostname of the SQL database server:"
 msgstr "Jméno počítače databázového serveru SQL:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:27
+#: ../dbmail.templates:4001
 msgid ""
 "Please mention the server where a database to hold dbmail's tables will be "
 "created. You should grant full read/write permissions on this database to "
@@ -90,32 +90,31 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:34
+#: ../dbmail.templates:5001
 msgid "The name of the database:"
 msgstr "Jméno databáze:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:34
-#, fuzzy
-msgid "This is the name of the database that holds the dbmail tables."
+#: ../dbmail.templates:5001
+msgid "Please mention the name of the database that holds the dbmail tables."
 msgstr "Zadejte jméno databáze, která uchovává tabulky dbmailu."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:34
+#: ../dbmail.templates:5001
 msgid "If you're using sqlite, this should be the path to the database file."
 msgstr "Pokud používáte sqlite, měli byste zadat cestu k databázovému souboru."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:41
+#: ../dbmail.templates:6001
 msgid "Database user:"
 msgstr "Uživatel databáze:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:41
+#: ../dbmail.templates:6001
 msgid ""
 "Please mention the username dbmail will use to connect to the database "
 "server."
@@ -124,13 +123,13 @@ msgstr ""
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:46
+#: ../dbmail.templates:7001
 msgid "Password for the database connection:"
 msgstr "Heslo pro připojení do databáze:"
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:46
+#: ../dbmail.templates:7001
 msgid ""
 "Please mention the password dbmail will use to connect to the database "
 "server."
@@ -138,13 +137,15 @@ msgstr "Toto heslo použije dbmail pro připojení k databázovému serveru."
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:51
+#: ../dbmail.templates:8001
 msgid "Start the IMAP server after reboot?"
 msgstr "Spustit po restartu server IMAP?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:51
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001 ../dbmail.templates:10001
 msgid ""
 "Dbmail supports both IMAP and POP3 services. You can choose to run either "
 "one or both services."
@@ -154,47 +155,35 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:57
+#: ../dbmail.templates:9001
 msgid "Start the LMTP server after reboot?"
 msgstr "Spustit po restartu server LMTP"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:57
-#, fuzzy
+#: ../dbmail.templates:9001
 msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
-"This is only needed if you like to feed the email to Dbmail by LMTP."
+"This is only needed when you like to feed the email to Dbmail by LMTP."
 msgstr ""
 "Server LMTP je možné spustit také po restartu počítače. To je potřeba pouze "
 "v okamžiku, kdy chcete posílat emaily do Dbmail pomocí LTMP."
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:64
+#: ../dbmail.templates:10001
 msgid "Start the POP3 server after reboot?"
 msgstr "Spustit po restartu server POP3?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:64
-#, fuzzy
-msgid ""
-"Dbmail support both imap and pop3 services. You can choose to run either one "
-"or both services."
-msgstr ""
-"Dbmail podporuje služby IMAP a POP3. Můžete si vybrat kteroukoliv službu, "
-"klidně i obě dvě současně."
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:70
+#: ../dbmail.templates:11001
 msgid "Start the timsieve server after reboot?"
 msgstr "Spustit po restartu server timsieve?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:70
+#: ../dbmail.templates:11001
 msgid ""
 "Please choose whether the timsieve server should be started after rebooting. "
 "This is only needed if you want to allow users to manage their sieve scripts "
@@ -208,13 +197,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:78
+#: ../dbmail.templates:12001
 msgid "Port used by the LDAP server:"
 msgstr "Port, na kterém běží server LDAP:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:78
+#: ../dbmail.templates:12001
 msgid ""
 "Please enter the port which your LDAP server is listening on. The default "
 "port is 389."
@@ -224,72 +213,70 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:84
+#: ../dbmail.templates:13001
 msgid "Hostname of the LDAP server:"
 msgstr "Jméno počítače serveru LDAP:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:84
+#: ../dbmail.templates:13001
 msgid "Please enter the name of the host your LDAP server is running at."
 msgstr "Zadejte prosím jméno počítače, na kterém běží server LDAP."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:89
+#: ../dbmail.templates:14001
 msgid "LDAP base DN:"
 msgstr "LDAP DN:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:89
+#: ../dbmail.templates:14001
 msgid ""
 "Please enter the DN where Dbmail should start searching for user accounts."
 msgstr "Zadejte prosím DN, ve kterém má Dbmail začít hledat uživatelské účty."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:95
+#: ../dbmail.templates:15001
 msgid "Field which contains the user login name of the user:"
 msgstr "Položka s přihlašovacím jménem uživatele:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:95
-#, fuzzy
+#: ../dbmail.templates:15001
 msgid ""
 "Please enter the LDAP attribute that will contain the username. The standard "
-"account uses uid"
+"account uses uid."
 msgstr ""
 "Zadejte prosím atribut ldap obsahující uživatelské jméno. Standardní účet "
 "používá uid."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:101
+#: ../dbmail.templates:16001
 msgid "Field which contains the group id number of the user:"
 msgstr "Položka s id číslem skupiny uživatele:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:101
-#, fuzzy
+#: ../dbmail.templates:16001
 msgid ""
-"Please enter the ldap attribute that will contain the group id number. The "
-"standard account uses gidNumber"
+"Please enter the LDAP attribute that will contain the group id number. The "
+"standard account uses gidNumber."
 msgstr ""
 "Zadejte prosím atribut LDAP, který obsahuje id číslo skupiny. Standardní "
 "účet používá gidNumber."
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:107
+#: ../dbmail.templates:17001
 msgid "Use an anonymous connection to the LDAP server?"
 msgstr "Použít anonymního připojení k serveru LDAP?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:107
+#: ../dbmail.templates:17001
 msgid ""
 "Please choose this option if the LDAP server does not require authentication "
 "to search the LDAP tree."
@@ -299,47 +286,46 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:113
+#: ../dbmail.templates:18001
 msgid "DN used to bind to the LDAP server:"
 msgstr "DN používané pro přiřazení k serveru LDAP:"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:113
-#, fuzzy
-msgid ""
-"Please enter the DN, which should be used to connect to the LDAP server."
+#: ../dbmail.templates:18001
+msgid "Please enter the DN which should be used to connect to the LDAP server."
 msgstr "Zadejte prosím DN, které je možné použít pro připojení k serveru LDAP."
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:119
+#: ../dbmail.templates:19001
 msgid "Password to bind to the LDAP server:"
 msgstr "Heslo pro připojení k serveru LDAP:"
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:119
-#, fuzzy
+#: ../dbmail.templates:19001
 msgid ""
-"Please enter the password, which should be used to connect to the LDAP "
-"server."
+"Please enter the password which should be used to connect to the LDAP server."
 msgstr ""
 "Zadejte prosím heslo, které se bude používat pro připojení k serveru LDAP."
 
-#, fuzzy
+#~ msgid ""
+#~ "Dbmail support both imap and pop3 services. You can choose to run either "
+#~ "one or both services."
+#~ msgstr ""
+#~ "Dbmail podporuje služby IMAP a POP3. Můžete si vybrat kteroukoliv službu, "
+#~ "klidně i obě dvě současně."
+
 #~ msgid "start the imap server after reboot?"
 #~ msgstr "Spustit po restartu server POP3?"
 
-#, fuzzy
 #~ msgid "start the lmtp server after reboot?"
 #~ msgstr "Spustit po restartu server POP3?"
 
-#, fuzzy
 #~ msgid "start the pop3 server after reboot?"
 #~ msgstr "Spustit po restartu server POP3?"
 
-#, fuzzy
 #~ msgid "The email address where bounces come from:"
 #~ msgstr "Emailová adresa odkud přícházejí zpět nedoručitelné zprávy."
 
@@ -353,11 +339,9 @@ msgstr ""
 #~ msgid "Example: MAILER-DAEMON@yourdomain.tld"
 #~ msgstr "Například: MAILER-DAEMON@vaše_doména.cz"
 
-#, fuzzy
 #~ msgid "Run the stunnel SSL wrapper from the init script?"
 #~ msgstr "Přejete si spustit stunnel SSL wrapper z init skriptu?"
 
-#, fuzzy
 #~ msgid ""
 #~ "The stunnel SSL wrapper allows you to provide secure imap and pop "
 #~ "services even though dbmail supports neither imaps nor pop3s (yet)."
@@ -372,7 +356,6 @@ msgstr ""
 #~ "Pokud chcete používat tuto možnost, ujistěte se, že máte nainstalován "
 #~ "stunnel, který je poskytován samostatným balíčkem."
 
-#, fuzzy
 #~ msgid "The filename for the SSL pem file:"
 #~ msgstr "Vložte prosím název souboru pro soubor SSL pem."
 
@@ -391,18 +374,14 @@ msgstr ""
 #~ "Jak vytvořit tento soubor se dočtete v /usr/share/doc/stunnel/README."
 #~ "Debian."
 
-#, fuzzy
 #~ msgid "start the timesieved after reboot?"
 #~ msgstr "Spustit po restartu server POP3?"
 
-#, fuzzy
 #~ msgid "Do you want to start the imap service after a reboot?"
 #~ msgstr "Přejete si po restartu spustit službu IMAP?"
 
-#, fuzzy
 #~ msgid "Do you want to start the pop3 service after a reboot?"
 #~ msgstr "Chcete spustit po restartu službu POP3?"
 
-#, fuzzy
 #~ msgid "Do you want to start the timsieved service after a reboot?"
 #~ msgstr "Přejete si po restartu spustit službu IMAP?"
