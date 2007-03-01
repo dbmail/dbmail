@@ -32,7 +32,7 @@ _Description: Hostname of the SQL database server:
 Template: dbmail/dbmail/db
 Type: string
 _Description: The name of the database:
- This is the name of the database that holds the dbmail tables.
+ Please mention the name of the database that holds the dbmail tables.
  .
  If you're using sqlite, this should be the path to the database file.
 
@@ -56,13 +56,13 @@ Template: dbmail/start_lmtpd
 Type: boolean
 _Description: Start the LMTP server after reboot?
  Please choose whether the LMTP server should be started after
- rebooting. This is only needed if you like to feed the email to
+ rebooting. This is only needed when you like to feed the email to
  Dbmail by LMTP.
 
 Template: dbmail/start_pop3d
 Type: boolean
 _Description: Start the POP3 server after reboot?
- Dbmail support both imap and pop3 services. You can choose to run either
+ Dbmail supports both IMAP and POP3 services. You can choose to run either
  one or both services.
 
 Template: dbmail/start_sieve
@@ -94,13 +94,13 @@ Template: dbmail/ldap/FIELD_UID
 Type: string
 _Description: Field which contains the user login name of the user:
  Please enter the LDAP attribute that will contain the username.
- The standard account uses uid
+ The standard account uses uid.
 
 Template: dbmail/ldap/FIELD_CID
 Type: string
 _Description: Field which contains the group id number of the user:
- Please enter the ldap attribute that will contain the group id number.
- The standard account uses gidNumber
+ Please enter the LDAP attribute that will contain the group id number.
+ The standard account uses gidNumber.
 
 Template: dbmail/ldap/bind_anonymous
 Type: boolean
@@ -111,11 +111,11 @@ _Description: Use an anonymous connection to the LDAP server?
 Template: dbmail/ldap/BIND_DN
 Type: string
 _Description: DN used to bind to the LDAP server:
- Please enter the DN, which should be used to connect to the LDAP
+ Please enter the DN which should be used to connect to the LDAP
  server.
 
 Template: dbmail/ldap/BIND_PW
 Type: password
 _Description: Password to bind to the LDAP server:
- Please enter the password, which should be used to connect to the LDAP
+ Please enter the password which should be used to connect to the LDAP
  server.

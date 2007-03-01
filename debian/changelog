@@ -1,10 +1,24 @@
 dbmail (2.2.3-1) unstable; urgency=low
 
+  [ Paul J Stevens ]
   * remove configure code from postinst, leaving the driver alone.
   * new upstream release.
-  * i18n updates.
 
- -- Paul J Stevens <paul@nfg.nl>  Mon, 26 Feb 2007 21:10:44 +0100
+  [ Christian Perrier ]
+  * Rewrite debconf templates for style consistency. Closes: #412276
+  * Debconf translations:
+    - French
+    - Czech. Closes: #412290
+    - Galician. Closes: #412336
+    - Tamil. Closes: #412442, #412439
+    - Russian. Closes: #412539
+    - Malayalam. Closes: #412849
+    - Spanish
+    - Italian
+    - Dutch
+    - Portuguese. Closes: #412942
+
+ -- Christian Perrier <bubulle@debian.org>  Thu,  1 Mar 2007 07:15:49 +0100
 
 dbmail (2.2.1-1) unstable; urgency=low
 
