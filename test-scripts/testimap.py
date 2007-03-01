@@ -102,8 +102,7 @@ class testImapServer(unittest.TestCase):
         # test flags
         self.o.create('testappend')
         self.o.append('testappend','\Flagged',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
-        self.o.select('testappend')
-        id=self.o.recent()[1][0]
+        id = self.o.select('testappend')[1][0]
         
         result = self.o.fetch(id,"(UID BODY[])")
         self.assertEquals(result[0],'OK')
@@ -376,6 +375,7 @@ class testImapServer(unittest.TestCase):
             Prompt server for an update. Returned data is `None' if no new
             messages, else value of `RECENT' response.
         """
+        print self.o.recent()
         self.assertEquals(self.o.recent(),('OK', [None]))
 
     def testRename(self):
@@ -556,7 +556,7 @@ class testImapServer(unittest.TestCase):
 	    TBD
 	"""
         self.o.select('INBOX')
-        self.assertRaises(self.o.error, self.o.fetch, "1" + " "*12000,"(Flags)")
+        self.assertRaises(self.o.error, self.o.fetch, "1" + " "*120000,"(Flags)")
         
     def tearDown(self):
         try:
