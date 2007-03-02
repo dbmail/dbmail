@@ -979,6 +979,8 @@ int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
 {
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
 	TRACE(TRACE_DEBUG, "checking %llu sievescript quota with %llu"
 		, user_idnr, scriptlen);
 
@@ -1001,6 +1003,8 @@ int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
 
 int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize)
 {
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
 	TRACE(TRACE_DEBUG, "setting sievescript quota for user [%llu] to [%llu]",
 		user_idnr, quotasize);
 
@@ -1020,6 +1024,8 @@ int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize)
 
 int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize)
 {
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
 	TRACE(TRACE_DEBUG, "getting sievescript quota for [%llu]", user_idnr);
 
 	*quotasize = 0;
