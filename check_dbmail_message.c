@@ -120,12 +120,15 @@ START_TEST(test_dbmail_message_retrieve)
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, s);
+	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
+
 	dbmail_message_set_header(m, 
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
 
 	physid = dbmail_message_get_physid(m);
+	fail_unless(physid > 0, "dbmail_message_get_physid failed");
 	
 	n = dbmail_message_new();
 	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_HEAD);	
