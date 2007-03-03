@@ -49,8 +49,8 @@ static gboolean _header_cache(const char *header, const char *value, gpointer us
 
 static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_template);
 static void _map_headers(struct DbmailMessage *self);
-static void _set_content(struct DbmailMessage *self, const GString *content);
-static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
+static int _set_content(struct DbmailMessage *self, const GString *content);
+static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
 static int _message_insert(struct DbmailMessage *self, 
 		u64_t user_idnr, 
 		const char *mailbox, 
@@ -216,14 +216,19 @@ struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int stream
 {
 	
 	GMimeStream *stream;
-	struct DbmailMessage *message;
+	struct DbmailMessage *message, *retmessage;
 	
 	assert(instream);
 	message = dbmail_message_new();
 	stream = g_mime_stream_fs_new(dup(fileno(instream)));
-	message = dbmail_message_init_with_stream(message, stream, streamtype);
+	retmessage = dbmail_message_init_with_stream(message, stream, streamtype);
 	g_object_unref(stream);
-	return message;
+
+	if (retmessage)
+		return retmessage;
+	
+	dbmail_message_free(message);
+	return NULL;
 }
 
 /* \brief set the type flag for this DbmailMessage
@@ -282,16 +287,22 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
  * \return the filled DbmailMessage
  */
 struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
-{
-	_set_content_from_stream(self,stream,type);
+	{
+	int res;
+
+	res = _set_content_from_stream(self,stream,type);
+	if (res != 0)
+		return NULL;
+
 	_map_headers(self);
 	return self;
 }
 
-static void _set_content(struct DbmailMessage *self, const GString *content)
+static int _set_content(struct DbmailMessage *self, const GString *content)
 {
-
+	int res;
 	GMimeStream *stream;
+
 	if (self->raw) {
 		g_byte_array_free(self->raw,TRUE);
 		self->raw = NULL;
@@ -301,12 +312,13 @@ static void _set_content(struct DbmailMessage *self, const GString *content)
 	self->raw = g_byte_array_append(self->raw,(guint8 *)content->str, content->len+1);
 	//stream = g_mime_stream_mem_new_with_byte_array(self->raw);
 	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
-	_set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
+	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_mime_stream_close(stream);
 	g_object_unref(stream);
+	return res;
 }
 
-static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
+static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
 {
 	/* 
 	 * We convert all messages to crlf->lf for internal usage and
@@ -317,8 +329,9 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	GMimeFilter *filter;
 	GMimeParser *parser;
 	gchar *buf, *from;
-	size_t t;
+	ssize_t getslen, putslen;
 	FILE *tmp;
+	int res = 0;
 	gboolean firstline=TRUE;
 
 	/*
@@ -350,15 +363,26 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 			
-			while ((t = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE))) {
+			while ((getslen = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) > 0) {
 				if (firstline && strncmp(buf,"From ",5)==0)
 					g_mime_parser_set_scan_from(parser,TRUE);
 				firstline=FALSE;
 
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 					break;
-				g_mime_stream_write_string(fstream, buf);
+				putslen = g_mime_stream_write_string(fstream, buf);
+
+				if (putslen < getslen) {
+					TRACE(TRACE_ERROR, "Short write, filesystem full?");
+					res = 1;
+				}
 			}
+
+			if (getslen < 0) {
+				TRACE(TRACE_ERROR, "Line read failed, dropped connection?");
+				res = 1;
+			}
+
 			g_free(buf);
 			
 			g_mime_stream_reset(mstream);
@@ -396,6 +420,8 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	}
 	
 	g_object_unref(parser);
+
+	return res;
 }
 
 static void _map_headers(struct DbmailMessage *self) 
