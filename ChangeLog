@@ -3,6 +3,8 @@
 	* dbmail-message.c:
 	Handle read and write errors from incoming message stream and its tmp
 	file during the filter process (closes bug #511).
+	* server.c:
+	Accepted Bernard Johnson's umask patch (closes bug #516).
 
 2007-03-01  Paul J Stevens <paul@nfg.nl>
 

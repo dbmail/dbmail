@@ -177,6 +177,7 @@ pid_t server_daemonize(serverConfig_t *conf)
 		exit(0);
 
 	chdir("/");
+	umask(0077);
 	
 	if (! (freopen(conf->log, "a", stdout))) {
 		serr = errno;
