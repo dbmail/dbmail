@@ -25,12 +25,11 @@ version = "%s version 2.0" %(sys.argv[0],)
 
 def main():
     try:
-        user=mbox=type=''
-        msgnumber=1
+        user=mbox=type=conf=''
         box = "Inbox"
         path = "/usr/sbin/dbmail-smtp"
         dryrun = False
-        opts, args = getopt.getopt(sys.argv[1:], "u:m:b:t:p:dhv", ["user=","mail=","box=","path=","type=","help","version"])
+        opts, args = getopt.getopt(sys.argv[1:], "u:m:b:t:p:f:dhv", ["user=","mail=","box=","path=","type=","help","version"])
         for o, a in opts:
             if o in ("-v","--version"):
                 print version
@@ -44,6 +43,7 @@ def main():
             elif o in ("-b","--box"): box = a
             elif o in ("-p","--path"): path = a
             elif o in ("-t","--type"): type = a
+            elif o in ("-f"): conf = a
         if dryrun:
             print "Dry run mode"
         if not user:
@@ -63,7 +63,7 @@ def main():
         elif not type:
             print "No mailbox type specified"
             sys.exit(1)
-        convert(user,mbox,box,path,msgnumber,dryrun)
+        convert(user,mbox,box,path,conf,dryrun)
     except getopt.GetoptError:
         usage()
         print "Error Parsing Options"
@@ -78,14 +78,19 @@ def usage():
     -m|--mail <location of mailbox> 
     -b|--box <Inbox,Inbox.Sent etc> 
     -p <path to dbmail-smtp>
+    -f <path to alternative config file>
     """ %(sys.argv[0],)
     
-def convert(user,mbox,box,path,msgnumber,dryrun):
+def convert(user,mbox,box,path,conf,dryrun):
+    if conf: conf = """-f %s""" % conf
+    command = """%s %s -m "%s" -u "%s" """ %(path,conf,box,user)
+    msgnumber=1
     try:
         while 1:
             mailmsg = mbox.next()
-            command = """%s -m "%s" -u "%s" """ %(path,box,user)
             if not mailmsg:
+                if msgnumber==1:
+                    raise "error", "Not a mailbox"
                 print "All Done!"
                 sys.exit()
             try:
