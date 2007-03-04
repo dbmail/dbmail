@@ -253,7 +253,6 @@ int _ic_select(struct ImapSession *self)
 		break;
 	case IMAPPERM_READWRITE:
 		g_snprintf(permstring, PERMSTRING_SIZE, "READ-WRITE");
-		dbmail_imap_session_mailbox_select_recent(self);
 		break;
 	default:
 		TRACE(TRACE_ERROR, "detected invalid permission mode for mailbox %llu ('%s')",

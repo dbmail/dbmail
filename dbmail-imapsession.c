@@ -203,7 +203,7 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_tree_destroy(self->envelopes);
 		self->envelopes = NULL;
 	}
-	
+
 	g_free(self);
 }
 
@@ -753,6 +753,10 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
 	
+        /* queue this message's recent_flag for removal */
+        if (ud->mailbox.permission == IMAPPERM_READWRITE)
+            self->recent = g_list_append(self->recent, g_strdup_printf("%llu",self->msg_idnr));
+
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
 		dbmail_imap_session_printf(self, "INTERNALDATE \"%s\"", date_sql2imap(msginfo->internaldate));
@@ -765,7 +769,7 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 		SEND_SPACE;
 		sublist = NULL;
 		for (j = 0; j < IMAP_NFLAGS; j++) {
-			if (msginfo->flags[j]) 
+			if (msginfo->flags[j])
 				sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
 		}
 		s = dbmail_imap_plist_as_string(sublist);
@@ -940,6 +944,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	if ((rows=dbmail_imap_session_fetch_get_unparsed(self)) < 0)
 		return -1;
 	g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
+	dbmail_imap_session_mailbox_update_recent(self);
 	return 0;
 	
 }
@@ -1629,45 +1634,16 @@ int dbmail_imap_session_mailbox_close(struct ImapSession *self)
 	return 0;
 }
 
-int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) 
-{
-	unsigned i, j;
-	char query[DEF_QUERYSIZE];
-	memset(query,0,DEF_QUERYSIZE);
-
-	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-
-
-	self->recent = NULL;
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM %smessages WHERE recent_flag = 1 AND mailbox_idnr = %llu",
-		 DBPFX, ud->mailbox.uid);
-
-	if (db_query(query) == -1) 
-		return (-1);
-
-	j = db_num_rows();
-	for (i = 0; i < j; i++) 
-		self->recent = g_list_append(self->recent, g_strdup(db_get_result(i, 0)));
-	
-	db_free_result();
-	TRACE(TRACE_DEBUG, "recent [%d] in mailbox [%llu]",
-		       	g_list_length(self->recent), ud->mailbox.uid);
-
-	return g_list_length(self->recent);
-}
-
-int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) 
+static int imap_session_update_recent(GList *recent) 
 {
 	GList *slices = NULL;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
 
-	
-	if (self->recent == NULL)
+	if (recent == NULL)
 		return 0;
 
-	slices = g_list_slices(self->recent,100);
+	slices = g_list_slices(recent,100);
 	slices = g_list_first(slices);
 	while (slices) {
 		snprintf(query, DEF_QUERYSIZE, "update %smessages set recent_flag = 0 "
@@ -1679,14 +1655,19 @@ int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self)
 		slices = g_list_next(slices);
 	}
 	
-	g_list_foreach(self->recent,(GFunc)g_free, NULL);
-	g_list_free(self->recent);
-	g_list_foreach(slices, (GFunc)g_free, NULL);
-	g_list_free(slices);
-	
-	self->recent = NULL;
+        g_list_destroy(slices);
 	return 0;
 }
+
+int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) 
+{
+	imap_session_update_recent(self->recent);
+	g_list_destroy(self->recent);
+	self->recent = NULL;
+
+	return 0;
+}
+
 int dbmail_imap_session_set_state(struct ImapSession *self, int state)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;

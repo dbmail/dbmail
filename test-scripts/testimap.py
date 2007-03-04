@@ -28,7 +28,7 @@ TYPE = 'stream'
 #TYPE = 'network'
 
 
-import unittest, imaplib, re
+import unittest, imaplib, re, commands
 import sys, traceback, getopt, string
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
@@ -80,6 +80,17 @@ def getsock():
 
 def strip_crlf(s):
     return string.replace(s,'\r','')
+
+def getFreshbox(name):
+    assert(name)
+    cmd='./contrib/mailbox2dbmail/mailbox2dbmail ' \
+        '-u testuser1 -t mbox -m test-scripts/testbox ' \
+        '-b "%s" -p ./dbmail-smtp -f /etc/dbmail/dbmail-test.conf' % name
+    print "loading new testbox [%s]. please wait..." % name
+    s,o=commands.getstatusoutput(cmd)
+    if s:
+        raise "error", o
+
 
 class testImapServer(unittest.TestCase):
 
@@ -202,7 +213,7 @@ class testImapServer(unittest.TestCase):
         self.o.append('tmpbox','','',str(m))
         self.o.select('tmpbox')
         self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
-        id=self.o.recent()[1][0]
+        id=1
         
         # fetch complete message. order and number of headers may differ
         result1 = self.o.fetch(id,"(UID BODY[])")
@@ -375,8 +386,16 @@ class testImapServer(unittest.TestCase):
             Prompt server for an update. Returned data is `None' if no new
             messages, else value of `RECENT' response.
         """
-        print self.o.recent()
-        self.assertEquals(self.o.recent(),('OK', [None]))
+        readonly=1
+
+        getFreshbox('recenttestbox')
+        self.o.select('recenttestbox',readonly)
+        self.o.fetch("1:*","(Flags)")
+        self.assertEquals(int(self.o.recent()[1][0]) > 0, True)
+
+        self.o.select('recenttestbox')
+        self.o.fetch("1:*","(Flags)")
+        self.assertEquals(self.o.status("recenttestbox",'(RECENT)')[1][0], '"recenttestbox" (RECENT 0)')
 
     def testRename(self):
         """ 
@@ -565,7 +584,7 @@ class testImapServer(unittest.TestCase):
                 d=re.match('(\(.*\)) "([^"])" "([^"]+)"',d).groups()[-1]
                 dirs.append(d)
             for i in range(0,len(dirs)):
-                if dirs[-i]=='INBOX': continue
+                if dirs[-i]=='INBOX' or dirs[-i][0] == '#': continue
                 self.o.delete(dirs[-i])
             self.o.logout()
         except: pass
