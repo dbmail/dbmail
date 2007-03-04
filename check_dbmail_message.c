@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_message.c 2415 2007-01-18 22:32:17Z aaron $ 
+ *  $Id: check_dbmail_message.c 2445 2007-03-03 17:20:37Z aaron $ 
  *
  *
  *  
@@ -120,12 +120,15 @@ START_TEST(test_dbmail_message_retrieve)
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, s);
+	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
+
 	dbmail_message_set_header(m, 
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
 
 	physid = dbmail_message_get_physid(m);
+	fail_unless(physid > 0, "dbmail_message_get_physid failed");
 	
 	n = dbmail_message_new();
 	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_HEAD);	

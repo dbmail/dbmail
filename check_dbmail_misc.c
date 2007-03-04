@@ -74,9 +74,15 @@ END_TEST
 START_TEST(test_mailbox_remove_namespace)
 {
 
-	char *namespace, *username;
-	char *n, *u;
+	char *simple, *username, *namespace, *n, *u;
 	const char *result;
+	char *patterns[] = {
+		"#Users/foo/mailbox", "#Users/foo/*", "#Users/foo*",
+		"#Users/", "#Users//", "#Users///", "#Users/%", "#Users*",
+		"#Public/foo/mailbox", "#Public/foo/*", "#Public/foo*",
+		"#Public/", "#Public//", "#Public///", "#Public/%", "#Public*", NULL
+		};
+	int i;
 
 	namespace = g_new0(char,255);
 	username = g_new0(char,255);
@@ -107,11 +113,18 @@ START_TEST(test_mailbox_remove_namespace)
 	result = mailbox_remove_namespace("#Public*/*",NULL,NULL);
 	fail_unless(strcmp(result,"*/*")==0,"mailbox_remove_namespace failed 4");
 
+	for (i = 0; patterns[i]; i++) {
+		simple = mailbox_remove_namespace(patterns[i], &namespace, &username);
+		printf("%s yields namespace [%s] user [%s] simple [%s]\n",
+			patterns[i], namespace, username, simple);
+	}
+
 	g_free(n);
 	g_free(u);
+
+
 }
 END_TEST
-
 
 Suite *dbmail_misc_suite(void)
 {
@@ -137,5 +150,3 @@ int main(void)
 	srunner_free(sr);
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-	
-

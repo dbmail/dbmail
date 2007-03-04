@@ -1,3 +1,20 @@
+2007-03-04  Aaron Stone <aaron@serendipity.cx>
+
+	* misc.c, check_dbmail_misc.c:
+	More work on mailbox_remove_namespace to handle search patterns and
+	missing usernames when in the #Users namespace.
+
+2007-03-02  Aaron Stone <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	Handle read and write errors from incoming message stream and its tmp
+	file during the filter process (closes bug #511).
+	* server.c:
+	Accepted Bernard Johnson's umask patch (closes bug #516).
+	* misc.c, check_dbmail_misc.c:
+	More work on mailbox_remove_namespace to handle search patterns and
+	missing usernames when in the #Users namespace.
+
 2007-03-01  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-user.c, user.c:
