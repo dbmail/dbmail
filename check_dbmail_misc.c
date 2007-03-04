@@ -71,6 +71,26 @@ START_TEST(test_g_strcasestr)
 }
 END_TEST
 
+START_TEST(test_mailbox_remove_namespace)
+{
+	char *patterns[] = {
+		"#Users/foo/mailbox", "#Users/foo/*", "#Users/foo*",
+		"#Users/", "#Users//", "#Users///", "#Users/%", "#Users*",
+		"#Public/foo/mailbox", "#Public/foo/*", "#Public/foo*",
+		"#Public/", "#Public//", "#Public///", "#Public/%", "#Public*", NULL
+		};
+	char *simple, *username, *namespace;
+	int i;
+
+	for (i = 0; patterns[i]; i++) {
+		simple = mailbox_remove_namespace(patterns[i], &namespace, &username);
+		printf("%s yields namespace [%s] user [%s] simple [%s]\n",
+			patterns[i], namespace, username, simple);
+	}
+
+}
+END_TEST
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -80,6 +100,7 @@ Suite *dbmail_misc_suite(void)
 	
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_g_strcasestr);
+	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
 	
 	return s;
 }
