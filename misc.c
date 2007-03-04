@@ -166,11 +166,10 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 const char *mailbox_remove_namespace(const char *fq_name,
 		char **namespace, char **username)
 {
-	char *temp, *user;
+	const char *temp = NULL, *user = NULL, *mbox = NULL;
 	size_t ns_user_len;
 	size_t ns_publ_len;
 	size_t fq_name_len;
-	char t;
 
 	if (username) *username = NULL;
 	if (namespace) *namespace = NULL;
@@ -180,47 +179,75 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	ns_publ_len = strlen(NAMESPACE_PUBLIC);
 
 	// i.e. '#Users/someuser/foldername'
+	// fail on '#Users*' and '#Users%'
+	// assume a slash in '#Users/foo*' and '#Users/foo%' like this '#Users/foo/*'
 	if (fq_name_len >= ns_user_len && strncasecmp(fq_name, NAMESPACE_USER, ns_user_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_USER;
-		t = fq_name[ns_user_len];
-		if (t == '*' || t == '%') { // treat search patterns differently (FIXME)
-			return &fq_name[ns_user_len];
-		} 
-		user = strstr(fq_name, MAILBOX_SEPARATOR);
-		if (user == NULL || strlen(user) <= 1) {
-			TRACE(TRACE_MESSAGE, "illegal mailbox name");
+
+		int end = 0, err = 0, slash = 0;
+		// We'll use a simple state machine to parse through this.
+		for (temp = &fq_name[ns_user_len]; !end && !err; temp++) {
+			switch (*temp) {
+			case '/':
+				if (!user) {
+					user = temp + 1;
+				} else if (user && !mbox) {
+					mbox = temp + 1;
+					slash = 1;
+				} else if (user && mbox) {
+					end = 1;
+				}
+				break;
+			case '*':
+				if (!user)
+					err = 1;
+				mbox = temp;
+				break;
+			case '%':
+				if (!user)
+					err = 1;
+				mbox = temp;
+				break;
+			case '\0':
+				if (!user)
+					err = 1;
+				end = 1;
+				break;
+			}
+		}
+
+		if (err) {
+			TRACE(TRACE_MESSAGE, "Illegal mailbox name");
 			return NULL;
 		}
-		temp = strstr(&user[1], MAILBOX_SEPARATOR);
-		if (temp == NULL || strlen(temp) <= 1) {
-			TRACE(TRACE_MESSAGE, "illegal mailbox name");
+
+		if (!user || user + slash == mbox) {
+			TRACE(TRACE_DEBUG, "Username not found");
 			return NULL;
 		}
-		if (user >= temp) {
-			TRACE(TRACE_DEBUG, "Username not found.");
+
+		if (!mbox) {
+			TRACE(TRACE_DEBUG, "Mailbox not found");
 			return NULL;
-		} else {
-			TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
-				&user[1], temp - user - 1);
-			if (username) *username = g_strndup(&user[1], temp - user - 1);
 		}
-		return &temp[1];
+
+		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
+			user, mbox - user - slash);
+		if (username) *username = g_strndup(user, mbox - user - slash);
+
+		return mbox;
 	}
 	
 	// i.e. '#Public/foldername'
+	// accept #Public* and #Public% also
 	if (fq_name_len >= ns_publ_len && strncasecmp(fq_name, NAMESPACE_PUBLIC, ns_publ_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_PUBLIC;
-		t = fq_name[ns_publ_len];
-		if (t == '*' || t == '%') { // FIXME
-			return &fq_name[ns_publ_len]; 
-		} 
-		temp = strstr(fq_name, MAILBOX_SEPARATOR);
-		if (temp == NULL || strlen(temp) <= 1) {
-			TRACE(TRACE_MESSAGE, "illegal mailbox name");
-			return NULL;
-		}
 		if (username) *username = g_strdup(PUBLIC_FOLDER_USER);
-		return &temp[1];
+		// Drop the slash between the namespace and the mailbox spec
+		if (fq_name[ns_publ_len] == '/')
+			return &fq_name[ns_publ_len+1]; 
+		// But if the slash wasn't there, it means we have #Public*, and that's OK.
+		return &fq_name[ns_publ_len]; 
 	}
 	
 	return fq_name;
