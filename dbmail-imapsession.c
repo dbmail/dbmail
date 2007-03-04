@@ -1543,8 +1543,6 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 		list = g_list_append(list,"\\Flagged");
 	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
 		list = g_list_append(list,"\\Draft");
-	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		list = g_list_append(list,"\\Recent");
 	string = g_list_join(list," ");
 	g_list_free(list);
 	dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", string->str);
