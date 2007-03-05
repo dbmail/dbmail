@@ -356,8 +356,10 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
 //			mstream = g_mime_stream_mem_new();
+
 			tmp = tmpfile();
 			mstream = g_mime_stream_file_new(tmp);
+
 			assert(mstream);
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
@@ -371,15 +373,23 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 					break;
 				putslen = g_mime_stream_write_string(fstream, buf);
+				TRACE(TRACE_DEBUG, "getslen [%d] putslen [%d]", getslen, putslen);
+
+				if (g_mime_stream_flush(fstream)) {
+					TRACE(TRACE_ERROR, "Failed to flush, is your /tmp filesystem full?");
+					res = 1;
+					break;
+				}
 
 				if (putslen < getslen) {
-					TRACE(TRACE_ERROR, "Short write, filesystem full?");
+					TRACE(TRACE_ERROR, "Short write, is your /tmp filesystem full?");
 					res = 1;
+					break;
 				}
 			}
 
 			if (getslen < 0) {
-				TRACE(TRACE_ERROR, "Line read failed, dropped connection?");
+				TRACE(TRACE_ERROR, "Read failed, did the client drop the connection?");
 				res = 1;
 			}
 

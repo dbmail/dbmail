@@ -1,3 +1,11 @@
+2007-03-05  Aaron Stone <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	Sadly we have to flush after every fwrite to be sure that we don't fit
+	an entire email into the C library's buffers and then lose it all when
+	the filesystem is full and the tmpfile cannot be closed out (really
+	closes bug #511 this time).
+
 2007-03-04  Aaron Stone <aaron@serendipity.cx>
 
 	* misc.c, check_dbmail_misc.c:
