@@ -5,6 +5,8 @@
 	an entire email into the C library's buffers and then lose it all when
 	the filesystem is full and the tmpfile cannot be closed out (really
 	closes bug #511 this time).
+	* dbmail-mailbox.c:
+	Support IMAP's SEARCH LARGER and SEARCH SMALLER (closes bug #512).
 
 2007-03-04  Aaron Stone <aaron@serendipity.cx>
 
