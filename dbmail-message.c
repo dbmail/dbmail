@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2443 2007-03-03 17:14:15Z aaron $
+  $Id: dbmail-message.c 2449 2007-03-06 07:00:29Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -356,8 +356,10 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
 //			mstream = g_mime_stream_mem_new();
+
 			tmp = tmpfile();
 			mstream = g_mime_stream_file_new(tmp);
+
 			assert(mstream);
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
@@ -372,14 +374,21 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 					break;
 				putslen = g_mime_stream_write_string(fstream, buf);
 
-				if (putslen < getslen) {
-					TRACE(TRACE_ERROR, "Short write, filesystem full?");
+				if (g_mime_stream_flush(fstream)) {
+					TRACE(TRACE_ERROR, "Failed to flush, is your /tmp filesystem full?");
 					res = 1;
+					break;
+				}
+
+				if (putslen < getslen) {
+					TRACE(TRACE_ERROR, "Short write, is your /tmp filesystem full?");
+					res = 1;
+					break;
 				}
 			}
 
 			if (getslen < 0) {
-				TRACE(TRACE_ERROR, "Line read failed, dropped connection?");
+				TRACE(TRACE_ERROR, "Read failed, did the client drop the connection?");
 				res = 1;
 			}
 
