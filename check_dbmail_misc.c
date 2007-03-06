@@ -74,54 +74,51 @@ END_TEST
 START_TEST(test_mailbox_remove_namespace)
 {
 
-	char *simple, *username, *namespace, *n, *u;
-	const char *result;
+	char *simple, *username, *namespace;
 	char *patterns[] = {
 		"#Users/foo/mailbox", "#Users/foo/*", "#Users/foo*",
-		"#Users/", "#Users//", "#Users///", "#Users/%", "#Users*",
+		"#Users/", "#Users//", "#Users///", "#Users/%", "#Users*", "#Users",
 		"#Public/foo/mailbox", "#Public/foo/*", "#Public/foo*",
-		"#Public/", "#Public//", "#Public///", "#Public/%", "#Public*", NULL
+		"#Public/", "#Public//", "#Public///", "#Public/%", "#Public*", "#Public", NULL
+		};
+
+	char *expected[18][3] = {
+		{ NAMESPACE_USER, "foo", "mailbox" },
+		{ NAMESPACE_USER, "foo", "*" },
+		{ NAMESPACE_USER, "foo", "*" },
+
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo/mailbox" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo/*" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo*" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "/" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "//" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "%" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "*" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "" }
+		
 		};
 	int i;
 
-	namespace = g_new0(char,255);
-	username = g_new0(char,255);
-
-	u = username;
-	n = namespace;
-
-	result = mailbox_remove_namespace("testbox",&namespace,&username);
-	fail_unless(strcmp("testbox", result) == 0,"mailbox_remove_namespace failed 1");
-	fail_unless(namespace==NULL,"namespace not NULL");
-	fail_unless(username==NULL,"username not NULL");
-
-	result = mailbox_remove_namespace("#Public",&namespace,&username);
-	fail_unless(result == NULL, "mailbox_remove_namespace failed 2");
-	fail_unless(strcmp("#Public",namespace)==0,"namespace not #Public");
-	fail_unless(username==NULL,"username not NULL");
-
-	result = mailbox_remove_namespace("#Users/testuser1/mailbox",&namespace,&username);
-	fail_unless(strcmp(result,"mailbox")==0,"mailbox_remove_namespace failed 3 [%s]", result);
-	fail_unless(strcmp("#Users",namespace)==0,"namespace not #Public");
-	fail_unless(strcmp("testuser1",username)==0,"username not testuser1 [%s]", username);
-
-	result = mailbox_remove_namespace("#Public/mailboxA/subboxB",&namespace,&username);
-	fail_unless(strcmp(result,"mailboxA/subboxB")==0,"mailbox_remove_namespace failed 3 [%s]", result);
-	fail_unless(strcmp("#Public",namespace)==0,"namespace not #Public");
-	fail_unless(strcmp("__public__",username)==0,"username not __public__ [%s]", username);
-
-	result = mailbox_remove_namespace("#Public*/*",NULL,NULL);
-	fail_unless(strcmp(result,"*/*")==0,"mailbox_remove_namespace failed 4");
-
 	for (i = 0; patterns[i]; i++) {
 		simple = mailbox_remove_namespace(patterns[i], &namespace, &username);
-		printf("%s yields namespace [%s] user [%s] simple [%s]\n",
-			patterns[i], namespace, username, simple);
+		fail_unless(
+			((simple == NULL && expected[i][2] == NULL) || strcmp(simple, expected[i][2])==0) &&
+			((username== NULL && expected[i][1] == NULL) || strcmp(username, expected[i][1])==0) &&
+			((namespace == NULL && expected[i][0] == NULL) || strcmp(namespace, expected[i][0])==0),
+			"\n  mailbox_remove_namespace failed on [%s]\n"
+			"  Expected: namespace [%s] user [%s] simple [%s]\n"
+			"  Received: namespace [%s] user [%s] simple [%s]",
+			patterns[i], expected[i][0], expected[i][1], expected[i][2],
+			namespace, username, simple);
 	}
-
-	g_free(n);
-	g_free(u);
-
 
 }
 END_TEST
