@@ -63,7 +63,7 @@ case "$1" in
 		db_get dbmail/start_imapd || true; START_IMAPD=$RET
 		db_get dbmail/start_lmtpd || true; START_LMTPD=$RET
 		db_get dbmail/start_pop3d || true; START_POP3D=$RET
-		db_get dbmail/sieve/start_timsieved || true; START_TIMSIEVED=$RET
+		db_get dbmail/sieve/start_sieve || true; START_SIEVE=$RET
 
 		if [ "$AUTHDRIVER" = "ldap" ]; then
 			db_get dbmail/ldap/HOSTNAME || true; LDAP_HOST=$RET
@@ -119,27 +119,27 @@ case "$1" in
 
 	if [ "$DO_DEBCONF" = "true" ] && [ -e "$CONFIG" ] && [ -e "$DEBIAN_CONFIG" ]; then
 		# edit the configs
-		sed -i -re "s/^host\W*=.*\$/host=$DB_HOST/i" \
-			-e "s/^user\W*=.*\$/user=$DB_USER/i" \
-			-e "s/^pass\W*=.*\$/pass=$DB_PASS/i" \
-			-e "s,^db\W*=.*\$,db=$DB_DATABASE,i" \
-                	-e "s/^#postmaster\W*=.*\$/postmaster=$POSTMASTER/i" \
-                	-e "s/^postmaster\W*=.*\$/postmaster=$POSTMASTER/i" \
-			-e "s/^EFFECTIVE_USER\W*=.*\$/EFFECTIVE_USER=dbmail/gi" \
-			-e "s/^EFFECTIVE_GROUP\W*=.*\$/EFFECTIVE_GROUP=dbmail/gi" \
+		sed -i -re "s/\(^host\W*=\)\(.*\$\)/\1 $DB_HOST/i" \
+			-e "s/\(^user\W*=\)\(.*\$\)/\1 $DB_USER/i" \
+			-e "s/\(^pass\W*=\)\(.*\$\)/\1 $DB_PASS/i" \
+			-e "s,\(^db\W*=\)\(.*\$\),\1 $DB_DATABASE,i" \
+                	-e "s/\(^#postmaster\W*=\)\(.*\$\)/\1 $POSTMASTER/i" \
+                	-e "s/\(^postmaster\W*=\)\(.*\$\)/\1 $POSTMASTER/i" \
+			-e "s/\(^EFFECTIVE_USER\W*=\)\(.*\$\)/\1 dbmail/i" \
+			-e "s/\(^EFFECTIVE_GROUP\W*=\)\(.*\$\)/\1 dbmail/i" \
                         $CONFIG
 		
 		if [ "$AUTHDRIVER" = "ldap" ]; then
-			sed -i -re "s/^BASE_DN\W*=.*\$/BASE_DN = $LDAP_BASE_DN/i" \
-				-e "s/^HOSTNAME\W*=.*\$/HOSTNAME = $LDAP_HOST/i" \
-				-e "s/^BIND_PW\W*=.*\$/BIND_PW = $LDAP_BIND_PW/i" \
-				-e "s/^BIND_DN\W*=.*\$/BIND_DN = $LDAP_BIND_DN/i" \
-				-e "s/^FIELD_UID\W*=.*\$/FIELD_UID = $LDAP_UID/i" \
-				-e "s/^FIELD_CID\W*=.*\$/FIELD_CID = $LDAP_CID/i" \
-				-e "s/^authdriver\W*=.*\$/authdriver = ldap/" \
+			sed -i -re "s/\(^BASE_DN\W*=\)\(.*\$\)/\1 $LDAP_BASE_DN/i" \
+				-e "s/\(^HOSTNAME\W*=\)\(.*\$\)/\1 $LDAP_HOST/i" \
+				-e "s/\(^BIND_PW\W*=\)\(.*\$\)/\1 $LDAP_BIND_PW/i" \
+				-e "s/\(^BIND_DN\W*=\)\(.*\$\)/\1 $LDAP_BIND_DN/i" \
+				-e "s/\(^FIELD_UID\W*=\)\(.*\$\)/\1 $LDAP_UID/i" \
+				-e "s/\(^FIELD_CID\W*=\)\(.*\$\)/\1 $LDAP_CID/i" \
+				-e "s/\(^authdriver\W*=\)\(.*\$\)/\1 ldap/" \
 				$CONFIG
 		else
-			sed -i -re "s/^authdriver\W*=.*\$/authdriver = sql/" \
+			sed -i -re "s/\(^authdriver\W*=\)\(.*\$\)/\1 sql/" \
 				$CONFIG
 		fi
 	
@@ -160,7 +160,7 @@ case "$1" in
 		else
 			sed -i -re 's/^.*START_POP3D=.*/#START_POP3D=true/i' $DEBIAN_CONFIG
 		fi
-		if [ "$START_TIMSIEVED" = "true" ]; then
+		if [ "$START_SIEVE" = "true" ]; then
 			sed -i -re 's/^.*START_SIEVE=.*/START_SIEVE=true/i' $DEBIAN_CONFIG
 		else
 			sed -i -re 's/^.*START_SIEVE=.*/#START_SIEVE=true/i' $DEBIAN_CONFIG
@@ -169,7 +169,7 @@ case "$1" in
 	fi
 	
 	db_stop
-	chown dbmail:dbmail $DEBIAN_CONFIG $CONFIG /usr/sbin/dbmail-smtp
+	chown dbmail:dbmail $CONFIG /usr/sbin/dbmail-smtp
 	chmod 0600 $CONFIG
 	chmod 4755 /usr/sbin/dbmail-smtp
 	

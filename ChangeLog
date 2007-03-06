@@ -1,3 +1,20 @@
+2007-03-06  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c:
+	added testcase for mailbox_remove_namespace
+	* check_dbmail_imapd.c:
+	add envelope test
+	* test-scripts/testimap.py:
+	fix false negatives after recent_flag changes
+	* debian/dbmail.postinst, debian/dbmail.postrm:
+	debian postinst fixes
+	* contrib/sql2sql/mysql2pgsql.sh:
+	adding migration script
+	* contrib/mailbox2dbmail/mailbox2dbmail:
+	add alternative config file option
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testimap.py:
+	recent_flag fixes
+
 2007-03-05  Aaron Stone <aaron@serendipity.cx>
 
 	* dbmail-message.c:

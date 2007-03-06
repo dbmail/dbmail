@@ -1,5 +1,8 @@
 #!/bin/sh
 
+. /usr/share/debconf/confmodule
+
+
 
 if [ "$1" = "purge" ]; then
 		
@@ -11,6 +14,7 @@ if [ "$1" = "purge" ]; then
 	ucf --purge /etc/dbmail/dbmail.conf || true
 	ucf --purge /etc/default/dbmail || true
 
+	db_purge
 fi
 
 #DEBHELPER#
