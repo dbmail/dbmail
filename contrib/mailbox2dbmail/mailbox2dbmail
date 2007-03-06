@@ -2,7 +2,7 @@
 
 # Copyright (C) 2004 Dan Weber <dan at mirrorlynx dot com>
 #
-# $Id: mailbox2dbmail 2429 2007-01-30 21:36:39Z paul $
+# $Id: mailbox2dbmail 2450 2007-03-06 11:38:07Z paul $
 #
 # This program is free software; you can redistribute it and/or 
 # modify it under the terms of the GNU General Public License 
@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-# $Id: mailbox2dbmail 2429 2007-01-30 21:36:39Z paul $
+# $Id: mailbox2dbmail 2450 2007-03-06 11:38:07Z paul $
 
 import os,sys,getopt,email,email.Errors,mailbox
 version = "%s version 2.0" %(sys.argv[0],)

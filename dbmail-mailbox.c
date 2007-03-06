@@ -1096,6 +1096,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	unsigned i, rows, date;
 	u64_t *k, *v, *w;
 	u64_t id;
+	char gt_lt = 0;
 	
 	GString *t;
 	GString *q;
@@ -1188,14 +1189,29 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			t->str, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
 		break;
 
+		case IST_SIZE_LARGER:
+			gt_lt = '>';
+		case IST_SIZE_SMALLER:
+			if (!gt_lt) gt_lt = '<';
+
+		g_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
+			"JOIN %sphysmessage p ON m.physmessage_id = p.id "
+			"WHERE m.mailbox_idnr = %llu "
+			"AND m.status IN (%d,%d) AND p.messagesize %c %llu "
+			"ORDER BY message_idnr", DBPFX, DBPFX,
+			dbmail_mailbox_get_id(self), 
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
+			gt_lt, s->size);
+		break;
+
 		default:
 		g_string_printf(q, "SELECT message_idnr FROM %smessages "
-			 "WHERE mailbox_idnr = %llu "
-			 "AND status IN (%d,%d) AND %s "
-			 "ORDER BY message_idnr", DBPFX, 
-			 dbmail_mailbox_get_id(self), 
-			 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
-			 s->search);
+			"WHERE mailbox_idnr = %llu "
+			"AND status IN (%d,%d) AND %s "
+			"ORDER BY message_idnr", DBPFX, 
+			dbmail_mailbox_get_id(self), 
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
+			s->search); // FIXME: Sometimes s->search is ""
 		break;
 		
 	}
