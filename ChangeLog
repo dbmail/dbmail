@@ -3,6 +3,10 @@
 	* dbmail-message.c:
 	It is not a short write if getslen == 1 and putslen == 0 (why does
 	this happen?) (closes bug #525)
+	* dbmail-mailbox.c:
+	Always prepend headers to a dumped message, in case the header block
+	does not come first. Also try asking the database to give the blocks
+	in the correct order in the first place (closes bug #520)
 
 2007-03-07  Paul J Stevens <paul@nfg.nl>
 
