@@ -317,3 +317,322 @@ msgstr "எல்ஏடிபி சேவையகத்துடன் இண�
 #~ msgstr ""
 #~ "டிபிமெய்ல்  ஐஎம்ஏபி மற்றும் பிஓபி3 சேவைகள் இரண்டையும் ஆதரிக்கிறது. நீங்கள் "
 #~ "இரண்டையுமேயோ அல்லது ஏதேனும் ஒன்றையோ இயக்க தேர்ந்தெடுக்கலாம்."
+# translation of dbmail1.po to TAMIL
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+#
+# Dr.T.Vasudevan <agnihot3@gmail.com>, 2007.
+msgid ""
+msgstr ""
+"Project-Id-Version: dbmail1\n"
+"Report-Msgid-Bugs-To: paul@nfg.nl\n"
+"POT-Creation-Date: 2007-02-28 18:17+0100\n"
+"PO-Revision-Date: 2007-02-26 06:08+0530\n"
+"Last-Translator: Dr.T.Vasudevan <agnihot3@gmail.com>\n"
+"Language-Team: TAMIL <ubuntu-l10n-tam@lists.ubuntu.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.11.4\n"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:1001
+msgid "Use debconf to manage dbmail configuration?"
+msgstr "டிபி மெய்ல் (dbmail) ஐ வடிவமைக்க டெப்கான்ப்ஃ ஐ பயன் படுத்தவா? "
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:1001
+msgid ""
+"Please confirm if you want to allow debconf to manage some parts of your "
+"dbmail configuration. Notice that changes you make to dbmail.conf by hand "
+"will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
+"dbmail."
+msgstr ""
+"நீங்கள் டிபி மெய்ல் (dbmail) ஐ வடிவமைக்க டெப்கான்ப்ஃ ஐ பயன் படுத்த விரும்புகிறீர்கள் என்பதை "
+"உறுதிப் படுத்தவும். நீங்கள் பின்னால் dpkg-reconfigure dbmail கட்டளையை மீண்டும் இயக்க "
+"நினைத்தால் dbmail.conf கோப்புக்கு கைமுறையாக செய்யும் மாறுதல்கள் மேலெழுதப்பட மாட்டா என "
+"அறியவும்."
+
+#. Type: select
+#. Description
+#: ../dbmail.templates:2001
+msgid "Authentication driver to activate:"
+msgstr "செயல்படுத்த வேண்டிய உண்மைப் படுத்தல் இயக்கி:"
+
+#. Type: select
+#. Description
+#: ../dbmail.templates:2001
+msgid ""
+"Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
+"instead."
+msgstr ""
+"டிபிமெய்ல் முன்னிருப்பாக எஸ்க்யூஎல் ஐ அடிப்படையான மெய்ப்படுத்தலை பயன்படுத்துகிறது. நீங்கள் "
+"விரும்பினால் எல்டிஏபி கூட பயன்படுத்தலாம்."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid "Postmaster's email address:"
+msgstr "அஞ்சல் அதிகாரியின் மின்னஞ்சல் முகவரி:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid ""
+"Please choose a valid email address read by the person responsible for this "
+"email server."
+msgstr ""
+"இந்த மின்னஞ்சல் சேவையகத்துக்கு பொறுப்பான நபரின் செல்லுபடியாகும் மின்னஞ்சல் முகவரியை "
+"தேர்ந்தெடுக்கவும்."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid "Example: postmaster@yourdomain.tld"
+msgstr "உதாரணம்: postmaster@yourdomain.tld"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:4001
+msgid "Hostname of the SQL database server:"
+msgstr "எஸ்க்யூஎல் தரவுத் தள சேவையகத்தின் புரவலன் பெயர்:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:4001
+msgid ""
+"Please mention the server where a database to hold dbmail's tables will be "
+"created. You should grant full read/write permissions on this database to "
+"the dbmail user."
+msgstr ""
+"டிபிமெய்ல் இன் அட்டவணைகளை சேமிக்கும் தரவுத் தளம் உள்ள சேவையகத்தை குறிப்பிடவும். டிபிமெய்ல் "
+"பயனருக்கு இந்த தரவுத் தளத்தில் படிக்க எழுத முழு உரிமை அளிக்க வேண்டும்."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "The name of the database:"
+msgstr "தரவுத் தளத்தின் பெயர்: "
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "Please mention the name of the database that holds the dbmail tables."
+msgstr "டிபிமெய்ல் இன் அட்டவணைகளை சேமிக்கும் தரவுத் தளத்தை குறிப்பிடவும்"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "If you're using sqlite, this should be the path to the database file."
+msgstr ""
+"நீங்கள் எஸ்க்யூ லைட் ஐ பயன் படுத்தினால் இது தரவுத் தள கோப்புக்கான தடமாக இருக்க வேண்டும்."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:6001
+msgid "Database user:"
+msgstr "தரவுத் தள பயனர்:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:6001
+msgid ""
+"Please mention the username dbmail will use to connect to the database "
+"server."
+msgstr "தரவுத் தளத்துக்கு இணைக்க டிபிமெய்ல் பயன்படுத்த வேண்டிய பயனர் பெயர் ஐ குறிப்பிடவும்."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:7001
+msgid "Password for the database connection:"
+msgstr "தரவுத் தள இணப்புக்கு கடவுச் சொல்:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:7001
+msgid ""
+"Please mention the password dbmail will use to connect to the database "
+"server."
+msgstr "தரவுத் தளத்துக்கு இணைக்க டிபிமெய்ல் பயன்படுத்த வேண்டிய கடவுச் சொல் ஐ குறிப்பிடவும்."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001
+msgid "Start the IMAP server after reboot?"
+msgstr "மீள் துவக்கத்துக்குப் பின் ஐஎம்ஏபி சேவையகத்தை துவக்கவா?"
+
+#. Type: boolean
+#. Description
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001 ../dbmail.templates:10001
+msgid ""
+"Dbmail supports both IMAP and POP3 services. You can choose to run either "
+"one or both services."
+msgstr ""
+"டிபிமெய்ல்  ஐஎம்ஏபி மற்றும் பிஓபி3 சேவைகள் இரண்டையும் ஆதரிக்கிறது. நீங்கள் இரண்டையுமேயோ "
+"அல்லது ஏதேனும் ஒன்றையோ இயக்க தேர்ந்தெடுக்கலாம்."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:9001
+msgid "Start the LMTP server after reboot?"
+msgstr "மீள் துவக்கத்துக்குப் பின் எல்எம்டிபி சேவையகத்தை துவக்கவா? "
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:9001
+msgid ""
+"Please choose whether the LMTP server should be started after rebooting. "
+"This is only needed when you like to feed the email to Dbmail by LMTP."
+msgstr ""
+"மீள் துவக்கத்துக்குப் பின் எல்எம்டிபி சேவையகத்தை துவக்கப் பட வேண்டுமா என தேர்ந்தெடுக்கவும். "
+"நீங்கள் எல்எம்டிபி யால் டிபிமெய்ல் க்கு மின்னஞ்சல்கள் அனுப்பப் போகிறீர்கள் என்றால் மட்டும் இது "
+"தேவை."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:10001
+msgid "Start the POP3 server after reboot?"
+msgstr "மீள் துவக்கத்துக்குப் பின் பிஓபி3 சேவையகத்தை துவக்கவா? "
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:11001
+msgid "Start the timsieve server after reboot?"
+msgstr "மீள் துவக்கத்துக்குப் பின் டிம்சீவ் (timsieve) சேவையகத்தை துவக்கவா? "
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:11001
+msgid ""
+"Please choose whether the timsieve server should be started after rebooting. "
+"This is only needed if you want to allow users to manage their sieve scripts "
+"using a compatible client such as kmail, horde/ingo or squirrelmail/"
+"avelsieve."
+msgstr ""
+"மீள் துவக்கத்துக்குப் பின் டிம்சீவ் (timsieve) சேவையகத்தை துவக்க வேண்டுமா என தேர்வு "
+"செய்யவும். பயனர்கள் கேமெய்ல் horde/ingo அல்லது squirrelmail/avelsieve ப்பொன்ற "
+"பொருந்தும் கிளையன்களைக் கொண்டு தம் சீவ் சிறுநிரல்களை மேலாள அனுமதிக்க விரும்பினால் மட்டும் "
+"இது தேவை."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:12001
+msgid "Port used by the LDAP server:"
+msgstr "எல்ஏடிபி சேவையகம் பயன்படுத்த வேண்டிய துறை: "
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:12001
+msgid ""
+"Please enter the port which your LDAP server is listening on. The default "
+"port is 389."
+msgstr "உங்கள் எல்ஏடிபி சேவையகம் செவிசாய்க்கும் துறையை உள்ளிடுக. முன்னிருப்பு 389"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:13001
+msgid "Hostname of the LDAP server:"
+msgstr "எல்ஏடிபி சேவையகத்தின் புரவலன் பெயர்:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:13001
+msgid "Please enter the name of the host your LDAP server is running at."
+msgstr "எல்ஏடிபி சேவையகத்தின் புரவலனின் பெயர்."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:14001
+msgid "LDAP base DN:"
+msgstr "டிஎன் இல் எல்ஏடிபி ஆதாரம்:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:14001
+msgid ""
+"Please enter the DN where Dbmail should start searching for user accounts."
+msgstr "டிபிமெய்ல் பயனர் கணக்குகளுக்கு தேட வேண்டிய டிஎன் (DN) ஐ உள்ளிடவும்."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:15001
+msgid "Field which contains the user login name of the user:"
+msgstr "பயனரின் உள்நுழை பெயர் உள்ள புலம்:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:15001
+msgid ""
+"Please enter the LDAP attribute that will contain the username. The standard "
+"account uses uid."
+msgstr ""
+"பயனர் பெயர் உள்ள எல்ஏடிபி சேவையக மதிப்புரு. சாதாரணமாக கணக்கு யூஐடி (uid) ஐ "
+"பயன்படுத்தும்."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:16001
+msgid "Field which contains the group id number of the user:"
+msgstr "பயனரின் குழு ஐடி எண் உள்ள புலம்:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:16001
+msgid ""
+"Please enter the LDAP attribute that will contain the group id number. The "
+"standard account uses gidNumber."
+msgstr ""
+"பயனரின் குழு ஐடி எண் உள்ள gid மதிப்புரு. சாதாரணமாக கணக்கு ஜிஐடி (gid) ஐ "
+"பயன்படுத்தும்."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:17001
+msgid "Use an anonymous connection to the LDAP server?"
+msgstr "அடையாளம் தெரியாத இணைப்பை எல்ஏடிபி சேவையகத்துக்கு பயன் படுத்தவா?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:17001
+msgid ""
+"Please choose this option if the LDAP server does not require authentication "
+"to search the LDAP tree."
+msgstr ""
+"எல்ஏடிபி சேவையகத்துக்கு எல்ஏடிபி கிளைகளை ஆராய உண்மைப்படுத்தல் தேவை இல்லை என்றால் இந்த "
+"தேர்வை பயன் படுத்துக."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:18001
+msgid "DN used to bind to the LDAP server:"
+msgstr "எல்ஏடிபி சேவையகத்துக்கு பிணைய பயன்படும் டிஎன்:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:18001
+msgid "Please enter the DN which should be used to connect to the LDAP server."
+msgstr "எல்ஏடிபி சேவையகத்துடன் இணைக்க பயன் படுத்த வேண்டிய டிஎன் (DN) ஐ உள்ளிடுக:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:19001
+msgid "Password to bind to the LDAP server:"
+msgstr "எல்ஏடிபி சேவையகத்துடன் பிணைய கடவுச் சொல்:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:19001
+msgid ""
+"Please enter the password which should be used to connect to the LDAP server."
+msgstr "எல்ஏடிபி சேவையகத்துடன் இணைய பயன் படுத்த வேண்டிய கடவுச் சொல்லை உள்ளிடுக."
+
+#~ msgid ""
+#~ "Dbmail support both imap and pop3 services. You can choose to run either "
+#~ "one or both services."
+#~ msgstr ""
+#~ "டிபிமெய்ல்  ஐஎம்ஏபி மற்றும் பிஓபி3 சேவைகள் இரண்டையும் ஆதரிக்கிறது. நீங்கள் "
+#~ "இரண்டையுமேயோ அல்லது ஏதேனும் ஒன்றையோ இயக்க தேர்ந்தெடுக்கலாம்."
