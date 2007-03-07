@@ -271,7 +271,9 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	while (slice) {
 		g_string_printf(q,"SELECT is_header,messageblk FROM %smessageblks b "
 				"JOIN %smessages m USING (physmessage_id) "
-				"WHERE message_idnr IN (%s)", DBPFX, DBPFX,
+				"WHERE message_idnr IN (%s) "
+				"ORDER BY messageblk_idnr ",
+				DBPFX, DBPFX,
 				(char *)slice->data);
 		
 		if (db_query(q->str) == -1) {
@@ -294,9 +296,9 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 						count++;
 					dbmail_message_free(message);
 				}
-				g_string_printf(t,"%s", db_get_result(i,1));
+				g_string_prepend(t, db_get_result(i,1));
 			} else {
-				g_string_append_printf(t,"%s",db_get_result(i,1));
+				g_string_append(t, db_get_result(i,1));
 			}
 		}
 		db_free_result();
