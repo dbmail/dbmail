@@ -292,7 +292,6 @@ typedef struct {
 	char *name;
 	unsigned no_select, no_inferiors, exists, recent, unseen, no_children, flags;
 	int permission;
-	u64_t *seq_list;
 	gboolean is_public, is_users, is_inbox;
 } mailbox_t;
 

@@ -1,3 +1,8 @@
+2007-03-07  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c:
+	re-add basic tests for mailbox_remove_namespace
+
 2007-03-06  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_misc.c:
