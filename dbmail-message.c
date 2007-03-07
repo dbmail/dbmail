@@ -381,7 +381,8 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 				}
 
 				if (putslen < getslen) {
-					TRACE(TRACE_ERROR, "Short write, is your /tmp filesystem full?");
+					TRACE(TRACE_ERROR, "Short write [%u < %u], is your /tmp filesystem full?", 
+						putslen, getslen);
 					res = 1;
 					break;
 				}

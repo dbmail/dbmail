@@ -1,3 +1,10 @@
+2007-03-07  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, dbmail-imapsession.c, dbmail-imapsession.h, dbmail-message.c,
+	  dbmailtypes.h, imap4.c, imapcommands.c, test-scripts/testbox,
+	  test-scripts/testimap.py:
+	fix and extend imap flags handling (bug #519, #381)
+
 2007-03-06  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_misc.c:
