@@ -2813,20 +2813,14 @@ int db_getmailbox_flags(mailbox_t *mb)
 	return DM_SUCCESS;
 
 }
+
 int db_getmailbox_count(mailbox_t *mb)
 {
-	unsigned i, exists = 0, seen = 0, recent = 0;
+	unsigned exists = 0, seen = 0, recent = 0;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
-	 
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
-
-	/* free existing MSN list */
-	if (mb->seq_list) {
-		dm_free(mb->seq_list);
-		mb->seq_list = NULL;
-	}
 
 	/* count messages */
 	snprintf(query, DEF_QUERYSIZE,
@@ -2857,54 +2851,20 @@ int db_getmailbox_count(mailbox_t *mb)
  
 	db_free_result();
 	
-	memset(query,0,DEF_QUERYSIZE);
+	/* now determine the next message UID NOTE expunged messages 
+	 * are selected as well in order to be able to restore them */
 
-	if(mb->exists) {
-		/* get  messages */
-		snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr "
-				"FROM %smessages "
-				"WHERE mailbox_idnr = %llu "
-				"AND status < %d "
-				"ORDER BY message_idnr ASC",
-				DBPFX, mb->uid, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-		
-		if (db_query(query) == -1) {
-			TRACE(TRACE_ERROR, "query error [%s]", query);
-			return DM_EQUERY;
-		}
-		
-		exists = db_num_rows();
-		
-		if (mb->exists != exists)
-			mb->exists = exists;
-		
-		TRACE(TRACE_DEBUG,"exists [%d]", mb->exists);
-		mb->seq_list = g_new0(u64_t,mb->exists);
-		for (i = 0; i < mb->exists; i++) 
-			mb->seq_list[i] = db_get_result_u64(i, 0);
-
-		db_free_result();
-	}
-
-	/* now determine the next message UID 
-	 * NOTE expunged messages are selected as well in order to be 
-	 * able to restore them 
-	 */
 	memset(query,0,DEF_QUERYSIZE);
 	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr+1 FROM %smessages "
 			"ORDER BY message_idnr DESC LIMIT 1",DBPFX);
-	if (db_query(query) == -1) {
-		if(mb->seq_list) {
-			dm_free(mb->seq_list);
-			mb->seq_list = NULL;
-		}
+
+	if (db_query(query) == -1)
 		return DM_EQUERY;
-	}
+
 	mb->msguidnext = db_get_result_u64(0, 0);
 	db_free_result();
 
 	return DM_SUCCESS;
-
 }
 
 int db_getmailbox(mailbox_t * mb)

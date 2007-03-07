@@ -113,7 +113,8 @@ class testImapServer(unittest.TestCase):
         # test flags
         self.o.create('testappend')
         self.o.append('testappend','\Flagged',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
-        id = self.o.select('testappend')[1][0]
+        result = self.o.select('testappend')
+        id = result[1][0]
         
         result = self.o.fetch(id,"(UID BODY[])")
         self.assertEquals(result[0],'OK')
@@ -395,6 +396,7 @@ class testImapServer(unittest.TestCase):
 
         self.o.select('recenttestbox')
         self.o.fetch("1:*","(Flags)")
+        print self.o.recent()
         self.assertEquals(self.o.status("recenttestbox",'(RECENT)')[1][0], '"recenttestbox" (RECENT 0)')
 
     def testRename(self):
