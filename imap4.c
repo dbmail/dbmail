@@ -103,8 +103,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 	size_t i;
 	int nfaultyresponses;
 	imap_userdata_t *ud = NULL;
-	mailbox_t newmailbox;
-	int this_was_noop = 0;
 	int serr;
 	
 	struct ImapSession *session = dbmail_imap_session_new();
@@ -309,17 +307,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 		TRACE(TRACE_INFO, "Executing command %s...\n", IMAP_COMMANDS[i]);
 
-// dirty hack to bypass a NOOP problem: 
-// unilateral server responses are not recognised by some clients 
-// if they are after the OK response
-		this_was_noop = 0;
-
-		if (i != IMAP_COMM_NOOP)
-			result = (*imap_handler_functions[i]) (session);
-		else {
-			this_was_noop = 1;
-			result = 0;
-		}
+		result = (*imap_handler_functions[i]) (session);
 
 		if (result == -1) {
 			TRACE(TRACE_ERROR,"command return with error [%s]", IMAP_COMMANDS[i]);
@@ -332,52 +320,9 @@ int IMAPClientHandler(clientinfo_t * ci)
 		if (result == 0 && i == IMAP_COMM_LOGOUT)
 			done = 1;
 
-
 		fflush(session->ci->tx);	/* write! */
 
 		TRACE(TRACE_INFO, "Finished command %s [%d]\n", IMAP_COMMANDS[i], result);
-
-		/* check if mailbox status has changed (notify client) */
-		if (ud->state == IMAPCS_SELECTED) {
-			//if (i == IMAP_COMM_NOOP || i == IMAP_COMM_CHECK || i == IMAP_COMM_SELECT || i == IMAP_COMM_EXPUNGE) {
-			if (i == IMAP_COMM_NOOP || i == IMAP_COMM_CHECK || i == IMAP_COMM_EXPUNGE) {
-				/* update mailbox info */
-				memset(&newmailbox, 0, sizeof(newmailbox));
-				newmailbox.uid = ud->mailbox.uid;
-
-				result = db_getmailbox(&newmailbox);
-				if (result == -1) {
-					TRACE(TRACE_ERROR, "could not get mailbox info\n");
-					dbmail_imap_session_printf(session, "* BYE internal dbase error\r\n");
-					dbmail_imap_session_delete(session);
-					return -1;
-				}
-
-				if (newmailbox.exists != ud->mailbox.exists) {
-					if(dbmail_imap_session_printf(session, "* %u EXISTS\r\n", newmailbox.exists) < 0) {
-						dbmail_imap_session_delete(session);
-						return EOF;
-					}
-					TRACE(TRACE_INFO, "ok update sent\r\n");
-				}
-
-				if (newmailbox.recent != ud->mailbox.recent)
-					if(dbmail_imap_session_printf(session, "* %u RECENT\r\n", newmailbox.recent) < 0) {
-						dbmail_imap_session_delete(session);
-						return EOF;
-					}
-
-				dm_free(ud->mailbox.seq_list);
-				memcpy((void *) &ud->mailbox, (void *)&newmailbox, sizeof(newmailbox));
-			}
-		}
-		if (this_was_noop) {
-			if(dbmail_imap_session_printf(session, "%s OK NOOP completed\r\n", session->tag) < 0) {
-				dbmail_imap_session_delete(session);
-				return EOF; 
-			}
-			TRACE(TRACE_DEBUG, "tag = %s", session->tag);
-		}
 
 	} while (!done);
 
