@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2452 2007-03-07 13:46:16Z paul $
+  $Id: dbmail-message.c 2453 2007-03-07 20:29:02Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -380,8 +380,8 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 					break;
 				}
 
-				if (putslen < getslen) {
-					TRACE(TRACE_ERROR, "Short write [%u < %u], is your /tmp filesystem full?", 
+				if (putslen < getslen && getslen > 1) {
+					TRACE(TRACE_ERROR, "Short write [%d < %d], is your /tmp filesystem full?", 
 						putslen, getslen);
 					res = 1;
 					break;
