@@ -157,6 +157,7 @@ if test [ "$usesqlite" = "yes" ]; then
         SQLITEALIB="modules/.libs/libsqlite.a"
 	SQLITELTLIB="modules/libsqlite.la"
         AC_MSG_RESULT([$SQLITELIB])
+    	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\" \\\\/'  sql/sqlite/create_tables.sqlite`
     fi
 fi
 ])
