@@ -1,3 +1,13 @@
+2007-03-09  Paul J Stevens <paul@nfg.nl>
+
+	* debian/po/ml.po, debian/po/pt.po, debian/po/ta.po:
+	fix broken po files
+	* contrib/sql2sql/mysql2pgsql.sh:
+	minor fixes
+	* Makefile.in, acinclude.m4, configure, configure.in, dbmail.h.in, 
+	  man/Makefile.in, modules/Makefile.in, modules/dbsqlite.c:
+	add auto-creation of database to sqlite driver
+
 2007-03-08  Paul J Stevens <paul@nfg.nl>
 
 	* debian/po/ml.po, debian/po/pt.po, debian/po/ta.po:
