@@ -153,6 +153,11 @@
 "Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.\n" \
 ""
 
+/* include sql/sqlite/create_tables.sqlite for autocreation */
+#define DM_SQLITECREATE \
+@SQLITECREATE@
+""
+
 /** default directory and extension for pidfiles */
 #define DEFAULT_PID_DIR "@DM_STATEDIR@"
 #define DEFAULT_PID_EXT ".pid"
