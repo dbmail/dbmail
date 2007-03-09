@@ -74,7 +74,6 @@ service_stop() {
 
 	pids=`pidof ${_name}`
 	if [ -n  "$pids" ]; then
-	echo "=[$pids]="
 		log_failure_msg "failed"
 		return 1
 	fi
