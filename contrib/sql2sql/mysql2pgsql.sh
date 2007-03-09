@@ -38,7 +38,9 @@ export_mysql()
 	t="$1"
 	dumpfile=$TMPDIR/$t.mysqldata
 	[ -e "$dumpfile" ] && return 1
-	mysqldump --compatible=postgresql -q -t --skip-opt -c $MYDB $t > $dumpfile
+	echo -n "export from mysql [$t] ..."
+	mysqldump --skip-opt --compatible=postgresql -q -t -c $MYDB $t > $dumpfile
+	echo "done"
 }
 
 import_pgsql()
@@ -46,12 +48,14 @@ import_pgsql()
 	t="$1"
 	dumpfile=$TMPDIR/$t.mysqldata
 	if [ "$t" = "dbmail_users" ]; then
-		dropdb dbmail
-		createdb dbmail
-		psql dbmail < ../../sql/postgresql/create_tables.pgsql || { echo "create db failed. abort."; exit 1; }
+		dropdb dbmail >/dev/null 2>&1
+		createdb dbmail >/dev/null 2>&1
+		psql dbmail < ../../sql/postgresql/create_tables.pgsql >/dev/null 2>&1 || { echo "create db failed. abort."; exit 1; }
 		echo "delete from dbmail_users;"|psql dbmail
 	fi
+	echo -n "import into pgsql [$t] ..."
 	( echo "BEGIN;"; cat $dumpfile; echo "END;" ) | psql dbmail >/dev/null 2>&1
+	echo "done."
 	return $?
 }
 
@@ -88,9 +92,6 @@ main()
 {
 	install -d -m 7777 $TMPDIR || { echo "unable to access $TMPDIR"; exit 1; }
 	for t in $tables; do
-		echo -n "mysql2pgsql $t? "
-		read confirm
-		[ "$confirm" = "y" ] || { echo "stopping. restart to continue."; exit 0; }
 		export_mysql $t || { echo "table already exported. successful import assumed. skipping $t."; continue; }
 		import_pgsql $t || { echo "import failed at table $t. abort."; exit 1; }
 	done
