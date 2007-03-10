@@ -119,18 +119,18 @@ case "$1" in
 
 	if [ "$DO_DEBCONF" = "true" ] && [ -e "$CONFIG" ] && [ -e "$DEBIAN_CONFIG" ]; then
 		# edit the configs
-		sed -i -re "s/\(^host\W*=\)\(.*\$\)/\1 $DB_HOST/i" \
-			-e "s/\(^user\W*=\)\(.*\$\)/\1 $DB_USER/i" \
+		sed -i -e "s,\(^host\W*=\)\(.*\$\),\1 $DB_HOST,i" \
+			-e "s,\(^user\W*=\)\(.*\$\),\1 $DB_USER,i" \
 			-e "s/\(^pass\W*=\)\(.*\$\)/\1 $DB_PASS/i" \
 			-e "s,\(^db\W*=\)\(.*\$\),\1 $DB_DATABASE,i" \
-                	-e "s/\(^#postmaster\W*=\)\(.*\$\)/\1 $POSTMASTER/i" \
-                	-e "s/\(^postmaster\W*=\)\(.*\$\)/\1 $POSTMASTER/i" \
-			-e "s/\(^EFFECTIVE_USER\W*=\)\(.*\$\)/\1 dbmail/i" \
-			-e "s/\(^EFFECTIVE_GROUP\W*=\)\(.*\$\)/\1 dbmail/i" \
+                	-e "s,\(^#postmaster\W*=\)\(.*\$\),\1 $POSTMASTER,i" \
+                	-e "s,\(^postmaster\W*=\)\(.*\$\),\1 $POSTMASTER,i" \
+			-e "s,\(^EFFECTIVE_USER\W*=\)\(.*\$\),\1 dbmail,i" \
+			-e "s,\(^EFFECTIVE_GROUP\W*=\)\(.*\$\),\1 dbmail,i" \
                         $CONFIG
 		
 		if [ "$AUTHDRIVER" = "ldap" ]; then
-			sed -i -re "s/\(^BASE_DN\W*=\)\(.*\$\)/\1 $LDAP_BASE_DN/i" \
+			sed -i -e "s/\(^BASE_DN\W*=\)\(.*\$\)/\1 $LDAP_BASE_DN/i" \
 				-e "s/\(^HOSTNAME\W*=\)\(.*\$\)/\1 $LDAP_HOST/i" \
 				-e "s/\(^BIND_PW\W*=\)\(.*\$\)/\1 $LDAP_BIND_PW/i" \
 				-e "s/\(^BIND_DN\W*=\)\(.*\$\)/\1 $LDAP_BIND_DN/i" \

@@ -6,7 +6,7 @@ PGDD="../../sql/postgresql/create_tables.pgsql"
 
 TMPDIR="/opt/tmp"
 
-tables="
+export tables="
 dbmail_users
 dbmail_mailboxes
 dbmail_physmessage
@@ -35,26 +35,27 @@ dbmail_usermap
 
 export_mysql()
 {
-	t="$1"
-	dumpfile=$TMPDIR/$t.mysqldata
+	dumpfile=$TMPDIR/dbmail.mysqldata
 	[ -e "$dumpfile" ] && return 1
-	echo -n "export from mysql [$t] ..."
-	mysqldump --skip-opt --compatible=postgresql -q -t -c $MYDB $t > $dumpfile
+	echo -n "export from mysql ..."
+	mysqldump --skip-opt --single-transaction --hex-blob --compatible=postgresql -q -t -c $MYDB $tables > $dumpfile
 	echo "done"
 }
 
+
+init_pgsql()
+{
+	dropdb dbmail >/dev/null 2>&1
+	createdb dbmail >/dev/null 2>&1
+	psql dbmail < ../../sql/postgresql/create_tables.pgsql >/dev/null 2>&1 || { echo "create db failed. abort."; exit 1; }
+	echo "delete from dbmail_users;"|psql dbmail
+
+}
 import_pgsql()
 {
-	t="$1"
-	dumpfile=$TMPDIR/$t.mysqldata
-	if [ "$t" = "dbmail_users" ]; then
-		dropdb dbmail >/dev/null 2>&1
-		createdb dbmail >/dev/null 2>&1
-		psql dbmail < ../../sql/postgresql/create_tables.pgsql >/dev/null 2>&1 || { echo "create db failed. abort."; exit 1; }
-		echo "delete from dbmail_users;"|psql dbmail
-	fi
-	echo -n "import into pgsql [$t] ..."
-	( echo "BEGIN;"; cat $dumpfile; echo "END;" ) | psql dbmail >/dev/null 2>&1
+	dumpfile=$TMPDIR/dbmail.mysqldata
+	echo -n "import into pgsql ..."
+	cat $dumpfile | psql -q dbmail
 	echo "done."
 	return $?
 }
@@ -84,17 +85,25 @@ SELECT setval('dbmail_sievescripts_idnr_seq', max(id)) FROM dbmail_sievescripts;
 SELECT setval('dbmail_envelope_idnr_seq', max(id)) FROM dbmail_envelope;
 END;
 EOQ
-	psql dbmail < $qfile
+	psql -q dbmail < $qfile
 	rm -f $qfile
+}
+
+pgsql_owner()
+{
+	for t in `echo '\d'|psql dbmail|grep root|awk '{print $3}'`; do 
+		echo "alter table $t owner to dbmail;"|psql -q dbmail
+	done
 }
 
 main()
 {
 	install -d -m 7777 $TMPDIR || { echo "unable to access $TMPDIR"; exit 1; }
-	for t in $tables; do
-		export_mysql $t || { echo "table already exported. successful import assumed. skipping $t."; continue; }
-		import_pgsql $t || { echo "import failed at table $t. abort."; exit 1; }
-	done
+	#export_mysql || { echo "Export failed"; exit 1; }
+	init_pgsql
+	import_pgsql || { echo "Import failed"; exit 1; }
+	pgsql_sequences
+	pgsql_owner
 }
 
 
