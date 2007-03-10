@@ -1,3 +1,12 @@
+2007-03-10  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail.postinst:
+	avoid slash in sed s commands
+	* debian/changelog, debian/dbmail.postinst:
+	2.2.4 rc1 packages
+	* dbmail-mailbox.c:
+	fix for export problem #590
+
 2007-03-09  Paul J Stevens <paul@nfg.nl>
 
 	* debian/po/ml.po, debian/po/pt.po, debian/po/ta.po:
