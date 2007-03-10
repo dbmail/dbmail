@@ -296,7 +296,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 						count++;
 					dbmail_message_free(message);
 				}
-				g_string_prepend(t, db_get_result(i,1));
+				g_string_printf(t,"%s", db_get_result(i,1));
 			} else {
 				g_string_append(t, db_get_result(i,1));
 			}
