@@ -1,11 +1,11 @@
 2007-03-11  Paul J Stevens <paul@nfg.nl>
 
+	* debian/changelog:
+	2.2.4 packages
 	* config.c:
 	expand tilde char in db path (closes #529)
 	* debian/dbmail.postinst:
 	fix sed error
-	* debian/changelog:
-	2.2.4 rc2 packages
 
 2007-03-10  Paul J Stevens <paul@nfg.nl>
 
