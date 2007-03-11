@@ -139,7 +139,7 @@ case "$1" in
 				-e "s/\(^authdriver\W*=\)\(.*\$\)/\1 ldap/" \
 				$CONFIG
 		else
-			sed -i -re "s/\(^authdriver\W*=\)\(.*\$\)/\1 sql/" \
+			sed -i -e "s/\(^authdriver\W*=\)\(.*\$\)/\1 sql/" \
 				$CONFIG
 		fi
 	
