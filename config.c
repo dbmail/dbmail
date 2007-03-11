@@ -220,6 +220,16 @@ void GetDBParams(db_param_t * db_params)
 		g_strlcpy(db_params->pfx, DEFAULT_DBPFX, FIELDSIZE);
 	}
 
+	/* expand ~ in db name to HOME env variable */
+	if ((strlen(db_params->db) > 0 ) && (db_params->db[0] == '~')) {
+		char *homedir = getenv ("HOME");
+		field_t db;
+		if (! strlen(homedir))
+			TRACE(TRACE_FATAL, "can't expand ~ in db name");
+		g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(db_params->db[1]));
+		g_strlcpy(db_params->db, db, FIELDSIZE);
+	}
+
 	/* check if port_string holds a value */
 	if (strlen(port_string) != 0) {
 		db_params->port =
