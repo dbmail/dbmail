@@ -222,9 +222,9 @@ void GetDBParams(db_param_t * db_params)
 
 	/* expand ~ in db name to HOME env variable */
 	if ((strlen(db_params->db) > 0 ) && (db_params->db[0] == '~')) {
-		char *homedir = getenv ("HOME");
+		char *homedir;
 		field_t db;
-		if (! strlen(homedir))
+		if ((homedir = getenv ("HOME")) == NULL)
 			TRACE(TRACE_FATAL, "can't expand ~ in db name");
 		g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(db_params->db[1]));
 		g_strlcpy(db_params->db, db, FIELDSIZE);
