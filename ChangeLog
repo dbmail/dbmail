@@ -1,5 +1,7 @@
 2007-03-11  Paul J Stevens <paul@nfg.nl>
 
+	* acinclude.m4, configure:
+	final touch on sqlite autocreate
 	* debian/changelog:
 	2.2.4 packages
 	* config.c:
