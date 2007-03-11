@@ -1,5 +1,7 @@
 2007-03-11  Paul J Stevens <paul@nfg.nl>
 
+	* config.c:
+	expand tilde char in db path (closes #529)
 	* debian/dbmail.postinst:
 	fix sed error
 	* debian/changelog:
