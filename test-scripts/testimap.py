@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-# $Id: testimap.py 2452 2007-03-07 13:46:16Z paul $
+# $Id: testimap.py 2464 2007-03-14 13:58:14Z paul $
 
 # For a protocol trace set to 4
 DEBUG = 0
