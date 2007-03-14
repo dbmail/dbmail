@@ -1,4 +1,4 @@
-/* $Id: db.c 2452 2007-03-07 13:46:16Z paul $ */
+/* $Id: db.c 2463 2007-03-14 08:55:13Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2452 2007-03-07 13:46:16Z paul $
+ * $Id: db.c 2463 2007-03-14 08:55:13Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -3985,6 +3985,11 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0,",DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
+
+		// Skip recent_flag because it is part of the query.
+		if (i == IMAP_FLAG_RECENT)
+			continue;
+
 		left = DEF_QUERYSIZE - strlen(query);
 		switch (action_type) {
 		case IMAPFA_ADD:
