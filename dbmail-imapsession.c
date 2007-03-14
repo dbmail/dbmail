@@ -591,7 +591,8 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
 	
-	g_return_val_if_fail(ids && g_tree_nnodes(ids)>0 ,NULL);
+	if (! (ids && g_tree_nnodes(ids)>0))
+		return NULL;
 
 	l = g_tree_keys(ids);
 
@@ -1570,10 +1571,7 @@ static gboolean imap_msginfo_notify(u64_t *uid, msginfo_t *msginfo, struct ImapS
 int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean update)
 {
 	/* 
-	   FIXME: this should be called during each command
-	   but only show status updates for changes
-	   Currently only changes in EXISTS and RECENT are detected
-	 
+	   FIXME: this should be called more often?
 	 
 		C: a047 NOOP
 		S: * 22 EXPUNGE

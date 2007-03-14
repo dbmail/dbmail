@@ -198,8 +198,12 @@ class testImapServer(unittest.TestCase):
             an `EXPUNGE' response for each deleted message. Returned data
             contains a list of `EXPUNGE' message numbers in order received.
         """
-        self.o.select('INBOX')
-        self.assertEquals(self.o.expunge(),('OK', [None]))
+
+        getFreshbox('testexpungebox')
+        self.o.select('testexpungebox')
+        self.o.store('1:*', '+FLAGS', '\Deleted')
+        msnlist = self.o.expunge()[1];
+        self.assertEquals(msnlist,['11', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1'])
 
     def testFetch(self):
         """ 
@@ -396,7 +400,6 @@ class testImapServer(unittest.TestCase):
 
         self.o.select('recenttestbox')
         self.o.fetch("1:*","(Flags)")
-        print self.o.recent()
         self.assertEquals(self.o.status("recenttestbox",'(RECENT)')[1][0], '"recenttestbox" (RECENT 0)')
 
     def testRename(self):
