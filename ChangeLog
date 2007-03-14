@@ -1,3 +1,11 @@
+2007-03-14  Paul J Stevens <paul@nfg.nl>
+
+	* pop3.c:
+	check return value on db_update_pop (closes: #530)
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testexpunge.imap, 
+	  test-scripts/testimap.py:
+	fix expunge response (closes #535)
+
 2007-03-14  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c:
