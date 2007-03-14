@@ -1,0 +1,5 @@
+1 login testuser1 test
+2 select INBOX
+3 uid store 1:* +FLAGS (\Deleted \Seen)
+4 expunge
+5 logout

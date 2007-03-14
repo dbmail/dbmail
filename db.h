@@ -1184,17 +1184,6 @@ int db_get_msgflag(const char *flag_name,
 		   u64_t msg_idnr, u64_t mailbox_idnr);
 
 /**
- * \brief get all flags for a message
- * \param msg_idnr
- * \param mailbox_idnr
- * \param flags An array of IMAP_NFLAGS elements. 
- * \return 
- * 		- -1 on failure
- * 		- 0 on success
- */
-int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags);
-
-/**
  * \brief set flags for a message
  * \param msg_idnr
  * \param mailbox_idnr
@@ -1213,68 +1202,6 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags);
  */
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
 		   int action_type);
-
-int db_set_msgflag_recent(u64_t msg_idnr, u64_t mailbox_idnr);
-
-int db_set_msgflag_recent_range(u64_t msg_idnr_lo, u64_t msg_idnr_hi, u64_t mailbox_idnr);
-
-
-/**
- * \brief retrieve internal message date
- * \param mailbox_idnr
- * \param msg_idnr
- * \param date string of size IMAP_INTERNALDATE_LEN which will
- *        hold the date after call.
- * \return 
- *     - -1 on failure
- *     -  0 on success
- */
-int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date);
-/**
- * \brief set the RFCSIZE field of a message
- * \param rfcsize new rfc size
- * \param msg_idnr
- * \param mailbox_idnr
- * \return
- * 		- -1 on failure
- * 		- 0 on success
- */
-int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr);
-/**
- * \brief get the RFCSIZE field of a message
- * \param msg_idnr
- * \param mailbox_idnr
- * \param rfc_size will hold RFCSIZE after return. Must be a valid pointer
- * on call.
- * \return
- * 		- -1 on failure
- * 		- 1 on success
- */
-int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size);
-
-/**
- * \brief builds a list containing the fields of
- * the main header.
- * \param msg_idnr
- * \param hdrlist will hold the list when finished
- * \return
- *    - -3 parse error
- *    - -2 memory error
- *    - -1 database error
- *    - 0 success
- * \attention hdrlist should be empty on call.
- */
-int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist, const char *headername);
-/**
- * \brief check if a message belongs to a mailbox
- * \param mailbox_idnr
- * \param message_idnr
- * \return 
- *    - -1 on failure
- *    -  0 if message does not belong to mailbox
- *    - 1 if message belongs to mailbox
- */
-int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t message_idnr);
 
 /**
  * \brief check if a user has a certain right to a mailbox

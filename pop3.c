@@ -176,8 +176,11 @@ int pop3_handle_connection(clientinfo_t * ci)
 					session.virtual_totalsize);
 
 			/* if everything went well, write down everything and do a cleanup */
-			db_update_pop(&session);
-			fprintf(ci->tx, "+OK see ya later\r\n");
+			if (db_update_pop(&session) == DM_SUCCESS)
+				fprintf(ci->tx, "+OK see ya later\r\n");
+			else
+				fprintf(ci->tx, "-ERR some deleted messages not removed\r\n");
+
 			fflush(ci->tx);
 			break;
 
