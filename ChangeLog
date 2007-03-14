@@ -1,3 +1,9 @@
+2007-03-14  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Skip Recent flag because it is now hardcoded into the query (closes
+	bug #534)
+
 2007-03-11  Paul J Stevens <paul@nfg.nl>
 
 	* acinclude.m4, configure:

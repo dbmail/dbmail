@@ -3985,6 +3985,11 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0,",DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
+
+		// Skip recent_flag because it is part of the query.
+		if (i == IMAP_FLAG_RECENT)
+			continue;
+
 		left = DEF_QUERYSIZE - strlen(query);
 		switch (action_type) {
 		case IMAPFA_ADD:
