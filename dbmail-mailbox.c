@@ -119,7 +119,7 @@ static void uid_msn_map(struct DbmailMailbox *self)
 		g_tree_destroy(self->msn);
 
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
-	self->rows = 0;
+	self->rows = 1;
 
 	g_tree_foreach(self->ids, (GTraverseFunc)_do_msn_map, self);
 }
@@ -137,7 +137,7 @@ void mailbox_uid_msn_new(struct DbmailMailbox *self)
 
 	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
-	self->rows = 0;
+	self->rows = 1;
 }
 
 static void mailbox_build_uid_map(struct DbmailMailbox *self)
@@ -153,7 +153,7 @@ static void mailbox_build_uid_map(struct DbmailMailbox *self)
 		*id = db_get_result_u64(i,0);
 
 		msn = g_new0(u64_t,1);
-		*msn = i;
+		*msn = i+1;
 
 		g_tree_insert(self->ids,id,msn);
 		g_tree_insert(self->msn,msn,id);
@@ -1319,7 +1319,8 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		if (rest[0] == '*') {
 			l = hi;
 			r = l;
-			rest++;
+			if (strlen(rest) > 1)
+				rest++;
 		} else {
 			if (! (l = strtoull(sets->data,&rest,10)))
 				break;
@@ -1331,7 +1332,8 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		}
 		
 		if (rest[0]==':') {
-			rest++;
+			if (strlen(rest)>1)
+				rest++;
 			if (rest[0] == '*') 
 				r = hi;
 			else {
