@@ -107,18 +107,21 @@ gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)
 	return self->uid;
 }
 
-
-static void uid_msn_map(struct DbmailMailbox *self, u64_t *id)
+static void _do_msn_map(u64_t *id, u64_t *msn, struct DbmailMailbox *self)
 {
-	u64_t *msn;
+	*msn = self->rows++;
+	g_tree_insert(self->msn, msn, id);
+}
 
-	self->rows++;
+static void uid_msn_map(struct DbmailMailbox *self)
+{
+	if (self->msn)
+		g_tree_destroy(self->msn);
 
-	msn = g_new0(u64_t,1);
-	*msn = self->rows;
+	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
+	self->rows = 0;
 
-	g_tree_insert(self->ids,id,msn);
-	g_tree_insert(self->msn,msn,id);
+	g_tree_foreach(self->ids, (GTraverseFunc)_do_msn_map, self);
 }
 	
 void mailbox_uid_msn_new(struct DbmailMailbox *self)
@@ -135,14 +138,12 @@ void mailbox_uid_msn_new(struct DbmailMailbox *self)
 	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
 	self->rows = 0;
-
-
 }
 
 static void mailbox_build_uid_map(struct DbmailMailbox *self)
 {
 	int i, rows;
-	u64_t *id;
+	u64_t *id, *msn;
 
 	mailbox_uid_msn_new(self);
 
@@ -150,7 +151,12 @@ static void mailbox_build_uid_map(struct DbmailMailbox *self)
 	for (i=0; i< rows; i++) {
 		id = g_new0(u64_t,1);
 		*id = db_get_result_u64(i,0);
-		uid_msn_map(self,id);
+
+		msn = g_new0(u64_t,1);
+		*msn = i;
+
+		g_tree_insert(self->ids,id,msn);
+		g_tree_insert(self->msn,msn,id);
 	}
 	
 	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
@@ -177,6 +183,15 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 	mailbox_build_uid_map(self);
 
 	db_free_result();
+	return DM_SUCCESS;
+}
+
+int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
+{
+	if (! g_tree_remove(self->ids, id))
+		return DM_EGENERAL;
+	uid_msn_map(self);
+
 	return DM_SUCCESS;
 }
 

@@ -1549,9 +1549,16 @@ static gboolean imap_msginfo_notify(u64_t *uid, msginfo_t *msginfo, struct ImapS
 		return TRUE;
 	}
 	// EXPUNGE
-	if (! newmsginfo) {
-		dbmail_imap_session_printf(self, "* %llu EXPUNGE\r\n", *msn);
-		return FALSE;
+	switch (self->command_type) {
+		case IMAP_COMM_NOOP:
+			if (! newmsginfo) {
+				dbmail_imap_session_printf(self, "* %llu EXPUNGE\r\n", *msn);
+				dbmail_mailbox_remove_uid(self->mailbox, uid);
+				return FALSE;
+
+			}
+		default:
+		break;
 	}
 
 	// FETCH

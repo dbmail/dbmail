@@ -2289,6 +2289,8 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 
 		if (g_mime_content_type_is_type(type,"multipart","*")) {
 			object=g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
+			if (! GMIME_IS_OBJECT(object))
+				return NULL;
 			type = (GMimeContentType *)g_mime_object_get_content_type(object);
 			assert(object);
 		}
