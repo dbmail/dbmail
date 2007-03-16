@@ -999,24 +999,37 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	values = g_relation_select(self->headers,header,0);
 	for (i=0; i<values->len;i++) {
 		raw = (unsigned char *)g_tuples_index(values,i,1);
-		char *tmp_raw=NULL;
+		
+		// Header values must be 7-bit
+		char *tmp_raw2=NULL, *tmp_raw=NULL;
+		tmp_raw=convert_8bit_field_to_utf8((GMimeMessage *)(self->content),(const char *)raw);
+		if ((tmp_raw != NULL) && (g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
+		    tmp_raw2=g_mime_utils_header_encode_text((unsigned char *)tmp_raw);
+		    g_free(tmp_raw);
+		    tmp_raw=tmp_raw2;
+		}
+		
 		if (isaddr) {
 			InternetAddressList *alist;
-			gchar *t = imap_cleanup_address((const char *)raw);
+			gchar *t = imap_cleanup_address((const char *)tmp_raw);
 			alist = internet_address_parse_string(t);
 			g_free(t);
 		
 			value = internet_address_list_to_string(alist, TRUE);
 			internet_address_list_destroy(alist);
 
-			tmp_raw=convert_8bit_field((GMimeMessage *)(self->content),value);
-						
-			safe_value = dm_stresc(tmp_raw);
+ 			tmp_raw2=g_mime_utils_header_decode_text((const unsigned char *)value);
+ 			tmp_raw=convert_8bit_field((GMimeMessage *)(self->content),tmp_raw2);
+ 
+			safe_value = dm_stresc(value);
 			g_free(value);
 		} else {
-			tmp_raw=convert_8bit_field((GMimeMessage *)(self->content),(const char *)raw);
+ 			tmp_raw2=g_mime_utils_header_decode_text(raw);
+ 			tmp_raw=convert_8bit_field((GMimeMessage *)(self->content),(const char *)tmp_raw2);
+ 
 			safe_value = dm_stresc((const char *)tmp_raw);
 		}
+		g_free(tmp_raw2);
 		g_free(tmp_raw);
 
 		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
@@ -1121,10 +1134,21 @@ void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
 void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 {
 	const char *addr;
+	char *value;
 	InternetAddressList *list;
 
-	addr = g_mime_message_get_sender((GMimeMessage *)(self->content));
-	list = internet_address_parse_string(addr);
+	// g_mime_message_get_sender fails to get 8-bit header, so we use dbmail_message_get_header
+	addr = (char *)dbmail_message_get_header(self, "From");
+	value = convert_8bit_field(GMIME_MESSAGE(self->content), addr);
+	if (value != NULL) if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
+	    char *value2 = g_mime_utils_header_encode_text((unsigned char *)value);
+	    g_free(value);
+	    value = value2;
+	}
+	
+	list = internet_address_parse_string(value);
+	g_free(value);
+	
 	if (list == NULL)
 		return;
 	insert_address_cache(self->physid, "from", list,(GMimeMessage *)(self->content));
@@ -1134,10 +1158,21 @@ void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
 {
 	const char *addr;
+	char *value;
 	InternetAddressList *list;
 
-	addr = g_mime_message_get_reply_to((GMimeMessage *)(self->content));
-	list = internet_address_parse_string(addr);
+	// g_mime_message_get_reply_to fails to get 8-bit header, so we use dbmail_message_get_header
+	addr = (char *)dbmail_message_get_header(self, "Reply-to");
+	value = convert_8bit_field(GMIME_MESSAGE(self->content), addr);
+	if (value != NULL) if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
+	    char *value2 = g_mime_utils_header_encode_text((unsigned char *)value);
+	    g_free(value);
+	    value = value2;
+	}
+	
+	list = internet_address_parse_string(value);
+	g_free(value);
+
 	if (list == NULL)
 		return;
 	insert_address_cache(self->physid, "replyto", list,(GMimeMessage *)(self->content));
@@ -1170,20 +1205,25 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 {
 	char *value, *raw;
 	char *s;
+	char *tmp;
 	
-	raw = (char *)g_mime_message_get_subject(GMIME_MESSAGE(self->content));
+	// g_mime_message_get_subject fails to get 8-bit header, so we use dbmail_message_get_header
+	raw = (char *)dbmail_message_get_header(self, "Subject");
 
 	if (! raw) {
 		TRACE(TRACE_MESSAGE,"no subject field value [%llu]", self->physid);
 		return;
 	}
 
+
+	value = convert_8bit_field_to_utf8(GMIME_MESSAGE(self->content), raw);
+	s = dm_base_subject(value);
 	
-	value = convert_8bit_field(GMIME_MESSAGE(self->content), raw);
-	s = value;
-	dm_base_subject(s);
-	
-	insert_field_cache(self->physid, "subject", s);
+	// dm_base_subject returns utf-8 string, convert it into database encoding
+	tmp = convert_8bit_field(GMIME_MESSAGE(self->content), s);
+	insert_field_cache(self->physid, "subject", tmp);
+	g_free(tmp);
+	g_free(s);
 	
 	g_free(value);
 }

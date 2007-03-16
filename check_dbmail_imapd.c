@@ -841,12 +841,10 @@ unsigned int get_count_on(unsigned int * set, unsigned int setlen) {
 	
 static int wrap_base_subject(const char *in, const char *expect) 
 {
-	char *s = g_strdup(in);
-	char *out = s;
+	char *out = dm_base_subject(in);
 	int res;
-	dm_base_subject(out);
 	res = strcmp(out, expect);
-	g_free(s);
+	g_free(out);
 	return res;
 }	
 

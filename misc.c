@@ -630,13 +630,19 @@ static void _strip_sub_leader(char *subject)
 	_strip_refwd(subject);
 }
 
-void dm_base_subject(char *subject)
+char * dm_base_subject(const char *subject)
 {
 	unsigned offset, len, olen;
 	char *tmp, *saved;
 	
-	tmp = g_mime_utils_header_decode_text((unsigned char *)subject);
+	// we expect utf-8 or 7-bit data
+	if (subject == NULL) return NULL;
+	if (g_mime_utils_text_is_8bit((unsigned char *)subject, strlen(subject))) 
+		tmp = g_strdup(subject);
+	else 
+		tmp = g_mime_utils_header_decode_text((unsigned char *)subject);
 	saved = tmp;
+	
 	dm_pack_spaces(tmp);
 	g_strstrip(tmp);
 	while (1==1) {
@@ -666,8 +672,10 @@ void dm_base_subject(char *subject)
 		if (strlen(tmp)==olen)
 			break;
 	}
-	strncpy(subject,tmp,strlen(subject)+1);
+	tmp = g_strdup(tmp);
 	g_free(saved);
+	
+	return tmp;
 }
 
 /* 
