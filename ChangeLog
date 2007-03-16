@@ -1,3 +1,8 @@
+2007-03-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* misc.c:
+	More logging in imap_get_partspec to try to nail down bug #533.
+
 2007-03-16  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c:
