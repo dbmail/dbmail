@@ -1,5 +1,8 @@
 2007-03-16  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-message.c:
+	add x-dbmail-physmessage-id header only during retrieval, not during
+	insertion (closes: #502)
 	* check_dbmail_imapd.c, configure, dbmail-message.c, misc.c, misc.h:
 	merging 8bit header patches (bug #538)
 
