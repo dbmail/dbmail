@@ -16,10 +16,6 @@
 	* db.c:
 	Skip Recent flag because it is now hardcoded into the query (closes
 	bug #534)
-	* serverparent.c:
-	Rearranged ClearConfig and new ResetConfig to avoid freeing an
-	uninitialized pointer, as well as not leak a few bytes on SIGHUP
-	(closes bug #537)
 
 2007-03-11  Paul J Stevens <paul@nfg.nl>
 

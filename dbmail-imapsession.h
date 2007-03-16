@@ -17,6 +17,7 @@ struct ImapSession {
 	GMimeStream *fstream; // gmime filter wrapper around the TX handler in clientinfo_t
 	char *tag;
 	char *command;
+	int command_type;
 	char **args;
 	fetch_items_t *fi;
 	struct DbmailMessage *message;
