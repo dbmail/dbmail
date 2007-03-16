@@ -1000,36 +1000,39 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	for (i=0; i<values->len;i++) {
 		raw = (unsigned char *)g_tuples_index(values,i,1);
 		
-		// Header values must be 7-bit
-		char *tmp_raw2=NULL, *tmp_raw=NULL;
-		tmp_raw=convert_8bit_field_to_utf8((GMimeMessage *)(self->content),(const char *)raw);
-		if ((tmp_raw != NULL) && (g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
-		    tmp_raw2=g_mime_utils_header_encode_text((unsigned char *)tmp_raw);
-		    g_free(tmp_raw);
-		    tmp_raw=tmp_raw2;
-		}
+                char *tmp_raw = NULL;
+                char *tmp_raw2 = NULL;
 		
 		if (isaddr) {
 			InternetAddressList *alist;
+
+                        tmp_raw = convert_8bit_field_to_utf8((GMimeMessage *)(self->content), (const char *)raw);
+                        if ((tmp_raw != NULL) && (g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
+                            tmp_raw2 = g_mime_utils_header_encode_text((unsigned char *)tmp_raw);
+                            g_free(tmp_raw);
+                            tmp_raw = tmp_raw2;
+                        }
+
 			gchar *t = imap_cleanup_address((const char *)tmp_raw);
 			alist = internet_address_parse_string(t);
 			g_free(t);
+			g_free(tmp_raw);
 		
-			value = internet_address_list_to_string(alist, TRUE);
+			tmp_raw = internet_address_list_to_string(alist, TRUE);
+			value = g_mime_utils_header_decode_text((const unsigned char *)tmp_raw);
 			internet_address_list_destroy(alist);
 
- 			tmp_raw2=g_mime_utils_header_decode_text((const unsigned char *)value);
- 			tmp_raw=convert_8bit_field((GMimeMessage *)(self->content),tmp_raw2);
- 
 			safe_value = dm_stresc(value);
 			g_free(value);
 		} else {
- 			tmp_raw2=g_mime_utils_header_decode_text(raw);
- 			tmp_raw=convert_8bit_field((GMimeMessage *)(self->content),(const char *)tmp_raw2);
- 
+			tmp_raw = convert_8bit_field((GMimeMessage *)(self->content), (const char *)raw);
+			if ((tmp_raw != NULL) && (!g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
+			    tmp_raw2 = g_mime_utils_header_decode_text((unsigned char *)tmp_raw);
+			    g_free(tmp_raw);
+			    tmp_raw = tmp_raw2;
+			}
 			safe_value = dm_stresc((const char *)tmp_raw);
 		}
-		g_free(tmp_raw2);
 		g_free(tmp_raw);
 
 		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
