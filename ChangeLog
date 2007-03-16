@@ -1,3 +1,8 @@
+2007-03-16  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, configure, dbmail-message.c, misc.c, misc.h:
+	merging 8bit header patches (bug #538)
+
 2007-03-14  Paul J Stevens <paul@nfg.nl>
 
 	* pop3.c:
