@@ -682,9 +682,17 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	}
 
 	m = g_string_new("");
-	for (row=0; row < rows; row++)
-		g_string_append_printf(m, "%s", db_get_result(row,0));
-	
+	for (row=0; row < rows; row++) {
+		char *str= db_get_result(row,0);
+		if( str && db_get_result_int(row,1)==1) {
+			size_t q=strlen(str)-1;
+			for(;q>=0 && (str[q]=='\r' || str[q]=='\n');q--);
+			g_string_append_len(m,str,q+1);
+			g_string_append_printf(m, "\r\nX-DBMail-PhysMessage-ID: %llu\r\n\r\n", dbmail_message_get_physid(self));
+		} else {
+			g_string_append_printf(m, "%s", str);
+		}
+	}
 	db_free_result();
 	
 	self = dbmail_message_init_with_string(self,m);
@@ -703,7 +711,7 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
  */
 static struct DbmailMessage * _fetch_head(struct DbmailMessage *self)
 {
-	char *query_template = 	"SELECT messageblk "
+	char *query_template = 	"SELECT messageblk, is_header "
 		"FROM %smessageblks "
 		"WHERE physmessage_id = %llu "
 		"AND is_header = '1'";
@@ -718,7 +726,7 @@ static struct DbmailMessage * _fetch_head(struct DbmailMessage *self)
  */
 static struct DbmailMessage * _fetch_full(struct DbmailMessage *self) 
 {
-	char *query_template = "SELECT messageblk "
+	char *query_template = "SELECT messageblk, is_header "
 		"FROM %smessageblks "
 		"WHERE physmessage_id = %llu "
 		"ORDER BY messageblk_idnr";
@@ -867,11 +875,7 @@ int _message_insert(struct DbmailMessage *self,
 	}
 	g_free(internal_date);
 
-	/* insert the physmessage-id into the message-headers */
-	physid = g_strdup_printf("%llu", physmessage_id);
 	dbmail_message_set_physid(self, physmessage_id);
-	dbmail_message_set_header(self, "X-DBMail-PhysMessage-ID", physid);
-	g_free(physid);
 	
 	/* now insert an entry into the messages table */
 	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
@@ -889,8 +893,6 @@ int _message_insert(struct DbmailMessage *self,
 	self->id = db_insert_result("message_idnr");
 	return 1;
 }
-
-
 
 int dbmail_message_cache_headers(const struct DbmailMessage *self)
 {
