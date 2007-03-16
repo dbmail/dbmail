@@ -990,7 +990,7 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 {
 	unsigned i=0, rows=0;
 	GString *h = NULL, *q = g_string_new("");
-	gchar *fld, *val, *old, *new;
+	gchar *fld, *val, *old, *new, *tmp;
 	GTree *t;
 	u64_t *mid, *hi, *lo;
 	u64_t id;
@@ -1043,9 +1043,11 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 		
 		fld = (char *)db_get_result(i,1);
 		val = (char *)db_get_result(i,2);
+		tmp = convert_8bit_db_to_mime(val);
 		
 		old = g_tree_lookup(t, (gconstpointer)mid);
-		new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
+		new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, tmp);
+		g_free(tmp);
 		
 		g_tree_insert(t,mid,new);
 	}
