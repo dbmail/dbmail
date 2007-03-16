@@ -72,14 +72,20 @@ service_stop() {
 	start-stop-daemon --stop --retry 10 \
 		--pidfile ${PID_DIR}/${_name}.pid >/dev/null 2>&1 || true
 
-	pids=`pidof ${_name}`
-	if [ -n  "$pids" ]; then
-		log_failure_msg "failed"
-		return 1
-	fi
-	
-	return 0
-	
+	pidof ${_name} >/dev/null 2>&1 || return 0
+	# try harder
+	echo -n "."
+	killall ${_name} >/dev/null 2>&1 || true
+	sleep 4
+	pidof ${_name} >/dev/null 2>&1 || return 0
+	echo -n "."
+	killall -9 ${_name} >/dev/null 2>&1 || true
+	sleep 2
+	pidof ${_name} >/dev/null 2>&1 || return 0
+	echo -n "."
+	log_failure_msg "failed"
+	return 1
+
 }
 	
 service_reload() {
