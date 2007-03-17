@@ -700,10 +700,9 @@ static GTree * _fetch_envelopes(struct ImapSession *self)
 	g_string_printf(q,"SELECT message_idnr,envelope "
 			"FROM %senvelope e "
 			"JOIN %smessages m ON m.physmessage_id=e.physmessage_id "
-			"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
 			"WHERE m.mailbox_idnr = %llu "
 			"AND message_idnr BETWEEN %llu AND %llu ",
-			DBPFX, DBPFX, DBPFX, 
+			DBPFX, DBPFX,  
 			self->mailbox->id, *lo, *hi);
 	
 	
@@ -1012,12 +1011,11 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
 			"FROM %sheadervalue v "
 			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
-			"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
 			"JOIN %sheadername n ON v.headername_id=n.id "
 			"WHERE m.mailbox_idnr = %llu "
 			"AND message_idnr BETWEEN %llu AND %llu "
 			"AND lower(headername) %s IN ('%s')",
-			DBPFX, DBPFX, DBPFX, DBPFX,
+			DBPFX, DBPFX, DBPFX,
 			self->mailbox->id,
 			*lo, *hi, not?"NOT":"", h->str);
 	
