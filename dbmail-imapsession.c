@@ -985,27 +985,27 @@ static void imap_cache_send_tmpdump(struct ImapSession *self, body_fetch_t *body
 }
 
 /* get headers or not */
-static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gboolean not)
+static void _fetch_headers(struct ImapSession *self, const body_fetch_t *bodyfetch, gboolean not)
 {
 	unsigned i=0, rows=0;
-	GString *h = NULL, *q = g_string_new("");
+	long long cnt = 0;
+	GString *ts = NULL, *h = NULL, *q = g_string_new("");
 	gchar *fld, *val, *old, *new, *tmp;
-	GTree *t;
-	u64_t *mid, *hi, *lo;
-	u64_t id;
-	GList *l;
+	u64_t *mid;
+	u64_t id, tmpdumpsize;
 
-	GTree *ids = self->ids;
-	
-	l = g_tree_keys((GTree *)ids);
-	
-	l = g_list_first(l);
-	lo = (u64_t *)l->data;
-	
-	l = g_list_last(l);
-	hi = (u64_t *)l->data;
+	int k;
+	GList *tlist = NULL;
 
-	h = g_list_join((GList *)headers,"','");
+	for (k = 0; k < bodyfetch->argcnt; k++) 
+		tlist = g_list_append(tlist, g_strdup(self->args[k + bodyfetch->argstart]));
+
+	tmp = dbmail_imap_plist_as_string(tlist);
+	dbmail_imap_session_printf(self,"HEADER.FIELDS%s %s] ", not ? ".NOT" : "", tmp);
+	g_free(tmp);
+	tmp = NULL;
+
+	h = g_list_join((GList *)tlist,"','");
 	h = g_string_ascii_down(h);
 	
 	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
@@ -1013,19 +1013,20 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
 			"JOIN %sheadername n ON v.headername_id=n.id "
 			"WHERE m.mailbox_idnr = %llu "
-			"AND message_idnr BETWEEN %llu AND %llu "
+			"AND message_idnr = %llu "
 			"AND lower(headername) %s IN ('%s')",
 			DBPFX, DBPFX, DBPFX,
 			self->mailbox->id,
-			*lo, *hi, not?"NOT":"", h->str);
+			self->msg_idnr, not?"NOT":"", h->str);
 	
 	
 	if (db_query(q->str)==-1)
-		return NULL;
+		return;
 	
 	g_string_free(h,TRUE);
 	
-	t = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	if (! self->headers)
+		self->headers = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 
 	rows = db_num_rows();
 	
@@ -1033,7 +1034,7 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 		
 		id = db_get_result_u64(i,0);
 		
-		if (! g_tree_lookup((GTree *)ids,&id))
+		if (! g_tree_lookup(self->ids,&id))
 			continue;
 		
 		mid = g_new0(u64_t,1);
@@ -1043,30 +1044,58 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 		val = (char *)db_get_result(i,2);
 		tmp = convert_8bit_db_to_mime(val);
 		
-		old = g_tree_lookup(t, (gconstpointer)mid);
+		old = g_tree_lookup(self->headers, (gconstpointer)mid);
 		new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, tmp);
 		g_free(tmp);
 		
-		g_tree_insert(t,mid,new);
+		g_tree_insert(self->headers,mid,new);
 	}
 	db_free_result();
-
 	g_string_free(q,TRUE);
-	
-	g_list_free(l);
 
-	return t;
+	tmp = g_tree_lookup(self->headers, &(self->msg_idnr));
+	
+	tmpdumpsize=0;
+	
+	if (!tmp) {
+		dbmail_imap_session_printf(self, "{2}\r\n\r\n");
+	} else {
+		ts = g_string_new(tmp);
+		
+		if (bodyfetch->octetcnt > 0) {
+			
+			if (bodyfetch->octetstart > 0 && bodyfetch->octetstart < ts->len)
+				ts = g_string_erase(ts, 0, bodyfetch->octetstart);
+			
+			if (ts->len > bodyfetch->octetcnt)
+				ts = g_string_truncate(ts, bodyfetch->octetcnt);
+			
+			tmp = get_crlf_encoded(ts->str);
+			cnt = strlen(tmp);
+			
+			dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n%s\r\n", 
+					bodyfetch->octetstart, 
+					cnt+2,
+					tmp);
+		} else {
+			tmp = get_crlf_encoded(ts->str);
+			cnt = strlen(tmp);
+			dbmail_imap_session_printf(self, "{%llu}\r\n%s\r\n", cnt+2, tmp);
+		}
+		g_string_free(ts,TRUE);
+		g_free(tmp);
+	}
+
+	g_list_foreach(tlist, (GFunc)g_free, NULL);
+	g_list_free(tlist);
 }
+
 static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) 
 {
-	long long cnt = 0;
 	u64_t tmpdumpsize;
-	GList *tlist = NULL, *flist = NULL;
-	GString *ts;
 	GMimeObject *part = NULL;
 	char *tmp;
 	gboolean condition = FALSE;
-	int k;
 	struct ImapSession *self = (struct ImapSession *)data;
 	
 	if (bodyfetch->itemtype < 0)
@@ -1153,61 +1182,9 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		condition=TRUE;
 		
 	case BFIT_HEADER_FIELDS:
-		tlist = NULL;
-		
-		for (k = 0; k < bodyfetch->argcnt; k++) 
-			tlist = g_list_append(tlist, g_strdup(self->args[k + bodyfetch->argstart]));
-
-		tmp = dbmail_imap_plist_as_string(tlist);
-		dbmail_imap_session_printf(self,"HEADER.FIELDS%s %s] ", condition ? ".NOT" : "", tmp);
-		g_free(tmp);
-		tmp = NULL;
-		
-		if (! self->headers)
-			self->headers = _fetch_headers(self, tlist, condition);
-		
-		if (self->headers) {
-			u64_t msg_idnr = self->msg_idnr;
-			tmp = g_tree_lookup(self->headers, &msg_idnr);
-		}
-		
-		tmpdumpsize=0;
-		
-		if (!tmp) {
-			dbmail_imap_session_printf(self, "{2}\r\n\r\n");
-		} else {
-			ts = g_string_new(tmp);
-			
-			if (bodyfetch->octetcnt > 0) {
-				
-				if (bodyfetch->octetstart > 0 && bodyfetch->octetstart < ts->len)
-					ts = g_string_erase(ts, 0, bodyfetch->octetstart);
-				
-				if (ts->len > bodyfetch->octetcnt)
-					ts = g_string_truncate(ts, bodyfetch->octetcnt);
-				
-				tmp = get_crlf_encoded(ts->str);
-				cnt = strlen(tmp);
-				
-				dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n%s\r\n", 
-						bodyfetch->octetstart, 
-						cnt+2,
-						tmp);
-			} else {
-				tmp = get_crlf_encoded(ts->str);
-				cnt = strlen(tmp);
-				dbmail_imap_session_printf(self, "{%llu}\r\n%s\r\n", cnt+2, tmp);
-			}
-			g_string_free(ts,TRUE);
-			g_free(tmp);
-		}
-
-		g_list_foreach(tlist, (GFunc)g_free, NULL);
-		g_list_free(tlist);
-		g_list_foreach(flist, (GFunc)g_free, NULL);
-		g_list_free(flist);
-
+		_fetch_headers(self, bodyfetch, condition);
 		break;
+
 	default:
 		dbmail_imap_session_printf(self, "\r\n* BYE internal server error\r\n");
 		return -1;
