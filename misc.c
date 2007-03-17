@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2468 2007-03-16 11:20:02Z paul $
+/*	$Id: misc.c 2471 2007-03-16 23:55:38Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -2326,39 +2326,60 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 	char *part;
 	guint index;
 	guint i;
+
+	assert(message);
+	assert(partspec);
 	
 	GString *t = g_string_new(partspec);
 	GList *specs = g_string_split(t,".");
 	g_string_free(t,TRUE);
 	
 	object = GMIME_OBJECT(message);
+	if (!object) {
+		TRACE(TRACE_INFO, "message is not an object");
+		return NULL;
+	}
+		
 	for (i=0; i< g_list_length(specs); i++) {
 		part = g_list_nth_data(specs,i);
 		if (! (index = strtol((const char *)part, NULL, 0))) 
 			break;
 		
 		if (GMIME_IS_MESSAGE(object))
-			object=GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
+			object = GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
 		
 		type = (GMimeContentType *)g_mime_object_get_content_type(object);
 
 		if (g_mime_content_type_is_type(type,"multipart","*")) {
-			object=g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
-			if (! GMIME_IS_OBJECT(object))
+			object = g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
+			if (!object) {
+				TRACE(TRACE_INFO, "object part [%d] is null", (int)index-1);
 				return NULL;
+			}
+			if (! GMIME_IS_OBJECT(object)) {
+				TRACE(TRACE_INFO, "object part [%d] is not an object", (int)index-1);
+				return NULL;
+			}
+
 			type = (GMimeContentType *)g_mime_object_get_content_type(object);
-			assert(object);
 		}
 
 		// for message/rfc822 parts we want the contained message, 
 		// not the mime-part as such
 
 		if (g_mime_content_type_is_type(type,"message","rfc822")) {
-			object=GMIME_OBJECT(GMIME_MESSAGE_PART(object)->message);
-			assert(object);
+			object = GMIME_OBJECT(GMIME_MESSAGE_PART(object)->message);
+			if (!object) {
+				TRACE(TRACE_INFO, "rfc822 part is null");
+				return NULL;
+			}
+			if (! GMIME_IS_OBJECT(object)) {
+				TRACE(TRACE_INFO, "rfc822 part is not an object");
+				return NULL;
+			}
 		}
-	
 	}
+
 	return object;
 }
 
