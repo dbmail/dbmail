@@ -683,10 +683,10 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 
 	m = g_string_new("");
 	for (row=0; row < rows; row++) {
-		char *str= db_get_result(row,0);
+		char *str = (char *)db_get_result(row,0);
 		if( str && db_get_result_int(row,1)==1) {
 			size_t q=strlen(str)-1;
-			for(;q>=0 && (str[q]=='\r' || str[q]=='\n');q--);
+			for( ; q > 0 && ( str[q]=='\r' || str[q]=='\n' ); q--);
 			g_string_append_len(m,str,q+1);
 			g_string_append_printf(m, "\r\nX-DBMail-PhysMessage-ID: %llu\r\n\r\n", dbmail_message_get_physid(self));
 		} else {
@@ -844,7 +844,6 @@ int _message_insert(struct DbmailMessage *self,
 	u64_t mailboxid;
 	u64_t physmessage_id;
 	char *internal_date = NULL;
-	char *physid = NULL;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
 
