@@ -63,9 +63,13 @@ static unsigned find_end_of_header(const char *h)
 {
 	gchar c, p1 = 0, p2 = 0;
 	unsigned i = 0;
-	size_t l = strlen(h);
+	size_t l;
 
-	while (h++) {
+	assert(h);
+
+	l  = strlen(h);
+
+	while (h++ && i<=l) {
 		i++;
 		c = *h;
 		if (c == '\n' && ((p1 == '\n') || (p1 == '\r' && p2 == '\n'))) {
@@ -86,7 +90,11 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
         unsigned i;
 	size_t l;
 	
+	g_return_val_if_fail(object != NULL, NULL);
+
 	s = g_mime_object_to_string(GMIME_OBJECT(object));
+	assert(s);
+
 	i = find_end_of_header(s);
 	
 	b = s+i;
