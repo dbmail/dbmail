@@ -1397,7 +1397,7 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 		/* a db-error occurred */
 		dbmail_imap_session_printf(self, "* BYE internal db error validating user\r\n");
 		TRACE(TRACE_ERROR, "db-validate error while validating user %s (pass %s).",
-			       	username, password);
+			       	username, password ? "XXXX" : "(null)");
 		return -1;
 	}
 
