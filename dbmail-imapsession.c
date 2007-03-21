@@ -1746,15 +1746,20 @@ static int imap_session_update_recent(GList *recent)
 
 	slices = g_list_slices(recent,100);
 	slices = g_list_first(slices);
+
+	db_begin_transaction();
 	while (slices) {
-		snprintf(query, DEF_QUERYSIZE, "update %smessages set recent_flag = 0 "
-				"where message_idnr in (%s)", DBPFX, (gchar *)slices->data);
-		if (db_query(query) == -1) 
+		snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag = 0 "
+				"WHERE message_idnr IN (%s)", DBPFX, (gchar *)slices->data);
+		if (db_query(query) == -1) {
+			db_rollback_transaction();
 			return (-1);
+		}
 		if (! g_list_next(slices))
 			break;
 		slices = g_list_next(slices);
 	}
+	db_commit_transaction();
 	
         g_list_destroy(slices);
 	return 0;
