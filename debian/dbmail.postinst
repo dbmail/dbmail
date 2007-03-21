@@ -47,6 +47,8 @@ case "$1" in
     ;;
     configure)
 
+	create_user
+
 	. /usr/share/debconf/confmodule
 	db_get dbmail/do_debconf || true; DO_DEBCONF=$RET
 	db_get dbmail/dbmail/authdriver || true; AUTHDRIVER=$RET
@@ -63,7 +65,7 @@ case "$1" in
 		db_get dbmail/start_imapd || true; START_IMAPD=$RET
 		db_get dbmail/start_lmtpd || true; START_LMTPD=$RET
 		db_get dbmail/start_pop3d || true; START_POP3D=$RET
-		db_get dbmail/sieve/start_sieve || true; START_SIEVE=$RET
+		db_get dbmail/start_sieve || true; START_SIEVE=$RET
 
 		if [ "$AUTHDRIVER" = "ldap" ]; then
 			db_get dbmail/ldap/HOSTNAME || true; LDAP_HOST=$RET
