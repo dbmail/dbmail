@@ -1,3 +1,9 @@
+2007-03-22  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	Change from g_mime_stream_write_string to g_mime_stream_write to
+	handle embedded \0 characters (closes bug #549)
+
 2007-03-17  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, dbmail-message.c:

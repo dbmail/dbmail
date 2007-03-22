@@ -372,7 +372,7 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 					break;
-				putslen = g_mime_stream_write_string(fstream, buf);
+				putslen = g_mime_stream_write(fstream, buf, getslen);
 
 				if (g_mime_stream_flush(fstream)) {
 					TRACE(TRACE_ERROR, "Failed to flush, is your /tmp filesystem full?");
