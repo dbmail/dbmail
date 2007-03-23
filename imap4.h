@@ -50,6 +50,10 @@ typedef struct {
 
 	char partspec[IMAP_MAX_PARTSPEC_LEN];	/* part specifier (i.e. '2.1.3' */
 
+	gchar *hdrnames;
+	gchar *hdrplist;
+
+
 } body_fetch_t;
 
 
