@@ -1,3 +1,21 @@
+2007-03-23  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.h:
+	do chunked queries during header and envelope retrieval when opening
+	large mailboxes (bug #539)
+	* dbmail-message.c:
+	avoid segfaults on empty messages (bug #544)
+	* dbmail-imapsession.c:
+	dont log raw password (closes: #545)
+	* dbmail.conf:
+	set default sieve port to 2000
+	* debian/dbmail.postinst:
+	add dbmail user during postinst preconfigure
+	* pop3.c, dbmail-imapsession.c:
+	log source ip on failed login (closes #543)
+	* dbmail-imapsession.c:
+	wrap flushing the recent flag in a transaction (bug #539)
+
 2007-03-22  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail-message.c:
