@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2472 2007-03-17 12:55:28Z paul $
+  $Id: dbmail-message.c 2473 2007-03-22 11:00:24Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -372,7 +372,7 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 					break;
-				putslen = g_mime_stream_write_string(fstream, buf);
+				putslen = g_mime_stream_write(fstream, buf, getslen);
 
 				if (g_mime_stream_flush(fstream)) {
 					TRACE(TRACE_ERROR, "Failed to flush, is your /tmp filesystem full?");
