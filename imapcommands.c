@@ -1411,6 +1411,7 @@ int _ic_fetch(struct ImapSession *self)
 		}
 	
 		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+		self->ids_list = g_tree_keys(self->ids);
 		
 		if (g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
@@ -1427,6 +1428,14 @@ int _ic_fetch(struct ImapSession *self)
 		if (self->envelopes) {
 			g_tree_destroy(self->envelopes);
 			self->envelopes = NULL;
+		}
+		if (self->ids) {
+			g_tree_destroy(self->ids);
+			self->ids = NULL;
+		}
+		if (self->ids_list) {
+			g_list_free(self->ids_list);
+			self->ids_list = NULL;
 		}
 	}	
 	
