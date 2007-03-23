@@ -25,8 +25,9 @@ struct ImapSession {
 	GTree *ids;
 	GTree *headers;
 	GTree *envelopes;
-	GList *recent;	// todo: replace with a struct DbmailMailbox
 	GTree *msginfo;
+	GList *recent;
+	GList *ids_list;
 	gpointer cmd; // command structure
 };
 

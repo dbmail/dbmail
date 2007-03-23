@@ -195,6 +195,10 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_tree_destroy(self->ids);
 		self->ids = NULL;
 	}
+	if (self->ids_list) {
+		g_list_free(self->ids_list);
+		self->ids_list = NULL;
+	}
 	if (self->headers) {
 		g_tree_destroy(self->headers);
 		self->headers = NULL;
@@ -914,6 +918,8 @@ static void imap_cache_send_tmpdump(struct ImapSession *self, body_fetch_t *body
 	send_data(self->ci->tx, cached_msg.tmpdump, cnt);
 }
 
+#define QUERY_BATCHSIZE 500
+
 /* get envelopes */
 static void _fetch_envelopes(struct ImapSession *self)
 {
@@ -922,14 +928,26 @@ static void _fetch_envelopes(struct ImapSession *self)
 	gchar *env, *s;
 	u64_t *mid;
 	u64_t id;
+	static int lo = 0;
+	static u64_t hi = 0;
+	GList *last;
 
-	if (! self->envelopes)
+	if (! self->envelopes) {
 		self->envelopes = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+		hi = 0;
+		lo = 0;
+	}
 
 	if ((s = g_tree_lookup(self->envelopes, &(self->msg_idnr))) != NULL) {
 		dbmail_imap_session_printf(self, "ENVELOPE %s", s?s:"");
 		return;
 	}
+
+	TRACE(TRACE_DEBUG,"lo: %d", lo);
+
+	if (! (last = g_list_nth(self->ids_list, lo+(int)QUERY_BATCHSIZE)))
+		last = g_list_last(self->ids_list);
+	hi = *(u64_t *)last->data;
 
 	g_string_printf(q,"SELECT message_idnr,envelope "
 			"FROM %senvelope e "
@@ -937,8 +955,7 @@ static void _fetch_envelopes(struct ImapSession *self)
 			"WHERE m.mailbox_idnr = %llu "
 			"AND message_idnr BETWEEN %llu AND %llu ",
 			DBPFX, DBPFX,  
-			self->mailbox->id, self->msg_idnr, self->msg_idnr+100);
-	
+			self->mailbox->id, self->msg_idnr, hi);
 	
 	if (db_query(q->str)==-1)
 		return;
@@ -960,9 +977,10 @@ static void _fetch_envelopes(struct ImapSession *self)
 		g_tree_insert(self->envelopes,mid,env);
 
 	}
-
 	db_free_result();
 	g_string_free(q,TRUE);
+
+	lo += QUERY_BATCHSIZE;
 
 	s = g_tree_lookup(self->envelopes, &(self->msg_idnr));
 	dbmail_imap_session_printf(self, "ENVELOPE %s", s?s:"");
@@ -1015,14 +1033,18 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 	gchar *fld, *val, *old, *new = NULL, *s;
 	u64_t *mid;
 	u64_t id;
-
+	GList *last;
 	int k;
+	static int lo = 0;
+	static u64_t hi = 0;
 	static u64_t ceiling = 0;
 
 	if (! self->headers) {
 		TRACE(TRACE_DEBUG, "init self->headers");
 		self->headers = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 		ceiling = 0;
+		hi = 0;
+		lo = 0;
 	}
 
 	if (! bodyfetch->hdrnames) {
@@ -1057,6 +1079,10 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 
 	// let's fetch the required message and prefetch a batch if needed.
 	
+	if (! (last = g_list_nth(self->ids_list, lo+(int)QUERY_BATCHSIZE)))
+		last = g_list_last(self->ids_list);
+	hi = *(u64_t *)last->data;
+
 	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
 			"FROM %sheadervalue v "
 			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
@@ -1066,7 +1092,7 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 			"AND lower(headername) %s IN ('%s')",
 			DBPFX, DBPFX, DBPFX,
 			self->mailbox->id,
-			self->msg_idnr, self->msg_idnr+100, 
+			self->msg_idnr, hi, 
 			not?"NOT":"", bodyfetch->hdrnames);
 	
 	if (db_query(q->str)==-1)
@@ -1095,7 +1121,8 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 		
 	}
 
-	ceiling = self->msg_idnr+100;
+	lo += QUERY_BATCHSIZE;
+	ceiling = hi;
 
 	db_free_result();
 	g_string_free(q,TRUE);
@@ -1405,7 +1432,7 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 		sleep(2);	/* security */
 
 		/* validation failed: invalid user/pass combination */
-		TRACE(TRACE_MESSAGE, "user (name %s) login rejected", username);
+		TRACE(TRACE_MESSAGE, "user (name %s) coming from [%s] login rejected", username, self->ci->ip_src);
 		dbmail_imap_session_printf(self, "%s NO login rejected\r\n", self->tag);
 
 		return 1;
@@ -1750,7 +1777,8 @@ static int imap_session_update_recent(GList *recent)
 	db_begin_transaction();
 	while (slices) {
 		snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag = 0 "
-				"WHERE message_idnr IN (%s)", DBPFX, (gchar *)slices->data);
+				"WHERE message_idnr IN (%s) AND recent_flag <> 0", 
+				DBPFX, (gchar *)slices->data);
 		if (db_query(query) == -1) {
 			db_rollback_transaction();
 			return (-1);
@@ -2211,10 +2239,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 
 	if (paridx != 0) {
 		/* error in parenthesis structure */
-		while (--nargs >= 0) {
-			dm_free(the_args[nargs]);
-			the_args[nargs] = NULL;
-		}
+		free_args();
 		return NULL;
 	}
 
