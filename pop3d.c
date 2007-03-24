@@ -19,7 +19,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3d.c 2259 2006-09-08 19:48:57Z aaron $
+/* $Id: pop3d.c 2476 2007-03-24 02:54:11Z aaron $
 *
 * pop3d.c
 *

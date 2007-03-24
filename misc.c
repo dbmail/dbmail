@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2471 2007-03-16 23:55:38Z aaron $
+/*	$Id: misc.c 2475 2007-03-24 02:28:48Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -2064,6 +2064,7 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 	}
 	if (subj==NULL) {
 		subj=g_mime_iconv_strdup(default_iconv,str_in);
+		g_mime_iconv_close(default_iconv);
 	}
 	    
 	if (subj==NULL) {
@@ -2085,6 +2086,7 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 	//char * str_out=NULL;
 	char * subj=NULL;
 	//int err_flg=1;
+	int allocated_default_iconv = 0;
 	static const char * base_charset=NULL;
 	static iconv_t base_iconv=(iconv_t)-1;
 	static iconv_t default_iconv=(iconv_t)-1;
@@ -2124,17 +2126,22 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		if (default_iconv == (iconv_t)-1) {
 			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
 		}
+		allocated_default_iconv = 1;
 	}
-	if (str_in==NULL)
+	if (str_in==NULL) {
+		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
 		return NULL;
+	}
 	
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
 		// Conversion not needed
+		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
 		return g_strdup(str_in);
 	}
 
 	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
 		// Conversion already done by header decode ? May insert to database
+		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
 		return subj;
 	}
 	
@@ -2165,6 +2172,9 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		for(p=subj;*p;p++)
 		    if(*p & 0x80) *p='?';
 	}
+
+	if(allocated_default_iconv)
+		g_mime_iconv_close(default_iconv);
 
 	return subj;
 }
