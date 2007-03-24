@@ -211,14 +211,19 @@ void ClearConfig(serverConfig_t * config)
 {
 	assert(config);
 	memset(config, 0, sizeof(serverConfig_t));
+
+	config->listenSockets = NULL;
+	config->iplist = NULL;
 }
 
 void ResetConfig(serverConfig_t * config)
 {
 	assert(config);
+
 	g_free(config->listenSockets);
 	g_strfreev(config->iplist);
-	memset(config, 0, sizeof(serverConfig_t));
+
+	ClearConfig(config);
 }
 
 void DoConfig(serverConfig_t * config, const char * const service)
