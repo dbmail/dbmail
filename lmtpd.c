@@ -40,10 +40,6 @@ int main(int argc, char *argv[])
 	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-	//fixes valgrind Conditional jump or move depends on uninitialised value(s)
-        config.iplist = NULL;
-        config.listenSockets = NULL;
-
 	result = serverparent_getopt(&config, "LMTP", argc, argv);
 	if (result == -1)
 		goto shutdown;
