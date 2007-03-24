@@ -1,3 +1,10 @@
+2007-03-23  Aaron Stone  <aaron@serendipity.cx>
+
+	* imapd.c, lmtpd.c, pop3d.c, timsieved.c:
+	Accepted patch from Leif Jackson to formally initialize some variables.
+	* misc.c, serverparent.c:
+	Accepted patch from Leif Jackson to close some minor memory leaks.
+
 2007-03-23  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.h:
