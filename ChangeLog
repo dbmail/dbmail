@@ -2,6 +2,8 @@
 
 	* db.c, dbmail-imapsession.c, dm_base64.c, modules/authsql.c:
 	valgrind fixes
+	* check_dbmail_imapd.c, misc.c:
+	fix bug #551
 
 2007-03-23  Aaron Stone  <aaron@serendipity.cx>
 
