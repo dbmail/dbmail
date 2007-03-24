@@ -1298,6 +1298,8 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         int result = 0;
         gchar *ln;
 
+	assert(message);
+
 	va_start(ap, message);
 	ln = g_strdup_vprintf(message,ap);
 	va_end(ap);

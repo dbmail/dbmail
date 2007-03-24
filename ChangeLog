@@ -1,3 +1,8 @@
+2007-03-24  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, dbmail-imapsession.c, dm_base64.c, modules/authsql.c:
+	valgrind fixes
+
 2007-03-23  Aaron Stone  <aaron@serendipity.cx>
 
 	* imapd.c, lmtpd.c, pop3d.c, timsieved.c:

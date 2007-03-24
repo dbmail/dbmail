@@ -4493,8 +4493,9 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 	int result;
 	int score, bestscore = -1;
 	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
 
+	memset(query,0,DEF_QUERYSIZE);
+	memset(clientsock,0,DM_SOCKADDR_LEN);
 	
 	TRACE(TRACE_DEBUG,"checking userid [%s] in usermap", username);
 	
