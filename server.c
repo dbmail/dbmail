@@ -1,5 +1,5 @@
 /*
-  $Id: server.c 2444 2007-03-03 17:19:54Z aaron $
+  $Id: server.c 2480 2007-03-24 22:22:18Z aaron $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -79,7 +79,7 @@ int server_setup(serverConfig_t *conf)
 	GeneralStopRequested = 0;
 	get_sigchld = 0;
 	SetParentSigHandler();
-	
+
 	childinfo.maxConnect	= conf->childMaxConnect;
 	childinfo.listenSockets	= g_memdup(conf->listenSockets, conf->ipcount * sizeof(int));
 	childinfo.numSockets   	= conf->ipcount;
