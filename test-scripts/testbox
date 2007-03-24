@@ -3002,7 +3002,7 @@ tzZZkJu2u+rAAyf91XSpmo7dHpH0gpJLp4UnyUTZbuElpCd0NZiZSSWpIrYK6SZ/sldemhg5
 --------------050000030206040804030909--
 
 
->From nobody
+From nobody@foo Tue Oct 11 13: 06:24 2005
 From: =?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=<bad@foo.ru>
 To: nobody@foo.ru
 Subject: test
@@ -3011,7 +3011,7 @@ Content-Type: text/plain
 
 test mail
 
->From nobody
+From nobody@foo Tue Oct 11 13: 06:24 2005
 From: "Kristoffer BrпїЅnemyr" <bad@foo.org>
 To: nobody@foo.org
 Subject: BrпїЅnemyr says
@@ -3020,7 +3020,7 @@ Content-Type: text/plain
 
 bogus header message
 
->From nobody
+From nobody@foo Tue Oct 11 13: 06:24 2005
 From: "job" <job@hydrosfera.ru>
 To: "job" <job@hyperboloid.ru>
 Subject: Широкий acopтимeнт cтpoитeлbныx Бл0k0в

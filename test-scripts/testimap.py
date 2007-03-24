@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
 # $Id$
 
 # For a protocol trace set to 4
@@ -29,7 +28,7 @@ TYPE = 'stream'
 #TYPE = 'network'
 
 
-import unittest, imaplib, re
+import unittest, imaplib, re, commands
 import sys, traceback, getopt, string
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
@@ -82,6 +81,17 @@ def getsock():
 def strip_crlf(s):
     return string.replace(s,'\r','')
 
+def getFreshbox(name):
+    assert(name)
+    cmd='./contrib/mailbox2dbmail/mailbox2dbmail ' \
+        '-u testuser1 -t mbox -m test-scripts/testbox ' \
+        '-b "%s" -p ./dbmail-smtp -f /etc/dbmail/dbmail-test.conf' % name
+    print "loading new testbox [%s]. please wait..." % name
+    s,o=commands.getstatusoutput(cmd)
+    if s:
+        raise "error", o
+
+
 class testImapServer(unittest.TestCase):
 
     def setUp(self,username="testuser1",password="test"):
@@ -103,8 +113,8 @@ class testImapServer(unittest.TestCase):
         # test flags
         self.o.create('testappend')
         self.o.append('testappend','\Flagged',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
-        self.o.select('testappend')
-        id=self.o.recent()[1][0]
+        result = self.o.select('testappend')
+        id = result[1][0]
         
         result = self.o.fetch(id,"(UID BODY[])")
         self.assertEquals(result[0],'OK')
@@ -188,8 +198,12 @@ class testImapServer(unittest.TestCase):
             an `EXPUNGE' response for each deleted message. Returned data
             contains a list of `EXPUNGE' message numbers in order received.
         """
-        self.o.select('INBOX')
-        self.assertEquals(self.o.expunge(),('OK', [None]))
+
+        getFreshbox('testexpungebox')
+        self.o.select('testexpungebox')
+        self.o.store('1:*', '+FLAGS', '\Deleted')
+        msnlist = self.o.expunge()[1];
+        self.assertEquals(msnlist,['11', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1'])
 
     def testFetch(self):
         """ 
@@ -204,7 +218,7 @@ class testImapServer(unittest.TestCase):
         self.o.append('tmpbox','','',str(m))
         self.o.select('tmpbox')
         self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
-        id=self.o.recent()[1][0]
+        id=1
         
         # fetch complete message. order and number of headers may differ
         result1 = self.o.fetch(id,"(UID BODY[])")
@@ -377,7 +391,16 @@ class testImapServer(unittest.TestCase):
             Prompt server for an update. Returned data is `None' if no new
             messages, else value of `RECENT' response.
         """
-        self.assertEquals(self.o.recent(),('OK', [None]))
+        readonly=1
+
+        getFreshbox('recenttestbox')
+        self.o.select('recenttestbox',readonly)
+        self.o.fetch("1:*","(Flags)")
+        self.assertEquals(int(self.o.recent()[1][0]) > 0, True)
+
+        self.o.select('recenttestbox')
+        self.o.fetch("1:*","(Flags)")
+        self.assertEquals(self.o.status("recenttestbox",'(RECENT)')[1][0], '"recenttestbox" (RECENT 0)')
 
     def testRename(self):
         """ 
@@ -557,7 +580,7 @@ class testImapServer(unittest.TestCase):
 	    TBD
 	"""
         self.o.select('INBOX')
-        self.assertRaises(self.o.error, self.o.fetch, "1" + " "*12000,"(Flags)")
+        self.assertRaises(self.o.error, self.o.fetch, "1" + " "*120000,"(Flags)")
         
     def tearDown(self):
         try:
@@ -566,7 +589,7 @@ class testImapServer(unittest.TestCase):
                 d=re.match('(\(.*\)) "([^"])" "([^"]+)"',d).groups()[-1]
                 dirs.append(d)
             for i in range(0,len(dirs)):
-                if dirs[-i]=='INBOX': continue
+                if dirs[-i]=='INBOX' or dirs[-i][0] == '#': continue
                 self.o.delete(dirs[-i])
             self.o.logout()
         except: pass

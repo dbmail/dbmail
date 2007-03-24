@@ -1,3 +1,211 @@
+2007-03-23  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.h:
+	do chunked queries during header and envelope retrieval when opening
+	large mailboxes (bug #539)
+	* dbmail-message.c:
+	avoid segfaults on empty messages (bug #544)
+	* dbmail-imapsession.c:
+	dont log raw password (closes: #545)
+	* dbmail.conf:
+	set default sieve port to 2000
+	* debian/dbmail.postinst:
+	add dbmail user during postinst preconfigure
+	* pop3.c, dbmail-imapsession.c:
+	log source ip on failed login (closes #543)
+	* dbmail-imapsession.c:
+	wrap flushing the recent flag in a transaction (bug #539)
+
+2007-03-22  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	Change from g_mime_stream_write_string to g_mime_stream_write to
+	handle embedded \0 characters (closes bug #549)
+
+2007-03-17  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-message.c:
+	remove some redundant joins
+
+2007-03-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* misc.c:
+	More logging in imap_get_partspec to try to nail down bug #533.
+
+2007-03-16  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	add x-dbmail-physmessage-id header only during retrieval, not during
+	insertion (closes: #502)
+	* check_dbmail_imapd.c, configure, dbmail-message.c, misc.c, misc.h:
+	merging 8bit header patches (bug #538)
+
+2007-03-14  Paul J Stevens <paul@nfg.nl>
+
+	* pop3.c:
+	check return value on db_update_pop (closes: #530)
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testexpunge.imap, 
+	  test-scripts/testimap.py:
+	fix expunge response (closes #535)
+
+2007-03-14  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Skip Recent flag because it is now hardcoded into the query (closes
+	bug #534)
+	* serverparent.c:
+	Rearranged ClearConfig and new ResetConfig to avoid freeing an
+	uninitialized pointer, as well as not leak a few bytes on SIGHUP
+	(closes bug #537)
+
+2007-03-11  Paul J Stevens <paul@nfg.nl>
+
+	* acinclude.m4, configure:
+	final touch on sqlite autocreate
+	* debian/changelog:
+	2.2.4 packages
+	* config.c:
+	expand tilde char in db path (closes #529)
+	* debian/dbmail.postinst:
+	fix sed error
+
+2007-03-10  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail.postinst:
+	avoid slash in sed s commands
+	* debian/changelog, debian/dbmail.postinst:
+	2.2.4 rc1 packages
+	* dbmail-mailbox.c:
+	fix for export problem #590
+
+2007-03-09  Paul J Stevens <paul@nfg.nl>
+
+	* debian/po/ml.po, debian/po/pt.po, debian/po/ta.po:
+	fix broken po files
+	* contrib/sql2sql/mysql2pgsql.sh:
+	minor fixes
+	* Makefile.in, acinclude.m4, configure, configure.in, dbmail.h.in, 
+	  man/Makefile.in, modules/Makefile.in, modules/dbsqlite.c:
+	add auto-creation of database to sqlite driver
+
+2007-03-08  Paul J Stevens <paul@nfg.nl>
+
+	* debian/po/ml.po, debian/po/pt.po, debian/po/ta.po:
+	debian po updates
+
+2007-03-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	It is not a short write if getslen == 1 and putslen == 0 (why does
+	this happen?) (closes bug #525)
+	* dbmail-mailbox.c:
+	Always prepend headers to a dumped message, in case the header block
+	does not come first. Also try asking the database to give the blocks
+	in the correct order in the first place (closes bug #520)
+
+2007-03-07  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, dbmail-imapsession.c, dbmail-imapsession.h, dbmail-message.c,
+	  dbmailtypes.h, imap4.c, imapcommands.c, test-scripts/testbox,
+	  test-scripts/testimap.py:
+	fix and extend imap flags handling (bug #519, #381)
+
+2007-03-06  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c:
+	added testcase for mailbox_remove_namespace
+	* check_dbmail_imapd.c:
+	add envelope test
+	* test-scripts/testimap.py:
+	fix false negatives after recent_flag changes
+	* debian/dbmail.postinst, debian/dbmail.postrm:
+	debian postinst fixes
+	* contrib/sql2sql/mysql2pgsql.sh:
+	adding migration script
+	* contrib/mailbox2dbmail/mailbox2dbmail:
+	add alternative config file option
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testimap.py:
+	recent_flag fixes
+
+2007-03-05  Aaron Stone <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	Sadly we have to flush after every fwrite to be sure that we don't fit
+	an entire email into the C library's buffers and then lose it all when
+	the filesystem is full and the tmpfile cannot be closed out (really
+	closes bug #511 this time).
+	* dbmail-mailbox.c:
+	Support IMAP's SEARCH LARGER and SEARCH SMALLER (closes bug #512).
+
+2007-03-04  Aaron Stone <aaron@serendipity.cx>
+
+	* misc.c, check_dbmail_misc.c:
+	More work on mailbox_remove_namespace to handle search patterns and
+	missing usernames when in the #Users namespace.
+
+2007-03-02  Aaron Stone <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	Handle read and write errors from incoming message stream and its tmp
+	file during the filter process (closes bug #511).
+	* server.c:
+	Accepted Bernard Johnson's umask patch (closes bug #516).
+	* misc.c, check_dbmail_misc.c:
+	More work on mailbox_remove_namespace to handle search patterns and
+	missing usernames when in the #Users namespace.
+
+2007-03-01  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-user.c, user.c:
+	revert changes at aarons request
+	* debian/changelog, debian/dbmail.templates, debian/po/cs.po, 
+	  debian/po/de.po, debian/po/es.po, debian/po/fr.po, debian/po/gl.po, 
+	  debian/po/it.po, debian/po/ja.po, debian/po/ml.po, debian/po/nl.po, 
+	  debian/po/pt.po, debian/po/pt_BR.po, debian/po/ru.po, 
+	  debian/po/ta.po, debian/po/templates.pot:
+	updates by Chistian Pellier
+	* misc.c:
+	fix mailbox_remove_namespace to work with search patterns
+	* db.c, imapcommands.c:
+	misc fixes
+	* Makefile.in, aclocal.m4, configure, man/Makefile.in, modules/Makefile.in:
+	regenerate autoconf files
+
+2007-02-28  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail-mysql.postinst, debian/dbmail-pgsql.postinst:
+	remove configure code from postinst, leaving the driver alone
+	* debian/dbmail.templates, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/gl.po, debian/po/it.po, 
+	  debian/po/ja.po, debian/po/nl.po, debian/po/pt_BR.po, 
+	  debian/po/ru.po, debian/po/templates.pot:
+	i10n updates
+	* ChangeLog, dbmail-user.c, user.c:
+	adapt aarons ui patch
+	* imap4.c:
+	avoid an errno race
+	* dbmail-user.c:
+	remove spurious output
+	* Makefile.in, aclocal.m4, configure, man/Makefile.in:
+	rebuild autoconf tools
+
+2007-02-27  Aaron Stone  <aaron@serendipity.cx>
+
+	* user.c, dbmail-user.c:
+	Enable use of -y/-n to protect against doing anything unintended
+	and irreversible without explicitly authorizing the changes.
+
+2007-02-26  Paul J Stevens <paul@nfg.nl>
+
+	* modules/Makefile.am, modules/Makefile.in:
+	do not build empty so files (closes: #510)
+	* dbmail.conf:
+	replace tabs with spaces (closes: #509)
+	* export.c:
+	append .mbox to mailbox-name during export
+	* pop3.c:
+	issue +OK after QUIT (closes: #513)
+
 2007-02-08  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:

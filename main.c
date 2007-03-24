@@ -344,10 +344,13 @@ int main(int argc, char *argv[])
 	/* If there wasn't already an EX_TEMPFAIL from insert_messages(),
 	 * then see if one of the status flags was marked with an error. */
 	if (!exitcode) {
+
+		const char *class, *subject, *detail;
 		delivery_status_t final_dsn;
 
 		/* Get one reasonable error code for everyone. */
 		final_dsn = dsnuser_worstcase_list(&dsnusers);
+		dsn_tostring(final_dsn, &class, &subject, &detail);
 
 		switch (final_dsn.class) {
 		case DSN_CLASS_OK:
@@ -359,9 +362,12 @@ int main(int argc, char *argv[])
 		case DSN_CLASS_NONE:
 		case DSN_CLASS_QUOTA:
 		case DSN_CLASS_FAIL:
-			/* If we're over-quota, say that,
-			 * else it's a generic user error. */
-			if (final_dsn.subject == 2)
+			/* shout */
+			TRACE(TRACE_WARNING, "%d%d%d  %s %s %s\r\n",
+					final_dsn.class, final_dsn.subject, final_dsn.detail,
+					class, subject, detail);
+
+			if (final_dsn.subject == 2) /* Mailbox Status */
 				exitcode = EX_CANTCREAT;
 			else
 				exitcode = EX_NOUSER;

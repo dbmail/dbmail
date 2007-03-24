@@ -18,8 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$ 
- */
+/* $Id$ */
 
 #ifndef _MISC_H
 #define _MISC_H
@@ -123,7 +122,7 @@ char * dm_stresc(const char * from);
 char * dm_strnesc(const char * from, size_t len);
 char * dm_shellesc(const char * command);
 void dm_pack_spaces(char *in);
-void dm_base_subject(char *subject);
+char * dm_base_subject(const char *subject);
 int listex_match(const char *p, const char *s, const char *x, int flags);
 u64_t dm_getguid(unsigned int serverid);
 
@@ -168,4 +167,5 @@ char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean n
 char * imap_cleanup_address(const char *a);
 char * convert_8bit_field(GMimeMessage *message,const char* str_in);
 char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in);
+char * convert_8bit_db_to_mime(const char* str_in);
 #endif

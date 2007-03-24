@@ -166,7 +166,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 const char *mailbox_remove_namespace(const char *fq_name,
 		char **namespace, char **username)
 {
-	char *temp, *user;
+	const char *temp = NULL, *user = NULL, *mbox = NULL;
 	size_t ns_user_len;
 	size_t ns_publ_len;
 	size_t fq_name_len;
@@ -179,39 +179,75 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	ns_publ_len = strlen(NAMESPACE_PUBLIC);
 
 	// i.e. '#Users/someuser/foldername'
+	// fail on '#Users*' and '#Users%'
+	// assume a slash in '#Users/foo*' and '#Users/foo%' like this '#Users/foo/*'
 	if (fq_name_len >= ns_user_len && strncasecmp(fq_name, NAMESPACE_USER, ns_user_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_USER;
-		user = strstr(fq_name, MAILBOX_SEPARATOR);
-		if (user == NULL || strlen(user) <= 1) {
-			TRACE(TRACE_MESSAGE, "illegal mailbox name");
+
+		int end = 0, err = 0, slash = 0;
+		// We'll use a simple state machine to parse through this.
+		for (temp = &fq_name[ns_user_len]; !end && !err; temp++) {
+			switch (*temp) {
+			case '/':
+				if (!user) {
+					user = temp + 1;
+				} else if (user && !mbox) {
+					mbox = temp + 1;
+					slash = 1;
+				} else if (user && mbox) {
+					end = 1;
+				}
+				break;
+			case '*':
+				if (!user)
+					err = 1;
+				mbox = temp;
+				break;
+			case '%':
+				if (!user)
+					err = 1;
+				mbox = temp;
+				break;
+			case '\0':
+				if (!user)
+					err = 1;
+				end = 1;
+				break;
+			}
+		}
+
+		if (err) {
+			TRACE(TRACE_MESSAGE, "Illegal mailbox name");
 			return NULL;
 		}
-		temp = strstr(&user[1], MAILBOX_SEPARATOR);
-		if (temp == NULL || strlen(temp) <= 1) {
-			TRACE(TRACE_MESSAGE, "illegal mailbox name");
+
+		if (!user || user + slash == mbox) {
+			TRACE(TRACE_DEBUG, "Username not found");
 			return NULL;
 		}
-		if (user >= temp) {
-			TRACE(TRACE_DEBUG, "Username not found.");
+
+		if (!mbox) {
+			TRACE(TRACE_DEBUG, "Mailbox not found");
 			return NULL;
-		} else {
-			TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
-				&user[1], temp - user - 1);
-			if (username) *username = g_strndup(&user[1], temp - user - 1);
 		}
-		return &temp[1];
+
+		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
+			user, mbox - user - slash);
+		if (username) *username = g_strndup(user, mbox - user - slash);
+
+		return mbox;
 	}
 	
 	// i.e. '#Public/foldername'
+	// accept #Public* and #Public% also
 	if (fq_name_len >= ns_publ_len && strncasecmp(fq_name, NAMESPACE_PUBLIC, ns_publ_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_PUBLIC;
-		temp = strstr(fq_name, MAILBOX_SEPARATOR);
-		if (temp == NULL || strlen(temp) <= 1) {
-			TRACE(TRACE_MESSAGE, "illegal mailbox name");
-			return NULL;
-		}
 		if (username) *username = g_strdup(PUBLIC_FOLDER_USER);
-		return &temp[1];
+		// Drop the slash between the namespace and the mailbox spec
+		if (fq_name[ns_publ_len] == '/')
+			return &fq_name[ns_publ_len+1]; 
+		// But if the slash wasn't there, it means we have #Public*, and that's OK.
+		return &fq_name[ns_publ_len]; 
 	}
 	
 	return fq_name;
@@ -594,13 +630,19 @@ static void _strip_sub_leader(char *subject)
 	_strip_refwd(subject);
 }
 
-void dm_base_subject(char *subject)
+char * dm_base_subject(const char *subject)
 {
 	unsigned offset, len, olen;
 	char *tmp, *saved;
 	
-	tmp = g_mime_utils_header_decode_text((unsigned char *)subject);
+	// we expect utf-8 or 7-bit data
+	if (subject == NULL) return NULL;
+	if (g_mime_utils_text_is_8bit((unsigned char *)subject, strlen(subject))) 
+		tmp = g_strdup(subject);
+	else 
+		tmp = g_mime_utils_header_decode_text((unsigned char *)subject);
 	saved = tmp;
+	
 	dm_pack_spaces(tmp);
 	g_strstrip(tmp);
 	while (1==1) {
@@ -630,8 +672,10 @@ void dm_base_subject(char *subject)
 		if (strlen(tmp)==olen)
 			break;
 	}
-	strncpy(subject,tmp,strlen(subject)+1);
+	tmp = g_strdup(tmp);
 	g_free(saved);
+	
+	return tmp;
 }
 
 /* 
@@ -2119,6 +2163,53 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 
 	return subj;
 }
+/* encode string from database encoding to mime (7-bit) */
+char * convert_8bit_db_to_mime(const char* str_in)
+{
+	char * subj=NULL;
+	char * subj2=NULL;
+	static const char * base_charset=NULL;
+	static iconv_t base_iconv=(iconv_t)-1;
+	field_t val;
+	
+	if(base_charset==NULL){ //Init
+		GETCONFIGVALUE("ENCODING", "DBMAIL", val);
+		if(val[0]) {
+			base_charset=val;
+			TRACE(TRACE_DEBUG,"Base charset [%s]", base_charset);
+			iconv_t tmp_i=g_mime_iconv_open("UTF-8", base_charset);
+			if(tmp_i == (iconv_t)-1) {
+				base_charset=g_mime_locale_charset();
+				TRACE(TRACE_DEBUG,"Base charset test filed set to [%s]", base_charset);
+			}
+			else
+				g_mime_iconv_close(tmp_i);
+		}
+		else
+		        base_charset=g_mime_locale_charset();
+		base_charset=g_strdup(base_charset);
+		base_iconv=g_mime_iconv_open("UTF-8", base_charset);
+		if (base_iconv == (iconv_t)-1)
+			TRACE(TRACE_DEBUG,"incorrect base encoding [%s]", base_charset);
+	}
+	
+	if (str_in==NULL)
+		return NULL;
+	
+	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
+		// Conversion not needed
+		return g_strdup(str_in);
+	}
+
+	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
+		subj2 = g_mime_utils_header_encode_text((unsigned char *)subj);
+		g_free(subj);
+		return subj2;
+	}
+	
+	return g_mime_utils_header_encode_text((unsigned char *)str_in);
+}
+
 
 /* envelope access point */
 char * imap_get_envelope(GMimeMessage *message)
@@ -2235,37 +2326,60 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 	char *part;
 	guint index;
 	guint i;
+
+	assert(message);
+	assert(partspec);
 	
 	GString *t = g_string_new(partspec);
 	GList *specs = g_string_split(t,".");
 	g_string_free(t,TRUE);
 	
 	object = GMIME_OBJECT(message);
+	if (!object) {
+		TRACE(TRACE_INFO, "message is not an object");
+		return NULL;
+	}
+		
 	for (i=0; i< g_list_length(specs); i++) {
 		part = g_list_nth_data(specs,i);
 		if (! (index = strtol((const char *)part, NULL, 0))) 
 			break;
 		
 		if (GMIME_IS_MESSAGE(object))
-			object=GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
+			object = GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
 		
 		type = (GMimeContentType *)g_mime_object_get_content_type(object);
 
 		if (g_mime_content_type_is_type(type,"multipart","*")) {
-			object=g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
+			object = g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
+			if (!object) {
+				TRACE(TRACE_INFO, "object part [%d] is null", (int)index-1);
+				return NULL;
+			}
+			if (! GMIME_IS_OBJECT(object)) {
+				TRACE(TRACE_INFO, "object part [%d] is not an object", (int)index-1);
+				return NULL;
+			}
+
 			type = (GMimeContentType *)g_mime_object_get_content_type(object);
-			assert(object);
 		}
 
 		// for message/rfc822 parts we want the contained message, 
 		// not the mime-part as such
 
 		if (g_mime_content_type_is_type(type,"message","rfc822")) {
-			object=GMIME_OBJECT(GMIME_MESSAGE_PART(object)->message);
-			assert(object);
+			object = GMIME_OBJECT(GMIME_MESSAGE_PART(object)->message);
+			if (!object) {
+				TRACE(TRACE_INFO, "rfc822 part is null");
+				return NULL;
+			}
+			if (! GMIME_IS_OBJECT(object)) {
+				TRACE(TRACE_INFO, "rfc822 part is not an object");
+				return NULL;
+			}
 		}
-	
 	}
+
 	return object;
 }
 

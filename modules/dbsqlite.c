@@ -29,6 +29,7 @@
 #define THIS_MODULE "sql"
 
 db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 static sqlite3 *conn;
 
@@ -243,6 +244,21 @@ static void dbsqlite_cslike(sqlite3_context *context, int argc, sqlite3_value **
 }
 /* this is lifted "almost" :) directly from sqlite -- cut here -- */
 
+static int create_tables(void)
+{
+	const char *cq = DM_SQLITECREATE;
+	char *q = g_strdup_printf("SELECT * FROM %susers LIMIT 1", DBPFX);
+	db_query(q); // ignore errors
+	g_free(q);
+	if (db_num_rows())
+		return 0;
+	TRACE(TRACE_DEBUG,"Creating tables in empty database");
+	/* FIXME; this does not respect the DBPFX */
+	if ( (db_query(cq)) == -1)
+		TRACE(TRACE_ERROR, "Creation of tables failed");
+	return 0;
+}
+
 int db_connect()
 {
 	int result;
@@ -257,7 +273,7 @@ int db_connect()
 		return -1;
 	}
 	sqlite3_busy_timeout(conn, 60000);
-	return 0;
+	return create_tables();
 }
 
 int db_check_connection()

@@ -27,30 +27,24 @@ else
 AM_LDFLAGS = 
 endif
 
-pkglib_LTLIBRARIES = libmysql.la \
-	libpgsql.la \
-	libsqlite.la \
-	libmod_ingres.la \
-	libsort_sieve.la \
-	libauth_sql.la \
-	libauth_ldap.la 
-
 noinst_LTLIBRARIES = libsort_null.la
-
 
 if MYSQL
 libmysql_la_SOURCES = dbmysql.c
 libmysql_la_LIBADD = @MYSQLLIB@
+dbmail_mysql_la = libmysql.la
 endif
 
 if PGSQL
 libpgsql_la_SOURCES = dbpgsql.c
 libpgsql_la_LIBADD = @PGSQLLIB@
+dbmail_pgsql_la = libpgsql.la
 endif
 
 if SQLITE
 libsqlite_la_SOURCES = dbsqlite.c
 libsqlite_la_LIBADD = @SQLITELIB@
+dbmail_sqlite_la = libsqlite.la
 endif
 
 if INGRES
@@ -64,6 +58,7 @@ libsort_null_la_SOURCES = sortnull.c
 if SIEVE
 libsort_sieve_la_SOURCES = sortsieve.c
 libsort_sieve_la_LIBADD = @SIEVELIB@
+dbmail_sieve_la = libsort_sieve.la
 endif
 
 # This one is always built.
@@ -73,5 +68,13 @@ libauth_sql_la_LIBADD = -lcrypt
 if LDAP
 libauth_ldap_la_SOURCES = authldap.c
 libauth_ldap_la_LIBADD = -lcrypt @LDAPLIB@ 
+dbmail_ldap_la = libauth_ldap.la
 endif
 
+pkglib_LTLIBRARIES = $(dbmail_mysql_la) \
+	$(dbmail_pgsql_la) \
+	$(dbmail_sqlite_la) \
+	$(dbmail_sieve_la) \
+	$(dbmail_ldap_la) \
+	libauth_sql.la
+	 

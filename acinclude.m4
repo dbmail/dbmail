@@ -164,7 +164,10 @@ if test [ "$usesqlite" = "yes" ]; then
         SQLITEALIB="modules/.libs/libsqlite.a"
 	SQLITELTLIB="modules/libsqlite.la"
         AC_MSG_RESULT([$SQLITELIB])
+    	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\" \\\\/'  sql/sqlite/create_tables.sqlite`
     fi
+else
+	SQLITECREATE="\"\" \\"
 fi
 if test [ -d "$useingres" ]; then
 	AC_MSG_CHECKING([Ingres headers])
@@ -815,7 +818,6 @@ AC_DEFUN([gl_PREREQ_GETOPT],
 dnl bsd_sockets.m4--which socket libraries do we need? 
 dnl Derrick Brashear
 dnl from Zephyr
-dnl $Id$
 
 dnl Hacked on by Rob Earhart to not just toss stuff in LIBS
 dnl It now puts everything required for sockets into SOCKETLIB

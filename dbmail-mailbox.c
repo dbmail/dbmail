@@ -107,18 +107,21 @@ gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)
 	return self->uid;
 }
 
-
-static void uid_msn_map(struct DbmailMailbox *self, u64_t *id)
+static void _do_msn_map(u64_t *id, u64_t *msn, struct DbmailMailbox *self)
 {
-	u64_t *msn;
+	*msn = self->rows++;
+	g_tree_insert(self->msn, msn, id);
+}
 
-	self->rows++;
+static void uid_msn_map(struct DbmailMailbox *self)
+{
+	if (self->msn)
+		g_tree_destroy(self->msn);
 
-	msn = g_new0(u64_t,1);
-	*msn = self->rows;
+	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
+	self->rows = 1;
 
-	g_tree_insert(self->ids,id,msn);
-	g_tree_insert(self->msn,msn,id);
+	g_tree_foreach(self->ids, (GTraverseFunc)_do_msn_map, self);
 }
 	
 void mailbox_uid_msn_new(struct DbmailMailbox *self)
@@ -134,15 +137,13 @@ void mailbox_uid_msn_new(struct DbmailMailbox *self)
 
 	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
-	self->rows = 0;
-
-
+	self->rows = 1;
 }
 
 static void mailbox_build_uid_map(struct DbmailMailbox *self)
 {
 	int i, rows;
-	u64_t *id;
+	u64_t *id, *msn;
 
 	mailbox_uid_msn_new(self);
 
@@ -150,7 +151,12 @@ static void mailbox_build_uid_map(struct DbmailMailbox *self)
 	for (i=0; i< rows; i++) {
 		id = g_new0(u64_t,1);
 		*id = db_get_result_u64(i,0);
-		uid_msn_map(self,id);
+
+		msn = g_new0(u64_t,1);
+		*msn = i+1;
+
+		g_tree_insert(self->ids,id,msn);
+		g_tree_insert(self->msn,msn,id);
 	}
 	
 	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
@@ -177,6 +183,15 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 	mailbox_build_uid_map(self);
 
 	db_free_result();
+	return DM_SUCCESS;
+}
+
+int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
+{
+	if (! g_tree_remove(self->ids, id))
+		return DM_EGENERAL;
+	uid_msn_map(self);
+
 	return DM_SUCCESS;
 }
 
@@ -271,7 +286,9 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	while (slice) {
 		g_string_printf(q,"SELECT is_header,messageblk FROM %smessageblks b "
 				"JOIN %smessages m USING (physmessage_id) "
-				"WHERE message_idnr IN (%s)", DBPFX, DBPFX,
+				"WHERE message_idnr IN (%s) "
+				"ORDER BY messageblk_idnr ",
+				DBPFX, DBPFX,
 				(char *)slice->data);
 		
 		if (db_query(q->str) == -1) {
@@ -296,7 +313,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 				}
 				g_string_printf(t,"%s", db_get_result(i,1));
 			} else {
-				g_string_append_printf(t,"%s",db_get_result(i,1));
+				g_string_append(t, db_get_result(i,1));
 			}
 		}
 		db_free_result();
@@ -1096,6 +1113,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	unsigned i, rows, date;
 	u64_t *k, *v, *w;
 	u64_t id;
+	char gt_lt = 0;
 	
 	GString *t;
 	GString *q;
@@ -1188,14 +1206,29 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			t->str, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
 		break;
 
+		case IST_SIZE_LARGER:
+			gt_lt = '>';
+		case IST_SIZE_SMALLER:
+			if (!gt_lt) gt_lt = '<';
+
+		g_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
+			"JOIN %sphysmessage p ON m.physmessage_id = p.id "
+			"WHERE m.mailbox_idnr = %llu "
+			"AND m.status IN (%d,%d) AND p.messagesize %c %llu "
+			"ORDER BY message_idnr", DBPFX, DBPFX,
+			dbmail_mailbox_get_id(self), 
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
+			gt_lt, s->size);
+		break;
+
 		default:
 		g_string_printf(q, "SELECT message_idnr FROM %smessages "
-			 "WHERE mailbox_idnr = %llu "
-			 "AND status IN (%d,%d) AND %s "
-			 "ORDER BY message_idnr", DBPFX, 
-			 dbmail_mailbox_get_id(self), 
-			 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
-			 s->search);
+			"WHERE mailbox_idnr = %llu "
+			"AND status IN (%d,%d) AND %s "
+			"ORDER BY message_idnr", DBPFX, 
+			dbmail_mailbox_get_id(self), 
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
+			s->search); // FIXME: Sometimes s->search is ""
 		break;
 		
 	}
@@ -1286,7 +1319,8 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		if (rest[0] == '*') {
 			l = hi;
 			r = l;
-			rest++;
+			if (strlen(rest) > 1)
+				rest++;
 		} else {
 			if (! (l = strtoull(sets->data,&rest,10)))
 				break;
@@ -1298,7 +1332,8 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		}
 		
 		if (rest[0]==':') {
-			rest++;
+			if (strlen(rest)>1)
+				rest++;
 			if (rest[0] == '*') 
 				r = hi;
 			else {

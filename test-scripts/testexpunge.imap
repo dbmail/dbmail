@@ -1,0 +1,13 @@
+1 login testuser1 test
+2 select INBOX
+3 store 1,2 +flags.silent (\Deleted)
+4 noop
+5 expunge
+6 fetch 1:* (uid)
+7 store 1 +flags (\Deleted)
+8 store 2 +flags (\Deleted)
+9 expunge
+10 fetch 1:* (uid)
+11 store 1 +flags (\Deleted)
+12 close
+13 logout

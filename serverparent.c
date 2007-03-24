@@ -42,6 +42,7 @@ extern volatile sig_atomic_t mainSig;
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 static void ClearConfig(serverConfig_t * conf);
+static void ResetConfig(serverConfig_t * conf);
 static void DoConfig(serverConfig_t * conf, const char * const service);
 static void LoadServerConfig(serverConfig_t * config, const char * const service);
 
@@ -165,7 +166,9 @@ int serverparent_mainloop(serverConfig_t *config, const char *service, const cha
 	while (!mainStop && server_run(config)) {
 		/* Reread the config file and restart the services,
 		 * e.g. on SIGHUP or other graceful restart condition. */
-		DoConfig(config, service); }
+		ResetConfig(config);
+		DoConfig(config, service);
+	}
 
 	TRACE(TRACE_INFO, "leaving main loop");
 	return 0;
@@ -205,12 +208,20 @@ int SetMainSigHandler()
 
 void ClearConfig(serverConfig_t * config)
 {
+	assert(config);
+	memset(config, 0, sizeof(serverConfig_t));
+}
+
+void ResetConfig(serverConfig_t * config)
+{
+	assert(config);
 	g_free(config->listenSockets);
 	g_strfreev(config->iplist);
 	memset(config, 0, sizeof(serverConfig_t));
 }
 
-void DoConfig(serverConfig_t * config, const char * const service) {
+void DoConfig(serverConfig_t * config, const char * const service)
+{
 	TRACE(TRACE_DEBUG, "reading config [%s]", configFile);
 	config_free();
 	config_read(configFile);

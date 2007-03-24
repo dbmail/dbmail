@@ -97,7 +97,7 @@ int pop3_handle_connection(clientinfo_t * ci)
 
 	if (ci->tx) {
 		/* sending greeting */
-		fprintf(ci->tx, "+OK DBMAIL pop3 server ready to rock %s\r\n",
+		ci_write(ci->tx, "+OK DBMAIL pop3 server ready to rock %s\r\n",
 			session.apop_stamp);
 		fflush(ci->tx);
 	} else {
@@ -176,8 +176,11 @@ int pop3_handle_connection(clientinfo_t * ci)
 					session.virtual_totalsize);
 
 			/* if everything went well, write down everything and do a cleanup */
-			db_update_pop(&session);
-			fprintf(ci->tx, "+OK see ya later\r\n");
+			if (db_update_pop(&session) == DM_SUCCESS)
+				ci_write(ci->tx, "+OK see ya later\r\n");
+			else
+				ci_write(ci->tx, "-ERR some deleted messages not removed\r\n");
+
 			fflush(ci->tx);
 			break;
 
@@ -196,6 +199,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 			TRACE(TRACE_ERROR, "storage layer failure");
 			break;
 		}
+	} else if (done==0) { // QUIT issued before AUTH phase completed
+		ci_write(ci->tx, "+OK see ya later\r\n");
+		fflush(ci->tx);
 	} else {
 		TRACE(TRACE_ERROR, "error, incomplete session");
 	}
@@ -229,7 +235,7 @@ int pop3_error(PopSession_t * session, void *stream,
 	if (session->error_count >= MAX_ERRORS) {
 		TRACE(TRACE_MESSAGE, "too many errors (MAX_ERRORS is %d)", 
 				MAX_ERRORS);
-		fprintf((FILE *) stream, "-ERR loser, go play somewhere else\r\n");
+		ci_write((FILE *) stream, "-ERR loser, go play somewhere else\r\n");
 		session->SessionResult = 2;	/* possible flood */
 		return -3;
 	} else {
@@ -355,7 +361,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			strncpy(session->username, value, strlen(value) + 1);
 		}
 
-		fprintf((FILE *) stream, "+OK Password required for %s\r\n", session->username);
+		ci_write((FILE *) stream, "+OK Password required for %s\r\n", session->username);
 		return 1;
 
 	case POP3_PASS:
@@ -381,7 +387,8 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			session->SessionResult = 3;
 			return -1;
 		case 0:
-			TRACE(TRACE_ERROR, "user [%s] tried to login with wrong password", session->username);
+			TRACE(TRACE_ERROR, "user [%s] coming from [%s] tried to login with wrong password", 
+				session->username, ci->ip_src);
 
 			g_free(session->username);
 			session->username = NULL;
@@ -405,7 +412,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 			result = db_createsession(result, session);
 			if (result == 1) {
-				fprintf((FILE *) stream, "+OK %s has %llu messages (%llu octets)\r\n", 
+				ci_write((FILE *) stream, "+OK %s has %llu messages (%llu octets)\r\n", 
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
@@ -430,7 +437,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			while (tmpelement != NULL) {
 				msg = (struct message *)tmpelement->data;
 				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
-					fprintf((FILE *) stream, "+OK %llu %llu\r\n", msg->messageid,msg->msize);
+					ci_write((FILE *) stream, "+OK %llu %llu\r\n", msg->messageid,msg->msize);
 					found = 1;
 				}
 				tmpelement = tmpelement->nextnode;
@@ -442,7 +449,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		}
 
 		/* just drop the list */
-		fprintf((FILE *) stream, "+OK %llu messages (%llu octets)\r\n", 
+		ci_write((FILE *) stream, "+OK %llu messages (%llu octets)\r\n", 
 				session->virtual_totalmessages, 
 				session->virtual_totalsize);
 
@@ -451,18 +458,18 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			while (tmpelement != NULL) {
 				msg = (struct message *)tmpelement->data;
 				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
-					fprintf((FILE *) stream, "%llu %llu\r\n", msg->messageid,msg->msize);
+					ci_write((FILE *) stream, "%llu %llu\r\n", msg->messageid,msg->msize);
 				tmpelement = tmpelement->nextnode;
 			}
 		}
-		fprintf((FILE *) stream, ".\r\n");
+		ci_write((FILE *) stream, ".\r\n");
 		return 1;
 
 	case POP3_STAT:
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
 
-		fprintf((FILE *) stream, "+OK %llu %llu\r\n", 
+		ci_write((FILE *) stream, "+OK %llu %llu\r\n", 
 				session->virtual_totalmessages, 
 				session->virtual_totalsize);
 
@@ -483,7 +490,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			msg = (struct message *) tmpelement->data;
 			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
 				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
-				fprintf((FILE *) stream, "+OK %llu octets\r\n", msg->msize);
+				ci_write((FILE *) stream, "+OK %llu octets\r\n", msg->msize);
 				return db_send_message_lines((void *) stream, msg->realmessageid, -2, 0);
 			}
 			tmpelement = tmpelement->nextnode;
@@ -504,7 +511,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 				session->virtual_totalsize -= msg->msize;
 				session->virtual_totalmessages -= 1;
 
-				fprintf((FILE *) stream, "+OK message %llu deleted\r\n", msg->messageid);
+				ci_write((FILE *) stream, "+OK message %llu deleted\r\n", msg->messageid);
 				return 1;
 			}
 			tmpelement = tmpelement->nextnode;
@@ -526,7 +533,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			tmpelement = tmpelement->nextnode;
 		}
 
-		fprintf((FILE *) stream, "+OK %llu messages (%llu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
+		ci_write((FILE *) stream, "+OK %llu messages (%llu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
 
 		return 1;
 
@@ -540,14 +547,14 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			msg = (struct message *) tmpelement->data;
 			if (msg->virtual_messagestatus == MESSAGE_STATUS_NEW) {
 				/* we need the last message that has been accessed */
-				fprintf((FILE *) stream, "+OK %llu\r\n", msg->messageid - 1);
+				ci_write((FILE *) stream, "+OK %llu\r\n", msg->messageid - 1);
 				return 1;
 			}
 			tmpelement = tmpelement->nextnode;
 		}
 
 		/* all old messages */
-		fprintf((FILE *) stream, "+OK %llu\r\n", session->virtual_totalmessages);
+		ci_write((FILE *) stream, "+OK %llu\r\n", session->virtual_totalmessages);
 
 		return 1;
 
@@ -555,7 +562,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
 
-		fprintf((FILE *) stream, "+OK\r\n");
+		ci_write((FILE *) stream, "+OK\r\n");
 		return 1;
 
 	case POP3_UIDL:
@@ -569,7 +576,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			while (tmpelement != NULL) {
 				msg = (struct message *)tmpelement->data;
 				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
-					fprintf((FILE *) stream, "+OK %llu %s\r\n", msg->messageid,msg->uidl);
+					ci_write((FILE *) stream, "+OK %llu %s\r\n", msg->messageid,msg->uidl);
 					found = 1;
 				}
 				tmpelement = tmpelement->nextnode;
@@ -581,20 +588,20 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		}
 
 		/* just drop the list */
-		fprintf((FILE *) stream, "+OK Some very unique numbers for you\r\n");
+		ci_write((FILE *) stream, "+OK Some very unique numbers for you\r\n");
 
 		if (session->virtual_totalmessages > 0) {
 			/* traversing list */
 			while (tmpelement != NULL) {
 				msg = (struct message *)tmpelement->data; 
 				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
-					fprintf((FILE *) stream, "%llu %s\r\n", msg->messageid, msg->uidl);
+					ci_write((FILE *) stream, "%llu %s\r\n", msg->messageid, msg->uidl);
 
 				tmpelement = tmpelement->nextnode;
 			}
 		}
 
-		fprintf((FILE *) stream, ".\r\n");
+		ci_write((FILE *) stream, ".\r\n");
 
 		return 1;
 
@@ -681,7 +688,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 			result = db_createsession(result, session);
 			if (result == 1) {
-				fprintf((FILE *) stream, "+OK %s has %llu messages (%llu octets)\r\n", 
+				ci_write((FILE *) stream, "+OK %s has %llu messages (%llu octets)\r\n", 
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
@@ -741,7 +748,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		while (tmpelement != NULL) {
 			msg = (struct message *) tmpelement->data;
 			if (msg->messageid == top_messageid && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
-				fprintf((FILE *) stream, "+OK %llu lines of message %llu\r\n", top_lines, top_messageid);
+				ci_write((FILE *) stream, "+OK %llu lines of message %llu\r\n", top_lines, top_messageid);
 				return db_send_message_lines(stream, msg->realmessageid, top_lines, 0);
 			}
 			tmpelement = tmpelement->nextnode;
@@ -749,7 +756,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		return pop3_error(session, stream, "-ERR no such message\r\n");
 
 	case POP3_CAPA:
-		fprintf((FILE *) stream, "+OK, Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
+		ci_write((FILE *) stream, "+OK, Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
 		return 1;
 
 	default:

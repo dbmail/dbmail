@@ -71,6 +71,58 @@ START_TEST(test_g_strcasestr)
 }
 END_TEST
 
+START_TEST(test_mailbox_remove_namespace)
+{
+
+	char *simple, *username, *namespace;
+	char *patterns[] = {
+		"#Users/foo/mailbox", "#Users/foo/*", "#Users/foo*",
+		"#Users/", "#Users//", "#Users///", "#Users/%", "#Users*", "#Users",
+		"#Public/foo/mailbox", "#Public/foo/*", "#Public/foo*",
+		"#Public/", "#Public//", "#Public///", "#Public/%", "#Public*", "#Public", NULL
+		};
+
+	char *expected[18][3] = {
+		{ NAMESPACE_USER, "foo", "mailbox" },
+		{ NAMESPACE_USER, "foo", "*" },
+		{ NAMESPACE_USER, "foo", "*" },
+
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, NULL },
+
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo/mailbox" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo/*" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo*" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "/" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "//" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "%" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "*" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "" }
+		
+		};
+	int i;
+
+	for (i = 0; patterns[i]; i++) {
+		simple = mailbox_remove_namespace(patterns[i], &namespace, &username);
+		fail_unless(
+			((simple == NULL && expected[i][2] == NULL) || strcmp(simple, expected[i][2])==0) &&
+			((username== NULL && expected[i][1] == NULL) || strcmp(username, expected[i][1])==0) &&
+			((namespace == NULL && expected[i][0] == NULL) || strcmp(namespace, expected[i][0])==0),
+			"\n  mailbox_remove_namespace failed on [%s]\n"
+			"  Expected: namespace [%s] user [%s] simple [%s]\n"
+			"  Received: namespace [%s] user [%s] simple [%s]",
+			patterns[i], expected[i][0], expected[i][1], expected[i][2],
+			namespace, username, simple);
+	}
+
+}
+END_TEST
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -80,6 +132,7 @@ Suite *dbmail_misc_suite(void)
 	
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_g_strcasestr);
+	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
 	
 	return s;
 }
@@ -94,5 +147,3 @@ int main(void)
 	srunner_free(sr);
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-	
-

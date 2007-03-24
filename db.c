@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -2829,11 +2828,11 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		TRACE(TRACE_DEBUG, "adding namespace prefix to [%s] got [%s]", simple_mailbox_name, mailbox_name);
 		if (mailbox_name) {
 			/* Enforce match of mailbox to pattern. */
-			if (listex_match(spattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
+			if (listex_match(pattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
 				tmp_mailboxes[*nr_mailboxes] = mailbox_idnr;
 				(*nr_mailboxes)++;
 			} else {
-				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox_name, spattern);
+				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox_name, pattern);
 			}
 		}
 		
@@ -2929,20 +2928,14 @@ int db_getmailbox_flags(mailbox_t *mb)
 	return DM_SUCCESS;
 
 }
+
 int db_getmailbox_count(mailbox_t *mb)
 {
-	unsigned i, exists = 0, seen = 0, recent = 0;
+	unsigned exists = 0, seen = 0, recent = 0;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
-	 
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
-
-	/* free existing MSN list */
-	if (mb->seq_list) {
-		dm_free(mb->seq_list);
-		mb->seq_list = NULL;
-	}
 
 	/* count messages */
 	snprintf(query, DEF_QUERYSIZE,
@@ -2973,54 +2966,20 @@ int db_getmailbox_count(mailbox_t *mb)
  
 	db_free_result();
 	
-	memset(query,0,DEF_QUERYSIZE);
+	/* now determine the next message UID NOTE expunged messages 
+	 * are selected as well in order to be able to restore them */
 
-	if(mb->exists) {
-		/* get  messages */
-		snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr "
-				"FROM %smessages "
-				"WHERE mailbox_idnr = %llu "
-				"AND status < %d "
-				"ORDER BY message_idnr ASC",
-				DBPFX, mb->uid, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-		
-		if (db_query(query) == -1) {
-			TRACE(TRACE_ERROR, "query error [%s]", query);
-			return DM_EQUERY;
-		}
-		
-		exists = db_num_rows();
-		
-		if (mb->exists != exists)
-			mb->exists = exists;
-		
-		TRACE(TRACE_DEBUG,"exists [%d]", mb->exists);
-		mb->seq_list = g_new0(u64_t,mb->exists);
-		for (i = 0; i < mb->exists; i++) 
-			mb->seq_list[i] = db_get_result_u64(i, 0);
-
-		db_free_result();
-	}
-
-	/* now determine the next message UID 
-	 * NOTE expunged messages are selected as well in order to be 
-	 * able to restore them 
-	 */
 	memset(query,0,DEF_QUERYSIZE);
 	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr+1 FROM %smessages "
 			"ORDER BY message_idnr DESC LIMIT 1",DBPFX);
-	if (db_query(query) == -1) {
-		if(mb->seq_list) {
-			dm_free(mb->seq_list);
-			mb->seq_list = NULL;
-		}
+
+	if (db_query(query) == -1)
 		return DM_EQUERY;
-	}
+
 	mb->msguidnext = db_get_result_u64(0, 0);
 	db_free_result();
 
 	return DM_SUCCESS;
-
 }
 
 int db_getmailbox(mailbox_t * mb)
@@ -4006,9 +3965,10 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 	memset(query,0,DEF_QUERYSIZE);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT MIN(message_idnr) FROM %smessages "
+		 "SELECT message_idnr FROM %smessages "
 		 "WHERE mailbox_idnr = %llu "
-		 "AND status < %d AND seen_flag = 0",DBPFX,
+		 "AND status < %d AND seen_flag = 0 "
+		 "ORDER BY message_idnr LIMIT 1",DBPFX,
 		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -4120,38 +4080,6 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	return val;
 }
 
-int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
-{
-	int i;
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-
-	memset(flags, 0, sizeof(int) * IMAP_NFLAGS);
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT seen_flag, answered_flag, deleted_flag, "
-		 "flagged_flag, draft_flag, recent_flag FROM %smessages "
-		 "WHERE message_idnr = %llu AND status < %d "
-		 "AND mailbox_idnr = %llu",DBPFX, msg_idnr, 
-		 // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-		 MESSAGE_STATUS_DELETE,
-		 mailbox_idnr);
-
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not select message");
-		return (-1);
-	}
-
-	if (db_num_rows() > 0) {
-		for (i = 0; i < IMAP_NFLAGS; i++) {
-			flags[i] = db_get_result_bool(0, i);
-		}
-	}
-	db_free_result();
-	return DM_SUCCESS;
-}
-
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_type)
 {
 	size_t i;
@@ -4161,9 +4089,14 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 	memset(query,0,DEF_QUERYSIZE);
 
 
-	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET ",DBPFX);
+	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0,",DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
+
+		// Skip recent_flag because it is part of the query.
+		if (i == IMAP_FLAG_RECENT)
+			continue;
+
 		left = DEF_QUERYSIZE - strlen(query);
 		switch (action_type) {
 		case IMAPFA_ADD:
@@ -4213,161 +4146,6 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 	}
 
 	return DM_SUCCESS;
-}
-
-int db_set_msgflag_recent(u64_t msg_idnr, u64_t mailbox_idnr)
-{
-	return db_set_msgflag_recent_range(msg_idnr, msg_idnr, mailbox_idnr);
-}
-
-int db_set_msgflag_recent_range(u64_t msg_idnr_lo, u64_t msg_idnr_hi, u64_t mailbox_idnr)
-{
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0 WHERE "
-			" WHERE message_idnr BETWEEN %llu AND %llu AND "
-			"status < %d AND mailbox_idnr = %llu",
-			DBPFX, msg_idnr_lo, msg_idnr_hi, MESSAGE_STATUS_DELETE, mailbox_idnr);
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not update recent_flag");
-		return DM_EQUERY;
-	}
-
-	return DM_SUCCESS;
-}
-
-int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
-{
-	const char *query_result;
-	char *to_char_str;
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-
-	to_char_str = date2char_str("pm.internal_date");
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT %s FROM %sphysmessage pm, %smessages msg "
-		 "WHERE msg.mailbox_idnr = %llu "
-		 "AND msg.message_idnr = %llu "
-		 "AND pm.id = msg.physmessage_id",
-		 to_char_str, DBPFX, DBPFX,
-		 mailbox_idnr, msg_idnr);
-	dm_free(to_char_str);
-
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not get message");
-		return (-1);
-	}
-
-	if ((db_num_rows() > 0) && (query_result = db_get_result(0, 0))) {
-		strncpy(date, query_result, IMAP_INTERNALDATE_LEN);
-		date[IMAP_INTERNALDATE_LEN - 1] = '\0';
-	} else {
-		/* no date ? let's say 1 jan 1970 */
-		strncpy(date, "1970-01-01 00:00:01",
-			IMAP_INTERNALDATE_LEN);
-		date[IMAP_INTERNALDATE_LEN - 1] = '\0';
-	}
-
-	db_free_result();
-	return DM_SUCCESS;
-}
-
-int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
-{
-	u64_t physmessage_id = 0;
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT physmessage_id FROM %smessages "
-		 "WHERE message_idnr = %llu "
-		 "AND mailbox_idnr = %llu",DBPFX, msg_idnr, mailbox_idnr);
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not get physmessage_id for "
-		      "message [%llu]", msg_idnr);
-		return DM_EQUERY;
-	}
-
-	if (db_num_rows() == 0) {
-		TRACE(TRACE_DEBUG, "no such message [%llu]", msg_idnr);
-		db_free_result();
-		return DM_SUCCESS;
-	}
-
-	physmessage_id = db_get_result_u64(0, 0);
-	db_free_result();
-
-	memset(query,0,DEF_QUERYSIZE);
-	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %sphysmessage SET rfcsize = %llu "
-		 "WHERE id = %llu",DBPFX, rfcsize, physmessage_id);
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not update  "
-		      "message [%llu]", msg_idnr);
-		return DM_EQUERY;
-	}
-
-	return DM_SUCCESS;
-}
-
-int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
-{
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-	assert(rfc_size != NULL);
-	*rfc_size = 0;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT pm.rfcsize FROM %sphysmessage pm, %smessages msg "
-		 "WHERE pm.id = msg.physmessage_id "
-		 "AND msg.message_idnr = %llu "
-		 "AND msg.status< %d "
-		 "AND msg.mailbox_idnr = %llu",DBPFX,DBPFX, msg_idnr, MESSAGE_STATUS_DELETE,
-		 mailbox_idnr);
-
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not fetch RFC size from table");
-		return DM_EQUERY;
-	}
-
-	if (db_num_rows() < 1) {
-		TRACE(TRACE_ERROR, "message not found");
-		db_free_result();
-		return DM_EQUERY;
-	}
-
-	*rfc_size = db_get_result_u64(0, 0);
-
-	db_free_result();
-	return DM_EGENERAL;
-}
-
-int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t msg_idnr)
-{
-	int val;
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM %smessages "
-		 "WHERE message_idnr = %llu "
-		 "AND mailbox_idnr = %llu "
-		 "AND status< %d",DBPFX, msg_idnr,
-		 mailbox_idnr, MESSAGE_STATUS_DELETE);
-
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not get message");
-		return (-1);
-	}
-
-	val = db_num_rows();
-	db_free_result();
-	return val;
 }
 
 int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)

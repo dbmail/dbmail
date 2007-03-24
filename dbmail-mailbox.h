@@ -58,7 +58,6 @@ struct DbmailMailbox {
 
 struct DbmailMailbox * dbmail_mailbox_new(u64_t id);
 int dbmail_mailbox_open(struct DbmailMailbox *self);
-
 int dbmail_mailbox_sort(struct DbmailMailbox *self);
 int dbmail_mailbox_search(struct DbmailMailbox *self);
 
@@ -70,6 +69,7 @@ gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self);
 
 int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *ostream);
 
+int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id);
 void dbmail_mailbox_map_uid_msn(struct DbmailMailbox *self);
 void dbmail_mailbox_free(struct DbmailMailbox *self);
 
