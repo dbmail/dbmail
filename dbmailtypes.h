@@ -309,9 +309,9 @@ typedef struct {
 	int maxChildren;
 	int childMaxConnect;
 	int timeout;
-	char **iplist;
+	char **iplist; // Allocated memory.
 	int ipcount;
-	int *listenSockets;
+	int *listenSockets; // Allocated memory.
 	int service_before_smtp;
 	int port;
 	int backlog;
