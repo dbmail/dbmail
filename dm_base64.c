@@ -46,6 +46,8 @@ static const char base64decodeval[] = {
  * I recommend allocating 2*inlen to be surely safe. */
 void base64_encode(unsigned char *out, const unsigned char *in, int inlen)
 {
+	assert(out);
+
 	for (; inlen >= 3; inlen -= 3) {
 		*out++ = base64encodestring[in[0] >> 2];
 		*out++ = base64encodestring[((in[0] << 4) & 0x30) | (in[1] >> 4)];

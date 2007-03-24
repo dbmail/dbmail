@@ -367,6 +367,10 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	char *md5str;
 	int result;
 
+	memset(salt,0,sizeof(salt));
+	memset(cryptres,0,sizeof(cryptres));
+	memset(real_username,0,sizeof(real_username));
+
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
 
