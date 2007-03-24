@@ -42,7 +42,6 @@ extern volatile sig_atomic_t mainSig;
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 static void ClearConfig(serverConfig_t * conf);
-static void ResetConfig(serverConfig_t * conf);
 static void DoConfig(serverConfig_t * conf, const char * const service);
 static void LoadServerConfig(serverConfig_t * config, const char * const service);
 
@@ -166,8 +165,8 @@ int serverparent_mainloop(serverConfig_t *config, const char *service, const cha
 	while (!mainStop && server_run(config)) {
 		/* Reread the config file and restart the services,
 		 * e.g. on SIGHUP or other graceful restart condition. */
-		ResetConfig(config);
 		DoConfig(config, service);
+		sleep(2);
 	}
 
 	ClearConfig(config);
@@ -210,20 +209,14 @@ int SetMainSigHandler()
 void ClearConfig(serverConfig_t * config)
 {
 	assert(config);
-	memset(config, 0, sizeof(serverConfig_t));
+
+	g_strfreev(config->iplist);
+	g_free(config->listenSockets);
 
 	config->listenSockets = NULL;
 	config->iplist = NULL;
-}
 
-void ResetConfig(serverConfig_t * config)
-{
-	assert(config);
-
-	g_free(config->listenSockets);
-	g_strfreev(config->iplist);
-
-	ClearConfig(config);
+	memset(config, 0, sizeof(serverConfig_t));
 }
 
 void DoConfig(serverConfig_t * config, const char * const service)
@@ -311,6 +304,10 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 	config_get_value("BINDIP", service, val);
 	if (strlen(val) == 0)
 		TRACE(TRACE_FATAL, "no value for BINDIP in config file");
+	// If there was a SIGHUP, then we're resetting an active config.
+	g_strfreev(config->iplist);
+	g_free(config->listenSockets);
+	// Allowed list separators are ' ' and ','.
 	config->iplist = g_strsplit_set(val, " ,", 0);
 	config->ipcount = g_strv_length(config->iplist);
 	if (config->ipcount < 1) {
@@ -319,6 +316,7 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 
 	int ip;
 	for (ip = 0; ip < config->ipcount; ip++) {
+		// Remove whitespace from each list entry, then log it.
 		g_strstrip(config->iplist[ip]);
 		TRACE(TRACE_DEBUG, "binding to IP [%s]", config->iplist[ip]);
 	}

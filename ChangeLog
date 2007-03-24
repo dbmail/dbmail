@@ -1,3 +1,10 @@
+2007-03-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverparent.c, dbmailtypes.h, server.c:
+	Fixes to SIGHUP handling (closes bug #546).
+	* dbmail-message.c:
+	Set the tmpfile not to use C library buffering.
+
 2007-03-24  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, dbmail-imapsession.c, dm_base64.c, modules/authsql.c:
