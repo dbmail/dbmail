@@ -787,6 +787,9 @@ int dm_sock_score(const char *base, const char *test)
 	int result = 0;
 	char *t;
 
+	if ((! base) || (! test))
+		return 0;
+		
 	t = strstr(base,"unix:");
 	if (t==base) {
 		base = strstr(base,":");
@@ -825,7 +828,7 @@ static int socket_match(const char *base, const char *test)
 
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny) 
 {
-	int result;
+	int result = DM_EGENERAL;
 	assert(clientsock);
 	
 	if ( (strlen(sock_allow) == 0) && (strlen(sock_deny) == 0) ) {
@@ -834,8 +837,6 @@ int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *
 		result = DM_EGENERAL;
 	} else if (strlen(sock_allow) > 0  && socket_match(sock_allow, clientsock)==0) {
 		result = DM_SUCCESS;
-	} else {
-		result = DM_EGENERAL;
 	}
 
 	TRACE(TRACE_DEBUG, "clientsock [%s] sock_allow[%s], sock_deny [%s] => [%d]", clientsock, sock_allow, sock_deny, result);
@@ -1431,8 +1432,8 @@ void dbmail_imap_plist_free(GList *l)
 char *dbmail_imap_astring_as_string(const char *s)
 {
 	int i;
-	char *r;
-	char *t, *l = NULL;
+	const char *p;
+	char *r, *t, *l = NULL;
 	char first, last, penult = '\\';
 
 	if (! s)
@@ -1452,7 +1453,11 @@ char *dbmail_imap_astring_as_string(const char *s)
 	
 	for (i=0; l[i]; i++) { 
 		if ((l[i] & 0x80) || (l[i] == '\r') || (l[i] == '\n') || (l[i] == '"') || (l[i] == '\\')) {
-			r = g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(l), l);
+			if ((l[i] == '"') && (i>0) && (l[i-1] != '\\'))
+				p = s;
+			else
+				p = l;
+			r = g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(p), p);
 			g_free(t);
 			return r;
 		}
