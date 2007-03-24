@@ -170,6 +170,7 @@ int serverparent_mainloop(serverConfig_t *config, const char *service, const cha
 		DoConfig(config, service);
 	}
 
+	ClearConfig(config);
 	TRACE(TRACE_INFO, "leaving main loop");
 	return 0;
 }
