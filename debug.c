@@ -63,14 +63,15 @@ static const char * trace_to_text(trace_t level)
  *
  */
 
-void newtrace(int isnew, trace_t level, const char * module,
+void trace(trace_t level, const char * module,
 		const char * file, const char * function,
 		int line, char *formatstring, ...)
 {
 	va_list argp;
 
 	gchar *message;
-	const char *format = "%s:[%s] %s,%s(+%d): %s";
+	const char *syslog_format = "%s:[%s] %s,%s(+%d): %s";
+	const char *stderr_format = "%s %s:[%s] %s,%s(+%d): %s";
 	size_t l;
 
 	/* Return now if we're not logging anything. */
@@ -85,11 +86,13 @@ void newtrace(int isnew, trace_t level, const char * module,
 	l = strlen(message);
 	
 	if (level <= TRACE_STDERR) {
-		if (isnew && TRACE_STDERR >= TRACE_DEBUG) {
-			fprintf(stderr, format, trace_to_text(level), module, file, function, line, message);
-		} else {
-			fprintf(stderr, "%s %s", trace_to_text(level), message);
-		}
+		time_t now = time(NULL);
+		struct tm *tmp = localtime(&now);
+		char date[32];
+		memset(date,0,sizeof(date));
+		strftime(date,32,"%b %d %H:%M:%S", tmp);
+
+		fprintf(stderr, stderr_format, date, trace_to_text(level), module, file, function, line, message);
 		if (message[l] != '\n')
 			fprintf(stderr, "\n");
 		fflush(stderr);
@@ -98,20 +101,11 @@ void newtrace(int isnew, trace_t level, const char * module,
 	if (level <= TRACE_SYSLOG) {
 		if (message[l] == '\n')
 			message[l] = '\0';
-		if (level <= TRACE_WARNING) {
-			/* set LOG_ALERT at warnings */
-			if (isnew && TRACE_SYSLOG >= TRACE_DEBUG) {
-				syslog(LOG_ALERT, format, trace_to_text(level), module, file, function, line, message);
-			} else {
-				syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
-			}
-		} else {
-			if (isnew && TRACE_SYSLOG >= TRACE_DEBUG) {
-				syslog(LOG_NOTICE, format, trace_to_text(level), module, file, function, line, message);
-			} else {
-				syslog(LOG_NOTICE, "%s %s", trace_to_text(level), message);
-			}
-		}
+		/* set LOG_ALERT at warnings */
+		if (level <= TRACE_WARNING)
+			syslog(LOG_ALERT, syslog_format, trace_to_text(level), module, file, function, line, message);
+		else
+			syslog(LOG_NOTICE, syslog_format, trace_to_text(level), module, file, function, line, message);
 	}
 	g_free(message);
 

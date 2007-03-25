@@ -1253,7 +1253,6 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	struct DbmailMailbox *mb;
 	int result = 0;
-	u64_t idx = 0;
 	gchar *s = NULL, *cmd = NULL;
 	gboolean sorted;
 
@@ -1303,7 +1302,7 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 		}
 
 
-		if (dbmail_mailbox_build_imap_search(mb, self->args, &idx, order) < 0) {
+		if (dbmail_mailbox_build_imap_search(mb, self->args, &(self->args_idx), order) < 0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
 				self->tag, cmd);
 			return 1;
@@ -1369,7 +1368,7 @@ int _ic_thread(struct ImapSession *self)
 int _ic_fetch(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	int result, idx;
+	int result, state, setidx;
 
 	if (!check_state_and_args (self, "FETCH", 2, 0, IMAPCS_SELECTED))
 		return 1;
@@ -1389,14 +1388,18 @@ int _ic_fetch(struct ImapSession *self)
 
 	self->fi->getUID = self->use_uid;
 
-	idx = 1;
+	setidx = self->args_idx;
+	self->args_idx++; //skip on past this for the fetch_parse_args coming next...
+
+	state = 1;
 	do {
-		idx = dbmail_imap_session_fetch_parse_args(self, idx);
-		if (idx == -2) {
+		if ( (state = dbmail_imap_session_fetch_parse_args(self)) == -2) {
 			dbmail_imap_session_printf(self, "%s BAD invalid argument list to fetch\r\n", self->tag);
 			return 1;
 		}
-	} while (idx > 0);
+		TRACE(TRACE_DEBUG,"dbmail_imap_session_fetch_parse_args loop idx %d state %d ", self->args_idx, state);
+		self->args_idx++;
+	} while (state > 0);
 
 	/* reopen the mailbox */
 	dbmail_mailbox_open(self->mailbox);
@@ -1410,7 +1413,7 @@ int _ic_fetch(struct ImapSession *self)
 			self->ids = NULL;
 		}
 	
-		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[setidx],self->use_uid);
 		self->ids_list = g_tree_keys(self->ids);
 		
 		if (g_tree_nnodes(self->ids)==0) {
@@ -1747,22 +1750,22 @@ int _ic_uid(struct ImapSession *self)
 	
 	/* ACL rights for UID are handled by the other functions called below */
 	if (MATCH(self->args[0], "fetch")) {
-		self->args++;
+		self->args_idx++; 
 		result = _ic_fetch(self);
 	} else if (MATCH(self->args[0], "copy")) {
-		self->args++;
+		self->args_idx++;
 		result = _ic_copy(self);
 	} else if (MATCH(self->args[0], "store")) {
-		self->args++;
+		self->args_idx++;
 		result = _ic_store(self);
 	} else if (MATCH(self->args[0], "search")) {
-		self->args++;
+		self->args_idx++;
 		result = _ic_search(self);
 	} else if (MATCH(self->args[0], "sort")) {
-		self->args++;
+		self->args_idx++;
 		result = _ic_sort(self);
 	} else if (MATCH(self->args[0], "thread")) {
-		self->args++;
+		self->args_idx++;
 		result = _ic_thread(self);
 	} else {
 		dbmail_imap_session_printf(self, "%s BAD invalid UID command\r\n", self->tag);
