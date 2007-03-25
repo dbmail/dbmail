@@ -3944,12 +3944,10 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_type)
 {
 	size_t i;
-	size_t placed = 0;
 	size_t left;
 	char query[DEF_QUERYSIZE]; 
+
 	memset(query,0,DEF_QUERYSIZE);
-
-
 	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0,",DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
@@ -3965,7 +3963,6 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 				strncat(query, db_flag_desc[i], left);
 				left = DEF_QUERYSIZE - strlen(query);
 				strncat(query, "=1,", left);
-				placed = 1;
 			}
 			break;
 		case IMAPFA_REMOVE:
@@ -3973,7 +3970,6 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 				strncat(query, db_flag_desc[i], left);
 				left = DEF_QUERYSIZE - strlen(query);
 				strncat(query, "=0,", left);
-				placed = 1;
 			}
 			break;
 
@@ -3984,14 +3980,10 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 				strncat(query, "=0,", left);
 			else
 				strncat(query, "=1,", left);
-			placed = 1;
 			break;
 		}
 		db_free_result();
 	}
-
-	if (!placed)
-		return DM_SUCCESS;	/* nothing to update */
 
 	/* last character in string is comma, replace it --> strlen()-1 */
 	left = DEF_QUERYSIZE - strlen(query);
