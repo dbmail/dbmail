@@ -234,6 +234,8 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 		g_free(dsnuser->forwards);
 
 	dsnuser->address = NULL;
+       if (dsnuser->mailbox)
+               g_free(dsnuser->mailbox); //allocated by dbmail-smtp main.c line ~ 319 g_strdup
 	dsnuser->mailbox = NULL;
 	dsnuser->userids = NULL;
 	dsnuser->forwards = NULL;
