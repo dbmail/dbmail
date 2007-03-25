@@ -2021,6 +2021,7 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 	char * subj=NULL;
 	static iconv_t default_iconv=(iconv_t)-1;
 	static const char *default_charset=NULL;
+	int allocated_default_iconv = 0;
 	const char *charset;
 	iconv_t conv_iconv;
 	field_t val;
@@ -2056,6 +2057,7 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 			
 			if ((conv_iconv=g_mime_iconv_open("UTF-8",charset))==(iconv_t)-1) {
 				TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [UTF-8]", charset);
+				allocated_default_iconv = 1;
 			} else {
 				subj=g_mime_iconv_strdup(conv_iconv,str_in);
 				g_mime_iconv_close(conv_iconv);
@@ -2064,7 +2066,7 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 	}
 	if (subj==NULL) {
 		subj=g_mime_iconv_strdup(default_iconv,str_in);
-		g_mime_iconv_close(default_iconv);
+		if (allocated_default_iconv) g_mime_iconv_close(default_iconv);
 	}
 	    
 	if (subj==NULL) {
