@@ -2036,12 +2036,19 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 		default_iconv=g_mime_iconv_open("UTF-8",default_charset);
 		if (default_iconv == (iconv_t)-1) {
 			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
-		}
+		}else
+			allocated_default_iconv = 1;
 	}
 	
-	if (str_in==NULL)
+	if (str_in==NULL) {
+		if (allocated_default_iconv)
+			g_mime_iconv_close(default_iconv);
 		return NULL;
+	}
+
 	if (g_utf8_validate((const gchar *)str_in, -1, NULL) || !g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
+		if (allocated_default_iconv)
+			g_mime_iconv_close(default_iconv);
 		// Conversion not needed
 		return g_strdup(str_in);
 	}
@@ -2057,7 +2064,6 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 			
 			if ((conv_iconv=g_mime_iconv_open("UTF-8",charset))==(iconv_t)-1) {
 				TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [UTF-8]", charset);
-				allocated_default_iconv = 1;
 			} else {
 				subj=g_mime_iconv_strdup(conv_iconv,str_in);
 				g_mime_iconv_close(conv_iconv);
@@ -2066,7 +2072,6 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 	}
 	if (subj==NULL) {
 		subj=g_mime_iconv_strdup(default_iconv,str_in);
-		if (allocated_default_iconv) g_mime_iconv_close(default_iconv);
 	}
 	    
 	if (subj==NULL) {
@@ -2076,6 +2081,9 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 		for(p=subj;*p;p++)
 		    if(*p & 0x80) *p='?';
 	}
+
+	if (allocated_default_iconv)
+		g_mime_iconv_close(default_iconv);
 
 	return subj;
 }
@@ -2127,29 +2135,44 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		default_iconv=g_mime_iconv_open(base_charset,default_charset);
 		if (default_iconv == (iconv_t)-1) {
 			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
-		}
-		allocated_default_iconv = 1;
+		}else
+			allocated_default_iconv = 1;
 	}
 	if (str_in==NULL) {
-		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
+		if(allocated_default_iconv)
+			g_mime_iconv_close(default_iconv);
+		if (base_iconv != (iconv_t)-1)
+			g_mime_iconv_close(base_iconv);
 		return NULL;
 	}
 	
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
+		if(allocated_default_iconv) 
+			g_mime_iconv_close(default_iconv);
+		if (base_iconv != (iconv_t)-1)
+			g_mime_iconv_close(base_iconv);
 		// Conversion not needed
-		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
 		return g_strdup(str_in);
 	}
 
 	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
+		if(allocated_default_iconv) 
+			g_mime_iconv_close(default_iconv);
+		if (base_iconv != (iconv_t)-1)
+			g_mime_iconv_close(base_iconv);
 		// Conversion already done by header decode ? May insert to database
-		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
 		return subj;
 	}
-	
+
+	//base_iconv not needed after here.
+	if (base_iconv != (iconv_t)-1)
+		g_mime_iconv_close(base_iconv);
+
+
 	// Get message encode codepage 
 	if (message)
 		mess_obj=g_mime_message_get_mime_part(message);
+
 	if (mess_obj) {
 		if ((charset=g_mime_object_get_content_type_parameter(mess_obj,"charset"))) {
 			// codepage not set in message header use default
@@ -2163,6 +2186,7 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 			}
 		}
 	}
+
 	if (subj==NULL) {
 		subj=g_mime_iconv_strdup(default_iconv,str_in);
 	}
@@ -2211,9 +2235,13 @@ char * convert_8bit_db_to_mime(const char* str_in)
 	}
 	
 	if (str_in==NULL)
+		if (base_iconv != (iconv_t)-1)
+			 g_mime_iconv_close(base_iconv);
 		return NULL;
 	
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
+		if (base_iconv != (iconv_t)-1)
+			 g_mime_iconv_close(base_iconv);
 		// Conversion not needed
 		return g_strdup(str_in);
 	}
@@ -2221,8 +2249,13 @@ char * convert_8bit_db_to_mime(const char* str_in)
 	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
 		subj2 = g_mime_utils_header_encode_text((unsigned char *)subj);
 		g_free(subj);
+		if (base_iconv != (iconv_t)-1)
+			 g_mime_iconv_close(base_iconv);
 		return subj2;
 	}
+
+	if (base_iconv != (iconv_t)-1)
+		 g_mime_iconv_close(base_iconv);
 	
 	return g_mime_utils_header_encode_text((unsigned char *)str_in);
 }
