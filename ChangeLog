@@ -1,5 +1,10 @@
 2007-03-25  Paul J Stevens <paul@nfg.nl>
 
+	* check_dbmail_imapd.c, dbmail-imapsession.c, dbmail-imapsession.h, 
+	  imap4.c, imapcommands.c, misc.c:
+	applied patch to fix argument parsing in imap (ljackson) (bug #546)
+	* debug.c, debug.h:
+	cleanup trace calls (closes #532)
 	* db.c:
 	small recent_flag fix
 	* dbmail-imapsession.c, dsn.c, imapd.c, lmtpd.c, pop3d.c, timsieved.c:
