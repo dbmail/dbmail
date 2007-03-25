@@ -886,6 +886,11 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
 		return -1;
 	}
+
+        //because other functions mayhave gotten msginfo
+        if(self->msginfo)
+                g_tree_destroy(self->msginfo);
+
 	self->msginfo = msginfo;
 
 	if (! self->ids)
@@ -1745,6 +1750,11 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	}
 	
 	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
+
+       //because more than one mailbox can be open before session is destroyed
+       if(self->msginfo)
+               g_tree_destroy(self->msginfo);
+
 	if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
 		TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
 
@@ -1779,7 +1789,7 @@ static int imap_session_update_recent(GList *recent)
 	db_begin_transaction();
 	while (slices) {
 		snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag = 0 "
-				"WHERE message_idnr IN (%s) AND recent_flag <> 0", 
+				"WHERE message_idnr IN (%s) AND recent_flag = 1", 
 				DBPFX, (gchar *)slices->data);
 		if (db_query(query) == -1) {
 			db_rollback_transaction();
