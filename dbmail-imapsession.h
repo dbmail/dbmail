@@ -19,6 +19,7 @@ struct ImapSession {
 	char *command;
 	int command_type;
 	char **args;
+	u64_t args_idx;
 	fetch_items_t *fi;
 	struct DbmailMessage *message;
 	struct DbmailMailbox *mailbox;
@@ -79,7 +80,7 @@ int dbmail_imap_session_mailbox_close(struct ImapSession *self);
 int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self);
 int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self);
 
-int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx);
+int dbmail_imap_session_fetch_parse_args(struct ImapSession * self);
 GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids);
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self);
 
@@ -94,10 +95,10 @@ char *dbmail_imap_session_bodyfetch_get_last_partspec(struct ImapSession *self);
 int dbmail_imap_session_bodyfetch_set_itemtype(struct ImapSession *self, int itemtype);
 int dbmail_imap_session_bodyfetch_get_last_itemtype(struct ImapSession *self);
 
-int dbmail_imap_session_bodyfetch_set_argstart(struct ImapSession *self, int idx);
+int dbmail_imap_session_bodyfetch_set_argstart(struct ImapSession *self);
 int dbmail_imap_session_bodyfetch_get_last_argstart(struct ImapSession *self);
 
-int dbmail_imap_session_bodyfetch_set_argcnt(struct ImapSession *self, int idx);
+int dbmail_imap_session_bodyfetch_set_argcnt(struct ImapSession *self);
 int dbmail_imap_session_bodyfetch_get_last_argcnt(struct ImapSession *self);
 
 int dbmail_imap_session_bodyfetch_set_octetstart(struct ImapSession *self, guint64 octet);

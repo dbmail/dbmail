@@ -1,7 +1,7 @@
 /* Delivery User Functions
  * Aaron Stone, 9 Feb 2004 */
 /*
-  $Id: dsn.c 2421 2007-01-20 21:18:09Z aaron $
+  $Id: dsn.c 2481 2007-03-25 09:14:45Z paul $
 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
