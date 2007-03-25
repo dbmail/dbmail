@@ -1,3 +1,10 @@
+2007-03-25  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	small recent_flag fix
+	* dbmail-imapsession.c, dsn.c, imapd.c, lmtpd.c, pop3d.c, timsieved.c:
+	valgrind fixes (ljackson)
+
 2007-03-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* serverparent.c, dbmailtypes.h, server.c:
