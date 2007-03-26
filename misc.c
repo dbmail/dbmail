@@ -167,16 +167,19 @@ const char *mailbox_remove_namespace(const char *fq_name,
 		char **namespace, char **username)
 {
 	const char *temp = NULL, *user = NULL, *mbox = NULL;
-	size_t ns_user_len;
-	size_t ns_publ_len;
+	static size_t ns_user_len = 0;
+	static size_t ns_publ_len = 0;
 	size_t fq_name_len;
+
+ 	if(ns_user_len==0) {
+ 		ns_user_len = strlen(NAMESPACE_USER);
+ 		ns_publ_len = strlen(NAMESPACE_PUBLIC);
+ 	}
 
 	if (username) *username = NULL;
 	if (namespace) *namespace = NULL;
 
 	fq_name_len = strlen(fq_name);
-	ns_user_len = strlen(NAMESPACE_USER);
-	ns_publ_len = strlen(NAMESPACE_PUBLIC);
 
 	// i.e. '#Users/someuser/foldername'
 	// fail on '#Users*' and '#Users%'
@@ -232,7 +235,7 @@ const char *mailbox_remove_namespace(const char *fq_name,
 		}
 
 		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
-			user, mbox - user - slash);
+			user, (size_t)(mbox - user - slash));
 		if (username) *username = g_strndup(user, mbox - user - slash);
 
 		return mbox;
@@ -362,7 +365,7 @@ int find_bounded(const char * const value, char left, char right,
 			*retchar = NULL;
 			*retsize = 0;
 			*retlast = 0;
-			TRACE(TRACE_INFO, "Found [%s] of length [%zd] between '%c' and '%c' so next skip [%zd]", *retchar, *retsize,
+			TRACE(TRACE_INFO, "Found [%s] of length [%zu] between '%c' and '%c' so next skip [%zu]", *retchar, *retsize,
 			      left, right, *retlast);
 			return -2;
 		}
@@ -370,7 +373,7 @@ int find_bounded(const char * const value, char left, char right,
 		(*retchar)[tmplen] = '\0';
 		*retsize = tmplen;
 		*retlast = tmpright - value;
-		TRACE(TRACE_INFO, "Found [%s] of length [%zd] between '%c' and '%c' so next skip [%zd]", *retchar, *retsize, left,
+		TRACE(TRACE_INFO, "Found [%s] of length [%zu] between '%c' and '%c' so next skip [%zu]", *retchar, *retsize, left,
 		      right, *retlast);
 		return 0;
 	}
@@ -388,13 +391,13 @@ int zap_between(const char * const instring, signed char left, signed char right
 
 	// Should we clip the left char, too?
 	if (left < 0) {
-		left = 0 - left;
+		left = (signed char)(0 - left);
 		clipleft = 1;
 	}
 
 	// Should we clip the right char, too?
 	if (right < 0) {
-		right = 0 - right;
+		right = (signed char)(0 - right);
 		clipright = 1;
 	}
 
@@ -734,9 +737,8 @@ int listex_match(const char *p, const char *s,
 			/* fall; try regular search */
 		}
 
-		if ((flags & LISTEX_NOCASE && tolower(((unsigned int)*p))
-					== tolower(((unsigned int)*s)))
-		|| (*p == *s)) {
+		if ( (*p == *s)||
+		((flags & LISTEX_NOCASE) && (tolower(*p) == tolower(*s)))) {
 			p8=(((unsigned char)*p) > 0xC0);
 			p++; s++;
 		} else {
@@ -758,14 +760,13 @@ u64_t dm_getguid(unsigned int serverid)
         if (gettimeofday(&tv,NULL))
                 return 0;
 
-        snprintf(s,30,"%ld%06ld%02d", tv.tv_sec, tv.tv_usec,serverid);
+        snprintf(s,30,"%ld%06ld%02u", tv.tv_sec, tv.tv_usec,serverid);
         return (u64_t)strtoll(s,NULL,10);
 }
 
 sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr)
 {
-	int maxsocklen = 128; /* ref. UNP */
-	
+	#define maxsocklen	128
 	union {
 		struct sockaddr sa;
 		char data[maxsocklen];
@@ -914,16 +915,22 @@ int checkmailboxname(const char *s)
  * 01234567890
  * month three-letter specifier
  */
+ 
+// Define len if "01-Jan-1970" string
+#define STRLEN_MINDATA	11
+
 int check_date(const char *date)
 {
 	char sub[4];
-	int days, i, j;
+	int days, i, j=1;
+	size_t l;
 
-	if (strlen(date) != strlen("01-Jan-1970")
-	    && strlen(date) != strlen("1-Jan-1970"))
+	l = strlen(date);
+
+	if (l != STRLEN_MINDATA && l != STRLEN_MINDATA-1)
 		return 0;
 
-	j = (strlen(date) == strlen("1-Jan-1970")) ? 1 : 0;
+	j = (l==STRLEN_MINDATA) ? 0 : 1;
 
 	if (date[2 - j] != '-' || date[6 - j] != '-')
 		return 0;
@@ -1991,7 +1998,7 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	return t;
 }
 
-GList * envelope_address_part(GList *list, GMimeMessage *message, const char *header)
+static GList * envelope_address_part(GList *list, GMimeMessage *message, const char *header)
 {
 	const char *result;
 	char *t;
@@ -2015,19 +2022,50 @@ GList * envelope_address_part(GList *list, GMimeMessage *message, const char *he
 	return list;
 }
 
+static void  get_msg_charset_frompart(GMimeObject *part, gpointer data)
+{
+	const char *charset=NULL;
+	if (*((char **)data)==NULL && (charset=g_mime_object_get_content_type_parameter(part,"charset"))) {
+	        *((char **)data)=g_strdup(charset);
+	}
+	return;
+}
+
+static char * get_msg_charset(GMimeMessage *message)
+{
+	GMimeObject *mess_obj=NULL;
+	char *mess_charset=NULL;
+
+	if (message)
+		mess_obj=g_mime_message_get_mime_part(message);
+	
+	if (mess_obj) {
+		const char * charset = NULL;
+		if ((charset=g_mime_object_get_content_type_parameter(mess_obj,"charset"))) {
+			mess_charset=g_strdup(charset);
+		}
+		g_object_unref(mess_obj);
+	}
+	if (mess_charset==NULL) {
+		g_mime_message_foreach_part(message,get_msg_charset_frompart,&mess_charset);
+	}
+
+	return mess_charset;
+}
+
 /* convert not encoded field to utf8 */
 char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 {
 	char * subj=NULL;
 	static iconv_t default_iconv=(iconv_t)-1;
-	static const char *default_charset=NULL;
-	int allocated_default_iconv = 0;
-	const char *charset;
+	const char *charset=NULL;
+	static int allocated_default_iconv = 0;
 	iconv_t conv_iconv;
-	field_t val;
-	GMimeObject *mess_obj=NULL;
 	
-	if (default_iconv==(iconv_t)-1){ //Init
+	// Init static vars
+	if (default_iconv==(iconv_t)-1){
+		field_t val;
+		const char *default_charset=NULL;
 		GETCONFIGVALUE("DEFAULT_MSG_ENCODING", "DBMAIL", val);
 		if (val[0])
 			default_charset=val;
@@ -2036,11 +2074,15 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 		default_iconv=g_mime_iconv_open("UTF-8",default_charset);
 		if (default_iconv == (iconv_t)-1) {
 			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
-		}
+		}else
+			allocated_default_iconv = 1;
 	}
+	// End init
 	
-	if (str_in==NULL)
+	if (str_in==NULL) {
 		return NULL;
+	}
+
 	if (g_utf8_validate((const gchar *)str_in, -1, NULL) || !g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
 		// Conversion not needed
 		return g_strdup(str_in);
@@ -2048,25 +2090,21 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 
 	// Get message encode codepage
 	if (message)
-		mess_obj=g_mime_message_get_mime_part(message);
-	
-	if (mess_obj) {
-		if ((charset=g_mime_object_get_content_type_parameter(mess_obj,"charset"))) {
-			// codepage not set in message header use default
-		        TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
-			
-			if ((conv_iconv=g_mime_iconv_open("UTF-8",charset))==(iconv_t)-1) {
-				TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [UTF-8]", charset);
-				allocated_default_iconv = 1;
-			} else {
-				subj=g_mime_iconv_strdup(conv_iconv,str_in);
-				g_mime_iconv_close(conv_iconv);
-			}
+ 		charset=get_msg_charset(message);
+ 	if (charset) {
+ 		// codepage not set in message header use default
+ 		TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
+  			
+ 		if ((conv_iconv=g_mime_iconv_open("UTF-8",charset))==(iconv_t)-1) {
+			TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [UTF-8]", charset);
+			subj=g_mime_iconv_strdup(default_iconv,str_in);
+		} else {
+			subj=g_mime_iconv_strdup(conv_iconv,str_in);
+			g_mime_iconv_close(conv_iconv);
 		}
 	}
 	if (subj==NULL) {
 		subj=g_mime_iconv_strdup(default_iconv,str_in);
-		if (allocated_default_iconv) g_mime_iconv_close(default_iconv);
 	}
 	    
 	if (subj==NULL) {
@@ -2076,6 +2114,14 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 		for(p=subj;*p;p++)
 		    if(*p & 0x80) *p='?';
 	}
+ 	
+ 	if (subj) {
+ 		gchar *p;
+ 		if ((p=g_utf8_normalize(subj,-1,G_NORMALIZE_ALL))) {
+ 		        g_free(subj);
+ 			subj=p;
+ 		}
+ 	}
 
 	return subj;
 }
@@ -2084,25 +2130,20 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 /* convert not encoded field to database encoding */
 char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 {
-	//size_t str_in_len=strlen(str_in);
-	//char * str_out=NULL;
 	char * subj=NULL;
-	//int err_flg=1;
-	int allocated_default_iconv = 0;
 	static const char * base_charset=NULL;
 	static iconv_t base_iconv=(iconv_t)-1;
 	static iconv_t default_iconv=(iconv_t)-1;
-	static const char *default_charset=NULL;
-	const char *charset;
+
+	const char *charset = NULL;
 	iconv_t conv_iconv;
-	field_t val;
-	GMimeObject *mess_obj=NULL;
-	
-	if(base_charset==NULL){ //Init
+
+	// Init static vars
+	if(base_charset==NULL){
+		field_t val;
 		GETCONFIGVALUE("ENCODING", "DBMAIL", val);
 		if(val[0]) {
 			base_charset=val;
-			//TEST
 			TRACE(TRACE_DEBUG,"Base charset [%s]", base_charset);
 			iconv_t tmp_i=g_mime_iconv_open(base_charset,"UTF-8");
 			if(tmp_i == (iconv_t)-1) {
@@ -2119,6 +2160,13 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		if (base_iconv == (iconv_t)-1)
 			TRACE(TRACE_DEBUG,"incorrect base encoding [%s]", base_charset);
 			// codepage not set in message header use default
+			
+	}
+	// End init static
+	
+	if (base_iconv == (iconv_t)-1) {
+		const char *default_charset=NULL;
+		field_t val;
 		GETCONFIGVALUE("DEFAULT_MSG_ENCODING", "DBMAIL", val);
 		if (val[0])
 			default_charset=val;
@@ -2128,45 +2176,44 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		if (default_iconv == (iconv_t)-1) {
 			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
 		}
-		allocated_default_iconv = 1;
 	}
 	if (str_in==NULL) {
-		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
 		return NULL;
 	}
 	
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
 		// Conversion not needed
-		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
 		return g_strdup(str_in);
 	}
 
 	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
 		// Conversion already done by header decode ? May insert to database
-		if(allocated_default_iconv) g_mime_iconv_close(default_iconv);
 		return subj;
 	}
-	
+
+	//base_iconv not needed after here.
+	if (base_iconv != (iconv_t)-1)
+		g_mime_iconv_close(base_iconv);
+
+
 	// Get message encode codepage 
-	if (message)
-		mess_obj=g_mime_message_get_mime_part(message);
-	if (mess_obj) {
-		if ((charset=g_mime_object_get_content_type_parameter(mess_obj,"charset"))) {
-			// codepage not set in message header use default
-		        TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
-			
-			if ((conv_iconv=g_mime_iconv_open(base_charset,charset))==(iconv_t)-1) {
-				TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [%s]", charset,base_charset);
-			} else {
-				subj=g_mime_iconv_strdup(conv_iconv,str_in);
-				g_mime_iconv_close(conv_iconv);
-			}
-		}
-	}
-	if (subj==NULL) {
-		subj=g_mime_iconv_strdup(default_iconv,str_in);
-	}
-	    
+ 	if (message) {
+ 		charset=get_msg_charset(message);
+ 	}
+ 	
+ 	if (charset) {
+ 		// codepage not set in message header use default
+ 	        TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
+  			
+ 		if ((conv_iconv=g_mime_iconv_open(base_charset,charset))==(iconv_t)-1) {
+ 			TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [%s]", charset,base_charset);
+ 			subj=g_mime_iconv_strdup(default_iconv,str_in);
+ 		} else {
+ 			subj=g_mime_iconv_strdup(conv_iconv,str_in);
+ 			g_mime_iconv_close(conv_iconv);
+  		}
+  	}
+    
 	if (subj==NULL) {
 		// On Error convertion,  replace all 8 bit symbol with '?'
 		subj=g_strdup(str_in);
@@ -2175,21 +2222,19 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		    if(*p & 0x80) *p='?';
 	}
 
-	if(allocated_default_iconv)
-		g_mime_iconv_close(default_iconv);
-
 	return subj;
 }
 /* encode string from database encoding to mime (7-bit) */
 char * convert_8bit_db_to_mime(const char* str_in)
 {
 	char * subj=NULL;
-	char * subj2=NULL;
-	static const char * base_charset=NULL;
-	static iconv_t base_iconv=(iconv_t)-1;
-	field_t val;
 	
-	if(base_charset==NULL){ //Init
+	static iconv_t base_iconv=(iconv_t)-1;
+
+	
+	if (base_iconv == (iconv_t)-1) { //Init
+		field_t val;
+		const char * base_charset=NULL;
 		GETCONFIGVALUE("ENCODING", "DBMAIL", val);
 		if(val[0]) {
 			base_charset=val;
@@ -2211,18 +2256,30 @@ char * convert_8bit_db_to_mime(const char* str_in)
 	}
 	
 	if (str_in==NULL)
+		if (base_iconv != (iconv_t)-1)
+			 g_mime_iconv_close(base_iconv);
 		return NULL;
 	
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
+		if (base_iconv != (iconv_t)-1)
+			 g_mime_iconv_close(base_iconv);
 		// Conversion not needed
 		return g_strdup(str_in);
 	}
 
-	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
-		subj2 = g_mime_utils_header_encode_text((unsigned char *)subj);
-		g_free(subj);
-		return subj2;
-	}
+ 	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
+ 		gchar *p,*subj2;
+ 		p=g_utf8_normalize(subj,-1,G_NORMALIZE_ALL);
+		subj2 = g_mime_utils_header_encode_text((unsigned char *)p);
+		if (base_iconv != (iconv_t)-1)
+			 g_mime_iconv_close(base_iconv);
+  		g_free(subj);
+ 		g_free(p);
+ 		return subj2;
+  	}
+
+	if (base_iconv != (iconv_t)-1)
+		 g_mime_iconv_close(base_iconv);
 	
 	return g_mime_utils_header_encode_text((unsigned char *)str_in);
 }
