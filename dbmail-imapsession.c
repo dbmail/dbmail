@@ -495,7 +495,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self)
 	token = self->args[self->args_idx];
 	nexttoken = self->args[self->args_idx+1];
 
-	TRACE(TRACE_DEBUG,"parse args[%d] = [%s]", self->args_idx, token);
+	TRACE(TRACE_DEBUG,"parse args[%llu] = [%s]", self->args_idx, token);
 
 	if (MATCH(token,"flags")) {
 		self->fi->getFlags = 1;
@@ -565,8 +565,9 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self)
 				TRACE(TRACE_DEBUG,"fetch_parse_partspec return with error");
 				return -2;
 			}
-			/* idx points to ']' now */
-			self->args_idx++;
+			
+			self->args_idx++; // idx points to ']' now
+			self->args_idx++; // idx points to octet range now 
 			return _imap_session_fetch_parse_octet_range(self);
 		}
 	} else if (MATCH(token,"all")) {		
