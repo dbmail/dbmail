@@ -1397,7 +1397,7 @@ int _ic_fetch(struct ImapSession *self)
 			dbmail_imap_session_printf(self, "%s BAD invalid argument list to fetch\r\n", self->tag);
 			return 1;
 		}
-		TRACE(TRACE_DEBUG,"dbmail_imap_session_fetch_parse_args loop idx %d state %d ", self->args_idx, state);
+		TRACE(TRACE_DEBUG,"dbmail_imap_session_fetch_parse_args loop idx %llu state %d ", self->args_idx, state);
 		self->args_idx++;
 	} while (state > 0);
 
@@ -1473,15 +1473,16 @@ int _ic_store(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	cmd_store_t cmd;
-	int result, i, j;
+	int result, i, j, k;
 
 	memset(cmd.flaglist, 0, sizeof(int) * IMAP_NFLAGS);
 
 	if (!check_state_and_args (self, "STORE", 2, 0, IMAPCS_SELECTED))
 		return 1;
 
+	k = self->args_idx;
 	/* multiple flags should be parenthesed */
-	if (self->args[3] && strcmp(self->args[2], "(") != 0) {
+	if (self->args[k+3] && strcmp(self->args[k+2], "(") != 0) {
 		dbmail_imap_session_printf(self, "%s BAD invalid argument(s) to STORE\r\n",
 			self->tag);
 		return 1;
@@ -1490,19 +1491,19 @@ int _ic_store(struct ImapSession *self)
 	cmd.silent = FALSE;
 
 	/* retrieve action type */
-	if (MATCH(self->args[1], "flags"))
+	if (MATCH(self->args[k+1], "flags"))
 		cmd.action = IMAPFA_REPLACE;
-	else if (MATCH(self->args[1], "flags.silent")) {
+	else if (MATCH(self->args[k+1], "flags.silent")) {
 		cmd.action = IMAPFA_REPLACE;
 		cmd.silent = TRUE;
-	} else if (MATCH(self->args[1], "+flags"))
+	} else if (MATCH(self->args[k+1], "+flags"))
 		cmd.action = IMAPFA_ADD;
-	else if (MATCH(self->args[1], "+flags.silent")) {
+	else if (MATCH(self->args[k+1], "+flags.silent")) {
 		cmd.action = IMAPFA_ADD;
 		cmd.silent = TRUE;
-	} else if (MATCH(self->args[1], "-flags"))
+	} else if (MATCH(self->args[k+1], "-flags"))
 		cmd.action = IMAPFA_REMOVE;
-	else if (MATCH(self->args[1], "-flags.silent")) {
+	else if (MATCH(self->args[k+1], "-flags.silent")) {
 		cmd.action = IMAPFA_REMOVE;
 		cmd.silent = TRUE;
 	}
@@ -1513,17 +1514,17 @@ int _ic_store(struct ImapSession *self)
 	}
 
 	/* now fetch flag list */
-	i = (strcmp(self->args[2], "(") == 0) ? 3 : 2;
+	i = (strcmp(self->args[k+2], "(") == 0) ? 3 : 2;
 
-	for (; self->args[i] && strcmp(self->args[i], ")") != 0; i++) {
+	for (; self->args[k+i] && strcmp(self->args[k+i], ")") != 0; i++) {
 		for (j = 0; j < IMAP_NFLAGS; j++) {
 			/* storing the recent flag explicitely is not allowed */
-			if (MATCH(self->args[i],"\\Recent")) {
+			if (MATCH(self->args[k+i],"\\Recent")) {
 				j = IMAP_NFLAGS;
 				break;
 			}
 				
-			if (MATCH(self->args[i], imap_flag_desc_escaped[j])) {
+			if (MATCH(self->args[k+i], imap_flag_desc_escaped[j])) {
 				cmd.flaglist[j] = 1;
 				break;
 			}
@@ -1589,7 +1590,7 @@ int _ic_store(struct ImapSession *self)
 			self->ids = NULL;
 		}
 
-		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[k],self->use_uid);
 		
 		if (g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
