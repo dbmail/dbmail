@@ -1,3 +1,12 @@
+2007-03-26  Paul J Stevens <paul@nfg.nl>
+
+	* imapcommands.c:
+	fix fallout from imap args cleanup
+	* misc.c:
+	fix minor memleaks (ljackson)
+	* dbmail-imapsession.c, misc.c, test-scripts/testimap.py:
+	integrate and finish patches by AntonZ and LJackson
+
 2007-03-25  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, dbmail-imapsession.c, dbmail-imapsession.h, 
