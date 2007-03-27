@@ -1,3 +1,45 @@
+2007-03-26  Paul J Stevens <paul@nfg.nl>
+
+	* imapcommands.c:
+	fix fallout from imap args cleanup
+	* misc.c:
+	fix minor memleaks (ljackson)
+	* dbmail-imapsession.c, misc.c, test-scripts/testimap.py:
+	integrate and finish patches by AntonZ and LJackson
+
+2007-03-25  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, dbmail-imapsession.c, dbmail-imapsession.h, 
+	  imap4.c, imapcommands.c, misc.c:
+	applied patch to fix argument parsing in imap (ljackson) (bug #546)
+	* debug.c, debug.h:
+	cleanup trace calls (closes #532)
+	* db.c:
+	small recent_flag fix
+	* dbmail-imapsession.c, dsn.c, imapd.c, lmtpd.c, pop3d.c, timsieved.c:
+	valgrind fixes (ljackson)
+
+2007-03-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverparent.c, dbmailtypes.h, server.c:
+	Fixes to SIGHUP handling (closes bug #546).
+	* dbmail-message.c:
+	Set the tmpfile not to use C library buffering.
+
+2007-03-24  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, dbmail-imapsession.c, dm_base64.c, modules/authsql.c:
+	valgrind fixes
+	* check_dbmail_imapd.c, misc.c:
+	fix bug #551
+
+2007-03-23  Aaron Stone  <aaron@serendipity.cx>
+
+	* imapd.c, lmtpd.c, pop3d.c, timsieved.c:
+	Accepted patch from Leif Jackson to formally initialize some variables.
+	* misc.c, serverparent.c:
+	Accepted patch from Leif Jackson to close some minor memory leaks.
+
 2007-03-23  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.h:

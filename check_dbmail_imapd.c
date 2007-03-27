@@ -124,13 +124,14 @@ END_TEST
 
 
 #define A(x,y) s=dbmail_imap_astring_as_string(x); \
-	fail_unless(strcmp(y,s)==0,"dbmail_imap_astring_as_string failed"); \
+	fail_unless(strcmp(y,s)==0,"dbmail_imap_astring_as_string failed [%s] != [%s]", s, y); \
 	g_free(s)
 START_TEST(test_dbmail_imap_astring_as_string)
 {
 	char *s;
 	A("test","\"test\"");
 	A("\"test\"","\"test\"");
+	A("\"test\" \"test\"","{13}\r\n\"test\" \"test\"");
 	A("\"test","{5}\r\n\"test");
 	A("testÃ","{5}\r\ntestÃ");
 	A("test\"","{5}\r\ntest\"");
@@ -326,7 +327,8 @@ START_TEST(test_imap_bodyfetch)
 	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_octetcnt(s), "octetcnt init value incorrect");
 	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_argstart(s), "argstart init value incorrect");
 	
-	dbmail_imap_session_bodyfetch_set_argstart(s,23);
+	s->args_idx = 23;
+	dbmail_imap_session_bodyfetch_set_argstart(s);
 	result = dbmail_imap_session_bodyfetch_get_last_argstart(s);
 	fail_unless(result==23, "argstart incorrect");
 	
@@ -486,12 +488,15 @@ START_TEST(test_imap_get_envelope)
 {
 	struct DbmailMessage *message;
 	char *result, *expect;
+	GString *s;
 	
 	expect = g_new0(char, 1024);
 	
 	/* text/plain */
 	message = dbmail_message_new();
-	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
+	s = g_string_new(rfc822);
+	message = dbmail_message_init_with_string(message, s);
+	g_string_free(s,TRUE);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
@@ -499,17 +504,23 @@ START_TEST(test_imap_get_envelope)
 	dbmail_message_free(message);
 	g_free(result);
 	result = NULL;
-	g_free(expect);
-	expect = NULL;
 
 	/* bare bones message */
 	message = dbmail_message_new();
-	message = dbmail_message_init_with_string(message, g_string_new(simple));
+	s = g_string_new(simple);
+	message = dbmail_message_init_with_string(message, s);
+	g_string_free(s,TRUE);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" NIL NIL NIL NIL NIL NIL NIL NIL)", 1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
 
 	dbmail_message_free(message);
 	g_free(result);
 	result = NULL;
+
+	g_free(expect);
+	expect = NULL;
 
 }
 END_TEST

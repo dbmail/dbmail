@@ -52,8 +52,8 @@ extern const char *imap_flag_desc_escaped[];
 
 extern volatile sig_atomic_t alarm_occured;
 
-static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx);
-static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int idx);
+static int _imap_session_fetch_parse_partspec(struct ImapSession *self);
+static int _imap_session_fetch_parse_octet_range(struct ImapSession *self);
 
 static void _imap_show_body_sections(struct ImapSession *self);
 static void _fetch_envelopes(struct ImapSession *self);
@@ -101,6 +101,8 @@ struct ImapSession * dbmail_imap_session_new(void)
 		return NULL;
 
 	self = g_new0(struct ImapSession,1);
+
+	self->args = g_new0(char *, MAX_ARGS);
 
 	dbmail_imap_session_resetFi(self);
 	
@@ -161,11 +163,13 @@ struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, c
 	self->command = g_strdup(command);
 	return self;
 }
+/* not needed...
 struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args)
 {
 	self->args = args;
 	return self;
 }
+*/
 
 
 void dbmail_imap_session_delete(struct ImapSession * self)
@@ -207,6 +211,8 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_tree_destroy(self->envelopes);
 		self->envelopes = NULL;
 	}
+
+	g_free(self->args);
 
 	g_free(self);
 }
@@ -306,7 +312,7 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 	return outcnt;
 }
 
-static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx)
+static int _imap_session_fetch_parse_partspec(struct ImapSession *self)
 {
 	/* check for a partspecifier */
 	/* first check if there is a partspecifier (numbers & dots) */
@@ -314,8 +320,8 @@ static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx)
 	unsigned int j = 0;
 	char *token, *nexttoken;
 
-	token=self->args[idx];
-	nexttoken=self->args[idx+1];
+	token=self->args[self->args_idx];
+	nexttoken=self->args[self->args_idx+1];
 
 	TRACE(TRACE_DEBUG,"token [%s], nexttoken [%s]", token, nexttoken);
 
@@ -380,41 +386,42 @@ static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx)
 		if (! MATCH(nexttoken, "]"))
 			return -2;	/* error DONE */
 	} else {
-		idx++;	/* should be at '(' now */
-		token = self->args[idx];
-		nexttoken = self->args[idx+1];
+		self->args_idx++;	/* should be at '(' now */
+		token = self->args[self->args_idx];
+		nexttoken = self->args[self->args_idx+1];
 		
 		if (! MATCH(token,"("))
 			return -2;	/* error DONE */
 
-		idx++;	/* at first item of field list now, remember idx */
-		dbmail_imap_session_bodyfetch_set_argstart(self, idx);
+		self->args_idx++;	/* at first item of field list now, remember idx */
+		dbmail_imap_session_bodyfetch_set_argstart(self); 
 
 		/* walk on untill list terminates (and it does 'cause parentheses are matched) */
-		while (! MATCH(self->args[idx],")") )
-			idx++;
+		while (! MATCH(self->args[self->args_idx],")") )
+			self->args_idx++;
 
-		token = self->args[idx];
-		nexttoken = self->args[idx+1];
+		token = self->args[self->args_idx];
+		nexttoken = self->args[self->args_idx+1];
 		
-		dbmail_imap_session_bodyfetch_set_argcnt(self, idx);
+		dbmail_imap_session_bodyfetch_set_argcnt(self);
 
 		if (dbmail_imap_session_bodyfetch_get_last_argcnt(self) == 0 || ! MATCH(nexttoken,"]") )
 			return -2;	/* error DONE */
 	}
-	return idx + 1;
+
+	return 0;
 }
 
-static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int idx) 
+static int _imap_session_fetch_parse_octet_range(struct ImapSession *self) 
 {
 	/* check if octet start/cnt is specified */
 	int delimpos;
 	unsigned int j = 0;
 	
-	char *token = self->args[idx];
+	char *token = self->args[self->args_idx];
 	
 	if (! token)
-		return idx;
+		return self->args_idx;
 	
 	TRACE(TRACE_DEBUG,"parse token [%s]", token);
 
@@ -446,10 +453,11 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int i
 		token[delimpos] = '.';
 		token[strlen(token) - 1] = '>';
 	} else {
-		return idx;
+		return self->args_idx;
 	}
 
-	return idx + 1;	/* DONE */
+	self->args_idx++;
+	return 0;	/* DONE */
 }
 
 /*
@@ -460,28 +468,34 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int i
  * arglist is supposed to be formatted according to build_args_array()
  *
  */
-int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
+int dbmail_imap_session_fetch_parse_args(struct ImapSession * self)
 {
-	int invalidargs, ispeek = 0;
+	int invalidargs, ispeek = 0, i;
 	
 	invalidargs = 0;
 
-	if (!self->args[idx])
+        /* dump args (debug) */
+        for (i = self->args_idx; self->args[i]; i++) {
+                TRACE(TRACE_DEBUG, "arg[%d]: '%s'\n", i, self->args[i]);
+        }
+
+
+	if (!self->args[self->args_idx])
 		return -1;	/* no more */
 
-	if (self->args[idx][0] == '(')
-		idx++;
+	if (self->args[self->args_idx][0] == '(')
+		self->args_idx++;
 
-	if (!self->args[idx])
+	if (!self->args[self->args_idx])
 		return -2;	/* error */
 
 	
 	char *token = NULL, *nexttoken = NULL;
 	
-	token = self->args[idx];
-	nexttoken = self->args[idx+1];
+	token = self->args[self->args_idx];
+	nexttoken = self->args[self->args_idx+1];
 
-	TRACE(TRACE_DEBUG,"parse args[%d] = [%s]", idx, token);
+	TRACE(TRACE_DEBUG,"parse args[%llu] = [%s]", self->args_idx, token);
 
 	if (MATCH(token,"flags")) {
 		self->fi->getFlags = 1;
@@ -521,7 +535,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 		if (MATCH(token,"body.peek"))
 			ispeek=1;
 		
-		nexttoken = (char *)self->args[idx+1];
+		nexttoken = (char *)self->args[self->args_idx+1];
 		
 		if (! nexttoken || ! MATCH(nexttoken,"[")) {
 			if (ispeek)
@@ -529,29 +543,32 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 			self->fi->getMIME_IMB_noextension = 1;	/* just BODY specified */
 		} else {
 			/* now read the argument list to body */
-			idx++;	/* now pointing at '[' (not the last arg, parentheses are matched) */
-			idx++;	/* now pointing at what should be the item type */
+			self->args_idx++;	/* now pointing at '[' (not the last arg, parentheses are matched) */
+			self->args_idx++;	/* now pointing at what should be the item type */
 
-			token = (char *)self->args[idx];
-			nexttoken = (char *)self->args[idx+1];
+			token = (char *)self->args[self->args_idx];
+			nexttoken = (char *)self->args[self->args_idx+1];
 
 			if (MATCH(token,"]")) {
 				if (ispeek)
 					self->fi->getBodyTotalPeek = 1;
 				else
 					self->fi->getBodyTotal = 1;
-				return _imap_session_fetch_parse_octet_range(self,idx+1);
+				self->args_idx++;				
+				return _imap_session_fetch_parse_octet_range(self);
 			}
 			
 			if (ispeek)
 				self->fi->noseen = 1;
 
-			if ((idx = _imap_session_fetch_parse_partspec(self,idx)) < 0) {
+			if (_imap_session_fetch_parse_partspec(self) < 0) {
 				TRACE(TRACE_DEBUG,"fetch_parse_partspec return with error");
 				return -2;
 			}
-			/* idx points to ']' now */
-			return _imap_session_fetch_parse_octet_range(self,idx+1);
+			
+			self->args_idx++; // idx points to ']' now
+			self->args_idx++; // idx points to octet range now 
+			return _imap_session_fetch_parse_octet_range(self);
 		}
 	} else if (MATCH(token,"all")) {		
 		self->fi->msgparse_needed=1; // because of getEnvelope
@@ -578,8 +595,8 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 		}
 		return -2;	/* DONE */
 	}
-	TRACE(TRACE_DEBUG, "args[idx = %d] = %s (returning %d)\n", idx, self->args[idx], idx + 1);
-	return idx + 1;
+
+	return 1; //theres more...
 }
 
 GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
@@ -888,6 +905,11 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
 		return -1;
 	}
+
+        //because other functions mayhave gotten msginfo
+        if(self->msginfo)
+                g_tree_destroy(self->msginfo);
+
 	self->msginfo = msginfo;
 
 	if (! self->ids)
@@ -1299,6 +1321,8 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         int maxlen=100;
         int result = 0;
         gchar *ln;
+
+	assert(message);
 
 	va_start(ap, message);
 	ln = g_strdup_vprintf(message,ap);
@@ -1745,6 +1769,11 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	}
 	
 	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
+
+       //because more than one mailbox can be open before session is destroyed
+       if(self->msginfo)
+               g_tree_destroy(self->msginfo);
+
 	if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
 		TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
 
@@ -1779,7 +1808,7 @@ static int imap_session_update_recent(GList *recent)
 	db_begin_transaction();
 	while (slices) {
 		snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag = 0 "
-				"WHERE message_idnr IN (%s) AND recent_flag <> 0", 
+				"WHERE message_idnr IN (%s) AND recent_flag = 1", 
 				DBPFX, (gchar *)slices->data);
 		if (db_query(query) == -1) {
 			db_rollback_transaction();
@@ -1901,11 +1930,11 @@ int dbmail_imap_session_bodyfetch_get_last_itemtype(struct ImapSession *self)
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->itemtype;
 }
-int dbmail_imap_session_bodyfetch_set_argstart(struct ImapSession *self, int idx) 
+int dbmail_imap_session_bodyfetch_set_argstart(struct ImapSession *self) 
 {
 	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
-	bodyfetch->argstart = idx;
+	bodyfetch->argstart = self->args_idx;
 	return bodyfetch->argstart;
 }
 int dbmail_imap_session_bodyfetch_get_last_argstart(struct ImapSession *self) 
@@ -1914,11 +1943,11 @@ int dbmail_imap_session_bodyfetch_get_last_argstart(struct ImapSession *self)
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->argstart;
 }
-int dbmail_imap_session_bodyfetch_set_argcnt(struct ImapSession *self, int idx) 
+int dbmail_imap_session_bodyfetch_set_argcnt(struct ImapSession *self) 
 {
 	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
-	bodyfetch->argcnt = idx - bodyfetch->argstart;
+	bodyfetch->argcnt = self->args_idx - bodyfetch->argstart;
 	return bodyfetch->argcnt;
 }
 int dbmail_imap_session_bodyfetch_get_last_argcnt(struct ImapSession *self) 
@@ -1972,8 +2001,6 @@ u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t dumpsize)
 #define SQUAREPAR 2
 #define NOPAR 0
 
-char *the_args[MAX_ARGS];
-
 /*
  * build_args_array_ext()
  *
@@ -2003,11 +2030,12 @@ char *the_args[MAX_ARGS];
  * Will return NULL upon errors.
  */
 
-static void free_args(void)
+static void free_args(struct ImapSession *self)
 {
 	int i;
-	for (i = 0; i < MAX_ARGS && the_args[i]; i++)
-		dm_free(the_args[i]);
+	for (i = 0; i < MAX_ARGS && self->args[i]; i++)
+		dm_free(self->args[i]);
+	self->args_idx = 0;
 }
 
 char **build_args_array_ext(struct ImapSession *self, const char *originalString)
@@ -2019,19 +2047,12 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 	char s[MAX_LINESIZE];
 	char *tmp, *lastchar;
 	int quotedSize, cnt, dataidx;
-	static int init_args = 0;
 	int gotc;
 	int result;
 	clientinfo_t *ci = self->ci;
 
-	/* Clear the_args the very first time. */
-	if (!init_args) {
-		memset(the_args, 0, MAX_ARGS * (sizeof(char *)));
-		init_args = 1;
-	}
-
 	/* free the last round of arguments */
-	free_args();
+	free_args(self);
 
 	/* this is done for the possible extra lines to be read from the client:
 	 * the line is read into currline; s will always point to the line currently
@@ -2044,8 +2065,8 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 
 	/* check for empty string */
 	if (!(*s)) {
-		the_args[0] = NULL;
-		return the_args;
+		self->args[0] = NULL;
+		return self->args;
 	}
 
 	/* find the arguments */
@@ -2059,9 +2080,9 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 		if (s[i] == '"' && ((i > 0 && s[i - 1] != '\\') || i == 0)) {
 			if (inquote) {
 				/* quotation end, treat quoted string as argument */
-				the_args[nargs] = g_new0(char,(i - quotestart));
-				memcpy((void *) the_args[nargs], (void *) &s[quotestart + 1], i - quotestart - 1);
-				the_args[nargs][i - quotestart - 1] = '\0';
+				self->args[nargs] = g_new0(char,(i - quotestart));
+				memcpy((void *) self->args[nargs], (void *) &s[quotestart + 1], i - quotestart - 1);
+				self->args[nargs][i - quotestart - 1] = '\0';
 
 				nargs++;
 				inquote = 0;
@@ -2124,9 +2145,9 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 			}
 
 			/* add this parenthesis to the arg list and continue */
-			the_args[nargs] = g_new0(char,2);
-			the_args[nargs][0] = s[i];
-			the_args[nargs][1] = '\0';
+			self->args[nargs] = g_new0(char,2);
+			self->args[nargs][0] = s[i];
+			self->args[nargs][1] = '\0';
 
 			nargs++;
 			continue;
@@ -2144,7 +2165,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 			if ((*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0') || 
 			    (*lastchar == '}' && *(lastchar + 1) == '\0')) {
 				/* allocate space for this argument (could be a message when used with APPEND) */
-				the_args[nargs] = g_new0(char, quotedSize+1);
+				self->args[nargs] = g_new0(char, quotedSize+1);
 			
 				ci_write(ci->tx, "+ OK gimme that string\r\n");
 				
@@ -2156,12 +2177,12 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					if (gotc == '\r')	/* only store if it is not \r */
 						continue;
 					
-					the_args[nargs][dataidx++] = gotc;
+					self->args[nargs][dataidx++] = gotc;
 				}
 				
 				alarm(0);
 
-				the_args[nargs][dataidx] = '\0';	/* terminate string */
+				self->args[nargs][dataidx] = '\0';	/* terminate string */
 				nargs++;
 				
 				if (alarm_occured) {
@@ -2171,14 +2192,14 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 						client_close();
 						TRACE(TRACE_ERROR, "timeout occurred in fgetc; got [%d] of [%d]; timeout [%d]", 
 								cnt, quotedSize, ci->timeout);
-						free_args();
+						free_args(self);
 						return NULL;
 					}
 				}
 
 				if (ferror(ci->rx) || ferror(ci->tx)) {
 					TRACE(TRACE_ERROR, "client socket has set error indicator in fgetc");
-					free_args();
+					free_args(self);
 					return NULL;
 				}
 				/* now read the rest of this line */
@@ -2188,18 +2209,18 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					alarm_occured = 0;
 					client_close();
 					TRACE(TRACE_ERROR, "timeout occurred in dbmail_imap_session_readln");
-					free_args();
+					free_args(self);
 					return NULL;
 				}
 
 				if (result < 0){
-					free_args();
+					free_args(self);
 					return NULL;
 				}
 
 				if (ferror(ci->rx) || ferror(ci->tx)) {
 					TRACE(TRACE_ERROR, "client socket is set error indicator in dbmail_imap_session_readln");
-					free_args();
+					free_args(self);
 					return NULL;
 				}
 
@@ -2231,9 +2252,9 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					break;
 			}
 
-		the_args[nargs] = g_new0(char,(i - argstart + 1));
-		memcpy((void *) the_args[nargs], (void *) &s[argstart], i - argstart);
-		the_args[nargs][i - argstart] = '\0';
+		self->args[nargs] = g_new0(char,(i - argstart + 1));
+		memcpy((void *) self->args[nargs], (void *) &s[argstart], i - argstart);
+		self->args[nargs][i - argstart] = '\0';
 
 		nargs++;
 		i--;		/* walked one too far */
@@ -2241,18 +2262,18 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 
 	if (paridx != 0) {
 		/* error in parenthesis structure */
-		free_args();
+		free_args(self);
 		return NULL;
 	}
 
-	the_args[nargs] = NULL;	/* terminate */
+	self->args[nargs] = NULL;	/* terminate */
 
 	/* dump args (debug) */
-	for (i = 0; the_args[i]; i++) {
-		TRACE(TRACE_DEBUG, "arg[%d]: '%s'\n", i, the_args[i]);
+	for (i = 0; self->args[i]; i++) {
+		TRACE(TRACE_DEBUG, "arg[%d]: '%s'\n", i, self->args[i]);
 	}
 
-	return the_args;
+	return self->args;
 }
 
 #undef NOPAR

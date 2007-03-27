@@ -80,7 +80,7 @@ int server_setup(serverConfig_t *conf)
 	GeneralStopRequested = 0;
 	get_sigchld = 0;
 	SetParentSigHandler();
-	
+
 	childinfo.maxConnect	= conf->childMaxConnect;
 	childinfo.listenSockets	= g_memdup(conf->listenSockets, conf->ipcount * sizeof(int));
 	childinfo.numSockets   	= conf->ipcount;
