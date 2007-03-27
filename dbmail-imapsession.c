@@ -1287,7 +1287,7 @@ int check_state_and_args(struct ImapSession * self, const char *command, int min
 
 	/* check args */
 	for (i = 0; i < minargs; i++) {
-		if (!self->args[i]) {
+		if (!self->args[self->args_idx+i]) {
 			/* error: need more args */
 			dbmail_imap_session_printf(self,
 				"%s BAD missing argument%s to %s\r\n", self->tag,
@@ -1296,7 +1296,7 @@ int check_state_and_args(struct ImapSession * self, const char *command, int min
 		}
 	}
 
-	for (i = 0; self->args[i]; i++);
+	for (i = 0; self->args[self->args_idx+i]; i++);
 
 	if (maxargs && (i > maxargs)) {
 		/* error: too many args */
@@ -1657,9 +1657,9 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	}
 	/* msg counts */
 	if ((!update) || (ud->mailbox.exists < mb.exists)) // only increments
-		dbmail_imap_session_printf(self, "* %u EXISTS\r\n", exists);
+		dbmail_imap_session_printf(self, "* %llu EXISTS\r\n", exists);
 	if ((!update) || (ud->mailbox.recent != mb.recent))
-		dbmail_imap_session_printf(self, "* %u RECENT\r\n", recent);
+		dbmail_imap_session_printf(self, "* %llu RECENT\r\n", recent);
 
 	if (msginfo) {
 		oldmsginfo = self->msginfo;
