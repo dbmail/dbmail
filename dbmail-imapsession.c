@@ -898,17 +898,15 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, struct ImapSession 
 
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 {
-	GTree *msginfo;
-	if ((msginfo=dbmail_imap_session_get_msginfo(self, self->ids)) == NULL) {
-		TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
-		return -1;
+	GTree *t;
+	
+	t = self->msginfo;
+
+	if ((self->msginfo=dbmail_imap_session_get_msginfo(self, self->ids)) == NULL) {
+		TRACE(TRACE_ERROR, "unable to retrieve msginfo");
 	}
-
-        //because other functions mayhave gotten msginfo
-        if(self->msginfo)
-                g_tree_destroy(self->msginfo);
-
-	self->msginfo = msginfo;
+        if(t)
+                g_tree_destroy(t);
 
 	if (! self->ids)
 		TRACE(TRACE_ERROR, "self->ids is NULL");
@@ -1134,6 +1132,7 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 		
 		fld = (char *)db_get_result(i,1);
 		val = convert_8bit_db_to_mime((char *)db_get_result(i,2));
+		TRACE(TRACE_DEBUG,"got hdrval [%s]", val);
 		
 		old = g_tree_lookup(self->headers, (gconstpointer)mid);
 		new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
@@ -1730,6 +1729,7 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mailbox)
 {
 	int result;
+	GTree *t;
 	u64_t mailbox_idnr;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	
@@ -1768,12 +1768,12 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	
 	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
 
-       //because more than one mailbox can be open before session is destroyed
-       if(self->msginfo)
-               g_tree_destroy(self->msginfo);
-
+	//because more than one mailbox can be open before session is destroyed
+	t = self->msginfo;
 	if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
-		TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
+	       TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
+	if(t)
+		g_tree_destroy(t);
 
 	return 0;
 }
