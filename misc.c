@@ -2177,12 +2177,11 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
 		}
 	}
-	if (str_in==NULL) {
+	if (str_in==NULL)
 		return NULL;
-	}
 	
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
-		// Conversion not needed
+		// No convertion required
 		return g_strdup(str_in);
 	}
 
@@ -2191,22 +2190,16 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		return subj;
 	}
 
-	//base_iconv not needed after here.
-	if (base_iconv != (iconv_t)-1)
-		g_mime_iconv_close(base_iconv);
-
-
 	// Get message encode codepage 
- 	if (message) {
+ 	if (message)
  		charset=get_msg_charset(message);
- 	}
  	
  	if (charset) {
  		// codepage not set in message header use default
  	        TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
   			
  		if ((conv_iconv=g_mime_iconv_open(base_charset,charset))==(iconv_t)-1) {
- 			TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [%s]", charset,base_charset);
+ 			TRACE(TRACE_WARNING,"incorrect encoding [%s] base [%s]", charset,base_charset);
  			subj=g_mime_iconv_strdup(default_iconv,str_in);
  		} else {
  			subj=g_mime_iconv_strdup(conv_iconv,str_in);
@@ -2228,9 +2221,7 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 char * convert_8bit_db_to_mime(const char* str_in)
 {
 	char * subj=NULL;
-	
 	static iconv_t base_iconv=(iconv_t)-1;
-
 	
 	if (base_iconv == (iconv_t)-1) { //Init
 		field_t val;
@@ -2256,14 +2247,10 @@ char * convert_8bit_db_to_mime(const char* str_in)
 	}
 	
 	if (str_in==NULL)
-		if (base_iconv != (iconv_t)-1)
-			 g_mime_iconv_close(base_iconv);
 		return NULL;
 	
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
-		if (base_iconv != (iconv_t)-1)
-			 g_mime_iconv_close(base_iconv);
-		// Conversion not needed
+		// No conversion required
 		return g_strdup(str_in);
 	}
 
@@ -2271,16 +2258,11 @@ char * convert_8bit_db_to_mime(const char* str_in)
  		gchar *p,*subj2;
  		p=g_utf8_normalize(subj,-1,G_NORMALIZE_ALL);
 		subj2 = g_mime_utils_header_encode_text((unsigned char *)p);
-		if (base_iconv != (iconv_t)-1)
-			 g_mime_iconv_close(base_iconv);
   		g_free(subj);
  		g_free(p);
  		return subj2;
   	}
 
-	if (base_iconv != (iconv_t)-1)
-		 g_mime_iconv_close(base_iconv);
-	
 	return g_mime_utils_header_encode_text((unsigned char *)str_in);
 }
 
