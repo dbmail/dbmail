@@ -1,3 +1,11 @@
+2007-03-27  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	small msginfo cleanup to avoid race condition
+	* misc.c:
+	fix regression in _fetch_headers and remove some more g_mime_iconv_close
+	call
+
 2007-03-26  Paul J Stevens <paul@nfg.nl>
 
 	* imapcommands.c:
