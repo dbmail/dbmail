@@ -1644,13 +1644,13 @@ int _ic_copy(struct ImapSession *self)
 	mailbox_t destmbox;
 	cmd_copy_t cmd;
 	
-	bzero(&destmbox, sizeof(destmbox));
+	memset(&destmbox, 0, sizeof(destmbox));
 
 	if (!check_state_and_args(self, "COPY", 2, 2, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	/* check if destination mailbox exists */
-	if (db_findmailbox(self->args[1], ud->userid, &destmboxid) == -1) {
+	if (db_findmailbox(self->args[self->args_idx+1], ud->userid, &destmboxid) == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
@@ -1703,7 +1703,7 @@ int _ic_copy(struct ImapSession *self)
 			self->ids = NULL;
 		}
 
-		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[self->args_idx],self->use_uid);
 		
 		if (g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
