@@ -1,7 +1,35 @@
 2007-03-29  Paul J Stevens <paul@nfg.nl>
-
-	* debian/dbmail.config, tags:
-	merging git tree
+	* AUTHORS, BUGS, INSTALL, README, README.aliases, README.exim, README.ldap, 
+	README.postfix, README.qmail, README.sieve, README.smtp, 
+	README.solaris, README.usermap, acinclude.m4, check_dbmail_auth.c, 
+	check_dbmail_common.c, check_dbmail_db.c, check_dbmail_deliver.c, 
+	check_dbmail_dsn.c, check_dbmail_imapd.c, check_dbmail_mailbox.c, 
+	check_dbmail_message.c, check_dbmail_misc.c, check_dbmail_server.c, 
+	check_dbmail_user.c, check_dbmail_util.c, config.c, 
+	contrib/mailbox2dbmail/mailbox2dbmail, db.c, dbmail-imapsession.c, 
+	dbmail-message.c, dbmail-user.c, dbmodule.c, debian/README.Debian, 
+	debug.c, dm_imaputil.c, dm_md5.c, dsn.c, export.c, imap4.c, 
+	imapcommands.c, imapd.c, list.c, lmtp.c, lmtpd.c, main.c, 
+	maintenance.c, memblock.c, misc.c, modules/Makefile.am, 
+	modules/Makefile.in, modules/authldap.c, modules/sortnull.c, 
+	modules/sortsieve.c, pipe.c, pop3.c, pop3d.c, quota.c, server.c, 
+	serverchild.c, serverparent.c, sievecmd.c, sort.c, 
+	sql/mysql/create_tables.mysql, 
+	sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql, 
+	sql/postgresql/create_tables.pgsql, 
+	sql/postgresql/migrate_from_1.x_to_2.0.pgsql, 
+	sql/postgresql/migrate_from_2.0_to_2.2.pgsql, 
+	sql/sqlite/create_tables.sqlite, test-scripts/testimap.py, 
+	test-scripts/testpop.py, timsieve.c, timsieved.c, user.c:
+	remove svn variables
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testimap.py:
+	fix uid copy (bug #552)
+	* dbmail-imapsession.c:
+	minor fixes
+	* imapcommands.c:
+	fix _ic_copy
+	* dbmail-mailbox.c, test-scripts/testsort.imap:
+	imap sort sometimes returns ids more than once (bug #557)
 
 2007-03-27  Paul J Stevens <paul@nfg.nl>
 
