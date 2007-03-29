@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
--- $Id: migrate_from_1.x_to_2.0.pgsql 2203 2006-07-21 07:36:44Z paul $
+-- 
 
 /* first start a transaction to possibly create the auto_replies and 
    auto_notifications tables, which might, or might not be present.

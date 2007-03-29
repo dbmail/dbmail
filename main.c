@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: main.c 2450 2007-03-06 11:38:07Z paul $
+/* 
  * 
  * main file for dbmail-smtp  */
 

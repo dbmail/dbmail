@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: user.c 2441 2007-03-01 11:35:19Z paul $
+/* 
  * This is the dbmail-user program
  * It makes adding users easier 
  *

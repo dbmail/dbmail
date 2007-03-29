@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 2286 2006-10-01 06:12:58Z aaron $
+/* 
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 

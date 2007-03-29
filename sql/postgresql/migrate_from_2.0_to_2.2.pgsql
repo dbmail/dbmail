@@ -25,7 +25,7 @@ COMMIT;
 --
 -- modify dbmail schema to support header caching.
 --
--- $Id: add_header_tables.psql 1634 2005-03-07 16:13:21Z paul $
+-- 
 --
 --
 -- store all headers by storing all headernames and headervalues in separate
@@ -185,7 +185,7 @@ CREATE UNIQUE INDEX replycache_1 ON dbmail_replycache USING btree (to_addr, from
 --
 -- Add tables and columns to hold Sieve scripts.
 --
--- $Id: add_header_tables.mysql 1634 2005-03-07 16:13:21Z paul $
+-- 
 --
 
 BEGIN TRANSACTION;

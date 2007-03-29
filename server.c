@@ -1,5 +1,5 @@
 /*
-  $Id: server.c 2480 2007-03-24 22:22:18Z aaron $
+  
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 

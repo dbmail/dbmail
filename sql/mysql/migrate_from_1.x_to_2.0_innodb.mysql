@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-# $Id: migrate_from_1.x_to_2.0_innodb.mysql 2055 2006-03-31 07:50:52Z paul $
+# 
 # SQL for upgrading from dbmail-1.2 to dbmail-2.0
 # This script was written by Paul J Stevens. Some changes were made
 # by Ilja Booij @ IC & S to make it work with the optional tables from

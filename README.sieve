@@ -1,4 +1,4 @@
-$Id: $
+
 
 DBMail-2 as of 2.1.4 supports the Sieve mail sorting language. The libSieve
 library is used to provide the core Sieve interpreter: http://libsieve.sf.net/

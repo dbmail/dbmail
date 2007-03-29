@@ -1,4 +1,4 @@
-$Id: README.ldap 1828 2005-08-01 07:57:58Z paul $
+
 
 Dbmail-2 as of 2.1.0 supports ldap for authentication and delivery information.
 

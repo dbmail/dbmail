@@ -1,7 +1,7 @@
 
 dbmail for Debian
 
-$Id: README.Debian 2070 2006-04-18 09:32:55Z paul $
+
 -----------------
 
 Before you can run dbmail you will have to create the database,

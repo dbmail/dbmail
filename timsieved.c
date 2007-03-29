@@ -1,4 +1,4 @@
-/* $Id: timsieved.c 2481 2007-03-25 09:14:45Z paul $
+/* 
  
 Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
