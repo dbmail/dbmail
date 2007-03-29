@@ -5,7 +5,7 @@
  *
  * (c) 2005 Aaron Stone <aaron@serendipity.cx>
  *
- * $Id: $
+ * 
  */
 
 #include <gmodule.h>

@@ -19,7 +19,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: serverparent.c 2199 2006-07-18 11:07:53Z paul $
+/* 
  *
  * serverparent.c
  * 

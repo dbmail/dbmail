@@ -1,7 +1,7 @@
 /* Delivery User Functions
  * Aaron Stone, 9 Feb 2004 */
 /*
-  $Id$
+  
 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 

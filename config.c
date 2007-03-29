@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id$
+ * 
  * \file config.c
  * \brief read configuration values from a config file
  */

@@ -1,5 +1,5 @@
 /*
-  $Id$
+  
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 

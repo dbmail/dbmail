@@ -18,7 +18,7 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  *
  * implementation for pop3 commands according to RFC 1081 */
 
