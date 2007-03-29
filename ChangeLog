@@ -1,5 +1,7 @@
 2007-03-29  Paul J Stevens <paul@nfg.nl>
-	* AUTHORS, BUGS, INSTALL, README, README.aliases, README.exim, README.ldap, 
+
+	* ChangeLog, pop3.c, tags:
+	undo accidental changes
 	README.postfix, README.qmail, README.sieve, README.smtp, 
 	README.solaris, README.usermap, acinclude.m4, check_dbmail_auth.c, 
 	check_dbmail_common.c, check_dbmail_db.c, check_dbmail_deliver.c, 
