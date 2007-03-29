@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 		case 'V':
  			printf("DBMail: dbmail-util\n"
  			       "Version: %s\n"
- 			       "$Revision: 2417 $\n"
+ 			       "$Revision: 2486 $\n"
  			       "Copyright: %s\n", VERSION, COPYRIGHT);
 			return 1;
 
