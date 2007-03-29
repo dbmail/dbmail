@@ -756,7 +756,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		return pop3_error(session, stream, "-ERR no such message\r\n");
 
 	case POP3_CAPA:
-		ci_write((FILE *) stream, "+OK, Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
+		ci_write((FILE *) stream, "+OK Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
 		return 1;
 
 	default:
