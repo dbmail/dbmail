@@ -1,7 +1,7 @@
 
 README.solaris
 
-$Id: $
+
 
 DBMail is able to produce a very large amount of debugging output if
 requested. Some of this debug output naturally includes strings that

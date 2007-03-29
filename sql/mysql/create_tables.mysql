@@ -23,7 +23,7 @@
 # This file was originally created by Paul Stevens and added
 # to dbmail on August 27th, 2003.
 # 
-# $Id$
+# 
 
 SET FOREIGN_KEY_CHECKS=0;
 

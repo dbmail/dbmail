@@ -1,4 +1,4 @@
-$Id$
+
 
 Dbmail-2 as of 2.1.0 supports ldap for authentication and delivery information.
 

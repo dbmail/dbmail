@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id$
+ * 
  * * User authentication functions for LDAP.
  */
 #ifdef HAVE_CONFIG_H
