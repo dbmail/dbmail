@@ -1,3 +1,8 @@
+2007-03-29  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail.config, tags:
+	merging git tree
+
 2007-03-27  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
