@@ -1077,7 +1077,7 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 		return FALSE;
 
 	q = g_string_new("");
-	g_string_printf(q, "SELECT message_idnr FROM %smessages m "
+	g_string_printf(q, "SELECT DISTINCT(message_idnr) FROM %smessages m "
 			 "LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			 "%s"
 			 "WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) " 

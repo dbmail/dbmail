@@ -403,6 +403,8 @@ static int _imap_session_fetch_parse_partspec(struct ImapSession *self)
 		token = self->args[self->args_idx];
 		nexttoken = self->args[self->args_idx+1];
 		
+		TRACE(TRACE_DEBUG,"token [%s], nexttoken [%s]", token, nexttoken);
+
 		dbmail_imap_session_bodyfetch_set_argcnt(self);
 
 		if (dbmail_imap_session_bodyfetch_get_last_argcnt(self) == 0 || ! MATCH(nexttoken,"]") )
@@ -453,6 +455,7 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self)
 		token[delimpos] = '.';
 		token[strlen(token) - 1] = '>';
 	} else {
+		self->args_idx--;
 		return self->args_idx;
 	}
 
@@ -548,6 +551,8 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self)
 
 			token = (char *)self->args[self->args_idx];
 			nexttoken = (char *)self->args[self->args_idx+1];
+
+			TRACE(TRACE_DEBUG,"token [%s], nexttoken [%s]", token, nexttoken);
 
 			if (MATCH(token,"]")) {
 				if (ispeek)
