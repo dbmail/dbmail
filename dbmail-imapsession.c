@@ -1633,6 +1633,15 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		S: * 23 EXISTS
 		S: * 3 RECENT
 		S: * 14 FETCH (FLAGS (\Seen \Deleted))
+
+	But beware! The dovecot team discovered some client bugs:
+	#     Send EXISTS/RECENT new mail notifications only when replying to NOOP
+	#     and CHECK commands. Some clients ignore them otherwise, for example OSX
+	#     Mail (<v2.1). Outlook Express breaks more badly though, without this it
+	#     may show user "Message no longer in server" errors. Note that OE6 still
+	#     breaks even with this workaround if synchronization is set to
+	#     "Headers Only".
+
 	*/
 
 	mailbox_t mb;
@@ -1661,10 +1670,22 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		recent = ud->mailbox.recent;
 	}
 	/* msg counts */
-	if ((!update) || (ud->mailbox.exists < mb.exists)) // only increments
-		dbmail_imap_session_printf(self, "* %llu EXISTS\r\n", exists);
-	if ((!update) || (ud->mailbox.recent != mb.recent))
-		dbmail_imap_session_printf(self, "* %llu RECENT\r\n", recent);
+	// EXPUNGE
+	switch (self->command_type) {
+		case IMAP_COMM_NOOP:
+		case IMAP_COMM_CHECK:
+		case IMAP_COMM_SELECT:
+		case IMAP_COMM_EXAMINE:
+	
+		if ((!update) || (ud->mailbox.exists < mb.exists)) // only increments
+			dbmail_imap_session_printf(self, "* %llu EXISTS\r\n", exists);
+		if ((!update) || (ud->mailbox.recent != mb.recent))
+			dbmail_imap_session_printf(self, "* %llu RECENT\r\n", recent);
+
+		break;
+		default:
+		break;
+	}
 
 	if (msginfo) {
 		oldmsginfo = self->msginfo;
