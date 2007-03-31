@@ -1,3 +1,8 @@
+2007-03-31  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	work around for OE bug
+
 2007-03-29  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, pop3.c, tags:
