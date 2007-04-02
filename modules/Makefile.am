@@ -60,11 +60,11 @@ endif
 
 # This one is always built.
 libauth_sql_la_SOURCES = authsql.c
-libauth_sql_la_LIBADD = -lcrypt
+libauth_sql_la_LIBADD = @CRYPTLIB@
 
 if LDAP
 libauth_ldap_la_SOURCES = authldap.c
-libauth_ldap_la_LIBADD = -lcrypt @LDAPLIB@ 
+libauth_ldap_la_LIBADD = @CRYPTLIB@ @LDAPLIB@ 
 dbmail_ldap_la = libauth_ldap.la
 endif
 

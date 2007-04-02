@@ -1,3 +1,8 @@
+2007-04-02  Aaron Stone  <aaron@serendipity.cx>
+
+	* configure.in, Makefile.am, modules/Makefile.am:
+	Accepted patch to check if -lcrypt is necessary (closes bug #554)
+
 2007-04-01  Aaron Stone  <aaron@serendipity.cx>
 
 	* [too many files to list]:
