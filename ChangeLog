@@ -1,3 +1,10 @@
+2007-04-01  Aaron Stone  <aaron@serendipity.cx>
+
+	* [too many files to list]:
+	Full support for multithreaded daemons, unified command parsing for
+	all protocols, multimaster replicated clusters and 50x performance
+	boost for all IMAP queries.
+
 2007-03-31  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
@@ -7,7 +14,7 @@
 
 	* ChangeLog, pop3.c, tags:
 	undo accidental changes
-	README.postfix, README.qmail, README.sieve, README.smtp, 
+	* README.postfix, README.qmail, README.sieve, README.smtp, 
 	README.solaris, README.usermap, acinclude.m4, check_dbmail_auth.c, 
 	check_dbmail_common.c, check_dbmail_db.c, check_dbmail_deliver.c, 
 	check_dbmail_dsn.c, check_dbmail_imapd.c, check_dbmail_mailbox.c, 
