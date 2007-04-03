@@ -2851,12 +2851,16 @@ int db_getmailbox_count(mailbox_t *mb)
  
 	db_free_result();
 	
-	/* now determine the next message UID NOTE expunged messages 
-	 * are selected as well in order to be able to restore them */
+	/* now determine the next message UID 
+	 * NOTE:
+	 * - expunged messages are selected as well in order to be able to restore them 
+	 * - the next uit MUST NOT change unless messages are added to THIS mailbox
+	 * */
 
 	memset(query,0,DEF_QUERYSIZE);
 	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr+1 FROM %smessages "
-			"ORDER BY message_idnr DESC LIMIT 1",DBPFX);
+			"WHERE mailbox_idnr=%llu "
+			"ORDER BY message_idnr DESC LIMIT 1",DBPFX, mb->uid);
 
 	if (db_query(query) == -1)
 		return DM_EQUERY;
