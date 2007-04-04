@@ -64,7 +64,8 @@ const char *imap_flag_desc_escaped[] = {
 #define MAX_COLUMN_LEN 50
 #define MAX_DATE_LEN 50
 
-extern db_param_t _db_params;
+/* write-once global variable */
+db_param_t _db_params;
 
 #define DBPFX _db_params.pfx
 /** list of tables used in dbmail */

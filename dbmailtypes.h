@@ -514,11 +514,5 @@ typedef enum {
 	IMAP_FLAG_RECENT
 } imap_flag_t;
 
- /* shared global */
- db_param_t _db_params;
- 
-
-/* shared global */
-db_param_t _db_params;
 
 #endif
