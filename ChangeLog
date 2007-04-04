@@ -1,3 +1,9 @@
+2007-04-03  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmailtypes.h, db.c:
+	Moved definition of _db_params from the header to the C file (closes
+	bug #453)
+
 2007-04-02  Aaron Stone  <aaron@serendipity.cx>
 
 	* configure.in, Makefile.am, modules/Makefile.am:
