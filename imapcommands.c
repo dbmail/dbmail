@@ -1227,14 +1227,12 @@ int _ic_expunge(struct ImapSession *self)
 			break;
 		}
 		dbmail_imap_session_printf(self, "* %llu EXPUNGE\r\n", *msn);
+		dbmail_mailbox_remove_uid(self->mailbox, &uid);
 	}
 		
 	if (msgids)
 		dm_free(msgids);
 	msgids = NULL;
-
-	// reopen the mailbox
-	dbmail_mailbox_open(self->mailbox);
 
 	dbmail_imap_session_printf(self, "%s OK EXPUNGE completed\r\n", self->tag);
 	return 0;
