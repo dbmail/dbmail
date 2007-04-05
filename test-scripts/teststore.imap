@@ -1,0 +1,9 @@
+1 login testuser1 test
+2 select inbox
+3 store 1 +flags (\Flagged)
+4 store 1 +flags (\Flagged)
+5 store 1 +flags.silent (\Flagged)
+6 store 1 -flags (\Flagged)
+7 store 1 -flags (\Answered)
+8 store 1 flags (\Answered)
+9 logout

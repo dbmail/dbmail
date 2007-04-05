@@ -1,7 +1,7 @@
-2007-04-05  Aaron Stone  <aaron@serendipity.cx>
+2007-04-05  Paul J Stevens <paul@nfg.nl>
 
-	* acinclude.m4:
-	Updates to GLib section to also look for GModule (closes bug #559)
+	* Makefile.in, configure, man/Makefile.in, modules/Makefile.in:
+	regenerate autoconf files
 
 2007-04-03  Aaron Stone  <aaron@serendipity.cx>
 

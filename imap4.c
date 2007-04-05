@@ -268,8 +268,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 			nfaultyresponses++;
 			continue;
 		}
-		//args are in the session now don't set...
-		//dbmail_imap_session_setArgs(session,args);
 
 		for (i = IMAP_COMM_NONE; i < IMAP_COMM_LAST && strcasecmp(session->command, IMAP_COMMANDS[i]); i++);
 

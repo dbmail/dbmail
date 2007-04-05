@@ -703,22 +703,6 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 			else \
 				dbmail_imap_session_printf(self, " ")
 
-static char * imap_flags_as_string(msginfo_t *msginfo)
-{
-	GList *sublist = NULL;
-	int j;
-	char *s;
-
-	for (j = 0; j < IMAP_NFLAGS; j++) {
-		if (msginfo->flags[j])
-			sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
-	}
-	s = dbmail_imap_plist_as_string(sublist);
-	g_list_foreach(sublist,(GFunc)g_free,NULL);
-	g_list_free(sublist);
-	return s;
-}
-
 
 static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 {
