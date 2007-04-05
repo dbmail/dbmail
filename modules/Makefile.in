@@ -145,6 +145,7 @@ CHECK_CFLAGS = @CHECK_CFLAGS@
 CHECK_LIBS = @CHECK_LIBS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CRYPTLIB = @CRYPTLIB@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
@@ -306,9 +307,9 @@ libsort_null_la_SOURCES = sortnull.c
 
 # This one is always built.
 libauth_sql_la_SOURCES = authsql.c
-libauth_sql_la_LIBADD = -lcrypt
+libauth_sql_la_LIBADD = @CRYPTLIB@
 @LDAP_TRUE@libauth_ldap_la_SOURCES = authldap.c
-@LDAP_TRUE@libauth_ldap_la_LIBADD = -lcrypt @LDAPLIB@ 
+@LDAP_TRUE@libauth_ldap_la_LIBADD = @CRYPTLIB@ @LDAPLIB@ 
 @LDAP_TRUE@dbmail_ldap_la = libauth_ldap.la
 pkglib_LTLIBRARIES = $(dbmail_mysql_la) \
 	$(dbmail_pgsql_la) \
