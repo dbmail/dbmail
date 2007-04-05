@@ -1457,11 +1457,48 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, struct ImapSession *
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	cmd_store_t *cmd = (cmd_store_t *)self->cmd;
 
+	u64_t *msn;
+	msginfo_t *msginfo;
+	char *s;
+	int i;
+
+	msginfo = g_tree_lookup(self->msginfo, id);
+	msn = g_tree_lookup(self->mailbox->ids, id);
+
 	if (ud->mailbox.permission == IMAPPERM_READWRITE) {
 		if (db_set_msgflag(*id, ud->mailbox.uid, cmd->flaglist, cmd->action) < 0) {
 			dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 			return TRUE;
 		}
+	}
+
+	for (i = 0; i < IMAP_NFLAGS; i++) {
+		// Skip recent_flag because it is part of the query.
+		if (i == IMAP_FLAG_RECENT)
+			continue;
+		switch (cmd->action) {
+			case IMAPFA_ADD:
+				if (cmd->flaglist[i])
+					msginfo->flags[i] = 1;
+			break;
+			case IMAPFA_REMOVE:
+				if (cmd->flaglist[i]) 
+					msginfo->flags[i] = 0;
+			break;
+			case IMAPFA_REPLACE:
+				if (cmd->flaglist[i]) 
+					msginfo->flags[i] = 1;
+				else
+					msginfo->flags[i] = 0;
+			break;
+		}
+	}
+
+	if (! cmd->silent) {
+		
+		s = imap_flags_as_string(msginfo);
+		dbmail_imap_session_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
+		g_free(s);
 	}
 
 	return FALSE;
@@ -1598,8 +1635,6 @@ int _ic_store(struct ImapSession *self)
 		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
 	}	
 
-	if (! cmd.silent)
-		dbmail_imap_session_mailbox_status(self,TRUE);
 
 	dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;
