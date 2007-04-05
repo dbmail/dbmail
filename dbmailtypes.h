@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 2480 2007-03-24 22:22:18Z aaron $
+ $Id: dbmailtypes.h 2494 2007-04-04 05:50:25Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -514,11 +514,5 @@ typedef enum {
 	IMAP_FLAG_RECENT
 } imap_flag_t;
 
- /* shared global */
- db_param_t _db_params;
- 
-
-/* shared global */
-db_param_t _db_params;
 
 #endif

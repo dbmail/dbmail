@@ -566,6 +566,9 @@ int insert_messages(struct DbmailMessage *message,
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);
 	msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 
+	// TODO: Run a Sieve script associated with the internal delivery user.
+	// Code would go here, after we've inserted the message blocks but
+	// before we've started delivering the message.
 
 	/* Loop through the users list. */
 	for (element = dm_list_getstart(dsnusers); element != NULL; element = element->nextnode) {

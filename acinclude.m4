@@ -452,6 +452,7 @@ if test [ -z "$glibconfig" ]
 then
 	AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
 else
+dnl First we're looking for straight GLib
 	AC_MSG_CHECKING([GLib headers])
 	ac_glib_cflags=`${glibconfig} --cflags glib-2.0`
 	if test -z "$ac_glib_cflags"
@@ -462,8 +463,31 @@ else
  
 	CFLAGS="$CFLAGS $ac_glib_cflags"
 	AC_MSG_RESULT([$ac_glib_cflags])
-        AC_MSG_CHECKING([Glib libraries])
+        AC_MSG_CHECKING([GLib libraries])
 	ac_glib_libs=`${glibconfig} --libs glib-2.0`
+	if test -z "$ac_glib_libs"
+	then
+		AC_MSG_RESULT([no])
+		AC_MSG_ERROR([Unable to locate glib libaries])
+	fi
+ 
+
+	LDFLAGS="$LDFLAGS $ac_glib_libs"
+        AC_MSG_RESULT([$ac_glib_libs])
+
+dnl Copied again for GLib's gmodule
+	AC_MSG_CHECKING([GModule headers])
+	ac_glib_cflags=`${glibconfig} --cflags gmodule-2.0`
+	if test -z "$ac_glib_cflags"
+	then
+		AC_MSG_RESULT([no])
+		AC_MSG_ERROR([Unable to locate glib development files])
+	fi
+ 
+	CFLAGS="$CFLAGS $ac_glib_cflags"
+	AC_MSG_RESULT([$ac_glib_cflags])
+        AC_MSG_CHECKING([GModule libraries])
+	ac_glib_libs=`${glibconfig} --libs gmodule-2.0`
 	if test -z "$ac_glib_libs"
 	then
 		AC_MSG_RESULT([no])

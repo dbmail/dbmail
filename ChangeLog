@@ -1,3 +1,26 @@
+2007-04-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4:
+	Updates to GLib section to also look for GModule (closes bug #559)
+
+2007-04-03  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmailtypes.h, db.c:
+	Moved definition of _db_params from the header to the C file (closes
+	bug #453)
+
+2007-04-02  Aaron Stone  <aaron@serendipity.cx>
+
+	* configure.in, Makefile.am, modules/Makefile.am:
+	Accepted patch to check if -lcrypt is necessary (closes bug #554)
+
+2007-04-01  Aaron Stone  <aaron@serendipity.cx>
+
+	* [too many files to list]:
+	Full support for multithreaded daemons, unified command parsing for
+	all protocols, multimaster replicated clusters and 50x performance
+	boost for all IMAP queries.
+
 2007-03-31  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
@@ -7,7 +30,7 @@
 
 	* ChangeLog, pop3.c, tags:
 	undo accidental changes
-	README.postfix, README.qmail, README.sieve, README.smtp, 
+	* README.postfix, README.qmail, README.sieve, README.smtp, 
 	README.solaris, README.usermap, acinclude.m4, check_dbmail_auth.c, 
 	check_dbmail_common.c, check_dbmail_db.c, check_dbmail_deliver.c, 
 	check_dbmail_dsn.c, check_dbmail_imapd.c, check_dbmail_mailbox.c, 
