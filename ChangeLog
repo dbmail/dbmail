@@ -1,3 +1,8 @@
+2007-04-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4:
+	Updates to GLib section to also look for GModule (closes bug #559)
+
 2007-04-03  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmailtypes.h, db.c:
