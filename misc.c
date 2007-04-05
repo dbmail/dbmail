@@ -50,6 +50,8 @@ char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;
 
 const int month_len[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
+extern const char *imap_flag_desc_escaped[];
+
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )
 
@@ -2536,6 +2538,22 @@ char * imap_cleanup_address(const char *a)
 	r = s->str;
 	g_string_free(s,FALSE);
 	return r;
+}
+
+char * imap_flags_as_string(msginfo_t *msginfo)
+{
+	GList *sublist = NULL;
+	int j;
+	char *s;
+
+	for (j = 0; j < IMAP_NFLAGS; j++) {
+		if (msginfo->flags[j])
+			sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
+	}
+	s = dbmail_imap_plist_as_string(sublist);
+	g_list_foreach(sublist,(GFunc)g_free,NULL);
+	g_list_free(sublist);
+	return s;
 }
 
 
