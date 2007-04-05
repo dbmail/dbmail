@@ -1,6 +1,5 @@
 
-/* $Id$ 
- 
+/*
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
  This program is free software; you can redistribute it and/or 
