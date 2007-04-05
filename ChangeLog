@@ -14,12 +14,12 @@
 	* configure.in, Makefile.am, modules/Makefile.am:
 	Accepted patch to check if -lcrypt is necessary (closes bug #554)
 
-2007-04-01  Aaron Stone  <aaron@serendipity.cx>
+2007-04-05  Paul J Stevens <paul@nfg.nl>
 
-	* [too many files to list]:
-	Full support for multithreaded daemons, unified command parsing for
-	all protocols, multimaster replicated clusters and 50x performance
-	boost for all IMAP queries.
+	* db.c:
+	make the UIDNEXT value more rfc compliant
+	* imapcommands.c:
+	during expunge call remove_uid without re-opening mailbox
 
 2007-03-31  Paul J Stevens <paul@nfg.nl>
 
