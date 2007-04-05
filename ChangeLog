@@ -1,3 +1,10 @@
+2007-04-05  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	make the UIDNEXT value more rfc compliant
+	* imapcommands.c:
+	during expunge call remove_uid without re-opening mailbox
+
 2007-03-31  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
