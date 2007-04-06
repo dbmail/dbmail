@@ -19,8 +19,6 @@
 */
 
 /*
- * $Id$
- *
  * dbase driver header file
  * Functions for database communication 
  *
