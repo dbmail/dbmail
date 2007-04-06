@@ -1,4 +1,4 @@
-/* $Id$
+/*
 
 Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 

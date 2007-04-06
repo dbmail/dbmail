@@ -18,9 +18,6 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$ 
- */
-
 #ifndef _PIPE_H
 #define _PIPE_H
 
