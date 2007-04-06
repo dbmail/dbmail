@@ -44,7 +44,7 @@ child_state_t state_new(void)
 	s.ctime = time(0);
 	s.status = STATE_NOOP;
 	s.count = 0;
-	snprintf(s.client, 127, "none");
+	strncat(s.client, "none", 127);
 	return s;
 }
 
@@ -333,6 +333,7 @@ void child_reg_connected(void)
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_CONNECTED;
+	scoreboard->child[key].count++;
 	scoreboard_unlck();
 }
 
@@ -350,9 +351,9 @@ void child_reg_connected_details(char *ip, char *name)
 	scoreboard_wrlck();
 	if (scoreboard->child[key].status == STATE_CONNECTED) {
 		if (name && name[0])
-			snprintf(scoreboard->child[key].client, 127, name);
+			strncat(scoreboard->child[key].client, name, 127);
 		else
-			snprintf(scoreboard->child[key].client, 127, ip);
+			strncat(scoreboard->child[key].client, ip, 127);
 	} else {
 		TRACE(TRACE_MESSAGE, "client disconnected before status detail was logged");
 	}
@@ -372,7 +373,7 @@ void child_reg_disconnected(void)
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_IDLE;
-	snprintf(scoreboard->child[key].client, 127, "none");
+	strncat(scoreboard->child[key].client, "none", 127);
 	scoreboard_unlck();
 }
 
@@ -559,17 +560,19 @@ void scoreboard_state(void)
 			strerror(errno));
 	}
 	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
-		int chpid;
-		int status;
+		int chpid, status;
 		char *client;
+		unsigned count;
 		
 		scoreboard_rdlck();
 		chpid = scoreboard->child[i].pid;
 		status = scoreboard->child[i].status;
 		client = scoreboard->child[i].client;
+		count = scoreboard->child[i].count;
 		scoreboard_unlck();
 
-		if ((printlen = fprintf(scoreFD, "Child %d Pid %d Status %d Client %s\n", i, chpid, status, client)) <= 0
+		if ((printlen = fprintf(scoreFD, "Child %d Pid %d Status %d Count %u Client %s\n",
+			i, chpid, status, count, client)) <= 0
 		  || !(scorelen += printlen)) {
 			TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
 				strerror(errno));
