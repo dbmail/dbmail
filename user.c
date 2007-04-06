@@ -35,11 +35,11 @@ char *configFile = DEFAULT_CONFIG_FILE;
 extern db_param_t _db_params;
 
 /* UI policy */
-extern int yes_to_all;
-extern int no_to_all;
-extern int verbose;
-extern int quiet; 		/* Don't be helpful. */
-extern int reallyquiet;	/* Don't print errors. */
+int yes_to_all;
+int no_to_all;
+int verbose;
+int quiet; 		/* Don't be helpful. */
+int reallyquiet;	/* Don't print errors. */
 
 int do_showhelp(void) {
 	
