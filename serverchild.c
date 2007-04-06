@@ -341,6 +341,8 @@ int PerformChildTask(ChildInfo_t * info)
 			TRACE(TRACE_MESSAGE, "incoming connection from [%s] by pid [%d]",
 			      client.ip_src, getpid());
 		}
+
+		child_reg_connected_details(client.ip_src, client.clientname);
 		
 		/* make streams */
 		if (!(client.rx = fdopen(dup(clientSocket), "r"))) {

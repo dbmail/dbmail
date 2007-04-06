@@ -17,8 +17,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "server"
 
-#define P_SIZE 100000
-
 static volatile Scoreboard_t *scoreboard;
 static int shmid;
 static int sb_lockfd;
@@ -46,7 +44,7 @@ child_state_t state_new(void)
 	s.ctime = time(0);
 	s.status = STATE_NOOP;
 	s.count = 0;
-	s.client = "none";
+	snprintf(s.client, 127, "none");
 	return s;
 }
 
@@ -81,7 +79,9 @@ int set_lock(int type)
 void scoreboard_new(serverConfig_t * conf)
 {
 	int serr;
-	if ((shmid = shmget(IPC_PRIVATE, P_SIZE, 0644 | IPC_CREAT)) == -1) {
+	if ((shmid = shmget(IPC_PRIVATE,
+			(sizeof(child_state_t) * HARD_MAX_CHILDREN),
+			0644 | IPC_CREAT)) == -1) {
 		serr = errno;
 		TRACE(TRACE_FATAL, "shmget failed [%s]",
 				strerror(serr));
@@ -336,6 +336,29 @@ void child_reg_connected(void)
 	scoreboard_unlck();
 }
 
+void child_reg_connected_details(char *ip, char *name)
+{
+	int key;
+	pid_t pid;
+	
+	pid = getpid();
+	key = getKey(pid);
+	
+	if (key == -1) 
+		TRACE(TRACE_FATAL, "unable to find this pid on the scoreboard");
+	
+	scoreboard_wrlck();
+	if (scoreboard->child[key].status == STATE_CONNECTED) {
+		if (name && name[0])
+			snprintf(scoreboard->child[key].client, 127, name);
+		else
+			snprintf(scoreboard->child[key].client, 127, ip);
+	} else {
+		TRACE(TRACE_MESSAGE, "client disconnected before status detail was logged");
+	}
+	scoreboard_unlck();
+}
+
 void child_reg_disconnected(void)
 {
 	int key;
@@ -349,6 +372,7 @@ void child_reg_disconnected(void)
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_IDLE;
+	snprintf(scoreboard->child[key].client, 127, "none");
 	scoreboard_unlck();
 }
 
@@ -537,13 +561,15 @@ void scoreboard_state(void)
 	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
 		int chpid;
 		int status;
+		char *client;
 		
 		scoreboard_rdlck();
 		chpid = scoreboard->child[i].pid;
 		status = scoreboard->child[i].status;
+		client = scoreboard->child[i].client;
 		scoreboard_unlck();
 
-		if ((printlen = fprintf(scoreFD, "Child %d Pid %d Status %d\n", i, chpid, status)) <= 0
+		if ((printlen = fprintf(scoreFD, "Child %d Pid %d Status %d Client %s\n", i, chpid, status, client)) <= 0
 		  || !(scorelen += printlen)) {
 			TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
 				strerror(errno));

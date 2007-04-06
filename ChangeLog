@@ -1,3 +1,12 @@
+2007-04-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-user.c, user.c:
+	Moved definitions of the verbosity variables from dbmail-user.c to
+	user.c to avoid multiple definitions
+	* pool.h, pool.c, serverchild.c:
+	Added client entry to the shared memory status, and functions to pass
+	the ip/resolved name of the current client to the pool manager
+
 2007-04-05  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.in, configure, man/Makefile.in, modules/Makefile.in:
