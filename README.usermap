@@ -1,18 +1,21 @@
 
 README.usermap
 
-
-
-
-
-dbmail-2.1.2 and beyond support usermaps and domainmaps which will allow you
-to map login names to fully qualified (unique) userids as used in the dbmail_users
-table or ldap. 
+DBMail supports usermaps and domainmaps which will allow you to map login names to
+fully qualified (unique) userids as used in the dbmail_users table or ldap. 
 
 Rationale:
 
 1) support 1-1 and 1-N mappings of login usernames to userids
+
+You can use this during a transition to a new username policy. For instance, 
+when you want to give all new users their email address as login, but you want 
+to allow all existing users to login using their old login.
+
 2) support IP based virtual hosting
+
+This means you can use separate namespaces for different IP addresses dbmail
+is listening on. 
 
 
 The layout of the new dbmail_usermap table is as follows:
