@@ -1,7 +1,6 @@
 #ifndef DSN_H
 #define DSN_H
 /*
-  $Id$ 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
  This program is free software; you can redistribute it and/or 
