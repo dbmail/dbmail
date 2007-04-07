@@ -457,6 +457,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					ci_write((FILE *) stream,
 						"250 Sender <%s> OK\r\n",
 						(char *)(dm_list_getstart(&from)->data));
+					child_reg_connected_user(tmpaddr);
 				}
 				if (tmpaddr != NULL)
 					dm_free(tmpaddr);
