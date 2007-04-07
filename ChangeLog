@@ -4,6 +4,8 @@
 	serverchild.c:
 	Further work on the scoreboard status output, and added currently
 	logged in user (pop3, imap, timsieve) or mail sender (lmtp)
+	* main.c, serverparent.c, dbmail-user.c:
+	Added definitions for yes_to_all, no_to_all, etc.
 
 2007-04-06  Paul J Stevens <paul@nfg.nl>
 	
