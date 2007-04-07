@@ -52,8 +52,13 @@ int brute_force = 0;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
 
-/* loudness and assumptions */
-static int verbose = 0;
+/* Loudness and assumptions. */
+int verbose = 0;
+/* Not used, but required to link with libdbmail.so */
+int no_to_all = 0;
+int yes_to_all = 0;
+int reallyquiet = 0;
+int quiet = 0;
 
 int do_showhelp(void) {
 	printf("*** dbmail-smtp ***\n");
