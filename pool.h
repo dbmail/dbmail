@@ -45,7 +45,7 @@ void scoreboard_release(pid_t pid);
 void scoreboard_delete(void);
 int child_register(void);
 void child_reg_connected(void);
-void child_reg_connected_client(char *ip, char *name);
+void child_reg_connected_client(const char *ip, const char *name);
 void child_reg_connected_user(char *user);
 void child_reg_disconnected(void);
 void child_unregister(void);
