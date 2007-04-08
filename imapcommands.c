@@ -143,6 +143,8 @@ int _ic_login(struct ImapSession *self)
 	if (imap_before_smtp)
 		db_log_ip(self->ci->ip_src);
 
+	child_reg_connected_user(self->args[self->args_idx]);
+
 	dbmail_imap_session_printf(self, "%s OK LOGIN completed\r\n", self->tag);
 	return 0;
 }

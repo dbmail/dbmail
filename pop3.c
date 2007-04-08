@@ -410,6 +410,8 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			if (pop_before_smtp)
 				db_log_ip(client_ip);
 
+			child_reg_connected_user(session->username);
+
 			result = db_createsession(result, session);
 			if (result == 1) {
 				ci_write((FILE *) stream, "+OK %s has %llu messages (%llu octets)\r\n", 
@@ -685,6 +687,8 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			/* if pop_before_smtp is active, log this ip */
 			if (pop_before_smtp)
 				db_log_ip(client_ip);
+
+			child_reg_connected_user(session->username);
 
 			result = db_createsession(result, session);
 			if (result == 1) {

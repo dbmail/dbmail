@@ -319,6 +319,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 							session->useridnr = useridnr;
 							session->username = dm_strdup(tmp64[1]);
 							session->password = dm_strdup(tmp64[2]);
+							child_reg_connected_user(session->username);
 						} else {
 							ci_write((FILE *) stream, "NO \"Username or password incorrect.\"\r\n");
 						}

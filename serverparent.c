@@ -39,6 +39,13 @@ extern volatile sig_atomic_t mainStatus;
 extern volatile sig_atomic_t mainStop;
 extern volatile sig_atomic_t mainSig;
 
+/* Not used, but required to link with libdbmail.so */
+int verbose = 0;
+int no_to_all = 0;
+int yes_to_all = 0;
+int reallyquiet = 0;
+int quiet = 0;
+
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 static void ClearConfig(serverConfig_t * conf);
