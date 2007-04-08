@@ -121,7 +121,7 @@ void scoreboard_setup(void) {
 	int i;
 	scoreboard_wrlck();
 	for (i = 0; i < HARD_MAX_CHILDREN; i++)
-		state_reset(&scoreboard->child[i]);
+		state_reset((child_state_t *)&scoreboard->child[i]);
 	scoreboard_unlck();
 }
 
@@ -186,7 +186,7 @@ void scoreboard_release(pid_t pid)
 		return;
 	
 	scoreboard_wrlck();
-	state_reset(&scoreboard->child[key]);
+	state_reset((child_state_t *)&scoreboard->child[key]);
 	scoreboard_unlck();
 }
 
@@ -336,7 +336,7 @@ void child_reg_connected(void)
 	scoreboard_unlck();
 }
 
-void child_reg_connected_client(char *ip, char *name)
+void child_reg_connected_client(const char *ip, const char *name)
 {
 	int key;
 	pid_t pid;
