@@ -342,7 +342,7 @@ int PerformChildTask(ChildInfo_t * info)
 			      client.ip_src, getpid());
 		}
 
-		child_reg_connected_client(client.ip_src, client.clientname);
+		child_reg_connected_client((const char *)client.ip_src, (const char *)client.clientname);
 		
 		/* make streams */
 		if (!(client.rx = fdopen(dup(clientSocket), "r"))) {
