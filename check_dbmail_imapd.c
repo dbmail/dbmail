@@ -438,7 +438,7 @@ START_TEST(test_internet_address_parse_string)
 
 		g_list_foreach(list,(GFunc)g_free,NULL);
 		g_list_free(list);
-		dm_free(result);
+		g_free(result);
 
 	}
 
