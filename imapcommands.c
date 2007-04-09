@@ -1465,6 +1465,11 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, struct ImapSession *
 	int i;
 
 	msginfo = g_tree_lookup(self->msginfo, id);
+	if (! msginfo) {
+		TRACE(TRACE_WARNING, "unable to lookup msginfo struct for [%llu]", id);
+		return TRUE;
+	}
+
 	msn = g_tree_lookup(self->mailbox->ids, id);
 
 	if (ud->mailbox.permission == IMAPPERM_READWRITE) {
@@ -1619,6 +1624,7 @@ int _ic_store(struct ImapSession *self)
 	self->cmd = &cmd;
 
 	if (g_tree_nnodes(self->mailbox->ids) > 0) {
+		GTree *t;
 
 		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 		
@@ -1633,6 +1639,12 @@ int _ic_store(struct ImapSession *self)
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 			return DM_EGENERAL;
 		}
+
+		t = self->msginfo;
+		if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
+		       TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
+		if(t)
+			g_tree_destroy(t);
 
 		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
 	}	
