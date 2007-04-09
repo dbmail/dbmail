@@ -528,7 +528,7 @@ START_TEST(test_auth_get_userid)
 	fail_unless(strlen(username)>3,"auth_get_userid failed");
 	auth_user_exists(username, &testidnr);
 	fail_unless(testidnr==user_idnr,"auth_get_userid: auth_user_exists returned wrong idnr");
-	dm_free(username);
+	g_free(username);
 }
 END_TEST
 
@@ -920,7 +920,7 @@ START_TEST(test_find_bounded)
 			"find_bounded is broken. "
 			"Should be success: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 
@@ -936,7 +936,7 @@ START_TEST(test_zap_between_both)
 			"zap_between is both broken. "
 			"Should be success: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 
@@ -952,7 +952,7 @@ START_TEST(test_zap_between_left)
 			"zap_between is left broken. "
 			"Should be suc@cess: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 
@@ -968,7 +968,7 @@ START_TEST(test_zap_between_right)
 			"zap_between is right broken. "
 			"Should be suc+cess: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 
@@ -984,7 +984,7 @@ START_TEST(test_zap_between_center)
 			"zap_between is center broken. "
 			"Should be suc+@cess: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 

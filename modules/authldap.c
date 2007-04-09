@@ -35,7 +35,6 @@
 extern char *configFile;
 
 static LDAP *_ldap_conn = NULL;
-LDAPMod **_ldap_mod;
 LDAPMessage *_ldap_res;
 LDAPMessage *_ldap_msg;
 int _ldap_err;
@@ -717,7 +716,7 @@ int auth_check_userid(u64_t user_idnr)
 		TRACE(TRACE_DEBUG, "didn't find user_idnr [%llu]", user_idnr);
 	}
 
-	dm_free(returnid);
+	g_free(returnid);
 
 	return ret;
 }
@@ -927,16 +926,13 @@ int auth_adduser(const char *username, const char *password,
 		 const char *enctype UNUSED, u64_t clientid, 
 		 u64_t maxmail, u64_t * user_idnr)
 {
-	int i, j, result;
-	/*int ret; unused variable */
-	int NUM_MODS = 9;
+	int i = 0, result;
 	GString *nid = g_string_new("");
 	GString *cid = g_string_new("");
 	GString *maxm = g_string_new("");
 	
 	u64_t newidnr = dm_ldap_get_freeid(_ldap_cfg.field_nid);
 
-	
 	g_string_printf(nid,"%llu", newidnr);
 	g_string_printf(cid,"%llu",clientid);
 	g_string_printf(maxm,"%llu",maxmail);
@@ -950,27 +946,11 @@ int auth_adduser(const char *username, const char *password,
 	
 	field_t mail_type = "mail";
 	field_t obj_type = "objectClass";
-	
+
 	GString *t=g_string_new("");
 	
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
-
-	/* Construct the array of LDAPMod structures representing the attributes */ 
-	if (! (_ldap_mod = (LDAPMod **) dm_malloc((NUM_MODS + 1) * sizeof(LDAPMod *)))) {
-		TRACE(TRACE_ERROR, "Cannot allocate memory for mods array");
-		return -1;
-	}
-
-	for (i = 0; i < NUM_MODS; i++) {
-		if (! (_ldap_mod[i] = (LDAPMod *) dm_malloc(sizeof(LDAPMod)))) {
-			TRACE(TRACE_ERROR, "Cannot allocate memory for mods element %d", i);
-			for (j = 0; j < (i - 1); j++)
-				dm_free(_ldap_mod[j]);
-			dm_free(_ldap_mod);
-			return -1;
-		}
-	}
 
 	g_string_printf(t,"%s=%s,%s", _ldap_cfg.cn_string, username, _ldap_cfg.base_dn);
 	_ldap_dn=g_strdup(t->str);
@@ -978,52 +958,52 @@ int auth_adduser(const char *username, const char *password,
 	
 	TRACE(TRACE_DEBUG, "Adding user with DN of [%s]", _ldap_dn);
 	
-	i = 0;
-	_ldap_mod[i]->mod_op = LDAP_MOD_ADD;
-	_ldap_mod[i]->mod_type = obj_type;
-	_ldap_mod[i]->mod_values = obj_values;
+	LDAPMod *mods[10], mod_obj_type, mod_field_passwd, mod_mail_type,
+	mod_field_uid, mod_field_cid, mod_field_maxmail, mod_field_nid;
+
+	
+	mod_obj_type.mod_op = LDAP_MOD_ADD;
+	mod_obj_type.mod_type = obj_type;
+	mod_obj_type.mod_values = obj_values;
+	mods[i++] = &mod_obj_type;
 	
 	if (strlen(_ldap_cfg.field_passwd) > 0) {
-		i++;
-		_ldap_mod[i]->mod_op = LDAP_MOD_ADD;
-		_ldap_mod[i]->mod_type = _ldap_cfg.field_passwd;
-		_ldap_mod[i]->mod_values = pw_values;
+		mod_field_passwd.mod_op = LDAP_MOD_ADD;
+		mod_field_passwd.mod_type = _ldap_cfg.field_passwd;
+		mod_field_passwd.mod_values = pw_values;
+		mods[i++] = &mod_field_passwd;
 	}
 
-	i++;
-	_ldap_mod[i]->mod_op = LDAP_MOD_ADD;
-	_ldap_mod[i]->mod_type = mail_type;
-	_ldap_mod[i]->mod_values = uid_values;
+	mod_mail_type.mod_op = LDAP_MOD_ADD;
+	mod_mail_type.mod_type = mail_type;
+	mod_mail_type.mod_values = uid_values;
+	mods[i++] = &mod_mail_type;
 
-	i++;
-	_ldap_mod[i]->mod_op = LDAP_MOD_ADD;
-	_ldap_mod[i]->mod_type = _ldap_cfg.field_uid;
-	_ldap_mod[i]->mod_values = uid_values;
+	mod_field_uid.mod_op = LDAP_MOD_ADD;
+	mod_field_uid.mod_type = _ldap_cfg.field_uid;
+	mod_field_uid.mod_values = uid_values;
+	mods[i++] = &mod_field_uid;
 	
-	i++;
-	_ldap_mod[i]->mod_op = LDAP_MOD_ADD;
-	_ldap_mod[i]->mod_type = _ldap_cfg.field_cid;
-	_ldap_mod[i]->mod_values = cid_values;
+	mod_field_cid.mod_op = LDAP_MOD_ADD;
+	mod_field_cid.mod_type = _ldap_cfg.field_cid;
+	mod_field_cid.mod_values = cid_values;
+	mods[i++] = &mod_field_cid;
 
-	i++;
-	_ldap_mod[i]->mod_op = LDAP_MOD_ADD;
-	_ldap_mod[i]->mod_type = _ldap_cfg.field_maxmail;
-	_ldap_mod[i]->mod_values = max_values;
+	mod_field_maxmail.mod_op = LDAP_MOD_ADD;
+	mod_field_maxmail.mod_type = _ldap_cfg.field_maxmail;
+	mod_field_maxmail.mod_values = max_values;
+	mods[i++] = &mod_field_maxmail;
 
-	i++;
-	_ldap_mod[i]->mod_op = LDAP_MOD_ADD;
-	_ldap_mod[i]->mod_type = _ldap_cfg.field_nid;
-	_ldap_mod[i]->mod_values = nid_values;
+	mod_field_nid.mod_op = LDAP_MOD_ADD;
+	mod_field_nid.mod_type = _ldap_cfg.field_nid;
+	mod_field_nid.mod_values = nid_values;
+	mods[i++] = &mod_field_nid;
 
-	i++;
-	_ldap_mod[i] = NULL;
+	mods[i++] = NULL;
 
-	_ldap_err = ldap_add_s(_ldap_conn, _ldap_dn, _ldap_mod);
+	_ldap_err = ldap_add_s(_ldap_conn, _ldap_dn, mods);
 
 	g_strfreev(obj_values);
-	for (i = 0; i < NUM_MODS; i++)
-		dm_free(_ldap_mod[i]);
-	dm_free(_ldap_mod);
 	ldap_memfree(_ldap_dn);
 
 	if (_ldap_err) {
@@ -1478,7 +1458,7 @@ static int forward_exists(const char *alias, const char *deliver_to)
 		
 	
 	g_free(objectfilter);
-	dm_free(dn);
+	g_free(dn);
 	g_string_free(t,TRUE);
 	g_list_foreach(l,(GFunc)g_free,NULL);
 	

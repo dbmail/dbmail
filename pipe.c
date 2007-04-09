@@ -126,13 +126,13 @@ static int send_mail(struct DbmailMessage *message,
 			return 1;
 		}
 		if (parse_and_escape(from, &escaped_from) < 0) {
-			dm_free(escaped_to);
+			g_free(escaped_to);
 			TRACE(TRACE_MESSAGE, "could not prepare 'from' address.");
 			return 1;
 		}
 		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
-		dm_free(escaped_to);
-		dm_free(escaped_from);
+		g_free(escaped_to);
+		g_free(escaped_from);
 		if (!sendmail_command) {
 			TRACE(TRACE_ERROR, "out of memory calling g_strconcat");
 			return -1;
@@ -395,7 +395,7 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 		db_replycache_register(to, escaped_send_address, "replycache");
 	}
 
-	dm_free(newsubject);
+	g_free(newsubject);
 	dbmail_message_free(new_message);
 
 	return 0;
@@ -439,10 +439,10 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 				TRACE(TRACE_DEBUG, "sending notifcation to [%s]", notify_address);
 				if (send_notification(message, notify_address) < 0) {
 					TRACE(TRACE_ERROR, "error in call to send_notification.");
-					dm_free(notify_address);
+					g_free(notify_address);
 					return -1;
 				}
-				dm_free(notify_address);
+				g_free(notify_address);
 			}
 		}
 	}
@@ -458,10 +458,10 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 			else {
 				if (send_reply(message, reply_body) < 0) {
 					TRACE(TRACE_ERROR, "error in call to send_reply");
-					dm_free(reply_body);
+					g_free(reply_body);
 					return -1;
 				}
-				dm_free(reply_body);
+				g_free(reply_body);
 				
 			}
 		}

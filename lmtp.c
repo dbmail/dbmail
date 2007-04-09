@@ -125,7 +125,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	gethostname(myhostname, 64);
 	myhostname[63] = 0;	/* make sure string is terminated */
 
-	buffer = (char *) dm_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
+	buffer = g_new0(char, INCOMING_BUFFER_SIZE);
 
 	if (!buffer) {
 		TRACE(TRACE_MESSAGE, "Could not allocate buffer");
@@ -138,7 +138,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 		fflush(ci->tx);
 	} else {
 		TRACE(TRACE_MESSAGE, "TX stream is null!");
-		dm_free(buffer);
+		g_free(buffer);
 		return 0;
 	}
 
@@ -166,7 +166,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 				if (alarm_occured) {
 					alarm_occured = 0;
 					client_close();
-					dm_free(buffer);
+					g_free(buffer);
 					return 0;
 				}
 			} while (ferror(ci->rx) && errno == EINTR);
@@ -192,7 +192,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 
 	/* memory cleanup */
 	lmtp_reset(&session);
-	dm_free(buffer);
+	g_free(buffer);
 	buffer = NULL;
 
 	/* reset timers */
@@ -460,7 +460,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					child_reg_connected_user(tmpaddr);
 				}
 				if (tmpaddr != NULL)
-					dm_free(tmpaddr);
+					g_free(tmpaddr);
 			}
 			return 1;
 		}

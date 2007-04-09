@@ -145,7 +145,7 @@ char **base64_decodev(char *str)
 	/* Copy each nul terminated string to the array. */
 	for (i = j = n = 0; i <= decodelen; i++) {
 		if (decoded[i] == '\0') {
-			ret[n] = dm_strdup(decoded + j);
+			ret[n] = g_strdup(decoded + j);
 			j = i + 1;
 			n++;
 		}

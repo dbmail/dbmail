@@ -647,7 +647,7 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
 		 *lo, *hi, ud->mailbox.uid,
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-	dm_free(to_char_str);
+	g_free(to_char_str);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select message");
@@ -1482,9 +1482,9 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	fflush(self->ci->tx);
 	
 	if ( (dbmail_imap_session_readln(self, buf) <= 0) )  {
-		dm_free(buf);
-		dm_free(prompt64);
-		dm_free(promptcat);
+		g_free(buf);
+		g_free(prompt64);
+		g_free(promptcat);
 		return -1;
 	}
 
@@ -1500,9 +1500,9 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 		return -1;
 	}
 
-	dm_free(buf);
-	dm_free(prompt64);
-	dm_free(promptcat);
+	g_free(buf);
+	g_free(prompt64);
+	g_free(promptcat);
 	
 	return 0;
 }
@@ -2042,7 +2042,7 @@ static void free_args(struct ImapSession *self)
 {
 	int i;
 	for (i = 0; i < MAX_ARGS && self->args[i]; i++)
-		dm_free(self->args[i]);
+		g_free(self->args[i]);
 	self->args_idx = 0;
 }
 

@@ -153,14 +153,14 @@ int main(int argc, char *argv[])
 			TRACE(TRACE_INFO, "using RETURN_PATH for bounces");
 
 			/* Add argument onto the returnpath list. */
-			returnpath = dm_strdup(optarg);
+			returnpath = g_strdup(optarg);
 			break;
 
 		case 'u':
 			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to usernames");
 
 			dsnuser_init(&dsnuser);
-			dsnuser.address = dm_strdup(optarg);
+			dsnuser.address = g_strdup(optarg);
 			dsnuser.source = BOX_COMMANDLINE;
 
 			/* Add argument onto the users list. */
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to email addresses");
 
 			dsnuser_init(&dsnuser);
-			dsnuser.address = dm_strdup(optarg);
+			dsnuser.address = g_strdup(optarg);
 			dsnuser.source = BOX_COMMANDLINE;
 
 			/* Add argument onto the users list. */
@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
 		userlist = g_list_first(userlist);
 		while (1) {
 			dsnuser_init(&dsnuser);
-			dsnuser.address = dm_strdup((char *) userlist->data);
+			dsnuser.address = g_strdup((char *) userlist->data);
 
 			if (! dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t))) {
 				TRACE(TRACE_ERROR,"out of memory in dm_list_nodeadd");
@@ -321,7 +321,7 @@ int main(int argc, char *argv[])
 		TRACE(TRACE_DEBUG, "setting mailbox for all deliveries to [%s]", deliver_to_mailbox);
 		/* Loop through the dsnusers list, setting the destination mailbox. */
 		for (tmp = dm_list_getstart(&dsnusers); tmp != NULL; tmp = tmp->nextnode) {
-			((deliver_to_user_t *)tmp->data)->mailbox = dm_strdup(deliver_to_mailbox);
+			((deliver_to_user_t *)tmp->data)->mailbox = g_strdup(deliver_to_mailbox);
 			if (brute_force) {
 				((deliver_to_user_t *)tmp->data)->source = BOX_BRUTEFORCE;
 			} else {
@@ -383,7 +383,7 @@ int main(int argc, char *argv[])
 	dbmail_message_free(msg);
 	dsnuser_free_list(&dsnusers);
 	dm_list_free(&users.start);
-	dm_free(returnpath);
+	g_free(returnpath);
 	g_list_foreach(userlist, (GFunc)g_free, NULL);
 	g_list_free(userlist);
 

@@ -149,7 +149,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	}
 
 	if (md5_handle)
-		dm_free(md5_handle);
+		g_free(md5_handle);
 
 	m->result->cancelkeep = 0;
 	return SIEVE2_OK;
@@ -529,7 +529,7 @@ static int sort_teardown(sieve2_context_t **s2c,
 	dm_list_free(&sort_context->freelist.start);
 
 	if (sort_context) {
-		dm_free(sort_context);
+		g_free(sort_context);
 	}
 
 	res = sieve2_free(&sieve2_context);
@@ -603,7 +603,7 @@ static int sort_startup(sieve2_context_t **s2c,
 		}
 	}
 
-	sort_context = dm_malloc(sizeof(struct sort_context));
+	sort_context = g_new0(struct sort_context, 1);
 	if (!sort_context) {
 		sort_teardown(&sieve2_context, &sort_context);
 		return DM_EGENERAL;
@@ -651,7 +651,7 @@ const char * sort_listextensions(void)
 
 	/* So we'll make our own copy. */
 	if (extensions)
-		extensions = dm_strdup(extensions);
+		extensions = g_strdup(extensions);
 
 	/* If this fails, then we don't care about the
 	 * memory leak, because the program has to bomb out.
@@ -700,7 +700,7 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
 
 freesieve:
 	if (sort_context->s_buf)
-		dm_free(sort_context->s_buf);
+		g_free(sort_context->s_buf);
 
 	if (exitnull)
 		result = NULL;
@@ -773,9 +773,9 @@ sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
 
 freesieve:
 	if (sort_context->s_buf)
-		dm_free(sort_context->s_buf);
+		g_free(sort_context->s_buf);
 	if (sort_context->script)
-		dm_free(sort_context->script);
+		g_free(sort_context->script);
 
 	if (exitnull)
 		result = NULL;
@@ -796,7 +796,7 @@ void sort_free_result(sort_result_t *result)
 		g_string_free(result->errormsg, TRUE);
 	if (result->rejectmsg != NULL) 
 		g_string_free(result->rejectmsg, TRUE);
-	dm_free(result);
+	g_free(result);
 }
 
 int sort_get_cancelkeep(sort_result_t *result)
