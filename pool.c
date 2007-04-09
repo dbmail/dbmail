@@ -364,6 +364,9 @@ void child_reg_connected_user(char *user)
 	int key;
 	pid_t pid;
 	
+	if (! scoreboard) // cli server
+		return;
+
 	pid = getpid();
 	key = getKey(pid);
 	
