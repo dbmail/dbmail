@@ -558,7 +558,7 @@ static int append_search(struct DbmailMailbox *self, search_key_t *value, gboole
 	if (descend)
 		self->search = n;
 	
-	TRACE(TRACE_DEBUG, "[%d] [%d] type [%d] field [%s] search [%s] at depth [%u]\n", (int)value, descend, 
+	TRACE(TRACE_DEBUG, "[%p] [%d] type [%d] field [%s] search [%s] at depth [%u]\n", value, descend, 
 			value->type, value->hdrfld, value->search, 
 			g_node_depth(self->search));
 	return 0;
@@ -1447,8 +1447,8 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 
 	s->searched = TRUE;
 	
-	TRACE(TRACE_DEBUG,"[%d] depth [%d] type [%d] rows [%d]\n",
-		(int)s, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0);
+	TRACE(TRACE_DEBUG,"[%p] depth [%d] type [%d] rows [%d]\n",
+		s, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0);
 
 	return FALSE;
 }	
@@ -1472,8 +1472,8 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	if (s->merged == TRUE)
 		return FALSE;
 
-	TRACE(TRACE_DEBUG,"[%d] depth [%d] type [%d]", 
-			(int)s, g_node_depth(node), s->type);
+	TRACE(TRACE_DEBUG,"[%p] depth [%d] type [%d]", 
+			s, g_node_depth(node), s->type);
 	switch(s->type) {
 		case IST_SUBSEARCH_AND:
 			g_node_children_foreach(node, G_TRAVERSE_LEAVES, (GNodeForeachFunc)_merge_search, (gpointer)found);

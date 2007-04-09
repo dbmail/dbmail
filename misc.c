@@ -236,7 +236,7 @@ const char *mailbox_remove_namespace(const char *fq_name,
 			return NULL;
 		}
 
-		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
+		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%zu]",
 			user, (size_t)(mbox - user - slash));
 		if (username) *username = g_strndup(user, mbox - user - slash);
 

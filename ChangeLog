@@ -7,6 +7,8 @@
 	memblock.c misc.c:
 	Changed all instances of dm_free, dm_malloc, dm_strdup to g_free,
 	g_new0 or g_malloc, g_strdup, respectively.
+	* dbmail-mailbox.c dbmail-message.c misc.c sort.c:
+	Corrected printf arguments that made 32 bit platform assumptions.
 
 2007-04-07  Aaron Stone  <aaron@serendipity.cx>
 
