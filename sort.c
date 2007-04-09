@@ -191,7 +191,7 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 				useridnr);
 		return DSN_CLASS_TEMP;
 	default:
-		TRACE(TRACE_MESSAGE, "message id=%llu, size=%d is inserted", 
+		TRACE(TRACE_MESSAGE, "message id=%llu, size=%zd is inserted", 
 				newmsgidnr, msgsize);
 		if (msgflags) {
 			TRACE(TRACE_MESSAGE, "message id=%llu, setting imap flags", 
