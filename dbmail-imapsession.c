@@ -423,7 +423,8 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self)
 	char *token = self->args[self->args_idx];
 	
 	if (! token)
-		return self->args_idx;
+		return 0;
+//FIXME wrong return value?	return self->args_idx;
 	
 	TRACE(TRACE_DEBUG,"parse token [%s]", token);
 
