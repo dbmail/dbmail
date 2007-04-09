@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
 			if (pw[len-1] == '\n')
 			        pw[len-1] = '\0';
 			/* fgets guarantees a nul terminated string. */
-			passwd = dm_strdup(pw);
+			passwd = g_strdup(pw);
 
 			/* Restore the previous terminal state (with echo back on). */
 			tcsetattr(fileno(stdin), TCSANOW, &oldattr);

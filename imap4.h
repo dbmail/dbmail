@@ -37,7 +37,7 @@
 /* max number of retries when synchronizing mailbox with dbase */
 #define MAX_RETRIES 20
 
-#define null_free(p) { dm_free(p); p = NULL; }
+#define null_free(p) { g_free(p); p = NULL; }
 
 
 

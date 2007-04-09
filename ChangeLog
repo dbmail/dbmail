@@ -1,3 +1,13 @@
+2007-04-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* check_dbmail_deliver.c dbmail-user.c lmtp.c user.c imap4.h db.c
+	modules/authsql.c modules/authldap.c modules/sortsieve.c quota.c
+	debug.h acl.c imapcommands.c dsn.c pipe.c dm_base64.c dbmail-message.c
+	check_dbmail_db.c sievecmd.c dbmail-imapsession.c main.c timsieve.c
+	memblock.c misc.c:
+	Changed all instances of dm_free, dm_malloc, dm_strdup to g_free,
+	g_new0 or g_malloc, g_strdup, respectively.
+
 2007-04-07  Aaron Stone  <aaron@serendipity.cx>
 
 	* pool.h, pool.c, lmtp.c, pop3.c, timsieve.c, imapcommands.c,

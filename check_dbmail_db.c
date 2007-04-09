@@ -809,7 +809,7 @@ START_TEST(test_db_imap_utf7_like)
 
 		fail_unless(strcmp(result, getthese[i])==0, "Failed to make db_imap_utf7_like string for [%s]", trythese[i]);
 
-		dm_free(result);
+		g_free(result);
 	}
 }
 END_TEST

@@ -553,7 +553,7 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 				"SELECT script FROM %ssievescripts WHERE "
 				"owner_idnr = %llu AND name = '%s'",
 				DBPFX,user_idnr,escaped_scriptname);
-	dm_free(escaped_scriptname);
+	g_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error getting sievescript by name");
@@ -574,7 +574,7 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 		return DM_EQUERY;
 	}
 
-	*script = dm_strdup(query_result);
+	*script = g_strdup(query_result);
 	db_free_result();
 
 	return DM_SUCCESS;
@@ -606,7 +606,7 @@ int db_check_sievescript_active_byname(u64_t user_idnr, const char *scriptname)
 			"owner_idnr = %llu AND active = 1 AND name = '%s'",
 			DBPFX, user_idnr, name);
 
-		dm_free(name);
+		g_free(name);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			"SELECT name FROM %ssievescripts WHERE "
@@ -652,7 +652,7 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
 
 	n = db_num_rows();
 	if (n > 0) {
-		*scriptname = dm_strdup(db_get_result(0, 0));
+		*scriptname = g_strdup(db_get_result(0, 0));
 	}
 
 	db_free_result();
@@ -681,7 +681,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 	for (i = 0, n = db_num_rows(); i < n; i++) {
 		struct ssinfo info;
 
-		info.name = dm_strdup(db_get_result(i, 0));   
+		info.name = g_strdup(db_get_result(i, 0));   
 		info.active = db_get_result_int(i, 1);
 
 		dm_list_nodeadd(scriptlist, &info, sizeof(struct ssinfo));	
@@ -716,8 +716,8 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 	if (db_query(query) == -1 ) {
 		db_rollback_transaction();
-		dm_free(escaped_scriptname);
-		dm_free(escaped_newname);
+		g_free(escaped_scriptname);
+		g_free(escaped_newname);
 		return DM_EQUERY;
 	}
 
@@ -731,8 +731,8 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 		if (db_query(query) == -1 ) {
 			db_rollback_transaction();
-			dm_free(escaped_scriptname);
-			dm_free(escaped_newname);
+			g_free(escaped_scriptname);
+			g_free(escaped_newname);
 			return DM_EQUERY;
 		}
 	}
@@ -742,8 +742,8 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 		"UPDATE %ssievescripts SET name = '%s', active = %d "
 		"WHERE owner_idnr = %llu AND name = '%s'",
 		DBPFX,escaped_newname,active,user_idnr,escaped_scriptname);
-	dm_free(escaped_scriptname);
-	dm_free(escaped_newname);
+	g_free(escaped_scriptname);
+	g_free(escaped_newname);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error replacing sievescript '%s' "
@@ -777,7 +777,7 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 
 	if (db_query(query) == -1 ) {
 		db_rollback_transaction();
-		dm_free(escaped_scriptname);
+		g_free(escaped_scriptname);
 		return DM_EQUERY;
 	}
 
@@ -790,7 +790,7 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 
 		if (db_query(query) == -1 ) {
 			db_rollback_transaction();
-			dm_free(escaped_scriptname);
+			g_free(escaped_scriptname);
 			return DM_EQUERY;
 		}
 	}
@@ -810,17 +810,17 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 	snprintf(&escaped_query[esclen + startlen],
 		 maxesclen - esclen - startlen, "', 0)");
 
-	dm_free(escaped_scriptname);
+	g_free(escaped_scriptname);
 
 	if (db_query(escaped_query) == -1) {
 		TRACE(TRACE_ERROR, "error adding sievescript '%s' "
 			"for user_idnr [%llu]" ,
 			scriptname, user_idnr);
 		db_rollback_transaction();
-		dm_free(escaped_query);
+		g_free(escaped_query);
 		return DM_EQUERY;
 	}
-	dm_free(escaped_query);
+	g_free(escaped_query);
 
 	db_commit_transaction();
 	return DM_SUCCESS;
@@ -838,7 +838,7 @@ int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 		"UPDATE %ssievescripts set active = 0 "
 		"where owner_idnr = %llu and name = '%s'",
 		DBPFX,user_idnr,escaped_scriptname);
-	dm_free(escaped_scriptname);
+	g_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error deactivating sievescript '%s' "
@@ -868,7 +868,7 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 		TRACE(TRACE_ERROR, "error activating sievescript '%s' "
 			"for user_idnr [%llu]" ,
 			scriptname, user_idnr);
-		dm_free(escaped_scriptname);
+		g_free(escaped_scriptname);
 		db_rollback_transaction();
 		return DM_EQUERY;
 	}
@@ -877,7 +877,7 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 		"UPDATE %ssievescripts SET active = 1 "
 		"WHERE owner_idnr = %llu AND name = '%s'",
 		DBPFX,user_idnr,escaped_scriptname);
-	dm_free(escaped_scriptname);
+	g_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error activating sievescript '%s' "
@@ -903,7 +903,7 @@ int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 		"DELETE FROM %ssievescripts "
 		"WHERE owner_idnr = %llu AND name = '%s'",
 		DBPFX,user_idnr,escaped_scriptname);
-	dm_free(escaped_scriptname);
+	g_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error deleting sievescript '%s' "
@@ -962,7 +962,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
-			*notify_address = dm_strdup(query_result);
+			*notify_address = g_strdup(query_result);
 			TRACE(TRACE_DEBUG, "found address [%s]", *notify_address);
 		}
 	}
@@ -994,7 +994,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
-			*reply_body = dm_strdup(query_result);
+			*reply_body = g_strdup(query_result);
 			TRACE(TRACE_DEBUG, "found reply_body [%s]", *reply_body);
 		}
 	}
@@ -1076,7 +1076,7 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
 			 "VALUES (0, %s)", DBPFX,to_date_str);
-		dm_free(to_date_str);
+		g_free(to_date_str);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
@@ -1201,7 +1201,7 @@ int db_insert_message_block_physmessage(const char *block,
 		 block_size, physmessage_id);
 
 	if (db_query(escaped_query) == DM_EQUERY) {
-		dm_free(escaped_query);
+		g_free(escaped_query);
 		return DM_EQUERY;
 	}
 
@@ -1303,7 +1303,7 @@ int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 	escaped_lasttokeep = dm_stresc(lasttokeep);
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %spbsp WHERE since < '%s'", DBPFX, escaped_lasttokeep);
-	dm_free(escaped_lasttokeep);
+	g_free(escaped_lasttokeep);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error executing query");
@@ -2019,11 +2019,11 @@ static int mailbox_empty(u64_t mailbox_idnr)
 	/* delete every message in the mailbox */
 	for (i = 0; i < n; i++) {
 		if (db_delete_message(message_idnrs[i]) == -1) {
-			dm_free(message_idnrs);
+			g_free(message_idnrs);
 			return DM_EQUERY;
 		}
 	}
-	dm_free(message_idnrs);
+	g_free(message_idnrs);
 
 	return DM_SUCCESS;
 }
@@ -2106,12 +2106,12 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 	/* always send all headers */
 	raw = get_crlf_encoded_dots(hdr);
 	ci_write((FILE *)fstream, "%s", raw);
-	dm_free(hdr);
-	dm_free(raw);
+	g_free(hdr);
+	g_free(raw);
 
 	/* send requested body lines */	
 	raw = get_crlf_encoded_dots(buf);
-	dm_free(buf);
+	g_free(buf);
 	
 	s = g_string_new(raw);
 	if (lines > 0) {
@@ -2122,7 +2122,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 		}
 		s = g_string_truncate(s,pos);
 	}
-	dm_free(raw);
+	g_free(raw);
 
 	if (pos > 0 || lines < 0)
 		ci_write((FILE *)fstream, "%s", s->str);
@@ -2365,7 +2365,7 @@ int db_deleted_purge(u64_t * affected_rows)
 	for (i = 0; i < *affected_rows; i++) {
 		if (db_delete_message(message_idnrs[i]) == -1) {
 			TRACE(TRACE_ERROR, "error deleting message");
-			dm_free(message_idnrs);
+			g_free(message_idnrs);
 			return DM_EQUERY;
 		}
 	}
@@ -2572,7 +2572,7 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		 "SELECT mailbox_idnr FROM %smailboxes "
 		 "WHERE %s AND owner_idnr=%llu",
 		 DBPFX, mailbox_like, owner_idnr);
-	dm_free(mailbox_like);
+	g_free(mailbox_like);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select mailbox '%s'", name);
@@ -2731,7 +2731,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 
 	if (*nr_mailboxes == 0) {
 		/* none exist, none matched */
-		dm_free(tmp_mailboxes);
+		g_free(tmp_mailboxes);
 		return DM_SUCCESS;
 	}
 
@@ -3011,7 +3011,7 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 
 	g_strfreev(chunks);
 	g_free(username);
-	dm_free(cpy);
+	g_free(cpy);
  
 	return DM_SUCCESS;
 
@@ -3034,7 +3034,7 @@ egeneral:
 	g_list_free(*mailboxes);
 	g_strfreev(chunks);
 	g_free(username);
-	dm_free(cpy);
+	g_free(cpy);
 	return ret;
 }
 
@@ -3230,7 +3230,7 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 		 " VALUES ('%s', %llu, 1, 1, 1, 1, 1, 1, %d)",DBPFX,
 		 escaped_simple_name, owner_idnr, IMAPPERM_READWRITE);
 
-	dm_free(escaped_simple_name);
+	g_free(escaped_simple_name);
 
 	if ((result = db_query(query)) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "could not create mailbox");
@@ -3359,7 +3359,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			 "SELECT mailbox_idnr FROM %smailboxes WHERE %s"
 			 " AND owner_idnr = %llu",DBPFX,
 			 mailbox_like, user_idnr);
-		dm_free(mailbox_like);
+		g_free(mailbox_like);
 	}
 	else
 		snprintf(query, DEF_QUERYSIZE,
@@ -3700,7 +3700,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		*name = '\0';
 		return DM_SUCCESS;
 	}
-	tmp_name = dm_strdup(query_result);
+	tmp_name = g_strdup(query_result);
 	
 	db_free_result();
 	tmp_fq_name = mailbox_add_namespace(tmp_name, owner_idnr, user_idnr);
@@ -3713,7 +3713,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		tmp_fq_name_len = IMAP_MAX_MAILBOX_NAMELEN - 1;
 	strncpy(name, tmp_fq_name, tmp_fq_name_len);
 	name[tmp_fq_name_len] = '\0';
-	dm_free(tmp_name);
+	g_free(tmp_name);
 	g_free(tmp_fq_name);
 	return DM_SUCCESS;
 }
@@ -3732,7 +3732,7 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 		 "WHERE mailbox_idnr = %llu",
 		 DBPFX, escaped_name, mailbox_idnr);
 
-	dm_free(escaped_name);
+	g_free(escaped_name);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not set name");
@@ -4522,7 +4522,7 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 			"ORDER BY sock_allow, sock_deny", 
 			DBPFX, escaped_username);
 
-	dm_free(escaped_username);
+	g_free(escaped_username);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select usermap");
@@ -4607,7 +4607,7 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 		 "SELECT user_idnr FROM %susers WHERE lower(userid) = lower('%s')",
 		 DBPFX, escaped_username);
 	
-	dm_free(escaped_username);
+	g_free(escaped_username);
 	
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select user information");
@@ -4645,7 +4645,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 	/* first check to see if this user already exists */
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %susers WHERE userid = '%s'",DBPFX, escaped_username);
-	dm_free(escaped_username);
+	g_free(escaped_username);
 
 	if (db_query(query) == -1) 
 		return DM_EQUERY;
@@ -4682,8 +4682,8 @@ int db_user_create(const char *username, const char *password, const char *encty
 			DBPFX,escaped_username,*user_idnr, escaped_password,clientid, 
 			maxmail, enctype ? enctype : "", db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
-	dm_free(escaped_username);
-	dm_free(escaped_password);
+	g_free(escaped_username);
+	g_free(escaped_password);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "query for adding user failed");
@@ -4723,7 +4723,7 @@ int db_user_delete(const char * username)
 	escaped_username = dm_stresc(username);
 	snprintf(query, DEF_QUERYSIZE, "DELETE FROM %susers WHERE userid = '%s'",
 		 DBPFX, escaped_username);
-	dm_free(escaped_username);
+	g_free(escaped_username);
 
 	if (db_query(query) == -1) {
 		/* query failed */
@@ -4744,7 +4744,7 @@ int db_user_rename(u64_t user_idnr, const char *new_name)
 	escaped_new_name = dm_stresc(new_name);
 	snprintf(query, DEF_QUERYSIZE, "UPDATE %susers SET userid = '%s' WHERE user_idnr=%llu",
 		 DBPFX, escaped_new_name, user_idnr);
-	dm_free(escaped_new_name);
+	g_free(escaped_new_name);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not change name for user [%llu]", user_idnr);
@@ -4814,9 +4814,9 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 			DBPFX, escaped_to, escaped_from, escaped_handle);
 
 	if (db_query(query) < 0) {
-		dm_free(escaped_to);
-		dm_free(escaped_from);
-		dm_free(escaped_handle);
+		g_free(escaped_to);
+		g_free(escaped_from);
+		g_free(escaped_handle);
 		return DM_EQUERY;
 	}
 	
@@ -4837,9 +4837,9 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	
 	db_free_result();
 	
-	dm_free(escaped_to);
-	dm_free(escaped_from);
-	dm_free(escaped_handle);
+	g_free(escaped_to);
+	g_free(escaped_from);
+	g_free(escaped_handle);
 
 	if (db_query(query)== -1)
 		return DM_EQUERY;
@@ -4865,9 +4865,9 @@ int db_replycache_unregister(const char *to, const char *from, const char *handl
 			"AND handle    = '%s' ",
 			DBPFX, escaped_to, escaped_from, escaped_handle);
 
-	dm_free(escaped_to);
-	dm_free(escaped_from);
-	dm_free(escaped_handle);
+	g_free(escaped_to);
+	g_free(escaped_from);
+	g_free(escaped_handle);
 
 	if (db_query(query) < 0)
 		return DM_EQUERY;
@@ -4901,9 +4901,9 @@ int db_replycache_validate(const char *to, const char *from,
 			DBPFX, escaped_to, escaped_from, escaped_handle, tmp->str);
 
 	g_string_free(tmp, TRUE);
-	dm_free(escaped_to);
-	dm_free(escaped_from);
-	dm_free(escaped_handle);
+	g_free(escaped_to);
+	g_free(escaped_from);
+	g_free(escaped_handle);
 
 	if (db_query(query) < 0)
 		return DM_EQUERY;

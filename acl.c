@@ -225,11 +225,11 @@ char *acl_get_acl(u64_t mboxid)
 	if (dm_list_nodeadd(&identifier_list, username, strlen(username) + 1) == NULL) { 
 		TRACE(TRACE_ERROR, "error adding username to list");
 		dm_list_free(&identifier_list.start);
-		dm_free(username);
+		g_free(username);
 		return NULL;
 	}
 	
-	dm_free(username);
+	g_free(username);
 
 	TRACE(TRACE_DEBUG, "before looping identifiers!");
 	
@@ -253,7 +253,7 @@ char *acl_get_acl(u64_t mboxid)
 		identifier = (char *) identifier_elm->data;
 		if (acl_get_rightsstring_identifier(identifier, mboxid, rightsstring) < 0) {
 			dm_list_free(&identifier_list.start);
-			dm_free(acl_string);
+			g_free(acl_string);
 			return NULL;
 		}
 		TRACE(TRACE_DEBUG, "%s", rightsstring);
@@ -299,7 +299,7 @@ char *acl_myrights(u64_t userid, u64_t mboxid)
 
 	if (acl_get_rightsstring(userid, mboxid, rightsstring) < 0) {
 		TRACE(TRACE_ERROR, "error getting rightsstring.");
-		dm_free(rightsstring);
+		g_free(rightsstring);
 		return NULL;
 	}
 

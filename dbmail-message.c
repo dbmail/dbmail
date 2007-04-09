@@ -33,8 +33,6 @@ extern db_param_t _db_params;
 
 #define MESSAGE_MAX_LINE_SIZE 1024
 
-static int dm_errno = 0;
-
 #define DBMAIL_TEMPMBOX "INBOX"
 
 #define THIS_MODULE "message"
@@ -211,7 +209,7 @@ void dbmail_message_free(struct DbmailMessage *self)
 	g_tree_destroy(self->header_value);
 	
 	self->id=0;
-	dm_free(self);
+	g_free(self);
 }
 
 
@@ -984,8 +982,6 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	gchar *value = NULL;
 	unsigned i;
 	gboolean isaddr = 0;
-
-	dm_errno = 0;
 
 	/* skip headernames with spaces like From_ */
 	if (strchr(header, ' '))

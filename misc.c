@@ -109,7 +109,7 @@ void create_unique_id(char *target, u64_t message_idnr)
 	md5_str = dm_md5((unsigned char *)target);
 	snprintf(target, UID_SIZE, "%s", md5_str);
 	TRACE(TRACE_DEBUG, "created: %s", target);
-	dm_free(md5_str);
+	g_free(md5_str);
 	g_free(a_message_idnr);
 	g_free(a_rand);
 }
@@ -154,7 +154,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 	else
 		g_string_printf(t, "%s%s%s%s%s", NAMESPACE_USER, MAILBOX_SEPARATOR, owner, 
 				MAILBOX_SEPARATOR, mailbox_name);
-	dm_free(owner);
+	g_free(owner);
 	
 	fq = t->str;
 	g_string_free(t,FALSE);
@@ -289,7 +289,7 @@ int read_from_stream(FILE * instream, char **m_buf, int maxlen)
 
 	/* Allocate a zero length string on length 0. */
 	if (maxlen == 0) {
-		*m_buf = dm_strdup("");
+		*m_buf = g_strdup("");
 		return 0;
 	}
 
@@ -362,7 +362,7 @@ int find_bounded(const char * const value, char left, char right,
 			tmpleft++;
 
 		tmplen = tmpright - tmpleft;
-		*retchar = dm_malloc(sizeof(char) * (tmplen + 1));
+		*retchar = g_new0(char, tmplen + 1);
 		if (*retchar == NULL) {
 			*retchar = NULL;
 			*retsize = 0;

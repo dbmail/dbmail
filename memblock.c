@@ -52,19 +52,17 @@ int __m_blkadd(MEM * m);
  */
 MEM *mopen()
 {
-	MEM *mp = (MEM *) dm_malloc(sizeof(MEM));
+	MEM *mp = g_new0(MEM, 1);
 
 	if (!mp) {
 		__m_errno = M_NOMEM;
 		return NULL;
 	}
 
-	memset(mp, 0, sizeof(*mp));
-
-	mp->firstblk = (memblock_t *) dm_malloc(sizeof(memblock_t));
+	mp->firstblk = g_new0(memblock_t, 1);
 	if (!mp->firstblk) {
 		__m_errno = M_NOMEM;
-		dm_free(mp);
+		g_free(mp);
 		return NULL;
 	}
 
@@ -99,11 +97,11 @@ void mclose(MEM ** m)
 	tmp = (*m)->firstblk;
 	while (tmp) {
 		next = tmp->nextblk;	/* save address */
-		dm_free(tmp);
+		g_free(tmp);
 		tmp = next;
 	}
 
-	dm_free(*m);
+	g_free(*m);
 	*m = NULL;
 
 	return;
@@ -404,7 +402,7 @@ void mreset(MEM * m)
 
 	while (tmp) {
 		next = tmp->nextblk;	/* save address */
-		dm_free(tmp);
+		g_free(tmp);
 		tmp = next;
 		m->nblocks--;
 	}
@@ -432,7 +430,7 @@ int __m_blkadd(MEM * m)
 		return 0;
 	}
 
-	newblk = (memblock_t *) dm_malloc(sizeof(memblock_t));
+	newblk = g_new0(memblock_t, 1);
 	if (!newblk) {
 		__m_errno = M_NOMEM;
 		return 0;

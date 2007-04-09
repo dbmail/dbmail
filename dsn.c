@@ -200,12 +200,12 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 	dsnuser->mailbox = NULL;
 	dsnuser->source = BOX_NONE;
 
-	dsnuser->userids = (struct dm_list *) dm_malloc(sizeof(struct dm_list));
+	dsnuser->userids = g_new0(struct dm_list, 1);
 	if (dsnuser->userids == NULL)
 		return -1;
-	dsnuser->forwards = (struct dm_list *) dm_malloc(sizeof(struct dm_list));
+	dsnuser->forwards = g_new0(struct dm_list, 1);
 	if (dsnuser->forwards == NULL) {
-		dm_free(dsnuser->userids);
+		g_free(dsnuser->userids);
 		return -1;
 	}
 
@@ -290,7 +290,7 @@ static int address_has_alias_mailbox(deliver_to_user_t *delivery)
 				delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases", newaddress, alias_count);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 
 	if (alias_count > 0)
 		return 1;
@@ -317,26 +317,26 @@ static int address_is_username_mailbox(deliver_to_user_t *delivery)
 	if (user_exists < 0) {
 		/* An error occurred. */
 		TRACE(TRACE_ERROR, "error checking user [%s]", newaddress);
-		dm_free(newaddress);
+		g_free(newaddress);
 		return -1;
 	}
 
 	if (user_exists == 0) {
 		/* User does not exist. */
 		TRACE(TRACE_INFO, "username not found [%s]", newaddress);
-		dm_free(newaddress);
+		g_free(newaddress);
 		return 0;
 	}
 
 	if (dm_list_nodeadd(delivery->userids, &userid, sizeof(u64_t)) == 0) {
 		TRACE(TRACE_ERROR, "out of memory");
-		dm_free(newaddress);
+		g_free(newaddress);
 		return -1;
 	}
 
 	TRACE(TRACE_DEBUG, "added user [%s] id [%llu] to delivery list", newaddress, userid);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 	return 1;
 }
 
@@ -442,7 +442,7 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 
 static int address_is_userpart_catchall(deliver_to_user_t *delivery)
 {
-	char *userpart = dm_strdup(delivery->address);
+	char *userpart = g_strdup(delivery->address);
 	char *userpartcut;
 	int userpart_count;
 

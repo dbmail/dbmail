@@ -385,12 +385,12 @@ int _ic_delete(struct ImapSession *self)
 		result = db_isselectable(mboxid);
 		if (result == 0) {
 			dbmail_imap_session_printf(self, "%s NO mailbox is non-selectable\r\n", self->tag);
-			dm_free(children);
+			g_free(children);
 			return 1;
 		}
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			dm_free(children);
+			g_free(children);
 			return -1;	/* fatal */
 		}
 
@@ -401,7 +401,7 @@ int _ic_delete(struct ImapSession *self)
 
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			dm_free(children);
+			g_free(children);
 			return -1;	/* fatal */
 		}
 
@@ -411,7 +411,7 @@ int _ic_delete(struct ImapSession *self)
 
 		/* ok done */
 		dbmail_imap_session_printf(self, "%s OK DELETE completed\r\n", self->tag);
-		dm_free(children);
+		g_free(children);
 		return 0;
 	}
 
@@ -554,7 +554,7 @@ int _ic_rename(struct ImapSession *self)
 		result = db_getmailboxname(children[i], ud->userid, name);
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			dm_free(children);
+			g_free(children);
 			return -1;
 		}
 
@@ -562,7 +562,7 @@ int _ic_rename(struct ImapSession *self)
 			/* strange error, let's say its fatal */
 			TRACE(TRACE_ERROR, "mailbox names appear to be corrupted");
 			dbmail_imap_session_printf(self, "* BYE internal error regarding mailbox names\r\n");
-			dm_free(children);
+			g_free(children);
 			return -1;
 		}
 
@@ -571,13 +571,13 @@ int _ic_rename(struct ImapSession *self)
 		result = db_setmailboxname(children[i], newname);
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			dm_free(children);
+			g_free(children);
 			return -1;
 		}
 			
 	}
 	if (children)
-		dm_free(children);
+		g_free(children);
 
 	/* now replace name */
 	result = db_setmailboxname(mboxid, self->args[1]);
@@ -709,7 +709,7 @@ int _ic_list(struct ImapSession *self)
 	result = db_findmailbox_by_regex(ud->userid, pattern, &children, &nchildren, list_is_lsub);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		dm_free(children);
+		g_free(children);
 		g_free(pattern);
 		return -1;
 	}
@@ -717,7 +717,7 @@ int _ic_list(struct ImapSession *self)
 	if (result == 1) {
 		dbmail_imap_session_printf(self, "%s BAD invalid pattern specified\r\n",
 			self->tag);
-		dm_free(children);
+		g_free(children);
 		g_free(pattern);
 		return 1;
 	}
@@ -750,10 +750,10 @@ int _ic_list(struct ImapSession *self)
 
 
 	if (children)
-		dm_free(children);
+		g_free(children);
 
 	g_free(pattern);
-	dm_free(mb);
+	g_free(mb);
 	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
 
 	return 0;
@@ -1233,7 +1233,7 @@ int _ic_expunge(struct ImapSession *self)
 	}
 		
 	if (msgids)
-		dm_free(msgids);
+		g_free(msgids);
 	msgids = NULL;
 
 	dbmail_imap_session_printf(self, "%s OK EXPUNGE completed\r\n", self->tag);
@@ -2025,7 +2025,7 @@ int _ic_getacl(struct ImapSession *self)
 	}
 
 	dbmail_imap_session_printf(self, "* ACL \"%s\" %s\r\n", self->args[self->args_idx], acl_string);
-	dm_free(acl_string);
+	g_free(acl_string);
 	dbmail_imap_session_printf(self, "%s OK GETACL completed\r\n", self->tag);
 	return 0;
 }
@@ -2072,7 +2072,7 @@ int _ic_listrights(struct ImapSession *self)
 	dbmail_imap_session_printf(self, "* LISTRIGHTS \"%s\" %s %s\r\n",
 		self->args[self->args_idx], self->args[self->args_idx+1], listrights_string);
 	dbmail_imap_session_printf(self, "%s OK LISTRIGHTS completed\r\n", self->tag);
-	dm_free(listrights_string);
+	g_free(listrights_string);
 	return 0;
 }
 
@@ -2105,7 +2105,7 @@ int _ic_myrights(struct ImapSession *self)
 
 	dbmail_imap_session_printf(self, "* MYRIGHTS \"%s\" %s\r\n", self->args[self->args_idx],
 		myrights_string);
-	dm_free(myrights_string);
+	g_free(myrights_string);
 	dbmail_imap_session_printf(self, "%s OK MYRIGHTS complete\r\n", self->tag);
 	return 0;
 }
