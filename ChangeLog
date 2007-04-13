@@ -1,3 +1,8 @@
+2007-04-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Some work in db_set_msgflag to help with bug #568
+
 2007-04-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* check_dbmail_deliver.c dbmail-user.c lmtp.c user.c imap4.h db.c

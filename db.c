@@ -3948,12 +3948,11 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_type)
 {
-	size_t i;
-	size_t left;
+	size_t i, pos = 0;
 	char query[DEF_QUERYSIZE]; 
 
 	memset(query,0,DEF_QUERYSIZE);
-	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0,",DBPFX);
+	pos += snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0", DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
 
@@ -3961,38 +3960,33 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 		if (i == IMAP_FLAG_RECENT)
 			continue;
 
-		left = DEF_QUERYSIZE - strlen(query);
 		switch (action_type) {
 		case IMAPFA_ADD:
 			if (flags[i] > 0) {
-				strncat(query, db_flag_desc[i], left);
-				left = DEF_QUERYSIZE - strlen(query);
-				strncat(query, "=1,", left);
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos,
+				                ", %s=1", db_flag_desc[i]); 
 			}
 			break;
 		case IMAPFA_REMOVE:
 			if (flags[i] > 0) {
-				strncat(query, db_flag_desc[i], left);
-				left = DEF_QUERYSIZE - strlen(query);
-				strncat(query, "=0,", left);
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos,
+				                ", %s=0", db_flag_desc[i]); 
 			}
 			break;
 
 		case IMAPFA_REPLACE:
-			strncat(query, db_flag_desc[i], left);
-			left = DEF_QUERYSIZE - strlen(query);
-			if (flags[i] == 0)
-				strncat(query, "=0,", left);
-			else
-				strncat(query, "=1,", left);
+			if (flags[i] == 0) {
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos,
+				                ", %s=0", db_flag_desc[i]); 
+			} else {
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos,
+				                ", %s=1", db_flag_desc[i]); 
+			}
 			break;
 		}
-		db_free_result();
 	}
 
-	/* last character in string is comma, replace it --> strlen()-1 */
-	left = DEF_QUERYSIZE - strlen(query);
-	snprintf(&query[strlen(query) - 1], left,
+	snprintf(query + pos, DEF_QUERYSIZE - pos,
 		 " WHERE message_idnr = %llu AND "
 		 "status < %d AND mailbox_idnr = %llu",
 		 msg_idnr, MESSAGE_STATUS_DELETE, 
@@ -4002,6 +3996,8 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 		TRACE(TRACE_ERROR, "could not set flags");
 		return (-1);
 	}
+
+	db_free_result();
 
 	return DM_SUCCESS;
 }
