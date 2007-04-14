@@ -341,6 +341,9 @@ void child_reg_connected_client(const char *ip, const char *name)
 	int key;
 	pid_t pid;
 	
+	if (! scoreboard) // cli server
+		return;
+
 	pid = getpid();
 	key = getKey(pid);
 	
