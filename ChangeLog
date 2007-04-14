@@ -3,6 +3,17 @@
 	* db.c:
 	Some work in db_set_msgflag to help with bug #568
 
+2007-04-09  Paul J Stevens <paul@nfg.nl>
+
+	* pool.c, pool.h, serverchild.c:
+	fix a couple of minor compiler warnings
+	* check_dbmail_imapd.c:
+	replace lingering dm_free call
+	* imapcommands.c:
+	re-initialize msginfo in session before _do_store (closes #565)
+	* pool.c:
+	dont access scoreboard during cli server run
+
 2007-04-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* check_dbmail_deliver.c dbmail-user.c lmtp.c user.c imap4.h db.c
