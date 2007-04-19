@@ -1466,7 +1466,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, struct ImapSession *
 
 	msginfo = g_tree_lookup(self->msginfo, id);
 	if (! msginfo) {
-		TRACE(TRACE_WARNING, "unable to lookup msginfo struct for [%llu]", id);
+		TRACE(TRACE_WARNING, "unable to lookup msginfo struct for [%llu]", *id);
 		return TRUE;
 	}
 
