@@ -253,6 +253,60 @@ START_TEST(test_resolve_userpart_catchall)
 }
 END_TEST
 
+START_TEST(test_tostring)
+{
+	int res;
+	delivery_status_t dsn;
+	const char *class, *subject, *detail;
+
+	dsn.class = 5, dsn.subject = 0, dsn.detail = 0;
+	res = dsn_tostring(dsn, &class, &subject, &detail);
+	fail_unless(res == 0 && strcmp(class, "Permanent Failure") == 0
+		&& strcmp(subject, "") == 0 && strcmp(detail, "") == 0,
+		"dsnuser_tostring failed to handle 500 %s %s %s", class, subject, detail);
+
+	dsn.class = 2, dsn.subject = 3, dsn.detail = 4;
+	res = dsn_tostring(dsn, &class, &subject, &detail);
+	fail_unless(res == 0
+		&& strcmp(class, "Success") == 0
+		&& strcmp(subject, "Mail System Status") == 0
+		&& strcmp(detail, "Message too big for system") == 0,
+		"dsnuser_tostring failed to handle 234 %s %s %s", class, subject, detail);
+
+	dsn.class = 4, dsn.subject = 5, dsn.detail = 4;
+	res = dsn_tostring(dsn, &class, &subject, &detail);
+	fail_unless(res == 0
+		&& strcmp(class, "Persistent Transient Failure") == 0
+		&& strcmp(subject, "Mail Delivery Protocol Status") == 0
+		&& strcmp(detail, "Invalid command arguments") == 0,
+		"dsnuser_tostring failed to handle 456 %s %s %s", class, subject, detail);
+
+	dsn.class = 6, dsn.subject = 7, dsn.detail = 8;
+	res = dsn_tostring(dsn, &class, &subject, &detail);
+	fail_unless(res == -1 && strcmp(class, "") == 0
+		&& strcmp(subject, "") == 0 && strcmp(detail, "") == 0,
+		"dsnuser_tostring failed to fail with fuzz 678");
+
+	dsn.class = 0, dsn.subject = 0, dsn.detail = 0;
+	res = dsn_tostring(dsn, &class, &subject, &detail);
+	fail_unless(res == -1 && strcmp(class, "") == 0
+		&& strcmp(subject, "") == 0 && strcmp(detail, "") == 0,
+		"dsnuser_tostring failed to fail with fuzz 000");
+
+	dsn.class = 3, dsn.subject = 3, dsn.detail = 3;
+	res = dsn_tostring(dsn, &class, &subject, &detail);
+	fail_unless(res == -1 && strcmp(class, "") == 0
+		&& strcmp(subject, "") == 0 && strcmp(detail, "") == 0,
+		"dsnuser_tostring failed to fail with fuzz 333");
+
+	dsn.class = -10, dsn.subject = -20, dsn.detail = -30;
+	res = dsn_tostring(dsn, &class, &subject, &detail);
+	fail_unless(res == -1 && strcmp(class, "") == 0
+		&& strcmp(subject, "") == 0 && strcmp(detail, "") == 0,
+		"dsnuser_tostring failed to fail with fuzz -10 -20 -30");
+}
+END_TEST
+
 
 Suite *dbmail_dsn_suite(void)
 {
@@ -270,6 +324,7 @@ Suite *dbmail_dsn_suite(void)
 	tcase_add_test(tc_dsn, test_resolve_username_mailbox);
 	tcase_add_test(tc_dsn, test_resolve_domain_catchall);
 	tcase_add_test(tc_dsn, test_resolve_userpart_catchall);
+	tcase_add_test(tc_dsn, test_tostring);
 	return s;
 }
 
