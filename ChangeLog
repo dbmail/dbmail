@@ -1,3 +1,12 @@
+2007-04-23  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c:
+	replace lingering dm_free call
+	* imapcommands.c:
+	re-initialize msginfo in session before _do_store (closes #565)
+	* pool.c:
+	dont access scoreboard during cli server run
+
 2007-04-20  Aaron Stone  <aaron@serendipity.cx>
 
 	* dsn.c, check_dbmail_dsn.c:
