@@ -1064,12 +1064,13 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 {
 	GString *q;
-	u64_t *id;
+	u64_t tid, *id;
 	unsigned i, rows;
+	GTree *z;
 	search_key_t *s = (search_key_t *)node->data;
 	
 	TRACE(TRACE_DEBUG,"type [%d]", s->type);
-	
+
 	if (s->type != IST_SORT)
 		return FALSE;
 	
@@ -1077,7 +1078,7 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 		return FALSE;
 
 	q = g_string_new("");
-	g_string_printf(q, "SELECT DISTINCT(message_idnr) FROM %smessages m "
+	g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			 "LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			 "%s"
 			 "WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) " 
@@ -1092,13 +1093,21 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
                 self->sorted = NULL;
         }
 
-        rows = db_num_rows();
-        for (i=0; i< rows; i++) {
-                id = g_new0(u64_t,1);
-                *id = db_get_result_u64(i,0);
-                if (g_tree_lookup(self->ids,id))
-                        self->sorted = g_list_prepend(self->sorted,id);
-        }
+	z = g_tree_new((GCompareFunc)ucmp);
+	
+	rows = db_num_rows();
+	for (i=0; i< rows; i++) {
+		tid = db_get_result_u64(i,0);
+		if (g_tree_lookup(self->ids,&tid) && (! g_tree_lookup(z, &tid))) {
+			id = g_new0(u64_t,1);
+			*id = tid;
+			g_tree_insert(z, id, id);
+			self->sorted = g_list_prepend(self->sorted,id);
+		}
+	}
+
+	g_tree_destroy(z);
+
         self->sorted = g_list_reverse(self->sorted);
 
 	g_string_free(q,TRUE);
