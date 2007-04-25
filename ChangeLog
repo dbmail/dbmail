@@ -1,3 +1,10 @@
+2007-04-25  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4, configure.in, dbmail.h.in, dbmail.conf, authmodule.c,
+	dbmodule.c, sortmodule.c:
+	Added compile and runtime configuration of 'pkglibdir' for
+	runtime loaded modules.
+
 2007-04-23  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c:

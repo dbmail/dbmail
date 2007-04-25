@@ -48,12 +48,19 @@ int auth_load_driver(void)
 		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from SQL or LDAP",
 				_db_params.authdriver);
 
+	field_t library_dir;
+	config_get_value("library_directory", "DBMAIL", library_dir);
+	if (strlen(library_dir) == 0) {
+		TRACE(TRACE_DEBUG, "no value for library_directory, using default [%s]", DEFAULT_LIBRARY_DIR);
+		snprintf(library_dir, sizeof(field_t), "%s", DEFAULT_LIBRARY_DIR);
+	} else {
+		TRACE(TRACE_DEBUG, "library_directory is [%s]", library_dir);
+	}
+
 	/* Try local build area, then dbmail lib paths, then system lib path. */
 	int i;
-	char *lib_path[] = {
-		"modules/.libs",
-		PREFIX "/lib/dbmail",
-		NULL };
+	char *lib_path[] = { library_dir, NULL };
+
 	/* Note that the limit here *includes* the NULL. This is intentional,
 	 * to allow g_module_build_path to try the current working directory. */
 	for (i = 0; i < 3; i++) {

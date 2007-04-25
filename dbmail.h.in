@@ -164,6 +164,9 @@
 #define DEFAULT_STATE_DIR "@DM_STATEDIR@"
 #define DEFAULT_STATE_EXT ".state"
 
+/** default location of library files */
+#define DEFAULT_LIBRARY_DIR "@DM_PKGLIBDIR@"
+
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "@DM_CONFDIR@/dbmail.conf"
 

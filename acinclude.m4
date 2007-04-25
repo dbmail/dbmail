@@ -16,6 +16,7 @@ AC_MSG_RESULT([
 DM_LOGDIR:     $DM_LOGDIR
 DM_CONFDIR:    $DM_CONFDIR
 DM_STATEDIR:   $DM_STATEDIR
+DM_PKGLIBDIR:  $DM_PKGLIBDIR
 USE_DM_GETOPT: $USE_DM_GETOPT
 CFLAGS:        $CFLAGS
 GLIB:          $ac_glib_libs
@@ -34,6 +35,7 @@ SOCKETS:       $SOCKETLIB
 
 
 AC_DEFUN([DM_DEFINES],[dnl
+dnl Custom DBMail option logdir...
 AC_ARG_WITH(logdir,
 	[  --with-logdir           use logdir for logfiles],
 	logdirname="$withval")
@@ -41,17 +43,29 @@ AC_ARG_WITH(logdir,
   then
   	DM_LOGDIR="/var/log"
   else
-  	DM_LOGDIR="$logdirname"
+  	DM_LOGDIR=$logdirname
   fi
+dnl Custom DBMail option pkglibdir...
+AC_ARG_WITH(pkglibdir,
+	[  --with-pkglibdir        use pkglibdir for dbmail libraries],
+	pkglibdirname="$withval")
+  if test "x$pkglibdirname" = "x"
+  then
+  	DM_PKGLIBDIR="/usr/lib/dbmail"
+  else
+  	DM_PKGLIBDIR=$pkglibdirname
+  fi
+dnl Standard autoconf option. The literal '${prefix}' is correct.
   if test "x$localstatedir" = 'x${prefix}/var'
   then
-  	DM_STATEDIR='/var/run'
+  	DM_STATEDIR="/var/run"
   else
   	DM_STATEDIR=$localstatedir
   fi
+dnl Standard autoconf option. The literal '${prefix}' is correct.
   if test "x$sysconfdir" = 'x${prefix}/etc'
   then
-  	DM_CONFDIR='/etc'
+  	DM_CONFDIR="/etc"
   else
   	DM_CONFDIR=$sysconfdir
   fi
