@@ -4,6 +4,10 @@
 	dbmodule.c, sortmodule.c:
 	Added compile and runtime configuration of 'pkglibdir' for
 	runtime loaded modules.
+	* acinclude.m4, configure.in, Makefile.am:
+	Added support for --disable-manual configure flag.
+	* db.c,  check_dbmail_db.c:
+	Fixed db_replycache_validate and added test cases to prove it.
 
 2007-04-23  Paul J Stevens <paul@nfg.nl>
 

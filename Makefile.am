@@ -16,7 +16,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-SUBDIRS = modules man
+SUBDIRS = modules
+
+if MANPAGES
+SUBDIRS += man
+endif
 
 if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
@@ -30,6 +34,7 @@ endif
 sbin_PROGRAMS = dbmail-smtp \
 	dbmail-pop3d \
 	dbmail-imapd \
+	dbmail-top \
 	dbmail-util \
 	dbmail-users \
 	dbmail-export \
@@ -77,6 +82,9 @@ dbmail_pop3d_LDADD = libdbmail.la
 
 dbmail_imapd_SOURCES = quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c imapd.c dbmail-imapsession.c
 dbmail_imapd_LDADD = libdbmail.la
+
+dbmail_top_SOURCES = top.c
+dbmail_top_LDADD = libdbmail.la -lncurses
 
 dbmail_util_SOURCES = maintenance.c
 dbmail_util_LDADD = libdbmail.la
