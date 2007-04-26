@@ -981,6 +981,44 @@ START_TEST(test_db_delete_mailbox)
 }
 END_TEST
 
+/* Insert or update a replycache entry.
+ * int db_replycache_register(const char *to, const char *from, const char *handle);
+
+ * Returns DM_SUCCESS if the (to, from) pair hasn't been seen in days.
+ * int db_replycache_validate(const char *to, const char *from, const char *handle, int days);
+
+ * Remove a replycache entry.
+ * int db_replycache_unregister(const char *to, const char *from, const char *handle);
+ */
+START_TEST(test_db_replycache)
+{
+	int result;
+
+	result = db_replycache_register("test_to", "test_from", "test_handle");
+	fail_unless(result == DM_SUCCESS, "failed to register");
+
+	/* Should always be DM_SUCCESS */
+	result = db_replycache_validate("test_to", "test_from", "test_handle", 0);
+	fail_unless(result == DM_SUCCESS, "failed with days = 0");
+
+	/* Should not be DM_SUCCESS, since we just inserted it. */
+	result = db_replycache_validate("test_to", "test_from", "test_handle", 1);
+	fail_unless(result != DM_SUCCESS, "failed with days = 1");
+
+	/* Should not be DM_SUCCESS, since we just inserted it. */
+	result = db_replycache_validate("test_to", "test_from", "test_handle", 2);
+	fail_unless(result != DM_SUCCESS, "failed with days = 2");
+
+	/* Should not be DM_SUCCESS, since we just inserted it. */
+	result = db_replycache_validate("test_to", "test_from", "test_handle", 1100);
+	fail_unless(result != DM_SUCCESS, "failed with days = 1100");
+
+	result = db_replycache_unregister("test_to", "test_from", "test_handle");
+	fail_unless(result == DM_SUCCESS, "failed to unregister");
+}
+END_TEST
+
+
 /**
  * \brief find a mailbox, create if not found
  * \param name name of mailbox
@@ -1145,6 +1183,7 @@ Suite *dbmail_db_suite(void)
 	tcase_add_test(tc_db, test_db_delete_mailbox);
 	tcase_add_test(tc_db, test_db_mailbox_set_permission);
 	tcase_add_test(tc_db, test_db_imap_utf7_like);
+	tcase_add_test(tc_db, test_db_replycache);
 	return s;
 }
 

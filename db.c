@@ -4831,17 +4831,16 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 			 DBPFX, escaped_to, escaped_from, escaped_handle, db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	
-	db_free_result();
-	
 	g_free(escaped_to);
 	g_free(escaped_from);
 	g_free(escaped_handle);
 
-	if (db_query(query)== -1)
+	if (db_query(query) < 0)
 		return DM_EQUERY;
 
+	db_free_result();
+	
 	return DM_SUCCESS;
-
 }
 
 int db_replycache_unregister(const char *to, const char *from, const char *handle)
@@ -4904,11 +4903,11 @@ int db_replycache_validate(const char *to, const char *from,
 	if (db_query(query) < 0)
 		return DM_EQUERY;
 
-	db_free_result();
-
 	if (db_num_rows() > 0)
 		return DM_EGENERAL;
 	
+	db_free_result();
+
 	return DM_SUCCESS;			
 }
 

@@ -26,6 +26,7 @@ PGSQL:         $PGSQLLIB
 SQLITE:        $SQLITELIB
 SIEVE:         $SIEVEINC$SIEVELIB
 LDAP:          $LDAPINC$LDAPLIB
+MANPAGES:      $enable_manpages
 SHARED:        $enable_shared
 STATIC:        $enable_static
 CHECK:         $with_check
@@ -47,7 +48,7 @@ AC_ARG_WITH(logdir,
   fi
 dnl Custom DBMail option pkglibdir...
 AC_ARG_WITH(pkglibdir,
-	[  --with-pkglibdir        use pkglibdir for dbmail libraries],
+AC_HELP_STRING([--with-pkglibdir],[use pkglibdir for dbmail libraries]),
 	pkglibdirname="$withval")
   if test "x$pkglibdirname" = "x"
   then
@@ -75,6 +76,15 @@ dnl Standard autoconf option. The literal '${prefix}' is correct.
   else
   	AC_DEFINE_UNQUOTED([PREFIX], "$prefix", [Prefix to the installed path])
   fi
+dnl Enabled by default.
+AC_MSG_CHECKING([whether to provide manual pages])
+AC_ARG_ENABLE(manual,
+AC_HELP_STRING([--disable-manual],[do not build or install manual pages]),
+  [ AC_MSG_RESULT(no)
+  enable_manpages="no" ],
+  [ AC_MSG_RESULT(yes)
+  enable_manpages="yes" ]
+  )
 ])
 	
 dnl DBMAIL_CHECK_SHARED_OR_STATIC
