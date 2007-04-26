@@ -617,6 +617,7 @@ void scoreboard_state(void)
 			break;
 		}
 	}
+	scorelen += fprintf(scoreFD, "\n");
 	fflush(scoreFD);
 	ftruncate(fileno(scoreFD), scorelen);
 

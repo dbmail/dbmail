@@ -102,18 +102,23 @@ We need to make sure to respect the implementation requirements.
 int sort_vacation(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
-	int days = 1, mime = 0;
 	const char *message, *subject, *fromaddr, *handle;
 	const char *rc_to, *rc_from, *rc_handle;
 	char *md5_handle = NULL;
+	int days, mime;
 
-	days = sieve2_getvalue_int(s, "days"); // days: min 1, max 30, default 7.
+	days = sieve2_getvalue_int(s, "days");
 	mime = sieve2_getvalue_int(s, "mime"); // mime: 1 if message is mime coded. FIXME.
 	message = sieve2_getvalue_string(s, "message");
 	subject = sieve2_getvalue_string(s, "subject");
 	fromaddr = sieve2_getvalue_string(s, "fromaddr"); // From: specified by the script.
 	handle = sieve2_getvalue_string(s, "handle");
 
+	/* Default to a week, upper limit of a month.
+	 * This is our only loop prevention mechanism! The value must be
+	 * greater than 0, else the replycache code will always indicate
+	 * that we haven't seen anything since 0 days ago... */
+	if (days == 0) days = 7;
 	if (days < 1) days = 1;
 	if (days > 30) days = 30;
 
