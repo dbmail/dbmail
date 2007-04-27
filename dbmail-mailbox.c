@@ -1481,8 +1481,6 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	if (s->merged == TRUE)
 		return FALSE;
 
-	TRACE(TRACE_DEBUG,"[%p] depth [%d] type [%d]", 
-			s, g_node_depth(node), s->type);
 	switch(s->type) {
 		case IST_SUBSEARCH_AND:
 			g_node_children_foreach(node, G_TRAVERSE_LEAVES, (GNodeForeachFunc)_merge_search, (gpointer)found);
@@ -1505,13 +1503,20 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			y = g_node_nth_child(node,1);
 			a = (search_key_t *)x->data;
 			b = (search_key_t *)y->data;
-			if (a->found && b->found) 
-				g_tree_merge(a->found,b->found,IST_SUBSEARCH_OR);
-			if (a->found && found)
-				g_tree_merge(found,a->found,IST_SUBSEARCH_AND);
+			if (a->type == IST_SUBSEARCH_AND)
+				g_node_children_foreach(x, G_TRAVERSE_LEAVES, (GNodeForeachFunc)_merge_search, (gpointer)a->found);
 
-			a->merged = TRUE;
-			b->merged = TRUE;
+			if (b->type == IST_SUBSEARCH_AND)
+				g_node_children_foreach(y, G_TRAVERSE_LEAVES, (GNodeForeachFunc)_merge_search, (gpointer)b->found);
+
+			if (a->found && b->found) {
+				g_tree_merge(a->found,b->found,IST_SUBSEARCH_OR);
+				b->merged = TRUE;
+			}
+			if (a->found && found) {
+				g_tree_merge(found,a->found,IST_SUBSEARCH_AND);
+				a->merged = TRUE;
+			}
 
 			break;
 			
@@ -1521,6 +1526,8 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			break;
 	}
 
+	TRACE(TRACE_DEBUG,"[%p] depth [%d] type [%d] found [%d]", 
+			s, g_node_depth(node), s->type, found ? g_tree_nnodes(found): 0);
 	s->merged = TRUE;
 
 	return FALSE;
@@ -1540,15 +1547,13 @@ int dbmail_mailbox_sort(struct DbmailMailbox *self)
 
 int dbmail_mailbox_search(struct DbmailMailbox *self) 
 {
-	GTraverseFlags flag = G_TRAVERSE_ALL;
-
 	if (! self->search)
 		return 0;
 	
-	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, flag, -1, 
+	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_LEAVES, -1, 
 			(GNodeTraverseFunc)_do_search, (gpointer)self);
 	
-	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, flag, -1, 
+	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_merge_search, (gpointer)self->ids);
 
 	if (self->ids == NULL)
