@@ -1308,6 +1308,7 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         int maxlen=100;
         int result = 0;
         gchar *ln;
+	static int errcount = 0;
 
 	assert(message);
 
@@ -1341,8 +1342,11 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 		g_free(re);
 		g_free(ln);
                 TRACE(TRACE_ERROR, "write to client socket failed");
+		if (errcount++ > 1)
+			TRACE(TRACE_FATAL,"uncaught error on socket, exiting");
 		return -2;
 	}
+	errcount = 0;
 
         if (result < maxlen)
                 TRACE(TRACE_DEBUG,"RESPONSE: [%s]", re);
