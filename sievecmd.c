@@ -151,10 +151,8 @@ int main(int argc, char *argv[])
 
 		case 'V':
 			/* Show the version and return non-zero. */
-			printf("\n*** DBMAIL: dbmail-sievecmd version "
-			       "$Revision$ %s\n\n", COPYRIGHT);
-			return 0;
-			break;
+			printf("This is DBMail version %s\n\n%s\n", VERSION, COPYRIGHT);
+			return 1;
 
 		default:
 			act = 'h';

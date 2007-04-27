@@ -29,7 +29,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #else
-#define VERSION "2.2"
+#define VERSION "2.2.5-pre-svn"
 #define PACKAGE "dbmail"
 #endif
 
