@@ -45,8 +45,25 @@ int imap_before_smtp = 0;
 void init_testuser1(void) 
 {
         u64_t user_idnr;
-	if (! (auth_user_exists("testuser1",&user_idnr)))
-		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
+
+	char user1[] = "testuser1";
+	char user2[] = "testuser2";
+	char passwd[] = "test";
+	char passwdtype[] = "md5-hash";
+	char *password = NULL;
+	char *enctype = NULL;
+	char *passwdfile = NULL;
+
+	if (! (auth_user_exists(user1,&user_idnr))) {
+		mkpassword(user1, passwd, passwdtype, passwdfile, &password, &enctype);
+		auth_adduser(user1,password, enctype, 101, 1024000, &user_idnr);
+	}
+
+	if (! (auth_user_exists(user2,&user_idnr))) {
+		mkpassword(user2, passwd, passwdtype, passwdfile, &password, &enctype);
+		auth_adduser(user2,password, enctype, 101, 1024000, &user_idnr);
+	}
+
 }
 	
 void setup(void)
