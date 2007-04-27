@@ -1,6 +1,6 @@
 2007-04-27  Aaron Stone  <aaron@serendipity.cx>
 
-	* dbmail.h.in, main.c, user.c, sievecmd.c:
+	* dbmail.h.in, main.c, user.c, sievecmd.c, export.c, maintenance.c:
 	Version and copyright cleanup on -V command line option.
 
 2007-04-25  Aaron Stone  <aaron@serendipity.cx>

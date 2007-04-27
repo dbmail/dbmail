@@ -203,10 +203,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'V':
- 			printf("DBMail: dbmail-util\n"
- 			       "Version: %s\n"
- 			       "$Revision$\n"
- 			       "Copyright: %s\n", VERSION, COPYRIGHT);
+			printf("This is DBMail version %s\n\n%s\n", VERSION, COPYRIGHT);
 			return 1;
 
 		default:
