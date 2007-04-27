@@ -165,8 +165,7 @@ int main(int argc, char *argv[])
 
 		case 'V':
 			/* Show the version and return non-zero. */
-			printf("\n*** DBMAIL: dbmail-users version "
-			       "$Revision: 1891 $ %s\n\n", COPYRIGHT);
+			printf("This is DBMail version %s\n\n%s\n", VERSION, COPYRIGHT);
 			result = 1;
 			break;
 
