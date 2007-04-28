@@ -4021,9 +4021,6 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 			return result;
 	}
 
-	TRACE(TRACE_DEBUG, "mailbox [%llu] is owned by user [%llu], is that also [%llu]?",
-			mboxid, userid, mailbox->owner_idnr);
-
 	if (mailbox->owner_idnr == userid) {
 		TRACE(TRACE_DEBUG, "mailbox [%llu] is owned by user [%llu], giving all rights",
 				mboxid, userid);
