@@ -83,42 +83,40 @@ db_param_t _db_params;
 
 int db_connect()
 {
-	char connectionstring[255];
+	GString *cs = g_string_new("");
 
-	/* use the standard port for postgresql if none is given. This looks a bit
-	   dirty.. can't we get this info from somewhere else? */
+	/* Warn if both the host= and sqlsocket= parameters are defined.
+	 * Prefer just the socket if given. */
+	if (strlen(_db_params.sock) && strlen(_db_params.host)
+	 && strncmp(_db_params.host, "localhost", FIELDSIZE != 0)) {
+		TRACE(TRACE_WARNING, "PostgreSQL socket and a hostname other "
+		      "than localhost have both been defined. The socket "
+		      "will be used and the hostname will be ignored.");
+		g_string_append_printf(cs, "host='%s'", _db_params.sock);
+	} else if (strlen(_db_params.sock)) {
+		g_string_append_printf(cs, "host='%s'", _db_params.sock);
+	} else {
+		g_string_append_printf(cs, "host='%s'", _db_params.host);
+	}
+
+	/* Add the username and password. */
+	g_string_append_printf(cs,
+		" user='%s' password='%s' dbname='%s'",
+		_db_params.user, _db_params.pass, _db_params.db);
+
+	/* Finally the port, if given. */
 	if (_db_params.port != 0)
-		snprintf(connectionstring, 255,
-			 "host='%s' user='%s' password='%s' dbname='%s' "
-			 "port='%u'",
-			 _db_params.host, _db_params.user, _db_params.pass,
-			 _db_params.db, _db_params.port);
-	else
-		snprintf(connectionstring, 255,
-			 "host='%s' user='%s' password='%s' dbname='%s' ",
-			 _db_params.host, _db_params.user, _db_params.pass,
-			 _db_params.db);
+		g_string_append_printf(cs, " port='%d'", _db_params.port);
 
-	conn = PQconnectdb(connectionstring);
+	conn = PQconnectdb(cs->str);
+
+	g_string_free(cs, TRUE);
 
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		TRACE(TRACE_ERROR, "PQconnectdb failed: %s", PQerrorMessage(conn));
 		return -1;
 	}
-#ifdef OLD
-	/* UNICODE is broken prior to 8.1 */
-	if (PQserverVersion(conn) < 80100) {
-		char *enc = NULL;
 
-		enc = pg_encoding_to_char(PQclientEncoding(conn));
-		// if (strcmp(enc, "SQL_ASCII") != 0) {
-		if (strcmp(enc, "UNICODE") == 0) {
-			TRACE(TRACE_FATAL, "Database encoding UNICODE is not supported prior to PostgreSQL 8.1");
-		}
-
-		// FIXME: Does we need to free enc?
-	}
-#endif
 	return 0;
 }
 
