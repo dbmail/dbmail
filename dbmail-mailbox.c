@@ -1012,7 +1012,11 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 
 	/* default initial key for ANDing */
 	value = g_new0(search_key_t,1);
-	value->type = IST_UIDSET;
+	if (self->uid)
+		value->type = IST_UIDSET;
+	else
+		value->type = IST_SET;
+
 	if (check_msg_set(search_keys[*idx])) {
 		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
 		(*idx)++;
@@ -1294,7 +1298,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 
 	g_return_val_if_fail(self->ids != NULL && g_tree_nnodes(self->ids) > 0,b);
 
-	TRACE(TRACE_DEBUG,"[%s]", set);
+	TRACE(TRACE_DEBUG,"[%s] uid [%d]", set, uid);
 	
 	if (uid) {
 		ids = g_tree_keys(self->ids);
@@ -1550,7 +1554,7 @@ int dbmail_mailbox_search(struct DbmailMailbox *self)
 	if (! self->search)
 		return 0;
 	
-	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_LEAVES, -1, 
+	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_do_search, (gpointer)self);
 	
 	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 

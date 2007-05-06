@@ -10,3 +10,4 @@ a11 UID SEARCH charset US-ASCII SUBJECT "some test"
 a12 SEARCH charset utf-8 SUBJECT "lars hase"
 a13 SEARCH charset utf-8 SUBJECT "Привет всем"
 a14 SEARCH 1:* OR (UNDELETED UNSEEN) (FLAGGED)
+a14 SEARCH 1,4:* OR (UNDELETED UNSEEN) (FLAGGED)
