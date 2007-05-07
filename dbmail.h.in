@@ -99,6 +99,10 @@
 #include "quota.h"
 #include "lmtp.h"
 
+#include "dbmodule.h"
+#include "authmodule.h"
+#include "sortmodule.h"
+
 #include "dm_md5.h"
 #include "dm_cidr.h"
 #include "dm_imaputil.h"
