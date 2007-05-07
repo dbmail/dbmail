@@ -1,3 +1,10 @@
+2007-05-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail.h.in authmodule.c dm_getopt.h modules/authsql.c
+	modules/authldap.c modules/dbpgsql.c sortmodule.c dbmailtypes.h
+	dbmodule.c:
+	Cleaned up the files that weren't getting headers from dbmail.h.
+
 2007-05-01  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/dbpgsql.c:

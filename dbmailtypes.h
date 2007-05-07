@@ -30,13 +30,7 @@
 #ifndef _DBMAILTYPES_H
 #define _DBMAILTYPES_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include "memblock.h"
-#include "list.h"
+#include "dbmail.h"
 
 /** max length of search query */
 #define MAX_SEARCH_LEN 1024

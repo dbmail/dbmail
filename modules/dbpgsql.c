@@ -23,20 +23,11 @@
  * Handles connection and queries to PostgreSQL backend
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "db.h"
 #include "libpq-fe.h"		/* PostgreSQL header */
+
 #include "dbmail.h"
-#include "dbmailtypes.h"
-
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-
 #define THIS_MODULE "sql"
+
 #define BYTEAOID  17
 
 const char * db_get_sql(sql_fragment_t frag)

@@ -18,19 +18,13 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*
- * 
- * * User authentication functions for LDAP.
- */
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+/* User authentication functions for LDAP. */
 
 #include "dbmail.h"
+#define THIS_MODULE "auth"
 
 #define AUTH_QUERY_SIZE 1024
 #define LDAP_RES_SIZE 1024
-#define THIS_MODULE "auth"
 
 extern char *configFile;
 
