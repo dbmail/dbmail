@@ -227,19 +227,19 @@ static void dbsqlite_cslike(sqlite3_context *context, int argc, sqlite3_value **
 	const unsigned char *zA = sqlite3_value_text(argv[0]);
 	const unsigned char *zB = sqlite3_value_text(argv[1]);
 	int escape = 0;
-	if( argc==3 ){
+	if (argc==3) {
 		/* The escape character string must consist of a single UTF-8 character.
 		** Otherwise, return an error.
 		*/
 		const unsigned char *zEsc = sqlite3_value_text(argv[2]);
-		if( sqlite3utf8CharLen(zEsc, -1)!=1 ){
+		if (sqlite3utf8CharLen((const char *)zEsc, -1) != 1) {
 			sqlite3_result_error(context, 
 				"ESCAPE expression must be a single character", -1);
 			return;
 		}
 		escape = sqlite3ReadUtf8(zEsc);
 	}
-	if( zA && zB ){
+	if (zA && zB) {
 		sqlite3_result_int(context, patternCompare(zA, zB, &likeInfo, escape));
 	}
 }
