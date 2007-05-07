@@ -28,10 +28,12 @@
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
-#else
+#endif
+
+#undef VERSION
+#undef PACKAGE
 #define VERSION "2.2.5-pre-svn"
 #define PACKAGE "dbmail"
-#endif
 
 #define _XOPEN_SOURCE /* glibc2 */
 #define __EXTENSIONS__ /* solaris */
@@ -44,6 +46,7 @@
 #include <fnmatch.h>
 #include <gmime/gmime.h>
 #include <glib.h>
+#include <gmodule.h>
 #include <grp.h>
 #include <limits.h>
 #include <netinet/in.h>
@@ -75,6 +78,8 @@
 #include <ldap.h>
 #endif
 
+#include "list.h"
+#include "memblock.h"
 #include "dbmailtypes.h"
 #include "debug.h"
 #include "dsn.h"
@@ -86,7 +91,6 @@
 #include "sort.h"
 #include "imap4.h"
 #include "imapcommands.h"
-#include "memblock.h"
 #include "server.h"
 #include "serverchild.h"
 #include "serverparent.h"

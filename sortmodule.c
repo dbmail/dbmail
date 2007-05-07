@@ -7,13 +7,7 @@
  * (c) 2005 Aaron Stone <aaron@serendipity.cx>
  */
 
-#include <gmodule.h>
-
-#include "config.h"
-#include "dbmailtypes.h"
-#include "debug.h"
-#include "sort.h"
-#include "sortmodule.h"
+#include "dbmail.h"
 #define THIS_MODULE "sort"
 
 static sort_func_t *sort = NULL;

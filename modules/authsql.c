@@ -24,23 +24,7 @@
  * \author IC&S (http://www.ic-s.nl)
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-
-#include <assert.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
-#ifdef HAVE_CRYPT_H
-#include <crypt.h>
-#endif
-
 #define THIS_MODULE "auth"
 
 extern db_param_t _db_params;

@@ -8,12 +8,7 @@
  * 
  */
 
-#include <gmodule.h>
-
-#include "config.h"
-#include "debug.h"
-#include "db.h"
-#include "dbmodule.h"
+#include "dbmail.h"
 #define THIS_MODULE "db"
 
 static db_func_t *db = NULL;

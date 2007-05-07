@@ -7,13 +7,7 @@
  * (c) 2005 Aaron Stone <aaron@serendipity.cx>
  */
 
-#include <gmodule.h>
-
-#include "config.h"
-#include "dbmailtypes.h"
-#include "debug.h"
-#include "auth.h"
-#include "authmodule.h"
+#include "dbmail.h"
 #define THIS_MODULE "auth"
 
 static auth_func_t *auth = NULL;
