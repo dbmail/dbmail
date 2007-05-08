@@ -1,3 +1,8 @@
+2007-05-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* lmtp.c:
+	Accepted modified patch to handle invalid commands (closes bug #585)
+
 2007-05-06  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail.h.in authmodule.c dm_getopt.h modules/authsql.c

@@ -276,12 +276,18 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 	TRACE(TRACE_DEBUG, "command looked up as commandtype %d", cmdtype);
 
-	/* commands that are allowed to have no arguments */
+	/* Invalid command */
+	if (cmdtype == LMTP_END) {
+		TRACE(TRACE_INFO, "Client gave an invalid command [%s], protocol error", command);
+		return lmtp_error(session, stream, "500 Invalid command.\r\n");
+	}
+
+	/* Commands that are allowed to have no arguments */
 	if ((value == NULL) &&
 	    !((cmdtype == LMTP_LHLO) || (cmdtype == LMTP_DATA) ||
 	      (cmdtype == LMTP_RSET) || (cmdtype == LMTP_QUIT) ||
 	      (cmdtype == LMTP_NOOP) || (cmdtype == LMTP_HELP) )) {
-		TRACE(TRACE_ERROR, "ARGUMENT %d", cmdtype);
+		TRACE(TRACE_INFO, "Client gave command [%s] without any arguments, protocol error", command);
 		return lmtp_error(session, stream, "500 This command requires an argument.\r\n");
 	}
 
