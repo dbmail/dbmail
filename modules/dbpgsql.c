@@ -62,7 +62,7 @@ const char * db_get_sql(sql_fragment_t frag)
 		break;
 		case SQL_STRCASE:
 			return "LOWER(%s)";
-		break
+		break;
 	}
 	return NULL;
 }
