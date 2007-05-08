@@ -43,6 +43,7 @@ const char * db_get_sql(sql_fragment_t frag)
 	switch(frag) {
 		case SQL_ENCODE_ESCAPE:
 		case SQL_TO_CHAR:
+		case SQL_STRCASE:
 			return "%s";
 		break;
 		case SQL_TO_DATE:
@@ -52,7 +53,7 @@ const char * db_get_sql(sql_fragment_t frag)
 			return "STRFTIME('%Y-%m-%d %H:%M:%S','now','localtime')";
 		break;
 		case SQL_REPLYCACHE_EXPIRE:
-			return "(STRFTIME('%s','now')-%s)";	
+			return "DATETIME('now','-%d DAYS')";	
 		break;
 		case SQL_BINARY:
 			return "";
