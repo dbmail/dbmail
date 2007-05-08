@@ -60,6 +60,9 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_ENCODE_ESCAPE:
 			return "ENCODE(%s::bytea,'escape')";
 		break;
+		case SQL_STRCASE:
+			return "LOWER(%s)";
+		break
 	}
 	return NULL;
 }

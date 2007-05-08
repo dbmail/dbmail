@@ -928,6 +928,7 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 {
 	u64_t tmp;
 	gpointer cacheid;
+	gchar *case_header;
 	gchar *safe_header;
 	gchar *tmpheader;
 
@@ -945,7 +946,11 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 	}
 		
 	GString *q = g_string_new("");
-	g_string_printf(q, "SELECT id FROM %sheadername WHERE lower(headername)='%s'", DBPFX, safe_header);
+
+	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
+	g_string_printf(q, "SELECT id FROM %sheadername WHERE %s='%s'", DBPFX, case_header, safe_header);
+	g_free(case_header);
+
 	if (db_query(q->str) == -1) {
 		g_string_free(q,TRUE);
 		g_free(safe_header);
