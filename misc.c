@@ -1255,8 +1255,8 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			break;
 	}
 
-	TRACE(TRACE_DEBUG,"a[%d] [%s] b[%d] -> a[%d]", 
-			alen, type, blen, 
+	TRACE(TRACE_DEBUG,"(%p) (%p): a[%d] [%s] b[%d] -> a[%d]", 
+			a, b, alen, type, blen, 
 			g_tree_nnodes(a));
 
 	g_free(merger);
