@@ -1635,7 +1635,7 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 
 	mailbox_t mb;
 	GTree *oldmsginfo, *msginfo = NULL;
-	u64_t exists, recent;
+	unsigned exists, recent;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 
 	exists = ud->mailbox.exists;
@@ -1665,9 +1665,9 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		case IMAP_COMM_EXAMINE:
 	
 		if ((!update) || (ud->mailbox.exists < mb.exists)) // only increments
-			dbmail_imap_session_printf(self, "* %llu EXISTS\r\n", exists);
+			dbmail_imap_session_printf(self, "* %u EXISTS\r\n", exists);
 	//	if ((!update) || (ud->mailbox.recent != mb.recent))
-			dbmail_imap_session_printf(self, "* %llu RECENT\r\n", recent);
+			dbmail_imap_session_printf(self, "* %u RECENT\r\n", recent);
 
 		break;
 		default:
