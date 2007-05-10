@@ -1666,7 +1666,7 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	
 		if ((!update) || (ud->mailbox.exists < mb.exists)) // only increments
 			dbmail_imap_session_printf(self, "* %llu EXISTS\r\n", exists);
-		if ((!update) || (ud->mailbox.recent != mb.recent))
+	//	if ((!update) || (ud->mailbox.recent != mb.recent))
 			dbmail_imap_session_printf(self, "* %llu RECENT\r\n", recent);
 
 		break;
