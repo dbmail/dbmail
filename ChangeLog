@@ -1,3 +1,35 @@
+2007-05-10  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	always send EXISTS response during status update
+	* AUTHORS, ChangeLog, dbmail-imapsession.c, dbmail-mailbox.c, 
+	test-scripts:
+	minor cleanups
+	* dbmailtypes.h:
+	define u64_t guint64
+
+2007-05-10  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-mailbox.c, test-scripts:
+	minor cleanups
+	* dbmailtypes.h:
+	define u64_t guint64
+
+2007-05-09  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c, misc.c, test-scripts:
+	work on merging search results correctly
+
+2007-05-08  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_db.c, dbmail-message.c, dbmailtypes.h, modules:
+	only use lower(headername) in dbpgsql
+
+2007-05-06  Paul Stevens <paul@nfg.nl>
+
+	* AUTHORS:
+	make the AUTHORS file git compliant
+
 2007-05-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* lmtp.c:
