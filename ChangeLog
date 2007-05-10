@@ -1,3 +1,9 @@
+2007-05-10  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-imapsession.c:
+	Changed exists and recent to be unsigned integers, as they are
+	elsewhere (closes bug #586)
+
 2007-05-10  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
@@ -25,15 +31,15 @@
 	* check_dbmail_db.c, dbmail-message.c, dbmailtypes.h, modules:
 	only use lower(headername) in dbpgsql
 
-2007-05-06  Paul Stevens <paul@nfg.nl>
-
-	* AUTHORS:
-	make the AUTHORS file git compliant
-
 2007-05-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* lmtp.c:
 	Accepted modified patch to handle invalid commands (closes bug #585)
+
+2007-05-06  Paul Stevens <paul@nfg.nl>
+
+	* AUTHORS:
+	make the AUTHORS file git compliant
 
 2007-05-06  Aaron Stone  <aaron@serendipity.cx>
 
