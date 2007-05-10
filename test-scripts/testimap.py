@@ -258,7 +258,6 @@ class testImapServer(unittest.TestCase):
         
         # TB query
         result=self.o.fetch(id,"(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type)])")
-        print result
         self.assertEquals(result[0],'OK')
         
         # test big folder full fetch
@@ -361,8 +360,9 @@ class testImapServer(unittest.TestCase):
         for mailbox in mailboxes:
             self.o.create(mailbox)
             self.o.subscribe(mailbox)
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], self.o.lsub()[1][7])
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][3])
+        result = self.o.lsub()[1]
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], result[6])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][2])
         self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('"%s/"' % mailboxes[1],'"%"')[1][0])
 
     def testNoop(self):

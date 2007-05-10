@@ -663,11 +663,8 @@ static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, sea
 		return 1;
 	}
 
-	else {
-		TRACE(TRACE_WARNING,"unknown sort key [%s]", key);
+	else
 		return -1; /* done */
-	}
-	
 
 	return 0;
 }

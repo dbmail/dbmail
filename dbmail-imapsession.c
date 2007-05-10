@@ -1406,7 +1406,7 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 	}
 	len = strlen(buffer);
 	if (len >= (MAX_LINESIZE-1)) {
-		TRACE(TRACE_ERROR, "too long line from client (discarding)");
+		TRACE(TRACE_WARNING, "too long line from client (discarding)");
 		alarm(0);
 		/* Note: we do preserve the partial read here -- so that 
 		 * the command parser can extract a tag if need be */
@@ -1637,6 +1637,10 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	GTree *oldmsginfo, *msginfo = NULL;
 	u64_t exists, recent;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+
+	exists = ud->mailbox.exists;
+	recent = ud->mailbox.recent;
+
 	if (update) {
 		memset(&mb, 0, sizeof (mailbox_t));
 		mb.uid = ud->mailbox.uid;
@@ -1648,16 +1652,10 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 			TRACE(TRACE_DEBUG,"unable to retrieve msginfo");
 			return -1;
 		}
-
-	}
-
-	if (update) {
 		exists = mb.exists;
 		recent = mb.recent;
-	} else {
-		exists = ud->mailbox.exists;
-		recent = ud->mailbox.recent;
 	}
+
 	/* msg counts */
 	// EXPUNGE
 	switch (self->command_type) {
