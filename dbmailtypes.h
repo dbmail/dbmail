@@ -51,7 +51,8 @@
 #define FIELDSIZE 1024
 
 /** use 64-bit unsigned integers as common data type */
-typedef unsigned long long u64_t;
+//typedef unsigned long long u64_t;
+#define u64_t guint64
 
 typedef enum {
 	DM_EQUERY 	= -1,
