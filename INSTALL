@@ -3,34 +3,28 @@
    (c) 2004-2006 NFG, The Netherlands
    */
 
-DBMAIL installation
+DBMAIL Installation
 ===================
-
-This file describes the installation of DBMail. To read about extra 
-features in dbmail you should consult the EXTRAS file.
-Remember, DBmail is easy to install, as long as you exactly follow
-these instructions.
 
 What do you need?
 
-- a working mysql (> 4.1.3) with innodb support or a postgresql installation
-- a working smtp server (Postfix, Exim, QMail or Sendmail)
-- the DBMail source (www.dbmail.org)
-- GNU Make. On Linux systems, your standard 'make' program is GNU Make. On
-  *BSD systems, make sure you install and use 'gmake'. 
-- development files (libs, scripts and include files) for your database 
-  server. These will probably be provided by separate packages.
-- glib (>= 2.8) development headers and libraries.
-- gmime (>= 2.1.18) development headers and libraries.
-- libsieve for sieve support (libsieve.sf.net).
-- libldap for ldap support (only tested with openldap).
+- A working database, one of the following:
+  - MySQL 4.1.3 or higher with InnoDB.
+  - PostgreSQL 7.4 or higher.
+  - SQLite 3 or higher.
+- A working SMTP server (such as Postfix, Exim, QMail or Sendmail).
+- The DBMail source (www.dbmail.org).
+- GNU Make. On Linux systems, your standard 'make' program is GNU Make. On *BSD
+  systems, make sure you install and use 'gmake'. 
+- Development files (libs, scripts and include files) for your database server.
+  These will probably be provided by separate packages.
+- Glib (>= 2.8) development headers and libraries.
+- Gmime (>= 2.1.18) development headers and libraries.
+- libSieve for Sieve support (libsieve.sf.net).
+- Any standard libldap for LDAP support (only tested with OpenLDAP, however).
 
 
 1.	Setup a database
-
-	Currently,  DBMail supports both MySQL, PostgreSQL and SQLite3 for mailstorage.
-	MySQL is supported from version 4.1.3 upwards. Earlier versions of
-	MySQL lack some SQL features that are needed for DBMail.
 
 	Mysql setup
 	-----------
@@ -59,13 +53,8 @@ What do you need?
 	the following command from the command line. You will have to
 	enter the password you set in the previous step.
 
-	mysql -u dbmail dbmail -p < sql/mysql/create_tables_innoDB.mysql
+	mysql -u dbmail dbmail -p < sql/mysql/create_tables.mysql
 
-	If you cannot use InnoDB, replace creates_table_innoDB.mysql by
-	create_tables.mysql. This is not recommended though. In future
-	versions, DBMail will only support MySQL with transaction support,
-	which is only given by InnoDB at the moment.
-	
 	After this, the DBMAIL tables will have been created and we can go
 	on to the compilation and installation of DBMail itself.
 
