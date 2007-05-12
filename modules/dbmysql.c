@@ -39,7 +39,10 @@ const char * db_get_sql(sql_fragment_t frag)
 			return "DATE_FORMAT(%s, '%%Y-%%m-%%d %%T')";
 		break;
 		case SQL_TO_DATE:
-			return "'%s'";
+			return "DATE(%s)";
+		break;
+		case SQL_TO_DATETIME:
+			return "TIMESTAMP(%s)";
 		break;
 		case SQL_CURRENT_TIMESTAMP:
 			return "CURRENT_TIMESTAMP";

@@ -30,9 +30,6 @@
 
 #define THIS_MODULE "imap"
 
-/* cache */
-cache_t cached_msg;
-
 const char *IMAP_COMMANDS[] = {
 	"", "capability", "noop", "logout",
 	"authenticate", "login",

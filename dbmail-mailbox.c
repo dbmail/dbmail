@@ -270,6 +270,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	ostream = g_mime_stream_file_new(file);
 	
 	ids = g_tree_keys(self->ids);
+
 	while (ids) {
 		cids = g_list_append(cids,g_strdup_printf("%llu", *(u64_t *)ids->data));
 		if (! g_list_next(ids))
@@ -1122,10 +1123,12 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 }
 static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 {
-	unsigned i, rows, date;
+	unsigned i, rows;
+	char *qs, *date, *field;
 	u64_t *k, *v, *w;
 	u64_t id;
 	char gt_lt = 0;
+	const char *op;
 	
 	GString *t;
 	GString *q;
@@ -1139,14 +1142,22 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		case IST_HDRDATE_ON:
 		case IST_HDRDATE_SINCE:
 		case IST_HDRDATE_BEFORE:
+		
+		field = g_strdup_printf(db_get_sql(SQL_TO_DATE), s->hdrfld);
+		qs = g_strdup_printf("'%s'", date_imap2sql(s->search));
+		date = g_strdup_printf(db_get_sql(SQL_TO_DATE), qs);
+		g_free(qs);
 
-		date = num_from_imapdate(s->search);
 		if (s->type == IST_HDRDATE_SINCE)
-			g_string_printf(t,"%s >= %d", s->hdrfld, date);
+			op = ">=";
 		else if (s->type == IST_HDRDATE_BEFORE)
-			g_string_printf(t,"%s < %d", s->hdrfld, date);
+			op = "<";
 		else
-			g_string_printf(t,"%s >= %d AND %s < %d", s->hdrfld, date, s->hdrfld, date+1);
+			op = "=";
+
+		g_string_printf(t,"%s %s %s", field, op, date);
+		g_free(date);
+		g_free(field);
 		
 		g_string_printf(q,"SELECT message_idnr FROM %smessages m "
 			"JOIN %sphysmessage p ON m.physmessage_id=p.id "

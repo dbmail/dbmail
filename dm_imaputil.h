@@ -33,11 +33,6 @@ size_t stridx(const char *s, char ch);
 
 int checktag(const char *s);
 
-void send_data(FILE * to, MEM * from, int cnt);
-
-int init_cache(void);
-void close_cache(void);
-
 int mime_unwrap(char *to, const char *from); 
 
 #endif

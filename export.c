@@ -43,6 +43,7 @@ int do_showhelp(void) {
 	printf("     -u username   specify a user\n");
 	printf("     -m mailbox    specify a mailbox (default export all mailboxes)\n");
 	printf("     -o outfile    specify the destination mbox (default ./user/mailbox)\n");
+	printf("     -s set        specify the search criteria in IMAP SEARCH notation (default 1:*)\n");
 	printf("\n");
 	printf("Summary of options for all modes:\n");
 	printf("\n");
@@ -57,10 +58,11 @@ int do_showhelp(void) {
 	return 0;
 	
 }
-static int mailbox_dump(u64_t mailbox_idnr, const char *outfile)
+static int mailbox_dump(u64_t mailbox_idnr, const char *outfile, const char *search)
 {
 	FILE *ostream;
 	struct DbmailMailbox *mb = NULL;
+	struct ImapSession *s;
 	char *dir;
 
 	/* 
@@ -71,6 +73,26 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *outfile)
 	 *
 	 * TODO: facilitate maildir type exports
 	 */
+	mb = dbmail_mailbox_new(mailbox_idnr);
+	if (search) {
+		s = dbmail_imap_session_new();
+		if (! (build_args_array_ext(s, search))) {
+			qerrorf("error parsing search string");
+			dbmail_imap_session_delete(s);
+			dbmail_mailbox_free(mb);
+			return 1;
+		}
+	
+		if (dbmail_mailbox_build_imap_search(mb, s->args, &(s->args_idx), SEARCH_UNORDERED) < 0) {
+			qerrorf("invalid search string");
+			dbmail_imap_session_delete(s);
+			dbmail_mailbox_free(mb);
+			return 1;
+		}
+		dbmail_mailbox_search(mb);
+		dbmail_imap_session_delete(s);	
+	}
+
 	dir = g_path_get_dirname(outfile);
 	if (g_mkdir_with_parents(dir,0700)) {
 		qerrorf("can't create directory [%s]\n", dir);
@@ -79,18 +101,20 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *outfile)
 	}
 	g_free(dir);
 
-	if (! (ostream = fopen(outfile,"a"))) {
+	if (strncmp(outfile,"-",1)==0) {
+		ostream = stdout;
+	} else if (! (ostream = fopen(outfile,"a"))) {
 		int err=errno;
 		qerrorf("opening [%s] failed [%s]\n", outfile, strerror(err));
 		return -1;
 	}
 
-	mb = dbmail_mailbox_new(mailbox_idnr);
 	if (dbmail_mailbox_dump(mb,ostream) < 0)
 		qerrorf("exporing failed\n");
 
 	if (mb)
 		dbmail_mailbox_free(mb);
+
 	return 0;
 }
 	
@@ -100,7 +124,7 @@ int main(int argc, char *argv[])
 	int opt = 0, opt_prev = 0;
 	int show_help = 0;
 	int result = 0;
-	char *user = NULL,*mailbox=NULL, *outfile=NULL;
+	char *user = NULL,*mailbox=NULL, *outfile=NULL, *search=NULL;
 	u64_t useridnr = 0, mailbox_idnr = 0;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -111,7 +135,7 @@ int main(int argc, char *argv[])
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
-		"-u:m:o:" /* Major modes */
+		"-u:m:o:s:" /* Major modes */
 		"f:qvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
@@ -120,8 +144,7 @@ int main(int argc, char *argv[])
 		opt_prev = opt;
 
 		switch (opt) {
-		/* Major modes of operation
-		 * (exactly one of these is required) */
+		/* export specific options */
 		case 'u':
 			if (optarg && strlen(optarg))
 				user = optarg;
@@ -134,6 +157,14 @@ int main(int argc, char *argv[])
 		case 'o':
 			if (optarg && strlen(optarg))
 				outfile = optarg;
+			break;
+		case 's':
+			if (optarg && strlen(optarg))
+				search = optarg;
+			else {
+				qprintf("dbmail-mailbox: -s requires a value\n\n");
+				result = 1;
+			}
 			break;
 
 		/* Common options */
@@ -168,7 +199,6 @@ int main(int argc, char *argv[])
 			printf("This is DBMail version %s\n\n%s\n", VERSION, COPYRIGHT);
 			result = 1;
 			break;
-
 		default:
 			/* printf("unrecognized option [%c], continuing...\n",optopt); */
 			break;
@@ -185,6 +215,12 @@ int main(int argc, char *argv[])
 		do_showhelp();
 		result = 1;
 		goto freeall;
+	}
+	if (search && (! mailbox) ) {
+		qerrorf("Mailbox required if search is specified.\n");
+		result = 1;
+		goto freeall;
+
 	}
 	/* read the config file */
         if (config_read(configFile) == -1) {
@@ -236,7 +272,7 @@ int main(int argc, char *argv[])
 		}
 		
 		qerrorf("  export mailbox /%s/%s -> %s\n", user, mailbox, outfile);
-		mailbox_dump(mailbox_idnr, outfile);
+		mailbox_dump(mailbox_idnr, outfile, search);
 
 	} else {
 		u64_t *children;
@@ -267,7 +303,7 @@ int main(int argc, char *argv[])
 
 			dumpfile = g_strdup_printf("%s/%s.mbox", user, mailbox);
 			qerrorf(" export mailbox /%s/%s -> %s/%s\n", user, mailbox, outfile, dumpfile);
-			if (mailbox_dump(mailbox_idnr, dumpfile)) {
+			if (mailbox_dump(mailbox_idnr, dumpfile, NULL)) {
 				g_free(dumpfile);
 				goto freeall;
 			}

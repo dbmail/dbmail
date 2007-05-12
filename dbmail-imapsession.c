@@ -36,7 +36,7 @@ extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
 /* cache */
-extern cache_t cached_msg;
+cache_t cached_msg;
 
 extern const char *month_desc[];
 /* returned by date_sql2imap() */
@@ -59,6 +59,75 @@ static void _imap_show_body_sections(struct ImapSession *self);
 static void _fetch_envelopes(struct ImapSession *self);
 static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data);
 	
+
+/*
+ * send_data()
+ *
+ * sends cnt bytes from a MEM structure to a FILE stream
+ * uses a simple buffering system
+ */
+static void send_data(FILE * to, MEM * from, int cnt)
+{
+	char buf[SEND_BUF_SIZE];
+
+	for (cnt -= SEND_BUF_SIZE; cnt >= 0; cnt -= SEND_BUF_SIZE) {
+		mread(buf, SEND_BUF_SIZE, from);
+		fwrite(buf, SEND_BUF_SIZE, 1, to);
+	}
+
+	if (cnt < 0) {
+		mread(buf, cnt + SEND_BUF_SIZE, from);
+		fwrite(buf, cnt + SEND_BUF_SIZE, 1, to);
+	}
+
+	fflush(to);
+}
+
+/* 
+ * init cache 
+ */
+static int init_cache(void)
+{
+	int serr;
+	cached_msg.dmsg = NULL;
+	cached_msg.num = -1;
+	cached_msg.msg_parsed = 0;
+	if (! (cached_msg.memdump = mopen())) {
+		serr = errno;
+		TRACE(TRACE_ERROR,"mopen() failed [%s]", strerror(serr));
+		errno = serr;
+		return -1;
+	}
+
+	
+	if (! (cached_msg.tmpdump = mopen())) {
+		serr = errno;
+		TRACE(TRACE_ERROR,"mopen() failed [%s]", strerror(serr));
+		errno = serr;
+		mclose(&cached_msg.memdump);
+		return -1;
+	}
+
+	cached_msg.file_dumped = 0;
+	cached_msg.dumpsize = 0;
+	return 0;
+}
+/*
+ * closes the msg cache
+ */
+static void close_cache(void)
+{
+	if (cached_msg.dmsg)
+		dbmail_message_free(cached_msg.dmsg);
+
+	cached_msg.num = -1;
+	cached_msg.msg_parsed = 0;
+	mclose(&cached_msg.memdump);
+	mclose(&cached_msg.tmpdump);
+}
+
+
+
 
 static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize); 
 

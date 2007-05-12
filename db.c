@@ -4368,14 +4368,11 @@ char *date2char_str(const char *column)
 
 char *char2date_str(const char *date)
 {
-	unsigned len;
-	char *s;
+	char *s, *qs;
 
-	len = strlen(db_get_sql(SQL_TO_DATE)) + MAX_DATE_LEN;
-	if (! (s = g_new0(char,len)))
-		return NULL;
-
-	snprintf(s, len, db_get_sql(SQL_TO_DATE), date);
+	qs = g_strdup_printf("'%s'", date);
+	s = g_strdup_printf(db_get_sql(SQL_TO_DATETIME), qs);
+	g_free(qs);
 
 	return s;
 }
