@@ -1467,16 +1467,31 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 	int len;
 	clientinfo_t *ci = self->ci;
 	
+	assert(buffer);
 	memset(buffer, 0, MAX_LINESIZE);
+
 	alarm(ci->timeout);
-	if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
-		alarm(0);
+	alarm_occured = 0;
+
+	fgets(buffer, MAX_LINESIZE, ci->rx);
+
+	alarm(0);
+
+	if (alarm_occured) {
+		alarm_occured = 0;
+		dbmail_imap_session_printf(self, "%s", IMAP_TIMEOUT_MSG);
+		TRACE(TRACE_ERROR, "timeout occurred in dbmail_imap_session_readln");
+		client_close();
 		return -1;
 	}
+
+	if (feof(ci->rx) || ferror(ci->rx)) {
+		return -1;
+	}
+
 	len = strlen(buffer);
 	if (len >= (MAX_LINESIZE-1)) {
 		TRACE(TRACE_WARNING, "too long line from client (discarding)");
-		alarm(0);
 		/* Note: we do preserve the partial read here -- so that 
 		 * the command parser can extract a tag if need be */
 		if (dbmail_imap_session_discard_to_eol(self) < 0)
@@ -1485,7 +1500,6 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 			return 0;
 	}
 
-	alarm(0);
 	return strlen(buffer);
 }
 	
@@ -2271,6 +2285,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					alarm_occured = 0;
 					// FIXME: why is the alarm handler sometimes triggered though cnt == quotedSize
 					if (cnt < quotedSize) {
+						dbmail_imap_session_printf(self, "%s", IMAP_TIMEOUT_MSG);
 						client_close();
 						TRACE(TRACE_ERROR, "timeout occurred in fgetc; got [%d] of [%d]; timeout [%d]", 
 								cnt, quotedSize, ci->timeout);
@@ -2287,14 +2302,6 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				/* now read the rest of this line */
 				result = dbmail_imap_session_readln(self, s);
 		
-				if (alarm_occured) {
-					alarm_occured = 0;
-					client_close();
-					TRACE(TRACE_ERROR, "timeout occurred in dbmail_imap_session_readln");
-					free_args(self);
-					return NULL;
-				}
-
 				if (result < 0){
 					free_args(self);
 					return NULL;
