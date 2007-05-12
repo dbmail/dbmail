@@ -3,6 +3,9 @@
 	* pop3d.c, pop3.c, imapd.c, server.c, serverchild.c, dbmailtypes.h,
 	lmtpd.c, lmtp.c, timsieved.c, timsieve.c, dbmail-imapsession.c:
 	Changes to timeout handling (closes bug #517)
+	* export.c:
+	Added -d command line option to delete messages after they have been
+	exported (closes bug #380)
 
 2007-05-12  Paul J Stevens <paul@nfg.nl>
 
