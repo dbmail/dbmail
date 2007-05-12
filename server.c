@@ -85,7 +85,6 @@ int server_setup(serverConfig_t *conf)
 	childinfo.numSockets   	= conf->ipcount;
 	childinfo.timeout 	= conf->timeout;
 	childinfo.ClientHandler	= conf->ClientHandler;
-	childinfo.timeoutMsg	= conf->timeoutMsg;
 	childinfo.resolveIP	= conf->resolveIP;
 
 	return 0;

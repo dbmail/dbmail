@@ -29,9 +29,6 @@
 #define THIS_MODULE "lmtpd"
 #define PNAME "dbmail/lmtpd"
 
-/* server timeout error */
-#define LMTP_TIMEOUT_MSG "221 Connection timeout BYE"
-
 int main(int argc, char *argv[])
 {
 	serverConfig_t config;
@@ -54,7 +51,6 @@ int main(int argc, char *argv[])
 	}
 
 	config.ClientHandler = lmtp_handle_connection;
-	config.timeoutMsg = LMTP_TIMEOUT_MSG;
 
 	result = serverparent_mainloop(&config, "LMTP", "dbmail-lmtpd");
 	

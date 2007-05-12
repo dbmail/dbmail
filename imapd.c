@@ -55,7 +55,6 @@ int main(int argc, char *argv[])
 
 	/* These are in imap4.h */
 	config.ClientHandler = IMAPClientHandler;
-	config.timeoutMsg = IMAP_TIMEOUT_MSG;
 
 	imap_before_smtp = config.service_before_smtp;
 
