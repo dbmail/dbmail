@@ -88,7 +88,7 @@ dbmail_util_LDADD = libdbmail.la
 dbmail_users_SOURCES = user.c
 dbmail_users_LDADD = libdbmail.la
 
-dbmail_export_SOURCES = export.c
+dbmail_export_SOURCES = export.c memblock.c dbmail-imapsession.c
 dbmail_export_LDADD = libdbmail.la
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c

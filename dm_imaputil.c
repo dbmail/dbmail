@@ -38,9 +38,6 @@
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
-/* cache */
-extern cache_t cached_msg;
-
 /* consts */
 const char AcceptedChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -79,75 +76,6 @@ int checktag(const char *s)
 	}
 	return 1;
 }
-
-/*
- * send_data()
- *
- * sends cnt bytes from a MEM structure to a FILE stream
- * uses a simple buffering system
- */
-void send_data(FILE * to, MEM * from, int cnt)
-{
-	char buf[SEND_BUF_SIZE];
-
-	for (cnt -= SEND_BUF_SIZE; cnt >= 0; cnt -= SEND_BUF_SIZE) {
-		mread(buf, SEND_BUF_SIZE, from);
-		fwrite(buf, SEND_BUF_SIZE, 1, to);
-	}
-
-	if (cnt < 0) {
-		mread(buf, cnt + SEND_BUF_SIZE, from);
-		fwrite(buf, cnt + SEND_BUF_SIZE, 1, to);
-	}
-
-	fflush(to);
-}
-
-
-
-/* 
- * init cache 
- */
-int init_cache()
-{
-	int serr;
-	cached_msg.dmsg = NULL;
-	cached_msg.num = -1;
-	cached_msg.msg_parsed = 0;
-	if (! (cached_msg.memdump = mopen())) {
-		serr = errno;
-		TRACE(TRACE_ERROR,"mopen() failed [%s]", strerror(serr));
-		errno = serr;
-		return -1;
-	}
-
-	
-	if (! (cached_msg.tmpdump = mopen())) {
-		serr = errno;
-		TRACE(TRACE_ERROR,"mopen() failed [%s]", strerror(serr));
-		errno = serr;
-		mclose(&cached_msg.memdump);
-		return -1;
-	}
-
-	cached_msg.file_dumped = 0;
-	cached_msg.dumpsize = 0;
-	return 0;
-}
-/*
- * closes the msg cache
- */
-void close_cache()
-{
-	if (cached_msg.dmsg)
-		dbmail_message_free(cached_msg.dmsg);
-
-	cached_msg.num = -1;
-	cached_msg.msg_parsed = 0;
-	mclose(&cached_msg.memdump);
-	mclose(&cached_msg.tmpdump);
-}
-
 
 /* unwrap strings */
 int mime_unwrap(char *to, const char *from) 
