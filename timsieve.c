@@ -108,6 +108,12 @@ int tims_handle_connection(clientinfo_t * ci)
 				}
 			} while (ferror(ci->rx) && errno == EINTR);
 
+			/* If we hit a timeout, we have to break now otherwise
+			 * we'll fall into the loop, below, that discards all
+			 * incoming lone-CRLF's. */
+			if (done < 0)
+				break;
+
 			if (buffer[cnt] == '\n' || feof(ci->rx) || ferror(ci->rx)) {
 				if (cnt > 0) {
 					/* Ignore single newlines and \r\n pairs */
