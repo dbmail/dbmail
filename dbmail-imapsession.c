@@ -2044,8 +2044,10 @@ u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t dumpsize)
 static void free_args(struct ImapSession *self)
 {
 	int i;
-	for (i = 0; i < MAX_ARGS && self->args[i]; i++)
+	for (i = 0; i < MAX_ARGS && self->args[i]; i++) {
 		g_free(self->args[i]);
+		self->args[i] = NULL;
+	}
 	self->args_idx = 0;
 }
 
