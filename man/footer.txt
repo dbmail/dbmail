@@ -16,7 +16,7 @@ the tremendous help of the testers, patchers and bug hunters listed in the
 AUTHORS and THANKS files found in the DBMail source distribution.
 
   Eelco van Beek      Aaron Stone            Paul J Stevens
-  Roel Rozendaal      Programmer             NFG Net Facilities Group BV
+  Roel Rozendaal      Open Source Engineer   NFG Net Facilities Group BV
   Ilja Booij          Palo Alto, CA USA      http://www.nfg.nl
   IC&S                http://hydricacid.com
   Koningsweg 4

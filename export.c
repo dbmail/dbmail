@@ -47,7 +47,6 @@ int do_showhelp(void) {
 	printf("                   for example, to export all messages received in May:\n");
 	printf("                   \"1:* SINCE 1-May-2007 BEFORE 1-Jun-2007\"\n");
 	printf("     -d            flag exported messages as \\Deleted (use dbmail-util to expunge)\n");
-	printf("     -s set        specify the search criteria in IMAP SEARCH notation (default 1:*)\n");
 	printf("\n");
 	printf("Summary of options for all modes:\n");
 	printf("\n");
