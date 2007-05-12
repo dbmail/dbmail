@@ -3,6 +3,8 @@
 	* dbmail-imapsession.c:
 	Set IMAP args array members to NULL after freeing them (closes bug
 	#590)
+	* dbmail-message.c:
+	Remove setvbuf call (closes bug #587)
 
 2007-05-10  Aaron Stone  <aaron@serendipity.cx>
 

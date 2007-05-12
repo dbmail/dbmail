@@ -365,7 +365,6 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 
 			tmp = tmpfile(); 
 			mstream = g_mime_stream_file_new(tmp);
-			setvbuf(tmp, NULL, _IONBF, 0);
 
 			assert(mstream);
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
