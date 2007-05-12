@@ -28,7 +28,10 @@ DESCRIPTION
   user=dbmail             # Database username.
   pass=                   # Database password.
   db=dbmail               # Database name.
-  #table_prefix=dbmail_   # Table prefix. Defaults to "dbmail_" if not specified.
+  table_prefix=dbmail_    # Table prefix. Defaults to "dbmail_" if not specified.
+  encoding=utf8           # Encoding to match database/table encoding, e.g., latin1, utf8
+  default_msg_encoding=utf8     # Default for messages without a known encoding, e.g., iso8859-1, utf8
+
   postmaster=             # Postmaster's email address for use in bounce messages.
   sendmail=/usr/sbin/sendmail	# Sendmail executable for forwards, replies, notifies, vacations.
                                 # You may use pipes (|) in this command, for example:
@@ -53,7 +56,9 @@ DESCRIPTION
   RESOLVE_IP=yes          # If yes, resolves IP addresses to DNS names when logging.
   log=/var/log/dbmail.log	# logfile for stdout messages
   error_log=/var/log/dbmail.err	# logfile for stderr messages
-  pid_dir=/var/run        # directory for storing PID files
+  pid_directory=/var/run        # directory for storing PID files
+  state_directory=/var/run      # directory for storing the daemon statefiles
+  library_directory=/usr/lib/dbmail # directory for locating libraries
    
   [SMTP]
                           # In fact, there isn't anything here by default.

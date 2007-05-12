@@ -8,7 +8,7 @@ dbmail-export - export a mailbox from the DBMail mailsystem to mbox format.
 
 SYNOPSIS
 --------
-dbmail-export [-u user] [-m mailbox] [-o outfile] [-f configFile]
+dbmail-export [-u user] [-m mailbox] [-o outfile] [-s imap search] [-d] [-f configFile]
 
 DESCRIPTION
 -----------
@@ -27,7 +27,27 @@ OPTIONS
 -o outfile::
   specify the file into which the exported mail will be saved.
 
+-s search::
+  use an IMAP SEARCH string to select messages (default: 1:\*)
+  for example, to export all messages received in May, use:
+      "1:* SINCE 1-May-2007 BEFORE 1-Jun-2007"
+
+-d::
+  flag exported messages as \\Deleted (use dbmail-util to expunge)
 
 include::commonopts.txt[]
+
+EXAMPLES
+--------
+
+To export and delete all messages belonging to user 'Joe' in mailbox 'Inbox'
+more than 30 days old, try this command line:
+
+    dbmail-export -u joe -m inbox -o textbox5 -d -s "1:* BEFORE `date '+%e-%b-%Y' -d '30 days ago'`"
+
+Note the careful bash quoting and backticks calling the GNU date(1) command.
+GNU date(1) has excellent features for retrieving relative dates. If you are
+using a different shell, you may need different quotes. Descriptions of
+relative dates are not supported by BSD date(1).
 
 include::footer.txt[]
