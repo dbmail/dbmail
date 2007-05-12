@@ -196,7 +196,8 @@ am__check_dbmail_util_SOURCES_DIST = check_dbmail_util.c
 @WITHCHECK_TRUE@	check_dbmail_util.$(OBJEXT)
 check_dbmail_util_OBJECTS = $(am_check_dbmail_util_OBJECTS)
 @WITHCHECK_TRUE@check_dbmail_util_DEPENDENCIES = libdbmail.la
-am_dbmail_export_OBJECTS = export.$(OBJEXT)
+am_dbmail_export_OBJECTS = export.$(OBJEXT) memblock.$(OBJEXT) \
+	dbmail-imapsession.$(OBJEXT)
 dbmail_export_OBJECTS = $(am_dbmail_export_OBJECTS)
 dbmail_export_DEPENDENCIES = libdbmail.la
 am_dbmail_imapd_OBJECTS = quota.$(OBJEXT) imap4.$(OBJEXT) \
@@ -489,7 +490,7 @@ dbmail_util_SOURCES = maintenance.c
 dbmail_util_LDADD = libdbmail.la
 dbmail_users_SOURCES = user.c
 dbmail_users_LDADD = libdbmail.la
-dbmail_export_SOURCES = export.c
+dbmail_export_SOURCES = export.c memblock.c dbmail-imapsession.c
 dbmail_export_LDADD = libdbmail.la
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
 dbmail_lmtpd_LDADD = libdbmail.la
