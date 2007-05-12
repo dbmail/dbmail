@@ -170,7 +170,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 				}
 			} while (ferror(ci->rx) && errno == EINTR);
 
-			if (buffer[cnt] == '\n' || feof(ci->rx)
+			if (done < 0 || buffer[cnt] == '\n' || feof(ci->rx)
 			    || ferror(ci->rx)) {
 				buffer[cnt + 1] = '\0';
 				break;
@@ -192,7 +192,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	}
 
 	if (done==-2) {
-		ci_write(ci->tx, "221 Connection timeout BYE");
+		ci_write(ci->tx, "221 Connection timeout BYE\r\n");
 		TRACE(TRACE_ERROR, "client timed, connection closed");
 	}
 
