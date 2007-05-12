@@ -28,9 +28,6 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 #define THIS_MODULE "timsieved"
 #define PNAME "dbmail/timsieved"
 
-/* server timeout error */
-#define TIMS_TIMEOUT_MSG "221 Connection timeout BYE"
-
 /* this is write-once read-many, so we'll do it once for all children. */
 const char *sieve_extensions = NULL;
 
@@ -56,7 +53,6 @@ int main(int argc, char *argv[])
 	}
 
 	config.ClientHandler = tims_handle_connection;
-	config.timeoutMsg = TIMS_TIMEOUT_MSG;
 
 	/* Get the Sieve capabilities. This may also cause the
 	 * program to bomb out if Sieve support was not compiled in. */

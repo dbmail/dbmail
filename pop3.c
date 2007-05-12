@@ -132,8 +132,8 @@ int pop3_handle_connection(clientinfo_t * ci)
 				
 				if (alarm_occured) {
 					alarm_occured = 0;
-					client_close();
-					done = -1;
+					done = -2;
+					session.SessionResult = 1;
 					break;
 				}
 
@@ -145,7 +145,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 			}
 		}
 
-		if (feof(ci->rx) || ferror(ci->rx))
+		if (done < 0) {
+			break;
+		} else if (feof(ci->rx) || ferror(ci->rx))
 			done = -1;
 		else {
 			/* reset function handle timeout */
@@ -185,7 +187,8 @@ int pop3_handle_connection(clientinfo_t * ci)
 			break;
 
 		case 1:
-			TRACE(TRACE_ERROR, "EOF from client, connection terminated");
+			ci_write(ci->tx, "-ERR I'm leaving, you're too slow\r\n");
+			TRACE(TRACE_ERROR, "client timed out, connection closed");
 			break;
 
 		case 2:
@@ -202,6 +205,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 	} else if (done==0) { // QUIT issued before AUTH phase completed
 		ci_write(ci->tx, "+OK see ya later\r\n");
 		fflush(ci->tx);
+	} else if (done==-2) {
+		ci_write(ci->tx, "-ERR I'm leaving, you're too slow\r\n");
+		TRACE(TRACE_ERROR, "client timed out before AUTH, connection closed");
 	} else {
 		TRACE(TRACE_ERROR, "error, incomplete session");
 	}

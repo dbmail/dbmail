@@ -111,7 +111,6 @@ typedef struct {
 	FILE *tx, *rx;
 	char ip_src[IPNUM_LEN];	/* client IP-number */
 	field_t clientname;	/* resolved client ip */
-	char *timeoutMsg;
 	int timeout;		/* server timeout (seconds) */
 	void *userData;
 } clientinfo_t;
@@ -122,7 +121,6 @@ typedef struct {
 	int numSockets;
 	int resolveIP;
 	int timeout;
-	char *timeoutMsg;
 	int (*ClientHandler) (clientinfo_t *);
 } ChildInfo_t;
 
@@ -310,7 +308,6 @@ typedef struct {
 	int port;
 	int backlog;
 	int resolveIP;
-	char *timeoutMsg;
 	field_t serverUser, serverGroup;
 	field_t socket;
 	field_t log, error_log;

@@ -165,9 +165,8 @@ int lmtp_handle_connection(clientinfo_t * ci)
 				/* leave, an alarm has occured during fread */
 				if (alarm_occured) {
 					alarm_occured = 0;
-					client_close();
-					g_free(buffer);
-					return 0;
+					done = -2;
+					break;
 				}
 			} while (ferror(ci->rx) && errno == EINTR);
 
@@ -178,7 +177,9 @@ int lmtp_handle_connection(clientinfo_t * ci)
 			}
 		}
 
-		if (feof(ci->rx) || ferror(ci->rx)) {
+		if (done < 0) {
+			break;
+		} else if (feof(ci->rx) || ferror(ci->rx)) {
 			/* check client eof  */
 			done = -1;
 		} else {
@@ -188,6 +189,11 @@ int lmtp_handle_connection(clientinfo_t * ci)
 			done = lmtp(ci->tx, ci->rx, buffer, ci->ip_src, &session);
 		}
 		fflush(ci->tx);
+	}
+
+	if (done==-2) {
+		ci_write(ci->tx, "221 Connection timeout BYE");
+		TRACE(TRACE_ERROR, "client timed, connection closed");
 	}
 
 	/* memory cleanup */
