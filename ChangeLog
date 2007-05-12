@@ -1,7 +1,7 @@
 2007-05-12  Aaron Stone  <aaron@serendipity.cx>
 
 	* pop3d.c, pop3.c, imapd.c, server.c, serverchild.c, dbmailtypes.h,
-	lmtpd.c, lmtp.c, timsieved.c, timsieve.c:
+	lmtpd.c, lmtp.c, timsieved.c, timsieve.c, dbmail-imapsession.c:
 	Changes to timeout handling (closes bug #517)
 
 2007-05-12  Paul J Stevens <paul@nfg.nl>
