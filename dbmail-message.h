@@ -73,6 +73,7 @@ struct DbmailMessage {
 	GHashTable *header_dict;
 	GTree *header_name;
 	GTree *header_value;
+	gchar *charset;
 };
 
 /*
@@ -114,6 +115,8 @@ int dbmail_message_get_class(const struct DbmailMessage *self);
 gchar * dbmail_message_to_string(const struct DbmailMessage *self);
 gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self);
 gchar * dbmail_message_body_to_string(const struct DbmailMessage *self);
+
+char * dbmail_message_get_charset(struct DbmailMessage *self);
 
 size_t dbmail_message_get_size(const struct DbmailMessage *self, gboolean crlf);
 
