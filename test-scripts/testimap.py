@@ -20,7 +20,7 @@
 
 # For a protocol trace set to 4
 DEBUG = 0
-#DEBUG = 4
+DEBUG = 4
 
 # select 'stream' for non-forking mode
 TYPE = 'stream'
@@ -371,6 +371,19 @@ class testImapServer(unittest.TestCase):
              Send `NOOP' to server.
         """
         self.assertEquals(self.o.noop(),('OK', ['NOOP completed']))
+        
+        self.o.select('INBOX')
+        
+        p = getsock()
+        p.debug = DEBUG
+        p.login('testuser1','test'),('OK',['LOGIN completed'])
+        p.select('INBOX')
+
+        print self.o.append('INBOX','\Flagged',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
+
+        result = p.noop()
+        print result
+
 
     def testPartial(self):
         """ 

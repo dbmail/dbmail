@@ -1728,7 +1728,13 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		memset(&mb, 0, sizeof (mailbox_t));
 		mb.uid = ud->mailbox.uid;
 
-		if ((db_getmailbox(&mb)) == -1)
+                // rebuild uid/msn trees
+		// ATTN: new messages shouldn't be visible in any way to a 
+		// client session until it has been announced with EXISTS
+		dbmail_mailbox_open(self->mailbox); 
+
+                // re-read flags and counters
+		if ((db_getmailbox(&mb)) == -1) 
 			return -1;
 
 		if ((msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL) {
@@ -1747,7 +1753,7 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		case IMAP_COMM_SELECT:
 		case IMAP_COMM_EXAMINE:
 	
-		if ((!update) || (ud->mailbox.exists <= mb.exists)) // never decrements
+		if ((!update) || (ud->mailbox.exists <= exists)) // never decrements
 			dbmail_imap_session_printf(self, "* %u EXISTS\r\n", exists);
 
 		dbmail_imap_session_printf(self, "* %u RECENT\r\n", recent);
@@ -1764,11 +1770,7 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		g_tree_destroy(oldmsginfo);
 	}
 
-	if (update)
-		dbmail_mailbox_open(self->mailbox); // too expensive?
-
 	return 0;
-
 }
 int dbmail_imap_session_mailbox_show_info(struct ImapSession * self) 
 {

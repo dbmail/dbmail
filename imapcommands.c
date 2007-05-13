@@ -1401,9 +1401,6 @@ int _ic_fetch(struct ImapSession *self)
 		self->args_idx++;
 	} while (state > 0);
 
-	/* reopen the mailbox */
-	dbmail_mailbox_open(self->mailbox);
-
 	if (g_tree_nnodes(self->mailbox->ids) > 0) {
 
 		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
@@ -1617,10 +1614,6 @@ int _ic_store(struct ImapSession *self)
 	/* end of ACL checking. If we get here without returning, the user has
 	   the right to store the flags */
 
-
-	/* reopen the mailbox */
-	dbmail_mailbox_open(self->mailbox);
-
 	self->cmd = &cmd;
 
 	if (g_tree_nnodes(self->mailbox->ids) > 0) {
@@ -1734,9 +1727,6 @@ int _ic_copy(struct ImapSession *self)
 
 	cmd.mailbox_id = destmboxid;
 	self->cmd = &cmd;
-
-	/* reopen the mailbox */
-	dbmail_mailbox_open(self->mailbox);
 
 	if (db_begin_transaction() < 0)
 		return -1;
