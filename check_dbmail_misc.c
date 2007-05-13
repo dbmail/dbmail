@@ -53,12 +53,14 @@ void setup(void)
 	GetDBParams(&_db_params);
 	db_connect();
 	auth_connect();
+	g_mime_init(0);
 }
 
 void teardown(void)
 {
 	db_disconnect();
 	auth_disconnect();
+	g_mime_shutdown();
 }
 
 
@@ -123,6 +125,29 @@ START_TEST(test_mailbox_remove_namespace)
 }
 END_TEST
 
+START_TEST(test_convert_8bit_field) 
+{
+	const char *val = "=?windows-1251?B?0+/w4OLr5e335fHq6Okg8/fl8iDiIPHu4vDl7OXt7e7pIOru7O/g7ejo?=";
+	char *u8, *val2, *u82, *u83, *val3;
+
+	u8 = g_mime_utils_header_decode_text((const unsigned char *)val);
+	val2 = g_mime_utils_header_encode_text((const unsigned char *)u8);
+	u82 = g_mime_utils_header_decode_text((const unsigned char *)val2);
+
+	fail_unless(strcmp(u8,u82)==0,"decode/encode failed in test_convert_8bit_field");
+
+	val3 = convert_8bit_db_to_mime(u8);
+	u83 = g_mime_utils_header_decode_text((const unsigned char *)val3);
+
+	fail_unless(strcmp(u8,u83)==0,"decode/encode failed in test_convert_8bit_field\n[%s]\n[%s]\n", u8, u83);
+	g_free(u8);
+	g_free(u82);
+	g_free(u83);
+	g_free(val2);
+	g_free(val3);
+}
+END_TEST
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -133,6 +158,7 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_g_strcasestr);
 	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
+	tcase_add_test(tc_misc, test_convert_8bit_field);
 	
 	return s;
 }

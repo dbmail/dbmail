@@ -2002,15 +2002,17 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 
 static GList * envelope_address_part(GList *list, GMimeMessage *message, const char *header)
 {
-	const char *result;
+	const char *result, *charset;
 	char *t;
 	InternetAddressList *alist;
 	char *result_enc;
 	
+	charset = message_get_charset(message);
+
 	result = g_mime_message_get_header(message,header);
 	
 	if (result) {
-		result_enc = convert_8bit_field_to_utf8(message,result);
+		result_enc = convert_8bit_field_to_utf8(result, charset);
 		t = imap_cleanup_address(result_enc);
 		g_free(result_enc);
 		alist = internet_address_parse_string(t);
@@ -2024,6 +2026,7 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 	return list;
 }
 
+
 static void  get_msg_charset_frompart(GMimeObject *part, gpointer data)
 {
 	const char *charset=NULL;
@@ -2033,34 +2036,33 @@ static void  get_msg_charset_frompart(GMimeObject *part, gpointer data)
 	return;
 }
 
-static char * get_msg_charset(GMimeMessage *message)
+
+char * message_get_charset(GMimeMessage *message)
 {
-	GMimeObject *mess_obj=NULL;
+	GMimeObject *mime_part=NULL;
 	char *mess_charset=NULL;
 
 	if (message)
-		mess_obj=g_mime_message_get_mime_part(message);
+		mime_part=g_mime_message_get_mime_part(message);
 	
-	if (mess_obj) {
+	if (mime_part) {
 		const char * charset = NULL;
-		if ((charset=g_mime_object_get_content_type_parameter(mess_obj,"charset"))) {
+		if ((charset=g_mime_object_get_content_type_parameter(mime_part,"charset")))
 			mess_charset=g_strdup(charset);
-		}
-		g_object_unref(mess_obj);
+		g_object_unref(mime_part);
 	}
-	if (mess_charset==NULL) {
+	if (mess_charset==NULL)
 		g_mime_message_foreach_part(message,get_msg_charset_frompart,&mess_charset);
-	}
 
 	return mess_charset;
 }
 
+
 /* convert not encoded field to utf8 */
-char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
+char * convert_8bit_field_to_utf8(const char* str_in, const char *charset)
 {
 	char * subj=NULL;
 	static iconv_t default_iconv=(iconv_t)-1;
-	const char *charset=NULL;
 	static int allocated_default_iconv = 0;
 	iconv_t conv_iconv;
 	
@@ -2090,9 +2092,6 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 		return g_strdup(str_in);
 	}
 
-	// Get message encode codepage
-	if (message)
- 		charset=get_msg_charset(message);
  	if (charset) {
  		// codepage not set in message header use default
  		TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
@@ -2116,28 +2115,18 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 		for(p=subj;*p;p++)
 		    if(*p & 0x80) *p='?';
 	}
- 	
- 	if (subj) {
- 		gchar *p;
- 		if ((p=g_utf8_normalize(subj,-1,G_NORMALIZE_ALL))) {
- 		        g_free(subj);
- 			subj=p;
- 		}
- 	}
-
+ 
 	return subj;
 }
 
 
 /* convert not encoded field to database encoding */
-char * convert_8bit_field(GMimeMessage *message,const char* str_in)
+char * convert_8bit_field(const char* str_in, const char *charset)
 {
 	char * subj=NULL;
 	static const char * base_charset=NULL;
 	static iconv_t base_iconv=(iconv_t)-1;
 	static iconv_t default_iconv=(iconv_t)-1;
-
-	const char *charset = NULL;
 	iconv_t conv_iconv;
 
 	// Init static vars
@@ -2161,7 +2150,6 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		base_iconv=g_mime_iconv_open(base_charset,base_charset);
 		if (base_iconv == (iconv_t)-1)
 			TRACE(TRACE_DEBUG,"incorrect base encoding [%s]", base_charset);
-			// codepage not set in message header use default
 			
 	}
 	// End init static
@@ -2192,12 +2180,7 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		return subj;
 	}
 
-	// Get message encode codepage 
- 	if (message)
- 		charset=get_msg_charset(message);
- 	
  	if (charset) {
- 		// codepage not set in message header use default
  	        TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
   			
  		if ((conv_iconv=g_mime_iconv_open(base_charset,charset))==(iconv_t)-1) {
@@ -2251,17 +2234,13 @@ char * convert_8bit_db_to_mime(const char* str_in)
 	if (str_in==NULL)
 		return NULL;
 	
-	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
-		// No conversion required
+	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)))
 		return g_strdup(str_in);
-	}
 
  	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
- 		gchar *p,*subj2;
- 		p=g_utf8_normalize(subj,-1,G_NORMALIZE_ALL);
-		subj2 = g_mime_utils_header_encode_text((unsigned char *)p);
+ 		gchar *subj2;
+		subj2 = g_mime_utils_header_encode_text(subj);
   		g_free(subj);
- 		g_free(p);
  		return subj2;
   	}
 
@@ -2297,7 +2276,8 @@ char * imap_get_envelope(GMimeMessage *message)
 	result = (char *)g_mime_message_get_header(message,"Subject");
 
 	if (result) {
-		char * subj = convert_8bit_field_to_utf8(message, result);
+		const char *charset = message_get_charset(message);
+		char * subj = convert_8bit_field_to_utf8(result, charset);
 		s = g_mime_utils_header_encode_text((unsigned char *)subj);
 		TRACE(TRACE_DEBUG,"encoding 8bit subject [%s] -> [%s]", subj, s);
 		t = dbmail_imap_astring_as_string(s);
