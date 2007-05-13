@@ -2237,9 +2237,9 @@ char * convert_8bit_db_to_mime(const char* str_in)
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)))
 		return g_strdup(str_in);
 
- 	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
+	if ((! g_utf8_validate((const char *)str_in,-1,NULL)) && ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL)) {
  		gchar *subj2;
-		subj2 = g_mime_utils_header_encode_text(subj);
+		subj2 = g_mime_utils_header_encode_text((unsigned char *)subj);
   		g_free(subj);
  		return subj2;
   	}
