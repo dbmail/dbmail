@@ -73,30 +73,30 @@ _Description: Start the timsieve server after reboot?
  their sieve scripts using a compatible client such as kmail,
  horde/ingo or squirrelmail/avelsieve.
 
-Template: dbmail/ldap/PORT
+Template: dbmail/ldap/port
 Type: string
 _Description: Port used by the LDAP server:
  Please enter the port which your LDAP server is listening on.
  The default port is 389.
 
-Template: dbmail/ldap/HOSTNAME
+Template: dbmail/ldap/hostname
 Type: string
 _Description: Hostname of the LDAP server:
  Please enter the name of the host your LDAP server is running at.
 
-Template: dbmail/ldap/BASE_DN
+Template: dbmail/ldap/base_dn
 Type: string
 _Description: LDAP base DN:
  Please enter the DN where Dbmail should start searching for
  user accounts.
 
-Template: dbmail/ldap/FIELD_UID
+Template: dbmail/ldap/field_uid
 Type: string
 _Description: Field which contains the user login name of the user:
  Please enter the LDAP attribute that will contain the username.
  The standard account uses uid.
 
-Template: dbmail/ldap/FIELD_CID
+Template: dbmail/ldap/field_cid
 Type: string
 _Description: Field which contains the group id number of the user:
  Please enter the LDAP attribute that will contain the group id number.
@@ -108,13 +108,13 @@ _Description: Use an anonymous connection to the LDAP server?
  Please choose this option if the LDAP server does not require
  authentication to search the LDAP tree.
 
-Template: dbmail/ldap/BIND_DN
+Template: dbmail/ldap/bind_dn
 Type: string
 _Description: DN used to bind to the LDAP server:
  Please enter the DN which should be used to connect to the LDAP
  server.
 
-Template: dbmail/ldap/BIND_PW
+Template: dbmail/ldap/bind_pw
 Type: password
 _Description: Password to bind to the LDAP server:
  Please enter the password which should be used to connect to the LDAP

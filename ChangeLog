@@ -1,3 +1,20 @@
+2007-05-14  Paul J Stevens <paul@nfg.nl>
+
+	* debian:
+	downcase all debconf keys
+	* configure, configure.in, debian:
+	2.2.5-rc2
+
+2007-05-13  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, misc.c:
+	only iconv_strdup non-utf8 values from database
+	* check_dbmail_misc.c, dbmail-message.c, dbmail-message.h, misc.c, 
+	misc.h, test-scripts:
+	cleanup the convert_8bit functions
+	* dbmail-imapsession.c, imapcommands.c, test-scripts:
+	be more careful about re-opening mailbox during sessions
+
 2007-05-13  Aaron Stone  <aaron@serendipity.cx>
 
 	* maintenance.c, db.h, db.c, man/dbmail-util.txt:
