@@ -1,3 +1,9 @@
+dbmail (2.2.5-0rc2) unstable; urgency=low
+
+  * tag and release canditate
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon, 14 May 2007 09:24:01 +0200
+
 dbmail (2.2.4-1) unstable; urgency=low
 
   * 2.2.4 release
