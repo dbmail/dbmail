@@ -68,14 +68,14 @@ case "$1" in
 		db_get dbmail/start_sieve || true; START_SIEVE=$RET
 
 		if [ "$AUTHDRIVER" = "ldap" ]; then
-			db_get dbmail/ldap/HOSTNAME || true; LDAP_HOST=$RET
-			db_get dbmail/ldap/PORT || true; LDAP_PORT=$RET
-			db_get dbmail/ldap/BASE_DN || true; LDAP_BASE_DN=$RET
-			db_get dbmail/ldap/BIND_DN || true; LDAP_BIND_DN=$RET
-			db_get dbmail/ldap/BIND_PW || true; LDAP_BIND_PW=$RET
+			db_get dbmail/ldap/hostname || true; LDAP_HOST=$RET
+			db_get dbmail/ldap/post || true; LDAP_PORT=$RET
+			db_get dbmail/ldap/base_dn || true; LDAP_BASE_DN=$RET
+			db_get dbmail/ldap/bind_dn || true; LDAP_BIND_DN=$RET
+			db_get dbmail/ldap/bind_pw || true; LDAP_BIND_PW=$RET
 			db_get dbmail/ldap/bind_anonymous || true; LDAP_BIND_ANONYMOUS=$RET
-			db_get dbmail/ldap/FIELD_UID || true; LDAP_UID=$RET
-			db_get dbmail/ldap/FIELD_CID || true; LDAP_CID=$RET
+			db_get dbmail/ldap/field_uid || true; LDAP_UID=$RET
+			db_get dbmail/ldap/field_cid || true; LDAP_CID=$RET
 
 			if [ -z "$LDAP_BASE_DN" ]; then
 				# For the domain really.argh.org we create the basedn
@@ -88,10 +88,10 @@ case "$1" in
 
 			if [ -n "$LDAP_BASE_DN" ] && [ -z "$LDAP_BIND_DN" ] && [ "$LDAP_BIND_ANONYMOUS" = "false" ]; then
 				LDAP_BIND_DN="cn=dbmail,$LDAP_BASE_DN";
-				db_set dbmail/ldap/BIND_DN "$LDAP_BIND_DN"
+				db_set dbmail/ldap/bind_dn "$LDAP_BIND_DN"
 				if [ -x /usr/bin/pwgen ]; then
 					LDAP_BIND_PW=`pwgen -n`
-					db_set dbmail/ldap/BIND_PW "$LDAP_BIND_PW"
+					db_set dbmail/ldap/bind_pw "$LDAP_BIND_PW"
 				fi
 			fi
 
