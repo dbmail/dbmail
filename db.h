@@ -614,13 +614,13 @@ int db_log_ip(const char *ip);
 /**
 * \brief clean up ip log
 * \param lasttokeep all ip log entries before this timestamp will
-*                     deleted
+*                     be deleted
 * \return 
 *       - -1 on database failure
 *       - 0 on success
 */
-int db_cleanup_iplog(const char *lasttokeep, u64_t *affected_rows);
-int db_count_iplog(const char *lasttokeep, u64_t *affected_rows);
+int db_cleanup_iplog(timestring_t lasttokeep, u64_t *affected_rows);
+int db_count_iplog(timestring_t lasttokeep, u64_t *affected_rows);
 
 /**
  * \brief cleanup database tables
@@ -1289,6 +1289,17 @@ int db_change_mailboxsize(u64_t user_idnr, u64_t new_size);
 int db_replycache_register(const char *to, const char *from, const char *handle);
 int db_replycache_validate(const char *to, const char *from, const char *handle, int days);
 int db_replycache_unregister(const char *to, const char *from, const char *handle);
+
+/**
+* \brief clean up replycache
+* \param lasttokeep all replycache entries before this timestamp will
+*                     be deleted
+* \return 
+*       - -1 on database failure
+*       - 0 on success
+*/
+int db_cleanup_replycache(timestring_t lasttokeep, u64_t *affected_rows);
+int db_count_replycache(timestring_t lasttokeep, u64_t *affected_rows);
 
 /* get driver specific SQL snippets */
 const char * db_get_sql(sql_fragment_t frag);
