@@ -1290,20 +1290,20 @@ int db_log_ip(const char *ip)
 	return DM_SUCCESS;
 }
 
-int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
+int db_count_iplog(timestring_t lasttokeep, u64_t *affected_rows)
 {
-	char *escaped_lasttokeep;
+	char *to_date_str;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
 
 	assert(affected_rows != NULL);
 	*affected_rows = 0;
 
-	escaped_lasttokeep = dm_stresc(lasttokeep);
+	to_date_str = char2date_str(lasttokeep);
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT * FROM %spbsp WHERE since < '%s'", DBPFX, escaped_lasttokeep);
-	g_free(escaped_lasttokeep);
+		 "SELECT * FROM %spbsp WHERE since < %s",
+		 DBPFX, to_date_str);
+	g_free(to_date_str);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error executing query");
@@ -1314,16 +1314,68 @@ int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 	return DM_SUCCESS;
 }
 
-int db_cleanup_iplog(const char *lasttokeep, u64_t *affected_rows)
+int db_cleanup_iplog(timestring_t lasttokeep, u64_t *affected_rows)
 {
- 	assert(affected_rows != NULL);
+	char *to_date_str;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
+ 	assert(affected_rows != NULL);
  	*affected_rows = 0;
 
+	to_date_str = char2date_str(lasttokeep);
 	snprintf(query, DEF_QUERYSIZE,
-		 "DELETE FROM %spbsp WHERE since < '%s'", DBPFX, lasttokeep);
+		 "DELETE FROM %spbsp WHERE since < %s",
+		 DBPFX, to_date_str);
+	g_free(to_date_str);
+
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "error executing query");
+		return DM_EQUERY;
+	}
+	*affected_rows = db_get_affected_rows();
+
+	return DM_SUCCESS;
+}
+
+int db_count_replycache(timestring_t lasttokeep, u64_t *affected_rows)
+{
+	char *to_date_str;
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
+
+	assert(affected_rows != NULL);
+	*affected_rows = 0;
+
+	to_date_str = char2date_str(lasttokeep);
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT * FROM %sreplycache WHERE lastseen < %s",
+		 DBPFX, to_date_str);
+	g_free(to_date_str);
+
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "error executing query");
+		return DM_EQUERY;
+	}
+	*affected_rows = db_get_affected_rows();
+
+	return DM_SUCCESS;
+}
+
+int db_cleanup_replycache(timestring_t lasttokeep, u64_t *affected_rows)
+{
+	char *to_date_str;
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
+
+ 	assert(affected_rows != NULL);
+ 	*affected_rows = 0;
+
+	to_date_str = char2date_str(lasttokeep);
+	snprintf(query, DEF_QUERYSIZE,
+		 "DELETE FROM %sreplycache WHERE lastseen < %s",
+		 DBPFX, to_date_str);
+	g_free(to_date_str);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error executing query");

@@ -1,3 +1,9 @@
+2007-05-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* maintenance.c, db.h, db.c, man/dbmail-util.txt:
+	Added new option '-r time' to clear old replycache entries. Cleaned
+	up the timestrings used to find old ipllog and replycache entries.
+
 2007-05-13  Paul J Stevens <paul@nfg.nl>
 
 	* misc.c:
