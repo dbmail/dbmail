@@ -1,22 +1,23 @@
-dbmail (2.2.5-0rc2) unstable; urgency=low
+dbmail (2.2.5-1) unstable; urgency=low
 
-  * tag and release canditate
+  * new upstream release (Closes: #412741, #415958, #423832)
+  * also create dbmail user in postinst configure (Closes: #418582)
 
- -- Paul J Stevens <paul@nfg.nl>  Mon, 14 May 2007 09:24:01 +0200
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 15 May 2007 13:47:50 +0200
 
-dbmail (2.2.4-1) unstable; urgency=low
+dbmail (2.2.4-1) unstable;  urgency=low
 
   * 2.2.4 release
 
  -- Paul J Stevens <paul@nfg.nl>  Sun, 11 Mar 2007 21:54:37 +0100
 
-dbmail (2.2.3-1) unstable; urgency=low
+dbmail (2.2.3-1) unstable; u rgency=low 
 
-  [ Paul J Stevens ]
+  [ Paul J Stevens ]  
   * remove configure code from postinst, leaving the driver alone.
   * new upstream release.
 
-  [ Christian Perrier ]
+  [ Christian Perrier   ]
   * Rewrite debconf templates for style consistency. Closes: #412276
   * Debconf translations:
     - French
