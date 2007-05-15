@@ -1,3 +1,19 @@
+2007-05-15  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, test-scripts:
+	rebuild uid_msn mapper (bug #578)
+	* debian:
+	update debian changelog for upcoming release
+	* misc.c:
+	fix small leaks
+
+2007-05-14  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, debian, man:
+	downcase all debconf keys
+	* configure, configure.in, debian:
+	2.2.5-rc2
+
 2007-05-14  Paul J Stevens <paul@nfg.nl>
 
 	* debian:

@@ -201,9 +201,10 @@ class testImapServer(unittest.TestCase):
 
         getFreshbox('testexpungebox')
         self.o.select('testexpungebox')
-        self.o.store('1:*', '+FLAGS', '\Deleted')
+        self.o.store('5:*', '+FLAGS', '\Deleted')
         msnlist = self.o.expunge()[1];
-        self.assertEquals(msnlist,['11', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1'])
+        self.assertEquals(msnlist,['11', '10', '9', '8', '7', '6', '5'])
+        print self.o.fetch('4','(BODYSTRUCTURE FLAGS)')
 
     def testFetch(self):
         """ 
