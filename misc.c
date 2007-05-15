@@ -2002,10 +2002,10 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 
 static GList * envelope_address_part(GList *list, GMimeMessage *message, const char *header)
 {
-	const char *result, *charset;
+	const char *result;
 	char *t;
 	InternetAddressList *alist;
-	char *result_enc;
+	char *result_enc, *charset;
 	
 	charset = message_get_charset(message);
 
@@ -2023,6 +2023,8 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
+
+	g_free(charset);
 	return list;
 }
 
@@ -2276,8 +2278,9 @@ char * imap_get_envelope(GMimeMessage *message)
 	result = (char *)g_mime_message_get_header(message,"Subject");
 
 	if (result) {
-		const char *charset = message_get_charset(message);
+		char *charset = message_get_charset(message);
 		char * subj = convert_8bit_field_to_utf8(result, charset);
+		g_free(charset);
 		s = g_mime_utils_header_encode_text((unsigned char *)subj);
 		TRACE(TRACE_DEBUG,"encoding 8bit subject [%s] -> [%s]", subj, s);
 		t = dbmail_imap_astring_as_string(s);
