@@ -107,21 +107,37 @@ gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)
 	return self->uid;
 }
 
-static void _do_msn_map(u64_t *id, u64_t *msn, struct DbmailMailbox *self)
-{
-	*msn = self->rows++;
-	g_tree_insert(self->msn, msn, id);
-}
-
 static void uid_msn_map(struct DbmailMailbox *self)
 {
+	GList *ids = NULL;
+	u64_t *id, *msn = NULL;
+
+	ids = g_tree_keys(self->ids);
+
 	if (self->msn)
 		g_tree_destroy(self->msn);
 
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
 	self->rows = 1;
 
-	g_tree_foreach(self->ids, (GTraverseFunc)_do_msn_map, self);
+	ids = g_list_first(ids);
+	while (ids) {
+		id = (u64_t *)ids->data;
+		msn = g_tree_lookup(self->ids, id);
+		*msn = self->rows++;
+
+		g_tree_insert(self->msn, msn, id);
+
+		if (! g_list_next(ids))
+			break;
+		ids = g_list_next(ids);
+
+	}
+
+	g_list_free(ids);
+
+	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->ids));
+	TRACE(TRACE_DEBUG,"total [%d] MSNs", g_tree_nnodes(self->msn));
 }
 	
 void mailbox_uid_msn_new(struct DbmailMailbox *self)
@@ -188,8 +204,11 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 
 int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
 {
-	if (! g_tree_remove(self->ids, id))
+	if (! g_tree_remove(self->ids, id)) {
+		TRACE(TRACE_ERROR,"trying to remove unknown UID [%llu]", *id);
 		return DM_EGENERAL;
+	}
+
 	uid_msn_map(self);
 
 	return DM_SUCCESS;
