@@ -1,3 +1,14 @@
+2007-05-15  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c, dbmail-imapsession.c, dbmail-mailbox.c:
+	Fixed memory leaks around g_list_slices
+	* configure.in, dbmail.h.in, acinclude.m4, VERSION:
+	Added a note that the version number is kept in this new VERSION file,
+	both to cut down on automake regenerations between releases and to
+	allow for a Subversion post-commit script to plant the version number
+	* export.c main.c maintenance.c serverparent.c sievecmd.c user.c:
+	Use the new PRINTF_THIS_IS_DBMAIL macro.
+
 2007-05-15  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_mailbox.c, dbmail-mailbox.c, test-scripts:

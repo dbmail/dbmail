@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* We must return non-zero in case someone put -V
 			 * into the mail server config and thus may lose mail. */
-			printf("This is DBMail version %s\n\n%s\n", VERSION, COPYRIGHT);
+			PRINTF_THIS_IS_DBMAIL;
 			return 1;
 
 		default:

@@ -95,7 +95,7 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 			config->log_verbose = 1;
 			break;
 		case 'V':
-			printf("This is DBMail version %s\n\n%s\n", VERSION, COPYRIGHT);
+			PRINTF_THIS_IS_DBMAIL;
 			return -1;
 		case 'n':
 			config->no_daemonize = 1;

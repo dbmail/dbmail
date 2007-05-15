@@ -30,11 +30,6 @@
 #include "config.h"
 #endif
 
-#undef VERSION
-#undef PACKAGE
-#define VERSION "2.2.5-pre-svn"
-#define PACKAGE "dbmail"
-
 #define _XOPEN_SOURCE /* glibc2 */
 #define __EXTENSIONS__ /* solaris */
 
@@ -138,6 +133,8 @@
 	/* No final ';' so macro can be called "like a function" */
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
+
+#define PRINTF_THIS_IS_DBMAIL printf("This is DBMail version %s\n\n%s\n", DBMAIL_VERSION, COPYRIGHT)
 
 #define COPYRIGHT \
 "Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl\n" \

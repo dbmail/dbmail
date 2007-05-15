@@ -1665,15 +1665,15 @@ int db_icheck_null_messages(struct dm_list *lost_list)
 
 int db_set_isheader(GList *lost)
 {
-	GList *slices;
+	GList *slices, *topslices;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
 	if (! lost)
 		return DM_SUCCESS;
 
-	slices = g_list_slices(lost,80);
-	slices = g_list_first(slices);
+	topslices = g_list_slices(lost,80);
+	slices = g_list_first(topslices);
 	while(slices) {
 		snprintf(query, DEF_QUERYSIZE,
 			"UPDATE %smessageblks"
@@ -1683,13 +1683,14 @@ int db_set_isheader(GList *lost)
 
 		if (db_query(query) == -1) {
 			TRACE(TRACE_ERROR, "could not access messageblks table");
+			g_list_destroy(topslices);
 			return DM_EQUERY;
 		}
 		if (! g_list_next(slices))
 			break;
 		slices = g_list_next(slices);
 	}
-	g_list_free(slices);
+	g_list_destroy(topslices);
 	return DM_SUCCESS;
 }
 

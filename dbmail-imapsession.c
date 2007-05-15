@@ -1891,15 +1891,15 @@ int dbmail_imap_session_mailbox_close(struct ImapSession *self)
 
 static int imap_session_update_recent(GList *recent) 
 {
-	GList *slices = NULL;
+	GList *slices, *topslices;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
 
 	if (recent == NULL)
 		return 0;
 
-	slices = g_list_slices(recent,100);
-	slices = g_list_first(slices);
+	topslices = g_list_slices(recent,100);
+	slices = g_list_first(topslices);
 
 	db_begin_transaction();
 	while (slices) {
@@ -1916,7 +1916,7 @@ static int imap_session_update_recent(GList *recent)
 	}
 	db_commit_transaction();
 	
-        g_list_destroy(slices);
+        g_list_destroy(topslices);
 	return 0;
 }
 

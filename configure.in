@@ -19,7 +19,11 @@ AC_INIT([main.c])
 AC_CONFIG_AUX_DIR(buildtools)
 AM_CONFIG_HEADER(config.h:config.in)
 DBMAIL_MSG_CONFIGURE_START
-AM_INIT_AUTOMAKE(dbmail, 2.2.5-rc2)
+DBMAIL_SET_VERSION
+# Initialize the package and major.minor version.
+# The full version that is printed out is kept in VERSION
+# and represented by the DBMAIL_VERSION define.
+AM_INIT_AUTOMAKE(dbmail, 2.2)
 AM_MAINTAINER_MODE
 
 pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \

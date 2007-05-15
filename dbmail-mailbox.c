@@ -273,7 +273,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	int count=0;
 	gboolean h;
 	GMimeStream *ostream;
-	GList *ids, *cids = NULL, *slice;
+	GList *ids, *cids = NULL, *slice, *topslice;
 	struct DbmailMessage *message = NULL;
 	GString *q, *t;
 
@@ -297,8 +297,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 		ids = g_list_next(ids);
 	}
 	
-	slice = g_list_slices(cids,100);
-	slice = g_list_first(slice);
+	topslice = g_list_slices(cids,100);
+	slice = g_list_first(topslice);
 
 	g_list_destroy(cids);
 	g_list_free(ids);
@@ -315,6 +315,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 			g_string_free(t,TRUE);
 			g_string_free(q,TRUE);
 			g_object_unref(ostream);
+			g_list_destroy(topslice);
 			return -1;
 		}
 
@@ -352,9 +353,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 		dbmail_message_free(message);
 	}
 	 
-	g_list_foreach(slice,(GFunc)g_free,NULL);
-	g_list_free(slice);
-
+	g_list_destroy(topslice);
 	g_string_free(t,TRUE);
 	g_string_free(q,TRUE);
 	g_object_unref(ostream);
