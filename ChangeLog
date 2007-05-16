@@ -1,3 +1,31 @@
+2007-05-16  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_deliver.c, check_dbmail_imapd.c, 
+	check_dbmail_message.c, check_dbmail_util.c, config.in, db.c, 
+	dbmail-imapsession.c, dbmail-mailbox.c, dbmail-user.c, dm_match.c, 
+	export.c, imapcommands.c, imapd.c, main.c, maintenance.c, misc.c, 
+	user.c:
+	g_list_free cleanup
+	* .gitignore:
+	add file
+	* debian/dbmail.postrm:
+	don't depend on debconf during purge
+	* debian/patches/00-dbmail_conf.dpatch, 
+	debian/patches/00-etch.dpatch, debian/patches/00list:
+	debian updates
+	* debian/changelog:
+	update
+
+2007-05-15  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_mailbox.c, dbmail-mailbox.c, 
+	test-scripts/testimap.py:
+	rebuild uid_msn mapper (bug #578)
+	* debian/changelog:
+	update debian changelog for upcoming release
+	* misc.c:
+	fix small leaks
+
 2007-05-15  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c, dbmail-imapsession.c, dbmail-mailbox.c:

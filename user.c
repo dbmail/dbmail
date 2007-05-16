@@ -430,20 +430,16 @@ freeall:
 
 	/* Free the lists. */
 	if (alias_del) {
-		g_list_foreach(alias_del, (GFunc)g_free, NULL);
-		g_list_free(alias_del);
+		g_list_destroy(alias_del);
 	}
 	if (alias_add) {
-		g_list_foreach(alias_add, (GFunc)g_free, NULL);
-		g_list_free(alias_add);
+		g_list_destroy(alias_add);
 	}
 	if (fwds_del) {
-		g_list_foreach(fwds_del, (GFunc)g_free, NULL);
-		g_list_free(fwds_del);
+		g_list_destroy(fwds_del);
 	}
 	if (fwds_add) {
-		g_list_foreach(fwds_add, (GFunc)g_free, NULL);
-		g_list_free(fwds_add);
+		g_list_destroy(fwds_add);
 	}
 
 	db_disconnect();

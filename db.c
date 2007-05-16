@@ -3084,7 +3084,7 @@ egeneral:
 		}
 		tmp = g_list_next(tmp);
 	}
-	g_list_free(*mailboxes);
+	g_list_free(g_list_first(*mailboxes));
 	g_strfreev(chunks);
 	g_free(username);
 	g_free(cpy);
@@ -3241,7 +3241,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 		g_free(mbox);
 		mailbox_item = g_list_next(mailbox_item);
 	}
-	g_list_free(mailbox_list);
+	g_list_free(g_list_first(mailbox_list));
 
 	*mailbox_idnr = created_mboxid;
 	return skip_and_free;

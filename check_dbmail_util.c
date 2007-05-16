@@ -68,8 +68,7 @@ START_TEST(test_allocate)
 		*id = i;
 		l = g_list_prepend(l, id);
 	}
-	g_list_foreach(l, (GFunc)g_free, NULL);
-	g_list_free(l);
+	g_list_destroy(l);
 }
 END_TEST
 

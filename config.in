@@ -3,6 +3,9 @@
 /* Define if LDAP will be used. */
 #undef AUTHLDAP
 
+/* Includes the micro version */
+#undef DBMAIL_VERSION
+
 /* Define to 1 if you have the <crypt.h> header file. */
 #undef HAVE_CRYPT_H
 

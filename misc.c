@@ -1105,7 +1105,10 @@ int num_from_imapdate(const char *date)
 
 void g_list_destroy(GList *l)
 {
+	l = g_list_first(l);
 	g_list_foreach(l,(GFunc)g_free,NULL);
+
+	l = g_list_first(l);
 	g_list_free(l);
 }
 
@@ -1252,12 +1255,20 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 				
 				keys = g_list_next(keys);
 			}
+
+			keys = g_list_first(keys);
+			g_list_free(keys);
+
 			break;
 	}
 
 	TRACE(TRACE_DEBUG,"(%p) (%p): a[%d] [%s] b[%d] -> a[%d]", 
 			a, b, alen, type, blen, 
 			g_tree_nnodes(a));
+
+	merger->list = g_list_first(merger->list);
+	g_list_free(merger->list);
+
 
 	g_free(merger);
 	g_free(type);
@@ -1430,8 +1441,7 @@ char *dbmail_imap_plist_as_string(GList * list)
 
 void dbmail_imap_plist_free(GList *l)
 {
-	g_list_foreach(l, (GFunc)g_free, NULL);
-	g_list_free(l);
+	g_list_destroy(l);
 }
 
 /* 
@@ -1504,8 +1514,7 @@ static GList * imap_append_hash_as_string(GList *list, GHashTable *hash)
 		list = g_list_append_printf(list, "%s", s);
 		g_free(s);
 		
-		g_list_foreach(l,(GFunc)g_free,NULL);
-		g_list_free(l);
+		g_list_destroy(l);
 	} else {
 		list = g_list_append_printf(list, "NIL");
 	}
@@ -1530,8 +1539,7 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 		list = g_list_append_printf(list,"%s",result);
 		g_free(result);
 
-		g_list_foreach(t,(GFunc)g_free,NULL);
-		g_list_free(t);
+		g_list_destroy(t);
 		g_mime_disposition_destroy(disposition);
 	} else {
 		list = g_list_append_printf(list,"NIL");
@@ -1681,20 +1689,19 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 		
 		alist = g_list_append(alist,s->str);
 
-		g_list_foreach(list,(GFunc)g_free,NULL);
-		g_list_free(list);
+		g_list_destroy(list);
 		g_string_free(s,FALSE);
 	}
 
 	/* done*/
 	*(GList **)data = (gpointer)g_list_append(*(GList **)data,dbmail_imap_plist_as_string(alist));
 	
-	g_list_foreach(alist,(GFunc)g_free,NULL);
-	g_list_free(alist);
-	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
+	g_list_destroy(alist);
 
+	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 	
 }
+
 void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean extension)
 {
 	char *result, *b;
@@ -1751,8 +1758,8 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	/* done*/
 	*(GList **)data = (gpointer)g_list_append(*(GList **)data,dbmail_imap_plist_as_string(list));
 	
-	g_list_foreach(list,(GFunc)g_free,NULL);
-	g_list_free(list);
+	g_list_destroy(list);
+
 	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 
 }
@@ -1812,8 +1819,8 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	/* done*/
 	*(GList **)data = (gpointer)g_list_append(*(GList **)data, dbmail_imap_plist_as_string(list));
 	
-	g_list_foreach(list,(GFunc)g_free,NULL);
-	g_list_free(list);
+	g_list_destroy(list);
+
 	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 }
 
@@ -1869,8 +1876,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			}
 			g_free(s);
 			
-			g_list_foreach(t, (GFunc)g_free, NULL);
-			g_list_free(t);
+			g_list_destroy(t);
 			t = NULL;
 
 			/* Address list ending. */
@@ -1926,8 +1932,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			p = g_list_append_printf(p, "%s", s);
 			g_free(s);
 			
-			g_list_foreach(t, (GFunc)g_free, NULL);
-			g_list_free(t);
+			g_list_destroy(t);
 			t = NULL;
 
 			break;
@@ -1950,8 +1955,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 		g_free(s);
 		g_free(st);
         
-		g_list_foreach(p, (GFunc)g_free, NULL);
-		g_list_free(p);
+		g_list_destroy(p);
 	} else {
 		list = g_list_append_printf(list, "NIL");
 	}
@@ -1993,8 +1997,7 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	t = dbmail_imap_plist_collapse(s);
 	g_free(s);
 
-	g_list_foreach(structure,(GFunc)g_free,NULL);
-	g_list_free(structure);
+	g_list_destroy(structure);
 	g_object_unref(part);
 	
 	return t;
@@ -2329,8 +2332,7 @@ char * imap_get_envelope(GMimeMessage *message)
 
 	s = dbmail_imap_plist_as_string(list);
 
-	g_list_foreach(list,(GFunc)g_free,NULL);
-	g_list_free(list);
+	g_list_destroy(list);
 	
 	return s;
 }
@@ -2534,8 +2536,7 @@ char * imap_flags_as_string(msginfo_t *msginfo)
 			sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
 	}
 	s = dbmail_imap_plist_as_string(sublist);
-	g_list_foreach(sublist,(GFunc)g_free,NULL);
-	g_list_free(sublist);
+	g_list_destroy(sublist);
 	return s;
 }
 

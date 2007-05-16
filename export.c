@@ -138,7 +138,7 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *outfile,
 			ids = g_list_next(ids);
 		}
 
-		g_list_free(ids);
+		g_list_free(g_list_first(ids));
 	}
 
 cleanup:

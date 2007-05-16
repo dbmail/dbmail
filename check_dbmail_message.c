@@ -453,8 +453,7 @@ START_TEST(test_dbmail_message_get_header_addresses)
 	fail_unless(g_list_length(result)==2,"dbmail_message_get_header_addresses failed");
 	fail_unless(strcmp((char *)result->data,"vol@inter7.com")==0, "dbmail_message_get_header_addresses failed");
 
-	g_list_foreach(result,(GFunc)g_free, NULL);
-	g_list_free(result);
+	g_list_destroy(result);
 	dbmail_message_free(m);
 	g_string_free(s,TRUE);
 }

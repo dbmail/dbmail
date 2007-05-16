@@ -552,7 +552,7 @@ int do_show(const char * const name)
 			}
 			g_list_foreach(users,(GFunc)g_free,NULL);
 		}
-		g_list_free(users);
+		g_list_free(g_list_first(users));
 
 	} else {
 		if (auth_user_exists(name, &useridnr) == -1) {
@@ -584,8 +584,7 @@ int do_show(const char * const name)
 						break;
 					forwards = g_list_next(forwards);
 				}
-				g_list_foreach(forwards,(GFunc)g_free, NULL);
-				g_list_free(forwards);
+				g_list_destroy(forwards);
 			}
 			
 			userids = g_list_first(userids);
@@ -599,7 +598,7 @@ int do_show(const char * const name)
 						break;
 					userids = g_list_next(userids);
 				}
-				g_list_free(userids);
+				g_list_free(g_list_first(userids));
 			}
 			return 0;
 		}
@@ -632,7 +631,7 @@ int do_show(const char * const name)
 		} else {
 			g_list_append_printf(out,"");
 		}
-		g_list_free(userlist);
+		g_list_free(g_list_first(userlist));
 		s = g_list_join(out,":");
 		qprintf("%s\n", s->str);
 		g_string_free(s,TRUE);

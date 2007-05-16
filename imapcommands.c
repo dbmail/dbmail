@@ -743,8 +743,7 @@ int _ic_list(struct ImapSession *self)
 		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", thisname, 
 				pstring, MAILBOX_SEPARATOR, mb->name);
 		
-		g_list_foreach(plist,(GFunc)g_free,NULL);
-		g_list_free(plist);
+		g_list_destroy(plist);
 		g_free(pstring);
 	}
 
@@ -883,8 +882,7 @@ int _ic_status(struct ImapSession *self)
 	dbmail_imap_session_printf(self, "%s\r\n", response->str);
 	dbmail_imap_session_printf(self, "%s OK STATUS completed\r\n", self->tag);
 
-	g_list_foreach(plst,(GFunc)g_free,NULL);
-	g_list_free(plst);
+	g_list_destroy(plst);
 	g_string_free(response,TRUE);
 	g_free(astring);
 	g_free(pstring);
@@ -1434,7 +1432,7 @@ int _ic_fetch(struct ImapSession *self)
 			self->ids = NULL;
 		}
 		if (self->ids_list) {
-			g_list_free(self->ids_list);
+			g_list_free(g_list_first(self->ids_list));
 			self->ids_list = NULL;
 		}
 	}	

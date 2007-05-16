@@ -769,6 +769,7 @@ START_TEST(test_g_tree_keys)
 	fail_unless(g_tree_nnodes(a)==0,"g_tree_keys failed");
 	fail_unless(g_list_length(akeys)==0,"g_tree_keys failed");
 
+	akeys = g_list_first(akeys);
 	g_list_free(akeys);
 	
 	for (i=0; i<4; i++) {
@@ -783,6 +784,7 @@ START_TEST(test_g_tree_keys)
 	fail_unless(g_tree_nnodes(a)==4,"g_tree_keys failed");
 	fail_unless(g_list_length(akeys)==4,"g_tree_keys failed");
 	
+	akeys = g_list_first(akeys);
 	g_list_free(akeys);
 	g_tree_destroy(a);
 }

@@ -134,7 +134,7 @@ static void uid_msn_map(struct DbmailMailbox *self)
 
 	}
 
-	g_list_free(ids);
+	g_list_free(g_list_first(ids));
 
 	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->ids));
 	TRACE(TRACE_DEBUG,"total [%d] MSNs", g_tree_nnodes(self->msn));
@@ -301,7 +301,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	slice = g_list_first(topslice);
 
 	g_list_destroy(cids);
-	g_list_free(ids);
+	
+	g_list_free(g_list_first(ids));
 
 	while (slice) {
 		g_string_printf(q,"SELECT is_header,messageblk FROM %smessageblks b "
@@ -1334,7 +1335,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		hi = *((u64_t *)ids->data);
 		ids = g_list_first(ids);
 		lo = *((u64_t *)ids->data);
-		g_list_free(ids);
+		g_list_free(g_list_first(ids));
 	} else {
 		lo = 1;
 		hi = g_tree_nnodes(self->ids);
@@ -1548,18 +1549,26 @@ static gboolean _merge_search(GNode *node, GTree *found)
 		
 			g_tree_merge(a->found, b->found,IST_SUBSEARCH_OR);
 			b->merged = TRUE;
+			g_tree_destroy(b->found);
+			b->found = NULL;
 
 			g_tree_merge(s->found, a->found,IST_SUBSEARCH_OR);
 			a->merged = TRUE;
+			g_tree_destroy(a->found);
+			a->found = NULL;
 
 			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
 			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
 
 			break;
 			
 		default:
 			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
 			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
 
 			break;
 	}
