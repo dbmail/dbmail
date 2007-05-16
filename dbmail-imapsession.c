@@ -165,6 +165,8 @@ struct ImapSession * dbmail_imap_session_new(void)
 {
 	struct ImapSession * self;
 
+	g_mime_init(0);
+
 	/* init: cache */
 	if (init_cache() != 0)
 		return NULL;
@@ -269,7 +271,7 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		self->ids = NULL;
 	}
 	if (self->ids_list) {
-		g_list_free(self->ids_list);
+		g_list_free(g_list_first(self->ids_list));
 		self->ids_list = NULL;
 	}
 	if (self->headers) {
@@ -282,6 +284,8 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 	}
 
 	g_free(self->args);
+
+	g_mime_shutdown();
 
 	g_free(self);
 }
@@ -1136,8 +1140,7 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 
 		bodyfetch->hdrplist = dbmail_imap_plist_as_string(tlist);
 		h = g_list_join((GList *)tlist,"','");
-		g_list_foreach(tlist, (GFunc)g_free, NULL);
-		g_list_free(tlist);
+		g_list_destroy(tlist);
 
 		h = g_string_ascii_down(h);
 
@@ -1793,7 +1796,7 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
 		list = g_list_append(list,"\\Draft");
 	string = g_list_join(list," ");
-	g_list_free(list);
+	g_list_free(g_list_first(list));
 	dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", string->str);
 
 	/* permanent flags */
@@ -1809,7 +1812,7 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
 		list = g_list_append(list,"\\Draft");
 	string = g_list_join(list," ");
-	g_list_free(list);
+	g_list_free(g_list_first(list));
 	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s)]\r\n", string->str);
 
 	/* UIDNEXT */
@@ -1984,8 +1987,9 @@ static void _body_fetch_free(body_fetch_t *bodyfetch, gpointer UNUSED data)
 void dbmail_imap_session_bodyfetch_free(struct ImapSession *self) 
 {
 	assert(self->fi);
+	self->fi->bodyfetch = g_list_first(self->fi->bodyfetch);
 	g_list_foreach(self->fi->bodyfetch, (GFunc)_body_fetch_free, NULL);
-	g_list_free(self->fi->bodyfetch);
+	g_list_free(g_list_first(self->fi->bodyfetch));
 }
 
 body_fetch_t * dbmail_imap_session_bodyfetch_get_last(struct ImapSession *self) 

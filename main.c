@@ -384,8 +384,7 @@ int main(int argc, char *argv[])
 	dsnuser_free_list(&dsnusers);
 	dm_list_free(&users.start);
 	g_free(returnpath);
-	g_list_foreach(userlist, (GFunc)g_free, NULL);
-	g_list_free(userlist);
+	g_list_destroy(userlist);
 
 	TRACE(TRACE_DEBUG, "they're all free. we're done.");
 

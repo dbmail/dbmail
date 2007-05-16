@@ -180,8 +180,7 @@ match:
 // Returns a list of elements from the argument list that
 // match the pattern. DOES make a copy of matching elements.
 // The resulting GList should be freed with
-//   g_list_foreach(glob_list, (GFunc)g_free, NULL)
-//   g_list_free(glob_list);
+//   g_list_destroy(glob_list);
 GList *match_glob_list(char *pattern, GList *list)
 {
 	GList *match_list = NULL;

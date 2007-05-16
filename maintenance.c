@@ -626,7 +626,7 @@ static int do_is_header(void)
 		}
 	}
 
-	g_list_free(lost);
+	g_list_free(g_list_first(lost));
 
 	time(&stop);
 	qverbosef("--- checking is_header flags took %g seconds\n",
@@ -667,8 +667,7 @@ static int do_rfc_size(void)
 		}
 	}
 
-	g_list_foreach(lost, (GFunc)g_free, NULL);
-	g_list_free(lost);
+	g_list_destroy(lost);
 
 	time(&stop);
 	qverbosef("--- checking rfcsize field took %g seconds\n",
@@ -710,7 +709,7 @@ static int do_envelope(void)
 		}
 	}
 
-	g_list_free(lost);
+	g_list_free(g_list_first(lost));
 
 	time(&stop);
 	qverbosef("--- checking envelope cache took %g seconds\n",
