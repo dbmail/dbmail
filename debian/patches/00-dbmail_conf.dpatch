@@ -1,0 +1,48 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 00-dbmail_conf.dpatch by  <paul@nfg.nl>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad dbmail-2.2.5~/dbmail.conf dbmail-2.2.5/dbmail.conf
+--- dbmail-2.2.5~/dbmail.conf	2007-04-27 09:52:11.000000000 +0200
++++ dbmail-2.2.5/dbmail.conf	2007-05-15 21:53:25.000000000 +0200
+@@ -100,8 +100,8 @@
+ # Root privs are used to open a port, then privs
+ # are dropped down to the user/group specified here.
+ #
+-EFFECTIVE_USER        = nobody   
+-EFFECTIVE_GROUP       = nogroup 
++EFFECTIVE_USER        = dbmail
++EFFECTIVE_GROUP       = dbmail 
+ 
+ # 
+ # The IP addresses the services will bind to.
+@@ -154,22 +154,22 @@
+ # 
+ # logfile for stdout messages
+ #
+-logfile               = /var/log/dbmail.log        
++logfile               = /var/log/dbmail/dbmail.log        
+ 
+ # 
+ # logfile for stderr messages
+ #
+-errorlog              = /var/log/dbmail.err        
++errorlog              = /var/log/dbmail/dbmail.err        
+ 
+ # 
+ # directory for storing PID files
+ #
+-pid_directory         = /var/run
++pid_directory         = /var/run/dbmail
+ 
+ #
+ # directory for storing the daemon statefiles
+ #
+-state_directory       = /var/run
++state_directory       = /var/run/dbmail
+ 
+ #
+ # directory for locating libraries (normally has a sane default compiled-in)
