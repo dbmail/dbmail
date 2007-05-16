@@ -1,0 +1,16 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 00-etch.dpatch by  <paul@nfg.nl>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad dbmail-2.2.5~/debian/changelog dbmail-2.2.5/debian/changelog
+--- dbmail-2.2.5~/debian/changelog	2007-05-15 21:40:33.000000000 +0200
++++ dbmail-2.2.5/debian/changelog	2007-05-15 21:41:39.000000000 +0200
+@@ -1,4 +1,4 @@
+-dbmail (2.2.5-1) unstable; urgency=low
++dbmail (2.2.5-1) stable; urgency=low
+ 
+   * new upstream release (Closes: #412741, #415958, #423832)
+   * update postinst (Closes: #418582)
