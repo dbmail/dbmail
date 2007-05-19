@@ -43,6 +43,7 @@ void state_reset(child_state_t *s)
 	s->ctime = time(0);
 	s->status = STATE_NOOP;
 	s->count = 0;
+	// FIXME: valgrind is complaining about s->user going 2 bytes past the structure.
 	memset(s->client, '\0', 128);
 	memset(s->user, '\0', 128);
 }

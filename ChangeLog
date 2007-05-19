@@ -1,3 +1,8 @@
+2007-05-19  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-imapsession.c:
+	Fixes for two more memory leaks
+
 2007-05-16  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_deliver.c, check_dbmail_imapd.c, 
