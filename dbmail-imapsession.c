@@ -187,8 +187,7 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
 		return self;
 	}
 	
-	dbmail_imap_session_bodyfetch_rewind(self);
-	g_list_foreach(self->fi->bodyfetch,(GFunc)g_free,NULL);
+	dbmail_imap_session_bodyfetch_free(self);
 	memset(self->fi,'\0',sizeof(fetch_items_t));
 	return self;
 }
@@ -686,7 +685,7 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 	char *to_char_str;
 	msginfo_t *result;
 	GTree *msginfo;
-	GList *l;
+	GList *l, *l_last;
 	u64_t *uid, *lo, *hi;
 	u64_t id;
 	char query[DEF_QUERYSIZE];
@@ -697,11 +696,13 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 
 	l = g_tree_keys(ids);
 
-	l = g_list_first(l);
+	// l = g_list_first(l);
 	lo = (u64_t *)l->data;
 
-	l = g_list_last(l);
-	hi = (u64_t *)l->data;
+	l_last = g_list_last(l);
+	hi = (u64_t *)l_last->data;
+
+	g_list_free(l);
 	
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 
