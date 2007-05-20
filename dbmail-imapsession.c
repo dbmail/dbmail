@@ -233,14 +233,6 @@ struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, c
 	self->command = g_strdup(command);
 	return self;
 }
-/* not needed...
-struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args)
-{
-	self->args = args;
-	return self;
-}
-*/
-
 
 void dbmail_imap_session_delete(struct ImapSession * self)
 {

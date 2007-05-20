@@ -1401,6 +1401,7 @@ int _ic_fetch(struct ImapSession *self)
 		self->args_idx++;
 	} while (state > 0);
 
+	result = 0;
 	if (g_tree_nnodes(self->mailbox->ids) > 0) {
 
 		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
@@ -1414,34 +1415,38 @@ int _ic_fetch(struct ImapSession *self)
 
 		if (g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
-			return DM_EGENERAL;
-		}
+			result = DM_EGENERAL;
+		} else {
+				
+			self->ids_list = g_tree_keys(self->ids);
 			
-		self->ids_list = g_tree_keys(self->ids);
-		
-		if (dbmail_imap_session_fetch_get_items(self) < 0)
-			return -1;
-		
-		if (self->headers) {
-			g_tree_destroy(self->headers);
-			self->headers = NULL;
-		}
-		if (self->envelopes) {
-			g_tree_destroy(self->envelopes);
-			self->envelopes = NULL;
-		}
-		if (self->ids) {
-			g_tree_destroy(self->ids);
-			self->ids = NULL;
-		}
-		if (self->ids_list) {
-			g_list_free(g_list_first(self->ids_list));
-			self->ids_list = NULL;
+			result = dbmail_imap_session_fetch_get_items(self);
+			
+			if (self->headers) {
+				g_tree_destroy(self->headers);
+				self->headers = NULL;
+			}
+			if (self->envelopes) {
+				g_tree_destroy(self->envelopes);
+				self->envelopes = NULL;
+			}
+			if (self->ids) {
+				g_tree_destroy(self->ids);
+				self->ids = NULL;
+			}
+			if (self->ids_list) {
+				g_list_free(g_list_first(self->ids_list));
+				self->ids_list = NULL;
+			}
+			if (self->fi) 
+				dbmail_imap_session_bodyfetch_free(self);
 		}
 	}	
 	
-	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
-	return 0;
+	if (! result)
+		dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
+
+	return result;
 }
 
 
