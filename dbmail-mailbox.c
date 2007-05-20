@@ -43,6 +43,7 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	self->fi = NULL;
 
 	if (dbmail_mailbox_open(self)) {
+		TRACE(TRACE_ERROR,"opening mailbox failed");
 		dbmail_mailbox_free(self);
 		return NULL;
 	}
@@ -498,7 +499,7 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self)
 {
 	GString *t;
 	gchar *s = NULL;
-	GList *l = NULL;
+	GList *l = NULL, *h = NULL;
 
 	if ((self->ids == NULL) || g_tree_nnodes(self->ids) <= 0) {
 		TRACE(TRACE_DEBUG,"no ids found");
@@ -515,12 +516,16 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self)
 		break;
 	}
 
+	h = l;
+
 	while(l->data) {
 		g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
 		if (! g_list_next(l))
 			break;
 		l = g_list_next(l);
 	}
+
+	g_list_free(h);
 
 	s = t->str;
 	g_string_free(t,FALSE);

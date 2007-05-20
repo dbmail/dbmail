@@ -1253,7 +1253,8 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	struct DbmailMailbox *mb;
 	int result = 0;
-	gchar *s = NULL, *cmd = NULL;
+	gchar *s = NULL;
+	const gchar *cmd;
 	gboolean sorted;
 
 	if (order == SEARCH_SORTED)
@@ -1283,24 +1284,23 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	}
 
 	mb = dbmail_mailbox_new(ud->mailbox.uid);
-
+	switch(order) {
+		case SEARCH_SORTED:
+			cmd = "SORT";
+			break;
+		case SEARCH_UNORDERED:
+			cmd = "SEARCH";
+			break;
+		case SEARCH_THREAD_REFERENCES:
+		case SEARCH_THREAD_ORDEREDSUBJECT:
+			cmd = "THREAD";
+			break;
+		default:// shouldn't happen
+			cmd = "NO";
+			break;
+	}
 	if (g_tree_nnodes(mb->ids) > 0) {
 		dbmail_mailbox_set_uid(mb,self->use_uid);
-		switch(order) {
-			case SEARCH_SORTED:
-				cmd = g_strdup("SORT");
-			break;
-			case SEARCH_UNORDERED:
-				cmd = g_strdup("SEARCH");
-			break;
-			case SEARCH_THREAD_ORDEREDSUBJECT:
-				cmd = g_strdup("THREAD");
-			break;
-			case SEARCH_THREAD_REFERENCES:
-				cmd = g_strdup("THREAD");
-			break;
-		}
-
 
 		if (dbmail_mailbox_build_imap_search(mb, self->args, &(self->args_idx), order) < 0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
@@ -1331,9 +1331,6 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	}
 
 	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, cmd);
-	if (cmd)
-		g_free(cmd);
-	
 	dbmail_mailbox_free(mb);
 	
 	return 0;
@@ -1422,25 +1419,8 @@ int _ic_fetch(struct ImapSession *self)
 		}
 	}
 			
-	if (self->headers) {
-		g_tree_destroy(self->headers);
-		self->headers = NULL;
-	}
-	if (self->envelopes) {
-		g_tree_destroy(self->envelopes);
-		self->envelopes = NULL;
-	}
-	if (self->ids) {
-		g_tree_destroy(self->ids);
-		self->ids = NULL;
-	}
-	if (self->ids_list) {
-		g_list_free(g_list_first(self->ids_list));
-		self->ids_list = NULL;
-	}
-	if (self->fi) 
-		dbmail_imap_session_bodyfetch_free(self);
-	
+	dbmail_imap_session_fetch_free(self);
+
 	if (! result)
 		dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 

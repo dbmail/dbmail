@@ -53,6 +53,10 @@ struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char
 struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
 
 
+
+void dbmail_imap_session_args_free(struct ImapSession *self, gboolean all);
+
+void dbmail_imap_session_fetch_free(struct ImapSession *self);
 void dbmail_imap_session_delete(struct ImapSession * self);
 
 int dbmail_imap_session_readln(struct ImapSession * self, char * buffer);

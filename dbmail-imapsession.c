@@ -155,6 +155,18 @@ static void _imap_clientinfo_free(struct ImapSession * self)
 		self->fstream = NULL;
 	}
 }
+
+static void free_args(struct ImapSession *self)
+{
+	int i;
+	for (i = 0; i < MAX_ARGS && self->args[i]; i++) {
+		g_free(self->args[i]);
+		self->args[i] = NULL;
+	}
+	self->args_idx = 0;
+}
+
+
 /* 
  *
  * initializer and accessors for ImapSession
@@ -261,10 +273,17 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_tree_destroy(self->ids);
 		self->ids = NULL;
 	}
-	if (self->ids_list) {
-		g_list_free(g_list_first(self->ids_list));
-		self->ids_list = NULL;
-	}
+
+	dbmail_imap_session_fetch_free(self);
+	dbmail_imap_session_args_free(self, TRUE);
+
+	g_mime_shutdown();
+
+	g_free(self);
+}
+
+void dbmail_imap_session_fetch_free(struct ImapSession *self) 
+{
 	if (self->headers) {
 		g_tree_destroy(self->headers);
 		self->headers = NULL;
@@ -273,14 +292,24 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_tree_destroy(self->envelopes);
 		self->envelopes = NULL;
 	}
-
-	g_free(self->args);
-
-	g_mime_shutdown();
-
-	g_free(self);
+	if (self->ids) {
+		g_tree_destroy(self->ids);
+		self->ids = NULL;
+	}
+	if (self->ids_list) {
+		g_list_free(g_list_first(self->ids_list));
+		self->ids_list = NULL;
+	}
+	if (self->fi) 
+		dbmail_imap_session_bodyfetch_free(self);
 }
 
+void dbmail_imap_session_args_free(struct ImapSession *self, gboolean all)
+{
+	free_args(self);
+	if (all)
+		g_free(self->args);
+}
 
 /*************************************************************************************
  *
@@ -1983,7 +2012,7 @@ static void _body_fetch_free(body_fetch_t *bodyfetch, gpointer UNUSED data)
 {
 	if (! bodyfetch)
 		return;
-	if (bodyfetch->hdrnames)
+	if (bodyfetch->hdrnames) 
 		g_free(bodyfetch->hdrnames);
 	if (bodyfetch->hdrplist)
 		g_free(bodyfetch->hdrplist);
@@ -1994,9 +2023,12 @@ static void _body_fetch_free(body_fetch_t *bodyfetch, gpointer UNUSED data)
 void dbmail_imap_session_bodyfetch_free(struct ImapSession *self) 
 {
 	assert(self->fi);
+	if (! self->fi->bodyfetch)
+		return;
 	self->fi->bodyfetch = g_list_first(self->fi->bodyfetch);
 	g_list_foreach(self->fi->bodyfetch, (GFunc)_body_fetch_free, NULL);
 	g_list_free(g_list_first(self->fi->bodyfetch));
+	self->fi->bodyfetch = NULL;
 }
 
 body_fetch_t * dbmail_imap_session_bodyfetch_get_last(struct ImapSession *self) 
@@ -2136,17 +2168,6 @@ u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t dumpsize)
  * The returned array will be NULL-terminated.
  * Will return NULL upon errors.
  */
-
-static void free_args(struct ImapSession *self)
-{
-	int i;
-	for (i = 0; i < MAX_ARGS && self->args[i]; i++) {
-		g_free(self->args[i]);
-		self->args[i] = NULL;
-	}
-	self->args_idx = 0;
-}
-
 char **build_args_array_ext(struct ImapSession *self, const char *originalString)
 {
 	int nargs = 0, inquote = 0, quotestart = 0;
@@ -2302,27 +2323,23 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 						client_close();
 						TRACE(TRACE_ERROR, "timeout occurred in fgetc; got [%d] of [%d]; timeout [%d]", 
 								cnt, quotedSize, ci->timeout);
-						free_args(self);
 						return NULL;
 					}
 				}
 
 				if (ferror(ci->rx) || ferror(ci->tx)) {
 					TRACE(TRACE_ERROR, "client socket has set error indicator in fgetc");
-					free_args(self);
 					return NULL;
 				}
 				/* now read the rest of this line */
 				result = dbmail_imap_session_readln(self, s);
 		
 				if (result < 0){
-					free_args(self);
 					return NULL;
 				}
 
 				if (ferror(ci->rx) || ferror(ci->tx)) {
 					TRACE(TRACE_ERROR, "client socket is set error indicator in dbmail_imap_session_readln");
-					free_args(self);
 					return NULL;
 				}
 
@@ -2364,7 +2381,6 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 
 	if (paridx != 0) {
 		/* error in parenthesis structure */
-		free_args(self);
 		return NULL;
 	}
 
