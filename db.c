@@ -4015,35 +4015,28 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 
 		switch (action_type) {
 		case IMAPFA_ADD:
-			if (flags[i] > 0) {
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos,
-				                ", %s=1", db_flag_desc[i]); 
-			}
+			if (flags[i])
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, ", %s=1", db_flag_desc[i]); 
 			break;
 		case IMAPFA_REMOVE:
-			if (flags[i] > 0) {
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos,
-				                ", %s=0", db_flag_desc[i]); 
-			}
+			if (flags[i])
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, ", %s=0", db_flag_desc[i]); 
 			break;
 
 		case IMAPFA_REPLACE:
-			if (flags[i] == 0) {
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos,
-				                ", %s=0", db_flag_desc[i]); 
-			} else {
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos,
-				                ", %s=1", db_flag_desc[i]); 
-			}
+			if (flags[i])
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, ", %s=1", db_flag_desc[i]); 
+			else
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, ", %s=0", db_flag_desc[i]); 
 			break;
 		}
 	}
 
 	snprintf(query + pos, DEF_QUERYSIZE - pos,
-		 " WHERE message_idnr = %llu AND "
-		 "status < %d AND mailbox_idnr = %llu",
-		 msg_idnr, MESSAGE_STATUS_DELETE, 
-		 mailbox_idnr);
+			" WHERE message_idnr = %llu"
+			" AND status < %d AND mailbox_idnr = %llu",
+			msg_idnr, MESSAGE_STATUS_DELETE, 
+			mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not set flags");
