@@ -20,7 +20,7 @@
 
 # For a protocol trace set to 4
 DEBUG = 0
-#DEBUG = 4
+DEBUG = 4
 
 # select 'stream' for non-forking mode
 TYPE = 'stream'
@@ -560,8 +560,27 @@ class testImapServer(unittest.TestCase):
         """
         self.o.select('INBOX')
         self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
+
+        p = getsock()
+        p.debug = DEBUG
+        p.login('testuser1','test'),('OK',['LOGIN completed'])
+        p.select('INBOX')
+
         self.assertEquals(self.o.store('1:*', '-FLAGS', '\Deleted')[0],'OK')
         self.assertRaises(self.o.error,self.o.store, '1:*', '-FLAGS', '\Recent')
+        
+        print p.noop()
+        self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
+        print p.noop()
+        print self.o.expunge()
+        print p.noop()
+
+        self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
+        self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
+        self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
+        print p.noop()
+        print p.store('1:*', '+FLAGS', '\Flagged')
+        print self.o.noop()
         
     def testSubscribe(self):
         """
