@@ -20,7 +20,7 @@
 
 # For a protocol trace set to 4
 DEBUG = 0
-DEBUG = 4
+#DEBUG = 4
 
 # select 'stream' for non-forking mode
 TYPE = 'stream'
@@ -42,7 +42,7 @@ HOST,PORT = "localhost", 143
 # for stdin/stdout testing
 DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-#DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
+#DAEMONBIN = "CK_FORK=no G_SLICE=always-malloc valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
 
 
 TESTMSG={}
@@ -200,11 +200,27 @@ class testImapServer(unittest.TestCase):
         """
 
         getFreshbox('testexpungebox')
+
+        p = getsock()
+        p.debug = DEBUG
+        p.login('testuser1','test'),('OK',['LOGIN completed'])
+
         self.o.select('testexpungebox')
+        
+        p.select('testexpungebox')
+        
         self.o.store('5:*', '+FLAGS', '\Deleted')
+        self.o.debug = 4
         msnlist = self.o.expunge()[1];
         self.assertEquals(msnlist,['11', '10', '9', '8', '7', '6', '5'])
-        print self.o.fetch('4','(BODYSTRUCTURE FLAGS)')
+        self.assertEquals(self.o.fetch('4','(BODYSTRUCTURE FLAGS)')[0],'OK')
+        
+        p.debug = 4
+        print p.noop()
+
+        self.o.debug = 0
+        p.debug = 0
+
 
     def testFetch(self):
         """ 

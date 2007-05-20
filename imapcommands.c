@@ -1411,13 +1411,14 @@ int _ic_fetch(struct ImapSession *self)
 		}
 	
 		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[setidx],self->use_uid);
-		self->ids_list = g_tree_keys(self->ids);
-		
+
 		if (g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 			return DM_EGENERAL;
 		}
 			
+		self->ids_list = g_tree_keys(self->ids);
+		
 		if (dbmail_imap_session_fetch_get_items(self) < 0)
 			return -1;
 		
