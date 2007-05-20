@@ -302,6 +302,8 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 		fflush(session->ci->tx);	/* write! */
 
+		dbmail_imap_session_args_free(session, FALSE);
+
 		TRACE(TRACE_INFO, "Finished command %s [%d]\n", IMAP_COMMANDS[i], result);
 
 	} while (!done);
