@@ -1417,31 +1417,29 @@ int _ic_fetch(struct ImapSession *self)
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 			result = DM_EGENERAL;
 		} else {
-				
 			self->ids_list = g_tree_keys(self->ids);
-			
 			result = dbmail_imap_session_fetch_get_items(self);
-			
-			if (self->headers) {
-				g_tree_destroy(self->headers);
-				self->headers = NULL;
-			}
-			if (self->envelopes) {
-				g_tree_destroy(self->envelopes);
-				self->envelopes = NULL;
-			}
-			if (self->ids) {
-				g_tree_destroy(self->ids);
-				self->ids = NULL;
-			}
-			if (self->ids_list) {
-				g_list_free(g_list_first(self->ids_list));
-				self->ids_list = NULL;
-			}
-			if (self->fi) 
-				dbmail_imap_session_bodyfetch_free(self);
 		}
-	}	
+	}
+			
+	if (self->headers) {
+		g_tree_destroy(self->headers);
+		self->headers = NULL;
+	}
+	if (self->envelopes) {
+		g_tree_destroy(self->envelopes);
+		self->envelopes = NULL;
+	}
+	if (self->ids) {
+		g_tree_destroy(self->ids);
+		self->ids = NULL;
+	}
+	if (self->ids_list) {
+		g_list_free(g_list_first(self->ids_list));
+		self->ids_list = NULL;
+	}
+	if (self->fi) 
+		dbmail_imap_session_bodyfetch_free(self);
 	
 	if (! result)
 		dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");

@@ -1,3 +1,35 @@
+2007-05-20  Paul J Stevens <paul@nfg.nl>
+
+	* imapcommands.c:
+	always cleanup after FETCH
+	* configure, dbmail-imapsession.c, imapcommands.c:
+	release bodyfetch earlier
+	* dbmail-imapsession.c, dbmail-mailbox.c, imapcommands.c, 
+	test-scripts/testimap.py:
+	work on expunge response (bug #591)
+	* db.c:
+	cosmetics
+	* test-scripts/torture.sh:
+	add torture imapsync test by Peter Rabbitson
+
+2007-05-16  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_deliver.c, check_dbmail_imapd.c, 
+	check_dbmail_message.c, check_dbmail_util.c, config.in, db.c, 
+	dbmail-imapsession.c, dbmail-mailbox.c, dbmail-user.c, dm_match.c, 
+	export.c, imapcommands.c, imapd.c, main.c, maintenance.c, misc.c, 
+	user.c:
+	g_list_free cleanup
+	* .gitignore:
+	add file
+	* debian/dbmail.postrm:
+	don't depend on debconf during purge
+	* debian/patches/00-dbmail_conf.dpatch, 
+	debian/patches/00-etch.dpatch, debian/patches/00list:
+	debian updates
+	* debian/changelog:
+	update
+
 2007-05-19  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail-imapsession.c:
