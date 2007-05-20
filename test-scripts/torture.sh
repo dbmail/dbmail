@@ -26,11 +26,12 @@ init_db() {
 
     # populate accounts with identical null messages (no need for logging)
     i=0
-    echo "Populating database with $COUNT messages, pelase wait"
+    echo "Populating database with $COUNT messages, please wait"
     while [ $i -lt $COUNT ] ; do
         num=$RANDOM
         echo | formail -a Message-ID: -a "Subject: $num" | ./dbmail-smtp -u tst_source tst_target &>/dev/null
         i=$[$i+1]
+	echo -n "."
     done
 }
 
@@ -110,7 +111,7 @@ start_memlog() {
 mkdir -p "$LOGDIR_PREFIX"
 chmod 777 "$LOGDIR_PREFIX"
 
-for size in 10; do 
+for size in 5000; do 
     init_db $size
     
     for malloc in no yes ; do
@@ -118,7 +119,7 @@ for size in 10; do
         LOGDIR="$LOGDIR_PREFIX/${size}msgs"
     
         if [ "$malloc" = "yes" ] ; then
-            G_SLICE="always_malloc"
+            G_SLICE="always-malloc"
             export G_SLICE
             LOGDIR="${LOGDIR}_always_malloc"
         else 
