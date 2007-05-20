@@ -1321,6 +1321,9 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	GTree *a, *b, *c;
 	
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+
+	if (! self->ids)
+		dbmail_mailbox_open(self);
 	
 	if (! (self->ids && set))
 		return b;

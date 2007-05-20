@@ -1680,6 +1680,7 @@ static gboolean imap_msginfo_notify(u64_t *uid, msginfo_t *msginfo, struct ImapS
 	// EXPUNGE
 	switch (self->command_type) {
 		case IMAP_COMM_NOOP:
+                        TRACE(TRACE_DEBUG,"send expunge?");
 			if (! newmsginfo) {
 				dbmail_imap_session_printf(self, "* %llu EXPUNGE\r\n", *msn);
 				dbmail_mailbox_remove_uid(self->mailbox, uid);
@@ -1726,24 +1727,27 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 
 	GTree *oldmsginfo, *msginfo = NULL;
 	unsigned oldexists, oldrecent;
+        struct DbmailMailbox *mailbox = NULL;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	if (! ud->state == IMAPCS_SELECTED)
 		return 0;
 
 	oldexists = ud->mailbox.exists;
 	oldrecent = ud->mailbox.recent;
+        oldmsginfo = self->msginfo;
 
 	if (update) {
                 // rebuild uid/msn trees
 		// ATTN: new messages shouldn't be visible in any way to a 
 		// client session until it has been announced with EXISTS
-		dbmail_mailbox_open(self->mailbox); 
+                mailbox = dbmail_mailbox_new(self->mailbox->id);
+		dbmail_mailbox_open(mailbox); 
 
                 // re-read flags and counters
 		if ((db_getmailbox(&(ud->mailbox))) == -1) 
 			return -1;
 
-		if ((msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL) {
+		if ((msginfo = dbmail_imap_session_get_msginfo(self, mailbox->ids)) == NULL) {
 			TRACE(TRACE_DEBUG,"unable to retrieve msginfo");
 			if (ud->mailbox.exists > 0)
 				return -1;
@@ -1771,12 +1775,17 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	}
 
 	if (msginfo) {
-		oldmsginfo = self->msginfo;
 		self->msginfo = msginfo;
 		if (oldmsginfo) {
 			g_tree_foreach(oldmsginfo, (GTraverseFunc)imap_msginfo_notify, self);
 			g_tree_destroy(oldmsginfo);
 		}
+                if (mailbox) {
+			struct DbmailMailbox *b;
+			b = self->mailbox;
+			self->mailbox = mailbox;
+			dbmail_mailbox_free(b);
+                }
 	}
 
 	return 0;
