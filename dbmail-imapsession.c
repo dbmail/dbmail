@@ -2184,20 +2184,18 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 	/* free the last round of arguments */
 	free_args(self);
 
-	/* this is done for the possible extra lines to be read from the client:
-	 * the line is read into currline; s will always point to the line currently
-	 * being processed
-	 */
-	strncpy(s, originalString, MAX_LINESIZE);
-
-	if (!s)
+	/* Check for null input */
+	if (!originalString)
 		return NULL;
 
-	/* check for empty string */
-	if (!(*s)) {
+	/* Check for zero length input */
+	if (!(originalString[0])) {
 		self->args[0] = NULL;
 		return self->args;
 	}
+
+	/* Make a local copy of the string */
+	g_strlcpy(s, originalString, MAX_LINESIZE);
 
 	/* find the arguments */
 	paridx = 0;

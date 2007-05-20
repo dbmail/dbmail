@@ -78,6 +78,7 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 	}
 	if (self->fi) {
 		if (self->fi->bodyfetch)
+			// FIXME: Should we be using dbmail-imapsession.c: _body_fetch_free?
 			g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
 		g_free(self->fi);
 		self->fi = NULL;
