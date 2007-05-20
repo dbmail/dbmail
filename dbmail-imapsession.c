@@ -671,6 +671,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self)
 			/* only allowed if last arg here */
 			return -1;
 		}
+		TRACE(TRACE_INFO,"error [%s]", token);
 		return -2;	/* DONE */
 	}
 
@@ -685,7 +686,7 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 	char *to_char_str;
 	msginfo_t *result;
 	GTree *msginfo;
-	GList *l, *l_last;
+	GList *l, *t;
 	u64_t *uid, *lo, *hi;
 	u64_t id;
 	char query[DEF_QUERYSIZE];
@@ -695,15 +696,15 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 		return NULL;
 
 	l = g_tree_keys(ids);
+	t = l;
 
-	// l = g_list_first(l);
 	lo = (u64_t *)l->data;
 
-	l_last = g_list_last(l);
-	hi = (u64_t *)l_last->data;
+	l = g_list_last(l);
+	hi = (u64_t *)l->data;
 
-	g_list_free(l);
-	
+	g_list_free(t);	
+
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 
 	k = 0;
@@ -967,15 +968,17 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	t = self->msginfo;
 
 	if ((self->msginfo=dbmail_imap_session_get_msginfo(self, self->ids)) == NULL) {
-		TRACE(TRACE_ERROR, "unable to retrieve msginfo");
+		TRACE(TRACE_INFO, "unable to retrieve msginfo. empty mailbox?");
 	}
         if(t)
                 g_tree_destroy(t);
 
 	if (! self->ids)
-		TRACE(TRACE_ERROR, "self->ids is NULL");
-	g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
-	dbmail_imap_session_mailbox_update_recent(self);
+		TRACE(TRACE_INFO, "self->ids is NULL");
+	else {
+		g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
+		dbmail_imap_session_mailbox_update_recent(self);
+	}
 	return 0;
 	
 }
@@ -1151,6 +1154,7 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 
 
 	}
+
 	TRACE(TRACE_DEBUG,"for %llu [%s]", self->msg_idnr, bodyfetch->hdrplist);
 
 	// did we prefetch this message already?
@@ -1720,34 +1724,32 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 
 	*/
 
-	mailbox_t mb;
 	GTree *oldmsginfo, *msginfo = NULL;
-	unsigned exists, recent;
+	unsigned oldexists, oldrecent;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	if (! ud->state == IMAPCS_SELECTED)
+		return 0;
 
-	exists = ud->mailbox.exists;
-	recent = ud->mailbox.recent;
+	oldexists = ud->mailbox.exists;
+	oldrecent = ud->mailbox.recent;
 
 	if (update) {
-		memset(&mb, 0, sizeof (mailbox_t));
-		mb.uid = ud->mailbox.uid;
-
                 // rebuild uid/msn trees
 		// ATTN: new messages shouldn't be visible in any way to a 
 		// client session until it has been announced with EXISTS
 		dbmail_mailbox_open(self->mailbox); 
 
                 // re-read flags and counters
-		if ((db_getmailbox(&mb)) == -1) 
+		if ((db_getmailbox(&(ud->mailbox))) == -1) 
 			return -1;
 
 		if ((msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL) {
 			TRACE(TRACE_DEBUG,"unable to retrieve msginfo");
-			return -1;
+			if (ud->mailbox.exists > 0)
+				return -1;
 		}
-		exists = mb.exists;
-		recent = mb.recent;
 	}
+
 
 	/* msg counts */
 	// EXPUNGE
@@ -1757,10 +1759,11 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		case IMAP_COMM_SELECT:
 		case IMAP_COMM_EXAMINE:
 	
-		if ((!update) || (ud->mailbox.exists <= exists)) // never decrements
-			dbmail_imap_session_printf(self, "* %u EXISTS\r\n", exists);
+		if ((!update) || (ud->mailbox.exists >= oldexists)) // never decrements
+			dbmail_imap_session_printf(self, "* %u EXISTS\r\n", ud->mailbox.exists);
 
-		dbmail_imap_session_printf(self, "* %u RECENT\r\n", recent);
+		if ((!update) || (ud->mailbox.recent != oldrecent))
+			dbmail_imap_session_printf(self, "* %u RECENT\r\n", ud->mailbox.recent);
 
 		break;
 		default:
@@ -1770,8 +1773,10 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	if (msginfo) {
 		oldmsginfo = self->msginfo;
 		self->msginfo = msginfo;
-		g_tree_foreach(oldmsginfo, (GTraverseFunc)imap_msginfo_notify, self);
-		g_tree_destroy(oldmsginfo);
+		if (oldmsginfo) {
+			g_tree_foreach(oldmsginfo, (GTraverseFunc)imap_msginfo_notify, self);
+			g_tree_destroy(oldmsginfo);
+		}
 	}
 
 	return 0;

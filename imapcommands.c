@@ -89,6 +89,8 @@ int _ic_noop(struct ImapSession *self)
 
 	if (ud->state == IMAPCS_SELECTED)
 		dbmail_imap_session_mailbox_status(self, TRUE);
+	else
+		TRACE(TRACE_DEBUG,"state: %d", ud->state);
 	
 	dbmail_imap_session_printf(self, "%s OK NOOP completed\r\n", self->tag);
 	return 0;
@@ -1497,7 +1499,6 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, struct ImapSession *
 	}
 
 	if (! cmd->silent) {
-		
 		s = imap_flags_as_string(msginfo);
 		dbmail_imap_session_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
 		g_free(s);
@@ -1633,13 +1634,14 @@ int _ic_store(struct ImapSession *self)
 
 		t = self->msginfo;
 		if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
-		       TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
+			TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
 		if(t)
 			g_tree_destroy(t);
 
-		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
-	}	
 
+		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
+
+	}	
 
 	dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;
