@@ -1,14 +1,26 @@
-2007-05-20  Paul J Stevens <paul@nfg.nl>
+2007-05-22  Paul J Stevens <paul@nfg.nl>
 
-	* imapcommands.c:
+	* dbmail-mailbox.c, imapcommands.c:
+	be more carefull before sending BAD invalid message range response
+
+2007-05-20  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-imapsession.h, dbmail-mailbox.c, 
+	imap4.c, imapcommands.c:
+	fix double free
+	* ChangeLog, imapcommands.c:
 	always cleanup after FETCH
 	* configure, dbmail-imapsession.c, imapcommands.c:
 	release bodyfetch earlier
 	* dbmail-imapsession.c, dbmail-mailbox.c, imapcommands.c, 
 	test-scripts/testimap.py:
 	work on expunge response (bug #591)
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testimap.py:
+	merge
 	* db.c:
 	cosmetics
+	* test-scripts/torture.sh:
+	fix typo
 	* test-scripts/torture.sh:
 	add torture imapsync test by Peter Rabbitson
 

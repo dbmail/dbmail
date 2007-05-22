@@ -1410,10 +1410,10 @@ int _ic_fetch(struct ImapSession *self)
 	
 		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[setidx],self->use_uid);
 
-		if (g_tree_nnodes(self->ids)==0) {
+		if (self->ids != NULL && g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 			result = DM_EGENERAL;
-		} else {
+		} else if (self->ids != NULL) {
 			self->ids_list = g_tree_keys(self->ids);
 			result = dbmail_imap_session_fetch_get_items(self);
 		}
@@ -1611,19 +1611,20 @@ int _ic_store(struct ImapSession *self)
 
 		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[k],self->use_uid);
 		
-		if (g_tree_nnodes(self->ids)==0) {
+		if (self->ids != NULL && g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 			return DM_EGENERAL;
 		}
 
-		t = self->msginfo;
-		if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
-			TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
-		if(t)
-			g_tree_destroy(t);
+		if (self->ids != NULL) {
+			t = self->msginfo;
+			if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
+				TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
+			if(t)
+				g_tree_destroy(t);
 
-
-		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
+			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
+		}
 
 	}	
 
@@ -1726,14 +1727,15 @@ int _ic_copy(struct ImapSession *self)
 
 		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[self->args_idx],self->use_uid);
 		
-		if (g_tree_nnodes(self->ids)==0) {
+		if (self->ids != NULL && g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 			return DM_EGENERAL;
+		} else if (self->ids != NULL) {
+
+			TRACE(TRACE_DEBUG,"copy [%d] messages", g_tree_nnodes(self->ids));
+
+			g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
 		}
-
-		TRACE(TRACE_DEBUG,"copy [%d] messages", g_tree_nnodes(self->ids));
-
-		g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
 	}	
 
 	if (db_commit_transaction() < 0)
