@@ -1326,7 +1326,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	u64_t *k, *v, *w = NULL;
 	GTree *a, *b, *c;
 	
-	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	b = NULL;
 
 	if (! self->ids)
 		dbmail_mailbox_open(self);
@@ -1335,6 +1335,8 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		return b;
 
 	g_return_val_if_fail(self->ids != NULL && g_tree_nnodes(self->ids) > 0,b);
+
+	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
 	TRACE(TRACE_DEBUG,"[%s] uid [%d]", set, uid);
 	
