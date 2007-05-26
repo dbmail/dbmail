@@ -1,3 +1,17 @@
+2007-05-26  Paul J Stevens <paul@nfg.nl>
+
+	* imapcommands.c:
+	fix search response for empty boxes or empty results
+	* acl.c, test-scripts/testimap.py:
+	make username in ACL response a proper astring (bug #599)
+
+2007-05-22  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, VERSION:
+	bump version
+	* ChangeLog, dbmail-mailbox.c, imapcommands.c:
+	be more carefull before sending BAD invalid message range response
+
 2007-05-22  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION:
