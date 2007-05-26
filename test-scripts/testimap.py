@@ -286,7 +286,7 @@ class testImapServer(unittest.TestCase):
         `getacl(mailbox)'
             Get the `ACL's for MAILBOX. 
         """
-        self.assertEquals(self.o.getacl('INBOX'),('OK', ['"INBOX" testuser1 lrswipcda']))
+        self.assertEquals(self.o.getacl('INBOX'),('OK', ['"INBOX" "testuser1" lrswipcda']))
         
     def getQuota(self):
         """ 

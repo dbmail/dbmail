@@ -193,6 +193,7 @@ char *acl_get_acl(u64_t mboxid)
 	size_t acl_strlen;
 	char *acl_string;	/* return string */
 	char *identifier;	/* one identifier */
+        char *identifier_astring;  /* identifier as IMAP astring */
 	char rightsstring[NR_ACL_FLAGS + 1];
 	int result;
 	struct dm_list identifier_list;
@@ -236,7 +237,9 @@ char *acl_get_acl(u64_t mboxid)
 	identifier_elm = dm_list_getstart(&identifier_list);
 	while (identifier_elm) {
 		nr_identifiers++;
-		acl_string_size += strlen((char *) identifier_elm->data) + NR_ACL_FLAGS + 2;
+		identifier_astring = dbmail_imap_astring_as_string(identifier_elm->data);
+		acl_string_size += strlen(identifier_astring) + NR_ACL_FLAGS + 2;
+		g_free(identifier_astring);
 		identifier_elm = identifier_elm->nextnode;
 	}
 
@@ -259,7 +262,9 @@ char *acl_get_acl(u64_t mboxid)
 		TRACE(TRACE_DEBUG, "%s", rightsstring);
 		if (strlen(rightsstring) > 0) {
 			acl_strlen = strlen(acl_string);
-			(void) snprintf(&acl_string[acl_strlen], acl_string_size - acl_strlen, "%s %s ", identifier, rightsstring);
+			identifier_astring = dbmail_imap_astring_as_string(identifier);
+			(void) snprintf(&acl_string[acl_strlen], acl_string_size - acl_strlen, "%s %s ", identifier_astring, rightsstring);
+			g_free(identifier_astring);
 		}
 		identifier_elm = identifier_elm->nextnode;
 	}
