@@ -956,16 +956,63 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	 */
 	
 	else if ( MATCH(key, "not") ) {
-		value->type = IST_SUBSEARCH_NOT;
-		(*idx)++;
-	
-		append_search(self, value, 1);
-		if ((result = _handle_search_args(self, search_keys, idx)) < 0)
-			return result;
-		pop_search(self);
+		char *nextkey;
 
-		return 0;
+		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		nextkey = search_keys[*idx+1];
+
+		if ( MATCH(nextkey, "answered") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "deleted") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "flagged") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "recent") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "seen") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "draft") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "new") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "(seen_flag=1 AND recent_flag=0)", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "old") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else {
+			value->type = IST_SUBSEARCH_NOT;
+			(*idx)++;
 		
+			append_search(self, value, 1);
+			if ((result = _handle_search_args(self, search_keys, idx)) < 0)
+				return result;
+			pop_search(self);
+
+			return 0;
+		}
+			
 	} else if ( MATCH(key, "or") ) {
 		value->type = IST_SUBSEARCH_OR;
 		(*idx)++;
@@ -987,7 +1034,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		while ((result = dbmail_mailbox_build_imap_search(self, search_keys, idx, 0)) == 0);
 		pop_search(self);
 		
-		return result;
+		return 0;
 
 	} else if ( MATCH(key, ")") ) {
 		(*idx)++;
@@ -1547,6 +1594,10 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			g_tree_foreach(found, (GTraverseFunc)_found_tree_copy, s->found);
 			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer) s->found);
 			g_tree_merge(found, s->found, IST_SUBSEARCH_NOT);
+			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
+
 			break;
 			
 		case IST_SUBSEARCH_OR:

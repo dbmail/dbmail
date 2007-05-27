@@ -447,31 +447,31 @@ START_TEST(test_dbmail_mailbox_get_set)
 
 	// basic tests;
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"*:1",0);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(c==d,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"1,*",0);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed [%d != 2]", d);
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"1,*",0);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
 	
 	set = dbmail_mailbox_get_set(mb,"1",0);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(d==1,"mailbox_get_set failed");
 	g_tree_destroy(set);
@@ -481,14 +481,14 @@ START_TEST(test_dbmail_mailbox_get_set)
 	char *s, *t;
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 1);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	s = tree_as_string(set);
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	t = tree_as_string(set);
 	fail_unless(strncmp(s,t,1024)==0,"mismatch between <1:*> and <UID 1:*>\n%s\n%s", s,t);
 	g_tree_destroy(set);
@@ -501,11 +501,11 @@ START_TEST(test_dbmail_mailbox_get_set)
 	// empty box
 	mb = dbmail_mailbox_new(get_mailbox_id("empty"));
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 	
 	set = dbmail_mailbox_get_set(mb, "*", 0);
-	fail_unless(set,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb, "1", 0);
