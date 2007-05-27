@@ -1325,6 +1325,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	u64_t i, l, r, lo = 0, hi = 0;
 	u64_t *k, *v, *w = NULL;
 	GTree *a, *b, *c;
+	gboolean error = FALSE;
 	
 	b = NULL;
 
@@ -1333,8 +1334,6 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	
 	if (! (self->ids && set))
 		return b;
-
-	g_return_val_if_fail(self->ids != NULL && g_tree_nnodes(self->ids) > 0,b);
 
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
@@ -1375,8 +1374,10 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 			if (strlen(rest) > 1)
 				rest++;
 		} else {
-			if (! (l = strtoull(sets->data,&rest,10)))
+			if (! (l = strtoull(sets->data,&rest,10))) {
+				error = TRUE;
 				break;
+			}
 			if (l == 0xffffffff) // outlook
 				l = hi;
 
@@ -1433,6 +1434,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		}
 		
 		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
+			error = TRUE;
 			TRACE(TRACE_ERROR, "cannot compare null trees");
 			break;
 		}
@@ -1449,6 +1451,11 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 
 	if (a)
 		g_tree_destroy(a);
+
+	if (error) {
+		g_tree_destroy(b);
+		b = NULL;
+	}
 
 	return b;
 }

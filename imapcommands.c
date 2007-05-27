@@ -1286,17 +1286,17 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	mb = dbmail_mailbox_new(ud->mailbox.uid);
 	switch(order) {
 		case SEARCH_SORTED:
-			cmd = "SORT ";
+			cmd = "SORT";
 			break;
 		case SEARCH_UNORDERED:
-			cmd = "SEARCH ";
+			cmd = "SEARCH";
 			break;
 		case SEARCH_THREAD_REFERENCES:
 		case SEARCH_THREAD_ORDEREDSUBJECT:
-			cmd = "THREAD ";
+			cmd = "THREAD";
 			break;
 		default:// shouldn't happen
-			cmd = "NO ";
+			cmd = "NO";
 			break;
 	}
 	if (g_tree_nnodes(mb->ids) > 0) {
@@ -1327,11 +1327,14 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 
 	}
 
-	dbmail_imap_session_printf(self, "* %s%s\r\n", cmd, s?s:"");
-	if (s)
+	if (s) {
+		dbmail_imap_session_printf(self, "* %s %s\r\n", cmd, s);
 		g_free(s);
+	} else {
+		dbmail_imap_session_printf(self, "* %s\r\n", cmd);
+	}
 
-	dbmail_imap_session_printf(self, "%s OK %scompleted\r\n", self->tag, cmd);
+	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, cmd);
 	dbmail_mailbox_free(mb);
 	
 	return 0;
@@ -1356,6 +1359,38 @@ int _ic_thread(struct ImapSession *self)
 
 	return 1;
 }
+
+int _dm_imapsession_get_ids(struct ImapSession *self, const char *set)
+{
+	int retry = 2;
+	int result = DM_SUCCESS;
+
+	dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
+
+	if (self->ids) {
+		g_tree_destroy(self->ids);
+		self->ids = NULL;
+	}
+	while (retry > 0) {
+
+		self->ids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
+		if (g_tree_nnodes(self->ids)> 0)
+			break;
+
+		if ((result = dbmail_mailbox_open(self->mailbox))!= DM_SUCCESS)
+			return result;
+		retry--;
+	}
+
+	if (g_tree_nnodes(self->ids)==0) {
+		dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
+		return DM_EGENERAL;
+	}
+
+	return DM_SUCCESS;
+}
+
+
 
 /*
  * _ic_fetch()
@@ -1399,30 +1434,18 @@ int _ic_fetch(struct ImapSession *self)
 		self->args_idx++;
 	} while (state > 0);
 
-	result = 0;
-	if (g_tree_nnodes(self->mailbox->ids) > 0) {
+	result = DM_SUCCESS;
 
-		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
-
-		if (self->ids) {
-			g_tree_destroy(self->ids);
-			self->ids = NULL;
-		}
-	
-		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[setidx],self->use_uid);
-
-		if (self->ids != NULL && g_tree_nnodes(self->ids)==0) {
-			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
-			result = DM_EGENERAL;
-		} else if (self->ids != NULL) {
-			self->ids_list = g_tree_keys(self->ids);
-			result = dbmail_imap_session_fetch_get_items(self);
-		}
+  	if (g_tree_nnodes(self->mailbox->ids) > 0) {
+ 		if ((result = _dm_imapsession_get_ids(self, self->args[setidx])) == DM_SUCCESS) {
+  			self->ids_list = g_tree_keys(self->ids);
+  			result = dbmail_imap_session_fetch_get_items(self);
+  		}
 	}
-			
+
 	dbmail_imap_session_fetch_free(self);
 
-	if (! result)
+	if (result == DM_SUCCESS)
 		dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 
 	return result;
@@ -1599,38 +1622,26 @@ int _ic_store(struct ImapSession *self)
 	   the right to store the flags */
 
 	self->cmd = &cmd;
+	
+	result = DM_SUCCESS;
 
-	if (g_tree_nnodes(self->mailbox->ids) > 0) {
-		GTree *t;
+  	if (g_tree_nnodes(self->mailbox->ids) > 0) {
+ 		if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS) {
+ 			GTree *t;
+ 			t = self->msginfo;
+ 			if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
+ 				TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
+ 			if(t)
+ 				g_tree_destroy(t);
+ 
+ 			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
+  		}
+  	}	
 
-		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
-		
-		if (self->ids) {
-			g_tree_destroy(self->ids);
-			self->ids = NULL;
-		}
+	if (result == DM_SUCCESS)
+		dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag, self->use_uid ? "UID " : "");
 
-		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[k],self->use_uid);
-		
-		if (self->ids != NULL && g_tree_nnodes(self->ids)==0) {
-			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
-			return DM_EGENERAL;
-		}
-
-		if (self->ids != NULL) {
-			t = self->msginfo;
-			if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
-				TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
-			if(t)
-				g_tree_destroy(t);
-
-			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
-		}
-
-	}	
-
-	dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag, self->use_uid ? "UID " : "");
-	return 0;
+	return result;
 }
 
 
@@ -1716,28 +1727,16 @@ int _ic_copy(struct ImapSession *self)
 
 	if (db_begin_transaction() < 0)
 		return -1;
-	
+
 	if (g_tree_nnodes(self->mailbox->ids) > 0) {
-
-		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
-		
-		if (self->ids) {
-			g_tree_destroy(self->ids);
-			self->ids = NULL;
-		}
-
-		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[self->args_idx],self->use_uid);
-		
-		if (self->ids != NULL && g_tree_nnodes(self->ids)==0) {
-			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
-			return DM_EGENERAL;
-		} else if (self->ids != NULL) {
-
-			TRACE(TRACE_DEBUG,"copy [%d] messages", g_tree_nnodes(self->ids));
-
-			g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
-		}
-	}	
+  
+ 		if ((_dm_imapsession_get_ids(self, self->args[self->args_idx]) == DM_SUCCESS)) {
+ 			g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
+ 		} else {
+ 			db_rollback_transaction();
+  			return DM_EGENERAL;
+  		}
+  	}	
 
 	if (db_commit_transaction() < 0)
 		return -1;
