@@ -26,13 +26,13 @@ What do you need?
 
 1.	Setup a database
 
-	Mysql setup
+	MySQL setup
 	-----------
 
-	First you'll need to create the DBMail database in MYSQL. You can
-	do this by issueing the following command. This step is only
-	necessary when you do not have a database for DBMail yet. Note that
-	you will be prompted for the MySQL root password.
+	First you'll need to create the DBMail database in MYSQL. You can do
+	this by issuing the following command. This step is only necessary when
+	you do not have a database for DBMail yet. Note that you will be
+	prompted for the MySQL root password.
 
 	mysqladmin create dbmail -u root -p
 
@@ -58,10 +58,10 @@ What do you need?
 	After this, the DBMAIL tables will have been created and we can go
 	on to the compilation and installation of DBMail itself.
 
-	Postgresql setup
+	PostgreSQL setup
 	----------------
 	
-	First you need to create the postgresql user dbmail is going to use.
+	First you need to create the PostgreSQL user dbmail is going to use.
 	This is done by. Note that this command can only be performed by
 	user postgres or another PostgreSQL user with the privileges to
 	create users and and databases.
@@ -73,14 +73,14 @@ What do you need?
 
 	ALTER USER dbmail WITH PASSWORD '<password>';
 
-	In a postgresql console, with <password> replaced by the actual 
+	In a PostgreSQL console, with <password> replaced by the actual 
 	password you want to use. After doing this you should create the
 	database for dbmail:
 
 	createdb -U dbmail dbmail
 
 	The first dbmail is the user you just created, the second the name of
-	the database.  Of course you can use an other databasename. After
+	the database.  Of course you can use an other database name. After
 	setting up the user and database it's time to create the tables, do a:
 
 	psql -U dbmail dbmail < sql/postgresql/create_tables.pgsql
@@ -104,7 +104,7 @@ What do you need?
 
 	Copy the dbmail.conf file to /etc
 	Edit the dbmail.conf file and set everything in there
-	to your likeings.
+	to your likings.
 
 	Make sure to set your database name, user and host are configured
 	in dbmail.conf. Other options in the configuration file are 
@@ -125,7 +125,7 @@ What do you need?
 
 4.	Create users in the dbmail system
 
-	Next you will need to create some users into the dbmail mailing sytem.
+	Next you will need to create some users into the dbmail mailing system.
 	Currently this can be done in two ways. One way is using the
 	dbmail-users utility. The other way is doing it in the database
 	itself. To do it using the dbmail-users utility and do the following:
@@ -133,21 +133,21 @@ What do you need?
 	dbmail-users -a <username> -w <password> -g <clientid>\
 	             -m <maxmail> [-s aliases]
 	
-	clientid can be left 0 (this is if you want certain mailadministrators
-	administer specific groups of mailusers). maxmail is the maximum
+	clientid can be left 0 (this is if you want certain mail administrators
+	administer specific groups of mail users). maxmail is the maximum
 	number of bytes this user may have in his/her mailboxes. 0 is
 	unlimited. Add K or M for kilobytes and megabytes. Aliases are a 
 	number of aliases for this user. @domain are domain aliases. 
 	A user always needs to have at least one alias to receive mail, unless
 	the users username is something like foo@bar.org, where bar.org is 
-	a domain the mailserver deliveres to.
+	a domain the mail server delivers to.
 	
 	example: 
 	./dbmail-users -a john -w secret -g 0 -m 25M\
 	               -s john@dude.org john@dude.net @net.com
 	
 	This will create a user john, with a password secret. It will set
-	john's maillimit 25 Mb and all mail for john@dude.org, john@dude.net
+	john's mail limit 25 Mb and all mail for john@dude.org, john@dude.net
 	and @net.com will be sent to john. The @net.com is a fallback alias.
 	This means that all mail that cannot be delivered to an existing alias
 	for a @net.com address will sent to john.
@@ -156,22 +156,23 @@ What do you need?
 
 	There are two ways to connect your MTA to DBMail. The MTA can start a
 	dbmail-smtp process and pipe SMTP commands and messages to it, or it
-	can use lmtp (Local Mail Transport Protocol) to deliver via
+	can use LMTP (Local Mail Transport Protocol) to deliver via
 	dbmail-lmtpd. LMTP is the preferred solution because it offers more
 	robust error handling and because it is a daemon, high traffic servers
 	will have reduced delays which would be incurred starting up a
 	dbmail-smtp process for each message.
 
-	The specifics of delivering to DBMail from your MTA can be found in
-	the INSTALL.<MTA Name> files. Currently there is documentation for
-	Postfix and Exim.
+	The specifics of delivering to DBMail from your MTA can be found in the
+	README.<MTA Name> files. Currently there is documentation for Postfix,
+	Exim and QMail. Other setup information can also be found on the
+	project wiki, at http://www.dbmail.org/dokuwiki
 
-	If you use a different kind of mta that we do not have documentation
+	If you use a different kind of MTA that we do not have documentation
 	for: The dbmail injector program, dbmail-smtp, can receive information
 	in two ways. Either through raw mail (for example, delivered by
 	procmail) using the -n option or from a MTA with recipients in the
-	commandline using the -d option. Be carefull, the -n option is not
-	fully tested and may behave unexected. If possible use the -d option.
+	command line using the -d option. Be careful, the -n option is not
+	fully tested and may behave unexpected. If possible use the -d option.
 
 	Setup for LMTP should be straightforward if your MTA supports it.
 
@@ -179,14 +180,13 @@ What do you need?
 
 	The dbmail daemons and the smtp injector itself will never actually
 	delete mail from the database. The only program that will do this is
-	the dbmail-util program. This program will also check the
-	integrity of the dbmail database and, if nescessary, fix it. The
-	dbmail-util program will first delete all messages that are set
-	for final deletion. After that it will set all messages that have the
-	delete status set to status final deletion. This way dbmail always
-	has a backup based upon the interval difference between maintenance
-	jobs. We recommend running the dbmail-util program in a daily
-	interval from cron:
+	the dbmail-util program. This program will also check the integrity of
+	the dbmail database and, if necessary, fix it. The dbmail-util program
+	will first delete all messages that are set for final deletion. After
+	that it will set all messages that have the delete status set to status
+	final deletion. This way dbmail always has a backup based upon the
+	interval difference between maintenance jobs. We recommend running the
+	dbmail-util program in a daily interval from cron:
 
 	0 3 * * * /usr/local/sbin/dbmail-util -ay &>/dev/null
 	
@@ -198,14 +198,14 @@ What do you need?
 
 8.	Problems
 	--------
-	For problems you can subscribe to the dbmail mailinglist: 
+	For problems you can subscribe to the dbmail mailing list: 
 	http://mailman.fastxs.nl/mailman/listinfo/dbmail
 	
-	Please always check the archives first.
+	Please also check the mailing list archives,
+	the wiki at: http://www.dbmail.org/dokuwiki
+	and the bugs at: http://www.dbmail.org/mantis
 
-	or check out the dbmail website at http://www.dbmail.org.
-
-	Please note that DBMail logs a lot of relevant data to the maillog
+	Please note that DBMail logs a lot of relevant data to the mail log
 	(often located at /var/log/maillog or /var/log/mail.log). This can
 	help you often if something is not working, e.g. if there's no
 	connection to the database.  
