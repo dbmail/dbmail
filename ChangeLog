@@ -1,3 +1,8 @@
+2007-05-28  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c:
+	Fixed send_reply, which was totally broken (closes bug #603)
+
 2007-05-27  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_mailbox.c, dbmail-mailbox.c:
