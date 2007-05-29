@@ -1,7 +1,11 @@
-2007-05-28  Aaron Stone  <aaron@serendipity.cx>
+2007-05-30  Paul J Stevens <paul@nfg.nl>
 
-	* pipe.c:
-	Fixed send_reply, which was totally broken (closes bug #603)
+	* db.c:
+	avoid segfault while getting uidnext for empty mailbox
+	* debug.c:
+	add hostname, process name and id to error log
+	* test-scripts/cleanlog.sh:
+	add new file
 
 2007-05-27  Paul J Stevens <paul@nfg.nl>
 
@@ -10,26 +14,12 @@
 	* ChangeLog, check_dbmail_mailbox.c, dbmail-mailbox.c, imapcommands.c:
 	fix the annoying invalid message range problem
 
-2007-05-26  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, imapcommands.c:
-	fix search response for empty boxes or empty results
-	* acl.c, test-scripts/testimap.py:
-	make username in ACL response a proper astring (bug #599)
-
 2007-05-26  Paul J Stevens <paul@nfg.nl>
 
 	* imapcommands.c:
 	fix search response for empty boxes or empty results
 	* acl.c, test-scripts/testimap.py:
 	make username in ACL response a proper astring (bug #599)
-
-2007-05-22  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, VERSION:
-	bump version
-	* ChangeLog, dbmail-mailbox.c, imapcommands.c:
-	be more carefull before sending BAD invalid message range response
 
 2007-05-22  Paul J Stevens <paul@nfg.nl>
 
