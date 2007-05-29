@@ -2919,7 +2919,10 @@ int db_getmailbox_count(mailbox_t *mb)
 	if (db_query(query) == -1)
 		return DM_EQUERY;
 
-	mb->msguidnext = db_get_result_u64(0, 0);
+	if (db_num_rows())
+		mb->msguidnext = db_get_result_u64(0, 0);
+	else
+		mb->msguidnext = 1;
 	db_free_result();
 
 	return DM_SUCCESS;
