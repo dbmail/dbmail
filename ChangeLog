@@ -1,3 +1,17 @@
+2007-06-01  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql:
+	add default encoding to mysql tables to match the default config file
+
+2007-05-30  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, db.c:
+	avoid segfault while getting uidnext for empty mailbox
+	* debug.c:
+	add hostname, process name and id to error log
+	* test-scripts/cleanlog.sh:
+	add new file
+
 2007-05-30  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:
