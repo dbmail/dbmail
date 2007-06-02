@@ -1,3 +1,8 @@
+2007-06-02  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	bump version
+
 2007-06-01  Paul J Stevens <paul@nfg.nl>
 
 	* sql/mysql/create_tables.mysql:
