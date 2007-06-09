@@ -1,44 +1,38 @@
-/* $Id$ 
+/*  
    (c) 2000-2004 IC&S, The Netherlands 
    (c) 2004-2006 NFG, The Netherlands
    */
 
-DBMAIL installation
+DBMAIL Installation
 ===================
-
-This file describes the installation of DBMail. To read about extra 
-features in dbmail you should consult the README.* files.
-Remember, DBmail is easy to install, as long as you exactly follow
-these instructions.
 
 What do you need?
 
-- a working mysql (> 4.1.3) with innodb support or a postgresql installation
-- a working smtp server (Postfix, Exim, QMail or Sendmail)
-- the DBMail source (www.dbmail.org)
-- GNU Make. On Linux systems, your standard 'make' program is GNU Make. On
-  *BSD systems, make sure you install and use 'gmake'. 
-- development files (libs, scripts and include files) for your database 
-  server. These will probably be provided by separate packages.
-- glib (>= 2.8) development headers and libraries.
-- gmime (>= 2.1.18) development headers and libraries.
-- libsieve for sieve support (libsieve.sf.net).
-- libldap for ldap support (only tested with openldap).
+- A working database, one of the following:
+  - MySQL 4.1.3 or higher with InnoDB.
+  - PostgreSQL 7.4 or higher.
+  - SQLite 3 or higher.
+- A working SMTP server (such as Postfix, Exim, QMail or Sendmail).
+- The DBMail source (www.dbmail.org).
+- GNU Make. On Linux systems, your standard 'make' program is GNU Make. On *BSD
+  systems, make sure you install and use 'gmake'. 
+- Development files (libs, scripts and include files) for your database server.
+  These will probably be provided by separate packages.
+- Glib (>= 2.8) development headers and libraries.
+- Gmime (>= 2.1.18) development headers and libraries.
+- libSieve for Sieve support (libsieve.sf.net).
+- Any standard libldap for LDAP support (only tested with OpenLDAP, however).
 
 
 1.	Setup a database
 
-	Currently,  DBMail supports both MySQL, PostgreSQL and SQLite3 for mailstorage.
-	MySQL is supported from version 4.1.3 upwards. Earlier versions of
-	MySQL lack some SQL features that are needed for DBMail.
-
 	Mysql setup
 	-----------
 
-	First you'll need to create the DBMail database in MYSQL. You can
-	do this by issueing the following command. This step is only
-	necessary when you do not have a database for DBMail yet. Note that
-	you will be prompted for the MySQL root password.
+	First you'll need to create the DBMail database in MYSQL. You can do
+	this by issuing the following command. This step is only necessary when
+	you do not have a database for DBMail yet. Note that you will be
+	prompted for the MySQL root password.
 
 	mysqladmin create dbmail -u root -p
 
@@ -59,13 +53,8 @@ What do you need?
 	the following command from the command line. You will have to
 	enter the password you set in the previous step.
 
-	mysql -u dbmail dbmail -p < sql/mysql/create_tables_innoDB.mysql
+	mysql -u dbmail dbmail -p < sql/mysql/create_tables.mysql
 
-	If you cannot use InnoDB, replace creates_table_innoDB.mysql by
-	create_tables.mysql. This is not recommended though. In future
-	versions, DBMail will only support MySQL with transaction support,
-	which is only given by InnoDB at the moment.
-	
 	After this, the DBMAIL tables will have been created and we can go
 	on to the compilation and installation of DBMail itself.
 
@@ -173,9 +162,10 @@ What do you need?
 	will have reduced delays which would be incurred starting up a
 	dbmail-smtp process for each message.
 
-	The specifics of delivering to DBMail from your MTA can be found in
-	the INSTALL.<MTA Name> files. Currently there is documentation for
-	Postfix and Exim.
+	The specifics of delivering to DBMail from your MTA can be found in the
+	README.<MTA Name> files. Currently there is documentation for Postfix,
+	Exim and qmail. Other setup information can also be found on the
+	project wiki, at http://www.dbmail.org/dokuwiki
 
 	If you use a different kind of mta that we do not have documentation
 	for: The dbmail injector program, dbmail-smtp, can receive information
@@ -190,14 +180,13 @@ What do you need?
 
 	The dbmail daemons and the smtp injector itself will never actually
 	delete mail from the database. The only program that will do this is
-	the dbmail-util program. This program will also check the
-	integrity of the dbmail database and, if nescessary, fix it. The
-	dbmail-util program will first delete all messages that are set
-	for final deletion. After that it will set all messages that have the
-	delete status set to status final deletion. This way dbmail always
-	has a backup based upon the interval difference between maintenance
-	jobs. We recommend running the dbmail-util program in a daily
-	interval from cron:
+	the dbmail-util program. This program will also check the integrity of
+	the dbmail database and, if nescessary, fix it. The dbmail-util program
+	will first delete all messages that are set for final deletion. After
+	that it will set all messages that have the delete status set to status
+	final deletion. This way dbmail always has a backup based upon the
+	interval difference between maintenance jobs. We recommend running the
+	dbmail-util program in a daily interval from cron:
 
 	0 3 * * * /usr/local/sbin/dbmail-util -ay &>/dev/null
 	
@@ -212,9 +201,9 @@ What do you need?
 	For problems you can subscribe to the dbmail mailinglist: 
 	http://mailman.fastxs.nl/mailman/listinfo/dbmail
 	
-	Please always check the archives first.
-
-	or check out the dbmail website at http://www.dbmail.org.
+	Please also check the mailing list archives,
+	the wiki at: http://www.dbmail.org/dokuwiki
+	and the bugs at: http://www.dbmail.org/mantis
 
 	Please note that DBMail logs a lot of relevant data to the maillog
 	(often located at /var/log/maillog or /var/log/mail.log). This can
