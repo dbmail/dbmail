@@ -39,7 +39,10 @@ const char * db_get_sql(sql_fragment_t frag)
 			return "DATE_FORMAT(%s, '%%Y-%%m-%%d %%T')";
 		break;
 		case SQL_TO_DATE:
-			return "'%s'";
+			return "DATE(%s)";
+		break;
+		case SQL_TO_DATETIME:
+			return "TIMESTAMP(%s)";
 		break;
 		case SQL_CURRENT_TIMESTAMP:
 			return "CURRENT_TIMESTAMP";
@@ -50,17 +53,18 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_BINARY:
 			return "BINARY";
 		break;
+		case SQL_REGEXP:
+			return "REGEXP";
+		break;
 		case SQL_SENSITIVE_LIKE:
 			return "LIKE BINARY";
 		break;
 		case SQL_INSENSITIVE_LIKE:
 			return "LIKE";
 		break;
+		case SQL_STRCASE:
 		case SQL_ENCODE_ESCAPE:
 			return "%s";
-		break;
-		case SQL_SEQ_NEXTVAL:
-			return "NULL";
 		break;
 	}
 	return NULL;
@@ -266,17 +270,9 @@ int db_check_connection()
 
 u64_t db_insert_result(const char *sequence_identifier UNUSED)
 {
-	return (u64_t)mysql_insert_id(&conn);
-}
-
-u64_t db_sequence_currval(const char *sequence_identifier UNUSED)
-{
-	return (u64_t)mysql_insert_id(&conn);
-}
-
-u64_t db_sequence_nextval(const char *sequence_identifier UNUSED)
-{
-	return 0; // make this trigger the use of NULL in the ensuing INSERT
+	u64_t insert_result;
+	insert_result = mysql_insert_id(&conn);
+	return insert_result;
 }
 
 int db_query(const char *q)

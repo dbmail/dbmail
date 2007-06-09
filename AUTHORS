@@ -1,8 +1,5 @@
-$Id$
-
-Eelco van Beek (eelco at ic-s dot nl)
-Roel Rozendaal (roel at ic-s dot nl)
-Ilja Booij (ilja at ic-s dot nl)
-Aaron Stone (aaron at serendipity dot cx):
-Paul Stevens (paul at nfg dot nl):
-
+eelco = Eelco van Beek <eelco@ic-s.nl>
+roel = Roel Rozendaal <roel@ic-s.nl>
+ilja = Ilja Booij <ilja@ic-s@nl>
+aaron = Aaron Stone <aaron@serendipity.cx>
+paul = Paul Stevens <paul@nfg.nl>

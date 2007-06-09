@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
--- $Id$
+-- 
 
 /* first start a transaction to possibly create the auto_replies and 
    auto_notifications tables, which might, or might not be present.

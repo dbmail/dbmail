@@ -5,15 +5,10 @@
  *
  * (c) 2005 Aaron Stone <aaron@serendipity.cx>
  *
- * $Id: $
+ * 
  */
 
-#include <gmodule.h>
-
-#include "config.h"
-#include "debug.h"
-#include "db.h"
-#include "dbmodule.h"
+#include "dbmail.h"
 #define THIS_MODULE "db"
 
 static db_func_t *db = NULL;
@@ -55,15 +50,22 @@ int db_load_driver(void)
 		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from MySQL, PGSQL, SQLite, Ingres",
 				_db_params.driver);
 
+	field_t library_dir;
+	config_get_value("library_directory", "DBMAIL", library_dir);
+	if (strlen(library_dir) == 0) {
+		TRACE(TRACE_DEBUG, "no value for library_directory, using default [%s]", DEFAULT_LIBRARY_DIR);
+		snprintf(library_dir, sizeof(field_t), "%s", DEFAULT_LIBRARY_DIR);
+	} else {
+		TRACE(TRACE_DEBUG, "library_directory is [%s]", library_dir);
+	}
+
 	/* Try local build area, then dbmail lib paths, then system lib path. */
 	int i;
-	char *lib_path[] = {
-		"modules/.libs",
-		PREFIX "/lib/dbmail",
-		NULL };
+	char *lib_path[] = { library_dir, NULL };
+
 	/* Note that the limit here *includes* the NULL. This is intentional,
 	 * to allow g_module_build_path to try the current working directory. */
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 2; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
 
@@ -86,7 +88,7 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_disconnect",          (gpointer)&db->disconnect          )
 	||  !g_module_symbol(module, "db_check_connection",    (gpointer)&db->check_connection    )
 	||  !g_module_symbol(module, "db_query",               (gpointer)&db->query               )
-	||  !g_module_symbol(module, "db_insert_result",       (gpointer)&db->insert_result       ) // deprecated: mysql-only
+-	||  !g_module_symbol(module, "db_insert_result",       (gpointer)&db->insert_result       ) // deprecated: mysql-only
 	||  !g_module_symbol(module, "db_sequence_nextval",    (gpointer)&db->sequence_nextval    )
 	||  !g_module_symbol(module, "db_sequence_currval",    (gpointer)&db->sequence_currval    )
 	||  !g_module_symbol(module, "db_num_rows",            (gpointer)&db->num_rows            )

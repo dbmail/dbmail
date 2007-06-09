@@ -16,7 +16,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sort.c 2199 2006-07-18 11:07:53Z paul $
+/* 
  *
  * Central switching station for email on its way to be delivered.
  * From here we call out to the sorting module, if applicable, to
@@ -191,7 +191,7 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 				useridnr);
 		return DSN_CLASS_TEMP;
 	default:
-		TRACE(TRACE_MESSAGE, "message id=%llu, size=%d is inserted", 
+		TRACE(TRACE_MESSAGE, "message id=%llu, size=%zd is inserted", 
 				newmsgidnr, msgsize);
 		if (msgflags) {
 			TRACE(TRACE_MESSAGE, "message id=%llu, setting imap flags", 

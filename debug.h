@@ -18,8 +18,6 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
  
- $Id$
- 
  headers for debug.c 
  
 */
@@ -28,11 +26,6 @@
 #define  _DEBUG_H
 
 #include "dbmail.h"
-
-#ifdef USE_GC
-#define GC_DEBUG
-#include <gc/gc.h>
-#endif
 
 typedef enum {
 	TRACE_FATAL = 0,
@@ -57,30 +50,11 @@ typedef enum {
 #endif
 
 
-#ifdef USE_GC
-
-#define dm_malloc(s) GC_MALLOC(s)
-#define dm_free(p) GC_FREE(p)
-#define dm_calloc(n,p) GC_MALLOC((n) * (p))
-#define dm_realloc(n,p) GC_REALLOC((n),(p))
-
-#else
-
-#define dm_malloc(s) g_malloc(s)
-#define dm_free(p) g_free(p)
-#define dm_calloc(n,p) g_malloc0(n,p)
-#define dm_realloc(n,p) g_realloc(n,p)
-
-#endif
-
-
 #define TRACE(level, fmt...) trace(level, THIS_MODULE, __FILE__, __func__, __LINE__, fmt)
 void trace(trace_t level, const char * module,
 		const char * file, const char * function,
 		int line, char *formatstring, ...) PRINTF_ARGS(6, 7);
 
 void configure_debug(trace_t trace_syslog, trace_t trace_stderr);
-
-#define dm_strdup(s) g_strdup(s)
 
 #endif

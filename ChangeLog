@@ -1,3 +1,430 @@
+2007-06-09  Aaron Stone  <aaron@serendipity.cx>
+
+	* [just about everything]:
+	Resync with DBMail 2.2.5
+
+2007-06-02  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	bump version
+
+2007-06-01  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql:
+	add default encoding to mysql tables to match the default config file
+
+2007-05-30  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, db.c:
+	avoid segfault while getting uidnext for empty mailbox
+	* debug.c:
+	add hostname, process name and id to error log
+	* test-scripts/cleanlog.sh:
+	add new file
+
+2007-05-30  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	avoid segfault while getting uidnext for empty mailbox
+	* debug.c:
+	add hostname, process name and id to error log
+	* test-scripts/cleanlog.sh:
+	add new file
+
+2007-05-27  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_mailbox.c, dbmail-mailbox.c:
+	fix NOT searches and add optimization (bug #602)
+	* ChangeLog, check_dbmail_mailbox.c, dbmail-mailbox.c, imapcommands.c:
+	fix the annoying invalid message range problem
+
+2007-05-26  Paul J Stevens <paul@nfg.nl>
+
+	* imapcommands.c:
+	fix search response for empty boxes or empty results
+	* acl.c, test-scripts/testimap.py:
+	make username in ACL response a proper astring (bug #599)
+
+2007-05-22  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	bump version
+	* ChangeLog, dbmail-mailbox.c, imapcommands.c:
+	be more carefull before sending BAD invalid message range response
+
+2007-05-20  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-imapsession.h, dbmail-mailbox.c, 
+	imap4.c, imapcommands.c:
+	fix double free
+	* ChangeLog, imapcommands.c:
+	always cleanup after FETCH
+	* configure, dbmail-imapsession.c, imapcommands.c:
+	release bodyfetch earlier
+	* dbmail-imapsession.c, dbmail-mailbox.c, imapcommands.c, 
+	test-scripts/testimap.py:
+	work on expunge response (bug #591)
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testimap.py:
+	merge
+	* db.c:
+	cosmetics
+	* test-scripts/torture.sh:
+	fix typo
+	* test-scripts/torture.sh:
+	add torture imapsync test by Peter Rabbitson
+
+2007-05-16  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_deliver.c, check_dbmail_imapd.c, 
+	check_dbmail_message.c, check_dbmail_util.c, config.in, db.c, 
+	dbmail-imapsession.c, dbmail-mailbox.c, dbmail-user.c, dm_match.c, 
+	export.c, imapcommands.c, imapd.c, main.c, maintenance.c, misc.c, 
+	user.c:
+	g_list_free cleanup
+	* .gitignore:
+	add file
+	* debian/dbmail.postrm:
+	don't depend on debconf during purge
+	* debian/patches/00-dbmail_conf.dpatch, 
+	debian/patches/00-etch.dpatch, debian/patches/00list:
+	debian updates
+	* debian/changelog:
+	update
+
+2007-05-19  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-imapsession.c:
+	Fixes for two more memory leaks
+
+2007-05-16  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_deliver.c, check_dbmail_imapd.c, 
+	check_dbmail_message.c, check_dbmail_util.c, config.in, db.c, 
+	dbmail-imapsession.c, dbmail-mailbox.c, dbmail-user.c, dm_match.c, 
+	export.c, imapcommands.c, imapd.c, main.c, maintenance.c, misc.c, 
+	user.c:
+	g_list_free cleanup
+	* .gitignore:
+	add file
+	* debian/dbmail.postrm:
+	don't depend on debconf during purge
+	* debian/patches/00-dbmail_conf.dpatch, 
+	debian/patches/00-etch.dpatch, debian/patches/00list:
+	debian updates
+	* debian/changelog:
+	update
+
+2007-05-15  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_mailbox.c, dbmail-mailbox.c, 
+	test-scripts/testimap.py:
+	rebuild uid_msn mapper (bug #578)
+	* debian/changelog:
+	update debian changelog for upcoming release
+	* misc.c:
+	fix small leaks
+
+2007-05-15  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c, dbmail-imapsession.c, dbmail-mailbox.c:
+	Fixed memory leaks around g_list_slices
+	* configure.in, dbmail.h.in, acinclude.m4, VERSION:
+	Added a note that the version number is kept in this new VERSION file,
+	both to cut down on automake regenerations between releases and to
+	allow for a Subversion post-commit script to plant the version number
+	* export.c main.c maintenance.c serverparent.c sievecmd.c user.c:
+	Use the new PRINTF_THIS_IS_DBMAIL macro.
+
+2007-05-15  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, test-scripts:
+	rebuild uid_msn mapper (bug #578)
+	* debian:
+	update debian changelog for upcoming release
+	* misc.c:
+	fix small leaks
+
+2007-05-14  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, debian, man:
+	downcase all debconf keys
+	* configure, configure.in, debian:
+	2.2.5-rc2
+
+2007-05-14  Paul J Stevens <paul@nfg.nl>
+
+	* debian:
+	downcase all debconf keys
+	* configure, configure.in, debian:
+	2.2.5-rc2
+
+2007-05-13  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, misc.c:
+	only iconv_strdup non-utf8 values from database
+	* check_dbmail_misc.c, dbmail-message.c, dbmail-message.h, misc.c, 
+	misc.h, test-scripts:
+	cleanup the convert_8bit functions
+	* dbmail-imapsession.c, imapcommands.c, test-scripts:
+	be more careful about re-opening mailbox during sessions
+
+2007-05-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* maintenance.c, db.h, db.c, man/dbmail-util.txt:
+	Added new option '-r time' to clear old replycache entries. Cleaned
+	up the timestrings used to find old ipllog and replycache entries.
+
+2007-05-13  Paul J Stevens <paul@nfg.nl>
+
+	* misc.c:
+	only iconv_strdup non-utf8 values from database
+	* check_dbmail_misc.c, dbmail-message.c, dbmail-message.h, misc.c, 
+	misc.h, test-scripts:
+	cleanup the convert_8bit functions
+	* dbmail-imapsession.c, imapcommands.c, test-scripts:
+	be more careful about re-opening mailbox during sessions
+
+2007-05-12  Paul Stevens <paul@nfg.nl>
+
+	* Makefile.in:
+	autotools update
+	* Makefile.am, db.c, dbmail-imapsession.c, dbmail-mailbox.c, 
+	dbmailtypes.h, dm_imaputil.c, dm_imaputil.h, export.c, imap4.c, 
+	modules:
+	add message selection using IMAP SEARCH syntax and stdout output to 
+	export
+	* dbmail-imapsession.c:
+	fix typo
+	* ChangeLog, dbmail-imapsession.c:
+	send EXISTS response when message count stays the same (bug #591)
+
+2007-05-12  Aaron Stone  <aaron@serendipity.cx>
+
+	* pop3d.c, pop3.c, imapd.c, server.c, serverchild.c, dbmailtypes.h,
+	lmtpd.c, lmtp.c, timsieved.c, timsieve.c, dbmail-imapsession.c:
+	Changes to timeout handling (closes bug #517)
+	* export.c:
+	Added -d command line option to delete messages after they have been
+	exported (closes bug #380)
+	* man/dbmail-export.txt man/dbmail-conf.txt man/footer.txt:
+	Added documentation for the encoding options in dbmail.conf, for the
+	new command line options in dbmail-export, and changed my title.
+
+2007-05-11  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-imapsession.c:
+	Set IMAP args array members to NULL after freeing them (closes bug
+	#590)
+	* dbmail-message.c:
+	Remove setvbuf call (closes bug #587)
+
+2007-05-10  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-imapsession.c:
+	Changed exists and recent to be unsigned integers, as they are
+	elsewhere (closes bug #586)
+
+2007-05-10  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	always send EXISTS response during status update
+	* AUTHORS, ChangeLog, dbmail-imapsession.c, dbmail-mailbox.c, 
+	test-scripts:
+	minor cleanups
+	* dbmailtypes.h:
+	define u64_t guint64
+
+2007-05-10  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-mailbox.c, test-scripts:
+	minor cleanups
+	* dbmailtypes.h:
+	define u64_t guint64
+
+2007-05-09  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c, misc.c, test-scripts:
+	work on merging search results correctly
+
+2007-05-08  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_db.c, dbmail-message.c, dbmailtypes.h, modules:
+	only use lower(headername) in dbpgsql
+
+2007-05-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* lmtp.c:
+	Accepted modified patch to handle invalid commands (closes bug #585)
+
+2007-05-06  Paul Stevens <paul@nfg.nl>
+
+	* AUTHORS:
+	make the AUTHORS file git compliant
+
+2007-05-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail.h.in authmodule.c dm_getopt.h modules/authsql.c
+	modules/authldap.c modules/dbpgsql.c sortmodule.c dbmailtypes.h
+	dbmodule.c:
+	Cleaned up the files that weren't getting headers from dbmail.h.
+
+2007-05-01  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/dbpgsql.c:
+	Added a message about sqlsocket (closes bug #527)
+
+2007-04-27  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail.h.in, main.c, user.c, sievecmd.c, export.c, maintenance.c:
+	Version and copyright cleanup on -V command line option.
+
+2007-04-25  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4, configure.in, dbmail.h.in, dbmail.conf, authmodule.c,
+	dbmodule.c, sortmodule.c:
+	Added compile and runtime configuration of 'pkglibdir' for
+	runtime loaded modules.
+	* acinclude.m4, configure.in, Makefile.am:
+	Added support for --disable-manual configure flag.
+	* db.c,  check_dbmail_db.c:
+	Fixed db_replycache_validate and added test cases to prove it.
+
+2007-04-23  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c:
+	replace lingering dm_free call
+	* imapcommands.c:
+	re-initialize msginfo in session before _do_store (closes #565)
+	* pool.c:
+	dont access scoreboard during cli server run
+
+2007-04-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* dsn.c, check_dbmail_dsn.c:
+	Corrected bounds checking for dsn_tostring (closes bug #570)
+
+2007-04-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Some work in db_set_msgflag to help with bug #568
+
+2007-04-09  Paul J Stevens <paul@nfg.nl>
+
+	* pool.c, pool.h, serverchild.c:
+	fix a couple of minor compiler warnings
+	* check_dbmail_imapd.c:
+	replace lingering dm_free call
+	* imapcommands.c:
+	re-initialize msginfo in session before _do_store (closes #565)
+	* pool.c:
+	dont access scoreboard during cli server run
+
+2007-04-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* check_dbmail_deliver.c dbmail-user.c lmtp.c user.c imap4.h db.c
+	modules/authsql.c modules/authldap.c modules/sortsieve.c quota.c
+	debug.h acl.c imapcommands.c dsn.c pipe.c dm_base64.c dbmail-message.c
+	check_dbmail_db.c sievecmd.c dbmail-imapsession.c main.c timsieve.c
+	memblock.c misc.c:
+	Changed all instances of dm_free, dm_malloc, dm_strdup to g_free,
+	g_new0 or g_malloc, g_strdup, respectively.
+	* dbmail-mailbox.c dbmail-message.c misc.c sort.c:
+	Corrected printf arguments that made 32 bit platform assumptions.
+
+2007-04-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* pool.h, pool.c, lmtp.c, pop3.c, timsieve.c, imapcommands.c,
+	serverchild.c:
+	Further work on the scoreboard status output, and added currently
+	logged in user (pop3, imap, timsieve) or mail sender (lmtp)
+	* main.c, serverparent.c, dbmail-user.c:
+	Added definitions for yes_to_all, no_to_all, etc.
+
+2007-04-06  Paul J Stevens <paul@nfg.nl>
+	
+	* README.usermap, UPGRADING:
+	documentation update
+
+2007-04-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-user.c, user.c:
+	Moved definitions of the verbosity variables from dbmail-user.c to
+	user.c to avoid multiple definitions
+	* pool.h, pool.c, serverchild.c:
+	Added client entry to the shared memory status, and functions to pass
+	the ip/resolved name of the current client to the pool manager
+
+2007-04-05  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.in, configure, man/Makefile.in, modules/Makefile.in:
+	regenerate autoconf files
+
+2007-04-03  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmailtypes.h, db.c:
+	Moved definition of _db_params from the header to the C file (closes
+	bug #453)
+
+2007-04-02  Aaron Stone  <aaron@serendipity.cx>
+
+	* configure.in, Makefile.am, modules/Makefile.am:
+	Accepted patch to check if -lcrypt is necessary (closes bug #554)
+
+2007-04-05  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	make the UIDNEXT value more rfc compliant
+	* imapcommands.c:
+	during expunge call remove_uid without re-opening mailbox
+
+2007-03-31  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	work around for OE bug
+
+2007-03-29  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, pop3.c, tags:
+	undo accidental changes
+	* README.postfix, README.qmail, README.sieve, README.smtp, 
+	README.solaris, README.usermap, acinclude.m4, check_dbmail_auth.c, 
+	check_dbmail_common.c, check_dbmail_db.c, check_dbmail_deliver.c, 
+	check_dbmail_dsn.c, check_dbmail_imapd.c, check_dbmail_mailbox.c, 
+	check_dbmail_message.c, check_dbmail_misc.c, check_dbmail_server.c, 
+	check_dbmail_user.c, check_dbmail_util.c, config.c, 
+	contrib/mailbox2dbmail/mailbox2dbmail, db.c, dbmail-imapsession.c, 
+	dbmail-message.c, dbmail-user.c, dbmodule.c, debian/README.Debian, 
+	debug.c, dm_imaputil.c, dm_md5.c, dsn.c, export.c, imap4.c, 
+	imapcommands.c, imapd.c, list.c, lmtp.c, lmtpd.c, main.c, 
+	maintenance.c, memblock.c, misc.c, modules/Makefile.am, 
+	modules/Makefile.in, modules/authldap.c, modules/sortnull.c, 
+	modules/sortsieve.c, pipe.c, pop3.c, pop3d.c, quota.c, server.c, 
+	serverchild.c, serverparent.c, sievecmd.c, sort.c, 
+	sql/mysql/create_tables.mysql, 
+	sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql, 
+	sql/postgresql/create_tables.pgsql, 
+	sql/postgresql/migrate_from_1.x_to_2.0.pgsql, 
+	sql/postgresql/migrate_from_2.0_to_2.2.pgsql, 
+	sql/sqlite/create_tables.sqlite, test-scripts/testimap.py, 
+	test-scripts/testpop.py, timsieve.c, timsieved.c, user.c:
+	remove svn variables
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testimap.py:
+	fix uid copy (bug #552)
+	* dbmail-imapsession.c:
+	minor fixes
+	* imapcommands.c:
+	fix _ic_copy
+	* dbmail-mailbox.c, test-scripts/testsort.imap:
+	imap sort sometimes returns ids more than once (bug #557)
+
+2007-03-27  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	small msginfo cleanup to avoid race condition
+	* misc.c:
+	fix regression in _fetch_headers and remove some more g_mime_iconv_close
+	call
+
 2007-03-26  Paul J Stevens <paul@nfg.nl>
 
 	* imapcommands.c:

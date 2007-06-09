@@ -57,10 +57,13 @@ OPTIONS
  better to leave a grace period for old messages before permanently wiping
  them from the database.
 
+-r time::
+ Clear the reply cache used for autoreplies and Sieve vacations. The time is
+ specified as <hours>h<minutes>m (don't include the angle brackets, though!).
+
 -l time::
- Clear the IP log used for IMAP/POP-before-SMTP the time is specified
- as <hours>h<minutes>m (don't include the angle brackets,
- though!).
+ Clear the IP log used for IMAP/POP-before-SMTP. The time is specified as
+ <hours>h<minutes>m (don't include the angle brackets, though!).
 
 -n::
  Show the intended repairs without making any changes, i.e. no to all.

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  *
  * Functions for reading the pipe from the MTA */
 
@@ -126,13 +126,13 @@ static int send_mail(struct DbmailMessage *message,
 			return 1;
 		}
 		if (parse_and_escape(from, &escaped_from) < 0) {
-			dm_free(escaped_to);
+			g_free(escaped_to);
 			TRACE(TRACE_MESSAGE, "could not prepare 'from' address.");
 			return 1;
 		}
 		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
-		dm_free(escaped_to);
-		dm_free(escaped_from);
+		g_free(escaped_to);
+		g_free(escaped_from);
 		if (!sendmail_command) {
 			TRACE(TRACE_ERROR, "out of memory calling g_strconcat");
 			return -1;
@@ -338,13 +338,9 @@ int send_vacation(struct DbmailMessage *message,
 #define REPLY_DAYS 7
 static int send_reply(struct DbmailMessage *message, const char *body)
 {
-	const char *from, *to, *replyto, *subject;
+	const char *from, *to, *subject;
 	const char *x_dbmail_reply;
-	char *escaped_send_address;
 	int result;
-
-	InternetAddressList *ialist;
-	InternetAddress *ia;
 
 	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
 	if (x_dbmail_reply) {
@@ -352,31 +348,27 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 		return 0;
 	}
 	
-	from = dbmail_message_get_header(message, "From");
 	subject = dbmail_message_get_header(message, "Subject");
-	replyto = dbmail_message_get_header(message, "Reply-To");
 
-	/* The To header is not usable as a backup because it
-	 * is likely to have other addresses listed. */
-	to = dbmail_message_get_header(message, "Delivered-To");
+	from = dbmail_message_get_header(message, "Delivered-To");
+	if (!from)
+		from = message->envelope_recipient->str;
+	if (!from)
+		from = ""; // send_mail will change this to DEFAULT_POSTMASTER
 
-	if (!from && !replyto) {
+	to = dbmail_message_get_header(message, "Reply-To");
+	if (!to)
+		to = dbmail_message_get_header(message, "Return-Path");
+	if (!to) {
 		TRACE(TRACE_ERROR, "no address to send to");
 		return 0;
 	}
-
-	if (!valid_sender(from)) {
+	if (!valid_sender(to)) {
 		TRACE(TRACE_DEBUG, "sender invalid. skip auto-reply.");
 		return 0;
 	}
 
-	ialist = internet_address_parse_string(replyto ? replyto : from);
-	ia = ialist->address;
-	escaped_send_address = internet_address_to_string(ia, TRUE);
-	internet_address_list_destroy(ialist);
-
-	if (db_replycache_validate(to, escaped_send_address,
-		"replycache", REPLY_DAYS) != DM_SUCCESS) {
+	if (db_replycache_validate(to, from, "replycache", REPLY_DAYS) != DM_SUCCESS) {
 		TRACE(TRACE_DEBUG, "skip auto-reply");
 		return 0;
 	}
@@ -384,21 +376,19 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	char *newsubject = g_strconcat("Re: ", subject, NULL);
 
 	struct DbmailMessage *new_message = dbmail_message_new();
-	/* Reversed 'to' and 'from' because this is a reply. */
-	new_message = dbmail_message_construct(new_message, escaped_send_address, to, newsubject, body);
-	dbmail_message_set_header(new_message, "X-DBMail-Reply", escaped_send_address);
+	new_message = dbmail_message_construct(new_message, from, to, newsubject, body);
+	dbmail_message_set_header(new_message, "X-DBMail-Reply", from);
 
 	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
 
-	/* Reversed 'to' and 'from' because this is a reply. */
-	if (!send_mail(new_message, escaped_send_address, to, NULL, SENDMESSAGE, SENDMAIL)) {
-		db_replycache_register(to, escaped_send_address, "replycache");
+	if (result == 0) {
+		db_replycache_register(to, from, "replycache");
 	}
 
-	dm_free(newsubject);
+	g_free(newsubject);
 	dbmail_message_free(new_message);
 
-	return 0;
+	return result;
 }
 
 
@@ -439,10 +429,10 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 				TRACE(TRACE_DEBUG, "sending notifcation to [%s]", notify_address);
 				if (send_notification(message, notify_address) < 0) {
 					TRACE(TRACE_ERROR, "error in call to send_notification.");
-					dm_free(notify_address);
+					g_free(notify_address);
 					return -1;
 				}
-				dm_free(notify_address);
+				g_free(notify_address);
 			}
 		}
 	}
@@ -458,10 +448,10 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 			else {
 				if (send_reply(message, reply_body) < 0) {
 					TRACE(TRACE_ERROR, "error in call to send_reply");
-					dm_free(reply_body);
+					g_free(reply_body);
 					return -1;
 				}
-				dm_free(reply_body);
+				g_free(reply_body);
 				
 			}
 		}
@@ -566,6 +556,9 @@ int insert_messages(struct DbmailMessage *message,
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);
 	msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 
+	// TODO: Run a Sieve script associated with the internal delivery user.
+	// Code would go here, after we've inserted the message blocks but
+	// before we've started delivering the message.
 
 	/* Loop through the users list. */
 	for (element = dm_list_getstart(dsnusers); element != NULL; element = element->nextnode) {

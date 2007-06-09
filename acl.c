@@ -52,7 +52,7 @@ static int acl_get_rightsstring(u64_t userid, u64_t mboxid,
 				/*@out@*/ char *rightsstring);
 
 
-gboolean acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
+int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 {
 	u64_t anyone_userid;
 	int test;
@@ -87,14 +87,10 @@ gboolean acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 	/* else check the 'anyone' user */
 	test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone_userid);
 	if (test == DM_EQUERY) 
-		return FALSE;
-	if (test) {
-		if (db_acl_has_right(mailbox, anyone_userid, right_flag))
-			return TRUE;
-		else
-			return FALSE;
-	}
-
+		return DM_EQUERY;
+	if (test)
+		return db_acl_has_right(mailbox, anyone_userid, right_flag);
+	
 	return FALSE;
 }
 
@@ -197,6 +193,7 @@ char *acl_get_acl(u64_t mboxid)
 	size_t acl_strlen;
 	char *acl_string;	/* return string */
 	char *identifier;	/* one identifier */
+        char *identifier_astring;  /* identifier as IMAP astring */
 	char rightsstring[NR_ACL_FLAGS + 1];
 	int result;
 	struct dm_list identifier_list;
@@ -229,18 +226,20 @@ char *acl_get_acl(u64_t mboxid)
 	if (dm_list_nodeadd(&identifier_list, username, strlen(username) + 1) == NULL) { 
 		TRACE(TRACE_ERROR, "error adding username to list");
 		dm_list_free(&identifier_list.start);
-		dm_free(username);
+		g_free(username);
 		return NULL;
 	}
 	
-	dm_free(username);
+	g_free(username);
 
 	TRACE(TRACE_DEBUG, "before looping identifiers!");
 	
 	identifier_elm = dm_list_getstart(&identifier_list);
 	while (identifier_elm) {
 		nr_identifiers++;
-		acl_string_size += strlen((char *) identifier_elm->data) + NR_ACL_FLAGS + 2;
+		identifier_astring = dbmail_imap_astring_as_string(identifier_elm->data);
+		acl_string_size += strlen(identifier_astring) + NR_ACL_FLAGS + 2;
+		g_free(identifier_astring);
 		identifier_elm = identifier_elm->nextnode;
 	}
 
@@ -257,13 +256,15 @@ char *acl_get_acl(u64_t mboxid)
 		identifier = (char *) identifier_elm->data;
 		if (acl_get_rightsstring_identifier(identifier, mboxid, rightsstring) < 0) {
 			dm_list_free(&identifier_list.start);
-			dm_free(acl_string);
+			g_free(acl_string);
 			return NULL;
 		}
 		TRACE(TRACE_DEBUG, "%s", rightsstring);
 		if (strlen(rightsstring) > 0) {
 			acl_strlen = strlen(acl_string);
-			(void) snprintf(&acl_string[acl_strlen], acl_string_size - acl_strlen, "%s %s ", identifier, rightsstring);
+			identifier_astring = dbmail_imap_astring_as_string(identifier);
+			(void) snprintf(&acl_string[acl_strlen], acl_string_size - acl_strlen, "%s %s ", identifier_astring, rightsstring);
+			g_free(identifier_astring);
 		}
 		identifier_elm = identifier_elm->nextnode;
 	}
@@ -303,7 +304,7 @@ char *acl_myrights(u64_t userid, u64_t mboxid)
 
 	if (acl_get_rightsstring(userid, mboxid, rightsstring) < 0) {
 		TRACE(TRACE_ERROR, "error getting rightsstring.");
-		dm_free(rightsstring);
+		g_free(rightsstring);
 		return NULL;
 	}
 

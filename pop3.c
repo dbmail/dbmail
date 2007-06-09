@@ -18,7 +18,7 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  *
  * implementation for pop3 commands according to RFC 1081 */
 
@@ -132,8 +132,8 @@ int pop3_handle_connection(clientinfo_t * ci)
 				
 				if (alarm_occured) {
 					alarm_occured = 0;
-					client_close();
-					done = -1;
+					done = -2;
+					session.SessionResult = 1;
 					break;
 				}
 
@@ -145,7 +145,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 			}
 		}
 
-		if (feof(ci->rx) || ferror(ci->rx))
+		if (done < 0) {
+			break;
+		} else if (feof(ci->rx) || ferror(ci->rx))
 			done = -1;
 		else {
 			/* reset function handle timeout */
@@ -185,7 +187,8 @@ int pop3_handle_connection(clientinfo_t * ci)
 			break;
 
 		case 1:
-			TRACE(TRACE_ERROR, "EOF from client, connection terminated");
+			ci_write(ci->tx, "-ERR I'm leaving, you're too slow\r\n");
+			TRACE(TRACE_ERROR, "client timed out, connection closed");
 			break;
 
 		case 2:
@@ -202,6 +205,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 	} else if (done==0) { // QUIT issued before AUTH phase completed
 		ci_write(ci->tx, "+OK see ya later\r\n");
 		fflush(ci->tx);
+	} else if (done==-2) {
+		ci_write(ci->tx, "-ERR I'm leaving, you're too slow\r\n");
+		TRACE(TRACE_ERROR, "client timed out before AUTH, connection closed");
 	} else {
 		TRACE(TRACE_ERROR, "error, incomplete session");
 	}
@@ -409,6 +415,8 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			/* if pop_before_smtp is active, log this ip */
 			if (pop_before_smtp)
 				db_log_ip(client_ip);
+
+			child_reg_connected_user(session->username);
 
 			result = db_createsession(result, session);
 			if (result == 1) {
@@ -686,6 +694,8 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			if (pop_before_smtp)
 				db_log_ip(client_ip);
 
+			child_reg_connected_user(session->username);
+
 			result = db_createsession(result, session);
 			if (result == 1) {
 				ci_write((FILE *) stream, "+OK %s has %llu messages (%llu octets)\r\n", 
@@ -756,7 +766,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		return pop3_error(session, stream, "-ERR no such message\r\n");
 
 	case POP3_CAPA:
-		ci_write((FILE *) stream, "+OK, Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
+		ci_write((FILE *) stream, "+OK Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
 		return 1;
 
 	default:

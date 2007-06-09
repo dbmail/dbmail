@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -89,18 +89,18 @@ int main(int argc, char *argv[])
 				act = opt;
 
 			if (!script_name) {
-				script_name = dm_strdup(optarg);
+				script_name = g_strdup(optarg);
 			} else if (!script_source) {
-				script_source = dm_strdup(optarg);
+				script_source = g_strdup(optarg);
 			}
 			break;
 		case 'c':
 			if (optarg)
-				script_name = dm_strdup(optarg);
+				script_name = g_strdup(optarg);
 			act = opt;
 			break;
 		case 'u':
-			user_name = dm_strdup(optarg);
+			user_name = g_strdup(optarg);
 			break;
 		case 'l':
 			if (act != 0)
@@ -151,10 +151,8 @@ int main(int argc, char *argv[])
 
 		case 'V':
 			/* Show the version and return non-zero. */
-			printf("\n*** DBMAIL: dbmail-sievecmd version "
-			       "$Revision$ %s\n\n", COPYRIGHT);
-			return 0;
-			break;
+			PRINTF_THIS_IS_DBMAIL;
+			return 1;
 
 		default:
 			act = 'h';
@@ -184,7 +182,7 @@ int main(int argc, char *argv[])
 	qprintf("Opening connection to database...\n");
 	if (db_connect() != 0) {
 		qerrorf("Failed. Could not connect to database (check log)\n");
-		dm_free(user_name);
+		g_free(user_name);
 		return -1;
 	}
 
@@ -192,7 +190,7 @@ int main(int argc, char *argv[])
 	qprintf("Opening connection to authentication...\n");
 	if (auth_connect() != 0) {
 		qerrorf("Failed. Could not connect to authentication (check log)\n");
-		dm_free(user_name);
+		g_free(user_name);
 		return -1;
 	}
 
@@ -237,9 +235,9 @@ int main(int argc, char *argv[])
 	}
 
       mainend:
-	dm_free(user_name);
-	dm_free(script_name);
-	dm_free(script_source);
+	g_free(user_name);
+	g_free(script_name);
+	g_free(script_source);
 	db_disconnect();
 	auth_disconnect();
 	config_free();
@@ -322,9 +320,9 @@ int do_cat(u64_t user_idnr, char *name)
 
 	printf("%s", buf);
 
-	dm_free(buf);
+	g_free(buf);
 	if (!name)
-		dm_free(scriptname);
+		g_free(scriptname);
 
 	return 0;
 }
@@ -372,7 +370,7 @@ int do_insert(u64_t user_idnr, char *name, char *source)
 
 	/* Check if the script is valid */
 	res = db_add_sievescript(user_idnr, "@!temp-script!@", buf);
-	dm_free(buf);
+	g_free(buf);
 	if (res != 0) {
 		qerrorf("Error inserting temporary script into the database!\n");
 		return -1;
@@ -462,7 +460,7 @@ int do_list(u64_t user_idnr)
 			printf("  - ");
 		printf("%s\n", info->name);
 
-		dm_free(info->name);
+		g_free(info->name);
 		tmp = tmp->nextnode;
 	}
 

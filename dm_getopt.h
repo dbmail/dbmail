@@ -25,8 +25,6 @@
  *  DEALINGS IN THE SOFTWARE.
  */
 
-#include "config.h"
-
 #ifndef USE_DM_GETOPT
 #  include <getopt.h>
 #endif

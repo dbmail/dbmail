@@ -1,4 +1,4 @@
-/* $Id$
+/* 
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -80,7 +80,7 @@ int tims_handle_connection(clientinfo_t * ci)
 
 	if (! ci->tx) {
 		TRACE(TRACE_MESSAGE, "TX stream is null!");
-		dm_free(buffer);
+		g_free(buffer);
 		return 0;
 	}
 	
@@ -103,11 +103,16 @@ int tims_handle_connection(clientinfo_t * ci)
 				/* leave, an alarm has occured during fread */
 				if (alarm_occured) {
 					alarm_occured = 0;
-					client_close();
-					dm_free(buffer);
-					return 0;
+					done = -2;
+					break;
 				}
 			} while (ferror(ci->rx) && errno == EINTR);
+
+			/* If we hit a timeout, we have to break now otherwise
+			 * we'll fall into the loop, below, that discards all
+			 * incoming lone-CRLF's. */
+			if (done < 0)
+				break;
 
 			if (buffer[cnt] == '\n' || feof(ci->rx) || ferror(ci->rx)) {
 				if (cnt > 0) {
@@ -124,7 +129,9 @@ int tims_handle_connection(clientinfo_t * ci)
 			}
 		}
 
-		if (feof(ci->rx) || ferror(ci->rx)) {
+		if (done < 0) {
+			break;
+		} else if (feof(ci->rx) || ferror(ci->rx)) {
 			/* check client eof  */
 			done = -1;
 		} else {
@@ -136,8 +143,13 @@ int tims_handle_connection(clientinfo_t * ci)
 		fflush(ci->tx);
 	}
 
+	if (done==-2) {
+		ci_write(ci->tx, "BYE \"Connection timed out.\"\r\n");
+		TRACE(TRACE_ERROR, "client timed, connection closed");
+	}
+
 	/* memory cleanup */
-	dm_free(buffer);
+	g_free(buffer);
 	buffer = NULL;
 
 	/* reset timers */
@@ -276,7 +288,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 					strncpy(tmpcharlen, tmpleft, (10 < tmplen ? 10 : tmplen));
 					tmpcharlen[(10 < tmplen ? 10 : tmplen)] = '\0';
-					dm_free(tmpleft);
+					g_free(tmpleft);
 
 					authlen = strtoull(tmpcharlen, NULL, 10);
 					if (authlen >= UINT_MAX) {
@@ -317,8 +329,9 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 							ci_write((FILE *) stream, "OK\r\n");
 							session->state = AUTH;
 							session->useridnr = useridnr;
-							session->username = dm_strdup(tmp64[1]);
-							session->password = dm_strdup(tmp64[2]);
+							session->username = g_strdup(tmp64[1]);
+							session->password = g_strdup(tmp64[2]);
+							child_reg_connected_user(session->username);
 						} else {
 							ci_write((FILE *) stream, "NO \"Username or password incorrect.\"\r\n");
 						}
@@ -360,7 +373,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
 		/* Of course, be sure to NULL terminate, because strncpy() likely won't */
 		scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
-		dm_free(tmpleft);
+		g_free(tmpleft);
 
 		/* Offset from the previous match to make sure not to pull
 		 * the "length" from a script with a malicious name */
@@ -377,7 +390,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 		strncpy(tmpcharlen, tmpleft, (10 < tmplen ? 10 : tmplen));
 		tmpcharlen[(10 < tmplen ? 10 : tmplen)] = '\0';
-		dm_free(tmpleft);
+		g_free(tmpleft);
 
 		scriptlen = strtoull(tmpcharlen, NULL, 10);
 		TRACE(TRACE_INFO, "Client sending script of length [%llu]", scriptlen);
@@ -455,7 +468,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
 			/* Of course, be sure to NULL terminate, because strncpy() likely won't */
 			scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
-			dm_free(tmpleft);
+			g_free(tmpleft);
 
 			ret = db_activate_sievescript(session->useridnr, scriptname);
 			if (ret == -3) {
@@ -474,7 +487,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 				ci_write((FILE *) stream, "OK \"No scripts are active at this time.\"\r\n");
 			} else {
 				ret = db_deactivate_sievescript(session->useridnr, scriptname);
-				dm_free(scriptname);
+				g_free(scriptname);
 				if (ret == -3) {
 					ci_write((FILE *)stream, "NO \"Active script does not exist.\"\r\n");
 					return -1;
@@ -511,7 +524,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
 			/* Of course, be sure to NULL terminate, because strncpy() likely won't */
 			scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
-			dm_free(tmpleft);
+			g_free(tmpleft);
 
 			ret = db_get_sievescript_byname(session->useridnr, scriptname, &script);
 			if (ret == -3) {
@@ -548,7 +561,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
 			/* Of course, be sure to NULL terminate, because strncpy() likely won't */
 			scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
-			dm_free(tmpleft);
+			g_free(tmpleft);
 
 			ret = db_delete_sievescript(session->useridnr, scriptname);
 			if (ret == -3) {
@@ -612,7 +625,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	if (sort_result)
 		sort_free_result(sort_result);
 	if (f_buf)
-		dm_free(f_buf);
+		g_free(f_buf);
 	
 	return 1;
 }

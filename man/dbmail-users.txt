@@ -93,6 +93,20 @@ MINOR OPTIONS
 
 include::commonopts.txt[]
 
+ALIASES VS. FORWARDS
+--------------------
+
+One question we often see on the dbmail@dbmail.org mailing list is what the
+difference is between aliases and forwards.
+When using dbmail-users, the different command line options are there
+because an alias attaches some arbitrary address to a particular user's
+account, while a forward attaches some arbitrary address another
+arbitrary address or pipe out.
+
+When using dbmail-users with major option -c, you must use minor option -s/-S
+for modifying aliases. When using dbmail-users with major option -x, you must
+use -t/-T for modifying forwards.
+
 ALIASES
 -------
 
@@ -112,15 +126,18 @@ utility, or by calling it with a comma-separated list of aliases:
 
 `    dbmail-users -c baz -s baz@foodomain,baz@bardomain`
 
-Two catch-all modes are also supported, for domains and for local parts:
+Three catch-all modes are also supported, for domains, sub-domains, and local parts:
 
 `    dbmail-users -a baz -s @bazdomain`
+
+`    dbmail-users -a baz -s @.allsubs.bazdomain`
  
 `    dbmail-users -a baz -s baz@`
 
 The first example catches email addressed to any user @bazdomain and delivers it
-to Baz's INBOX. The second example catches email addressed to baz@ any domain
-and also delivers it to Baz's INBOX.
+to Baz's INBOX. The second example catch email address to any user at any
+subdomain below .allsubs.bazdomain (*not* including allsubs.bazdomain
+itself!) The third example catches email addressed to baz@ at any domain.
 
 There is no support for delivering to a particular mailbox other than INBOX
 via the aliases system. Please use a Sieve script to sort mail like this.
@@ -157,6 +174,7 @@ Forwards can be removed using basic glob style pattern matching.  A ?
 
 will complete and totally remove the 'bar@domain' external alias and all of
 its forwarding addresses and commands.
+
 
 
 

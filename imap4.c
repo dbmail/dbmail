@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  * imap4.c
  *
  * implements an IMAP 4 rev 1 server.
@@ -29,9 +29,6 @@
 #define COMMAND_SHOW_LEVEL TRACE_INFO
 
 #define THIS_MODULE "imap"
-
-/* cache */
-cache_t cached_msg;
 
 const char *IMAP_COMMANDS[] = {
 	"", "capability", "noop", "logout",
@@ -268,8 +265,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 			nfaultyresponses++;
 			continue;
 		}
-		//args are in the session now don't set...
-		//dbmail_imap_session_setArgs(session,args);
 
 		for (i = IMAP_COMM_NONE; i < IMAP_COMM_LAST && strcasecmp(session->command, IMAP_COMMANDS[i]); i++);
 
@@ -306,6 +301,8 @@ int IMAPClientHandler(clientinfo_t * ci)
 			done = 1;
 
 		fflush(session->ci->tx);	/* write! */
+
+		dbmail_imap_session_args_free(session, FALSE);
 
 		TRACE(TRACE_INFO, "Finished command %s [%d]\n", IMAP_COMMANDS[i], result);
 

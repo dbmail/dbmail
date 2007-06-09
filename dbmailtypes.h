@@ -1,5 +1,4 @@
 /*
- $Id$
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -31,13 +30,7 @@
 #ifndef _DBMAILTYPES_H
 #define _DBMAILTYPES_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include "memblock.h"
-#include "list.h"
+#include "dbmail.h"
 
 /** max length of search query */
 #define MAX_SEARCH_LEN 1024
@@ -58,7 +51,8 @@
 #define FIELDSIZE 1024
 
 /** use 64-bit unsigned integers as common data type */
-typedef unsigned long long u64_t;
+//typedef unsigned long long u64_t;
+#define u64_t guint64
 
 typedef enum {
 	DM_EQUERY 	= -1,
@@ -117,7 +111,6 @@ typedef struct {
 	FILE *tx, *rx;
 	char ip_src[IPNUM_LEN];	/* client IP-number */
 	field_t clientname;	/* resolved client ip */
-	char *timeoutMsg;
 	int timeout;		/* server timeout (seconds) */
 	void *userData;
 } clientinfo_t;
@@ -128,7 +121,6 @@ typedef struct {
 	int numSockets;
 	int resolveIP;
 	int timeout;
-	char *timeoutMsg;
 	int (*ClientHandler) (clientinfo_t *);
 } ChildInfo_t;
 
@@ -316,7 +308,6 @@ typedef struct {
 	int port;
 	int backlog;
 	int resolveIP;
-	char *timeoutMsg;
 	field_t serverUser, serverGroup;
 	field_t socket;
 	field_t log, error_log;
@@ -494,15 +485,17 @@ typedef enum {
 
 typedef enum {
 	SQL_TO_DATE,
+	SQL_TO_DATETIME,
 	SQL_TO_CHAR,
 	SQL_CURRENT_TIMESTAMP,
 	SQL_REPLYCACHE_EXPIRE,
 	SQL_BINARY,
+	SQL_REGEXP,
 	SQL_SENSITIVE_LIKE,
 	SQL_INSENSITIVE_LIKE,
 	SQL_ENCODE_ESCAPE,
-	SQL_SEQ_CURRVAL,
-	SQL_SEQ_NEXTVAL
+	SQL_STRCASE
+		
 } sql_fragment_t;
 
 typedef enum {
@@ -514,11 +507,5 @@ typedef enum {
 	IMAP_FLAG_RECENT
 } imap_flag_t;
 
- /* shared global */
- db_param_t _db_params;
- 
-
-/* shared global */
-db_param_t _db_params;
 
 #endif

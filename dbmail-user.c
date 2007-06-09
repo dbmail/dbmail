@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: user.c 1665 2005-03-12 17:42:59Z paul $
+/* 
  * This is the dbmail-user program
  * It makes adding users easier */
 
@@ -41,11 +41,11 @@ static const char ValidChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "_.!@#$%^&*()-+=~[]{}<>:;\\/";
 
-int yes_to_all = 0;
-int no_to_all = 0;
-int verbose = 0;
-int quiet = 0; 		/* Don't be helpful. */
-int reallyquiet = 0;	/* Don't print errors. */
+extern int yes_to_all;
+extern int no_to_all;
+extern int verbose;
+extern int quiet; 		/* Don't be helpful. */
+extern int reallyquiet;	/* Don't print errors. */
 
 int do_add(const char * const user,
            const char * const password, const char * const enctype,
@@ -207,7 +207,7 @@ int mkpassword(const char * const user, const char * const passwd,
 			md5str = dm_md5((unsigned char *)passwd);
 			null_strncpy(pw, md5str, 49);
 			*enctype = "md5sum";
-			dm_free(md5str);
+			g_free(md5str);
 			break;
 		case MD5_DIGEST_RAW:
 			null_strncpy(pw, passwd, 49);
@@ -218,7 +218,7 @@ int mkpassword(const char * const user, const char * const passwd,
 			md5str = dm_md5_base64((unsigned char *)passwd);
 			null_strncpy(pw, md5str, 49);
 			*enctype = "md5base64";
-			dm_free(md5str);
+			g_free(md5str);
 			}
 			break;
 		case MD5_BASE64_RAW:
@@ -259,7 +259,7 @@ int mkpassword(const char * const user, const char * const passwd,
 	}
 
 	/* Pass this out of the function. */
-	*password = dm_strdup(pw);
+	*password = g_strdup(pw);
 
 	return result;
 }
@@ -552,7 +552,7 @@ int do_show(const char * const name)
 			}
 			g_list_foreach(users,(GFunc)g_free,NULL);
 		}
-		g_list_free(users);
+		g_list_free(g_list_first(users));
 
 	} else {
 		if (auth_user_exists(name, &useridnr) == -1) {
@@ -584,8 +584,7 @@ int do_show(const char * const name)
 						break;
 					forwards = g_list_next(forwards);
 				}
-				g_list_foreach(forwards,(GFunc)g_free, NULL);
-				g_list_free(forwards);
+				g_list_destroy(forwards);
 			}
 			
 			userids = g_list_first(userids);
@@ -599,7 +598,7 @@ int do_show(const char * const name)
 						break;
 					userids = g_list_next(userids);
 				}
-				g_list_free(userids);
+				g_list_free(g_list_first(userids));
 			}
 			return 0;
 		}
@@ -632,7 +631,7 @@ int do_show(const char * const name)
 		} else {
 			g_list_append_printf(out,"");
 		}
-		g_list_free(userlist);
+		g_list_free(g_list_first(userlist));
 		s = g_list_join(out,":");
 		qprintf("%s\n", s->str);
 		g_string_free(s,TRUE);

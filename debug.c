@@ -18,12 +18,19 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  *
  * Debugging and memory checking functions */
 
 #include "dbmail.h"
+#if defined(BSD4_4)
+extern char     *__progname;            /* Program name, from crt0. */
+#else
+char            *__progname = NULL;
+#endif
 
+char		hostname[16];
+ 
 /* the debug variables */
 static trace_t TRACE_SYSLOG = TRACE_ERROR;  /* default: errors, warnings, fatals */
 static trace_t TRACE_STDERR = TRACE_FATAL;  /* default: fatal errors only */
@@ -71,7 +78,8 @@ void trace(trace_t level, const char * module,
 
 	gchar *message;
 	const char *syslog_format = "%s:[%s] %s,%s(+%d): %s";
-	const char *stderr_format = "%s %s:[%s] %s,%s(+%d): %s";
+	const char *stderr_format = "%s %s %s[%d]: %s:[%s] %s,%s(+%d): %s";
+	static int configured=0;
 	size_t l;
 
 	/* Return now if we're not logging anything. */
@@ -89,10 +97,19 @@ void trace(trace_t level, const char * module,
 		time_t now = time(NULL);
 		struct tm *tmp = localtime(&now);
 		char date[32];
+
+ 		if (! configured) {
+ 			memset(&hostname,'\0',16);
+ 			gethostname(&hostname,16);
+ 			configured=1;
+ 		}
+ 
+ 
 		memset(date,0,sizeof(date));
 		strftime(date,32,"%b %d %H:%M:%S", tmp);
 
-		fprintf(stderr, stderr_format, date, trace_to_text(level), module, file, function, line, message);
+ 		fprintf(stderr, stderr_format, date, hostname, __progname?__progname:"", getpid(), trace_to_text(level), module, file, function, line, message);
+ 
 		if (message[l] != '\n')
 			fprintf(stderr, "\n");
 		fflush(stderr);

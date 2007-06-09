@@ -1,0 +1,246 @@
+#
+# Copyright (c) 2004-2006, NFG Net Facilities Group BV, support@nfg.nl
+# Copyright (c) 2006 Aaron Stone, aaron@serendipity.cx
+#
+# This program is free software; you can redistribute it and/or 
+# modify it under the terms of the GNU General Public License 
+# as published by the Free Software Foundation; either 
+# version 2 of the License, or (at your option) any later 
+# version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# 
+
+# Schema to repair broken foreign key constraints.
+# Run thusly:
+#    mysql -u dbmail_user -p dbmail_pass dbmail_db -f < fix_foreign_keys.mysql
+#
+# You will probably see a lot of errors. That's OK, because we're not sure what
+# the foreign keys are called in your database (since they're broken!) and
+# programmed in a couple of guesses to try to get them.
+#
+# The errors you can ignore will look similar to this one:
+#    ERROR 1025 (HY000) at line 37: Error on rename of
+#    './dbmail/dbmail_mailboxes' to './dbmail/#sql2-6487-4c' (errno: 152)
+#
+# After this script runs, you must run:
+#    dbmail-util -by
+#
+# As we have dropped several of the ephemeral tables outright, they have to be
+# rebuilt from the message store.
+# 
+
+SET FOREIGN_KEY_CHECKS=0;
+
+alter table dbmail_mailboxes drop foreign key owner_idnr_fk;
+alter table dbmail_mailboxes drop foreign key dbmail_mailboxes_ibfk;
+alter table dbmail_mailboxes drop foreign key dbmail_mailboxes_ibfk_1;
+alter table dbmail_mailboxes add FOREIGN KEY owner_idnr_fk (owner_idnr) 
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+alter table dbmail_subscription drop foreign key user_id_fk;
+alter table dbmail_subscription drop foreign key mailbox_id_fk;
+alter table dbmail_subscription drop foreign key dbmail_subscription_ibfk_1;
+alter table dbmail_subscription drop foreign key dbmail_subscription_ibfk_2;
+alter table dbmail_subscription drop foreign key dbmail_subscription_ibfk_3;
+alter table dbmail_subscription add FOREIGN KEY user_id_fk (user_id) 
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_subscription add FOREIGN KEY mailbox_id_fk (mailbox_id) 
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+alter table dbmail_acl drop foreign key user_id_fk;
+alter table dbmail_acl drop foreign key mailbox_id_fk;
+alter table dbmail_acl drop foreign key dbmail_acl_ibfk_1;
+alter table dbmail_acl drop foreign key dbmail_acl_ibfk_2;
+alter table dbmail_acl drop foreign key dbmail_acl_ibfk_3;
+alter table dbmail_acl add FOREIGN KEY user_id_fk (user_id) 
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_acl add FOREIGN KEY mailbox_id_fk (mailbox_id) 
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+
+	
+alter table dbmail_messages drop foreign key physmessage_id_fk;
+alter table dbmail_messages drop foreign key mailbox_idnr_fk;
+alter table dbmail_messages drop foreign key dbmail_messages_ibfk_1;
+alter table dbmail_messages drop foreign key dbmail_messages_ibfk_2;
+alter table dbmail_messages drop foreign key dbmail_messages_ibfk_3;
+alter table dbmail_messages add FOREIGN KEY physmessage_id_fk (physmessage_id) 
+		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_messages add FOREIGN KEY mailbox_idnr_fk (mailbox_idnr) 
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+
+	
+alter table dbmail_messageblks drop foreign key physmessage_id_fk;
+alter table dbmail_messageblks drop foreign key dbmail_messageblks_ibfk_1;
+alter table dbmail_messageblks drop foreign key dbmail_messageblks_ibfk_2;
+alter table dbmail_messageblks add FOREIGN KEY physmessage_id_fk (physmessage_id) 
+		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+alter table dbmail_auto_notifications drop foreign key physmessage_id_fk;
+alter table dbmail_auto_notifications drop foreign key dbmail_auto_notifications_ibfk_1;
+alter table dbmail_auto_notifications drop foreign key dbmail_auto_notifications_ibfk_2;
+alter table dbmail_auto_notifications add FOREIGN KEY user_idnr_fk (user_idnr) 
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+alter table dbmail_auto_replies drop foreign key physmessage_id_fk;
+alter table dbmail_auto_replies drop foreign key dbmail_auto_replies_ibfk_1;
+alter table dbmail_auto_replies drop foreign key dbmail_auto_replies_ibfk_2;
+alter table dbmail_auto_replies add FOREIGN KEY user_idnr_fk (user_idnr) 
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+alter table dbmail_sievescripts drop foreign key physmessage_id_fk;
+alter table dbmail_sievescripts drop foreign key dbmail_sievescripts_ibfk_1;
+alter table dbmail_sievescripts drop foreign key dbmail_sievescripts_ibfk_2;
+alter table dbmail_sievescripts add FOREIGN KEY owner_idnr_fk (owner_idnr) 
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+DROP TABLE IF EXISTS dbmail_headervalue;
+CREATE TABLE dbmail_headervalue (
+	headername_id	BIGINT NOT NULL,
+        physmessage_id	BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	headervalue	TEXT NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	UNIQUE (physmessage_id, headername_id, headervalue(255)),
+	INDEX (headername_id),
+	INDEX (physmessage_id),
+	FOREIGN KEY (headername_id)
+		REFERENCES dbmail_headername(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	FOREIGN KEY (physmessage_id)
+		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+# Provide separate storage of commonly used headers
+
+# These fields will typically be preparsed as specified by 
+# http://www.ietf.org/internet-drafts/draft-ietf-imapext-sort-17.txt
+
+# Threading
+
+# support fast threading by breaking out In-Reply-To/References headers
+# these fields contain zero or more Message-Id values that determine the message
+# threading
+
+DROP TABLE IF EXISTS dbmail_subjectfield;
+CREATE TABLE dbmail_subjectfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	subjectfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, subjectfield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_datefield;
+CREATE TABLE dbmail_datefield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	datefield	DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, datefield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_referencesfield;
+CREATE TABLE dbmail_referencesfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	referencesfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, referencesfield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+# Searching and Sorting
+
+# support fast sorting by breaking out and preparsing the fields most commonly used
+# in searching and sorting: Subject, From, To, Reply-To, Cc. 
+
+DROP TABLE IF EXISTS dbmail_fromfield;
+CREATE TABLE dbmail_fromfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	fromname	VARCHAR(100) NOT NULL DEFAULT '',
+	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_tofield;
+CREATE TABLE dbmail_tofield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	toname		VARCHAR(100) NOT NULL DEFAULT '',
+	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_replytofield;
+CREATE TABLE dbmail_replytofield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
+	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_ccfield;
+CREATE TABLE dbmail_ccfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	ccname		VARCHAR(100) NOT NULL DEFAULT '',
+	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+COMMIT;
+
+DROP TABLE IF EXISTS dbmail_envelope;
+CREATE TABLE dbmail_envelope (
+	physmessage_id	BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	envelope	TEXT NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+SET FOREIGN_KEY_CHECKS=1;
+

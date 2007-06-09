@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id$ 
+ *   
  *
  *
  *  
@@ -45,8 +45,25 @@ int imap_before_smtp = 0;
 void init_testuser1(void) 
 {
         u64_t user_idnr;
-	if (! (auth_user_exists("testuser1",&user_idnr)))
-		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
+
+	char user1[] = "testuser1";
+	char user2[] = "testuser2";
+	char passwd[] = "test";
+	char passwdtype[] = "md5-hash";
+	char *password = NULL;
+	char *enctype = NULL;
+	char *passwdfile = NULL;
+
+	if (! (auth_user_exists(user1,&user_idnr))) {
+		mkpassword(user1, passwd, passwdtype, passwdfile, &password, &enctype);
+		auth_adduser(user1,password, enctype, 101, 1024000, &user_idnr);
+	}
+
+	if (! (auth_user_exists(user2,&user_idnr))) {
+		mkpassword(user2, passwd, passwdtype, passwdfile, &password, &enctype);
+		auth_adduser(user2,password, enctype, 101, 1024000, &user_idnr);
+	}
+
 }
 	
 void setup(void)
@@ -528,7 +545,7 @@ START_TEST(test_auth_get_userid)
 	fail_unless(strlen(username)>3,"auth_get_userid failed");
 	auth_user_exists(username, &testidnr);
 	fail_unless(testidnr==user_idnr,"auth_get_userid: auth_user_exists returned wrong idnr");
-	dm_free(username);
+	g_free(username);
 }
 END_TEST
 
@@ -752,6 +769,7 @@ START_TEST(test_g_tree_keys)
 	fail_unless(g_tree_nnodes(a)==0,"g_tree_keys failed");
 	fail_unless(g_list_length(akeys)==0,"g_tree_keys failed");
 
+	akeys = g_list_first(akeys);
 	g_list_free(akeys);
 	
 	for (i=0; i<4; i++) {
@@ -766,6 +784,7 @@ START_TEST(test_g_tree_keys)
 	fail_unless(g_tree_nnodes(a)==4,"g_tree_keys failed");
 	fail_unless(g_list_length(akeys)==4,"g_tree_keys failed");
 	
+	akeys = g_list_first(akeys);
 	g_list_free(akeys);
 	g_tree_destroy(a);
 }
@@ -920,7 +939,7 @@ START_TEST(test_find_bounded)
 			"find_bounded is broken. "
 			"Should be success: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 
@@ -936,7 +955,7 @@ START_TEST(test_zap_between_both)
 			"zap_between is both broken. "
 			"Should be success: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 
@@ -952,7 +971,7 @@ START_TEST(test_zap_between_left)
 			"zap_between is left broken. "
 			"Should be suc@cess: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 
@@ -968,7 +987,7 @@ START_TEST(test_zap_between_right)
 			"zap_between is right broken. "
 			"Should be suc+cess: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 
@@ -984,7 +1003,7 @@ START_TEST(test_zap_between_center)
 			"zap_between is center broken. "
 			"Should be suc+@cess: %s", newaddress);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 }
 END_TEST
 

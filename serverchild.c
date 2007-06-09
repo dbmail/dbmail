@@ -21,7 +21,7 @@
 /*
  * serverchild.c
  *
- * $Id$
+ * 
  * 
  * function implementations of server children code (connection handling)
  */
@@ -322,7 +322,6 @@ int PerformChildTask(ChildInfo_t * info)
 		
 		memset((void *)&client, 0, sizeof(client));	/* zero-init */
 
-		client.timeoutMsg = info->timeoutMsg;
 		client.timeout = info->timeout;
 		strncpy((char *)client.ip_src, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
 		client.clientname[0] = '\0';
@@ -341,6 +340,8 @@ int PerformChildTask(ChildInfo_t * info)
 			TRACE(TRACE_MESSAGE, "incoming connection from [%s] by pid [%d]",
 			      client.ip_src, getpid());
 		}
+
+		child_reg_connected_client((const char *)client.ip_src, (const char *)client.clientname);
 		
 		/* make streams */
 		if (!(client.rx = fdopen(dup(clientSocket), "r"))) {
@@ -424,7 +425,6 @@ int manage_start_cli_server(ChildInfo_t * info)
 		
 	memset((void *)&client, 0, sizeof(client));	/* zero-init */
 
-	client.timeoutMsg = info->timeoutMsg;
 	client.timeout = info->timeout;
 
 	/* make streams */

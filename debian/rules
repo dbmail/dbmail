@@ -52,16 +52,6 @@ endif
 ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
 	export WITH_SIEVE=--with-sieve
 endif
-ifneq (,$(findstring static,$(DEB_BUILD_OPTIONS)))
-	export SHARED=--enable-shared=no
-	export STATIC=--enable-static=yes
-endif
-ifneq (,$(findstring shared,$(DEB_BUILD_OPTIONS)))
-	export SHARED=--enable-shared=yes
-	export STATIC=--enable-static=no
-endif
-
-
 
 # dpatch
 export PACKAGE=dbmail
@@ -112,7 +102,6 @@ mrproper:
 	rm -f `find . -name "*.pyc"`
 	rm -f `find man -name "*.xml"`
 	rm -f `find man -name "*.[1-8]"`
-	rm -rf buildtools
 	# Add here commands to clean up after the build process.
 	for file in config.in aclocal.m4 acconfig.h configure `find . -name Makefile.in`; do \
 		rm -rf $$file || true; \

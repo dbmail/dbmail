@@ -43,19 +43,28 @@ const char * db_get_sql(sql_fragment_t frag)
 	switch(frag) {
 		case SQL_ENCODE_ESCAPE:
 		case SQL_TO_CHAR:
+		case SQL_STRCASE:
 			return "%s";
 		break;
 		case SQL_TO_DATE:
-			return "'%s'";
+			return "DATE(%s)";
+		break;
+		case SQL_TO_DATETIME:
+			return "DATETIME(%s)";
 		break;
 		case SQL_CURRENT_TIMESTAMP:
 			return "STRFTIME('%Y-%m-%d %H:%M:%S','now','localtime')";
 		break;
 		case SQL_REPLYCACHE_EXPIRE:
-			return "(STRFTIME('%s','now')-%s)";	
+			return "DATETIME('now','-%d DAYS')";	
 		break;
 		case SQL_BINARY:
 			return "";
+		break;
+		case SQL_REGEXP:
+			TRACE(TRACE_ERROR, "We deliberately don't support REGEXP operations.");
+			sqlite3_close(conn);
+			exit(255);
 		break;
 		/* some explaining:
 		 *
@@ -70,10 +79,6 @@ const char * db_get_sql(sql_fragment_t frag)
 		break;
 		case SQL_INSENSITIVE_LIKE:
 			return "LIKE";
-		break;
-		case SQL_SEQ_NEXTVAL:
-		default:
-			return "NULL";
 		break;
 	}
 	return NULL;
@@ -226,19 +231,19 @@ static void dbsqlite_cslike(sqlite3_context *context, int argc, sqlite3_value **
 	const unsigned char *zA = sqlite3_value_text(argv[0]);
 	const unsigned char *zB = sqlite3_value_text(argv[1]);
 	int escape = 0;
-	if( argc==3 ){
+	if (argc==3) {
 		/* The escape character string must consist of a single UTF-8 character.
 		** Otherwise, return an error.
 		*/
 		const unsigned char *zEsc = sqlite3_value_text(argv[2]);
-		if( sqlite3utf8CharLen(zEsc, -1)!=1 ){
+		if (sqlite3utf8CharLen((const char *)zEsc, -1) != 1) {
 			sqlite3_result_error(context, 
 				"ESCAPE expression must be a single character", -1);
 			return;
 		}
 		escape = sqlite3ReadUtf8(zEsc);
 	}
-	if( zA && zB ){
+	if (zA && zB) {
 		sqlite3_result_int(context, patternCompare(zA, zB, &likeInfo, escape));
 	}
 }
@@ -316,16 +321,6 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 {
 	if (!conn) return 0;
 	return (u64_t)sqlite3_last_insert_rowid(conn);
-}
-
-u64_t db_sequence_currval(const char *sequence_identifier)
-{
-	return db_insert_result(sequence_identifier);
-}
-
-u64_t db_sequence_nextval(const char *sequence_identifier UNUSED)
-{
-	return 0; // make this trigger the use of NULL in the ensuing INSERT
 }
 
 int db_query(const char *the_query)

@@ -1,5 +1,5 @@
 /*
-  $Id$
+  
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -30,9 +30,15 @@ quota_t *quota_alloc(int n_resources)
 {
 	quota_t *quota;
 
-	quota =
-	    dm_malloc(sizeof(quota_t) +
-		   n_resources * sizeof(resource_limit_t));
+	/* We're allocating enough memory off the end of the quota
+	 * structure to accomodate an array of resource_limit structs.
+	 * This is the declaration:
+	 *   resource_limit_t resource[0];
+	 * it's a pretty cool abuse of C to alloc more memory off the end of
+	 * this array and access it way out of bounds into that extra memory!
+	 */
+	quota = g_malloc(sizeof(quota_t) + n_resources * sizeof(resource_limit_t));
+
 	if (quota != NULL) {
 		quota->root = NULL;
 		quota->n_resources = n_resources;
@@ -65,16 +71,16 @@ void quota_set_resource_limit(quota_t * quota, int resource_idx,
  */
 int quota_set_root(quota_t * quota, char *root)
 {
-	dm_free(quota->root);
-	quota->root = dm_strdup(root);
+	g_free(quota->root);
+	quota->root = g_strdup(root);
 	return (quota->root == NULL);
 }
 
 /* Free a quota structure. */
 void quota_free(quota_t * quota)
 {
-	dm_free(quota->root);
-	dm_free(quota);
+	g_free(quota->root);
+	g_free(quota);
 }
 
 

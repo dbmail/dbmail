@@ -10,9 +10,31 @@ Dependencies
 
 Config Changes
 
-* [DBMAIL] section must have driver=mysql/pgsql and authdriver=sql/ldap.
-* [DBMAIL] section now has two logging settings: trace_syslog and trace_stderr.
-These replace the old TRACE_LEVEL setting.
+* [DBMAIL] section 
+
+ Dbmail allows you to select the database module and authentication module
+ in the config file.
+
+driver=mysql/pgsql/sqlite
+authdriver=sql/ldap
+
+ Some mail clients will send illegal 8bit headers. Dbmail will try to 
+ decode these headers to make them readable. If you have clients that
+ send 8bit headers (outlook office), set the next setting to charset 
+ encoding that is most common amoung your users. Some examples: 
+ windows-1250, latin-1, utf8.
+
+default_msg_encoding=
+
+ If your database is anything else than US_ASCII encoded please specify
+ the encoding used in the next setting. 
+
+encoding=
+
+ the old TRACE_LEVEL was replaced by two new entries.
+
+trace_syslog=
+trace_stderr=
 
 Schema Changes
 

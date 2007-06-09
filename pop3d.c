@@ -19,7 +19,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
 *
 * pop3d.c
 *
@@ -29,9 +29,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "pop3d"
 #define PNAME "dbmail/pop3d"
-
-/* server timeout error */
-#define POP_TIMEOUT_MSG "-ERR I'm leaving, you're tooo slow\r\n"
 
 /* also used in pop3.c */
 int pop_before_smtp = 0;
@@ -58,7 +55,6 @@ int main(int argc, char *argv[])
 	}
 
 	config.ClientHandler = pop3_handle_connection;
-	config.timeoutMsg = POP_TIMEOUT_MSG;
 	pop_before_smtp = config.service_before_smtp;
 
 	result = serverparent_mainloop(&config, "POP", "dbmail-pop3d");

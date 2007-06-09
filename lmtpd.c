@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
 *
 * lmtpd.c
 *
@@ -28,9 +28,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "lmtpd"
 #define PNAME "dbmail/lmtpd"
-
-/* server timeout error */
-#define LMTP_TIMEOUT_MSG "221 Connection timeout BYE"
 
 int main(int argc, char *argv[])
 {
@@ -54,7 +51,6 @@ int main(int argc, char *argv[])
 	}
 
 	config.ClientHandler = lmtp_handle_connection;
-	config.timeoutMsg = LMTP_TIMEOUT_MSG;
 
 	result = serverparent_mainloop(&config, "LMTP", "dbmail-lmtpd");
 	

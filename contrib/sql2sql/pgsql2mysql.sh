@@ -4,7 +4,6 @@
 #
 # It's slow, but it works.
 #
-# $Id$
 
 PGDB="dbmail"
 MYDB="dbmail"

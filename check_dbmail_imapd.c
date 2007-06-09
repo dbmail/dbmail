@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id$ 
+ *   
  *
  *
  *  
@@ -436,9 +436,8 @@ START_TEST(test_internet_address_parse_string)
 
 		fail_unless(strcmp(result,expect)==0, "internet_address_parse_string failed to generate correct undisclosed-recipients plist, expected [%s] got [%s]", expect, result);
 
-		g_list_foreach(list,(GFunc)g_free,NULL);
-		g_list_free(list);
-		dm_free(result);
+		g_list_destroy(list);
+		g_free(result);
 
 	}
 
@@ -476,8 +475,7 @@ START_TEST(test_internet_address_parse_string)
 
 		internet_address_list_destroy(alist);
 		alist = NULL;
-		g_list_foreach(list, (void *)g_free, NULL);
-		g_list_free(list);
+		g_list_destroy(list);
 		g_free(result);
 		g_free(t);
 	}

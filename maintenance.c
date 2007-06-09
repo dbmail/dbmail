@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  *
  * This is the dbmail housekeeping program. 
  *	It checks the integrity of the database and does a cleanup of all
@@ -28,7 +28,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "maintenance"
 #define PNAME "dbmail/maintenance"
-#define LEN 30
 
 /* Loudness and assumptions. */
 int yes_to_all = 0;
@@ -50,55 +49,61 @@ int has_errors = 0;
 /* set up database login data */
 extern db_param_t _db_params;
 
-static void find_time(char *timestr, const char *timespec);
+static int find_time(const char *timespec, timestring_t *timestring);
 
 static int do_check_integrity(void);
 static int do_null_messages(void);
 static int do_purge_deleted(void);
 static int do_set_deleted(void);
 static int do_header_cache(void);
-static int do_check_iplog(char *timestr, const char *timespec);
+static int do_check_iplog(const char *timespec);
+static int do_check_replycache(const char *timespec);
 static int do_vacuum_db(void);
 
 int do_showhelp(void) {
 	printf("*** dbmail-util ***\n");
 
-	printf("Use this program to maintain your DBMail database.\n");
-	printf("See the man page for more info. Summary:\n\n");
-	printf("     -a        perform all checks (in this release: -ctubpd)\n");
-	printf("     -c        clean up database (optimize/vacuum)\n");
-	printf("     -t        test for message integrity\n");
-	printf("     -u        null message check\n");
-	printf("     -b        body/header/envelope cache check\n");
-	printf("     -p        purge messages have the DELETE status set\n");
-	printf("     -d        set DELETE status for deleted messages\n");
-	printf("     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
-	       "               the time is specified as <hours>h<minutes>m\n"
-	       "               (don't include the angle brackets, though)\n");
-	printf("\nCommon options for all DBMail utilities:\n");
-	printf("     -f file   specify an alternative config file\n");
-	printf("     -q        quietly skip interactive prompts\n"
-	       "               use twice to suppress error messages\n");
-	printf("     -n        show the intended action but do not perform it, no to all\n");
-	printf("     -y        perform all proposed actions, as though yes to all\n");
-	printf("     -v        verbose details\n");
-	printf("     -V        show the version\n");
-	printf("     -h        show this help message\n");
+	printf(
+//	Try to stay under the standard 80 column width
+//	0........10........20........30........40........50........60........70........80
+	"Use this program to maintain your DBMail database.\n"
+	"See the man page for more info. Summary:\n\n"
+	"     -a        perform all checks (in this release: -ctubpd)\n"
+	"     -c        clean up database (optimize/vacuum)\n"
+	"     -t        test for message integrity\n"
+	"     -u        null message check\n"
+	"     -b        body/header/envelope cache check\n"
+	"     -p        purge messages have the DELETE status set\n"
+	"     -d        set DELETE status for deleted messages\n"
+	"     -r time   clear the replycache used for autoreply/vacation\n"
+	"     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
+	"               the time syntax is [<hours>h][<minutes>m]\n"
+	"               valid examples: 72h, 4h5m, 10m\n"
+	"\nCommon options for all DBMail utilities:\n"
+	"     -f file   specify an alternative config file\n"
+	"     -q        quietly skip interactive prompts\n"
+	"               use twice to suppress error messages\n"
+	"     -n        show the intended action but do not perform it, no to all\n"
+	"     -y        perform all proposed actions, as though yes to all\n"
+	"     -v        verbose details\n"
+	"     -V        show the version\n"
+	"     -h        show this help message\n"
+	);
 
 	return 0;
 }
 
 int main(int argc, char *argv[])
 {
-	int check_integrity = 0, check_iplog = 0;
+	int check_integrity = 0;
+	int check_iplog = 0, check_replycache = 0;
+	char *timespec_iplog = NULL, *timespec_replycache = NULL;
 	int null_messages = 0;
 	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0;
 	int show_help = 0;
 	int do_nothing = 1;
 	int is_header = 0;
 	int opt;
-	char timespec[LEN];
-	char timestr[LEN];
 
 	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -106,7 +111,7 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-acbtl:pud" "i" "f:qnyvVh")) != -1) {
+	while ((opt = getopt(argc, argv, "-acbtl:r:pud" "i" "f:qnyvVh")) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
@@ -155,11 +160,14 @@ int main(int argc, char *argv[])
 			check_iplog = 1;
 			do_nothing = 0;
 			if (optarg)
-				strncpy(timespec, optarg, LEN);
-			else
-				timespec[0] = 0;
+				timespec_iplog = g_strdup(optarg);
+			break;
 
-			timespec[LEN] = 0;
+		case 'r':
+			check_replycache = 1;
+			do_nothing = 0;
+			if (optarg)
+				timespec_replycache = g_strdup(optarg);
 			break;
 
 		case 'i':
@@ -176,7 +184,6 @@ int main(int argc, char *argv[])
 			no_to_all = 1;
 			break;
 
-		case 'r':
 		case 'y':
 			yes_to_all = 1;
 			break;
@@ -203,10 +210,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'V':
- 			printf("DBMail: dbmail-util\n"
- 			       "Version: %s\n"
- 			       "$Revision$\n"
- 			       "Copyright: %s\n", VERSION, COPYRIGHT);
+			PRINTF_THIS_IS_DBMAIL;
 			return 1;
 
 		default:
@@ -250,7 +254,8 @@ int main(int argc, char *argv[])
 	if (purge_deleted) do_purge_deleted();
 	if (is_header) do_header_cache();
 	if (set_deleted) do_set_deleted();
-	if (check_iplog) do_check_iplog(timestr, timespec);
+	if (check_iplog) do_check_iplog(timespec_iplog);
+	if (check_replycache) do_check_replycache(timespec_replycache);
 	if (vacuum_db) do_vacuum_db();
 
 	if (!has_errors) {
@@ -621,7 +626,7 @@ static int do_is_header(void)
 		}
 	}
 
-	g_list_free(lost);
+	g_list_free(g_list_first(lost));
 
 	time(&stop);
 	qverbosef("--- checking is_header flags took %g seconds\n",
@@ -662,8 +667,7 @@ static int do_rfc_size(void)
 		}
 	}
 
-	g_list_foreach(lost, (GFunc)g_free, NULL);
-	g_list_free(lost);
+	g_list_destroy(lost);
 
 	time(&stop);
 	qverbosef("--- checking rfcsize field took %g seconds\n",
@@ -705,7 +709,7 @@ static int do_envelope(void)
 		}
 	}
 
-	g_list_free(lost);
+	g_list_free(g_list_first(lost));
 
 	time(&stop);
 	qverbosef("--- checking envelope cache took %g seconds\n",
@@ -766,35 +770,68 @@ int do_header_cache(void)
 }
 
 
-int do_check_iplog(char *timestr, const char *timespec)
+int do_check_iplog(const char *timespec)
 {
 	u64_t log_count;
+	timestring_t timestring;
 
-	find_time(timestr, timespec);
-	if (timestr[0] == 0) {
+	if (find_time(timespec, &timestring) != 0) {
 		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
 		       timespec);
 		return -1;
 	}
 
 	if (no_to_all) {
-		qprintf("\nCounting IP entries older than [%s]...\n", timestr);
-		if (db_count_iplog(timestr, &log_count) < 0) {
+		qprintf("\nCounting IP entries older than [%s]...\n", timestring);
+		if (db_count_iplog(timestring, &log_count) < 0) {
 			qerrorf("Failed. An error occured. Check the log.\n");
 			return -1;
 		}
 		qprintf("Ok. [%llu] IP entries are older than [%s].\n",
-		    log_count, timestr);
+		    log_count, timestring);
 	}
 	if (yes_to_all) {
-		qprintf("\nRemoving IP entries older than [%s]...\n", timestr);
-		if (db_cleanup_iplog(timestr, &log_count) < 0) {
+		qprintf("\nRemoving IP entries older than [%s]...\n", timestring);
+		if (db_cleanup_iplog(timestring, &log_count) < 0) {
 			qerrorf("Failed. Please check the log.\n");
 			return -1;
 		}
 
 		qprintf("Ok. [%llu] IP entries were older than [%s].\n",
-		       log_count, timestr);
+		       log_count, timestring);
+	}
+	return 0;
+}
+
+int do_check_replycache(const char *timespec)
+{
+	u64_t log_count;
+	timestring_t timestring;
+
+	if (find_time(timespec, &timestring) != 0) {
+		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
+		       timespec);
+		return -1;
+	}
+
+	if (no_to_all) {
+		qprintf("\nCounting RC entries older than [%s]...\n", timestring);
+		if (db_count_replycache(timestring, &log_count) < 0) {
+			qerrorf("Failed. An error occured. Check the log.\n");
+			return -1;
+		}
+		qprintf("Ok. [%llu] RC entries are older than [%s].\n",
+		    log_count, timestring);
+	}
+	if (yes_to_all) {
+		qprintf("\nRemoving RC entries older than [%s]...\n", timestring);
+		if (db_cleanup_replycache(timestring, &log_count) < 0) {
+			qerrorf("Failed. Please check the log.\n");
+			return -1;
+		}
+
+		qprintf("Ok. [%llu] RC entries were older than [%s].\n",
+		       log_count, timestring);
 	}
 	return 0;
 }
@@ -817,35 +854,33 @@ int do_vacuum_db(void)
 	return 0;
 }
 
-/* 
- * makes a date/time string: YYYY-MM-DD HH:mm:ss
+/* Makes a date/time string: YYYY-MM-DD HH:mm:ss
  * based on current time minus timespec
  * timespec contains: <n>h<m>m for a timespan of n hours, m minutes
  * hours or minutes may be absent, not both
  *
- * upon error, timestr[0] = 0
+ * Returns NULL on error.
  */
-void find_time(char *timestr, const char *timespec)
+int find_time(const char *timespec, timestring_t *timestring)
 {
 	time_t td;
 	struct tm tm;
 	int min = -1, hour = -1;
 	long tmp;
-	char *end;
+	char *end = NULL;
 
 	time(&td);		/* get time */
 
-	timestr[0] = 0;
 	if (!timespec)
-		return;
+		return -1;
 
 	/* find first num */
 	tmp = strtol(timespec, &end, 10);
 	if (!end)
-		return;
+		return -1;
 
 	if (tmp < 0)
-		return;
+		return -1;
 
 	switch (*end) {
 	case 'h':
@@ -858,12 +893,12 @@ void find_time(char *timestr, const char *timespec)
 		hour = 0;
 		min = tmp;
 		if (end[1])	/* should end here */
-			return;
+			return -1;
 
 		break;
 
 	default:
-		return;
+		return -1;
 	}
 
 
@@ -872,13 +907,13 @@ void find_time(char *timestr, const char *timespec)
 		tmp = strtol(&timespec[end - timespec + 1], &end, 10);
 		if (end) {
 			if ((*end != 'm' && *end != 'M') || end[1])
-				return;
+				return -1;
 
 			if (tmp < 0)
-				return;
+				return -1;
 
 			if (min >= 0)	/* already specified minutes */
-				return;
+				return -1;
 
 			min = tmp;
 		}
@@ -891,8 +926,9 @@ void find_time(char *timestr, const char *timespec)
 	td -= (hour * 3600L + min * 60L);
 
 	tm = *localtime(&td);	/* get components */
-	strftime(timestr, LEN, "%Y-%m-%d %H:%M:%S", &tm);
+	strftime((char *) timestring, sizeof(timestring_t),
+		 "%Y-%m-%d %H:%M:%S", &tm);
 
-	return;
+	return 0;
 }
 

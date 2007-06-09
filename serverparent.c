@@ -19,7 +19,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: serverparent.c 2199 2006-07-18 11:07:53Z paul $
+/* 
  *
  * serverparent.c
  * 
@@ -38,6 +38,13 @@ extern volatile sig_atomic_t mainRestart;
 extern volatile sig_atomic_t mainStatus;
 extern volatile sig_atomic_t mainStop;
 extern volatile sig_atomic_t mainSig;
+
+/* Not used, but required to link with libdbmail.so */
+int verbose = 0;
+int no_to_all = 0;
+int yes_to_all = 0;
+int reallyquiet = 0;
+int quiet = 0;
 
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
@@ -88,7 +95,7 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 			config->log_verbose = 1;
 			break;
 		case 'V':
-			printf("This is DBMail version %s\n\n%s\n", VERSION, COPYRIGHT);
+			PRINTF_THIS_IS_DBMAIL;
 			return -1;
 		case 'n':
 			config->no_daemonize = 1;

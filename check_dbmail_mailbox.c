@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_deliver.c 1829 2005-08-01 14:53:53Z paul $ 
+ *   
  *
  *
  *  
@@ -93,11 +93,11 @@ char * tree_as_string(GTree *t)
 	return result;
 }
 
-static u64_t get_mailbox_id(void)
+static u64_t get_mailbox_id(const char *name)
 {
 	u64_t id, owner;
 	auth_user_exists("testuser1",&owner);
-	db_find_create_mailbox("INBOX", BOX_COMMANDLINE, owner, &id);
+	db_find_create_mailbox(name, BOX_COMMANDLINE, owner, &id);
 	return id;
 }
 
@@ -131,7 +131,7 @@ void teardown(void)
 
 START_TEST(test_dbmail_mailbox_new)
 {
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	fail_unless(mb!=NULL, "dbmail_mailbox_new failed");
 	dbmail_mailbox_free(mb);
 }
@@ -139,7 +139,7 @@ END_TEST
 
 START_TEST(test_dbmail_mailbox_free)
 {
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	dbmail_mailbox_free(mb);
 }
 END_TEST
@@ -147,7 +147,7 @@ END_TEST
 START_TEST(test_dbmail_mailbox_open)
 {
 	int result;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	result = dbmail_mailbox_open(mb);
 	fail_unless(result == 0, "dbmail_mailbox_open failed");
 	dbmail_mailbox_free(mb);
@@ -158,7 +158,7 @@ START_TEST(test_dbmail_mailbox_dump)
 {
 	int c = 0;
 	FILE *o = fopen("/dev/null","w");
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	c = dbmail_mailbox_dump(mb,o);
 	fail_unless(c>=0,"dbmail_mailbox_dump failed");
 	dbmail_mailbox_free(mb);
@@ -176,7 +176,7 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	struct DbmailMailbox *mb, *mc, *md;
 	
 	// first case
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
 			"HEADER FROM paul@nfg.nl SINCE 1-Feb-1994");
 	array = g_strsplit(args," ",0);
@@ -189,7 +189,7 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	
 	// second case
 	idx = 0;
-	mc = dbmail_mailbox_new(get_mailbox_id());
+	mc = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("( arrival ) ( cc ) us-ascii HEADER FROM paul@nfg.nl "
 			"SINCE 1-Feb-1990");
 	array = g_strsplit(args," ",0);
@@ -202,7 +202,7 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	
 	// third case
 	idx = 0;
-	md = dbmail_mailbox_new(get_mailbox_id());
+	md = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
 			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test "
 			"HEADER SUBJECT foo )");
@@ -218,7 +218,7 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 
 	// fourth case
 	idx = 0;
-	md = dbmail_mailbox_new(get_mailbox_id());
+	md = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("1,* ( arrival cc date reverse from size subject to ) us-ascii "
 			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test "
 			"HEADER SUBJECT foo )");
@@ -244,7 +244,7 @@ START_TEST(test_dbmail_mailbox_sort)
 	struct DbmailMailbox *mb;
 	
 	// first case
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii HEADER FROM test SINCE 1-Feb-1994");
 	array = g_strsplit(args," ",0);
 	g_free(args);
@@ -267,7 +267,7 @@ START_TEST(test_dbmail_mailbox_search)
 	struct DbmailMailbox *mb;
 	
 	// first case
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
 			"HEADER FROM foo SINCE 1-Feb-1994 ( SENTSINCE 1-Feb-1995 OR BEFORE 1-Jan-2006 SINCE 1-Jan-2005 )");
 	array = g_strsplit(args," ",0);
@@ -284,7 +284,7 @@ START_TEST(test_dbmail_mailbox_search)
 	//
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("1:*");
 	array = g_strsplit(args," ",0);
 	g_free(args);
@@ -298,7 +298,7 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("1:* TEXT @");
 	array = g_strsplit(args," ",0);
 	g_free(args);
@@ -312,7 +312,7 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("1:* NOT TEXT @");
 	array = g_strsplit(args," ",0);
 	g_free(args);
@@ -329,7 +329,7 @@ START_TEST(test_dbmail_mailbox_search)
 	// third case
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("UID 1,* BODY paul@nfg.nl");
 	array = g_strsplit(args," ",0);
 	g_free(args);
@@ -343,7 +343,7 @@ START_TEST(test_dbmail_mailbox_search)
 	// 
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("1");
 	array = g_strsplit(args," ",0);
 	g_free(args);
@@ -359,7 +359,7 @@ START_TEST(test_dbmail_mailbox_search)
 	// 
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	args = g_strdup("OR FROM myclient SUBJECT myclient");
 	array = g_strsplit(args," ",0);
 	g_free(args);
@@ -380,7 +380,7 @@ START_TEST(test_dbmail_mailbox_search_parsed_1)
 {
 	u64_t idx=0;
 	gboolean sorted = 0;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	char *args = g_strdup("UID 1 BODY unlikelyaddress@nfg.nl");
 	char **array = g_strsplit(args," ",0);
 	g_free(args);
@@ -395,7 +395,7 @@ START_TEST(test_dbmail_mailbox_search_parsed_2)
 {
 	u64_t idx=0;
 	gboolean sorted = 0;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	char *args = g_strdup("UID 1,* BODY the");
 	char **array = g_strsplit(args," ",0);
 	g_free(args);
@@ -412,7 +412,7 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	char *args;
 	char **array;
 	u64_t idx = 0;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	
 	dbmail_mailbox_open(mb);
 
@@ -442,31 +442,36 @@ START_TEST(test_dbmail_mailbox_get_set)
 {
 	guint c, d;
 	GTree *set;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	dbmail_mailbox_set_uid(mb,TRUE);
 
 	// basic tests;
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"*:1",0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(c==d,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"1,*",0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed [%d != 2]", d);
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"1,*",0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
 	
 	set = dbmail_mailbox_get_set(mb,"1",0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(d==1,"mailbox_get_set failed");
 	g_tree_destroy(set);
@@ -476,12 +481,14 @@ START_TEST(test_dbmail_mailbox_get_set)
 	char *s, *t;
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 1);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	s = tree_as_string(set);
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	t = tree_as_string(set);
 	fail_unless(strncmp(s,t,1024)==0,"mismatch between <1:*> and <UID 1:*>\n%s\n%s", s,t);
 	g_tree_destroy(set);
@@ -489,6 +496,47 @@ START_TEST(test_dbmail_mailbox_get_set)
 	g_free(t);
 	
 	dbmail_mailbox_free(mb);
+
+
+	// empty box
+	mb = dbmail_mailbox_new(get_mailbox_id("empty"));
+	set = dbmail_mailbox_get_set(mb, "1:*", 0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
+	g_tree_destroy(set);
+	
+	set = dbmail_mailbox_get_set(mb, "*", 0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
+	g_tree_destroy(set);
+
+	set = dbmail_mailbox_get_set(mb, "1", 0);
+	fail_unless(set==NULL,"dbmail_mailbox_get_set failed");
+
+	dbmail_mailbox_free(mb);
+}
+END_TEST
+
+START_TEST(test_dbmail_mailbox_remove_uid)
+{
+	GTree *set;
+	u64_t *id, msn;
+	gint c, i, j;
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	dbmail_mailbox_set_uid(mb,TRUE);
+	
+	msn = 1;
+	set = dbmail_mailbox_get_set(mb, "1:*", 1);
+	c = g_tree_nnodes(mb->ids);
+	j = c/2;
+
+	for (i=0; i<j; i++) {
+		id = g_tree_lookup(mb->msn, &msn);
+		dbmail_mailbox_remove_uid(mb, id);
+		fail_unless(g_tree_nnodes(mb->ids)==c-i-1,
+			"remove_uid failed [%d] != [%d]", g_tree_nnodes(mb->ids), c-i-1);
+	}
+
+	dbmail_mailbox_free(mb);
+
 }
 END_TEST
 
@@ -510,6 +558,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_remove_uid);
 	return s;
 }
 

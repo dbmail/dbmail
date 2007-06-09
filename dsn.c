@@ -1,7 +1,7 @@
 /* Delivery User Functions
  * Aaron Stone, 9 Feb 2004 */
 /*
-  $Id$
+  
 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -49,6 +49,11 @@ static const char * const DSN_STRINGS_SUBJECT[] = {
 /* .5. */	"Mail Delivery Protocol Status",
 /* .6. */	"Message Content or Message Media Status",
 /* .7. */	"Security or Policy Status"
+};
+
+/* Empty subject */
+static const char * const DSN_STRINGS_DETAIL_ZERO[] = {
+/* .0.0 */	""
 };
 
 /* Address Status */
@@ -126,68 +131,50 @@ static const char * const DSN_STRINGS_DETAIL_SEVEN[] = {
 /* .7.7 */	"Message integrity failure"
 };
 
+/* MAGIC: max detail indexes for each subject detail array */
+static int DSN_STRINGS_DETAIL_VALID[] = { 0, 8, 4, 4, 7, 5 ,5, 7 };
+
+static const char * const * const DSN_STRINGS_DETAIL[] = {
+	DSN_STRINGS_DETAIL_ZERO,
+	DSN_STRINGS_DETAIL_ONE,
+	DSN_STRINGS_DETAIL_TWO,
+	DSN_STRINGS_DETAIL_THREE,
+	DSN_STRINGS_DETAIL_FOUR,
+	DSN_STRINGS_DETAIL_FIVE,
+	DSN_STRINGS_DETAIL_SIX,
+	DSN_STRINGS_DETAIL_SEVEN,
+};
+
 /* Convert the DSN code into a descriptive message. 
  * Returns 0 on success, -1 on failure. */
 int dsn_tostring(delivery_status_t dsn, const char ** const class,
                  const char ** const subject, const char ** const detail)
 {
+	assert(class); assert(subject); assert(detail);
+	*class = *subject = *detail = NULL;
+	
 	if (dsn.class == 2 || dsn.class == 4 || dsn.class == 5)
 		*class = DSN_STRINGS_CLASS[dsn.class];
-	else
+	
+	if (dsn.subject >= 0 && dsn.subject <= 7) /* MAGIC: max index of DSN_STRINGS_SUBJECT */
+		*subject = DSN_STRINGS_SUBJECT[dsn.subject];
+
+	if (dsn.subject >= 0 && dsn.subject <= 7 /* MAGIC: max index of DSN_STRINGS_SUBJECT */
+		 && dsn.detail >= 0 && dsn.detail <= DSN_STRINGS_DETAIL_VALID[dsn.subject])
+		*detail = DSN_STRINGS_DETAIL[dsn.subject][dsn.detail];
+
+	if (!*class || !*subject || !*detail) {
+		TRACE(TRACE_INFO, "Invalid dsn code received [%d][%d][%d]",
+			dsn.class, dsn.subject, dsn.detail);
+		/* Allow downstream code to assume the return pointers
+		 * are valid strings, though not particularly useful. */
+		*class = *subject = *detail = "";
 		return -1;
-
-	switch (dsn.subject) {
-		case 1:
-			if (dsn.detail >= 0 && dsn.detail <= 8)
-				*detail = DSN_STRINGS_DETAIL_ONE[dsn.detail];
-			else
-				return -1;
-			break;
-		case 2:
-			if (dsn.detail >= 0 && dsn.detail <= 4)
-				*detail = DSN_STRINGS_DETAIL_TWO[dsn.detail];
-			else
-				return -1;
-			break;
-		case 3:
-			if (dsn.detail >= 0 && dsn.detail <= 4)
-				*detail = DSN_STRINGS_DETAIL_THREE[dsn.detail];
-			else
-				return -1;
-			break;
-		case 4:
-			if (dsn.detail >= 0 && dsn.detail <= 7)
-				*detail = DSN_STRINGS_DETAIL_FOUR[dsn.detail];
-			else
-				return -1;
-			break;
-		case 5:
-			if (dsn.detail >= 0 && dsn.detail <= 5)
-				*detail = DSN_STRINGS_DETAIL_FIVE[dsn.detail];
-			else
-				return -1;
-			break;
-		case 6:
-			if (dsn.detail >= 0 && dsn.detail <= 5)
-				*detail = DSN_STRINGS_DETAIL_SIX[dsn.detail];
-			else
-				return -1;
-			break;
-		case 7:
-			if (dsn.detail >= 0 && dsn.detail <= 7)
-				*detail = DSN_STRINGS_DETAIL_SEVEN[dsn.detail];
-			else
-				return -1;
-			break;
-		default:
-			return -1;
 	}
-
-	/* If we made it this far, then the subject was valid. */
-	*subject = DSN_STRINGS_SUBJECT[dsn.subject];
 
 	return 0;
 }
+
 
 int dsnuser_init(deliver_to_user_t * dsnuser)
 {
@@ -200,12 +187,12 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 	dsnuser->mailbox = NULL;
 	dsnuser->source = BOX_NONE;
 
-	dsnuser->userids = (struct dm_list *) dm_malloc(sizeof(struct dm_list));
+	dsnuser->userids = g_new0(struct dm_list, 1);
 	if (dsnuser->userids == NULL)
 		return -1;
-	dsnuser->forwards = (struct dm_list *) dm_malloc(sizeof(struct dm_list));
+	dsnuser->forwards = g_new0(struct dm_list, 1);
 	if (dsnuser->forwards == NULL) {
-		dm_free(dsnuser->userids);
+		g_free(dsnuser->userids);
 		return -1;
 	}
 
@@ -290,7 +277,7 @@ static int address_has_alias_mailbox(deliver_to_user_t *delivery)
 				delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases", newaddress, alias_count);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 
 	if (alias_count > 0)
 		return 1;
@@ -317,26 +304,26 @@ static int address_is_username_mailbox(deliver_to_user_t *delivery)
 	if (user_exists < 0) {
 		/* An error occurred. */
 		TRACE(TRACE_ERROR, "error checking user [%s]", newaddress);
-		dm_free(newaddress);
+		g_free(newaddress);
 		return -1;
 	}
 
 	if (user_exists == 0) {
 		/* User does not exist. */
 		TRACE(TRACE_INFO, "username not found [%s]", newaddress);
-		dm_free(newaddress);
+		g_free(newaddress);
 		return 0;
 	}
 
 	if (dm_list_nodeadd(delivery->userids, &userid, sizeof(u64_t)) == 0) {
 		TRACE(TRACE_ERROR, "out of memory");
-		dm_free(newaddress);
+		g_free(newaddress);
 		return -1;
 	}
 
 	TRACE(TRACE_DEBUG, "added user [%s] id [%llu] to delivery list", newaddress, userid);
 
-	dm_free(newaddress);
+	g_free(newaddress);
 	return 1;
 }
 
@@ -442,7 +429,7 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 
 static int address_is_userpart_catchall(deliver_to_user_t *delivery)
 {
-	char *userpart = dm_strdup(delivery->address);
+	char *userpart = g_strdup(delivery->address);
 	char *userpartcut;
 	int userpart_count;
 

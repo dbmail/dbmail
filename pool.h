@@ -28,7 +28,8 @@ typedef struct {
 	time_t ctime;
 	unsigned char status;
 	unsigned long count;
-	char * client;
+	char client[128];
+	char user[128];
 } child_state_t;
 
 typedef struct {
@@ -44,6 +45,8 @@ void scoreboard_release(pid_t pid);
 void scoreboard_delete(void);
 int child_register(void);
 void child_reg_connected(void);
+void child_reg_connected_client(const char *ip, const char *name);
+void child_reg_connected_user(char *user);
 void child_reg_disconnected(void);
 void child_unregister(void);
 int count_children(void);

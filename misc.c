@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id$
+/*	
  *
  *	Miscelaneous functions */
 
@@ -49,6 +49,8 @@ char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
 char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;
 
 const int month_len[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
+extern const char *imap_flag_desc_escaped[];
 
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )
@@ -107,7 +109,7 @@ void create_unique_id(char *target, u64_t message_idnr)
 	md5_str = dm_md5((unsigned char *)target);
 	snprintf(target, UID_SIZE, "%s", md5_str);
 	TRACE(TRACE_DEBUG, "created: %s", target);
-	dm_free(md5_str);
+	g_free(md5_str);
 	g_free(a_message_idnr);
 	g_free(a_rand);
 }
@@ -152,7 +154,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 	else
 		g_string_printf(t, "%s%s%s%s%s", NAMESPACE_USER, MAILBOX_SEPARATOR, owner, 
 				MAILBOX_SEPARATOR, mailbox_name);
-	dm_free(owner);
+	g_free(owner);
 	
 	fq = t->str;
 	g_string_free(t,FALSE);
@@ -234,7 +236,7 @@ const char *mailbox_remove_namespace(const char *fq_name,
 			return NULL;
 		}
 
-		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
+		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%zu]",
 			user, (size_t)(mbox - user - slash));
 		if (username) *username = g_strndup(user, mbox - user - slash);
 
@@ -287,7 +289,7 @@ int read_from_stream(FILE * instream, char **m_buf, int maxlen)
 
 	/* Allocate a zero length string on length 0. */
 	if (maxlen == 0) {
-		*m_buf = dm_strdup("");
+		*m_buf = g_strdup("");
 		return 0;
 	}
 
@@ -360,7 +362,7 @@ int find_bounded(const char * const value, char left, char right,
 			tmpleft++;
 
 		tmplen = tmpright - tmpleft;
-		*retchar = dm_malloc(sizeof(char) * (tmplen + 1));
+		*retchar = g_new0(char, tmplen + 1);
 		if (*retchar == NULL) {
 			*retchar = NULL;
 			*retsize = 0;
@@ -1103,7 +1105,10 @@ int num_from_imapdate(const char *date)
 
 void g_list_destroy(GList *l)
 {
+	l = g_list_first(l);
 	g_list_foreach(l,(GFunc)g_free,NULL);
+
+	l = g_list_first(l);
 	g_list_free(l);
 }
 
@@ -1250,12 +1255,20 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 				
 				keys = g_list_next(keys);
 			}
+
+			keys = g_list_first(keys);
+			g_list_free(keys);
+
 			break;
 	}
 
-	TRACE(TRACE_DEBUG,"a[%d] [%s] b[%d] -> a[%d]", 
-			alen, type, blen, 
+	TRACE(TRACE_DEBUG,"(%p) (%p): a[%d] [%s] b[%d] -> a[%d]", 
+			a, b, alen, type, blen, 
 			g_tree_nnodes(a));
+
+	merger->list = g_list_first(merger->list);
+	g_list_free(merger->list);
+
 
 	g_free(merger);
 	g_free(type);
@@ -1428,8 +1441,7 @@ char *dbmail_imap_plist_as_string(GList * list)
 
 void dbmail_imap_plist_free(GList *l)
 {
-	g_list_foreach(l, (GFunc)g_free, NULL);
-	g_list_free(l);
+	g_list_destroy(l);
 }
 
 /* 
@@ -1502,8 +1514,7 @@ static GList * imap_append_hash_as_string(GList *list, GHashTable *hash)
 		list = g_list_append_printf(list, "%s", s);
 		g_free(s);
 		
-		g_list_foreach(l,(GFunc)g_free,NULL);
-		g_list_free(l);
+		g_list_destroy(l);
 	} else {
 		list = g_list_append_printf(list, "NIL");
 	}
@@ -1528,8 +1539,7 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 		list = g_list_append_printf(list,"%s",result);
 		g_free(result);
 
-		g_list_foreach(t,(GFunc)g_free,NULL);
-		g_list_free(t);
+		g_list_destroy(t);
 		g_mime_disposition_destroy(disposition);
 	} else {
 		list = g_list_append_printf(list,"NIL");
@@ -1679,20 +1689,19 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 		
 		alist = g_list_append(alist,s->str);
 
-		g_list_foreach(list,(GFunc)g_free,NULL);
-		g_list_free(list);
+		g_list_destroy(list);
 		g_string_free(s,FALSE);
 	}
 
 	/* done*/
 	*(GList **)data = (gpointer)g_list_append(*(GList **)data,dbmail_imap_plist_as_string(alist));
 	
-	g_list_foreach(alist,(GFunc)g_free,NULL);
-	g_list_free(alist);
-	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
+	g_list_destroy(alist);
 
+	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 	
 }
+
 void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean extension)
 {
 	char *result, *b;
@@ -1749,8 +1758,8 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	/* done*/
 	*(GList **)data = (gpointer)g_list_append(*(GList **)data,dbmail_imap_plist_as_string(list));
 	
-	g_list_foreach(list,(GFunc)g_free,NULL);
-	g_list_free(list);
+	g_list_destroy(list);
+
 	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 
 }
@@ -1810,8 +1819,8 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	/* done*/
 	*(GList **)data = (gpointer)g_list_append(*(GList **)data, dbmail_imap_plist_as_string(list));
 	
-	g_list_foreach(list,(GFunc)g_free,NULL);
-	g_list_free(list);
+	g_list_destroy(list);
+
 	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 }
 
@@ -1867,8 +1876,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			}
 			g_free(s);
 			
-			g_list_foreach(t, (GFunc)g_free, NULL);
-			g_list_free(t);
+			g_list_destroy(t);
 			t = NULL;
 
 			/* Address list ending. */
@@ -1924,8 +1932,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			p = g_list_append_printf(p, "%s", s);
 			g_free(s);
 			
-			g_list_foreach(t, (GFunc)g_free, NULL);
-			g_list_free(t);
+			g_list_destroy(t);
 			t = NULL;
 
 			break;
@@ -1948,8 +1955,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 		g_free(s);
 		g_free(st);
         
-		g_list_foreach(p, (GFunc)g_free, NULL);
-		g_list_free(p);
+		g_list_destroy(p);
 	} else {
 		list = g_list_append_printf(list, "NIL");
 	}
@@ -1991,8 +1997,7 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	t = dbmail_imap_plist_collapse(s);
 	g_free(s);
 
-	g_list_foreach(structure,(GFunc)g_free,NULL);
-	g_list_free(structure);
+	g_list_destroy(structure);
 	g_object_unref(part);
 	
 	return t;
@@ -2003,12 +2008,14 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 	const char *result;
 	char *t;
 	InternetAddressList *alist;
-	char *result_enc;
+	char *result_enc, *charset;
 	
+	charset = message_get_charset(message);
+
 	result = g_mime_message_get_header(message,header);
 	
 	if (result) {
-		result_enc = convert_8bit_field_to_utf8(message,result);
+		result_enc = convert_8bit_field_to_utf8(result, charset);
 		t = imap_cleanup_address(result_enc);
 		g_free(result_enc);
 		alist = internet_address_parse_string(t);
@@ -2019,8 +2026,11 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
+
+	g_free(charset);
 	return list;
 }
+
 
 static void  get_msg_charset_frompart(GMimeObject *part, gpointer data)
 {
@@ -2031,34 +2041,33 @@ static void  get_msg_charset_frompart(GMimeObject *part, gpointer data)
 	return;
 }
 
-static char * get_msg_charset(GMimeMessage *message)
+
+char * message_get_charset(GMimeMessage *message)
 {
-	GMimeObject *mess_obj=NULL;
+	GMimeObject *mime_part=NULL;
 	char *mess_charset=NULL;
 
 	if (message)
-		mess_obj=g_mime_message_get_mime_part(message);
+		mime_part=g_mime_message_get_mime_part(message);
 	
-	if (mess_obj) {
+	if (mime_part) {
 		const char * charset = NULL;
-		if ((charset=g_mime_object_get_content_type_parameter(mess_obj,"charset"))) {
+		if ((charset=g_mime_object_get_content_type_parameter(mime_part,"charset")))
 			mess_charset=g_strdup(charset);
-		}
-		g_object_unref(mess_obj);
+		g_object_unref(mime_part);
 	}
-	if (mess_charset==NULL) {
+	if (mess_charset==NULL)
 		g_mime_message_foreach_part(message,get_msg_charset_frompart,&mess_charset);
-	}
 
 	return mess_charset;
 }
 
+
 /* convert not encoded field to utf8 */
-char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
+char * convert_8bit_field_to_utf8(const char* str_in, const char *charset)
 {
 	char * subj=NULL;
 	static iconv_t default_iconv=(iconv_t)-1;
-	const char *charset=NULL;
 	static int allocated_default_iconv = 0;
 	iconv_t conv_iconv;
 	
@@ -2088,9 +2097,6 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 		return g_strdup(str_in);
 	}
 
-	// Get message encode codepage
-	if (message)
- 		charset=get_msg_charset(message);
  	if (charset) {
  		// codepage not set in message header use default
  		TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
@@ -2114,28 +2120,18 @@ char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
 		for(p=subj;*p;p++)
 		    if(*p & 0x80) *p='?';
 	}
- 	
- 	if (subj) {
- 		gchar *p;
- 		if ((p=g_utf8_normalize(subj,-1,G_NORMALIZE_ALL))) {
- 		        g_free(subj);
- 			subj=p;
- 		}
- 	}
-
+ 
 	return subj;
 }
 
 
 /* convert not encoded field to database encoding */
-char * convert_8bit_field(GMimeMessage *message,const char* str_in)
+char * convert_8bit_field(const char* str_in, const char *charset)
 {
 	char * subj=NULL;
 	static const char * base_charset=NULL;
 	static iconv_t base_iconv=(iconv_t)-1;
 	static iconv_t default_iconv=(iconv_t)-1;
-
-	const char *charset = NULL;
 	iconv_t conv_iconv;
 
 	// Init static vars
@@ -2159,7 +2155,6 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		base_iconv=g_mime_iconv_open(base_charset,base_charset);
 		if (base_iconv == (iconv_t)-1)
 			TRACE(TRACE_DEBUG,"incorrect base encoding [%s]", base_charset);
-			// codepage not set in message header use default
 			
 	}
 	// End init static
@@ -2177,12 +2172,11 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
 		}
 	}
-	if (str_in==NULL) {
+	if (str_in==NULL)
 		return NULL;
-	}
 	
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
-		// Conversion not needed
+		// No convertion required
 		return g_strdup(str_in);
 	}
 
@@ -2191,22 +2185,11 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 		return subj;
 	}
 
-	//base_iconv not needed after here.
-	if (base_iconv != (iconv_t)-1)
-		g_mime_iconv_close(base_iconv);
-
-
-	// Get message encode codepage 
- 	if (message) {
- 		charset=get_msg_charset(message);
- 	}
- 	
  	if (charset) {
- 		// codepage not set in message header use default
  	        TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
   			
  		if ((conv_iconv=g_mime_iconv_open(base_charset,charset))==(iconv_t)-1) {
- 			TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [%s]", charset,base_charset);
+ 			TRACE(TRACE_WARNING,"incorrect encoding [%s] base [%s]", charset,base_charset);
  			subj=g_mime_iconv_strdup(default_iconv,str_in);
  		} else {
  			subj=g_mime_iconv_strdup(conv_iconv,str_in);
@@ -2228,9 +2211,7 @@ char * convert_8bit_field(GMimeMessage *message,const char* str_in)
 char * convert_8bit_db_to_mime(const char* str_in)
 {
 	char * subj=NULL;
-	
 	static iconv_t base_iconv=(iconv_t)-1;
-
 	
 	if (base_iconv == (iconv_t)-1) { //Init
 		field_t val;
@@ -2256,31 +2237,18 @@ char * convert_8bit_db_to_mime(const char* str_in)
 	}
 	
 	if (str_in==NULL)
-		if (base_iconv != (iconv_t)-1)
-			 g_mime_iconv_close(base_iconv);
 		return NULL;
 	
-	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
-		if (base_iconv != (iconv_t)-1)
-			 g_mime_iconv_close(base_iconv);
-		// Conversion not needed
+	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)))
 		return g_strdup(str_in);
-	}
 
- 	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
- 		gchar *p,*subj2;
- 		p=g_utf8_normalize(subj,-1,G_NORMALIZE_ALL);
-		subj2 = g_mime_utils_header_encode_text((unsigned char *)p);
-		if (base_iconv != (iconv_t)-1)
-			 g_mime_iconv_close(base_iconv);
+	if ((! g_utf8_validate((const char *)str_in,-1,NULL)) && ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL)) {
+ 		gchar *subj2;
+		subj2 = g_mime_utils_header_encode_text((unsigned char *)subj);
   		g_free(subj);
- 		g_free(p);
  		return subj2;
   	}
 
-	if (base_iconv != (iconv_t)-1)
-		 g_mime_iconv_close(base_iconv);
-	
 	return g_mime_utils_header_encode_text((unsigned char *)str_in);
 }
 
@@ -2313,7 +2281,9 @@ char * imap_get_envelope(GMimeMessage *message)
 	result = (char *)g_mime_message_get_header(message,"Subject");
 
 	if (result) {
-		char * subj = convert_8bit_field_to_utf8(message, result);
+		char *charset = message_get_charset(message);
+		char * subj = convert_8bit_field_to_utf8(result, charset);
+		g_free(charset);
 		s = g_mime_utils_header_encode_text((unsigned char *)subj);
 		TRACE(TRACE_DEBUG,"encoding 8bit subject [%s] -> [%s]", subj, s);
 		t = dbmail_imap_astring_as_string(s);
@@ -2362,8 +2332,7 @@ char * imap_get_envelope(GMimeMessage *message)
 
 	s = dbmail_imap_plist_as_string(list);
 
-	g_list_foreach(list,(GFunc)g_free,NULL);
-	g_list_free(list);
+	g_list_destroy(list);
 	
 	return s;
 }
@@ -2554,6 +2523,21 @@ char * imap_cleanup_address(const char *a)
 	r = s->str;
 	g_string_free(s,FALSE);
 	return r;
+}
+
+char * imap_flags_as_string(msginfo_t *msginfo)
+{
+	GList *sublist = NULL;
+	int j;
+	char *s;
+
+	for (j = 0; j < IMAP_NFLAGS; j++) {
+		if (msginfo->flags[j])
+			sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
+	}
+	s = dbmail_imap_plist_as_string(sublist);
+	g_list_destroy(sublist);
+	return s;
 }
 
 

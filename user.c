@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  * This is the dbmail-user program
  * It makes adding users easier 
  *
@@ -35,11 +35,11 @@ char *configFile = DEFAULT_CONFIG_FILE;
 extern db_param_t _db_params;
 
 /* UI policy */
-extern int yes_to_all;
-extern int no_to_all;
-extern int verbose;
-extern int quiet; 		/* Don't be helpful. */
-extern int reallyquiet;	/* Don't print errors. */
+int yes_to_all;
+int no_to_all;
+int verbose;
+int quiet; 		/* Don't be helpful. */
+int reallyquiet;	/* Don't print errors. */
 
 int do_showhelp(void) {
 	
@@ -272,8 +272,7 @@ int main(int argc, char *argv[])
 
 		case 'V':
 			/* Show the version and return non-zero. */
-			printf("\n*** DBMAIL: dbmail-users version "
-			       "$Revision$ %s\n\n", COPYRIGHT);
+			PRINTF_THIS_IS_DBMAIL;
 			result = 1;
 			break;
 
@@ -366,7 +365,7 @@ int main(int argc, char *argv[])
 			if (pw[len-1] == '\n')
 			        pw[len-1] = '\0';
 			/* fgets guarantees a nul terminated string. */
-			passwd = dm_strdup(pw);
+			passwd = g_strdup(pw);
 
 			/* Restore the previous terminal state (with echo back on). */
 			tcsetattr(fileno(stdin), TCSANOW, &oldattr);
@@ -431,20 +430,16 @@ freeall:
 
 	/* Free the lists. */
 	if (alias_del) {
-		g_list_foreach(alias_del, (GFunc)g_free, NULL);
-		g_list_free(alias_del);
+		g_list_destroy(alias_del);
 	}
 	if (alias_add) {
-		g_list_foreach(alias_add, (GFunc)g_free, NULL);
-		g_list_free(alias_add);
+		g_list_destroy(alias_add);
 	}
 	if (fwds_del) {
-		g_list_foreach(fwds_del, (GFunc)g_free, NULL);
-		g_list_free(fwds_del);
+		g_list_destroy(fwds_del);
 	}
 	if (fwds_add) {
-		g_list_foreach(fwds_add, (GFunc)g_free, NULL);
-		g_list_free(fwds_add);
+		g_list_destroy(fwds_add);
 	}
 
 	db_disconnect();

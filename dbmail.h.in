@@ -28,9 +28,6 @@
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
-#else
-#define VERSION "2.2"
-#define PACKAGE "dbmail"
 #endif
 
 #define _XOPEN_SOURCE /* glibc2 */
@@ -44,6 +41,7 @@
 #include <fnmatch.h>
 #include <gmime/gmime.h>
 #include <glib.h>
+#include <gmodule.h>
 #include <grp.h>
 #include <limits.h>
 #include <netinet/in.h>
@@ -75,6 +73,8 @@
 #include <ldap.h>
 #endif
 
+#include "list.h"
+#include "memblock.h"
 #include "dbmailtypes.h"
 #include "debug.h"
 #include "dsn.h"
@@ -86,7 +86,6 @@
 #include "sort.h"
 #include "imap4.h"
 #include "imapcommands.h"
-#include "memblock.h"
 #include "server.h"
 #include "serverchild.h"
 #include "serverparent.h"
@@ -94,6 +93,10 @@
 #include "pop3.h"
 #include "quota.h"
 #include "lmtp.h"
+
+#include "dbmodule.h"
+#include "authmodule.h"
+#include "sortmodule.h"
 
 #include "dm_md5.h"
 #include "dm_cidr.h"
@@ -131,6 +134,8 @@
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
 
+#define PRINTF_THIS_IS_DBMAIL printf("This is DBMail version %s\n\n%s\n", DBMAIL_VERSION, COPYRIGHT)
+
 #define COPYRIGHT \
 "Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl\n" \
 "Copyright (C) 2001-2007 Aaron Stone, aaron@serendipity.cx\n" \
@@ -163,6 +168,9 @@
 #define DEFAULT_PID_EXT ".pid"
 #define DEFAULT_STATE_DIR "@DM_STATEDIR@"
 #define DEFAULT_STATE_EXT ".state"
+
+/** default location of library files */
+#define DEFAULT_LIBRARY_DIR "@DM_PKGLIBDIR@"
 
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "@DM_CONFDIR@/dbmail.conf"

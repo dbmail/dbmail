@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
+/* 
  *
  * implementation for lmtp commands according to RFC 1081 */
 
@@ -125,7 +125,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	gethostname(myhostname, 64);
 	myhostname[63] = 0;	/* make sure string is terminated */
 
-	buffer = (char *) dm_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
+	buffer = g_new0(char, INCOMING_BUFFER_SIZE);
 
 	if (!buffer) {
 		TRACE(TRACE_MESSAGE, "Could not allocate buffer");
@@ -138,7 +138,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 		fflush(ci->tx);
 	} else {
 		TRACE(TRACE_MESSAGE, "TX stream is null!");
-		dm_free(buffer);
+		g_free(buffer);
 		return 0;
 	}
 
@@ -165,20 +165,21 @@ int lmtp_handle_connection(clientinfo_t * ci)
 				/* leave, an alarm has occured during fread */
 				if (alarm_occured) {
 					alarm_occured = 0;
-					client_close();
-					dm_free(buffer);
-					return 0;
+					done = -2;
+					break;
 				}
 			} while (ferror(ci->rx) && errno == EINTR);
 
-			if (buffer[cnt] == '\n' || feof(ci->rx)
+			if (done < 0 || buffer[cnt] == '\n' || feof(ci->rx)
 			    || ferror(ci->rx)) {
 				buffer[cnt + 1] = '\0';
 				break;
 			}
 		}
 
-		if (feof(ci->rx) || ferror(ci->rx)) {
+		if (done < 0) {
+			break;
+		} else if (feof(ci->rx) || ferror(ci->rx)) {
 			/* check client eof  */
 			done = -1;
 		} else {
@@ -190,9 +191,14 @@ int lmtp_handle_connection(clientinfo_t * ci)
 		fflush(ci->tx);
 	}
 
+	if (done==-2) {
+		ci_write(ci->tx, "221 Connection timeout BYE\r\n");
+		TRACE(TRACE_ERROR, "client timed, connection closed");
+	}
+
 	/* memory cleanup */
 	lmtp_reset(&session);
-	dm_free(buffer);
+	g_free(buffer);
 	buffer = NULL;
 
 	/* reset timers */
@@ -276,12 +282,18 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 	TRACE(TRACE_DEBUG, "command looked up as commandtype %d", cmdtype);
 
-	/* commands that are allowed to have no arguments */
+	/* Invalid command */
+	if (cmdtype == LMTP_END) {
+		TRACE(TRACE_INFO, "Client gave an invalid command [%s], protocol error", command);
+		return lmtp_error(session, stream, "500 Invalid command.\r\n");
+	}
+
+	/* Commands that are allowed to have no arguments */
 	if ((value == NULL) &&
 	    !((cmdtype == LMTP_LHLO) || (cmdtype == LMTP_DATA) ||
 	      (cmdtype == LMTP_RSET) || (cmdtype == LMTP_QUIT) ||
 	      (cmdtype == LMTP_NOOP) || (cmdtype == LMTP_HELP) )) {
-		TRACE(TRACE_ERROR, "ARGUMENT %d", cmdtype);
+		TRACE(TRACE_INFO, "Client gave command [%s] without any arguments, protocol error", command);
 		return lmtp_error(session, stream, "500 This command requires an argument.\r\n");
 	}
 
@@ -457,9 +469,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 					ci_write((FILE *) stream,
 						"250 Sender <%s> OK\r\n",
 						(char *)(dm_list_getstart(&from)->data));
+					child_reg_connected_user(tmpaddr);
 				}
 				if (tmpaddr != NULL)
-					dm_free(tmpaddr);
+					g_free(tmpaddr);
 			}
 			return 1;
 		}

@@ -23,7 +23,7 @@
 # This file was originally created by Paul Stevens and added
 # to dbmail on August 27th, 2003.
 # 
-# $Id$
+# 
 
 SET FOREIGN_KEY_CHECKS=0;
 
@@ -36,7 +36,7 @@ CREATE TABLE dbmail_aliases (
 	PRIMARY KEY (alias_idnr),
 	INDEX alias_index (alias),
 	INDEX client_idnr_index (client_idnr)	
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_users;
 CREATE TABLE dbmail_users (
@@ -52,7 +52,7 @@ CREATE TABLE dbmail_users (
 	last_login datetime NOT NULL default '1979-11-03 22:05:58',
 	PRIMARY KEY  (user_idnr),
 	UNIQUE INDEX userid_index (userid)
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_usermap;
 CREATE TABLE dbmail_usermap (
@@ -60,7 +60,7 @@ CREATE TABLE dbmail_usermap (
   sock_allow varchar(100) NOT NULL,
   sock_deny varchar(100) NOT NULL,
   userid varchar(100) NOT NULL
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
 DROP TABLE IF EXISTS dbmail_mailboxes;
@@ -83,7 +83,7 @@ CREATE TABLE dbmail_mailboxes (
 	UNIQUE INDEX owner_idnr_name_index (owner_idnr, name),
 	FOREIGN KEY owner_idnr_fk (owner_idnr) 
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_subscription;
 CREATE TABLE dbmail_subscription (
@@ -96,7 +96,7 @@ CREATE TABLE dbmail_subscription (
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
 		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_acl;
 CREATE TABLE dbmail_acl (
@@ -118,7 +118,7 @@ CREATE TABLE dbmail_acl (
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
 		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 	
 DROP TABLE IF EXISTS dbmail_physmessage;
 CREATE TABLE dbmail_physmessage (
@@ -127,7 +127,7 @@ CREATE TABLE dbmail_physmessage (
 	rfcsize bigint(21) NOT NULL default '0',
 	internal_date datetime NOT NULL default '0000-00-00 00:00:00',
 	PRIMARY KEY (id)
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_messages;
 CREATE TABLE dbmail_messages (
@@ -153,7 +153,7 @@ CREATE TABLE dbmail_messages (
 		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY mailbox_idnr_fk (mailbox_idnr) 
 		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_messageblks;
 CREATE TABLE dbmail_messageblks (
@@ -167,7 +167,7 @@ CREATE TABLE dbmail_messageblks (
 	INDEX physmessage_id_is_header_index (physmessage_id, is_header),
 	FOREIGN KEY physmessage_id_fk (physmessage_id) 
 		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_auto_notifications;
 CREATE TABLE dbmail_auto_notifications (
@@ -176,7 +176,7 @@ CREATE TABLE dbmail_auto_notifications (
 	INDEX user_idnr_index (user_idnr),
 	FOREIGN KEY user_idnr_fk (user_idnr) 
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_auto_replies;
 CREATE TABLE dbmail_auto_replies (
@@ -187,7 +187,7 @@ CREATE TABLE dbmail_auto_replies (
 	INDEX user_idnr_index (user_idnr),
 	FOREIGN KEY user_idnr_fk (user_idnr) 
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_pbsp;
 CREATE TABLE dbmail_pbsp (
@@ -197,7 +197,7 @@ CREATE TABLE dbmail_pbsp (
    PRIMARY KEY (idnr),
    UNIQUE INDEX ipnumber_index (ipnumber),
    INDEX since_index (since)
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_sievescripts;
 CREATE TABLE dbmail_sievescripts (
@@ -210,7 +210,7 @@ CREATE TABLE dbmail_sievescripts (
   INDEX (owner_idnr, name),
   FOREIGN KEY owner_idnr_fk (owner_idnr)
     REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 
 #
@@ -224,7 +224,7 @@ CREATE TABLE dbmail_headername (
 	headername	VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
 	UNIQUE (headername)
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 DROP TABLE IF EXISTS dbmail_headervalue;
 CREATE TABLE dbmail_headervalue (
@@ -243,7 +243,7 @@ CREATE TABLE dbmail_headervalue (
 		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
 	
 		
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 # Provide separate storage of commonly used headers
 
@@ -266,7 +266,7 @@ CREATE TABLE dbmail_subjectfield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 DROP TABLE IF EXISTS dbmail_datefield;
 CREATE TABLE dbmail_datefield (
@@ -278,7 +278,7 @@ CREATE TABLE dbmail_datefield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 DROP TABLE IF EXISTS dbmail_referencesfield;
 CREATE TABLE dbmail_referencesfield (
@@ -290,7 +290,7 @@ CREATE TABLE dbmail_referencesfield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 # Searching and Sorting
 
@@ -308,7 +308,7 @@ CREATE TABLE dbmail_fromfield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 DROP TABLE IF EXISTS dbmail_tofield;
 CREATE TABLE dbmail_tofield (
@@ -321,7 +321,7 @@ CREATE TABLE dbmail_tofield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 DROP TABLE IF EXISTS dbmail_replytofield;
 CREATE TABLE dbmail_replytofield (
@@ -334,7 +334,7 @@ CREATE TABLE dbmail_replytofield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 DROP TABLE IF EXISTS dbmail_ccfield;
 CREATE TABLE dbmail_ccfield (
@@ -347,7 +347,7 @@ CREATE TABLE dbmail_ccfield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
 
 COMMIT;
 
@@ -360,7 +360,7 @@ CREATE TABLE dbmail_replycache (
   handle varchar(100) NOT NULL default '',
   lastseen datetime NOT NULL default '0000-00-00 00:00:00',
   UNIQUE KEY replycache_1 (to_addr,from_addr, handle)
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_usermap;
 CREATE TABLE dbmail_usermap (
@@ -368,7 +368,7 @@ CREATE TABLE dbmail_usermap (
   sock_allow varchar(100) NOT NULL,
   sock_deny varchar(100) NOT NULL,
   userid varchar(100) NOT NULL
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
@@ -382,7 +382,7 @@ CREATE TABLE dbmail_envelope (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 SET FOREIGN_KEY_CHECKS=1;
 # create the user for the delivery chain

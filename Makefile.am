@@ -16,7 +16,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-SUBDIRS = modules man
+SUBDIRS = modules
+
+if MANPAGES
+SUBDIRS += man
+endif
 
 if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
@@ -84,7 +88,7 @@ dbmail_util_LDADD = libdbmail.la
 dbmail_users_SOURCES = user.c
 dbmail_users_LDADD = libdbmail.la
 
-dbmail_export_SOURCES = export.c
+dbmail_export_SOURCES = export.c memblock.c dbmail-imapsession.c
 dbmail_export_LDADD = libdbmail.la
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
@@ -103,7 +107,7 @@ pkglib_LTLIBRARIES = libdbmail.la
 
 
 if SHARED
-AM_LDFLAGS = -export-dynamic -lcrypt
+AM_LDFLAGS = -export-dynamic @CRYPTLIB@
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
 else
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)

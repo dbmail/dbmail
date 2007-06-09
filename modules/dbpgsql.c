@@ -23,20 +23,11 @@
  * Handles connection and queries to PostgreSQL backend
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "db.h"
 #include "libpq-fe.h"		/* PostgreSQL header */
+
 #include "dbmail.h"
-#include "dbmailtypes.h"
-
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-
 #define THIS_MODULE "sql"
+
 #define BYTEAOID  17
 
 const char * db_get_sql(sql_fragment_t frag)
@@ -46,7 +37,10 @@ const char * db_get_sql(sql_fragment_t frag)
 			return "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";
 		break;
 		case SQL_TO_DATE:
-			return "TO_TIMESTAMP('%s', 'YYYY-MM-DD HH:MI:SS')";
+			return "TO_DATE(%s,'YYYY-MM-DD')";
+		break;
+		case SQL_TO_DATETIME:
+			return "TO_TIMESTAMP(%s, 'YYYY-MM-DD HH24:MI:SS')";
 		break;
 		case SQL_CURRENT_TIMESTAMP:
 			return "CURRENT_TIMESTAMP";
@@ -57,6 +51,9 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_BINARY:
 			return "";
 		break;
+		case SQL_REGEXP:
+			return "~";
+		break;
 		case SQL_SENSITIVE_LIKE:
 			return "LIKE";
 		break;
@@ -66,9 +63,8 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_ENCODE_ESCAPE:
 			return "ENCODE(%s::bytea,'escape')";
 		break;
-		case SQL_SEQ_NEXTVAL:
-		default:
-			return "";
+		case SQL_STRCASE:
+			return "LOWER(%s)";
 		break;
 	}
 	return NULL;
@@ -84,42 +80,40 @@ db_param_t _db_params;
 
 int db_connect()
 {
-	char connectionstring[255];
+	GString *cs = g_string_new("");
 
-	/* use the standard port for postgresql if none is given. This looks a bit
-	   dirty.. can't we get this info from somewhere else? */
+	/* Warn if both the host= and sqlsocket= parameters are defined.
+	 * Prefer just the socket if given. */
+	if (strlen(_db_params.sock) && strlen(_db_params.host)
+	 && strncmp(_db_params.host, "localhost", FIELDSIZE != 0)) {
+		TRACE(TRACE_WARNING, "PostgreSQL socket and a hostname other "
+		      "than localhost have both been defined. The socket "
+		      "will be used and the hostname will be ignored.");
+		g_string_append_printf(cs, "host='%s'", _db_params.sock);
+	} else if (strlen(_db_params.sock)) {
+		g_string_append_printf(cs, "host='%s'", _db_params.sock);
+	} else {
+		g_string_append_printf(cs, "host='%s'", _db_params.host);
+	}
+
+	/* Add the username and password. */
+	g_string_append_printf(cs,
+		" user='%s' password='%s' dbname='%s'",
+		_db_params.user, _db_params.pass, _db_params.db);
+
+	/* Finally the port, if given. */
 	if (_db_params.port != 0)
-		snprintf(connectionstring, 255,
-			 "host='%s' user='%s' password='%s' dbname='%s' "
-			 "port='%u'",
-			 _db_params.host, _db_params.user, _db_params.pass,
-			 _db_params.db, _db_params.port);
-	else
-		snprintf(connectionstring, 255,
-			 "host='%s' user='%s' password='%s' dbname='%s' ",
-			 _db_params.host, _db_params.user, _db_params.pass,
-			 _db_params.db);
+		g_string_append_printf(cs, " port='%d'", _db_params.port);
 
-	conn = PQconnectdb(connectionstring);
+	conn = PQconnectdb(cs->str);
+
+	g_string_free(cs, TRUE);
 
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		TRACE(TRACE_ERROR, "PQconnectdb failed: %s", PQerrorMessage(conn));
 		return -1;
 	}
-#ifdef OLD
-	/* UNICODE is broken prior to 8.1 */
-	if (PQserverVersion(conn) < 80100) {
-		char *enc = NULL;
 
-		enc = pg_encoding_to_char(PQclientEncoding(conn));
-		// if (strcmp(enc, "SQL_ASCII") != 0) {
-		if (strcmp(enc, "UNICODE") == 0) {
-			TRACE(TRACE_FATAL, "Database encoding UNICODE is not supported prior to PostgreSQL 8.1");
-		}
-
-		// FIXME: Does we need to free enc?
-	}
-#endif
 	return 0;
 }
 
@@ -248,15 +242,13 @@ const char *db_get_result(unsigned row, unsigned field)
 
 u64_t db_insert_result(const char *sequence_identifier)
 {
-	return db_sequence_currval(sequence_identifier);
-}
-
-u64_t db_sequence_currval(const char *sequence_identifier)
-{
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
-	u64_t seq;
 
+	u64_t insert_result;
+
+	/* postgres uses the currval call on a sequence to determine
+	 * the result value of an insert query */
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT currval('%s%s_seq')",_db_params.pfx, sequence_identifier);
 
@@ -265,29 +257,10 @@ u64_t db_sequence_currval(const char *sequence_identifier)
 		db_free_result();
 		return 0;
 	}
-	seq = strtoull(db_get_result(0, 0), NULL, 10);
+	insert_result = strtoull(db_get_result(0, 0), NULL, 10);
 	db_free_result();
-	return seq;
+	return insert_result;
 }
-
-u64_t db_sequence_nextval(const char *sequence_identifier UNUSED)
-{
-	char query[DEF_QUERYSIZE];
-	u64_t seq;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT nextval('%s%s_seq')",_db_params.pfx, sequence_identifier);
-
-	db_query(query);
-	if (db_num_rows() == 0) {
-		db_free_result();
-		return 0;
-	}
-	seq = strtoull(db_get_result(0, 0), NULL, 10);
-	db_free_result();
-	return seq;
-}
-
 
 int db_query(const char *q)
 {

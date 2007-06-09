@@ -1,4 +1,4 @@
-# $Id: Makefile.am 1920 2005-11-26 08:32:15Z aaron $
+# 
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 #
 # This program is free software; you can redistribute it and/or 
@@ -20,6 +20,7 @@ INCLUDES = -I$(top_srcdir)
 AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@
 
 
+
 #AM_LDFLAGS = -Wl,--export-dynamic
 if SHARED
 AM_LDFLAGS = -module
@@ -28,6 +29,7 @@ AM_LDFLAGS =
 endif
 
 noinst_LTLIBRARIES = libsort_null.la
+
 
 if MYSQL
 libmysql_la_SOURCES = dbmysql.c
@@ -63,11 +65,11 @@ endif
 
 # This one is always built.
 libauth_sql_la_SOURCES = authsql.c
-libauth_sql_la_LIBADD = -lcrypt
+libauth_sql_la_LIBADD = @CRYPTLIB@
 
 if LDAP
 libauth_ldap_la_SOURCES = authldap.c
-libauth_ldap_la_LIBADD = -lcrypt @LDAPLIB@ 
+libauth_ldap_la_LIBADD = @CRYPTLIB@ @LDAPLIB@ 
 dbmail_ldap_la = libauth_ldap.la
 endif
 

@@ -24,23 +24,7 @@
  * \author IC&S (http://www.ic-s.nl)
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-
-#include <assert.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
-#ifdef HAVE_CRYPT_H
-#include <crypt.h>
-#endif
-
 #define THIS_MODULE "auth"
 
 extern db_param_t _db_params;
@@ -218,7 +202,7 @@ int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm
 
 	TRACE(TRACE_DEBUG, "checking user [%s] in alias table", username);
 
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
+	if (!(escaped_username = g_new0(char, strlen(username) * 2 + 1))) {
 		TRACE(TRACE_ERROR, "out of memory allocating escaped username");
 		return -1;
 	}
@@ -231,7 +215,7 @@ int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm
 		 "AND lower(alias) <> lower(deliver_to)",
 		 DBPFX, escaped_username);
 	
-	dm_free(escaped_username);
+	g_free(escaped_username);
 
 	TRACE(TRACE_DEBUG, "checks [%d]", checks);
 
@@ -431,7 +415,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 			/* redundant statement: query_result = db_get_result(0, 1); */
 			md5str = dm_md5((unsigned char *)password);
 			is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-			dm_free(md5str);
+			g_free(md5str);
 		} else {
 			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
 			strncpy(salt, query_result, 12);
@@ -446,13 +430,13 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		query_result = db_get_result(0, 1);
 		md5str = dm_md5((unsigned char *)password);
 		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-		dm_free(md5str);
+		g_free(md5str);
 	} else if (strcasecmp(query_result, "md5base64") == 0) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
 		query_result = db_get_result(0, 1);
 		md5str = dm_md5_base64((unsigned char *)password);
 		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-		dm_free(md5str);
+		g_free(md5str);
 	}
 
 	if (is_validated) {
@@ -510,8 +494,8 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 		user_idnr =
 		    (query_result) ? strtoull(query_result, NULL, 10) : 0;
 		db_free_result();
-		dm_free(md5_apop_we);
-		dm_free(checkstring);
+		g_free(md5_apop_we);
+		g_free(checkstring);
 
 		db_user_log_login(user_idnr);
 		return user_idnr;
@@ -520,8 +504,8 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 	TRACE(TRACE_MESSAGE, "user [%s] could not be validated", username);
 
 	db_free_result();
-	dm_free(md5_apop_we);
-	dm_free(checkstring);
+	g_free(md5_apop_we);
+	g_free(checkstring);
 	return 0;
 }
 
@@ -548,8 +532,7 @@ char *auth_get_userid(u64_t user_idnr)
 	query_result = db_get_result(0, 0);
 	if (query_result) {
 		TRACE(TRACE_DEBUG, "query_result = %s", query_result);
-		if (!(returnid =
-		     (char *) dm_malloc(strlen(query_result) + 1))) {
+		if (!(returnid = g_new0(char, strlen(query_result) + 1))) {
 			TRACE(TRACE_ERROR, "out of memory");
 			db_free_result();
 			return NULL;
@@ -603,7 +586,7 @@ int auth_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
 		return -1;
 	}
 	*num_users = db_num_rows();
-	*user_ids = (u64_t *) dm_malloc(*num_users * sizeof(u64_t));
+	*user_ids = g_new0(u64_t, *num_users);
 	if (*user_ids == NULL) {
 		TRACE(TRACE_ERROR, "error allocating memory, probably out of memory");
 		db_free_result();
@@ -621,7 +604,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 {
 	char *escaped_alias;
 
-	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = g_new0(char, strlen(alias) * 2 + 1))) {
 		TRACE(TRACE_ERROR, "out of memory allocating escaped alias");
 		return -1;
 	}
@@ -637,14 +620,14 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
 		TRACE(TRACE_ERROR, "query for searching alias failed");
-		dm_free(escaped_alias);
+		g_free(escaped_alias);
 		return -1;
 	}
 
 	if (db_num_rows() > 0) {
 		TRACE(TRACE_INFO, "alias [%s] for user [%llu] already exists", escaped_alias, user_idnr);
 
-		dm_free(escaped_alias);
+		g_free(escaped_alias);
 		db_free_result();
 		return 1;
 	}
@@ -654,7 +637,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
 		 "VALUES ('%s',%llu,%llu)",DBPFX, escaped_alias, user_idnr,
 		 clientid);
-	dm_free(escaped_alias);
+	g_free(escaped_alias);
 
 	if (db_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -670,12 +653,12 @@ int auth_addalias_ext(const char *alias,
 	char *escaped_alias;
 	char *escaped_deliver_to;
 
-	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = g_new0(char, strlen(alias) * 2 + 1))) {
 		TRACE(TRACE_ERROR, "out of memory allocating escaped alias");
 		return -1;
 	}
 
-	if (!(escaped_deliver_to = (char *) dm_malloc(strlen(deliver_to) * 2 + 1))) {
+	if (!(escaped_deliver_to = g_new0(char, strlen(deliver_to) * 2 + 1))) {
 		TRACE(TRACE_ERROR, "out of memory allocating escaped deliver_to");
 		return -1;
 	}
@@ -703,16 +686,16 @@ int auth_addalias_ext(const char *alias,
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
 		TRACE(TRACE_ERROR, "query for searching alias failed");
-		dm_free(escaped_alias);
-		dm_free(escaped_deliver_to);
+		g_free(escaped_alias);
+		g_free(escaped_deliver_to);
 		return -1;
 	}
 
 	if (db_num_rows() > 0) {
 		TRACE(TRACE_INFO, "alias [%s] --> [%s] already exists", alias, deliver_to);
 
-		dm_free(escaped_alias);
-		dm_free(escaped_deliver_to);
+		g_free(escaped_alias);
+		g_free(escaped_deliver_to);
 		db_free_result();
 		return 1;
 	}
@@ -721,8 +704,8 @@ int auth_addalias_ext(const char *alias,
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
 		 "VALUES ('%s','%s',%llu)",DBPFX, escaped_alias, escaped_deliver_to, clientid);
-	dm_free(escaped_alias);
-	dm_free(escaped_deliver_to);
+	g_free(escaped_alias);
+	g_free(escaped_deliver_to);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -736,7 +719,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 {
 	char *escaped_alias;
 
-	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = g_new0(char, strlen(alias) * 2 + 1))) {
 		TRACE(TRACE_ERROR, "out of memory allocating escaped alias");
 		return -1;
 	}
@@ -746,7 +729,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "DELETE FROM %saliases WHERE deliver_to=%llu "
 		 "AND lower(alias) = lower('%s')",DBPFX, user_idnr, escaped_alias);
-	dm_free(escaped_alias);
+	g_free(escaped_alias);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -761,12 +744,12 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	char *escaped_alias;
 	char *escaped_deliver_to;
 
-	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = g_new0(char, strlen(alias) * 2 + 1))) {
 		TRACE(TRACE_ERROR, "out of memory allocating escaped alias");
 		return -1;
 	}
 
-	if (!(escaped_deliver_to = (char *) dm_malloc(strlen(deliver_to) * 2 + 1))) {
+	if (!(escaped_deliver_to = g_new0(char, strlen(deliver_to) * 2 + 1))) {
 		TRACE(TRACE_ERROR, "out of memory allocating escaped deliver_to");
 		return -1;
 	}
@@ -777,8 +760,8 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "DELETE FROM %saliases WHERE lower(deliver_to) = lower('%s') "
 		 "AND lower(alias) = lower('%s')",DBPFX, deliver_to, alias);
-	dm_free(escaped_alias);
-	dm_free(escaped_deliver_to);
+	g_free(escaped_alias);
+	g_free(escaped_deliver_to);
 
 	if (db_query(__auth_query_data) == -1) {
 		/* query failed */

@@ -1,5 +1,5 @@
 /*
-  $Id$
+  
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -32,8 +32,6 @@ extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
 #define MESSAGE_MAX_LINE_SIZE 1024
-
-static int dm_errno = 0;
 
 #define DBMAIL_TEMPMBOX "INBOX"
 
@@ -200,10 +198,13 @@ void dbmail_message_free(struct DbmailMessage *self)
 		g_object_unref(self->content);
 	if (self->raw)
 		g_byte_array_free(self->raw,TRUE);
-	
+	if (self->charset)
+		g_free(self->charset);
+
 	self->headers=NULL;
 	self->content=NULL;
 	self->raw=NULL;
+	self->charset=NULL;
 	
 	g_string_free(self->envelope_recipient,TRUE);
 	g_hash_table_destroy(self->header_dict);
@@ -211,7 +212,7 @@ void dbmail_message_free(struct DbmailMessage *self)
 	g_tree_destroy(self->header_value);
 	
 	self->id=0;
-	dm_free(self);
+	g_free(self);
 }
 
 
@@ -367,7 +368,6 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 
 			tmp = tmpfile(); 
 			mstream = g_mime_stream_file_new(tmp);
-			setvbuf(tmp, NULL, _IONBF, 0);
 
 			assert(mstream);
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
@@ -390,7 +390,7 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 				}
 
 				if (putslen < getslen && getslen > putslen+1) {
-					TRACE(TRACE_ERROR, "Short write [%d < %d], is your /tmp filesystem full?", 
+					TRACE(TRACE_ERROR, "Short write [%zd < %zd], is your /tmp filesystem full?", 
 						putslen, getslen);
 					res = 1;
 					break;
@@ -583,6 +583,12 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 	TRACE(TRACE_DEBUG, "mail address parser found [%d] email addresses", g_list_length(result));
 
 	return result;
+}
+char * dbmail_message_get_charset(struct DbmailMessage *self)
+{
+	if (! self->charset)
+		self->charset = message_get_charset((GMimeMessage *)self->content);
+	return self->charset;
 }
 
 /* dump message(parts) to char ptrs */
@@ -850,7 +856,8 @@ int _message_insert(struct DbmailMessage *self,
 		const char *mailbox, 
 		const char *unique_id)
 {
-	u64_t mailboxid, physmessage_id;
+	u64_t mailboxid;
+	u64_t physmessage_id;
 	char *internal_date = NULL;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
@@ -884,32 +891,20 @@ int _message_insert(struct DbmailMessage *self,
 
 	dbmail_message_set_physid(self, physmessage_id);
 	
-	self->id = 0;
-
-	if ((self->id = db_sequence_nextval(sid)))
-		id = g_strdup_printf("%llu", self->id);
-	else
-		id = g_strdup_printf("%s", db_get_sql(SQL_SEQ_NEXTVAL));
-
 	/* now insert an entry into the messages table */
 	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
-		 "%smessages(message_idnr, mailbox_idnr, physmessage_id, unique_id,"
+		 "%smessages(mailbox_idnr, physmessage_id, unique_id,"
 		 "recent_flag, status) "
-		 "VALUES (%s, %llu, %llu, '%s', 1, %d)",
-		 DBPFX, id, mailboxid, physmessage_id, unique_id,
+		 "VALUES (%llu, %llu, '%s', 1, %d)",
+		 DBPFX, mailboxid, physmessage_id, unique_id,
 		 MESSAGE_STATUS_INSERT);
-
-	g_free(id);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "query failed");
 		return -1;
 	}
 
-	/* for mysql and sqlite */
-	if (self->id == 0)
-		self->id = db_insert_result(sid);
-
+	self->id = db_insert_result("message_idnr");
 	return 1;
 }
 
@@ -941,6 +936,7 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 {
 	u64_t tmp;
 	gpointer cacheid;
+	gchar *case_header;
 	gchar *safe_header;
 	gchar *tmpheader;
 
@@ -958,36 +954,25 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 	}
 		
 	GString *q = g_string_new("");
-	g_string_printf(q, "SELECT id FROM %sheadername WHERE lower(headername)='%s'", DBPFX, safe_header);
+
+	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
+	g_string_printf(q, "SELECT id FROM %sheadername WHERE %s='%s'", DBPFX, case_header, safe_header);
+	g_free(case_header);
+
 	if (db_query(q->str) == -1) {
 		g_string_free(q,TRUE);
 		g_free(safe_header);
 		return -1;
 	}
 	if (db_num_rows() < 1) {
-		const char *sid = "headername_idnr";
-		char *id = NULL;
-
 		db_free_result();
-		tmp = 0;
-
-		if ((tmp = db_sequence_nextval(sid)))
-			id = g_strdup_printf("%llu", tmp);
-		else
-			id = g_strdup_printf("%s", db_get_sql(SQL_SEQ_NEXTVAL));
-
-		g_string_printf(q, "INSERT INTO %sheadername (id, headername) "
-			"VALUES (%s, '%s')", DBPFX, id, safe_header);
-		g_free(id);
-
+		g_string_printf(q, "INSERT INTO %sheadername (headername) VALUES ('%s')", DBPFX, safe_header);
 		if (db_query(q->str) == -1) {
 			g_string_free(q,TRUE);
 			g_free(safe_header);
 			return -1;
 		}
-		if (tmp == 0)
-			tmp = db_insert_result(sid);
-
+		tmp = db_insert_result("headername_idnr");
 	} else {
 		tmp = db_get_result_u64(0,0);
 		db_free_result();
@@ -1001,7 +986,7 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {
-	u64_t id, headervalue_id;
+	u64_t id;
 	struct DbmailMessage *self = (struct DbmailMessage *)user_data;
 	gchar *safe_value;
 	GString *q;
@@ -1010,10 +995,6 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	gchar *value = NULL;
 	unsigned i;
 	gboolean isaddr = 0;
-	const char *sid = "headervalue_idnr";
-	char *s = NULL;
-
-	dm_errno = 0;
 
 	/* skip headernames with spaces like From_ */
 	if (strchr(header, ' '))
@@ -1041,10 +1022,12 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
                 char *tmp_raw = NULL;
                 char *tmp_raw2 = NULL;
 		
+		const char *charset = dbmail_message_get_charset(self);
+
 		if (isaddr) {
 			InternetAddressList *alist;
 
-                        tmp_raw = convert_8bit_field_to_utf8((GMimeMessage *)(self->content), (const char *)raw);
+                        tmp_raw = convert_8bit_field_to_utf8((const char *)raw, charset);
                         if ((tmp_raw != NULL) && (g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
                             tmp_raw2 = g_mime_utils_header_encode_text((unsigned char *)tmp_raw);
                             g_free(tmp_raw);
@@ -1063,7 +1046,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			safe_value = dm_stresc(value);
 			g_free(value);
 		} else {
-			tmp_raw = convert_8bit_field((GMimeMessage *)(self->content), (const char *)raw);
+			tmp_raw = convert_8bit_field((const char *)raw, charset);
 			if ((tmp_raw != NULL) && (!g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
 			    tmp_raw2 = g_mime_utils_header_decode_text((unsigned char *)tmp_raw);
 			    g_free(tmp_raw);
@@ -1071,20 +1054,12 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			}
 			safe_value = dm_stresc((const char *)tmp_raw);
 		}
-
 		g_free(tmp_raw);
 
-		if ((headervalue_id = db_sequence_nextval(sid)))
-			s = g_strdup_printf("%llu", headervalue_id);
-		else
-			s = g_strdup_printf("%s", db_get_sql(SQL_SEQ_NEXTVAL));
-
-
-		g_string_printf(q,"INSERT INTO %sheadervalue (id, headername_id, physmessage_id, headervalue) "
-				"VALUES (%s, %llu,%llu,'%s')", DBPFX, s, id, self->physid, safe_value);
+		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
+				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
 		g_free(safe_value);
 		safe_value = NULL;
-		g_free(s);
 
 		if (db_query(q->str)) {
 			TRACE(TRACE_ERROR,"insert headervalue failed");
@@ -1098,17 +1073,16 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	return FALSE;
 }
 
-static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist,GMimeMessage *message)
+static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist, const struct DbmailMessage *self)
 {
 	InternetAddress *ia;
-	char *id = NULL, *sid = NULL;
-	u64_t idnr;
-
+	
 	g_return_if_fail(ialist != NULL);
 
 	GString *q = g_string_new("");
 	gchar *name, *rname;
 	gchar *addr;
+	char *charset = dbmail_message_get_charset((struct DbmailMessage *)self);
 
 	for (; ialist != NULL && ialist->address; ialist = ialist->next) {
 		
@@ -1116,23 +1090,15 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		g_return_if_fail(ia != NULL);
 
 		rname = ia->name ? ia->name: "";
-		rname=convert_8bit_field(message,rname);
+		rname=convert_8bit_field(rname, charset);
 		/* address fields are truncated to column width */
 		name = dm_strnesc(rname, CACHE_WIDTH_ADDR);
 		addr = dm_strnesc(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
 
-		sid = g_strdup_printf("%sfield_idnr", field);
-		if ((idnr = db_sequence_nextval(sid)))
-			id = g_strdup_printf("%llu", idnr);
-		else
-			id = g_strdup_printf("%s", db_get_sql(SQL_SEQ_NEXTVAL));
-		g_free(sid);
-
-		g_string_printf(q, "INSERT INTO %s%sfield (id, physmessage_id, %sname, %saddr) "
-				"VALUES (%s, %llu,'%s','%s')", DBPFX, field, field, field, 
-				id, physid, name, addr);
-
-		g_free(id);
+		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
+				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
+				physid, name, addr);
+		
 		g_free(name);
 		g_free(addr);
 		g_free(rname);
@@ -1150,8 +1116,6 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 {
 	GString *q;
 	gchar *clean_value;
-	char *id = NULL, *sid = NULL;
-	u64_t idnr;
 
 	g_return_if_fail(value != NULL);
 
@@ -1160,15 +1124,9 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 
 	q = g_string_new("");
 
-	sid = g_strdup_printf("%sfield_idnr", field);
-	if ((idnr = db_sequence_nextval(sid)))
-		id = g_strdup_printf("%llu", idnr);
-	else
-		id = g_strdup_printf("%s", db_get_sql(SQL_SEQ_NEXTVAL));
+	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sfield) "
+			"VALUES (%llu,'%s')", DBPFX, field, field, physid, clean_value);
 
-	g_string_printf(q, "INSERT INTO %s%sfield (id, physmessage_id, %sfield) "
-			"VALUES (%s, %llu,'%s')", DBPFX, field, field, id, physid, clean_value);
-	g_free(id);
 	g_free(clean_value);
 
 	if (db_query(q->str)) {
@@ -1185,7 +1143,7 @@ void dbmail_message_cache_tofield(const struct DbmailMessage *self)
 	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_TO);
 	if (list == NULL)
 		return;
-	insert_address_cache(self->physid, "to", list,(GMimeMessage *)(self->content));
+	insert_address_cache(self->physid, "to", list,self);
 }
 
 void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
@@ -1195,18 +1153,20 @@ void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
 	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_CC);
 	if (list == NULL)
 		return;
-	insert_address_cache(self->physid, "cc", list,(GMimeMessage *)(self->content));
+	insert_address_cache(self->physid, "cc", list,self);
 	
 }
 void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 {
 	const char *addr;
-	char *value;
+	char *value, *charset;
 	InternetAddressList *list;
+
+	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
 
 	// g_mime_message_get_sender fails to get 8-bit header, so we use dbmail_message_get_header
 	addr = (char *)dbmail_message_get_header(self, "From");
-	value = convert_8bit_field(GMIME_MESSAGE(self->content), addr);
+	value = convert_8bit_field(addr, charset);
 	if (value != NULL) if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
 	    char *value2 = g_mime_utils_header_encode_text((unsigned char *)value);
 	    g_free(value);
@@ -1218,19 +1178,21 @@ void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 	
 	if (list == NULL)
 		return;
-	insert_address_cache(self->physid, "from", list,(GMimeMessage *)(self->content));
+	insert_address_cache(self->physid, "from", list,self);
 	internet_address_list_destroy(list);
 
 }
 void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
 {
 	const char *addr;
-	char *value;
+	char *value, *charset;
 	InternetAddressList *list;
+
+	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
 
 	// g_mime_message_get_reply_to fails to get 8-bit header, so we use dbmail_message_get_header
 	addr = (char *)dbmail_message_get_header(self, "Reply-to");
-	value = convert_8bit_field(GMIME_MESSAGE(self->content), addr);
+	value = convert_8bit_field(addr, charset);
 	if (value != NULL) if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
 	    char *value2 = g_mime_utils_header_encode_text((unsigned char *)value);
 	    g_free(value);
@@ -1242,7 +1204,7 @@ void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
 
 	if (list == NULL)
 		return;
-	insert_address_cache(self->physid, "replyto", list,(GMimeMessage *)(self->content));
+	insert_address_cache(self->physid, "replyto", list,self);
 	internet_address_list_destroy(list);
 
 }
@@ -1270,10 +1232,11 @@ void dbmail_message_cache_datefield(const struct DbmailMessage *self)
 
 void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 {
-	char *value, *raw;
-	char *s;
-	char *tmp;
+	char *value, *raw, *s, *tmp;
+	char *charset;
 	
+	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
+
 	// g_mime_message_get_subject fails to get 8-bit header, so we use dbmail_message_get_header
 	raw = (char *)dbmail_message_get_header(self, "Subject");
 
@@ -1283,11 +1246,11 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 	}
 
 
-	value = convert_8bit_field_to_utf8(GMIME_MESSAGE(self->content), raw);
+	value = convert_8bit_field_to_utf8(raw, charset);
 	s = dm_base_subject(value);
 	
 	// dm_base_subject returns utf-8 string, convert it into database encoding
-	tmp = convert_8bit_field(GMIME_MESSAGE(self->content), s);
+	tmp = convert_8bit_field(s, charset);
 	insert_field_cache(self->physid, "subject", tmp);
 	g_free(tmp);
 	g_free(s);
@@ -1334,22 +1297,14 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 	
 void dbmail_message_cache_envelope(const struct DbmailMessage *self)
 {
-	char *q, *envelope, *clean, *id = NULL;
-	const char *sid = "envelope_idnr";
-	u64_t idnr;
-
+	char *q, *envelope, *clean;
 
 	envelope = imap_get_envelope(GMIME_MESSAGE(self->content));
 	clean = dm_stresc(envelope);
 
-	if ((idnr = db_sequence_nextval(sid)))
-		id = g_strdup_printf("%llu", idnr);
-	else
-		id = g_strdup_printf("%s", db_get_sql(SQL_SEQ_NEXTVAL));
+	q = g_strdup_printf("INSERT INTO %senvelope (physmessage_id, envelope) "
+			"VALUES (%llu,'%s')", DBPFX, self->physid, clean);
 
-	q = g_strdup_printf("INSERT INTO %senvelope (id, physmessage_id, envelope) "
-			"VALUES (%s, %llu,'%s')", DBPFX, id, self->physid, clean);
-	g_free(id);
 	g_free(clean);
 	g_free(envelope);
 

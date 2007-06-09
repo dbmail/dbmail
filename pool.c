@@ -17,8 +17,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "server"
 
-#define P_SIZE 100000
-
 static volatile Scoreboard_t *scoreboard;
 static int shmid;
 static int sb_lockfd;
@@ -27,7 +25,7 @@ static FILE *scoreFD;
 extern volatile sig_atomic_t GeneralStopRequested;
 extern ChildInfo_t childinfo;
 
-static child_state_t state_new(void); 
+static void state_reset(child_state_t *child); 
 static int set_lock(int type);
 static pid_t reap_child(void);
 
@@ -39,15 +37,15 @@ static pid_t reap_child(void);
  *
  */
 
-child_state_t state_new(void)
+void state_reset(child_state_t *s)
 {
-	child_state_t s;
-	s.pid = -1;
-	s.ctime = time(0);
-	s.status = STATE_NOOP;
-	s.count = 0;
-	s.client = "none";
-	return s;
+	s->pid = -1;
+	s->ctime = time(0);
+	s->status = STATE_NOOP;
+	s->count = 0;
+	// FIXME: valgrind is complaining about s->user going 2 bytes past the structure.
+	memset(s->client, '\0', 128);
+	memset(s->user, '\0', 128);
 }
 
 int set_lock(int type)
@@ -81,7 +79,9 @@ int set_lock(int type)
 void scoreboard_new(serverConfig_t * conf)
 {
 	int serr;
-	if ((shmid = shmget(IPC_PRIVATE, P_SIZE, 0644 | IPC_CREAT)) == -1) {
+	if ((shmid = shmget(IPC_PRIVATE,
+			(sizeof(child_state_t) * HARD_MAX_CHILDREN),
+			0644 | IPC_CREAT)) == -1) {
 		serr = errno;
 		TRACE(TRACE_FATAL, "shmget failed [%s]",
 				strerror(serr));
@@ -122,7 +122,7 @@ void scoreboard_setup(void) {
 	int i;
 	scoreboard_wrlck();
 	for (i = 0; i < HARD_MAX_CHILDREN; i++)
-		scoreboard->child[i] = state_new();
+		state_reset((child_state_t *)&scoreboard->child[i]);
 	scoreboard_unlck();
 }
 
@@ -187,7 +187,7 @@ void scoreboard_release(pid_t pid)
 		return;
 	
 	scoreboard_wrlck();
-	scoreboard->child[key] = state_new();
+	state_reset((child_state_t *)&scoreboard->child[key]);
 	scoreboard_unlck();
 }
 
@@ -325,6 +325,9 @@ void child_reg_connected(void)
 	int key;
 	pid_t pid;
 	
+	if (! scoreboard) // cli server
+		return;
+
 	pid = getpid();
 	key = getKey(pid);
 	
@@ -333,6 +336,56 @@ void child_reg_connected(void)
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_CONNECTED;
+	scoreboard->child[key].count++;
+	scoreboard_unlck();
+}
+
+void child_reg_connected_client(const char *ip, const char *name)
+{
+	int key;
+	pid_t pid;
+	
+	if (! scoreboard) // cli server
+		return;
+
+	pid = getpid();
+	key = getKey(pid);
+	
+	if (key == -1) 
+		TRACE(TRACE_FATAL, "unable to find this pid on the scoreboard");
+	
+	scoreboard_wrlck();
+	if (scoreboard->child[key].status == STATE_CONNECTED) {
+		if (name && name[0])
+			strncpy(scoreboard->child[key].client, name, 127);
+		else
+			strncpy(scoreboard->child[key].client, ip, 127);
+	} else {
+		TRACE(TRACE_MESSAGE, "client disconnected before status detail was logged");
+	}
+	scoreboard_unlck();
+}
+
+void child_reg_connected_user(char *user)
+{
+	int key;
+	pid_t pid;
+	
+	if (! scoreboard) // cli server
+		return;
+
+	pid = getpid();
+	key = getKey(pid);
+	
+	if (key == -1) 
+		TRACE(TRACE_FATAL, "unable to find this pid on the scoreboard");
+	
+	scoreboard_wrlck();
+	if (scoreboard->child[key].status == STATE_CONNECTED) {
+		strncpy(scoreboard->child[key].user, user, 127);
+	} else {
+		TRACE(TRACE_MESSAGE, "client disconnected before status detail was logged");
+	}
 	scoreboard_unlck();
 }
 
@@ -349,6 +402,8 @@ void child_reg_disconnected(void)
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_IDLE;
+	memset(scoreboard->child[key].client, '\0', 128);
+	memset(scoreboard->child[key].user, '\0', 128);
 	scoreboard_unlck();
 }
 
@@ -363,6 +418,9 @@ void child_unregister(void)
 	int key;
 	pid_t pid;
 	
+	if (! scoreboard) // cli server
+		return;
+
 	pid = getpid();
 	key = getKey(pid);
 	
@@ -534,22 +592,39 @@ void scoreboard_state(void)
 		TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
 			strerror(errno));
 	}
+
+	// Fixed 78 char output width.
+	if ((printlen = fprintf(scoreFD, "%8s%8s%8s%8s%22s%22s\n\n",
+		"Child", "PID", "Status", "Count", "Client", "User") <= 0)
+	  || !(scorelen += printlen)) {
+		TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
+			strerror(errno));
+	}
+
 	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
-		int chpid;
-		int status;
+		int chpid, status;
+		char *client, *user;
+		unsigned count;
 		
 		scoreboard_rdlck();
 		chpid = scoreboard->child[i].pid;
 		status = scoreboard->child[i].status;
+		count = scoreboard->child[i].count;
+		client = scoreboard->child[i].client;
+		user = scoreboard->child[i].user;
 		scoreboard_unlck();
 
-		if ((printlen = fprintf(scoreFD, "Child %d Pid %d Status %d\n", i, chpid, status)) <= 0
+		// Matching 78 char fixed width as above.
+		// Long hostnames may make the output a little messy.
+		if ((printlen = fprintf(scoreFD, "%8d%8d%8d%8u%22s%22s\n",
+			i, chpid, status, count, client, user)) <= 0
 		  || !(scorelen += printlen)) {
 			TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
 				strerror(errno));
 			break;
 		}
 	}
+	scorelen += fprintf(scoreFD, "\n");
 	fflush(scoreFD);
 	ftruncate(fileno(scoreFD), scorelen);
 

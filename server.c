@@ -1,6 +1,5 @@
 /*
-  $Id$
-
+  
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -86,7 +85,6 @@ int server_setup(serverConfig_t *conf)
 	childinfo.numSockets   	= conf->ipcount;
 	childinfo.timeout 	= conf->timeout;
 	childinfo.ClientHandler	= conf->ClientHandler;
-	childinfo.timeoutMsg	= conf->timeoutMsg;
 	childinfo.resolveIP	= conf->resolveIP;
 
 	return 0;

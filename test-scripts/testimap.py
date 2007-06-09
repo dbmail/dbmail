@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-# $Id$
+# 
 
 # For a protocol trace set to 4
 DEBUG = 0
@@ -42,7 +42,7 @@ HOST,PORT = "localhost", 143
 # for stdin/stdout testing
 DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-#DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
+#DAEMONBIN = "CK_FORK=no G_SLICE=always-malloc valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
 
 
 TESTMSG={}
@@ -200,10 +200,27 @@ class testImapServer(unittest.TestCase):
         """
 
         getFreshbox('testexpungebox')
+
+        p = getsock()
+        p.debug = DEBUG
+        p.login('testuser1','test'),('OK',['LOGIN completed'])
+
         self.o.select('testexpungebox')
-        self.o.store('1:*', '+FLAGS', '\Deleted')
+        
+        p.select('testexpungebox')
+        
+        self.o.store('5:*', '+FLAGS', '\Deleted')
+        self.o.debug = 4
         msnlist = self.o.expunge()[1];
-        self.assertEquals(msnlist,['11', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1'])
+        self.assertEquals(msnlist,['11', '10', '9', '8', '7', '6', '5'])
+        self.assertEquals(self.o.fetch('4','(BODYSTRUCTURE FLAGS)')[0],'OK')
+        
+        p.debug = 4
+        print p.noop()
+
+        self.o.debug = 0
+        p.debug = 0
+
 
     def testFetch(self):
         """ 
@@ -220,6 +237,13 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
         id=1
         
+        # OE query
+        result=self.o.fetch(id,"(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
+        self.assertEquals(len(result[1]),5)
+        expect=[(' (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) ((NIL NIL "somewher" "foo.org")(NIL NIL "other" "bar.org")) NIL {84}', '"Message from "Test User" <testuser@test.org>    of "Sat,\t14 Dec 2002 09:17:00 CST."'), (' {36}', '<"114.5862946l.21522l.0l"@localhost>'), (') BODY[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] {2}', '\r\n'), ')']
+        self.assertEquals(result[1][1:],expect)
+        self.assertEquals(result[0],'OK')
+
         # fetch complete message. order and number of headers may differ
         result1 = self.o.fetch(id,"(UID BODY[])")
         result2 = self.o.fetch(id,"(UID RFC822)")
@@ -249,10 +273,6 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1][0][1][-2:],'\r\n')
         
-        # OE query
-        result=self.o.fetch(id,"(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
-        self.assertEquals(result[0],'OK')
-
         # TB query
         result=self.o.fetch(id,"(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type)])")
         self.assertEquals(result[0],'OK')
@@ -266,7 +286,7 @@ class testImapServer(unittest.TestCase):
         `getacl(mailbox)'
             Get the `ACL's for MAILBOX. 
         """
-        self.assertEquals(self.o.getacl('INBOX'),('OK', ['"INBOX" testuser1 lrswipcda']))
+        self.assertEquals(self.o.getacl('INBOX'),('OK', ['"INBOX" "testuser1" lrswipcda']))
         
     def getQuota(self):
         """ 
@@ -357,8 +377,9 @@ class testImapServer(unittest.TestCase):
         for mailbox in mailboxes:
             self.o.create(mailbox)
             self.o.subscribe(mailbox)
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], self.o.lsub()[1][7])
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][3])
+        result = self.o.lsub()[1]
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], result[6])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][2])
         self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('"%s/"' % mailboxes[1],'"%"')[1][0])
 
     def testNoop(self):
@@ -367,6 +388,19 @@ class testImapServer(unittest.TestCase):
              Send `NOOP' to server.
         """
         self.assertEquals(self.o.noop(),('OK', ['NOOP completed']))
+        
+        self.o.select('INBOX')
+        
+        p = getsock()
+        p.debug = DEBUG
+        p.login('testuser1','test'),('OK',['LOGIN completed'])
+        p.select('INBOX')
+
+        print self.o.append('INBOX','\Flagged',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
+
+        result = p.noop()
+        print result
+
 
     def testPartial(self):
         """ 
@@ -542,8 +576,27 @@ class testImapServer(unittest.TestCase):
         """
         self.o.select('INBOX')
         self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
+
+        p = getsock()
+        p.debug = DEBUG
+        p.login('testuser1','test'),('OK',['LOGIN completed'])
+        p.select('INBOX')
+
         self.assertEquals(self.o.store('1:*', '-FLAGS', '\Deleted')[0],'OK')
         self.assertRaises(self.o.error,self.o.store, '1:*', '-FLAGS', '\Recent')
+        
+        print p.noop()
+        self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
+        print p.noop()
+        print self.o.expunge()
+        print p.noop()
+
+        self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
+        self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
+        self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
+        print p.noop()
+        print p.store('1:*', '+FLAGS', '\Flagged')
+        print self.o.noop()
         
     def testSubscribe(self):
         """
@@ -566,6 +619,10 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(len(result[1]) < 10, True)
         result=self.o.uid('FETCH','10:*', 'FLAGS')
         self.assertEquals(len(result[1]) > 0, True)
+        print self.o.create('testuidcopy')
+        result=self.o.uid('COPY','*','testuidcopy')
+        print result
+        self.assertEquals(result[0],'OK')
         
     def testUnsubscribe(self):
         """

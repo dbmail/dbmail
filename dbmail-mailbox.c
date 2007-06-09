@@ -43,6 +43,7 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	self->fi = NULL;
 
 	if (dbmail_mailbox_open(self)) {
+		TRACE(TRACE_ERROR,"opening mailbox failed");
 		dbmail_mailbox_free(self);
 		return NULL;
 	}
@@ -77,6 +78,7 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 	}
 	if (self->fi) {
 		if (self->fi->bodyfetch)
+			// FIXME: Should we be using dbmail-imapsession.c: _body_fetch_free?
 			g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
 		g_free(self->fi);
 		self->fi = NULL;
@@ -107,21 +109,37 @@ gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)
 	return self->uid;
 }
 
-static void _do_msn_map(u64_t *id, u64_t *msn, struct DbmailMailbox *self)
-{
-	*msn = self->rows++;
-	g_tree_insert(self->msn, msn, id);
-}
-
 static void uid_msn_map(struct DbmailMailbox *self)
 {
+	GList *ids = NULL;
+	u64_t *id, *msn = NULL;
+
+	ids = g_tree_keys(self->ids);
+
 	if (self->msn)
 		g_tree_destroy(self->msn);
 
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
 	self->rows = 1;
 
-	g_tree_foreach(self->ids, (GTraverseFunc)_do_msn_map, self);
+	ids = g_list_first(ids);
+	while (ids) {
+		id = (u64_t *)ids->data;
+		msn = g_tree_lookup(self->ids, id);
+		*msn = self->rows++;
+
+		g_tree_insert(self->msn, msn, id);
+
+		if (! g_list_next(ids))
+			break;
+		ids = g_list_next(ids);
+
+	}
+
+	g_list_free(g_list_first(ids));
+
+	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->ids));
+	TRACE(TRACE_DEBUG,"total [%d] MSNs", g_tree_nnodes(self->msn));
 }
 	
 void mailbox_uid_msn_new(struct DbmailMailbox *self)
@@ -188,8 +206,11 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 
 int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
 {
-	if (! g_tree_remove(self->ids, id))
+	if (! g_tree_remove(self->ids, id)) {
+		TRACE(TRACE_ERROR,"trying to remove unknown UID [%llu]", *id);
 		return DM_EGENERAL;
+	}
+
 	uid_msn_map(self);
 
 	return DM_SUCCESS;
@@ -254,7 +275,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	int count=0;
 	gboolean h;
 	GMimeStream *ostream;
-	GList *ids, *cids = NULL, *slice;
+	GList *ids, *cids = NULL, *slice, *topslice;
 	struct DbmailMessage *message = NULL;
 	GString *q, *t;
 
@@ -270,6 +291,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	ostream = g_mime_stream_file_new(file);
 	
 	ids = g_tree_keys(self->ids);
+
 	while (ids) {
 		cids = g_list_append(cids,g_strdup_printf("%llu", *(u64_t *)ids->data));
 		if (! g_list_next(ids))
@@ -277,11 +299,12 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 		ids = g_list_next(ids);
 	}
 	
-	slice = g_list_slices(cids,100);
-	slice = g_list_first(slice);
+	topslice = g_list_slices(cids,100);
+	slice = g_list_first(topslice);
 
 	g_list_destroy(cids);
-	g_list_free(ids);
+	
+	g_list_free(g_list_first(ids));
 
 	while (slice) {
 		g_string_printf(q,"SELECT is_header,messageblk FROM %smessageblks b "
@@ -295,6 +318,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 			g_string_free(t,TRUE);
 			g_string_free(q,TRUE);
 			g_object_unref(ostream);
+			g_list_destroy(topslice);
 			return -1;
 		}
 
@@ -332,9 +356,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 		dbmail_message_free(message);
 	}
 	 
-	g_list_foreach(slice,(GFunc)g_free,NULL);
-	g_list_free(slice);
-
+	g_list_destroy(topslice);
 	g_string_free(t,TRUE);
 	g_string_free(q,TRUE);
 	g_object_unref(ostream);
@@ -478,7 +500,7 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self)
 {
 	GString *t;
 	gchar *s = NULL;
-	GList *l = NULL;
+	GList *l = NULL, *h = NULL;
 
 	if ((self->ids == NULL) || g_tree_nnodes(self->ids) <= 0) {
 		TRACE(TRACE_DEBUG,"no ids found");
@@ -495,12 +517,16 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self)
 		break;
 	}
 
+	h = l;
+
 	while(l->data) {
 		g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
 		if (! g_list_next(l))
 			break;
 		l = g_list_next(l);
 	}
+
+	g_list_free(h);
 
 	s = t->str;
 	g_string_free(t,FALSE);
@@ -558,7 +584,7 @@ static int append_search(struct DbmailMailbox *self, search_key_t *value, gboole
 	if (descend)
 		self->search = n;
 	
-	TRACE(TRACE_DEBUG, "[%d] [%d] type [%d] field [%s] search [%s] at depth [%u]\n", (int)value, descend, 
+	TRACE(TRACE_DEBUG, "[%p] leaf [%d] type [%d] field [%s] search [%s] at depth [%u]\n", value, G_NODE_IS_LEAF(n), 
 			value->type, value->hdrfld, value->search, 
 			g_node_depth(self->search));
 	return 0;
@@ -663,11 +689,8 @@ static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, sea
 		return 1;
 	}
 
-	else {
-		TRACE(TRACE_WARNING,"unknown sort key [%s]", key);
+	else
 		return -1; /* done */
-	}
-	
 
 	return 0;
 }
@@ -684,7 +707,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	int result = 0;
 
 	if (! (search_keys && search_keys[*idx]))
-		return -1;
+		return 1;
 
 	char *t = NULL, *key = search_keys[*idx];
 
@@ -933,15 +956,63 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	 */
 	
 	else if ( MATCH(key, "not") ) {
-		value->type = IST_SUBSEARCH_NOT;
-		(*idx)++;
-	
-		append_search(self, value, 1);
-		while((result = dbmail_mailbox_build_imap_search(self, search_keys, idx, 0)) == 0);
-		pop_search(self);
+		char *nextkey;
 
-		return result;
+		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		nextkey = search_keys[*idx+1];
+
+		if ( MATCH(nextkey, "answered") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "deleted") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "flagged") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "recent") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "seen") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "draft") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "new") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "(seen_flag=1 AND recent_flag=0)", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else if ( MATCH(nextkey, "old") ) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN);
+			(*idx)+=2;
+			
+		} else {
+			value->type = IST_SUBSEARCH_NOT;
+			(*idx)++;
 		
+			append_search(self, value, 1);
+			if ((result = _handle_search_args(self, search_keys, idx)) < 0)
+				return result;
+			pop_search(self);
+
+			return 0;
+		}
+			
 	} else if ( MATCH(key, "or") ) {
 		value->type = IST_SUBSEARCH_OR;
 		(*idx)++;
@@ -949,11 +1020,11 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		append_search(self, value, 1);
 		if ((result = _handle_search_args(self, search_keys, idx)) < 0)
 			return result;
-		if ((result =  _handle_search_args(self, search_keys, idx)) < 0)
+		if ((result = _handle_search_args(self, search_keys, idx)) < 0)
 			return result;
 		pop_search(self);
 		
-		return result;
+		return 0;
 
 	} else if ( MATCH(key, "(") ) {
 		value->type = IST_SUBSEARCH_AND;
@@ -963,7 +1034,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		while ((result = dbmail_mailbox_build_imap_search(self, search_keys, idx, 0)) == 0);
 		pop_search(self);
 		
-		return result;
+		return 0;
 
 	} else if ( MATCH(key, ")") ) {
 		(*idx)++;
@@ -1012,7 +1083,11 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 
 	/* default initial key for ANDing */
 	value = g_new0(search_key_t,1);
-	value->type = IST_UIDSET;
+	if (self->uid)
+		value->type = IST_UIDSET;
+	else
+		value->type = IST_SET;
+
 	if (check_msg_set(search_keys[*idx])) {
 		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
 		(*idx)++;
@@ -1021,7 +1096,7 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 		strncpy(value->search, "1:*", MAX_SEARCH_LEN);
 	}
 	append_search(self, value, 0);
-	
+
 	/* SORT */
 	switch (order) {
 		case SEARCH_SORTED:
@@ -1057,6 +1132,7 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 	/* SEARCH */
 	while( search_keys[*idx] && ((result = _handle_search_args(self, search_keys, idx)) == 0) );
 	
+	TRACE(TRACE_DEBUG,"done [%d] at idx [%llu]", result, *idx);
 	return result;
 }
 
@@ -1064,12 +1140,13 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 {
 	GString *q;
-	u64_t *id;
+	u64_t tid, *id;
 	unsigned i, rows;
+	GTree *z;
 	search_key_t *s = (search_key_t *)node->data;
 	
 	TRACE(TRACE_DEBUG,"type [%d]", s->type);
-	
+
 	if (s->type != IST_SORT)
 		return FALSE;
 	
@@ -1092,13 +1169,21 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
                 self->sorted = NULL;
         }
 
-        rows = db_num_rows();
-        for (i=0; i< rows; i++) {
-                id = g_new0(u64_t,1);
-                *id = db_get_result_u64(i,0);
-                if (g_tree_lookup(self->ids,id))
-                        self->sorted = g_list_prepend(self->sorted,id);
-        }
+	z = g_tree_new((GCompareFunc)ucmp);
+	
+	rows = db_num_rows();
+	for (i=0; i< rows; i++) {
+		tid = db_get_result_u64(i,0);
+		if (g_tree_lookup(self->ids,&tid) && (! g_tree_lookup(z, &tid))) {
+			id = g_new0(u64_t,1);
+			*id = tid;
+			g_tree_insert(z, id, id);
+			self->sorted = g_list_prepend(self->sorted,id);
+		}
+	}
+
+	g_tree_destroy(z);
+
         self->sorted = g_list_reverse(self->sorted);
 
 	g_string_free(q,TRUE);
@@ -1110,10 +1195,12 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 }
 static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 {
-	unsigned i, rows, date;
+	unsigned i, rows;
+	char *qs, *date, *field;
 	u64_t *k, *v, *w;
 	u64_t id;
 	char gt_lt = 0;
+	const char *op;
 	
 	GString *t;
 	GString *q;
@@ -1127,14 +1214,22 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		case IST_HDRDATE_ON:
 		case IST_HDRDATE_SINCE:
 		case IST_HDRDATE_BEFORE:
+		
+		field = g_strdup_printf(db_get_sql(SQL_TO_DATE), s->hdrfld);
+		qs = g_strdup_printf("'%s'", date_imap2sql(s->search));
+		date = g_strdup_printf(db_get_sql(SQL_TO_DATE), qs);
+		g_free(qs);
 
-		date = num_from_imapdate(s->search);
 		if (s->type == IST_HDRDATE_SINCE)
-			g_string_printf(t,"%s >= %d", s->hdrfld, date);
+			op = ">=";
 		else if (s->type == IST_HDRDATE_BEFORE)
-			g_string_printf(t,"%s < %d", s->hdrfld, date);
+			op = "<";
 		else
-			g_string_printf(t,"%s >= %d AND %s < %d", s->hdrfld, date, s->hdrfld, date+1);
+			op = "=";
+
+		g_string_printf(t,"%s %s %s", field, op, date);
+		g_free(date);
+		g_free(field);
 		
 		g_string_printf(q,"SELECT message_idnr FROM %smessages m "
 			"JOIN %sphysmessage p ON m.physmessage_id=p.id "
@@ -1277,15 +1372,19 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	u64_t i, l, r, lo = 0, hi = 0;
 	u64_t *k, *v, *w = NULL;
 	GTree *a, *b, *c;
+	gboolean error = FALSE;
 	
-	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	b = NULL;
+
+	if (! self->ids)
+		dbmail_mailbox_open(self);
 	
 	if (! (self->ids && set))
 		return b;
 
-	g_return_val_if_fail(self->ids != NULL && g_tree_nnodes(self->ids) > 0,b);
+	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
-	TRACE(TRACE_DEBUG,"[%s]", set);
+	TRACE(TRACE_DEBUG,"[%s] uid [%d]", set, uid);
 	
 	if (uid) {
 		ids = g_tree_keys(self->ids);
@@ -1293,7 +1392,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		hi = *((u64_t *)ids->data);
 		ids = g_list_first(ids);
 		lo = *((u64_t *)ids->data);
-		g_list_free(ids);
+		g_list_free(g_list_first(ids));
 	} else {
 		lo = 1;
 		hi = g_tree_nnodes(self->ids);
@@ -1322,8 +1421,10 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 			if (strlen(rest) > 1)
 				rest++;
 		} else {
-			if (! (l = strtoull(sets->data,&rest,10)))
+			if (! (l = strtoull(sets->data,&rest,10))) {
+				error = TRUE;
 				break;
+			}
 			if (l == 0xffffffff) // outlook
 				l = hi;
 
@@ -1380,6 +1481,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		}
 		
 		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
+			error = TRUE;
 			TRACE(TRACE_ERROR, "cannot compare null trees");
 			break;
 		}
@@ -1397,9 +1499,24 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	if (a)
 		g_tree_destroy(a);
 
+	if (error) {
+		g_tree_destroy(b);
+		b = NULL;
+	}
+
 	return b;
 }
 
+static gboolean _found_tree_copy(u64_t *key, u64_t *val, GTree *tree)
+{
+	u64_t *a,*b;
+	a = g_new0(u64_t,1);
+	b = g_new0(u64_t,1);
+	*a = *key;
+	*b = *val;
+	g_tree_insert(tree, a, b);
+	return FALSE;
+}
 static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 {
 	search_key_t *s = (search_key_t *)node->data;
@@ -1438,6 +1555,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		case IST_SUBSEARCH_AND:
 		case IST_SUBSEARCH_OR:
 			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_do_search, (gpointer)self);
+			s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
 			break;
 
 
@@ -1447,24 +1565,18 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 
 	s->searched = TRUE;
 	
-	TRACE(TRACE_DEBUG,"[%d] depth [%d] type [%d] rows [%d]\n",
-		(int)s, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0);
+	TRACE(TRACE_DEBUG,"[%p] depth [%d] type [%d] rows [%d]\n",
+		s, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0);
 
 	return FALSE;
 }	
 
-gboolean g_tree_copy(gpointer key, gpointer val, GTree *tree)
-{
-	g_tree_insert(tree, key, val);
-	return FALSE;
-}
 
 static gboolean _merge_search(GNode *node, GTree *found)
 {
 	search_key_t *s = (search_key_t *)node->data;
 	search_key_t *a, *b;
 	GNode *x, *y;
-	GTree *z;
 
 	if (s->type == IST_SORT)
 		return FALSE;
@@ -1472,23 +1584,20 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	if (s->merged == TRUE)
 		return FALSE;
 
-	TRACE(TRACE_DEBUG,"[%d] depth [%d] type [%d]", 
-			(int)s, g_node_depth(node), s->type);
+
 	switch(s->type) {
 		case IST_SUBSEARCH_AND:
-			g_node_children_foreach(node, G_TRAVERSE_LEAVES, (GNodeForeachFunc)_merge_search, (gpointer)found);
+			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer) found);
 			break;
 			
 		case IST_SUBSEARCH_NOT:
-			if (! found)
-				break;
-			
-			z = g_tree_new((GCompareFunc)ucmp);
-			g_tree_foreach(found, (GTraverseFunc)g_tree_copy, z);
-			g_node_children_foreach(node, G_TRAVERSE_LEAVES, (GNodeForeachFunc)_merge_search, (gpointer) z);
-			if (z) 
-				g_tree_merge(found, z, IST_SUBSEARCH_NOT);
-			g_tree_destroy(z);
+			g_tree_foreach(found, (GTraverseFunc)_found_tree_copy, s->found);
+			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer) s->found);
+			g_tree_merge(found, s->found, IST_SUBSEARCH_NOT);
+			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
+
 			break;
 			
 		case IST_SUBSEARCH_OR:
@@ -1496,23 +1605,45 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			y = g_node_nth_child(node,1);
 			a = (search_key_t *)x->data;
 			b = (search_key_t *)y->data;
-			if (a->found && b->found) 
-				g_tree_merge(a->found,b->found,IST_SUBSEARCH_OR);
-			if (a->found && found)
-				g_tree_merge(found,a->found,IST_SUBSEARCH_AND);
 
-			a->merged = TRUE;
+			if (a->type == IST_SUBSEARCH_AND) {
+				g_tree_foreach(found, (GTraverseFunc)_found_tree_copy, a->found);
+				g_node_children_foreach(x, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)a->found);
+			}
+
+			if (b->type == IST_SUBSEARCH_AND) {
+				g_tree_foreach(found, (GTraverseFunc)_found_tree_copy, b->found);
+				g_node_children_foreach(y, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)b->found);
+			}
+		
+			g_tree_merge(a->found, b->found,IST_SUBSEARCH_OR);
 			b->merged = TRUE;
+			g_tree_destroy(b->found);
+			b->found = NULL;
+
+			g_tree_merge(s->found, a->found,IST_SUBSEARCH_OR);
+			a->merged = TRUE;
+			g_tree_destroy(a->found);
+			a->found = NULL;
+
+			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
 
 			break;
 			
 		default:
-			if (s->found && found) 
-				g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
+
 			break;
 	}
 
-	s->merged = TRUE;
+	TRACE(TRACE_DEBUG,"[%p] leaf [%d] depth [%d] type [%d] found [%d]", 
+			s, G_NODE_IS_LEAF(node), g_node_depth(node), s->type, found ? g_tree_nnodes(found): 0);
 
 	return FALSE;
 }
@@ -1531,16 +1662,15 @@ int dbmail_mailbox_sort(struct DbmailMailbox *self)
 
 int dbmail_mailbox_search(struct DbmailMailbox *self) 
 {
-	GTraverseFlags flag = G_TRAVERSE_ALL;
-
 	if (! self->search)
 		return 0;
 	
-	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, flag, -1, 
+	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_do_search, (gpointer)self);
-	
-	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, flag, -1, 
+
+	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_merge_search, (gpointer)self->ids);
+
 
 	if (self->ids == NULL)
 		TRACE(TRACE_DEBUG,"found no ids\n");
