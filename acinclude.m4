@@ -9,6 +9,12 @@ make your compile work without much twiddling.
 ])
 ])
 
+dnl DBMAIL_SET_VERSION
+AC_DEFUN([DBMAIL_SET_VERSION], [dnl
+		dbmail_version=`cat VERSION`
+		AC_DEFINE_UNQUOTED([DBMAIL_VERSION], "$dbmail_version", [Includes the micro version])
+		])
+
 dnl DBMAIL_MSG_CONFIGURE_RESULTS()
 dnl
 AC_DEFUN([DBMAIL_MSG_CONFIGURE_RESULTS], [dnl

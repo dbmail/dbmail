@@ -34,7 +34,7 @@ static int read_file(FILE * f, char **m_buf);
 static char **get_state(char *service);
 static int count_services(char **services);
 
-ServerConfig_t config;
+serverConfig_t config;
 
 /* loudness and assumptions */
 static int verbose = 0;
