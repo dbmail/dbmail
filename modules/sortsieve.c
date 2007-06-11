@@ -112,7 +112,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	message = sieve2_getvalue_string(s, "message");
 	subject = sieve2_getvalue_string(s, "subject");
 	fromaddr = sieve2_getvalue_string(s, "fromaddr"); // From: specified by the script.
-	handle = sieve2_getvalue_string(s, "handle");
+	handle = sieve2_getvalue_string(s, "hash");
 
 	/* Default to a week, upper limit of a month.
 	 * This is our only loop prevention mechanism! The value must be
