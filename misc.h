@@ -166,7 +166,20 @@ char * imap_flags_as_string(msginfo_t *msginfo);
 char * imap_cleanup_address(const char *a);
 
 char * message_get_charset(GMimeMessage *self);
-char * convert_8bit_field(const char* str_in, const char *charset);
-char * convert_8bit_field_to_utf8(const char* str_in, const char *charset);
-char * convert_8bit_db_to_mime(const char* str_in);
+
+
+struct DbmailIconv {
+	field_t db_charset;
+	field_t msg_charset;
+
+	iconv_t to_db;
+	iconv_t from_db;
+	iconv_t from_msg;
+};
+
+
+void dbmail_iconv_init(void);
+char * dbmail_iconv_str_to_db(const char* str_in, const char *charset);
+char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset);
+char * dbmail_iconv_db_to_utf7(const char* str_in);
 #endif

@@ -1,3 +1,18 @@
+2007-06-15  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c, dbmail-imapsession.c, dbmail-message.c, 
+	misc.c, misc.h:
+	iconv cleanup
+
+2007-06-11  Paul Stevens <paul@nfg.nl>
+
+	* acinclude.m4, debian/patches/00-dbmail_conf.dpatch, 
+	man/dbmail-export.8, man/dbmail-imapd.8, man/dbmail-lmtpd.8, 
+	man/dbmail-pop3d.8, man/dbmail-sievecmd.8, man/dbmail-smtp.1, 
+	man/dbmail-timsieved.8, man/dbmail-users.8, man/dbmail-util.8, 
+	man/dbmail.1, man/dbmail.conf.5, top.c:
+	make the trunk build again
+
 2007-06-09  Aaron Stone  <aaron@serendipity.cx>
 
 	* [just about everything]:
