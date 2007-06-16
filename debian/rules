@@ -13,6 +13,7 @@ export WITH_PGSQL=--with-pgsql
 export WITH_LDAP=--with-auth-ldap
 export SHARED=--enable-shared=yes
 export SHARED=--enable-static=no
+export REAL_CLEAN=
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
@@ -21,6 +22,9 @@ LDFLAGS = -lcrypt
 # from having to guess our platform (since we know it already)
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+
+DBMAIL_VERSION	?= $(shell cat VERSION)
+
 
 ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
@@ -52,6 +56,9 @@ endif
 ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
 	export WITH_SIEVE=--with-sieve
 endif
+ifneq (,$(findstring trunk,$(DBMAIL_VERSION)))
+	export REAL_CLEAN=mrproper
+endif
 
 # dpatch
 export PACKAGE=dbmail
@@ -82,7 +89,7 @@ stamps/dbmail:
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 	touch $@
 
-clean: clean1 unpatch
+clean: clean1 unpatch $(REAL_CLEAN)
 clean1: 
 	# run clean
 	dh_testroot
