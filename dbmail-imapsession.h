@@ -12,17 +12,17 @@
 /* ImapSession definition */
 struct ImapSession {
 	clientinfo_t *ci;
-	gboolean use_uid;
 	u64_t msg_idnr;  // replace this with a GList
 	GMimeStream *fstream; // gmime filter wrapper around the TX handler in clientinfo_t
+	gboolean use_uid;
 	char *tag;
 	char *command;
 	int command_type;
 	char **args;
 	u64_t args_idx;
 	fetch_items_t *fi;
-	struct DbmailMessage *message;
 	struct DbmailMailbox *mailbox;
+	struct DbmailMessage *message;
 	GTree *ids;
 	GTree *headers;
 	GTree *envelopes;
@@ -30,6 +30,7 @@ struct ImapSession {
 	GList *recent;
 	GList *ids_list;
 	gpointer cmd; // command structure
+	gboolean error; // command result
 };
 
 typedef struct {
