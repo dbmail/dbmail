@@ -1915,6 +1915,46 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	return 0;
 }
 
+int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
+{
+	int result = 0, idle_timeout = 10;
+	char buffer[MAX_LINESIZE];
+	clientinfo_t *ci = self->ci;
+	
+	assert(buffer);
+	memset(buffer, 0, MAX_LINESIZE);
+
+	dbmail_imap_session_printf(self, "+ idling\r\n");
+
+	while (1) {
+
+		if (ferror(ci->tx) || feof(ci->rx)) {
+			int serr = errno;
+			TRACE(TRACE_DEBUG,"error on client socket [%s]", strerror(serr));
+			errno = serr;
+			result = -1;
+			break;
+		}
+
+		alarm(idle_timeout);
+		alarm_occured = 0;
+
+		fgets(buffer, MAX_LINESIZE, ci->rx);
+		alarm(0);
+		if (g_strncasecmp(buffer,"DONE",4)==0)
+			break;
+
+		if (alarm_occured) {
+			alarm_occured = 0;
+			dbmail_imap_session_mailbox_status(self,TRUE);
+			continue;
+		}
+
+	}
+	alarm(0);
+
+	return result;
+}
 int dbmail_imap_session_mailbox_close(struct ImapSession *self)
 {
 	// flush recent messages from previous select
