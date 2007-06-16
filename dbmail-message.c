@@ -1027,7 +1027,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		if (isaddr) {
 			InternetAddressList *alist;
 
-                        tmp_raw = convert_8bit_field_to_utf8((const char *)raw, charset);
+                        tmp_raw = dbmail_iconv_str_to_utf8((const char *)raw, charset);
                         if ((tmp_raw != NULL) && (g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
                             tmp_raw2 = g_mime_utils_header_encode_text((unsigned char *)tmp_raw);
                             g_free(tmp_raw);
@@ -1046,7 +1046,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			safe_value = dm_stresc(value);
 			g_free(value);
 		} else {
-			tmp_raw = convert_8bit_field((const char *)raw, charset);
+			tmp_raw = dbmail_iconv_str_to_db((const char *)raw, charset);
 			if ((tmp_raw != NULL) && (!g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
 			    tmp_raw2 = g_mime_utils_header_decode_text((unsigned char *)tmp_raw);
 			    g_free(tmp_raw);
@@ -1090,7 +1090,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		g_return_if_fail(ia != NULL);
 
 		rname = ia->name ? ia->name: "";
-		rname=convert_8bit_field(rname, charset);
+		rname=dbmail_iconv_str_to_db(rname, charset);
 		/* address fields are truncated to column width */
 		name = dm_strnesc(rname, CACHE_WIDTH_ADDR);
 		addr = dm_strnesc(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
@@ -1166,7 +1166,7 @@ void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 
 	// g_mime_message_get_sender fails to get 8-bit header, so we use dbmail_message_get_header
 	addr = (char *)dbmail_message_get_header(self, "From");
-	value = convert_8bit_field(addr, charset);
+	value = dbmail_iconv_str_to_db(addr, charset);
 	if (value != NULL) if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
 	    char *value2 = g_mime_utils_header_encode_text((unsigned char *)value);
 	    g_free(value);
@@ -1192,7 +1192,7 @@ void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
 
 	// g_mime_message_get_reply_to fails to get 8-bit header, so we use dbmail_message_get_header
 	addr = (char *)dbmail_message_get_header(self, "Reply-to");
-	value = convert_8bit_field(addr, charset);
+	value = dbmail_iconv_str_to_db(addr, charset);
 	if (value != NULL) if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
 	    char *value2 = g_mime_utils_header_encode_text((unsigned char *)value);
 	    g_free(value);
@@ -1246,11 +1246,11 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 	}
 
 
-	value = convert_8bit_field_to_utf8(raw, charset);
+	value = dbmail_iconv_str_to_utf8(raw, charset);
 	s = dm_base_subject(value);
 	
 	// dm_base_subject returns utf-8 string, convert it into database encoding
-	tmp = convert_8bit_field(s, charset);
+	tmp = dbmail_iconv_str_to_db(s, charset);
 	insert_field_cache(self->physid, "subject", tmp);
 	g_free(tmp);
 	g_free(s);

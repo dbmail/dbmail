@@ -1219,7 +1219,7 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 		*mid = id;
 		
 		fld = (char *)db_get_result(i,1);
-		val = convert_8bit_db_to_mime((char *)db_get_result(i,2));
+		val = dbmail_iconv_db_to_utf7((char *)db_get_result(i,2));
 		TRACE(TRACE_DEBUG,"got hdrval [%s]", val);
 		
 		old = g_tree_lookup(self->headers, (gconstpointer)mid);

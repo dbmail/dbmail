@@ -1,3 +1,16 @@
+2007-06-03  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c, dbmail-imapsession.c, dbmail-message.c, 
+	misc.c, misc.h:
+	iconv cleanup
+
+2007-06-02  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, VERSION:
+	bump version
+	* ChangeLog, sql/mysql/create_tables.mysql:
+	add default encoding to mysql tables to match the default config file
+
 2007-06-10  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/sortsieve.c:
