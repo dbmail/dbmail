@@ -12,6 +12,8 @@
 	man/dbmail-timsieved.8, man/dbmail-users.8, man/dbmail-util.8, 
 	man/dbmail.1, man/dbmail.conf.5, top.c:
 	make the trunk build again
+	* debian/control, debian/rules:
+	update build rules for trunk development
 
 2007-06-09  Aaron Stone  <aaron@serendipity.cx>
 
