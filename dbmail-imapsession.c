@@ -730,7 +730,6 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 
 	k = 0;
 	to_char_str = date2char_str("internal_date");
-
 		
 	db_free_result();
 
@@ -740,10 +739,10 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 		 "FROM %smessages msg, %sphysmessage pm "
 		 "WHERE pm.id = msg.physmessage_id "
 		 "AND message_idnr BETWEEN %llu AND %llu "
-		 "AND mailbox_idnr = %llu AND status IN (%d,%d) "
+		 "AND mailbox_idnr = %llu AND status IN (%d,%d,%d) "
 		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
 		 *lo, *hi, ud->mailbox.uid,
-		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,MESSAGE_STATUS_DELETE);
 	g_free(to_char_str);
 
 	if (db_query(query) == -1) {
@@ -752,6 +751,7 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 	}
 
 	if ((nrows = db_num_rows()) == 0) {
+		TRACE(TRACE_ERROR, "empty result set");
 		db_free_result();
 		return NULL;
 	}
@@ -977,8 +977,10 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, struct ImapSession 
 
 	/* go fetch the items */
 	fflush(self->ci->tx);
-	if (_fetch_get_items(self,uid) < 0)
+	if (_fetch_get_items(self,uid) < 0) {
+		self->error = TRUE;
 		return TRUE;
+	}
 	return FALSE;
 }
 
@@ -998,6 +1000,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		TRACE(TRACE_INFO, "self->ids is NULL");
 	else {
 		g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
+		if (self->error)
+			return -1;
 		dbmail_imap_session_mailbox_update_recent(self);
 	}
 	return 0;
