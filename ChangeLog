@@ -1,3 +1,17 @@
+2007-06-17  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, imap4.c:
+	test and finish IDLE using thunderbird and outlook
+
+2007-06-16  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmailtypes.h, debian/rules, imap4.c, 
+	imap4.h, imapcommands.c, imapcommands.h, server.c, serverchild.c:
+	add IDLE capability
+	* dbmail-imapsession.c, dbmail-imapsession.h, 
+	test-scripts/testimap.py:
+	include deleted messages while looking for msginfo
+
 2007-06-03  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_misc.c, dbmail-imapsession.c, dbmail-message.c, 
