@@ -36,6 +36,7 @@ volatile sig_atomic_t mainRestart = 0;
 volatile sig_atomic_t mainStatus = 0;
 volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
+volatile sig_atomic_t alarm_occured = 0;
 
 int isChildProcess = 0;
 int isGrandChildProcess = 0;
@@ -50,24 +51,31 @@ static int server_setup(serverConfig_t *conf);
 int SetParentSigHandler()
 {
 	struct sigaction act;
+	struct sigaction sact;
 
 	/* init & install signal handlers */
 	memset(&act, 0, sizeof(act));
+	memset(&sact, 0, sizeof(sact));
 
 	act.sa_sigaction = ParentSigHandler;
 	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
+	act.sa_flags = SA_SIGINFO;
 
-	sigaction(SIGCHLD,	&act, 0);
-	sigaction(SIGINT,	&act, 0);
-	sigaction(SIGQUIT,	&act, 0);
-	sigaction(SIGILL,	&act, 0);
-	sigaction(SIGBUS,	&act, 0);
-	sigaction(SIGFPE,	&act, 0);
-	sigaction(SIGSEGV,	&act, 0); 
-	sigaction(SIGTERM,	&act, 0);
-	sigaction(SIGHUP, 	&act, 0);
-	sigaction(SIGUSR1,	&act, 0);
+	sact.sa_sigaction = ParentSigHandler;
+	sigemptyset(&sact.sa_mask);
+	sact.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
+
+	sigaction(SIGCHLD,	&sact, 0);
+	sigaction(SIGINT,	&sact, 0);
+	sigaction(SIGQUIT,	&sact, 0);
+	sigaction(SIGILL,	&sact, 0);
+	sigaction(SIGBUS,	&sact, 0);
+	sigaction(SIGFPE,	&sact, 0);
+	sigaction(SIGSEGV,	&sact, 0); 
+	sigaction(SIGTERM,	&sact, 0);
+	sigaction(SIGHUP, 	&sact, 0);
+	sigaction(SIGUSR1,	&sact, 0);
+	sigaction(SIGALRM, 	&act, 0);
 
 	return 0;
 }
@@ -318,6 +326,10 @@ void ParentSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 
 	case SIGUSR1:
 		mainStatus = 1;
+		break;
+
+	case SIGALRM:
+		alarm_occured = 1;
 		break;
 		
 	default:

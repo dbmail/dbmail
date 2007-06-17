@@ -39,7 +39,7 @@ const char *IMAP_COMMANDS[] = {
 	"check", "close", "expunge", "search", "fetch", "store", "copy",
 	"uid", "sort", "getquotaroot", "getquota",
 	"setacl", "deleteacl", "getacl", "listrights", "myrights",
-	"namespace","thread","unselect",
+	"namespace","thread","unselect","idle",
 	"***NOMORE***"
 };
 
@@ -57,7 +57,7 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 	_ic_getquotaroot, _ic_getquota,
 	_ic_setacl, _ic_deleteacl, _ic_getacl, _ic_listrights,
 	_ic_myrights,
-	_ic_namespace, _ic_thread, _ic_unselect,
+	_ic_namespace, _ic_thread, _ic_unselect, _ic_idle,
 	NULL
 };
 
@@ -77,15 +77,13 @@ imap_userdata_t * dbmail_imap_userdata_new(void)
  */
 int IMAPClientHandler(clientinfo_t * ci)
 {
-	char line[MAX_LINESIZE];
-	char *tag = NULL, *cpy, **args, *command;
-	int done, result, readresult;
+	char line[MAX_LINESIZE], *tag = NULL, *cpy, **args, *command;
+	int done, result, readresult, nfaultyresponses, serr;
 	size_t i;
-	int nfaultyresponses;
 	imap_userdata_t *ud = NULL;
-	int serr;
-	
-	struct ImapSession *session = dbmail_imap_session_new();
+	struct ImapSession *session;
+
+	session = dbmail_imap_session_new();
 	dbmail_imap_session_setClientinfo(session,ci);
 
 	if (! (ud = dbmail_imap_userdata_new()))
@@ -175,7 +173,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 		TRACE(COMMAND_SHOW_LEVEL, "COMMAND: [%s]\n", line);
 
 		if (!(*line)) {
-			
 			if (dbmail_imap_session_printf(session, "* BAD No tag specified\r\n") < 0) {
 				dbmail_imap_session_delete(session);
 				return EOF;
@@ -202,7 +199,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 			}
 			nfaultyresponses++;
 			continue;
-			
 		}
 		
 		tag = g_strdup(cpy);	/* set tag */
