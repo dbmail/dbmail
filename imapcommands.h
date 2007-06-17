@@ -56,6 +56,7 @@ int _ic_append(struct ImapSession *self);
 int _ic_sort(struct ImapSession *self);
 int _ic_check(struct ImapSession *self);
 int _ic_close(struct ImapSession *self);
+int _ic_idle(struct ImapSession *self);
 int _ic_unselect(struct ImapSession *self);
 int _ic_expunge(struct ImapSession *self);
 int _ic_search(struct ImapSession *self);

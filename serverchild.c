@@ -31,7 +31,8 @@
 
 volatile sig_atomic_t ChildStopRequested = 0;
 volatile sig_atomic_t childSig = 0;
-volatile sig_atomic_t alarm_occured = 0;
+extern volatile sig_atomic_t alarm_occured;
+
 
 int connected = 0;
 int selfPipe[2];
