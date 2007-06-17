@@ -123,24 +123,27 @@ int IMAPClientHandler(clientinfo_t * ci)
 		}
 
 		if (ferror(session->ci->rx)) {
-			serr = errno;
-			TRACE(TRACE_ERROR, "[%s] on read-stream\n", strerror(serr));
-			if (serr == EPIPE) {
-				dbmail_imap_session_delete(session);
-				return -1;	/* broken pipe */
-			} else
-				clearerr(session->ci->rx);
+			if (errno) {
+				serr = errno;
+				TRACE(TRACE_ERROR, "[%s] on read-stream\n", strerror(serr));
+				if (serr == EPIPE) {
+					dbmail_imap_session_delete(session);
+					return -1;	/* broken pipe */
+				} 
+			}
+			clearerr(session->ci->rx);
 		}
 
 		if (ferror(session->ci->tx)) {
-			serr = errno;
-			TRACE(TRACE_ERROR, "[%s] on write-stream\n", strerror(serr));
-
-			if (serr == EPIPE) {
-				dbmail_imap_session_delete(session);
-				return -1;	/* broken pipe */
-			} else
-				clearerr(session->ci->tx);
+			if (errno) {
+				serr = errno;
+				TRACE(TRACE_ERROR, "[%s] on write-stream\n", strerror(serr));
+				if (serr == EPIPE) {
+					dbmail_imap_session_delete(session);
+					return -1;	/* broken pipe */
+				}
+			}
+			clearerr(session->ci->tx);
 		}
 
 		readresult = dbmail_imap_session_readln(session, line);

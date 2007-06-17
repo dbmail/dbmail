@@ -31,6 +31,7 @@
 #define BUFLEN 2048
 #define SEND_BUF_SIZE 1024
 #define MAX_ARGS 512
+#define IDLE_TIMEOUT 10
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
@@ -1705,7 +1706,7 @@ static gboolean imap_msginfo_notify(u64_t *uid, msginfo_t *msginfo, struct ImapS
 	// EXPUNGE
 	switch (self->command_type) {
 		case IMAP_COMM_NOOP:
-                        TRACE(TRACE_DEBUG,"send expunge?");
+		case IMAP_COMM_IDLE:
 			if (! newmsginfo) {
 				dbmail_imap_session_printf(self, "* %llu EXPUNGE\r\n", *msn);
 				dbmail_mailbox_remove_uid(self->mailbox, uid);
@@ -1715,6 +1716,12 @@ static gboolean imap_msginfo_notify(u64_t *uid, msginfo_t *msginfo, struct ImapS
 		default:
 		break;
 	}
+
+	// 
+	// some clients dont like FETCH data during IDLE
+	//
+	if (self->command_type == IMAP_COMM_IDLE)
+		return FALSE;
 
 	// FETCH
 	for (i=0; i< IMAP_NFLAGS; i++) {
@@ -1751,14 +1758,17 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	*/
 
 	GTree *oldmsginfo, *msginfo = NULL;
-	unsigned oldexists, oldrecent;
+	unsigned oldexists, oldrecent, olduidnext;
         struct DbmailMailbox *mailbox = NULL;
+	gboolean showexists = FALSE;
+	static int idle_keepalive = 0;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	if (! ud->state == IMAPCS_SELECTED)
 		return 0;
 
 	oldexists = ud->mailbox.exists;
 	oldrecent = ud->mailbox.recent;
+	olduidnext = ud->mailbox.msguidnext;
         oldmsginfo = self->msginfo;
 
 	if (update) {
@@ -1783,13 +1793,22 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	/* msg counts */
 	// EXPUNGE
 	switch (self->command_type) {
-		case IMAP_COMM_NOOP:
 		case IMAP_COMM_IDLE:
+			// send a keepalive message every 12 * IDLE_TIMEOUT seconds
+			// this will cause most clients to issue a DONE/IDLE cycle
+			if (idle_keepalive++ == 12) {
+				dbmail_imap_session_printf(self, "* OK\r\n");
+				idle_keepalive = 0;
+			}
+		case IMAP_COMM_NOOP:
 		case IMAP_COMM_CHECK:
 		case IMAP_COMM_SELECT:
 		case IMAP_COMM_EXAMINE:
 	
-		if ((!update) || (ud->mailbox.exists >= oldexists)) // never decrements
+		if ((olduidnext != ud->mailbox.msguidnext) && (ud->mailbox.exists >= oldexists))
+			showexists = TRUE;
+
+		if ((!update) || (showexists)) // never decrements
 			dbmail_imap_session_printf(self, "* %u EXISTS\r\n", ud->mailbox.exists);
 
 		if ((!update) || (ud->mailbox.recent != oldrecent))
@@ -1922,13 +1941,14 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 
 int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
 {
-	int result = 0, idle_timeout = 10;
+	int result = 0, idle_timeout = IDLE_TIMEOUT;
 	char buffer[MAX_LINESIZE];
 	clientinfo_t *ci = self->ci;
 	
 	assert(buffer);
 	memset(buffer, 0, MAX_LINESIZE);
 
+	dbmail_imap_session_mailbox_status(self,TRUE);
 	dbmail_imap_session_printf(self, "+ idling\r\n");
 
 	while (1) {
@@ -1948,6 +1968,11 @@ int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
 		alarm(0);
 		if (g_strncasecmp(buffer,"DONE",4)==0)
 			break;
+		else if (strlen(buffer) > 0) {
+			dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
+			result = -1;
+			break;
+		}
 
 		if (alarm_occured) {
 			alarm_occured = 0;
