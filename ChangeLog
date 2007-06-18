@@ -1,8 +1,10 @@
 2007-06-18  Paul J Stevens <paul@nfg.nl>
 
-	* db.c:
+	* dbmail.conf, sort.c:
+	add suppress_duplicate to dbmail.conf
+	* ChangeLog, db.c:
 	check for resent-message-id during duplicate check
-	* db.c, db.h, sort.c:
+	* ChangeLog, db.c, db.h, sort.c:
 	avoid duplicate message-ids in a mailbox
 	* dbmail-imapsession.h:
 	add missing prototype declaration
