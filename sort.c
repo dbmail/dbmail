@@ -131,6 +131,7 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		int *msgflags)
 {
 	u64_t mboxidnr, newmsgidnr;
+	char *messageid;
 	size_t msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 
 	TRACE(TRACE_INFO,"useridnr [%llu] mailbox [%s]", useridnr, mailbox);
@@ -178,6 +179,13 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 			TRACE(TRACE_ERROR, "invalid return value from acl_has_right");
 			return DSN_CLASS_FAIL;
 		}
+	}
+
+	// if the mailbox already holds this message we're done
+	messageid = dbmail_message_get_header(message, "message-id");
+	if ( messageid && ((db_mailbox_has_message_id(mboxidnr, messageid)) > 0) ) {
+		TRACE(TRACE_DEBUG, "mailbox already contains this message.");
+		return DSN_CLASS_OK;
 	}
 
 	// Ok, we have the ACL right, time to deliver the message.

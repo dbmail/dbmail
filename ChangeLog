@@ -1,6 +1,10 @@
-2007-06-17  Paul J Stevens <paul@nfg.nl>
+2007-06-18  Paul J Stevens <paul@nfg.nl>
 
-	* dbmail-imapsession.c, imap4.c:
+	* db.c, db.h, sort.c:
+	avoid duplicate message-ids in a mailbox
+	* dbmail-imapsession.h:
+	add missing prototype declaration
+	* ChangeLog, dbmail-imapsession.c, imap4.c:
 	test and finish IDLE using thunderbird and outlook
 
 2007-06-16  Paul Stevens <paul@nfg.nl>
