@@ -186,7 +186,7 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 	if (strcasecmp(val,"yes")==0) {
 		char *messageid = dbmail_message_get_header(message, "message-id");
 		if ( messageid && ((db_mailbox_has_message_id(mboxidnr, messageid)) > 0) ) {
-			TRACE(TRACE_INFO, "suppress_duplicate: [%s]", messageid);
+			TRACE(TRACE_MESSAGE, "suppress_duplicate: [%s]", messageid);
 			return DSN_CLASS_OK;
 		}
 	}
