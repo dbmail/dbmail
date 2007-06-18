@@ -3636,6 +3636,37 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 	return DM_SUCCESS;		/* success */
 }
 
+int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
+{
+	int rows;
+	char *safe_messageid;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+
+	g_return_val_if_fail(messageid!=NULL,0);
+
+	safe_messageid = dm_stresc(messageid);
+	snprintf(query, DEF_QUERYSIZE,
+		"SELECT message_idnr FROM %smessages m "
+		"JOIN %sphysmessage p ON m.physmessage_id=p.id "
+		"JOIN %sheadervalue v ON v.physmessage_id=p.id "
+		"JOIN %sheadername n ON v.headername_id=n.id "
+		"WHERE m.mailbox_idnr=%llu "
+		"AND n.headername='message-id' "
+		"AND v.headervalue='%s'", DBPFX, DBPFX, 
+		DBPFX, DBPFX, mailbox_idnr, safe_messageid);
+	g_free(safe_messageid);
+	
+	if (db_query(query) == DM_EQUERY)
+		return DM_EQUERY;
+
+	rows = db_num_rows();
+	db_free_result();
+	
+	return rows;
+}
+
+
 static u64_t message_get_size(u64_t message_idnr)
 {
 	u64_t size = 0;

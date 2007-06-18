@@ -1102,6 +1102,15 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from);
  */
 int db_copymsg(u64_t msg_idnr, u64_t mailbox_to,
 	       u64_t user_idnr, u64_t * newmsg_idnr);
+
+/**
+ * \brief check if mailbox already holds message with message-id
+ * \param mailbox_idnr
+ * \param messageid Message-ID header to check for
+ * \return number of matching messages or -1 on failure
+ */
+int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid);
+
 /**
  * \brief get name of mailbox
  * \param mailbox_idnr
@@ -1112,6 +1121,8 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to,
  * \attention name should be large enough to hold the name 
  * (preferably of size IMAP_MAX_MAILBOX_NAMELEN + 1)
  */
+
+
 int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name);
 /**
  * \brief set name of mailbox
