@@ -1,3 +1,22 @@
+2007-06-18  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.conf, sort.c:
+	add suppress_duplicate to dbmail.conf
+	* db.c:
+	check for resent-message-id during duplicate check
+	* db.c, db.h, sort.c:
+	avoid duplicate message-ids in a mailbox
+	* dbmail-imapsession.h:
+	add missing prototype declaration
+
+2007-06-17  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, dbmail-imapsession.c, imap4.c:
+	test and finish IDLE using thunderbird and outlook
+	* dbmail-imapsession.c, dbmailtypes.h, debian/rules, imap4.c, 
+	imap4.h, imapcommands.c, imapcommands.h, server.c, serverchild.c:
+	add IDLE capability
+
 2007-06-17  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, imap4.c:
