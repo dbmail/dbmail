@@ -1,6 +1,9 @@
 2007-06-18  Paul J Stevens <paul@nfg.nl>
 
-	* dbmail.conf, sort.c:
+	* db.c, dbmailtypes.h, modules/dbmysql.c, modules/dbpgsql.c, 
+	modules/dbsqlite.c:
+	add timewindow to suppress_duplicate detection
+	* ChangeLog, dbmail.conf, sort.c:
 	add suppress_duplicate to dbmail.conf
 	* ChangeLog, db.c:
 	check for resent-message-id during duplicate check

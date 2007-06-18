@@ -55,7 +55,7 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_CURRENT_TIMESTAMP:
 			return "STRFTIME('%Y-%m-%d %H:%M:%S','now','localtime')";
 		break;
-		case SQL_REPLYCACHE_EXPIRE:
+		case SQL_EXPIRE:
 			return "DATETIME('now','-%d DAYS')";	
 		break;
 		case SQL_BINARY:
