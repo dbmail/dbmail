@@ -3652,7 +3652,7 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 		"JOIN %sheadervalue v ON v.physmessage_id=p.id "
 		"JOIN %sheadername n ON v.headername_id=n.id "
 		"WHERE m.mailbox_idnr=%llu "
-		"AND n.headername='message-id' "
+		"AND n.headername IN ('resent-message-id','message-id') "
 		"AND v.headervalue='%s'", DBPFX, DBPFX, 
 		DBPFX, DBPFX, mailbox_idnr, safe_messageid);
 	g_free(safe_messageid);
