@@ -3636,16 +3636,20 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 	return DM_SUCCESS;		/* success */
 }
 
+#define EXPIRE_SIZE 64
+#define EXPIRE_DAYS 3
 int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 {
 	int rows;
 	char *safe_messageid;
-	char query[DEF_QUERYSIZE];
+	char query[DEF_QUERYSIZE], expire[EXPIRE_SIZE];
 	memset(query,0,DEF_QUERYSIZE);
+	memset(expire,0,EXPIRE_SIZE);
 
 	g_return_val_if_fail(messageid!=NULL,0);
 
 	safe_messageid = dm_stresc(messageid);
+	snprintf(expire, EXPIRE_SIZE, db_get_sql(SQL_EXPIRE), EXPIRE_DAYS);
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT message_idnr FROM %smessages m "
 		"JOIN %sphysmessage p ON m.physmessage_id=p.id "
@@ -3653,8 +3657,9 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 		"JOIN %sheadername n ON v.headername_id=n.id "
 		"WHERE m.mailbox_idnr=%llu "
 		"AND n.headername IN ('resent-message-id','message-id') "
-		"AND v.headervalue='%s'", DBPFX, DBPFX, 
-		DBPFX, DBPFX, mailbox_idnr, safe_messageid);
+		"AND v.headervalue='%s'" 
+		"AND p.internal_date > %s", DBPFX, DBPFX, DBPFX, DBPFX, 
+		mailbox_idnr, safe_messageid, expire);
 	g_free(safe_messageid);
 	
 	if (db_query(query) == DM_EQUERY)
@@ -4957,7 +4962,7 @@ int db_replycache_validate(const char *to, const char *from,
 	char query[DEF_QUERYSIZE]; 
 
 	memset(query,0,DEF_QUERYSIZE);
-	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), days);
+	g_string_printf(tmp, db_get_sql(SQL_EXPIRE), days);
 
 	escaped_to = dm_stresc(to);
 	escaped_from = dm_stresc(from);
