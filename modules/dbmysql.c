@@ -47,7 +47,7 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_CURRENT_TIMESTAMP:
 			return "CURRENT_TIMESTAMP";
 		break;
-		case SQL_REPLYCACHE_EXPIRE:
+		case SQL_EXPIRE:
 			return "NOW() - INTERVAL %d DAY";
 		break;
 		case SQL_BINARY:
