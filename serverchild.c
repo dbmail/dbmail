@@ -93,6 +93,8 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	case SIGALRM:
 		alarm_occured = 1;
 		break;
+	case SIGPIPE:
+		break;
 	default:
 	 	ChildStopRequested = 1;
 		childSig = sig;
@@ -141,8 +143,10 @@ int SetChildSigHandler()
 	sigaction(SIGSEGV,	&rstact, 0);
 	sigaction(SIGTERM,	&rstact, 0);
 	sigaction(SIGHUP,	&rstact, 0);
+	sigaction(SIGPIPE,	&rstact, 0);
 	sigaction(SIGALRM,	&act, 0);
 	sigaction(SIGCHLD,	&act, 0);
+
 	return 0;
 }
 int DelChildSigHandler()
@@ -244,7 +248,7 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	// and we need to loop again upstream to handle it.
 	// See http://cr.yp.to/docs/selfpipe.html
 	if (FD_ISSET(selfPipe[0], &rfds)) {
-		char *buf[1];
+		char buf[1];
 		TRACE(TRACE_INFO, "received signal");
 		read(selfPipe[0], buf, 1);
 		return -1;
