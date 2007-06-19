@@ -1,3 +1,30 @@
+2007-06-19  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.am, check_dbmail.h, check_dbmail_mailbox.c, 
+	check_dbmail_message.c, db.c, dbmail-mailbox.c, dbmail-message.c, 
+	dbmail-message.h, dbmail.h.in, dm_sha1.c, dm_sha1.h, 
+	sql/mysql/2_2_5-2_3_0.mysql, sql/mysql/create_tables.mysql, 
+	sql/postgresql/2_2_5-2_3_0.pgsql, sql/postgresql/create_tables.pgsql, 
+	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite, 
+	sql/sqlite/trigger.tmpl.sql:
+	merge mimechunk
+
+2007-06-18  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, db.c, dbmailtypes.h, modules/dbmysql.c, 
+	modules/dbpgsql.c, modules/dbsqlite.c:
+	add timewindow to suppress_duplicate detection
+	* ChangeLog, dbmail.conf, sort.c:
+	add suppress_duplicate to dbmail.conf
+	* ChangeLog, db.c:
+	check for resent-message-id during duplicate check
+	* ChangeLog, db.c, db.h, sort.c:
+	avoid duplicate message-ids in a mailbox
+	* dbmail-imapsession.h:
+	add missing prototype declaration
+	* ChangeLog, dbmail-imapsession.c, imap4.c:
+	test and finish IDLE using thunderbird and outlook
+
 2007-06-18  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, dbmailtypes.h, modules/dbmysql.c, modules/dbpgsql.c, 

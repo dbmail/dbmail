@@ -269,27 +269,18 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 	return r;
 }
 
-int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
+static int _messageblks_dump(struct DbmailMailbox *self, GMimeStream *ostream)
 {
+	GList *topslice = NULL, *slice = NULL, *ids = NULL, *cids = NULL;
+	struct DbmailMessage *message = NULL;
+	GString *q, *t;
 	unsigned i,j;
 	int count=0;
 	gboolean h;
-	GMimeStream *ostream;
-	GList *ids, *cids = NULL, *slice, *topslice;
-	struct DbmailMessage *message = NULL;
-	GString *q, *t;
-
-	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
-		TRACE(TRACE_DEBUG,"cannot dump empty mailbox");
-		return 0;
-	}
-	
-	assert(self->ids);
 
 	q = g_string_new("");
 	t = g_string_new("");
-	ostream = g_mime_stream_file_new(file);
-	
+
 	ids = g_tree_keys(self->ids);
 
 	while (ids) {
@@ -359,6 +350,80 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	g_list_destroy(topslice);
 	g_string_free(t,TRUE);
 	g_string_free(q,TRUE);
+
+	return count;
+}
+
+static int _mimeparts_dump(struct DbmailMailbox *self, GMimeStream *ostream)
+{
+	GList *ids = NULL;
+	u64_t msgid, physid, *id;
+	struct DbmailMessage *m;
+	int count = 0;
+	char q[DEF_QUERYSIZE];
+	memset(q,0,sizeof(q));
+	int rows, i;
+
+	snprintf(q,DEF_QUERYSIZE,"select id,message_idnr from %sphysmessage p "
+		"join %smessages m on p.id=m.physmessage_id "
+		"join %smailboxes b on b.mailbox_idnr=m.mailbox_idnr "
+		"where b.mailbox_idnr=%llu order by message_idnr",
+		DBPFX,DBPFX,DBPFX,self->id);
+
+	if (db_query(q)==DM_EQUERY)
+		return DM_EQUERY;
+
+	rows = db_num_rows();
+	for (i=0; i<rows; i++) {
+		physid = db_get_result_u64(i,0);
+		msgid = db_get_result_u64(i,1);
+		if (g_tree_lookup(self->ids,&msgid)) {
+			id = g_new0(u64_t,1);
+			*id = physid;
+			ids = g_list_prepend(ids,id);
+		}
+	}
+	db_free_result();
+
+	ids = g_list_reverse(ids);
+		
+	while(ids) {
+		physid = *(u64_t *)ids->data;
+		m = dbmail_message_new();
+		m = dbmail_message_retrieve(m, physid, DBMAIL_MESSAGE_FILTER_FULL);
+		if (dump_message_to_stream(m, ostream) > 0)
+			count++;
+		dbmail_message_free(m);
+
+		if (! g_list_next(ids))
+			break;
+
+		ids = g_list_next(ids);
+	}
+
+	g_list_foreach(g_list_first(ids),(GFunc)g_free,NULL);
+	g_list_free(ids);
+
+	return count;
+}
+
+int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
+{
+	int count = 0;
+	GMimeStream *ostream;
+
+	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
+		TRACE(TRACE_DEBUG,"cannot dump empty mailbox");
+		return 0;
+	}
+	
+	assert(self->ids);
+
+	ostream = g_mime_stream_file_new(file);
+	
+	count =+ _mimeparts_dump(self, ostream);
+	//count =+ _messageblks_dump(self, ostream);
+
 	g_object_unref(ostream);
 	
 	return count;
@@ -1286,6 +1351,20 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		break;
 		
 		case IST_DATA_BODY:
+		g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "p.data");
+		g_string_printf(q,"SELECT m.message_idnr,p.data FROM %smimeparts p "
+			"JOIN %spartlists l ON p.id=l.part_id "
+			"JOIN %sphysmessage s ON l.physmessage_id=s.id "
+			"JOIN %smessages m ON m.physmessage_id=s.id "
+			"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
+			"WHERE b.mailbox_idnr=%llu AND m.status IN (%d,%d) "
+			"AND l.part_key > 1 OR l.is_header=0 "
+			"GROUP BY m.message_idnr,p.data HAVING %s %s '%%%s%%';",
+			DBPFX,DBPFX,DBPFX,DBPFX,DBPFX,dbmail_mailbox_get_id(self),
+			MESSAGE_STATUS_NEW,MESSAGE_STATUS_SEEN,
+			t->str, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
+
+#if 0
 		g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "k.messageblk");
 		g_string_printf(q, "SELECT m.message_idnr,k.messageblk FROM %smessageblks k "
 			"JOIN %sphysmessage p ON k.physmessage_id = p.id "
@@ -1299,6 +1378,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			dbmail_mailbox_get_id(self),
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
 			t->str, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
+#endif
 		break;
 
 		case IST_SIZE_LARGER:
@@ -1386,8 +1466,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 
 	TRACE(TRACE_DEBUG,"[%s] uid [%d]", set, uid);
 	
-	if (uid) {
-		ids = g_tree_keys(self->ids);
+	if (uid  && (ids = g_tree_keys(self->ids) ) ) {
 		ids = g_list_last(ids);
 		hi = *((u64_t *)ids->data);
 		ids = g_list_first(ids);

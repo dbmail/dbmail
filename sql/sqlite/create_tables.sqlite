@@ -922,3 +922,98 @@ CREATE TRIGGER fk_delete_envelope_physmessage_id
 		DELETE FROM dbmail_envelope WHERE physmessage_id = OLD.id;
 	END;
 
+
+
+--
+-- 2.3.x additions
+--
+
+DROP TABLE IF EXISTS dbmail_mimeparts;
+CREATE TABLE dbmail_mimeparts (
+	id	TEXT NOT NULL,
+	data	TEXT NOT NULL,
+	size	INTEGER NOT NULL
+);
+
+DROP TABLE IF EXISTS dbmail_partlists;
+CREATE TABLE dbmail_partlists (
+	physmessage_id	INTEGER NOT NULL,
+   	is_header 	BOOLEAN DEFAULT '0' NOT NULL,
+	part_key	INTEGER DEFAULT '0' NOT NULL,
+	part_depth	INTEGER DEFAULT '0' NOT NULL,
+	part_order	INTEGER DEFAULT '0' NOT NULL,
+	part_id		TEXT NOT NULL
+);
+
+-- ALTER TABLE ONLY dbmail_partlists
+--    ADD CONSTRAINT dbmail_partlists_part_id_fkey FOREIGN KEY (part_id) REFERENCES dbmail_mimeparts(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DROP TRIGGER IF EXISTS fk_insert_partlists_mimeparts_id;
+CREATE TRIGGER fk_insert_partlists_mimeparts_id
+	BEFORE INSERT ON dbmail_partlists
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.part_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_mimeparts WHERE id = new.part_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_partlists" violates foreign key constraint "fk_insert_partlists_mimeparts_id"')
+		END;
+	END;
+DROP TRIGGER IF EXISTS fk_update_partlists_mimeparts_id;
+CREATE TRIGGER fk_update_partlists_mimeparts_id
+	BEFORE UPDATE ON dbmail_partlists
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.part_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_mimeparts WHERE id = new.part_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_partlists" violates foreign key constraint "fk_update_partlists_mimeparts_id"')
+		END;
+	END;
+DROP TRIGGER IF EXISTS fk_update2_partlists_mimeparts_id;
+CREATE TRIGGER fk_update2_partlists_mimeparts_id
+	AFTER UPDATE ON dbmail_mimeparts
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_partlists SET part_id = new.id WHERE part_id = OLD.id;
+	END;
+DROP TRIGGER IF EXISTS fk_delete_partlists_mimeparts_id;
+CREATE TRIGGER fk_delete_partlists_mimeparts_id
+	BEFORE DELETE ON dbmail_mimeparts
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_partlists WHERE part_id = OLD.id;
+	END;
+
+-- ALTER TABLE ONLY dbmail_partlists
+--    ADD CONSTRAINT dbmail_partlists_physmessage_id_fkey FOREIGN KEY (physmessage_id) REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DROP TRIGGER IF EXISTS fk_insert_partlists_physmessage_id;
+CREATE TRIGGER fk_insert_partlists_physmessage_id
+	BEFORE INSERT ON dbmail_partlists
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_partlists" violates foreign key constraint "fk_insert_partlists_physmessage_id"')
+		END;
+	END;
+DROP TRIGGER IF EXISTS fk_update_partlists_physmessage_id;
+CREATE TRIGGER fk_update_partlists_physmessage_id
+	BEFORE UPDATE ON dbmail_partlists
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_partlists" violates foreign key constraint "fk_update_partlists_physmessage_id"')
+		END;
+	END;
+DROP TRIGGER IF EXISTS fk_update2_partlists_physmessage_id;
+CREATE TRIGGER fk_update2_partlists_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_partlists SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+DROP TRIGGER IF EXISTS fk_delete_partlists_physmessage_id;
+CREATE TRIGGER fk_delete_partlists_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_partlists WHERE physmessage_id = OLD.id;
+	END;
+

@@ -74,6 +74,9 @@ struct DbmailMessage {
 	GTree *header_name;
 	GTree *header_value;
 	gchar *charset;
+	int part_key;
+	int part_depth;
+	int part_order;
 };
 
 /*
@@ -82,6 +85,7 @@ struct DbmailMessage {
 
 struct DbmailMessage * dbmail_message_new(void);
 struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype);
+struct DbmailMessage * dbmail_message_init_from_gmime_message(struct DbmailMessage *self, GMimeMessage *message);
 struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
 struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
@@ -159,6 +163,7 @@ void dbmail_message_free(struct DbmailMessage *self);
 
 /* move these elsewhere: */
 
+unsigned find_end_of_header(const char *h);
 char * g_mime_object_get_body(const GMimeObject *object);
 
 /* moved here from dbmsgbuf.h */

@@ -51,6 +51,7 @@ COMMON = dbmail-user.c \
 	misc.c \
 	pidfile.c \
 	dm_md5.c \
+	dm_sha1.c \
 	dm_match.c \
 	dm_base64.c $(DM_GETOPT)
 	

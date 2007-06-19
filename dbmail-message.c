@@ -57,7 +57,7 @@ static int _message_insert(struct DbmailMessage *self,
 
 /* general mime utils (missing from gmime?) */
 
-static unsigned find_end_of_header(const char *h)
+unsigned find_end_of_header(const char *h)
 {
 	gchar c, p1 = 0, p2 = 0;
 	unsigned i = 0;
@@ -142,6 +142,330 @@ gchar * get_crlf_encoded_opt(const gchar *string, int dots)
 	return encoded;
 
 }
+
+static int _get_sha1(const char *s, size_t len, unsigned char *sha1)
+{
+	SHA_CTX c;
+
+	SHA1_Init(&c);
+	SHA1_Update(&c,s,len);
+	SHA1_Final(sha1,&c);
+
+	return 0;
+}
+
+static gboolean blob_exists(const char *id)
+{
+	int rows;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+
+	snprintf(query, DEF_QUERYSIZE, "SELECT id FROM %smimeparts WHERE id='%s'", DBPFX, id);
+	if (db_query(query) == DM_EQUERY)
+		return FALSE;
+	
+	rows = db_num_rows();
+	db_free_result();
+
+	return rows ? TRUE : FALSE;
+}
+
+static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_header)
+{
+	unsigned char sha1[20];
+	memset(sha1,0,sizeof(sha1));
+
+	GString *q;
+	char *safe = NULL;
+	const char *id;
+	size_t len;
+
+	if (is_header) {
+		m->part_key++;
+		m->part_order=0;
+	}
+
+	q = g_string_new("");
+
+	len = strlen(buf);
+	_get_sha1(buf, len, sha1);
+	id = sha1_to_hex(sha1);
+
+	// store this message fragment
+	if (! blob_exists(id)) {
+		safe = dm_stresc(buf);
+		g_string_printf(q, "INSERT INTO %smimeparts "
+				"(id, data, size) VALUES ("
+				"'%s', '%s', %u)", 
+				DBPFX, id, safe, len);
+		g_free(safe);
+
+		if (db_query(q->str) == DM_EQUERY) {
+			g_string_free(q,TRUE);
+			return DM_EQUERY;
+		}
+
+		db_free_result();
+	}
+
+	// register this message fragment
+	g_string_printf(q, "INSERT INTO %spartlists "
+		"(physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
+		"VALUES (%llu,%u,%u,%u,%u,'%s')", 
+		DBPFX, dbmail_message_get_physid(m), is_header, 
+		m->part_key, m->part_depth, m->part_order, id);
+
+	if (db_query(q->str) == DM_EQUERY) {
+		g_string_free(q,TRUE);
+		return DM_EQUERY;
+	}
+	db_free_result();
+
+	m->part_order++;
+	g_string_free(q,TRUE);
+
+	return 0;
+
+}
+static const char * find_boundary(const char *s)
+{
+	GMimeContentType *type;
+	char header[128];
+	const char *boundary;
+	char *rest;
+	int i=0, j=0;
+
+	memset(header,0,sizeof(header));
+
+	rest = g_strcasestr(s, "Content-type:");
+	if (! rest)
+		return NULL;
+
+	i = 13;
+	while (rest[i]) {
+		if (((rest[i] == '\n') || (rest[i] == '\r')) && (!isspace(rest[i+1]))) {
+			break;
+		}
+		header[j++]=rest[i++];
+	}
+	header[j]='\0';
+	g_strstrip(header);
+	type = g_mime_content_type_new_from_string(header);
+	boundary = g_mime_content_type_get_parameter(type,"boundary");
+	
+	return boundary;
+}
+
+
+static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
+{
+	char *str;
+	const char *boundary = NULL;
+	char **blist = g_new0(char *,32);
+	int prevdepth, depth = 0, order, row, rows;
+	int key = 1;
+	gboolean got_boundary = FALSE, prev_boundary = FALSE;
+	gboolean is_header = TRUE, prev_header;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+	GString *m;
+
+	assert(dbmail_message_get_physid(self));
+
+	snprintf(query, DEF_QUERYSIZE, "SELECT data,l.part_key,l.part_depth,l.part_order,l.is_header "
+		"FROM %smimeparts p "
+		"JOIN %spartlists l ON p.id = l.part_id "
+		"WHERE l.physmessage_id = %llu ORDER BY l.part_key,l.part_order ASC", 
+		DBPFX, DBPFX, dbmail_message_get_physid(self));
+
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "sql error");
+		return NULL;
+	}
+	
+	rows = db_num_rows();
+	if (rows < 1) {
+		db_free_result();
+		return NULL;	/* msg should have 1 block at least */
+	}
+
+	m = g_string_new("");
+
+	for (row=0; row < rows; row++) {
+
+		prevdepth = depth;
+		prev_header = is_header;
+
+		str = (char *)db_get_result(row,0);
+		key = db_get_result_int(row,1);
+		depth = db_get_result_int(row,2);
+		order = db_get_result_int(row,3);
+		is_header = db_get_result_bool(row,4);
+
+		if (is_header)
+			prev_boundary = got_boundary;
+
+		got_boundary = FALSE;
+		if (is_header && ((boundary = find_boundary(str)) != NULL)) {
+			got_boundary = TRUE;
+			blist[depth] = (char *)boundary;
+		}
+
+		if (prevdepth > depth)
+			g_string_append_printf(m, "\n--%s--\n", blist[depth]);
+
+		if (depth>0)
+			boundary = (const char *)blist[depth-1];
+
+		if (is_header && (!prev_header|| prev_boundary))
+			g_string_append_printf(m, "\n--%s\n", boundary);
+
+		g_string_append_printf(m, "%s", str);
+		if (is_header)
+			g_string_append_printf(m,"\n");
+	}
+	if (rows > 1 && boundary)
+		g_string_append_printf(m, "\n--%s--\n", boundary);
+
+	if (rows > 1 && depth > 0)
+		g_string_append_printf(m, "\n--%s--\n\n", blist[0]);
+
+	db_free_result();
+
+
+	self = dbmail_message_init_with_string(self,m);
+	g_string_free(m,TRUE);
+	g_free(blist);
+
+	return self;
+}
+
+static gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m);
+
+static gboolean _dm_store_mime_text(GMimeObject *object, struct DbmailMessage *m)
+{
+	char *head, *text;
+
+	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
+
+	head = g_mime_object_get_headers(object);
+	text = g_mime_object_get_body(object);
+
+	_store_blob(m, head, 1);
+	g_free(head);
+
+	_store_blob(m, text, 0);
+	g_free(text);
+
+	return FALSE;
+}
+
+static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessage *m, const GMimeContentType *content_type)
+{
+	char *head, *text;
+	size_t i = 0, t;
+	const char *boundary;
+	int n;
+
+	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
+
+	boundary = g_mime_content_type_get_parameter(content_type,"boundary");
+	head = g_mime_object_get_headers(object);
+
+	_store_blob(m, head, 1);
+	g_free(head);
+
+	if (g_mime_content_type_is_type(content_type, "multipart", "mixed")) {
+		text = g_mime_object_get_body(object);
+		t = strlen(text);
+
+		while(t>2 && i++ < t && text[i+2]) {
+			if ((i==0 || text[i] == '\n') && text[i+1]=='-' && text[i+2]=='-')
+				break;
+		}
+
+		if (i>0 && i<t) {
+			text[i] = '\0';
+			text = g_realloc(text,i);
+			_store_blob(m, text, 0);
+		}
+
+		g_free(text);
+	}
+
+	if (boundary) {
+		m->part_depth++;
+		n = m->part_order;
+		m->part_order=0;
+	}
+	g_mime_multipart_foreach((GMimeMultipart *)object, (GMimePartFunc)_dm_store_mime_object, m);
+
+	if (boundary) {
+		n++;
+		m->part_depth--;
+		m->part_order=n;
+	}
+
+	return FALSE;
+}
+
+static gboolean _dm_store_mime_message(GMimeObject * object, struct DbmailMessage *m)
+{
+	char *head;
+	GMimeMessage *m2;
+
+	head = g_mime_object_get_headers(object);
+	_store_blob(m, head, 1);
+	g_free(head);
+
+	m2 = g_mime_message_part_get_message(GMIME_MESSAGE_PART(object));
+
+	g_return_val_if_fail(GMIME_IS_MESSAGE(m2), TRUE);
+
+	_dm_store_mime_object(GMIME_OBJECT(m2), m);
+
+	g_object_unref(m2);
+	
+	return FALSE;
+	
+}
+
+gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m)
+{
+	const GMimeContentType *content_type;
+	GMimeObject *mime_part;
+	gboolean r = FALSE;
+
+	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
+
+	if (GMIME_IS_MESSAGE(object))
+		mime_part = g_mime_message_get_mime_part((GMimeMessage *)object);
+	else 
+		mime_part = object;
+
+	content_type = g_mime_object_get_content_type(mime_part);
+
+	if (g_mime_content_type_is_type(content_type, "multipart", "*"))
+		r = _dm_store_mime_multipart((GMimeObject *)mime_part, m, content_type);
+
+	else if (g_mime_content_type_is_type(content_type, "message","*"))
+		r = _dm_store_mime_message((GMimeObject *)mime_part, m);
+
+	else 
+		r = _dm_store_mime_text((GMimeObject *)mime_part, m);
+
+	if (GMIME_IS_MESSAGE(object))
+		g_object_unref(mime_part);
+
+	return r;
+}
+
+
+static gboolean _dm_message_store(struct DbmailMessage *m)
+{
+	return _dm_store_mime_object((GMimeObject *)m->content, m);
+}
+
 
 /* Useful for debugging. Uncomment if/when needed.
  *//*
@@ -289,6 +613,18 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 	
 	return self;
 }
+
+struct DbmailMessage * dbmail_message_init_from_gmime_message(struct DbmailMessage *self, GMimeMessage *message)
+{
+	g_return_val_if_fail(GMIME_IS_MESSAGE(message), NULL);
+
+	self->content = GMIME_OBJECT(message);
+	_map_headers(self);
+
+	return self;
+
+}
+
 /* \brief initialize a previously created DbmailMessage using a GMimeStream
  * \param empty DbmailMessage
  * \param stream from which to read
@@ -430,14 +766,13 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 				dbmail_message_set_internal_date(self, from);
 				g_free(from);
 			}
-
 			break;
 		case DBMAIL_MESSAGE_PART:
-		TRACE(TRACE_DEBUG,"parse part");
+			TRACE(TRACE_DEBUG,"parse part");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
 			break;
 	}
-	
+
 	g_object_unref(parser);
 
 	return res;
@@ -600,19 +935,22 @@ gchar * dbmail_message_body_to_string(const struct DbmailMessage *self)
 {
 	return g_mime_object_get_body(GMIME_OBJECT(self->content));
 }
-
 gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self)
 {
 	gchar *h;
 	unsigned i = 0;
-	
+
+//	i = find_end_of_header((const char *)self->raw->data);
+//	h = g_strndup((const char *)self->raw->data, i);
+
 	h = dbmail_message_to_string(self);
 	i = find_end_of_header(h);
 	h[i] = '\0';
 	h = g_realloc(h, strlen(h)+1);
-	
+
 	return h;
 }
+
 
 /* 
  * Some dynamic accessors.
@@ -677,10 +1015,18 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	GString *m;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
+	struct DbmailMessage *store;
 
 	
 	assert(dbmail_message_get_physid(self));
 	
+	store = self;
+
+	if ((self = _mime_retrieve(self)))
+		return self;
+
+	self = store;
+
 	snprintf(query, DEF_QUERYSIZE, query_template, DBPFX, 
 			dbmail_message_get_physid(self));
 
@@ -699,14 +1045,7 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	m = g_string_new("");
 	for (row=0; row < rows; row++) {
 		char *str = (char *)db_get_result(row,0);
-		if( str && db_get_result_int(row,1)==1) {
-			size_t q=strlen(str)-1;
-			for( ; q > 0 && ( str[q]=='\r' || str[q]=='\n' ); q--);
-			g_string_append_len(m,str,q+1);
-			g_string_append_printf(m, "\r\nX-DBMail-PhysMessage-ID: %llu\r\n\r\n", dbmail_message_get_physid(self));
-		} else {
-			g_string_append_printf(m, "%s", str);
-		}
+		g_string_append_printf(m, "%s", str);
 	}
 	db_free_result();
 	
@@ -771,6 +1110,7 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 			break;
 	}
 	
+
 	if ((!self) || (! self->content)) {
 		TRACE(TRACE_ERROR, "retrieval failed for physid [%llu]", physid);
 		return NULL;
@@ -824,20 +1164,25 @@ int dbmail_message_store(struct DbmailMessage *self)
 	}
 
 	hdrs = dbmail_message_hdrs_to_string(self);
-	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
-	if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0) {
-		g_free(hdrs);
-		return -1;
-	}
-	g_free(hdrs);
-
-	/* store body in several blocks (if needed */
 	body = dbmail_message_body_to_string(self);
+
+	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
 	body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
-	if (store_message_in_blocks(body, body_size, self->id) < 0) {
-		g_free(body);
-		return -1;
+
+	if (_dm_message_store(self)) {
+
+		/* store body in several blocks (if needed */
+		if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0) {
+			g_free(hdrs);
+			return -1;
+		}
+		if (store_message_in_blocks(body, body_size, self->id) < 0) {
+			g_free(body);
+			return -1;
+		}
 	}
+
+	g_free(hdrs);
 	g_free(body);
 
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(self);

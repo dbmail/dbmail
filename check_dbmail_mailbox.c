@@ -449,13 +449,13 @@ START_TEST(test_dbmail_mailbox_get_set)
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
 	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	c = g_tree_nnodes(set);
-	fail_unless(c>1,"dbmail_mailbox_get_set failed");
+	fail_unless(c>1,"dbmail_mailbox_get_set failed [%d]", c);
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"*:1",0);
 	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
-	fail_unless(c==d,"dbmail_mailbox_get_set failed");
+	fail_unless(c==d,"dbmail_mailbox_get_set failed [%d != %d]", c, d);
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"1,*",0);

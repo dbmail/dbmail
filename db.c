@@ -120,8 +120,8 @@ int db_check_version(void)
 {
 
 	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
 
+	memset(query,0,DEF_QUERYSIZE);
 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %sphysmessage LIMIT 1 OFFSET 0", DBPFX);
 	if (db_query(query) == -1) {
 		TRACE(TRACE_FATAL, "pre-2.0 database incompatible. You need to run the conversion script");
@@ -129,6 +129,7 @@ int db_check_version(void)
 	}
 	db_free_result();
 	
+	memset(query,0,DEF_QUERYSIZE);
 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %sheadervalue LIMIT 1 OFFSET 0", DBPFX);
 	if (db_query(query) == -1) {
 		TRACE(TRACE_FATAL, "2.0 database incompatible. You need to add the header tables.");
@@ -136,12 +137,21 @@ int db_check_version(void)
 	}
 	db_free_result();
  		
+	memset(query,0,DEF_QUERYSIZE);
  	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %senvelope LIMIT 1 OFFSET 0", DBPFX);
  	if (db_query(query) == -1) {
  		TRACE(TRACE_FATAL, "2.1 database incompatible. You need to add the envelopes table "
  				"and run dbmail-util -by");
 	}
 	db_free_result();
+
+	memset(query,0,DEF_QUERYSIZE);
+ 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX);
+ 	if (db_query(query) == -1) {
+ 		TRACE(TRACE_FATAL, "2.2 database incompatible.");
+	}
+	db_free_result();
+
 
 	return DM_SUCCESS;
 }
