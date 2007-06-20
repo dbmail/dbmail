@@ -96,7 +96,6 @@ static void __auth_get_config(void)
 	/* defaults to version 3 */
 	if (!_ldap_cfg.version_int)
 		_ldap_cfg.version_int=3;
-
 	/* Compare the input string with the possible options,
 	 * making sure not to exceeed the length of the given string */
 	{
@@ -152,9 +151,9 @@ int auth_connect(void)
 	char *uri;
 #endif
 
-	if (_ldap_conn != NULL) 
-		return 0;
-	
+       if (_ldap_conn != NULL)
+               return 0;
+
 	__auth_get_config();
 
 	switch (_ldap_cfg.version_int) {
@@ -215,12 +214,19 @@ int auth_connect(void)
 	return auth_ldap_bind();	
 }
 
-int auth_disconnect(void)
+int auth_disconnect(void) 
 {
 	/* Destroy the connection */
 	if (_ldap_conn != NULL) {
+		/* If LDAP server has gone, we will caught SIGPIPE in 
+		 * ldap_unbind... so we should catch it.
+		 */
+		sighandler_t sigh = signal(SIGPIPE, SIG_IGN);
+
 		ldap_unbind(_ldap_conn);
 		_ldap_conn = NULL;
+
+		signal (SIGPIPE, sigh);
 	}
 	return 0;
 }
@@ -241,12 +247,12 @@ static int auth_search(const gchar *query)
 		
 		switch (_ldap_err) {
 			case LDAP_SERVER_DOWN:
-				TRACE(TRACE_ERROR, "%s", ldap_err2string(_ldap_err));
+				TRACE(TRACE_WARNING, "LDAP gone away: %s. Try to reconnect(%d/5).", ldap_err2string(_ldap_err),c);
 				if (auth_reconnect())
 					sleep(2); // reconnect failed. wait before trying again
 				break;
 			default:
-				TRACE(TRACE_ERROR, "%s", ldap_err2string(_ldap_err));
+				TRACE(TRACE_ERROR, "LDAP error(%d): %s", _ldap_err, ldap_err2string(_ldap_err));
 				return _ldap_err;
 				break;
 		}
@@ -271,16 +277,19 @@ void dm_ldap_freeresult(GList *entlist)
 		fldlist = entlist->data;
 		while(fldlist) {
 			attlist = fldlist->data;
-			g_list_foreach(attlist,(GFunc)g_free,NULL);
-			g_list_free(attlist);
+			g_list_destroy(attlist);
 			if (! g_list_next(fldlist))
 				break;
 			fldlist = g_list_next(fldlist);
 		}
+		g_list_free(g_list_first(fldlist));
+
 		if (! g_list_next(entlist))
 			break;
 		entlist = g_list_next(entlist);
 	}
+
+	g_list_free(g_list_first(entlist));
 }
 
 GList * dm_ldap_entdm_list_get_values(GList *entlist)
@@ -766,8 +775,9 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 		 user_idnr);
 	max_char = __auth_get_first_match(query, fields);
 	*maxmail_size = (max_char) ? strtoull(max_char, 0, 10) : 0;
-	if (max_char != NULL)
-		g_free(max_char);
+	
+	// if max_char is NULL g_free will not fail it simply return
+	g_free(max_char);
 
 	TRACE(TRACE_DEBUG, "returned value is [%llu]", *maxmail_size);
 
@@ -837,8 +847,11 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 	u64_t id;
 	char *endptr = NULL;
 	char query[AUTH_QUERY_SIZE];
-	char *fields[] = { _ldap_cfg.field_nid, _ldap_cfg.field_fwdtarget, NULL };
-	unsigned c2;
+	char *fields[] = { 
+		_ldap_cfg.field_nid, 
+		_ldap_cfg.field_fwdtarget[0] ? _ldap_cfg.field_fwdtarget : NULL, 
+		NULL 
+	};
 	char *attrvalue;
 	GList *entlist, *fldlist, *attlist;
 
@@ -883,12 +896,10 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 	entlist = g_list_first(entlist);
 	while (entlist) {
 		fldlist = g_list_first(entlist->data);
-		c2 = 0;
 		while(fldlist) {
 			attlist = g_list_first(fldlist->data);
 			while(attlist) {
 				attrvalue = (char *)attlist->data;
-				
 				occurences += auth_check_user_ext(attrvalue, userids, fwds, checks+1);
 				
 				if (! g_list_next(attlist))
@@ -898,7 +909,6 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 			if (! g_list_next(fldlist))
 				break;
 			fldlist = g_list_next(fldlist);
-			c2++;
 		}
 		if (! g_list_next(entlist))
 			break;
