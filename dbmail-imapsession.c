@@ -31,7 +31,7 @@
 #define BUFLEN 2048
 #define SEND_BUF_SIZE 1024
 #define MAX_ARGS 512
-#define IDLE_TIMEOUT 10
+#define IDLE_TIMEOUT 30
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
@@ -1794,9 +1794,9 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	// EXPUNGE
 	switch (self->command_type) {
 		case IMAP_COMM_IDLE:
-			// send a keepalive message every 12 * IDLE_TIMEOUT seconds
+			// send a keepalive message every 10 * IDLE_TIMEOUT seconds
 			// this will cause most clients to issue a DONE/IDLE cycle
-			if (idle_keepalive++ == 12) {
+			if (idle_keepalive++ == 10) {
 				dbmail_imap_session_printf(self, "* OK\r\n");
 				idle_keepalive = 0;
 			}
@@ -1939,18 +1939,24 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	return 0;
 }
 
+#define IDLE_BUFFER 8
 int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
 {
-	int result = 0, idle_timeout = IDLE_TIMEOUT;
-	char buffer[MAX_LINESIZE];
+	char buffer[IDLE_BUFFER];
+	int result = 0, idle_timeout;
 	clientinfo_t *ci = self->ci;
+	field_t val;
 	
-	assert(buffer);
-	memset(buffer, 0, MAX_LINESIZE);
+	GETCONFIGVALUE("idle_timeout", "IMAP", val);
+	if ((idle_timeout = atoi(val)) <= 0) {
+		TRACE(TRACE_ERROR, "illegal value for idle_timeout [%s]", val);
+		idle_timeout = IDLE_TIMEOUT;	
+	}
 
+	memset(buffer, 0, IDLE_BUFFER);
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	dbmail_imap_session_printf(self, "+ idling\r\n");
-
+	
 	while (1) {
 
 		if (ferror(ci->tx) || feof(ci->rx)) {
@@ -1964,8 +1970,9 @@ int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
 		alarm(idle_timeout);
 		alarm_occured = 0;
 
-		fgets(buffer, MAX_LINESIZE, ci->rx);
+		fgets(buffer, IDLE_BUFFER, ci->rx);
 		alarm(0);
+
 		if (g_strncasecmp(buffer,"DONE",4)==0)
 			break;
 		else if (strlen(buffer) > 0) {
@@ -1973,18 +1980,19 @@ int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
 			result = -1;
 			break;
 		}
+		memset(buffer, 0, IDLE_BUFFER);
 
 		if (alarm_occured) {
 			alarm_occured = 0;
 			dbmail_imap_session_mailbox_status(self,TRUE);
 			continue;
 		}
-
 	}
 	alarm(0);
 
 	return result;
 }
+
 int dbmail_imap_session_mailbox_close(struct ImapSession *self)
 {
 	// flush recent messages from previous select
