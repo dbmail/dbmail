@@ -1,3 +1,34 @@
+2007-06-21  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	collapse BETWEEN clause if hi and low values are equal
+	* dbmail.conf, imapcommands.c:
+	allow override of CAPABILITY message so people can disable stuff like 
+	IDLE
+
+2007-06-19  Paul Stevens <paul@nfg.nl>
+
+	* modules/authldap.c, serverchild.c:
+	add sigpipe handling during ldap disconnect
+	* dbmail-imapsession.c, dbmail.conf:
+	add idle_timeout to dbmail.conf
+	* db.c, dbmailtypes.h, modules/dbmysql.c, modules/dbpgsql.c, 
+	modules/dbsqlite.c:
+	add timewindow to suppress_duplicate detection
+
+2007-06-18  Paul Stevens <paul@nfg.nl>
+
+	* sort.c:
+	log suppress_duplicate at TRACE_MESSAGE
+	* ChangeLog, dbmail.conf, sort.c:
+	add suppress_duplicate to dbmail.conf
+	* db.c:
+	check for resent-message-id during duplicate check
+	* db.c, db.h, sort.c:
+	avoid duplicate message-ids in a mailbox
+	* dbmail-imapsession.h:
+	add missing prototype declaration
+
 2007-06-18  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail.conf, sort.c:
