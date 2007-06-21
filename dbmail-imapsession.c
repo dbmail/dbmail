@@ -32,6 +32,7 @@
 #define SEND_BUF_SIZE 1024
 #define MAX_ARGS 512
 #define IDLE_TIMEOUT 30
+#define RANGE_SIZE 128
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
@@ -700,6 +701,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self)
 	return 1; //theres more...
 }
 
+
 GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 {
 
@@ -711,8 +713,9 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 	GList *l, *t;
 	u64_t *uid, *lo, *hi;
 	u64_t id;
-	char query[DEF_QUERYSIZE];
+	char query[DEF_QUERYSIZE], range[RANGE_SIZE];
 	memset(query,0,DEF_QUERYSIZE);
+	memset(range,0,RANGE_SIZE);
 	
 	if (! (ids && g_tree_nnodes(ids)>0))
 		return NULL;
@@ -734,15 +737,20 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 		
 	db_free_result();
 
+	if (*lo == *hi) 
+		snprintf(range,RANGE_SIZE,"= %llu", *lo);
+	else
+		snprintf(range,RANGE_SIZE,"BETWEEN %llu AND %llu", *lo, *hi);
+
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
 		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
 		 "FROM %smessages msg, %sphysmessage pm "
 		 "WHERE pm.id = msg.physmessage_id "
-		 "AND message_idnr BETWEEN %llu AND %llu "
+		 "AND message_idnr %s "
 		 "AND mailbox_idnr = %llu AND status IN (%d,%d,%d) "
 		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
-		 *lo, *hi, ud->mailbox.uid,
+		 range, ud->mailbox.uid,
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,MESSAGE_STATUS_DELETE);
 	g_free(to_char_str);
 
@@ -1043,7 +1051,9 @@ static void _fetch_envelopes(struct ImapSession *self)
 	u64_t id;
 	static int lo = 0;
 	static u64_t hi = 0;
+	char range[RANGE_SIZE];
 	GList *last;
+	memset(range,0,RANGE_SIZE);
 
 	if (! self->envelopes) {
 		self->envelopes = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
@@ -1062,13 +1072,18 @@ static void _fetch_envelopes(struct ImapSession *self)
 		last = g_list_last(self->ids_list);
 	hi = *(u64_t *)last->data;
 
+	if (self->msg_idnr == hi)
+		snprintf(range,RANGE_SIZE,"= %llu", self->msg_idnr);
+	else
+		snprintf(range,RANGE_SIZE,"BETWEEN %llu AND %llu", self->msg_idnr, hi);
+
 	g_string_printf(q,"SELECT message_idnr,envelope "
 			"FROM %senvelope e "
 			"JOIN %smessages m ON m.physmessage_id=e.physmessage_id "
 			"WHERE m.mailbox_idnr = %llu "
-			"AND message_idnr BETWEEN %llu AND %llu ",
+			"AND message_idnr %s",
 			DBPFX, DBPFX,  
-			self->mailbox->id, self->msg_idnr, hi);
+			self->mailbox->id, range);
 	
 	if (db_query(q->str)==-1)
 		return;
@@ -1151,6 +1166,8 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 	static int lo = 0;
 	static u64_t hi = 0;
 	static u64_t ceiling = 0;
+	char range[RANGE_SIZE];
+	memset(range,0,RANGE_SIZE);
 
 	if (! self->headers) {
 		TRACE(TRACE_DEBUG, "init self->headers");
@@ -1196,16 +1213,20 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 		last = g_list_last(self->ids_list);
 	hi = *(u64_t *)last->data;
 
+	if (self->msg_idnr == hi)
+		snprintf(range,RANGE_SIZE,"= %llu", self->msg_idnr);
+	else
+		snprintf(range,RANGE_SIZE,"BETWEEN %llu AND %llu", self->msg_idnr, hi);
+
 	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
 			"FROM %sheadervalue v "
 			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
 			"JOIN %sheadername n ON v.headername_id=n.id "
 			"WHERE m.mailbox_idnr = %llu "
-			"AND message_idnr BETWEEN %llu AND %llu "
+			"AND message_idnr %s "
 			"AND lower(headername) %s IN ('%s')",
 			DBPFX, DBPFX, DBPFX,
-			self->mailbox->id,
-			self->msg_idnr, hi, 
+			self->mailbox->id, range, 
 			not?"NOT":"", bodyfetch->hdrnames);
 	
 	if (db_query(q->str)==-1)
