@@ -66,10 +66,18 @@ extern int imap_before_smtp;
  */
 int _ic_capability(struct ImapSession *self)
 {
+	field_t val;
+	gboolean override = FALSE;
+
 	if (!check_state_and_args(self, "CAPABILITY", 0, 0, -1))
 		return 1;	/* error, return */
 
-	dbmail_imap_session_printf(self, "* CAPABILITY %s\r\n", IMAP_CAPABILITY_STRING);
+	
+	GETCONFIGVALUE("capability", "IMAP", val);
+	if (strlen(val) > 0)
+		override = TRUE;
+
+	dbmail_imap_session_printf(self, "* CAPABILITY %s\r\n", override ? val : IMAP_CAPABILITY_STRING);
 	dbmail_imap_session_printf(self, "%s OK CAPABILITY completed\r\n", self->tag);
 
 	return 0;
