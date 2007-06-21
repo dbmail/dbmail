@@ -1,3 +1,18 @@
+2007-06-21  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	collapse BETWEEN clause if hi and low values are equal
+	* dbmail.conf, imapcommands.c:
+	allow override of CAPABILITY message so people can disable stuff like 
+	IDLE
+
+2007-06-20  Paul Stevens <paul@nfg.nl>
+
+	* modules/authldap.c, serverchild.c:
+	add sigpipe handling during ldap disconnect
+	* dbmail-imapsession.c, dbmail.conf:
+	add idle_timeout to dbmail.conf
+
 2007-06-19  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.am, check_dbmail.h, check_dbmail_mailbox.c, 
