@@ -1964,12 +1964,12 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
 {
 	char buffer[IDLE_BUFFER];
-	int result = 0, idle_timeout;
+	int result = 0, idle_timeout = IDLE_TIMEOUT;
 	clientinfo_t *ci = self->ci;
 	field_t val;
 	
 	GETCONFIGVALUE("idle_timeout", "IMAP", val);
-	if ((idle_timeout = atoi(val)) <= 0) {
+	if ( strlen(val) && (idle_timeout = atoi(val)) <= 0 ) {
 		TRACE(TRACE_ERROR, "illegal value for idle_timeout [%s]", val);
 		idle_timeout = IDLE_TIMEOUT;	
 	}
