@@ -1464,9 +1464,14 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
+	if (g_tree_nnodes(self->ids) == 0)
+		return b;
+
 	TRACE(TRACE_DEBUG,"[%s] uid [%d]", set, uid);
 	
-	if (uid  && (ids = g_tree_keys(self->ids) ) ) {
+	if (uid) {
+		ids = g_tree_keys(self->ids);
+		assert(ids);
 		ids = g_list_last(ids);
 		hi = *((u64_t *)ids->data);
 		ids = g_list_first(ids);
