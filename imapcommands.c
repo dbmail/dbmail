@@ -1412,7 +1412,7 @@ int _dm_imapsession_get_ids(struct ImapSession *self, const char *set)
 		retry--;
 	}
 
-	if (g_tree_nnodes(self->ids)==0) {
+	if ( (!self->ids) || (g_tree_nnodes(self->ids)==0) ) {
 		dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 		return DM_EGENERAL;
 	}
