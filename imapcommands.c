@@ -1384,7 +1384,8 @@ int _ic_thread(struct ImapSession *self)
 	if (MATCH(self->args[0],"ORDEREDSUBJECT"))
 		return sorted_search(self,SEARCH_THREAD_ORDEREDSUBJECT);
 	if (MATCH(self->args[0],"REFERENCES"))
-		return sorted_search(self,SEARCH_THREAD_REFERENCES);
+		dbmail_imap_session_printf(self, "%s BAD THREAD=REFERENCES not supported\r\n",self->tag);
+		//return sorted_search(self,SEARCH_THREAD_REFERENCES);
 
 	return 1;
 }
