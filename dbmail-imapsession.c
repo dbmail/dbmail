@@ -798,7 +798,6 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 		g_tree_insert(msginfo, uid, result); 
 	}
 
-	
 	db_free_result();
 
 	return msginfo;
