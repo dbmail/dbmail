@@ -1,3 +1,8 @@
+2007-06-22  Aaron Stone  <aaron@serendipity.cx>
+
+	* server.c:
+	Reopen log files after a HUP (closes bug #615)
+
 2007-06-21  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
