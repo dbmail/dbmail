@@ -88,6 +88,26 @@ GList * auth_get_known_users(void)
 	return users;
 }
 
+GList * auth_get_known_aliases(void)
+{
+	u64_t i;
+	GList * aliases = NULL;
+
+	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
+		 "SELECT alias FROM %saliases ORDER BY alias",DBPFX);
+
+	if (__auth_query(__auth_query_data) == -1) {
+		TRACE(TRACE_ERROR, "could not retrieve user list");
+		return NULL;
+	}
+
+	for (i = 0; i < (unsigned) db_num_rows(); i++) 
+		aliases = g_list_append(aliases, g_strdup(db_get_result(i, 0)));
+	
+	db_free_result();
+	return aliases;
+}
+
 int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 {
 	const char *query_result;

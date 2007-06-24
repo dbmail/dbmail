@@ -18,6 +18,7 @@ typedef struct {
 	char * (* get_userid)(u64_t user_idnr);
 	int (* check_userid)(u64_t user_idnr);
 	GList * (* get_known_users)(void);
+	GList * (* get_known_aliases)(void);
 	int (* getclientid)(u64_t user_idnr, u64_t * client_idnr);
 	int (* getmaxmailsize)(u64_t user_idnr, u64_t * maxmail_size);
 	char * (* getencryption)(u64_t user_idnr);
