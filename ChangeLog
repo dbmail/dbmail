@@ -1,3 +1,15 @@
+2007-06-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* sort.c:
+	Resolved a trivial compiler warning.
+	* dbmail-user.c:
+	List forwards as part of 'dbmail-user -l' output (closes bug #605)
+	* auth.h, authmodule.h, authmodule.c, modules/authsql.c,
+	modules/authldap.c:
+	New function auth_get_known_aliases.
+	* list.h, list.c:
+	New function g_list_dedup.
+
 2007-06-22  Aaron Stone  <aaron@serendipity.cx>
 
 	* server.c:

@@ -829,6 +829,31 @@ GList * auth_get_known_users(void)
 	return users;
 }
 
+/* Fills the aliases list with all existing aliases
+ * return -2 on mem error, -1 on db-error, 0 on succeses */
+GList * auth_get_known_aliases(void)
+{
+	char *query;
+	char *fields[] = { _ldap_cfg.field_uid, NULL };
+	GList *aliases;
+	GList *entlist;
+	
+	GString *t = g_string_new(_ldap_cfg.forw_objectclass);
+	GList *l = g_string_split(t,",");
+	g_string_free(t,TRUE);
+	
+	query =  dm_ldap_get_filter('&',"objectClases",l);
+	entlist = __auth_get_every_match(query, fields);
+	g_free(query);
+	
+	TRACE(TRACE_INFO, "found %d aliases", g_list_length(entlist));
+
+	aliases = dm_ldap_entdm_list_get_values(entlist);
+	
+	dm_ldap_freeresult(entlist);
+	return aliases;
+}
+
 /*
  * auth_check_user_ext()
  * 

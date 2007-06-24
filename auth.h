@@ -97,6 +97,15 @@ int auth_check_userid(u64_t user_idnr);
 GList * auth_get_known_users(void);
 
 /**
+ * \brief get a list of all known aliases
+ * \return
+ *    - list off all forwards on success
+ *    - NULL on error
+ * \attention caller should free list
+ */
+GList * auth_get_known_aliases(void);
+
+/**
  * \brief get client_id for a user
  * \param user_idnr
  * \param client_idnr will hold client_idnr after return. Must hold a valid
