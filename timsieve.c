@@ -36,7 +36,11 @@
 #define MAX_IN_BUFFER 255
 
 #define GREETING(stream) \
-          ci_write(stream, "\"IMPLEMENTATION\" \"DBMail timsieved v%s\"\r\n", VERSION); \
+          GETCONFIGVALUE("banner", "SIEVE", banner); \
+	  if (strlen(banner) > 0) \
+            ci_write(stream, "\"IMPLEMENTATION\" \"%s\"\r\n", banner); \
+	  else \
+            ci_write(stream, "\"IMPLEMENTATION\" \"DBMail timsieved v%s\"\r\n", VERSION); \
           ci_write(stream, "\"SASL\" \"PLAIN\"\r\n"); \
           ci_write(stream, "\"SIEVE\" \"%s\"\r\n", sieve_extensions); \
           ci_write(stream, "OK\r\n")
@@ -67,6 +71,7 @@ int tims_handle_connection(clientinfo_t * ci)
 	int done = 1;		/* loop state */
 	char *buffer = NULL;	/* connection buffer */
 	int cnt;		/* counter */
+	field_t banner;
 
 	PopSession_t session;	/* current connection session */
 
@@ -200,6 +205,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	char *command, *value;
 	int cmdtype;
 	int indx = 0;
+	field_t banner;
 	
 	size_t tmplen = 0;
 	size_t tmppos = 0;

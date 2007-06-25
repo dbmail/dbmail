@@ -92,11 +92,21 @@ int IMAPClientHandler(clientinfo_t * ci)
 	session->ci->userData = ud;
 
 	/* greet user */
-	if (dbmail_imap_session_printf(session,
-		     "* OK dbmail imap (protocol version 4r1) server %s "
-		     "ready to run\r\n", IMAP_SERVER_VERSION) < 0) {
-		dbmail_imap_session_delete(session);
-		return EOF;
+	field_t banner;
+	GETCONFIGVALUE("banner", "IMAP", banner);
+	if (strlen(banner) > 0) {
+		if (dbmail_imap_session_printf(session,
+			     "* OK %s\r\n", banner) < 0) {
+			dbmail_imap_session_delete(session);
+			return EOF;
+		}
+	} else {
+		if (dbmail_imap_session_printf(session,
+			     "* OK dbmail imap (protocol version 4r1) server %s "
+			     "ready to run\r\n", IMAP_SERVER_VERSION) < 0) {
+			dbmail_imap_session_delete(session);
+			return EOF;
+		}
 	}
 	fflush(session->ci->tx);
 

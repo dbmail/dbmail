@@ -134,7 +134,13 @@ int lmtp_handle_connection(clientinfo_t * ci)
 
 	if (ci->tx) {
 		/* sending greeting */
-		ci_write(ci->tx, "220 %s DBMail LMTP service ready to rock\r\n", myhostname);
+		field_t banner;
+		GETCONFIGVALUE("banner", "LMTP", banner);
+		if (strlen(banner) > 0) {
+			ci_write(ci->tx, "220 %s %s\r\n", myhostname, banner);
+		} else {
+			ci_write(ci->tx, "220 %s DBMail LMTP service ready to rock\r\n", myhostname);
+		}
 		fflush(ci->tx);
 	} else {
 		TRACE(TRACE_MESSAGE, "TX stream is null!");
