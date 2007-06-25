@@ -527,19 +527,18 @@ int do_delete(const u64_t useridnr, const char * const name)
 	return 0;
 }
 
+static void show_alias(const char * const name);
+static void show_user(u64_t useridnr);
+
 int do_show(const char * const name)
 {
-	u64_t useridnr, cid, quotum, quotumused;
+	u64_t useridnr;
 	GList *users = NULL;
-	GList *userlist = NULL;
-	char *username;
-	int result;
-	struct dm_list uids;
-	struct dm_list fwds;
-	GList *userids = NULL;
-	GList *forwards = NULL;
+	GList *aliases = NULL;
 
 	if (!name) {
+		printf("\n-- users --\n");
+
 		/* show all users */
 		users = auth_get_known_users();
 		if (g_list_length(users) > 0) {
@@ -554,6 +553,22 @@ int do_show(const char * const name)
 		}
 		g_list_free(g_list_first(users));
 
+		printf("\n-- aliases --\n");
+
+		/* show all aliases */
+		aliases = auth_get_known_aliases();
+		aliases = g_list_dedup(aliases);
+		if (g_list_length(aliases) > 0) {
+			aliases = g_list_first(aliases);
+			while (aliases) {
+				show_alias(aliases->data);
+				if (! g_list_next(aliases))
+					break;
+				aliases = g_list_next(aliases);
+			}
+			g_list_foreach(aliases,(GFunc)g_free,NULL);
+		}
+		g_list_free(g_list_first(aliases));
 	} else {
 		if (auth_user_exists(name, &useridnr) == -1) {
 			qerrorf("Error while verifying user [%s].\n", name);
@@ -561,83 +576,108 @@ int do_show(const char * const name)
 		}
 
 		if (useridnr == 0) {
-			/* not a user, search aliases */
-			dm_list_init(&fwds);
-			dm_list_init(&uids);
-			result = auth_check_user_ext(name,&uids,&fwds,0);
-			
-			if (!result) {
-				qerrorf("Nothing found searching for [%s].\n", name);
-				return -1;
-			}
-		
-			if (dm_list_getstart(&uids))
-				userids = g_list_copy_list(userids,dm_list_getstart(&uids));
-			if (dm_list_getstart(&fwds))
-				forwards = g_list_copy_list(forwards,dm_list_getstart(&fwds));
-			
-			forwards = g_list_first(forwards);
-			if (forwards) {
-				while(forwards) {
-					qerrorf("forward [%s] to [%s]\n", name, (char *)forwards->data);
-					if (! g_list_next(forwards))
-						break;
-					forwards = g_list_next(forwards);
-				}
-				g_list_destroy(forwards);
-			}
-			
-			userids = g_list_first(userids);
-			if (userids) {
-				while (userids) {
-					username = auth_get_userid(*(u64_t *)userids->data);
-					qerrorf("deliver [%s] to [%s]\n-------\n", name, username);
-					do_show(username);
-					g_free(username);
-					if (! g_list_next(userids))
-						break;
-					userids = g_list_next(userids);
-				}
-				g_list_free(g_list_first(userids));
-			}
-			return 0;
-		}
-
-		auth_getclientid(useridnr, &cid);
-		auth_getmaxmailsize(useridnr, &quotum);
-		db_get_quotum_used(useridnr, &quotumused);
-
-		GList *out = NULL;
-		GString *s = g_string_new("");
-		
-		username = auth_get_userid(useridnr);
-		out = g_list_append_printf(out,"%s", username);
-		g_free(username);
-		
-		out = g_list_append_printf(out,"x");
-		out = g_list_append_printf(out,"%llu", useridnr);
-		out = g_list_append_printf(out,"%llu", cid);
-		out = g_list_append_printf(out,"%.02f", 
-				(double) quotum / (1024.0 * 1024.0));
-		out = g_list_append_printf(out,"%.02f", 
-				(double) quotumused / (1024.0 * 1024.0));
-		userlist = auth_get_user_aliases(useridnr);
-
-		if (g_list_length(userlist)) {
-			userlist = g_list_first(userlist);
-			s = g_list_join(userlist,",");
-			g_list_append_printf(out,"%s", s->str);
-			g_list_foreach(userlist,(GFunc)g_free, NULL);
+			show_alias(name);
 		} else {
-			g_list_append_printf(out,"");
+			show_user(useridnr);
 		}
-		g_list_free(g_list_first(userlist));
-		s = g_list_join(out,":");
-		qprintf("%s\n", s->str);
-		g_string_free(s,TRUE);
 	}
 
 	return 0;
+}
+
+static void show_alias(const char * const name)
+{
+	int result;
+	char *username;
+	struct dm_list uids;
+	struct dm_list fwds;
+	GList *userids = NULL;
+	GList *forwards = NULL;
+
+	/* not a user, search aliases */
+	dm_list_init(&fwds);
+	dm_list_init(&uids);
+	result = auth_check_user_ext(name,&uids,&fwds,0);
+	
+	if (!result) {
+		qerrorf("Nothing found searching for [%s].\n", name);
+		return;
+	}
+
+	if (dm_list_getstart(&uids))
+		userids = g_list_copy_list(userids,dm_list_getstart(&uids));
+	if (dm_list_getstart(&fwds))
+		forwards = g_list_copy_list(forwards,dm_list_getstart(&fwds));
+	
+	forwards = g_list_first(forwards);
+	if (forwards) {
+		while(forwards) {
+			qerrorf("forward [%s] to [%s]\n", name, (char *)forwards->data);
+			if (! g_list_next(forwards))
+				break;
+			forwards = g_list_next(forwards);
+		}
+		g_list_destroy(forwards);
+	}
+	
+	userids = g_list_first(userids);
+	if (userids) {
+		while (userids) {
+			username = auth_get_userid(*(u64_t *)userids->data);
+			if (!username) {
+				// FIXME: This is a dangling entry. These should be removed
+				// by dbmail-util. This method of identifying dangling aliases
+				// should go into maintenance.c at some point.
+			} else {
+				qerrorf("deliver [%s] to [%s]\n", name, username);
+			}
+			g_free(username);
+			if (! g_list_next(userids))
+				break;
+			userids = g_list_next(userids);
+		}
+		g_list_free(g_list_first(userids));
+	}
+}
+
+static void show_user(u64_t useridnr)
+{
+	u64_t cid, quotum, quotumused;
+	GList *userlist = NULL;
+	char *username;
+
+	auth_getclientid(useridnr, &cid);
+	auth_getmaxmailsize(useridnr, &quotum);
+	db_get_quotum_used(useridnr, &quotumused);
+        
+	GList *out = NULL;
+	GString *s = g_string_new("");
+	
+	username = auth_get_userid(useridnr);
+	out = g_list_append_printf(out,"%s", username);
+	g_free(username);
+	
+	out = g_list_append_printf(out,"x");
+	out = g_list_append_printf(out,"%llu", useridnr);
+	out = g_list_append_printf(out,"%llu", cid);
+	out = g_list_append_printf(out,"%.02f", 
+			(double) quotum / (1024.0 * 1024.0));
+	out = g_list_append_printf(out,"%.02f", 
+			(double) quotumused / (1024.0 * 1024.0));
+	userlist = auth_get_user_aliases(useridnr);
+        
+	if (g_list_length(userlist)) {
+		userlist = g_list_first(userlist);
+		s = g_list_join(userlist,",");
+		g_list_append_printf(out,"%s", s->str);
+		g_list_foreach(userlist,(GFunc)g_free, NULL);
+	} else {
+		g_list_append_printf(out,"");
+	}
+	g_list_free(g_list_first(userlist));
+	s = g_list_join(out,":");
+	qprintf("%s\n", s->str);
+	g_string_free(s,TRUE);
 }
 
 

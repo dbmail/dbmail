@@ -82,6 +82,7 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_get_userid",             (gpointer)&auth->get_userid             )
 	||  !g_module_symbol(module, "auth_check_userid",           (gpointer)&auth->check_userid           )
 	||  !g_module_symbol(module, "auth_get_known_users",        (gpointer)&auth->get_known_users        )
+	||  !g_module_symbol(module, "auth_get_known_aliases",      (gpointer)&auth->get_known_aliases      )
 	||  !g_module_symbol(module, "auth_getclientid",            (gpointer)&auth->getclientid            )
 	||  !g_module_symbol(module, "auth_getmaxmailsize",         (gpointer)&auth->getmaxmailsize         )
 	||  !g_module_symbol(module, "auth_getencryption",          (gpointer)&auth->getencryption          )
@@ -134,6 +135,8 @@ int auth_check_userid(u64_t user_idnr)
 	{ return auth->check_userid(user_idnr); }
 GList * auth_get_known_users(void)
 	{ return auth->get_known_users(); }
+GList * auth_get_known_aliases(void)
+	{ return auth->get_known_aliases(); }
 int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	{ return auth->getclientid(user_idnr, client_idnr); }
 int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)

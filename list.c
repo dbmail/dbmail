@@ -199,3 +199,23 @@ GList *g_list_slices_u64(GList *list, unsigned limit)
 	return new;
 }
 
+/* Given a _sorted_ list of _char *_ entries, removes duplicates and frees them. */
+GList *g_list_dedup(GList *list)
+{
+	char *lastdata = NULL;
+
+	list = g_list_first(list);
+	while (list) {
+		if (lastdata && list->data && strcmp(lastdata, (char *)list->data) == 0) {
+			g_free(list->data);
+			list = g_list_delete_link(g_list_previous(list), list);
+		} else {
+			lastdata = (char *)list->data;
+		}
+		if (! g_list_next(list))
+			break;
+		list = g_list_next(list);
+	}
+
+	return g_list_first(list);
+}

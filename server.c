@@ -172,20 +172,36 @@ int StartServer(serverConfig_t * conf)
 	return Restart;
 }
 
-pid_t server_daemonize(serverConfig_t *conf)
+/* Should be called after a HUP to allow for log rotation,
+ * as the filesystem may want to give us new inodes and/or
+ * the user may have changed the log file configs. */
+static void reopen_logs(serverConfig_t *conf)
 {
 	int serr;
-	assert(conf);
-	
-	if (fork())
-		exit(0);
-	setsid();
-	if (fork())
-		exit(0);
 
-	chdir("/");
-	umask(0077);
+	if (! (freopen(conf->log, "a", stdout))) {
+		serr = errno;
+		TRACE(TRACE_ERROR, "freopen failed on [%s] [%s]", 
+				conf->log, strerror(serr));
+	}
+	if (! (freopen(conf->error_log, "a", stderr))) {
+		serr = errno;
+		TRACE(TRACE_ERROR, "freopen failed on [%s] [%s]", 
+				conf->error_log, strerror(serr));
+	}
+	if (! (freopen("/dev/null", "r", stdin))) {
+		serr = errno;
+		TRACE(TRACE_ERROR, "freopen failed on stdin [%s]",
+				strerror(serr));
+	}
+}
 	
+/* Should be called once to initially close the actual std{in,out,err}
+ * and open the redirection files. */
+static void reopen_logs_fatal(serverConfig_t *conf)
+{
+	int serr;
+
 	if (! (freopen(conf->log, "a", stdout))) {
 		serr = errno;
 		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", 
@@ -201,6 +217,22 @@ pid_t server_daemonize(serverConfig_t *conf)
 		TRACE(TRACE_FATAL, "freopen failed on stdin [%s]",
 				strerror(serr));
 	}
+}
+
+pid_t server_daemonize(serverConfig_t *conf)
+{
+	assert(conf);
+	
+	if (fork())
+		exit(0);
+	setsid();
+	if (fork())
+		exit(0);
+
+	chdir("/");
+	umask(0077);
+
+	reopen_logs_fatal(conf);
 
 	TRACE(TRACE_DEBUG, "sid: [%d]", getsid(0));
 
@@ -224,6 +256,8 @@ int server_run(serverConfig_t *conf)
 	mainSig = 0;
 	int serrno, status, result = 0;
 	pid_t pid = -1;
+
+	reopen_logs(conf);
 
 	CreateSocket(conf);
 
@@ -285,7 +319,6 @@ int server_run(serverConfig_t *conf)
 				errno = serrno;
 			}
 		}
- 
 
 		break;
 	}

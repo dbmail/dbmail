@@ -1,3 +1,21 @@
+2007-06-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* sort.c:
+	Resolved a trivial compiler warning.
+	* dbmail-user.c:
+	List forwards as part of 'dbmail-user -l' output (closes bug #605)
+	* auth.h, authmodule.h, authmodule.c, modules/authsql.c,
+	modules/authldap.c:
+	New function auth_get_known_aliases.
+	* list.h, list.c:
+	New function g_list_dedup.
+	* man/fixsp.pl, man/Makefile.am:
+	Added a Perl script to fix the man page output.
+	* server.c:
+	Reopen log files after a HUP (closes bug #615)
+	* modules/sortsieve.c:
+	Now use the correct Sieve name for vacation :handle (closes bug #608).
+
 2007-06-21  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
