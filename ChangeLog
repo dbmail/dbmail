@@ -12,6 +12,18 @@
 	* man/fixsp.pl, man/Makefile.am:
 	Added a Perl script to fix the man page output.
 
+2007-06-23  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-mailbox.c, serverparent.c, 
+	test-scripts/testimap.py:
+	fixing leaks
+	* dbmail-imapsession.c, dbmail-mailbox.c, imapcommands.c:
+	add some checks to avoid segfaults
+	* imapcommands.c:
+	issue BAD for thread=references
+	* dbmail-imapsession.c:
+	silence false error
+
 2007-06-22  Aaron Stone  <aaron@serendipity.cx>
 
 	* server.c:
