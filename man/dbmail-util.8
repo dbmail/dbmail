@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-util
 .\"    Author: 
-.\" Generator: DocBook XSL Stylesheets v1.71.0 <http://docbook.sf.net/>
-.\"      Date: 05/14/2007
+.\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
+.\"      Date: 06/24/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-UTIL" "8" "05/14/2007" "" ""
+.TH "DBMAIL\-UTIL" "8" "06/24/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -13,113 +13,88 @@
 .SH "NAME"
 dbmail\-util \- maintains the integrity and cleanliness of the DBMail datatables.
 .SH "SYNOPSIS"
-dbmail\-util [\-actubpd] [\-l time] [\-yn] [\-qvVh] [\-f configFile].sp
+dbmail\-util [\-actubpd] [\-l time] [\-yn] [\-qvVh] [\-f configFile]
 .SH "DESCRIPTION"
-The dbmail\-util program does a global database cleanup and integrity check. All messages that are set for deletion will be marked for final deletion (status 3). All message that are marked for final deletion will be cleared from the database. The integrity check will check for unconnected messageblocks, unconnected messages and unconnected mailboxes..sp
-By default, the checks run in a read\-only mode, possibly prompting to make changes. Pass the \-n option to respond no to any prompts. Pass the \-y option to make read\-write changes, responding yes to any prompts..sp
-As DBMail matures and new features are added, additional check modes will be added. In addition, more prompts may be added for different situations where changes need to be committed to the database. We recommend using the \-a option to run all checks and using the \-n and \-y options if you expect no prompts..sp
+The dbmail\-util program does a global database cleanup and integrity check. All messages that are set for deletion will be marked for final deletion (status 3). All message that are marked for final deletion will be cleared from the database. The integrity check will check for unconnected messageblocks, unconnected messages and unconnected mailboxes.
+.sp
+By default, the checks run in a read\-only mode, possibly prompting to make changes. Pass the \-n option to respond no to any prompts. Pass the \-y option to make read\-write changes, responding yes to any prompts.
+.sp
+As DBMail matures and new features are added, additional check modes will be added. In addition, more prompts may be added for different situations where changes need to be committed to the database. We recommend using the \-a option to run all checks and using the \-n and \-y options if you expect no prompts.
 .SH "OPTIONS"
-.PP
+.TP 3n
 \-a
-.RS 3n
 Perform all checks listed below. This option will be kept up\-to\-date with additional checks available in future versions.
-.RE
-.PP
+.TP 3n
 \-c
-.RS 3n
 Clean up unlinked message entries.
-.RE
-.PP
+.TP 3n
 \-t
-.RS 3n
 Test for message integrity.
-.RE
-.PP
+.TP 3n
 \-u
-.RS 3n
 Null message check.
-.RE
-.PP
+.TP 3n
 \-b
-.RS 3n
 Check and rebuild the body/header/envelope cache tables.
-.RE
-.PP
+.TP 3n
 \-d
-.RS 3n
 Set DELETE status for messages flagged \\Deleted by IMAP or POP3.
-.RE
-.PP
+.TP 3n
 \-p
-.RS 3n
 Purge messages with DELETE status. To purge messages currently marked \\Deleted, run with the \-pd options twice. This is not recommended; it is better to leave a grace period for old messages before permanently wiping them from the database.
-.RE
-.PP
+.TP 3n
 \-r time
-.RS 3n
 Clear the reply cache used for autoreplies and Sieve vacations. The time is specified as <hours>h<minutes>m (don't include the angle brackets, though!).
-.RE
-.PP
+.TP 3n
 \-l time
-.RS 3n
 Clear the IP log used for IMAP/POP\-before\-SMTP. The time is specified as <hours>h<minutes>m (don't include the angle brackets, though!).
-.RE
-.PP
+.TP 3n
 \-n
-.RS 3n
 Show the intended repairs without making any changes, i.e. no to all.
-.RE
-.PP
+.TP 3n
 \-y
-.RS 3n
 Perform all repair actions , i.e. yes to all.
-.RE
-.PP
+.TP 3n
 \-i
-.RS 3n
 Enter an interactive user management console in some future version where this feature is implemented. It is not currently available.
-.RE
 .SH "COMMON OPTIONS"
-.PP
+.TP 3n
 \-f configfile
-.RS 3n
 Specify an alternate config file. The utilities are currently hardcoded to use /etc/dbmail.conf for their configs, and will halt if the config file cannot be found. Use the \-f configfile option to specify your system's preferred config file location.
-.RE
-.PP
+.TP 3n
 \-q
-.RS 3n
 Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout. Use two \-q's to silence errors which would otherwise be printed to stderr.
-.RE
-.PP
+.TP 3n
 \-v
-.RS 3n
 Operate verbosely. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity.
-.RE
-.PP
+.TP 3n
 \-V
-.RS 3n
 Show the version and copyright, then exit.
-.RE
-.PP
+.TP 3n
 \-h
-.RS 3n
 Show a brief summary of options, then exit.
-.RE
 .SH "EXAMPLES"
-After upgrading from DBMail 2.0, run this command to populate the cache tables:.sp
-dbmail\-util \-by.sp
-To set all messages flagged \\Deleted to the DELETE status, and to permanently purge all messages previously set to DELETE status:.sp
-dbmail\-util \-dpy.sp
-To get a listing of the changes that would be performed for all actions:.sp
-dbmail\-util \-an.sp
-To remove all IP log entries more than three days old:.sp
-dbmail\-util \-l 72h \-y.sp
+After upgrading from DBMail 2.0, run this command to populate the cache tables:
+.sp
+dbmail\-util \-by
+.sp
+To set all messages flagged \\Deleted to the DELETE status, and to permanently purge all messages previously set to DELETE status:
+.sp
+dbmail\-util \-dpy
+.sp
+To get a listing of the changes that would be performed for all actions:
+.sp
+dbmail\-util \-an
+.sp
+To remove all IP log entries more than three days old:
+.sp
+dbmail\-util \-l 72h \-y
 .SH "BUGS"
-If you experience inexplicable problems with DBMAil, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR..sp
+If you experience inexplicable problems with DBMAil, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
 .SH "LICENSE"
-DBMail and its components are distributed under the terms of the GNU General Public License. Copyrights are held variously by the authors listed below..sp
+DBMail and its components are distributed under the terms of the GNU General Public License. Copyrights are held variously by the authors listed below.
 .SH "AUTHOR(S)"
-DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution..sp
+DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution.
 .sp
 .RS 3n
 .nf

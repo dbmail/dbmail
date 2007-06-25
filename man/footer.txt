@@ -2,18 +2,18 @@
 BUGS
 ----
 If you experience inexplicable problems with DBMAil, please report the issue
-to the http://dbmail.org/index.php?page=bugs[DBMail Bug Tracker].
+to the http://dbmail.org/index.php?page=bugs[DBMail Bug Tracker]. 
 
 LICENSE
 -------
 DBMail and its components are distributed under the terms of the GNU General
-Public License. Copyrights are held variously by the authors listed below.
+Public License. Copyrights are held variously by the authors listed below. 
 
 AUTHOR(S)
 ---------
 DBMail is a collaborative effort among the core developers listed below and
 the tremendous help of the testers, patchers and bug hunters listed in the
-AUTHORS and THANKS files found in the DBMail source distribution.
+AUTHORS and THANKS files found in the DBMail source distribution. 
 
   Eelco van Beek      Aaron Stone            Paul J Stevens
   Roel Rozendaal      Open Source Engineer   NFG Net Facilities Group BV

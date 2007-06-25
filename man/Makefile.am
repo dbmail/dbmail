@@ -34,10 +34,16 @@ EXTRA_DIST = $(man1_MANS) $(man5_MANS) $(man8_MANS)
 	asciidoc -b docbook -d manpage $<
 
 %.1 : %.xml
-	xmlto man $<
+	xmlto man $< 2>/dev/null
+	./fixsp.pl $@
 
 %.5 : %.xml
-	xmlto man $<
+	xmlto man $< 2>/dev/null
+	./fixsp.pl $@
 
 %.8 : %.xml
-	xmlto man $<
+	xmlto man $< 2>/dev/null
+	./fixsp.pl $@
+
+clean:
+	rm -f *1 *5 *8 *xml

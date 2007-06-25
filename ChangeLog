@@ -9,6 +9,8 @@
 	New function auth_get_known_aliases.
 	* list.h, list.c:
 	New function g_list_dedup.
+	* man/fixsp.pl, man/Makefile.am:
+	Added a Perl script to fix the man page output.
 
 2007-06-22  Aaron Stone  <aaron@serendipity.cx>
 
