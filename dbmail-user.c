@@ -527,8 +527,9 @@ int do_delete(const u64_t useridnr, const char * const name)
 	return 0;
 }
 
-static void show_alias(const char * const name);
-static void show_user(u64_t useridnr);
+/* Set concise = 1 for passwd / aliases style output. */
+static void show_alias(const char * const name, int concise);
+static void show_user(u64_t useridnr, int concise);
 
 int do_show(const char * const name)
 {
@@ -537,9 +538,9 @@ int do_show(const char * const name)
 	GList *aliases = NULL;
 
 	if (!name) {
-		printf("\n-- users --\n");
+		printf("-- users --\n");
 
-		/* show all users */
+		/* show all users and their aliases */
 		users = auth_get_known_users();
 		if (g_list_length(users) > 0) {
 			users = g_list_first(users);
@@ -553,15 +554,15 @@ int do_show(const char * const name)
 		}
 		g_list_free(g_list_first(users));
 
-		printf("\n-- aliases --\n");
+		printf("\n-- forwards --\n");
 
-		/* show all aliases */
+		/* show all aliases with forwarding addresses */
 		aliases = auth_get_known_aliases();
 		aliases = g_list_dedup(aliases);
 		if (g_list_length(aliases) > 0) {
 			aliases = g_list_first(aliases);
 			while (aliases) {
-				show_alias(aliases->data);
+				show_alias(aliases->data, 1);
 				if (! g_list_next(aliases))
 					break;
 				aliases = g_list_next(aliases);
@@ -576,16 +577,16 @@ int do_show(const char * const name)
 		}
 
 		if (useridnr == 0) {
-			show_alias(name);
+			show_alias(name, 0);
 		} else {
-			show_user(useridnr);
+			show_user(useridnr, 0);
 		}
 	}
 
 	return 0;
 }
 
-static void show_alias(const char * const name)
+static void show_alias(const char * const name, int concise)
 {
 	int result;
 	char *username;
@@ -609,15 +610,17 @@ static void show_alias(const char * const name)
 	if (dm_list_getstart(&fwds))
 		forwards = g_list_copy_list(forwards,dm_list_getstart(&fwds));
 	
-	forwards = g_list_first(forwards);
 	if (forwards) {
-		while(forwards) {
-			qerrorf("forward [%s] to [%s]\n", name, (char *)forwards->data);
-			if (! g_list_next(forwards))
-				break;
-			forwards = g_list_next(forwards);
+		if (concise) {
+			GString *fwdlist = g_list_join(forwards,",");
+			qerrorf("%s: %s\n", name, fwdlist->str);
+			g_string_free(fwdlist, TRUE);
+		} else {
+			GString *fwdlist = g_list_join(forwards,", ");
+			qerrorf("forward [%s] to [%s]\n", name, fwdlist->str);
+			g_string_free(fwdlist, TRUE);
 		}
-		g_list_destroy(forwards);
+		g_list_destroy(g_list_first(forwards));
 	}
 	
 	userids = g_list_first(userids);
@@ -629,6 +632,7 @@ static void show_alias(const char * const name)
 				// by dbmail-util. This method of identifying dangling aliases
 				// should go into maintenance.c at some point.
 			} else {
+				if (!concise) // Don't print for concise
 				qerrorf("deliver [%s] to [%s]\n", name, username);
 			}
 			g_free(username);
@@ -640,7 +644,8 @@ static void show_alias(const char * const name)
 	}
 }
 
-static void show_user(u64_t useridnr)
+/* TODO: Non-concise output, like the old dbmail-users used to have. */
+static void show_user(u64_t useridnr, int concise)
 {
 	u64_t cid, quotum, quotumused;
 	GList *userlist = NULL;
