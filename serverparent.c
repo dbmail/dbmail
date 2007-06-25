@@ -119,9 +119,10 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 			}
 			break;
 		case 'f':
-			if (optarg && strlen(optarg) > 0)
+			if (optarg && strlen(optarg) > 0) {
+                                g_free(configFile);
 				configFile = g_strdup(optarg);
-			else {
+			} else {
 				fprintf(stderr, "%s: -f requires a filename argument\n\n", argv[0]);
 				return 1;
 			}
