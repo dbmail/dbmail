@@ -33,7 +33,7 @@ DESCRIPTION
   default_msg_encoding=utf8     # Default for messages without a known encoding, e.g., iso8859-1, utf8
 
   postmaster=             # Postmaster's email address for use in bounce messages.
-  sendmail=/usr/sbin/sendmail	# Sendmail executable for forwards, replies, notifies, vacations.
+  sendmail=/usr/sbin/sendmail   # Sendmail executable for forwards, replies, notifies, vacations.
                                 # You may use pipes (|) in this command, for example:
                                 # dos2unix|/usr/sbin/sendmail  will work well with Qmail.
                                 # You may use quotes (") for executables with unusual names.
@@ -46,6 +46,8 @@ DESCRIPTION
   BINDIP=*                # The IP address the services will bind to.
                           #   Use * for all local interfaces.
                           #   Use 127.0.0.1 for localhost only.
+                          #   Multiple addresses may be separated by commas.
+                          #   IPv6 addresses are not yet supported.
   NCHILDREN=2             # Default number of child processes to start.
   MAXCHILDREN=10          # Maximum number of child processes allowed.
   MINSPARECHILDREN=2      # Unused children to always have availale.
@@ -54,8 +56,8 @@ DESCRIPTION
   MAX_ERRORS=500          # Child process will restart after this many connection errors.
   TIMEOUT=300             # Idle time allowed before a connection is shut off.
   RESOLVE_IP=yes          # If yes, resolves IP addresses to DNS names when logging.
-  log=/var/log/dbmail.log	# logfile for stdout messages
-  error_log=/var/log/dbmail.err	# logfile for stderr messages
+  log=/var/log/dbmail.log       # logfile for stdout messages
+  error_log=/var/log/dbmail.err # logfile for stderr messages
   pid_directory=/var/run        # directory for storing PID files
   state_directory=/var/run      # directory for storing the daemon statefiles
   library_directory=/usr/lib/dbmail # directory for locating libraries
@@ -64,19 +66,23 @@ DESCRIPTION
                           # In fact, there isn't anything here by default.
   
   [LMTP]
-  PORT=24                 # Port to bind to.
+  PORT=24                 # Port to listen on.
+  BANNER=Hello I am LMTP  # Override the LMTP banner to hide your DBMail version.
   
   [POP]
-  PORT=110                # Port to bind to.
+  PORT=110                # Port to listen on.
   POP_BEFORE_SMTP=no      # If yes, allows SMTP access from the host IP connecting by POP3.
+  BANNER=Hello I am POP3  # Override the POP3 banner to hide your DBMail version.
   
   [IMAP]
-  PORT=143                # Port to bind to.
+  PORT=143                # Port to listen on.
   TIMEOUT=4000            # IMAP prefers a longer timeout than other services.
   IMAP_BEFORE_SMTP=no     # If yes, allows SMTP access from the host IP connecting by IMAP.
+  BANNER=Hello I am IMAP  # Override the IMAP banner to hide your DBMail version.
   
   [SIEVE]
-  PORT=2000               # Port to bind to.
+  PORT=2000               # Port to listen on.
+  BANNER=Hello I am SIEVE # Override the ManageSieve banner to hide your DBMail version.
   
   [LDAP]
   PORT=389

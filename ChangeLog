@@ -1,3 +1,8 @@
+2007-06-25  Aaron Stone  <aaron@serendipity.cx>
+
+	* imap4.c, lmtp.c, pop3.c, timsieve.c, man/dbmail.conf.txt:
+	Added configurable login banner (closes bug #611)
+
 2007-06-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* sort.c:
