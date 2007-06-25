@@ -42,7 +42,7 @@ HOST,PORT = "localhost", 143
 # for stdin/stdout testing
 DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-#DAEMONBIN = "CK_FORK=no G_SLICE=always-malloc valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
+DAEMONBIN = "CK_FORK=no G_SLICE=always-malloc valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
 
 
 TESTMSG={}
@@ -279,6 +279,9 @@ class testImapServer(unittest.TestCase):
         # test big folder full fetch
         self.o.select('INBOX')
         self.o.fetch("1:*","(UID FULL)")
+
+        #self.assertRaises(self.o.error,self.o.fetch("1:*","(BODY.PEEK)"))
+        self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
 
     def testGetacl(self):
         """ 

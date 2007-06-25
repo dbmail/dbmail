@@ -1044,7 +1044,7 @@ static void imap_cache_send_tmpdump(struct ImapSession *self, body_fetch_t *body
 static void _fetch_envelopes(struct ImapSession *self)
 {
 	unsigned i=0, rows=0;
-	GString *q = g_string_new("");
+	GString *q;
 	gchar *env, *s;
 	u64_t *mid;
 	u64_t id;
@@ -1076,6 +1076,7 @@ static void _fetch_envelopes(struct ImapSession *self)
 	else
 		snprintf(range,RANGE_SIZE,"BETWEEN %llu AND %llu", self->msg_idnr, hi);
 
+        q = g_string_new("");
 	g_string_printf(q,"SELECT message_idnr,envelope "
 			"FROM %senvelope e "
 			"JOIN %smessages m ON m.physmessage_id=e.physmessage_id "
@@ -1084,8 +1085,10 @@ static void _fetch_envelopes(struct ImapSession *self)
 			DBPFX, DBPFX,  
 			self->mailbox->id, range);
 	
-	if (db_query(q->str)==-1)
+	if (db_query(q->str)==-1) {
+                g_string_free(q,TRUE);
 		return;
+        }
 	
 	rows = db_num_rows();
 	
@@ -1799,13 +1802,17 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		dbmail_mailbox_open(mailbox); 
 
                 // re-read flags and counters
-		if ((db_getmailbox(&(ud->mailbox))) == -1) 
+		if ((db_getmailbox(&(ud->mailbox))) == -1) {
+			dbmail_mailbox_free(mailbox);
 			return -1;
+		}
 
 		if ((msginfo = dbmail_imap_session_get_msginfo(self, mailbox->ids)) == NULL) {
 			TRACE(TRACE_DEBUG,"unable to retrieve msginfo");
-			if (ud->mailbox.exists > 0)
+			if (ud->mailbox.exists > 0) {
+				dbmail_mailbox_free(mailbox);
 				return -1;
+			}
 		}
 	}
 

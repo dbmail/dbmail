@@ -1424,8 +1424,6 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		
 		
 		for (i=0; i < rows; i++) {
-			k = g_new0(u64_t,1);
-			v = g_new0(u64_t,1);
 			id = db_get_result_u64(i,0);
 			if (! (w = g_tree_lookup(self->ids, &id))) {
 				TRACE(TRACE_ERROR, "key missing in self->ids: [%llu]\n", id);
@@ -1433,6 +1431,8 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			}
 			assert(w);
 			
+			k = g_new0(u64_t,1);
+			v = g_new0(u64_t,1);
 			*k = id;
 			*v = *w;
 

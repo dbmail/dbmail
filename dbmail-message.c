@@ -252,6 +252,7 @@ static const char * find_boundary(const char *s)
 	g_strstrip(header);
 	type = g_mime_content_type_new_from_string(header);
 	boundary = g_mime_content_type_get_parameter(type,"boundary");
+        g_free(type);
 	
 	return boundary;
 }

@@ -21,6 +21,18 @@
 	* modules/sortsieve.c:
 	Now use the correct Sieve name for vacation :handle (closes bug #608).
 
+2007-06-23  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-mailbox.c, dbmail-message.c, 
+	serverparent.c, test-scripts/testimap.py:
+	fixing leaks
+	* dbmail-imapsession.c, dbmail-mailbox.c, imapcommands.c:
+	add some checks to avoid segfaults
+	* dbmail-imapsession.c:
+	silence false error
+	* imapcommands.c:
+	issue BAD for thread=references
+
 2007-06-21  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
