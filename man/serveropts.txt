@@ -12,3 +12,4 @@ OPTIONS
   No daemonize. The program remains attached to the console from
   which it was started. This is quite useful for debugging when
   combined with the -v option.
+
