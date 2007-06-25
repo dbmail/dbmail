@@ -97,8 +97,15 @@ int pop3_handle_connection(clientinfo_t * ci)
 
 	if (ci->tx) {
 		/* sending greeting */
-		ci_write(ci->tx, "+OK DBMAIL pop3 server ready to rock %s\r\n",
-			session.apop_stamp);
+		field_t banner;
+		GETCONFIGVALUE("banner", "POP", banner);
+		if (strlen(banner) > 0) {
+			ci_write(ci->tx, "+OK %s %s\r\n",
+				banner, session.apop_stamp);
+		} else {
+			ci_write(ci->tx, "+OK DBMAIL pop3 server ready to rock %s\r\n",
+				session.apop_stamp);
+		}
 		fflush(ci->tx);
 	} else {
 		TRACE(TRACE_MESSAGE, "TX stream is null!");

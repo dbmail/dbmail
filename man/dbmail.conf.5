@@ -1,11 +1,11 @@
 .\"     Title: dbmail.conf
 .\"    Author: 
 .\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 06/24/2007
+.\"      Date: 06/25/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL.CONF" "5" "06/24/2007" "" ""
+.TH "DBMAIL.CONF" "5" "06/25/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -58,6 +58,8 @@ EFFECTIVE_GROUP=nogroup #   are dropped down to the user/group specified here.
 BINDIP=*                # The IP address the services will bind to.
                         #   Use * for all local interfaces.
                         #   Use 127.0.0.1 for localhost only.
+                        #   Multiple addresses may be separated by commas.
+                        #   IPv6 addresses are not yet supported.
 NCHILDREN=2             # Default number of child processes to start.
 MAXCHILDREN=10          # Maximum number of child processes allowed.
 MINSPARECHILDREN=2      # Unused children to always have availale.
@@ -84,31 +86,35 @@ library_directory=/usr/lib/dbmail # directory for locating libraries
 .RS 3n
 .nf
 [LMTP]
-PORT=24                 # Port to bind to.
+PORT=24                 # Port to listen on.
+BANNER=Hello I am LMTP  # Override the LMTP banner to hide your DBMail version.
 .fi
 .RE
 .sp
 .RS 3n
 .nf
 [POP]
-PORT=110                # Port to bind to.
+PORT=110                # Port to listen on.
 POP_BEFORE_SMTP=no      # If yes, allows SMTP access from the host IP connecting by POP3.
+BANNER=Hello I am POP3  # Override the POP3 banner to hide your DBMail version.
 .fi
 .RE
 .sp
 .RS 3n
 .nf
 [IMAP]
-PORT=143                # Port to bind to.
+PORT=143                # Port to listen on.
 TIMEOUT=4000            # IMAP prefers a longer timeout than other services.
 IMAP_BEFORE_SMTP=no     # If yes, allows SMTP access from the host IP connecting by IMAP.
+BANNER=Hello I am IMAP  # Override the IMAP banner to hide your DBMail version.
 .fi
 .RE
 .sp
 .RS 3n
 .nf
 [SIEVE]
-PORT=2000               # Port to bind to.
+PORT=2000               # Port to listen on.
+BANNER=Hello I am SIEVE # Override the ManageSieve banner to hide your DBMail version.
 .fi
 .RE
 .sp
@@ -152,6 +158,7 @@ AUTO_REPLY=no           # Use the auto_reply table to send away messages.
 #AUTO_NOTIFY_SUBJECT    # Defaults to "NEW MAIL NOTIFICATION"
 #AUTO_NOTIFY_SENDER     # Defaults to POSTMASTER from the DBMAIL section.
 .fi
+.sp
 .RE
 .SH "BUGS"
 If you experience inexplicable problems with DBMAil, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
@@ -170,6 +177,7 @@ Koningsweg 4
 3582 GE Utrecht
 http://www.ic\-s.nl
 .fi
+.sp
 .RE
 .SH "REFERENCES"
 .TP 3
