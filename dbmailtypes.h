@@ -112,6 +112,7 @@ typedef struct {
 	char ip_src[IPNUM_LEN];	/* client IP-number */
 	field_t clientname;	/* resolved client ip */
 	int timeout;		/* server timeout (seconds) */
+	int login_timeout;	/* login timeout (seconds) */
 	void *userData;
 } clientinfo_t;
 
@@ -121,6 +122,7 @@ typedef struct {
 	int numSockets;
 	int resolveIP;
 	int timeout;
+	int login_timeout;
 	int (*ClientHandler) (clientinfo_t *);
 } ChildInfo_t;
 
@@ -302,6 +304,7 @@ typedef struct {
 	int maxChildren;
 	int childMaxConnect;
 	int timeout;
+	int login_timeout;
 	char **iplist; // Allocated memory.
 	int ipcount;
 	int *listenSockets; // Allocated memory.

@@ -1375,6 +1375,13 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 
 
 
+int client_is_authenticated(struct ImapSession * self)
+{
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+
+	return (ud->state != IMAPCS_NON_AUTHENTICATED);
+}
+
 /*
  * check_state_and_args()
  *
@@ -1495,7 +1502,10 @@ int dbmail_imap_session_discard_to_eol(struct ImapSession *self)
 	/* loop until we get a newline terminated chunk */
 	while (!done)  {
 		memset(buffer, 0, MAX_LINESIZE);
-		alarm(ci->timeout);
+		if (!client_is_authenticated(self))
+			alarm(ci->login_timeout);
+		else
+			alarm(ci->timeout);
 		if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
 			alarm(0);
 			TRACE(TRACE_ERROR, "error reading from client");
@@ -1527,7 +1537,10 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 	assert(buffer);
 	memset(buffer, 0, MAX_LINESIZE);
 
-	alarm(ci->timeout);
+	if (!client_is_authenticated(self))
+		alarm(ci->login_timeout);
+	else
+		alarm(ci->timeout);
 	alarm_occured = 0;
 
 	fgets(buffer, MAX_LINESIZE, ci->rx);
@@ -2403,7 +2416,11 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				ci_write(ci->tx, "+ OK gimme that string\r\n");
 				
 				for (cnt = 0, dataidx = 0; cnt < quotedSize; cnt++) {
-					alarm(ci->timeout);	/* dont wait forever, but reset after every fgetc */
+					/* dont wait forever, but reset after every fgetc */
+					if (!client_is_authenticated(self))
+						alarm(ci->login_timeout);
+					else
+						alarm(ci->timeout);
 					if (! (gotc = fgetc(ci->rx)))
 						break;
 					

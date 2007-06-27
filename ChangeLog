@@ -2,6 +2,10 @@
 
 	* imap4.c, lmtp.c, pop3.c, timsieve.c, man/dbmail.conf.txt:
 	Added configurable login banner (closes bug #611)
+	* pop3.c, dbmail.conf, serverparent.c, timsieve.c, serverchild.c,
+	lmtp.c, dbmailtypes.h, server.c, dbmail-imapsession.c,
+	dbmail-imapsession.h:
+	Added configurable login timeout (closes bug #612)
 
 2007-06-24  Aaron Stone  <aaron@serendipity.cx>
 

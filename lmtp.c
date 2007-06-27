@@ -158,7 +158,10 @@ int lmtp_handle_connection(clientinfo_t * ci)
 		}
 
 		/* set the timeout counter */
-		alarm(ci->timeout);
+		if (session.state == LHLO)
+			alarm(ci->login_timeout);
+		else
+			alarm(ci->timeout);
 
 		/* clear the buffer */
 		memset(buffer, 0, INCOMING_BUFFER_SIZE);
