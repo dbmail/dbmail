@@ -287,6 +287,18 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 	TRACE(TRACE_DEBUG, "timeout [%d] seconds",
 	      config->timeout);
 
+	/* read items: LOGIN_TIMEOUT */
+	config_get_value("LOGIN_TIMEOUT", service, val);
+	if (strlen(val) == 0) {
+		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
+		config->login_timeout = 60;
+	} else if ((config->login_timeout = atoi(val)) <= 10)
+		TRACE(TRACE_FATAL, "value for TIMEOUT is invalid: [%d]",
+		      config->login_timeout);
+
+	TRACE(TRACE_DEBUG, "login_timeout [%d] seconds",
+	      config->login_timeout);
+
 	/* SOCKET */
 	config_get_value("SOCKET", service, val);
 	if (strlen(val) == 0)

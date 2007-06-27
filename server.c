@@ -92,6 +92,7 @@ int server_setup(serverConfig_t *conf)
 	childinfo.listenSockets	= g_memdup(conf->listenSockets, conf->ipcount * sizeof(int));
 	childinfo.numSockets   	= conf->ipcount;
 	childinfo.timeout 	= conf->timeout;
+	childinfo.login_timeout = conf->login_timeout;
 	childinfo.ClientHandler	= conf->ClientHandler;
 	childinfo.resolveIP	= conf->resolveIP;
 
