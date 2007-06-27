@@ -61,6 +61,14 @@ static char myhostname[64];
 extern const char *sieve_extensions;
 extern volatile sig_atomic_t alarm_occured;
 
+int tims_reset(PopSession_t * session)
+{
+	memset(session,0,sizeof(PopSession_t));
+	session->state = STRT;
+	return 1;
+}
+
+
 int tims_handle_connection(clientinfo_t * ci)
 {
 	/*
@@ -75,7 +83,7 @@ int tims_handle_connection(clientinfo_t * ci)
 
 	PopSession_t session;	/* current connection session */
 
-	memset(&session,0,sizeof(session));
+	tims_reset(&session);
 	
 	/* getting hostname */
 	gethostname(myhostname, 64);
@@ -95,7 +103,10 @@ int tims_handle_connection(clientinfo_t * ci)
 
 	while (done > 0) {
 		/* set the timeout counter */
-		alarm(ci->timeout);
+		if (session.state == STRT)
+			alarm(ci->login_timeout);
+		else
+			alarm(ci->timeout);
 
 		/* clear the buffer */
 		memset(buffer, 0, INCOMING_BUFFER_SIZE);
@@ -161,13 +172,6 @@ int tims_handle_connection(clientinfo_t * ci)
 	alarm(0);
 
 	return 0;
-}
-
-
-int tims_reset(PopSession_t * session)
-{
-	session->state = STRT;
-	return 1;
 }
 
 

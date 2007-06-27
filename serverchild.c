@@ -328,6 +328,7 @@ int PerformChildTask(ChildInfo_t * info)
 		memset((void *)&client, 0, sizeof(client));	/* zero-init */
 
 		client.timeout = info->timeout;
+		client.login_timeout = info->login_timeout;
 		strncpy((char *)client.ip_src, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
 		client.clientname[0] = '\0';
 			
@@ -431,6 +432,7 @@ int manage_start_cli_server(ChildInfo_t * info)
 	memset((void *)&client, 0, sizeof(client));	/* zero-init */
 
 	client.timeout = info->timeout;
+	client.login_timeout = info->login_timeout;
 
 	/* make streams */
 	client.rx = stdin;
