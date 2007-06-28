@@ -1,3 +1,8 @@
+2007-06-28  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	send fetch updates during mailbox_status run
+
 2007-06-25  Aaron Stone  <aaron@serendipity.cx>
 
 	* imap4.c, lmtp.c, pop3.c, timsieve.c, man/dbmail.conf.txt:
