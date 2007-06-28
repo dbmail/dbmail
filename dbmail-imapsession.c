@@ -1753,12 +1753,6 @@ static gboolean imap_msginfo_notify(u64_t *uid, msginfo_t *msginfo, struct ImapS
 		break;
 	}
 
-	// 
-	// some clients dont like FETCH data during IDLE
-	//
-	if (self->command_type == IMAP_COMM_IDLE)
-		return FALSE;
-
 	// FETCH
 	for (i=0; i< IMAP_NFLAGS; i++) {
 		if (msginfo->flags[i] != newmsginfo->flags[i]) {
