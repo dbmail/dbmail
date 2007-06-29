@@ -483,7 +483,7 @@ delivery_status_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quo
 	if (ok)
 		dsn.class = DSN_CLASS_OK;
 	if (fail_quota)
-		dsn.class = DSN_CLASS_QUOTA;
+		dsn.class = DSN_CLASS_FAIL, dsn.subject = 2, dsn.detail = 2;
 	if (fail)
 		dsn.class = DSN_CLASS_FAIL;
 	if (temp)

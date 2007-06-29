@@ -325,6 +325,7 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 
 int db_query(const char *the_query)
 {
+	time_t before, after;
 	char *errmsg;
 
 	if (lastq) {
@@ -338,12 +339,30 @@ int db_query(const char *the_query)
 	}
 	TRACE(TRACE_DEBUG,"%s", the_query);
 
+	before = time(NULL);
 	if (sqlite3_get_table(conn, the_query, &lastq->resp,
 				(int *)&lastq->rows, (int *)&lastq->cols, &errmsg) != SQLITE_OK) {
 		TRACE(TRACE_ERROR, "sqlite3_get_table failed: %s", errmsg);
 		sqlite3_free(errmsg);
 		return -1;
 	}
+	after = time(NULL);
+
+	if (before == (time_t)-1 || after == (time_t)-1) {
+		/* Can't log because time(2) failed. */
+	} else {
+		/* This is signed on the chance that ntpd ran during the query
+		 * so it might look like it went back in time. */
+		int elapsed = (int)((time_t) (after - before));
+		TRACE(TRACE_DEBUG, "last query took [%d] seconds", elapsed);
+		if (elapsed > 10)
+			TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", the_query, elapsed);
+		if (elapsed > 20)
+			TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", the_query, elapsed);
+		if (elapsed > 40)
+			TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", the_query, elapsed);
+	}
+
 	if (lastq->rows < 0 || lastq->cols < 0) {
 		lastq->rows = 0;
 		lastq->cols = 0;
