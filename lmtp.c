@@ -595,7 +595,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 					dbmail_message_set_header(msg, "Return-Path", from.start->data);
 					if (insert_messages(msg, &rcpt) == -1) {
-						ci_write((FILE *) stream, "503 Message not received\r\n");
+						ci_write((FILE *) stream, "430 Message not received\r\n");
 					} else {
 						/* The DATA command itself it not given a reply except
 						 * that of the status of each of the remaining recipients. */
