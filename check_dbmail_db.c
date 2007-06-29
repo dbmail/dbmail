@@ -845,6 +845,18 @@ END_TEST
 //int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 //			    u64_t ** children, unsigned *nchildren,
 //			    int only_subscribed);
+START_TEST(test_db_findmailbox_by_regex)
+{
+	int result;
+	u64_t *children = NULL;
+	u64_t mailbox_id = 0;
+	unsigned nchildren = 0;
+
+	result = db_createmailbox("INBOX/Trash", testidnr, &mailbox_id);
+	result = db_findmailbox_by_regex(testidnr, "INBOX/Trash", &children, &nchildren, 0);
+
+}
+END_TEST
 /**
  * \brief get info on a mailbox. Info is filled in in the
  *        mailbox_t struct.
@@ -1184,6 +1196,7 @@ Suite *dbmail_db_suite(void)
 	tcase_add_test(tc_db, test_db_mailbox_set_permission);
 	tcase_add_test(tc_db, test_db_imap_utf7_like);
 	tcase_add_test(tc_db, test_db_replycache);
+	tcase_add_test(tc_db, test_db_findmailbox_by_regex);
 	return s;
 }
 
