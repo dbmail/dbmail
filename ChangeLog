@@ -1,3 +1,12 @@
+2007-06-29  Aaron Stone  <aaron@serendipity.cx>
+
+	* dsn.c:
+	Fixed incorrect dsn class for mailbox over quota (closes bug #617)
+	* db.c, modules/dbmysql.c, modules/dbpgsql.c, modules/dbsqlite.c:
+	Added query and transaction timing.
+	* sievecmd.c:
+	General cleanups.
+
 2007-06-29  Paul J Stevens <paul@nfg.nl>
 
 	* lmtp.c:
@@ -18,7 +27,7 @@
 	* pop3.c, dbmail.conf, serverparent.c, timsieve.c, serverchild.c,
 	lmtp.c, dbmailtypes.h, server.c, dbmail-imapsession.c,
 	dbmail-imapsession.h:
-	Added configurable login timeout (closes bug #612)
+	Added configurable login timeout (closes bug #616)
 
 2007-06-24  Aaron Stone  <aaron@serendipity.cx>
 
