@@ -3,9 +3,9 @@
 	* dsn.c:
 	Fixed incorrect dsn class for mailbox over quota (closes bug #617)
 	* db.c, modules/dbmysql.c, modules/dbpgsql.c, modules/dbsqlite.c:
-	Added query and transaction timing.
+	Added query and transaction timing
 	* sievecmd.c:
-	General cleanups.
+	General cleanups
 
 2007-06-29  Paul J Stevens <paul@nfg.nl>
 
