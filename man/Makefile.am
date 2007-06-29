@@ -30,8 +30,11 @@ man8_MANS = dbmail-util.8 \
 
 EXTRA_DIST = $(man1_MANS) $(man5_MANS) $(man8_MANS)
 
+%.html : %.txt 
+	asciidoc --unsafe -b xhtml11 -d manpage $<
+
 %.xml : %.txt
-	asciidoc -b docbook -d manpage $<
+	asciidoc --unsafe -b docbook -d manpage $<
 
 %.1 : %.xml
 	xmlto man $< 2>/dev/null
@@ -46,4 +49,4 @@ EXTRA_DIST = $(man1_MANS) $(man5_MANS) $(man8_MANS)
 	./fixsp.pl $@
 
 clean:
-	rm -f *1 *5 *8 *xml
+	rm -f *1 *5 *8 *xml *html
