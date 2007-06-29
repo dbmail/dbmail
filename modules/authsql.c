@@ -206,7 +206,6 @@ int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm
 	int occurences = 0;
 	void *saveres;
 	u64_t counter;
-	const char *query_result;
 	char *endptr;
 	u64_t id;
 	unsigned num_rows;
@@ -276,9 +275,10 @@ int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm
 	if (num_rows > 0) {
 		for (counter = 0; counter < num_rows; counter++) {
 			/* do a recursive search for deliver_to */
-			query_result = db_get_result(counter, 0);
+			char *query_result = g_strdup(db_get_result(counter, 0));
 			TRACE(TRACE_DEBUG, "checking user %s to %s", username, query_result);
 			occurences += auth_check_user_ext(query_result, userids, fwds, checks+1 );
+			g_free(query_result);
 		}
 	}
 	db_free_result();
