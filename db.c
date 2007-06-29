@@ -2696,9 +2696,10 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			g_free(username);
 			return DM_SUCCESS;
 		}
+		TRACE(TRACE_DEBUG, "searching namespace [%s] for user [%s] with pattern [%s]",
+			namespace, username, spattern);
+		g_free(username);
 	}
-	TRACE(TRACE_DEBUG, "searching namespace [%s] for user [%s] with pattern [%s]",
-		namespace, username, spattern);
 
 	/* If there's neither % nor *, don't match on mailbox name. */
 	if ( (! strchr(spattern, '%')) && (! strchr(spattern,'*')) ) {
@@ -2741,7 +2742,6 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 search_user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
 	
 	g_free(matchname);
-	g_free(username);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error during mailbox query");
