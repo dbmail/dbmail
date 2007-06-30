@@ -53,7 +53,7 @@ static int do_cat(u64_t user_idnr, char *name);
 
 int main(int argc, char *argv[])
 {
-	int res = 0, opt = 0, opt_prev = 0, act = 0;
+	int res = 0, opt = 0, opt_prev = 0;
 	u64_t user_idnr = 0;
 	char *user_name = NULL;
 	char *script_name = NULL;
@@ -61,13 +61,16 @@ int main(int argc, char *argv[])
 	extern char *optarg;
 	extern int opterr;
 
+	int activate = 0, deactivate = 0, insert = 0;
+	int remove = 0, list = 0, cat = 0, help = 0;
+
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
-		"-a:d:i:c::r:u:l" /* Major modes */
+		"-a::d:i:c::r:u:l" /* Major modes */
 		/*"i"*/ "f:qnyvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
@@ -79,34 +82,44 @@ int main(int argc, char *argv[])
 		case -1:
 			/* Break right away if this is the end of the args */
 			break;
-		case 'a':
-		case 'd':
-		case 'i':
-		case 'r':
-			if (act != 0 && opt != opt_prev)
-				act = 'h';
-			else
-				act = opt;
+		case 'a': /* activate */
+			activate = 1;
+			goto major_script;
+		case 'd': /* deactivate */
+			deactivate = 1;
+			goto major_script;
+		case 'i': /* insert */
+			insert = 1;
+			goto major_script;
+		case 'r': /* remove */
+			remove = 1;
+			goto major_script;
 
-			if (!script_name) {
+		major_script:
+			if (!optarg) {
+				/* Need optarg */
+			} else if (!script_name) {
 				script_name = g_strdup(optarg);
 			} else if (!script_source) {
 				script_source = g_strdup(optarg);
 			}
 			break;
 		case 'c':
+			cat = 1;
+
 			if (optarg)
 				script_name = g_strdup(optarg);
-			act = opt;
+
+			/* Don't print anything but the script. */
+			quiet = 1;
+			verbose = 0;
+
 			break;
 		case 'u':
 			user_name = g_strdup(optarg);
 			break;
 		case 'l':
-			if (act != 0)
-				act = 'h';
-			else
-				act = opt;
+			list = 1;
 			break;
 
 		/* Common options */
@@ -124,7 +137,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'h':
-			act = 'h';
+			help = 1;
 			break;
 
 		case 'n':
@@ -155,17 +168,30 @@ int main(int argc, char *argv[])
 			return 1;
 
 		default:
-			act = 'h';
+			help = 1;
 			break;
 		}
 	}
 
-	if (act == 'h' || act == 0 || !user_name || (no_to_all && yes_to_all)) {
+/*
+	if (insert) printf("got insert\n");
+	if (remove) printf("got remove\n");
+	if (list) printf("got list\n");
+	if (cat) printf("got cat\n");
+	if (activate) printf("got activate\n");
+	if (deactivate) printf("got deactivate\n");
+*/
+
+	/* Only one major mode is allowed */
+	if ((insert + remove + list + cat > 1)
+	/* Only insert is allowed together with activate or deactivate */
+	 || ((remove + list + cat == 1) && (activate + deactivate > 0))
+	/* You may either activate or deactivate as a mode on its own*/
+	 || (((insert + remove + list + cat == 0) && (activate + deactivate != 1)))
+	 || (help || !user_name || (no_to_all && yes_to_all))) {
 		do_showhelp();
 		goto mainend;
 	}
-
-	qprintf("*** dbmail-sievecmd ***\n");
 
 	/* read the config file */
         if (config_read(configFile) == -1) {
@@ -179,7 +205,6 @@ int main(int argc, char *argv[])
 	GetDBParams(&_db_params);
 
 	/* Open database connection */
-	qprintf("Opening connection to database...\n");
 	if (db_connect() != 0) {
 		qerrorf("Failed. Could not connect to database (check log)\n");
 		g_free(user_name);
@@ -187,14 +212,11 @@ int main(int argc, char *argv[])
 	}
 
 	/* Open authentication connection */
-	qprintf("Opening connection to authentication...\n");
 	if (auth_connect() != 0) {
 		qerrorf("Failed. Could not connect to authentication (check log)\n");
 		g_free(user_name);
 		return -1;
 	}
-
-	qprintf("Ok. Connected!\n");
 
 	/* Retrieve the user ID number */
 	switch (auth_user_exists(user_name, &user_idnr)) {
@@ -209,30 +231,21 @@ int main(int argc, char *argv[])
 		goto mainend;
 	}
 
-	switch (act) {
-	case 'a':
-		res = do_activate(user_idnr, script_name);
-		break;
-	case 'd':
-		res = do_deactivate(user_idnr, script_name);
-		break;
-	case 'i':
+	if (insert)
 		res = do_insert(user_idnr, script_name, script_source);
-		break;
-	case 'c':
-		res = do_cat(user_idnr, script_name);
-		break;
-	case 'r':
+	if (remove)
 		res = do_remove(user_idnr, script_name);
-		break;
-	case 'l':
+	if (activate)
+		if (!(insert && res)) /* Don't activate the script if it wasn't inserted */
+			res = do_activate(user_idnr, script_name);
+	if (deactivate)
+		res = do_deactivate(user_idnr, script_name);
+	if (list)
 		res = do_list(user_idnr);
-		break;
-	case 'h':
-	default:
+	if (cat)
+		res = do_cat(user_idnr, script_name);
+	if (help)
 		res = do_showhelp();
-		break;
-	}
 
       mainend:
 	g_free(user_name);
@@ -493,6 +506,15 @@ int do_showhelp(void)
 	printf("     -r scriptname          Remove the named script \n");
 	printf("                            (if script was active, no script is \n"
 	       "                             active after deletion) \n");
+        printf("\nCommon options for all DBMail utilities:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -q        quietly skip interactive prompts\n"
+	       "               use twice to suppress error messages\n");
+	printf("     -n        show the intended action but do not perform it, no to all\n");
+	printf("     -y        perform all proposed actions, as though yes to all\n");
+	printf("     -v        verbose details\n");
+	printf("     -V        show the version\n");
+	printf("     -h        show this help message\n");
 
 	return 0;
 }
