@@ -6,6 +6,8 @@
 	Added query and transaction timing
 	* sievecmd.c:
 	General cleanups
+	* modules/authsql.c:
+	Fixed query result getting freed out from under us (closes bug #618)
 
 2007-06-29  Paul J Stevens <paul@nfg.nl>
 
