@@ -278,6 +278,7 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 int db_query(const char *q)
 {
 	unsigned querysize = 0;
+	time_t before, after;
 	assert(q);
 
 	querysize = (unsigned) strlen(q);
@@ -288,9 +289,27 @@ int db_query(const char *q)
 		return DM_EQUERY;
 	
 	TRACE(TRACE_DEBUG, "query [%s]", q);
+
+	before = time(NULL);
 	if (mysql_real_query(&conn, q, querysize)) {
 		TRACE(TRACE_ERROR, "[%s] [%s]", mysql_error(&conn), q);
 		return DM_EQUERY;
+	}
+	after = time(NULL);
+
+	if (before == (time_t)-1 || after == (time_t)-1) {
+		/* Can't log because time(2) failed. */
+	} else {
+		/* This is signed on the chance that ntpd ran during the query
+		 * so it might look like it went back in time. */
+		int elapsed = (int)((time_t) (after - before));
+		TRACE(TRACE_DEBUG, "last query took [%d] seconds", elapsed);
+		if (elapsed > 10)
+			TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", q, elapsed);
+		if (elapsed > 20)
+			TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", q, elapsed);
+		if (elapsed > 40)
+			TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", q, elapsed);
 	}
 
 	if(res != NULL) 

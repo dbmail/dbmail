@@ -178,7 +178,10 @@ int db_use_usermap(void)
 	
 	return use_usermap;
 }
- 
+
+static int transaction = 0;
+static time_t transaction_before = 0;
+static time_t transaction_after = 0;
 
 int db_begin_transaction()
 {
@@ -188,6 +191,12 @@ int db_begin_transaction()
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error beginning transaction");
 		return DM_EQUERY;
+	}
+	if (transaction) {
+		TRACE(TRACE_INFO, "A transaction was already started");
+	} else if (!transaction) {
+		transaction_before = time(NULL);
+		transaction = 1;
 	}
 	return DM_SUCCESS;
 }
@@ -203,6 +212,26 @@ int db_commit_transaction()
 		      "an inconsistent state, we will perform a rollback now");
 		db_rollback_transaction();
 		return DM_EQUERY;
+	}
+	if (transaction) {
+		transaction_after = time(NULL);
+		if (transaction_before == (time_t)-1 || transaction_after == (time_t)-1) {
+			/* Can't log because time(2) failed. */
+		} else {
+			/* This is signed on the chance that ntpd ran during the query
+			 * so it might look like it went back in time. */
+			int elapsed = (int)((time_t) (transaction_after - transaction_before));
+			TRACE(TRACE_DEBUG, "last transaction took [%d] seconds", elapsed);
+			if (elapsed > 10)
+				TRACE(TRACE_INFO, "slow transaction took [%d] seconds", elapsed);
+			if (elapsed > 20)
+				TRACE(TRACE_MESSAGE, "slow transaction took [%d] seconds", elapsed);
+			if (elapsed > 40)
+				TRACE(TRACE_WARNING, "slow transaction took [%d] seconds", elapsed);
+		}
+		transaction = 0;
+	} else if (!transaction) {
+		TRACE(TRACE_INFO, "No transaction to commit");
 	}
 	return DM_SUCCESS;
 }
@@ -221,6 +250,27 @@ int db_rollback_transaction()
 		/* and reconnect again */
 		db_connect();
 	}
+	if (transaction) {
+		transaction_after = time(NULL);
+		if (transaction_before == (time_t)-1 || transaction_after == (time_t)-1) {
+			/* Can't log because time(2) failed. */
+		} else {
+			/* This is signed on the chance that ntpd ran during the query
+			 * so it might look like it went back in time. */
+			int elapsed = (int)((time_t) (transaction_after - transaction_before));
+			TRACE(TRACE_DEBUG, "last transaction took [%d] seconds", elapsed);
+			if (elapsed > 10)
+				TRACE(TRACE_INFO, "slow transaction took [%d] seconds", elapsed);
+			if (elapsed > 20)
+				TRACE(TRACE_MESSAGE, "slow transaction took [%d] seconds", elapsed);
+			if (elapsed > 40)
+				TRACE(TRACE_WARNING, "slow transaction took [%d] seconds", elapsed);
+		}
+		transaction = 0;
+	} else if (!transaction) {
+		TRACE(TRACE_INFO, "No transaction to rollback from");
+	}
+	transaction = 0;
 	return DM_SUCCESS;
 }
 
