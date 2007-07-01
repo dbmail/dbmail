@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
 			vacuum_db = 1;
 			purge_deleted = 1;
 			set_deleted = 1;
+			dangling_aliases = 1;
 			check_integrity = 1;
 			null_messages = 1;
 			is_header = 1;
