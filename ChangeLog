@@ -1,3 +1,14 @@
+2007-06-30  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-user.c:
+	Some cleanups.
+	* list.c:
+	Some work on the g_list_dedup function.
+	* maintenance.c:
+	Added new option '-s' to remove dangling aliases.
+	* check_dbmail_list.c, Makefile.am:
+	Added test of the g_list_dedup function.
+
 2007-06-29  Aaron Stone  <aaron@serendipity.cx>
 
 	* dsn.c:

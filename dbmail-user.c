@@ -538,7 +538,7 @@ int do_show(const char * const name)
 	GList *aliases = NULL;
 
 	if (!name) {
-		printf("-- users --\n");
+		qprintf("-- users --\n");
 
 		/* show all users and their aliases */
 		users = auth_get_known_users();
@@ -554,7 +554,7 @@ int do_show(const char * const name)
 		}
 		g_list_free(g_list_first(users));
 
-		printf("\n-- forwards --\n");
+		qprintf("\n-- forwards --\n");
 
 		/* show all aliases with forwarding addresses */
 		aliases = auth_get_known_aliases();
@@ -613,11 +613,11 @@ static void show_alias(const char * const name, int concise)
 	if (forwards) {
 		if (concise) {
 			GString *fwdlist = g_list_join(forwards,",");
-			qerrorf("%s: %s\n", name, fwdlist->str);
+			printf("%s: %s\n", name, fwdlist->str);
 			g_string_free(fwdlist, TRUE);
 		} else {
 			GString *fwdlist = g_list_join(forwards,", ");
-			qerrorf("forward [%s] to [%s]\n", name, fwdlist->str);
+			printf("forward [%s] to [%s]\n", name, fwdlist->str);
 			g_string_free(fwdlist, TRUE);
 		}
 		g_list_destroy(g_list_first(forwards));
@@ -633,7 +633,7 @@ static void show_alias(const char * const name, int concise)
 				// should go into maintenance.c at some point.
 			} else {
 				if (!concise) // Don't print for concise
-				qerrorf("deliver [%s] to [%s]\n", name, username);
+				printf("deliver [%s] to [%s]\n", name, username);
 			}
 			g_free(username);
 			if (! g_list_next(userids))
@@ -681,7 +681,7 @@ static void show_user(u64_t useridnr, int concise)
 	}
 	g_list_free(g_list_first(userlist));
 	s = g_list_join(out,":");
-	qprintf("%s\n", s->str);
+	printf("%s\n", s->str);
 	g_string_free(s,TRUE);
 }
 
