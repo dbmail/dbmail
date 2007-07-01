@@ -9,7 +9,7 @@ datatables.
 
 SYNOPSIS
 --------
-dbmail-util [-actubpd] [-l time] [-yn] [-qvVh] [-f configFile]
+dbmail-util [-actubpds] [-l time] [-yn] [-qvVh] [-f configFile]
 
 DESCRIPTION
 -----------
@@ -48,14 +48,17 @@ OPTIONS
 -b::
  Check and rebuild the body/header/envelope cache tables.
 
--d::
- Set DELETE status for messages flagged \Deleted by IMAP or POP3.
-
 -p::
  Purge messages with DELETE status. To purge messages currently marked
  \Deleted, run with the -pd options twice. This is not recommended; it is
  better to leave a grace period for old messages before permanently wiping
  them from the database.
+
+-d::
+ Set DELETE status for messages flagged \Deleted by IMAP or POP3.
+
+-s::
+ Remove dangling/invalid aliases and forwards.
 
 -r time::
  Clear the reply cache used for autoreplies and Sieve vacations. The time is
@@ -77,6 +80,14 @@ OPTIONS
 
 
 include::commonopts.txt[]
+
+RETURN VALUES
+-------------
+
+Returns 3 when errors are found but could not be fixed due to failure, 2 when
+errors are found but '-y' was not provided or '-n' was provided, 1 when errors
+are found and fixed successfully, 0 when no errors are found.
+
 
 EXAMPLES
 --------
