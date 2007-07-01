@@ -55,6 +55,7 @@ static int do_check_integrity(void);
 static int do_null_messages(void);
 static int do_purge_deleted(void);
 static int do_set_deleted(void);
+static int do_dangling_aliases(void);
 static int do_header_cache(void);
 static int do_check_iplog(const char *timespec);
 static int do_check_replycache(const char *timespec);
@@ -68,13 +69,14 @@ int do_showhelp(void) {
 //	0........10........20........30........40........50........60........70........80
 	"Use this program to maintain your DBMail database.\n"
 	"See the man page for more info. Summary:\n\n"
-	"     -a        perform all checks (in this release: -ctubpd)\n"
+	"     -a        perform all checks (in this release: -ctubpds)\n"
 	"     -c        clean up database (optimize/vacuum)\n"
 	"     -t        test for message integrity\n"
 	"     -u        null message check\n"
 	"     -b        body/header/envelope cache check\n"
 	"     -p        purge messages have the DELETE status set\n"
 	"     -d        set DELETE status for deleted messages\n"
+	"     -s        remove dangling/invalid aliases and forwards\n"
 	"     -r time   clear the replycache used for autoreply/vacation\n"
 	"     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
 	"               the time syntax is [<hours>h][<minutes>m]\n"
@@ -99,7 +101,7 @@ int main(int argc, char *argv[])
 	int check_iplog = 0, check_replycache = 0;
 	char *timespec_iplog = NULL, *timespec_replycache = NULL;
 	int null_messages = 0;
-	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0;
+	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0;
 	int show_help = 0;
 	int do_nothing = 1;
 	int is_header = 0;
@@ -111,7 +113,7 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-acbtl:r:pud" "i" "f:qnyvVh")) != -1) {
+	while ((opt = getopt(argc, argv, "-acbtl:r:puds" "i" "f:qnyvVh")) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
@@ -143,6 +145,11 @@ int main(int argc, char *argv[])
 
 		case 'd':
 			set_deleted = 1;
+			do_nothing = 0;
+			break;
+
+		case 's':
+			dangling_aliases = 1;
 			do_nothing = 0;
 			break;
 
@@ -227,7 +234,7 @@ int main(int argc, char *argv[])
 
  	/* Don't make any changes unless specifically authorized. */
  	if (!yes_to_all) {
-		qprintf("Choosing dry-run mode. Use -y to disable it.");
+		qprintf("Choosing dry-run mode. No changes will be made at this time.\n\n");
 		no_to_all = 1;
  	}
 
@@ -235,25 +242,26 @@ int main(int argc, char *argv[])
 	SetTraceLevel("DBMAIL");
 	GetDBParams(&_db_params);
 
-	qprintf("Opening connection to database... \n");
+	qverbosef("Opening connection to database... \n");
 	if (db_connect() != 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
 		return -1;
 	}
 
-	qprintf("Opening connection to authentication... \n");
+	qverbosef("Opening connection to authentication... \n");
 	if (auth_connect() != 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
 		return -1;
 	}
 
-	qprintf("Ok. Connected.\n");
+	qverbosef("Ok. Connected.\n");
 
 	if (check_integrity) do_check_integrity();
 	if (null_messages) do_null_messages();
 	if (purge_deleted) do_purge_deleted();
 	if (is_header) do_header_cache();
 	if (set_deleted) do_set_deleted();
+	if (dangling_aliases) do_dangling_aliases();
 	if (check_iplog) do_check_iplog(timespec_iplog);
 	if (check_replycache) do_check_replycache(timespec_replycache);
 	if (vacuum_db) do_vacuum_db();
@@ -264,13 +272,13 @@ int main(int argc, char *argv[])
 		qerrorf("\nMaintenance done. Errors were found");
 		if (no_to_all) {
 			qerrorf(" but not fixed.\n");
-			qerrorf("Try running dbmail-util with the '-y' "
-			    "option to repair the errors.\n");
+			qerrorf("Run again with the '-y' option to "
+				"repair the errors.\n");
 		}
 		if (yes_to_all) {
 			qerrorf(" and fixed.\n");
-			qerrorf("Try running dbmail-util again to confirm "
-			    "that the errors were repaired.\n");
+			qerrorf("We suggest running dbmail-util again to "
+				"confirm that the errors were repaired.\n");
 		}
 	}
 
@@ -341,6 +349,91 @@ int do_set_deleted(void)
 		qprintf("Ok. Used quota updated for all users.\n");
 	}
 	return 0;
+}
+
+GList *find_dangling_aliases(const char * const name)
+{
+	int result;
+	char *username;
+	struct dm_list uids;
+	struct dm_list fwds;
+	GList *userids = NULL;
+	GList *dangling = NULL;
+
+	/* not a user, search aliases */
+	dm_list_init(&fwds);
+	dm_list_init(&uids);
+	result = auth_check_user_ext(name,&uids,&fwds,0);
+	
+	if (!result) {
+		qerrorf("Nothing found searching for [%s].\n", name);
+		return dangling;
+	}
+
+	if (dm_list_getstart(&uids))
+		userids = g_list_copy_list(userids,dm_list_getstart(&uids));
+
+	userids = g_list_first(userids);
+	while (userids) {
+		username = auth_get_userid(*(u64_t *)userids->data);
+		if (!username) {
+			dangling = g_list_prepend(dangling, userids->data);
+		}
+		g_free(username);
+		if (! g_list_next(userids))
+			break;
+		userids = g_list_next(userids);
+	}
+
+	return dangling;
+}
+
+int do_dangling_aliases(void)
+{
+	int count = 0;
+	int result = 0;
+	GList *aliases = NULL;
+
+	/* For each alias, figure out if it resolves to a valid user
+	 * or some forwarding address. If neither, remove it. */
+
+	aliases = auth_get_known_aliases();
+	aliases = g_list_dedup(aliases);
+	aliases = g_list_first(aliases);
+	while (aliases) {
+		char forward[21];
+		GList *dangling = find_dangling_aliases(aliases->data);
+
+		dangling = g_list_first(dangling);
+		while (dangling) {
+			count++;
+			g_snprintf(forward, 21, "%llu", *(u64_t *)dangling->data);
+			qverbosef("Dangling alias [%s] delivers to nonexistent user [%s]\n",
+				(char *)aliases->data, forward);
+			if (yes_to_all) {
+				if (auth_removealias_ext(aliases->data, forward) < 0) {
+					qerrorf("Error: could not remove forward [%s] \n", forward);
+					result = -1;
+				}
+			}
+			if (!g_list_next(dangling))
+				break;
+			dangling = g_list_next(dangling);
+		}
+		g_list_destroy(g_list_first(dangling));
+
+		if (! g_list_next(aliases))
+			break;
+		aliases = g_list_next(aliases);
+	}
+	g_list_destroy(g_list_first(aliases));
+
+	if (count) {
+		qerrorf("Ok. Found [%d] dangling aliases.\n", count);
+		has_errors = 1;
+	}
+
+	return result;
 }
 
 int do_null_messages(void)

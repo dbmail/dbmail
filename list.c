@@ -199,15 +199,15 @@ GList *g_list_slices_u64(GList *list, unsigned limit)
 	return new;
 }
 
-/* Given a _sorted_ list of _char *_ entries, removes duplicates and frees them. */
-GList *g_list_dedup(GList *list)
+GList *g_list_dedup_func(GList *list, GCompareFunc compare_func, int freeitems)
 {
 	char *lastdata = NULL;
 
 	list = g_list_first(list);
 	while (list) {
-		if (lastdata && list->data && strcmp(lastdata, (char *)list->data) == 0) {
-			g_free(list->data);
+		if (lastdata && list->data && compare_func(lastdata, list->data) == 0) {
+			if (freeitems)
+				g_free(list->data);
 			list = g_list_delete_link(g_list_previous(list), list);
 		} else {
 			lastdata = (char *)list->data;
@@ -219,3 +219,16 @@ GList *g_list_dedup(GList *list)
 
 	return g_list_first(list);
 }
+
+/* Given a _sorted_ list of _char *_ entries, removes duplicates and frees them. */
+GList *g_list_dedup(GList *list)
+{
+	return g_list_dedup_func(list, strcmp, TRUE);
+}
+
+/* Given a _sorted_ list of pointers to u64's, removes duplicates and frees the pointers to them. */
+GList *g_list_dedup_u64_p(GList *list)
+{
+	return g_list_dedup_func(list, strcmp, TRUE);
+}
++
