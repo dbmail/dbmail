@@ -548,18 +548,18 @@ uninstall-man: uninstall-man1 uninstall-man5 uninstall-man8
 
 %.1 : %.xml
 	xmlto man $< 2>/dev/null
-	sed -f fixsp.sed -i $@
+	./fixsp.pl $@
 
 %.5 : %.xml
 	xmlto man $< 2>/dev/null
-	sed -f fixsp.sed -i $@
+	./fixsp.pl $@
 
 %.8 : %.xml
 	xmlto man $< 2>/dev/null
-	sed -f fixsp.sed -i $@
+	./fixsp.pl $@
 
 clean:
-	rm *1 *5 *8 *xml
+	rm -f *1 *5 *8 *xml
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

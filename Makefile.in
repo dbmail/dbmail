@@ -123,6 +123,7 @@ libdbmail_la_OBJECTS = $(am_libdbmail_la_OBJECTS)
 @WITHCHECK_TRUE@	check_dbmail_mailbox$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_auth$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_misc$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_list$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_dsn$(EXEEXT) \
@@ -166,6 +167,11 @@ am__check_dbmail_imapd_SOURCES_DIST = quota.c imap4.c dm_imaputil.c \
 @WITHCHECK_TRUE@	check_dbmail_imapd.$(OBJEXT)
 check_dbmail_imapd_OBJECTS = $(am_check_dbmail_imapd_OBJECTS)
 @WITHCHECK_TRUE@check_dbmail_imapd_DEPENDENCIES = libdbmail.la
+am__check_dbmail_list_SOURCES_DIST = check_dbmail_list.c
+@WITHCHECK_TRUE@am_check_dbmail_list_OBJECTS =  \
+@WITHCHECK_TRUE@	check_dbmail_list.$(OBJEXT)
+check_dbmail_list_OBJECTS = $(am_check_dbmail_list_OBJECTS)
+@WITHCHECK_TRUE@check_dbmail_list_DEPENDENCIES = libdbmail.la
 am__check_dbmail_mailbox_SOURCES_DIST = check_dbmail_mailbox.c
 @WITHCHECK_TRUE@am_check_dbmail_mailbox_OBJECTS =  \
 @WITHCHECK_TRUE@	check_dbmail_mailbox.$(OBJEXT)
@@ -244,7 +250,8 @@ LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 SOURCES = $(libdbmail_la_SOURCES) $(check_dbmail_auth_SOURCES) \
 	$(check_dbmail_common_SOURCES) $(check_dbmail_db_SOURCES) \
 	$(check_dbmail_deliver_SOURCES) $(check_dbmail_dsn_SOURCES) \
-	$(check_dbmail_imapd_SOURCES) $(check_dbmail_mailbox_SOURCES) \
+	$(check_dbmail_imapd_SOURCES) $(check_dbmail_list_SOURCES) \
+	$(check_dbmail_mailbox_SOURCES) \
 	$(check_dbmail_message_SOURCES) $(check_dbmail_misc_SOURCES) \
 	$(check_dbmail_server_SOURCES) $(check_dbmail_user_SOURCES) \
 	$(check_dbmail_util_SOURCES) $(dbmail_export_SOURCES) \
@@ -259,6 +266,7 @@ DIST_SOURCES = $(am__libdbmail_la_SOURCES_DIST) \
 	$(am__check_dbmail_deliver_SOURCES_DIST) \
 	$(am__check_dbmail_dsn_SOURCES_DIST) \
 	$(am__check_dbmail_imapd_SOURCES_DIST) \
+	$(am__check_dbmail_list_SOURCES_DIST) \
 	$(am__check_dbmail_mailbox_SOURCES_DIST) \
 	$(am__check_dbmail_message_SOURCES_DIST) \
 	$(am__check_dbmail_misc_SOURCES_DIST) \
@@ -513,6 +521,7 @@ libdbmail_la_CFLAGS = $(AM_CFLAGS)
 @WITHCHECK_TRUE@	check_dbmail_mailbox \
 @WITHCHECK_TRUE@	check_dbmail_auth \
 @WITHCHECK_TRUE@	check_dbmail_misc \
+@WITHCHECK_TRUE@	check_dbmail_list \
 @WITHCHECK_TRUE@	check_dbmail_user \
 @WITHCHECK_TRUE@	check_dbmail_util \
 @WITHCHECK_TRUE@	check_dbmail_dsn \
@@ -527,6 +536,9 @@ libdbmail_la_CFLAGS = $(AM_CFLAGS)
 @WITHCHECK_TRUE@check_dbmail_misc_SOURCES = check_dbmail_misc.c
 @WITHCHECK_TRUE@check_dbmail_misc_LDADD = libdbmail.la @CHECK_LIBS@
 @WITHCHECK_TRUE@check_dbmail_misc_INCLUDES = @CHECK_CFLAGS@
+@WITHCHECK_TRUE@check_dbmail_list_SOURCES = check_dbmail_list.c
+@WITHCHECK_TRUE@check_dbmail_list_LDADD = libdbmail.la @CHECK_LIBS@
+@WITHCHECK_TRUE@check_dbmail_list_INCLUDES = @CHECK_CFLAGS@
 @WITHCHECK_TRUE@check_dbmail_util_SOURCES = check_dbmail_util.c
 @WITHCHECK_TRUE@check_dbmail_util_LDADD = libdbmail.la @CHECK_LIBS@
 @WITHCHECK_TRUE@check_dbmail_util_INCLUDES = @CHECK_CFLAGS@
@@ -693,6 +705,9 @@ check_dbmail_dsn$(EXEEXT): $(check_dbmail_dsn_OBJECTS) $(check_dbmail_dsn_DEPEND
 check_dbmail_imapd$(EXEEXT): $(check_dbmail_imapd_OBJECTS) $(check_dbmail_imapd_DEPENDENCIES) 
 	@rm -f check_dbmail_imapd$(EXEEXT)
 	$(LINK) $(check_dbmail_imapd_LDFLAGS) $(check_dbmail_imapd_OBJECTS) $(check_dbmail_imapd_LDADD) $(LIBS)
+check_dbmail_list$(EXEEXT): $(check_dbmail_list_OBJECTS) $(check_dbmail_list_DEPENDENCIES) 
+	@rm -f check_dbmail_list$(EXEEXT)
+	$(LINK) $(check_dbmail_list_LDFLAGS) $(check_dbmail_list_OBJECTS) $(check_dbmail_list_LDADD) $(LIBS)
 check_dbmail_mailbox$(EXEEXT): $(check_dbmail_mailbox_OBJECTS) $(check_dbmail_mailbox_DEPENDENCIES) 
 	@rm -f check_dbmail_mailbox$(EXEEXT)
 	$(LINK) $(check_dbmail_mailbox_LDFLAGS) $(check_dbmail_mailbox_OBJECTS) $(check_dbmail_mailbox_LDADD) $(LIBS)
@@ -752,6 +767,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_deliver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_dsn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_imapd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_list.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_mailbox.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_message.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_misc.Po@am__quote@
