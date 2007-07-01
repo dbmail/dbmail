@@ -223,12 +223,12 @@ GList *g_list_dedup_func(GList *list, GCompareFunc compare_func, int freeitems)
 /* Given a _sorted_ list of _char *_ entries, removes duplicates and frees them. */
 GList *g_list_dedup(GList *list)
 {
-	return g_list_dedup_func(list, strcmp, TRUE);
+	return g_list_dedup_func(list, (GCompareFunc)strcmp, TRUE);
 }
 
 /* Given a _sorted_ list of pointers to u64's, removes duplicates and frees the pointers to them. */
 GList *g_list_dedup_u64_p(GList *list)
 {
-	return g_list_dedup_func(list, strcmp, TRUE);
+	return g_list_dedup_func(list, (GCompareFunc)ucmp, TRUE);
 }
 
