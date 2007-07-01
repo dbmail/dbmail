@@ -45,6 +45,7 @@ int reallyquiet = 0;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 int has_errors = 0;
+int serious_errors = 0;
 
 /* set up database login data */
 extern db_param_t _db_params;
@@ -235,7 +236,7 @@ int main(int argc, char *argv[])
 
  	/* Don't make any changes unless specifically authorized. */
  	if (!yes_to_all) {
-		qprintf("Choosing dry-run mode. No changes will be made at this time.\n\n");
+		qprintf("Choosing dry-run mode. No changes will be made at this time.\n");
 		no_to_all = 1;
  	}
 
@@ -267,19 +268,28 @@ int main(int argc, char *argv[])
 	if (check_replycache) do_check_replycache(timespec_replycache);
 	if (vacuum_db) do_vacuum_db();
 
-	if (!has_errors) {
+	if (!has_errors && !serious_errors) {
 		qprintf("\nMaintenance done. No errors found.\n");
 	} else {
 		qerrorf("\nMaintenance done. Errors were found");
-		if (no_to_all) {
+		if (serious_errors) {
+			qerrorf(" but not fixed due to failures.\n");
+			qerrorf("Please check the logs for further details, "
+				"turning up the trace level as needed.\n");
+			// Indicate that something went really wrong
+			has_errors = 3;
+		} else if (no_to_all) {
 			qerrorf(" but not fixed.\n");
 			qerrorf("Run again with the '-y' option to "
 				"repair the errors.\n");
-		}
-		if (yes_to_all) {
+			// Indicate that the program should be run with -y
+			has_errors = 2;
+		} else if (yes_to_all) {
 			qerrorf(" and fixed.\n");
 			qerrorf("We suggest running dbmail-util again to "
-				"confirm that the errors were repaired.\n");
+				"confirm that all errors were repaired.\n");
+			// Indicate that the program should be run again
+			has_errors = 1;
 		}
 	}
 
@@ -288,7 +298,7 @@ int main(int argc, char *argv[])
 	config_free();
 	g_mime_shutdown();
 	
-	return 0;
+	return has_errors;
 }
 
 int do_purge_deleted(void)
@@ -300,6 +310,7 @@ int do_purge_deleted(void)
 		if (db_deleted_count(&deleted_messages) < 0) {
 			qerrorf
 			    ("Failed. An error occured. Please check log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%llu] messages have DELETE status.\n",
@@ -310,6 +321,7 @@ int do_purge_deleted(void)
 		if (db_deleted_purge(&deleted_messages) < 0) {
 			qerrorf
 			    ("Failed. An error occured. Please check log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%llu] messages deleted.\n", deleted_messages);
@@ -327,6 +339,7 @@ int do_set_deleted(void)
 		if (db_count_deleted(&messages_set_to_delete) == -1) {
 			qerrorf
 			    ("Failed. An error occured. Please check log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%llu] messages need to be set for deletion.\n",
@@ -337,6 +350,7 @@ int do_set_deleted(void)
 		if (db_set_deleted(&messages_set_to_delete) == -1) {
 			qerrorf
 			    ("Failed. An error occured. Please check log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%llu] messages set for deletion.\n",
@@ -345,6 +359,7 @@ int do_set_deleted(void)
 		if (db_calculate_quotum_all() < 0) {
 			qerrorf
 			    ("Failed. An error occured. Please check log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. Used quota updated for all users.\n");
@@ -361,13 +376,16 @@ GList *find_dangling_aliases(const char * const name)
 	GList *userids = NULL;
 	GList *dangling = NULL;
 
-	/* not a user, search aliases */
+	/* For each alias, figure out if it resolves to a valid user
+	 * or some forwarding address. If neither, remove it. */
+
 	dm_list_init(&fwds);
 	dm_list_init(&uids);
 	result = auth_check_user_ext(name,&uids,&fwds,0);
 	
 	if (!result) {
 		qerrorf("Nothing found searching for [%s].\n", name);
+		serious_errors = 1;
 		return dangling;
 	}
 
@@ -395,25 +413,29 @@ int do_dangling_aliases(void)
 	int result = 0;
 	GList *aliases = NULL;
 
-	/* For each alias, figure out if it resolves to a valid user
-	 * or some forwarding address. If neither, remove it. */
+	if (no_to_all)
+		qprintf("\nCounting aliases with nonexistent delivery userid's...\n");
+	if (yes_to_all)
+		qprintf("\nRemoving aliases with nonexistent delivery userid's...\n");
 
 	aliases = auth_get_known_aliases();
 	aliases = g_list_dedup(aliases);
 	aliases = g_list_first(aliases);
 	while (aliases) {
-		char forward[21];
+		char deliver_to[21];
 		GList *dangling = find_dangling_aliases(aliases->data);
 
 		dangling = g_list_first(dangling);
 		while (dangling) {
 			count++;
-			g_snprintf(forward, 21, "%llu", *(u64_t *)dangling->data);
+			g_snprintf(deliver_to, 21, "%llu", *(u64_t *)dangling->data);
 			qverbosef("Dangling alias [%s] delivers to nonexistent user [%s]\n",
-				(char *)aliases->data, forward);
+				(char *)aliases->data, deliver_to);
 			if (yes_to_all) {
-				if (auth_removealias_ext(aliases->data, forward) < 0) {
-					qerrorf("Error: could not remove forward [%s] \n", forward);
+				if (auth_removealias_ext(aliases->data, deliver_to) < 0) {
+					qerrorf("Error: could not remove alias [%s] deliver to [%s] \n",
+						(char *)aliases->data, deliver_to);
+					serious_errors = 1;
 					result = -1;
 				}
 			}
@@ -429,9 +451,11 @@ int do_dangling_aliases(void)
 	}
 	g_list_destroy(g_list_first(aliases));
 
-	if (count) {
+	if (count > 0) {
 		qerrorf("Ok. Found [%d] dangling aliases.\n", count);
 		has_errors = 1;
+	} else {
+		qprintf("Ok. Found [%d] dangling aliases.\n", count);
 	}
 
 	return result;
@@ -454,6 +478,7 @@ int do_null_messages(void)
 
 	if (db_icheck_null_messages(&lostlist) < 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -489,6 +514,7 @@ int do_null_messages(void)
 	time(&start);
 	if (db_icheck_null_physmessages(&lostlist) < 0) {
 		qerrorf("Failed, an error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -543,6 +569,7 @@ int do_check_integrity(void)
 	/* first part */
 	if (db_icheck_messageblks(&lostlist) < 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -592,6 +619,7 @@ int do_check_integrity(void)
 	if (db_icheck_messages(&lostlist) < 0) {
 		qerrorf
 		    ("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -645,6 +673,7 @@ int do_check_integrity(void)
 	if (db_icheck_mailboxes(&lostlist) < 0) {
 		qerrorf
 		    ("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -703,6 +732,7 @@ static int do_is_header(void)
 
 	if (db_icheck_isheader(&lost) < 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -744,6 +774,7 @@ static int do_rfc_size(void)
 
 	if (db_icheck_rfcsize(&lost) < 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -786,6 +817,7 @@ static int do_envelope(void)
 
 	if (db_icheck_envelope(&lost) < 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -819,14 +851,20 @@ int do_header_cache(void)
 	time_t start, stop;
 	GList *lost = NULL;
 	
-	if (do_rfc_size())
+	if (do_rfc_size()) {
+		serious_errors = 1;
 		return -1;
+	}
 
-	if (do_is_header())
+	if (do_is_header()) {
+		serious_errors = 1;
 		return -1;
+	}
 	
-	if (do_envelope())
+	if (do_envelope()) {
+		serious_errors = 1;
 		return -1;
+	}
 	
 	if (no_to_all) 
 		qprintf("\nChecking DBMAIL for cached header values...\n");
@@ -837,6 +875,7 @@ int do_header_cache(void)
 
 	if (db_icheck_headercache(&lost) < 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -850,7 +889,7 @@ int do_header_cache(void)
 	if (yes_to_all) {
 		if (db_set_headercache(lost) < 0) {
 			qerrorf("Error caching the header values ");
-			has_errors = 1;
+			serious_errors = 1;
 		}
 	}
 
@@ -872,6 +911,7 @@ int do_check_iplog(const char *timespec)
 	if (find_time(timespec, &timestring) != 0) {
 		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
 		       timespec);
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -879,6 +919,7 @@ int do_check_iplog(const char *timespec)
 		qprintf("\nCounting IP entries older than [%s]...\n", timestring);
 		if (db_count_iplog(timestring, &log_count) < 0) {
 			qerrorf("Failed. An error occured. Check the log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%llu] IP entries are older than [%s].\n",
@@ -888,6 +929,7 @@ int do_check_iplog(const char *timespec)
 		qprintf("\nRemoving IP entries older than [%s]...\n", timestring);
 		if (db_cleanup_iplog(timestring, &log_count) < 0) {
 			qerrorf("Failed. Please check the log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 
@@ -905,6 +947,7 @@ int do_check_replycache(const char *timespec)
 	if (find_time(timespec, &timestring) != 0) {
 		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
 		       timespec);
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -912,6 +955,7 @@ int do_check_replycache(const char *timespec)
 		qprintf("\nCounting RC entries older than [%s]...\n", timestring);
 		if (db_count_replycache(timestring, &log_count) < 0) {
 			qerrorf("Failed. An error occured. Check the log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%llu] RC entries are older than [%s].\n",
@@ -921,6 +965,7 @@ int do_check_replycache(const char *timespec)
 		qprintf("\nRemoving RC entries older than [%s]...\n", timestring);
 		if (db_cleanup_replycache(timestring, &log_count) < 0) {
 			qerrorf("Failed. Please check the log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 
@@ -940,6 +985,7 @@ int do_vacuum_db(void)
 		fflush(stdout);
 		if (db_cleanup() < 0) {
 			qerrorf("Failed. Please check the log.\n");
+			serious_errors = 1;
 			return -1;
 		}
 
@@ -965,16 +1011,22 @@ int find_time(const char *timespec, timestring_t *timestring)
 
 	time(&td);		/* get time */
 
-	if (!timespec)
+	if (!timespec) {
+		serious_errors = 1;
 		return -1;
+	}
 
 	/* find first num */
 	tmp = strtol(timespec, &end, 10);
-	if (!end)
+	if (!end) {
+		serious_errors = 1;
 		return -1;
+	}
 
-	if (tmp < 0)
+	if (tmp < 0) {
+		serious_errors = 1;
 		return -1;
+	}
 
 	switch (*end) {
 	case 'h':
@@ -986,12 +1038,15 @@ int find_time(const char *timespec, timestring_t *timestring)
 	case 'M':
 		hour = 0;
 		min = tmp;
-		if (end[1])	/* should end here */
+		if (end[1]) {	/* should end here */
+			serious_errors = 1;
 			return -1;
+		}
 
 		break;
 
 	default:
+		serious_errors = 1;
 		return -1;
 	}
 
@@ -1000,14 +1055,20 @@ int find_time(const char *timespec, timestring_t *timestring)
 	if (timespec[end - timespec + 1]) {
 		tmp = strtol(&timespec[end - timespec + 1], &end, 10);
 		if (end) {
-			if ((*end != 'm' && *end != 'M') || end[1])
+			if ((*end != 'm' && *end != 'M') || end[1]) {
+				serious_errors = 1;
 				return -1;
+			}
 
-			if (tmp < 0)
+			if (tmp < 0) {
+				serious_errors = 1;
 				return -1;
+			}
 
-			if (min >= 0)	/* already specified minutes */
+			if (min >= 0) {	/* already specified minutes */
+				serious_errors = 1;
 				return -1;
+			}
 
 			min = tmp;
 		}

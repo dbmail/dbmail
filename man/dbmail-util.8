@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-util
 .\"    Author: 
 .\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 06/24/2007
+.\"      Date: 06/30/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-UTIL" "8" "06/24/2007" "" ""
+.TH "DBMAIL\-UTIL" "8" "06/30/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -13,7 +13,7 @@
 .SH "NAME"
 dbmail\-util \- maintains the integrity and cleanliness of the DBMail datatables.
 .SH "SYNOPSIS"
-dbmail\-util [\-actubpd] [\-l time] [\-yn] [\-qvVh] [\-f configFile]
+dbmail\-util [\-actubpds] [\-l time] [\-yn] [\-qvVh] [\-f configFile]
 .SH "DESCRIPTION"
 The dbmail\-util program does a global database cleanup and integrity check. All messages that are set for deletion will be marked for final deletion (status 3). All message that are marked for final deletion will be cleared from the database. The integrity check will check for unconnected messageblocks, unconnected messages and unconnected mailboxes.
 .sp
@@ -37,11 +37,14 @@ Null message check.
 \-b
 Check and rebuild the body/header/envelope cache tables.
 .TP 3n
+\-p
+Purge messages with DELETE status. To purge messages currently marked \\Deleted, run with the \-pd options twice. This is not recommended; it is better to leave a grace period for old messages before permanently wiping them from the database.
+.TP 3n
 \-d
 Set DELETE status for messages flagged \\Deleted by IMAP or POP3.
 .TP 3n
-\-p
-Purge messages with DELETE status. To purge messages currently marked \\Deleted, run with the \-pd options twice. This is not recommended; it is better to leave a grace period for old messages before permanently wiping them from the database.
+\-s
+Remove dangling/invalid aliases and forwards.
 .TP 3n
 \-r time
 Clear the reply cache used for autoreplies and Sieve vacations. The time is specified as <hours>h<minutes>m (don't include the angle brackets, though!).
@@ -73,6 +76,8 @@ Show the version and copyright, then exit.
 .TP 3n
 \-h
 Show a brief summary of options, then exit.
+.SH "RETURN VALUES"
+Returns 3 when errors are found but could not be fixed, 2 when errors are found but \fI\-y\fR was not provided or \fI\-n\fR was provided, 1 when errors are found and fixed successfully, 0 when no errors are found.
 .SH "EXAMPLES"
 After upgrading from DBMail 2.0, run this command to populate the cache tables:
 .sp
@@ -106,6 +111,7 @@ Koningsweg 4
 3582 GE Utrecht
 http://www.ic\-s.nl
 .fi
+.sp
 .RE
 .SH "REFERENCES"
 .TP 3
