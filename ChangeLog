@@ -1,3 +1,23 @@
+2007-07-02  Paul J Stevens <paul@nfg.nl>
+
+	* serverparent.c:
+	allow zero spare children
+	* dbmail-imapsession.c, imapd.c:
+	fix sig11 in iconv code (bug #579)
+
+2007-07-01  Paul Stevens <paul@nfg.nl>
+
+	* Makefile.in, list.c, man/Makefile.in:
+	minor g_list_dedup fix and update of autoconf chain
+
+2007-06-29  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, lmtp.c:
+	make lmtpd return temp failure in case of database failure during 
+	insertion
+	* check_dbmail_db.c, db.c:
+	catch potential segfault
+
 2007-06-30  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail-user.c:
