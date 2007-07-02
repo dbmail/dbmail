@@ -1,6 +1,8 @@
 2007-07-02  Paul J Stevens <paul@nfg.nl>
 
-	* serverparent.c:
+	* dbmail-imapsession.c:
+	fix g_strncasecmp problem (JF)
+	* ChangeLog, serverparent.c:
 	allow zero spare children
 	* dbmail-imapsession.c, imapd.c:
 	fix sig11 in iconv code (bug #579)
