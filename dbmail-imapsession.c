@@ -179,8 +179,6 @@ struct ImapSession * dbmail_imap_session_new(void)
 {
 	struct ImapSession * self;
 
-	g_mime_init(0);
-
 	/* init: cache */
 	if (init_cache() != 0)
 		return NULL;
@@ -278,8 +276,6 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 
 	dbmail_imap_session_fetch_free(self);
 	dbmail_imap_session_args_free(self, TRUE);
-
-	g_mime_shutdown();
 
 	g_free(self);
 }

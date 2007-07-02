@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 	serverConfig_t config;
 	int result;
 		
+	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
        //fixes valgrind Conditional jump or move depends on uninitialised value(s)
@@ -60,6 +61,7 @@ int main(int argc, char *argv[])
 	result = serverparent_mainloop(&config, "IMAP", "dbmail-imapd");
 	
 shutdown:
+	g_mime_shutdown();
 	config_free();
 
 	TRACE(TRACE_INFO, "exit");
