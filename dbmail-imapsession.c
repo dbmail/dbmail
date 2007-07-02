@@ -2003,7 +2003,7 @@ int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
 		fgets(buffer, IDLE_BUFFER, ci->rx);
 		alarm(0);
 
-		if (g_strncasecmp(buffer,"DONE",4)==0)
+		if (strlen(buffer) > 4 && strncmp(buffer,"DONE",4)==0)
 			break;
 		else if (strlen(buffer) > 0) {
 			dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
