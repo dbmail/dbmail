@@ -404,7 +404,7 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
        config_get_value("MINSPARECHILDREN", service, val);
        if (strlen(val) == 0)
                TRACE(TRACE_FATAL, "no value for MINSPARECHILDREN in config file");
-       if ( (config->minSpareChildren = atoi(val)) <= 0)
+       if ( (config->minSpareChildren = atoi(val)) < 0)
                TRACE(TRACE_FATAL, "value for MINSPARECHILDREN is invalid: [%d]",
                        config->minSpareChildren);
 
