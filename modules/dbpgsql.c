@@ -42,6 +42,9 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_TO_DATETIME:
 			return "TO_TIMESTAMP(%s, 'YYYY-MM-DD HH24:MI:SS')";
 		break;
+		case SQL_TO_UNIXEPOCH:
+			return "ROUND(DATE_PART('epoch',%s))";
+		break;
 		case SQL_CURRENT_TIMESTAMP:
 			return "CURRENT_TIMESTAMP";
 		break;

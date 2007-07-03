@@ -540,6 +540,43 @@ START_TEST(test_dbmail_mailbox_remove_uid)
 }
 END_TEST
 
+#define DEF_FRAGSIZE 64
+static int dbmail_mailbox_get_mtime(struct DbmailMailbox *self)
+{
+	int res;
+	char q[DEF_QUERYSIZE];
+	char t[DEF_FRAGSIZE];
+	memset(q,0,DEF_QUERYSIZE);
+	memset(t,0,DEF_FRAGSIZE);
+
+	snprintf(t,DEF_FRAGSIZE,db_get_sql(SQL_TO_UNIXEPOCH), "mtime");
+	snprintf(q, DEF_QUERYSIZE, "SELECT %s FROM %smailboxes WHERE mailbox_idnr=%llu",
+		t, DBPFX, self->id);
+
+	if (db_query(q) == DM_EQUERY)
+		return DM_EQUERY;
+	
+	if (db_num_rows() == 0) {
+		TRACE(TRACE_ERROR, "failed. No such mailbox [%llu]", self->id);
+		db_free_result();
+		return 0;
+	}
+
+	res = db_get_result_int(0,0);
+	db_free_result();
+	return res;
+
+}
+
+START_TEST(test_dbmail_mailbox_get_mtime)
+{
+	int mtime;
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	mtime = dbmail_mailbox_get_mtime(mb);
+	fail_unless(mtime > 0,"dbmail_mailbox_get_mtime failed [%d]", mtime);
+}
+END_TEST
+
 Suite *dbmail_mailbox_suite(void)
 {
 	Suite *s = suite_create("Dbmail Mailbox");
@@ -559,6 +596,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_remove_uid);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_mtime);
 	return s;
 }
 

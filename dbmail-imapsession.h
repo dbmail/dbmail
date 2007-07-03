@@ -26,7 +26,8 @@ struct ImapSession {
 	GTree *ids;
 	GTree *headers;
 	GTree *envelopes;
-	GTree *msginfo;
+	GTree *msginfo; // cache msginfo
+	GTree *mbxinfo; // cache mailbox_t
 	GList *recent;
 	GList *ids_list;
 	gpointer cmd; // command structure

@@ -32,6 +32,7 @@
 
 #include "dbmail.h"
 #define THIS_MODULE "db"
+#define DEF_FRAGSIZE 64
 
 // Flag order defined in dbmailtypes.h
 static const char *db_flag_desc[] = {
@@ -2885,10 +2886,6 @@ int db_getmailbox_flags(mailbox_t *mb)
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
 	
 	mb->flags = 0;
-	mb->exists = 0;
-	mb->unseen = 0;
-	mb->recent = 0;
-	mb->msguidnext = 0;
 
 	/* select mailbox */
 	snprintf(query, DEF_QUERYSIZE,
@@ -2988,16 +2985,56 @@ int db_getmailbox_count(mailbox_t *mb)
 	return DM_SUCCESS;
 }
 
+int db_getmailbox_mtime(mailbox_t * mb)
+{
+	char q[DEF_QUERYSIZE];
+	char t[DEF_FRAGSIZE];
+	memset(q,0,DEF_QUERYSIZE);
+	memset(t,0,DEF_FRAGSIZE);
+
+	snprintf(t,DEF_FRAGSIZE,db_get_sql(SQL_TO_UNIXEPOCH), "mtime");
+	snprintf(q, DEF_QUERYSIZE, "SELECT name,%s FROM %smailboxes WHERE mailbox_idnr=%llu",
+		t, DBPFX, mb->uid);
+
+	if (db_query(q) == DM_EQUERY)
+		return DM_EQUERY;
+	
+	if (db_num_rows() == 0) {
+		TRACE(TRACE_ERROR, "failed. No such mailbox [%llu]", mb->uid);
+		db_free_result();
+		return DM_EGENERAL;
+	}
+	
+	if (! mb->name)
+		mb->name = g_strdup(db_get_result(0,0));
+
+	mb->mtime = (time_t)db_get_result_int(0,1);
+	db_free_result();
+
+	return DM_SUCCESS;
+}
+
+
 int db_getmailbox(mailbox_t * mb)
 {
 	int res;
+	int oldmtime;
 	
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
+
+	oldmtime = mb->mtime;
 	
+	if ((res = db_getmailbox_mtime(mb)) != DM_SUCCESS)
+		return res;
+
+	if (mb->msguidnext && mb->flags && mb->mtime == oldmtime)
+		return DM_SUCCESS;
+
 	if ((res = db_getmailbox_flags(mb)) != DM_SUCCESS)
 		return res;
 	if ((res = db_getmailbox_count(mb)) != DM_SUCCESS)
 		return res;
+
 	return DM_SUCCESS;
 }
 

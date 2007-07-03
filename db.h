@@ -943,8 +943,9 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
  *     - -1 on failure
  *     - 0 on success
  */
-int db_getmailbox_flags(mailbox_t *mb);
-int db_getmailbox_count(mailbox_t *mb);
+int db_getmailbox_flags(mailbox_t * mb);
+int db_getmailbox_count(mailbox_t * mb);
+int db_getmailbox_mtime(mailbox_t * mb);
 int db_getmailbox(mailbox_t * mb);
 
 /**

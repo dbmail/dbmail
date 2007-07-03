@@ -328,6 +328,7 @@ typedef struct {
 	char *name;
 	unsigned no_select, no_inferiors, exists, recent, unseen, no_children, flags;
 	int permission;
+	time_t mtime;
 	gboolean is_public, is_users, is_inbox;
 } mailbox_t;
 
@@ -490,6 +491,7 @@ typedef enum {
 typedef enum {
 	SQL_TO_DATE,
 	SQL_TO_DATETIME,
+	SQL_TO_UNIXEPOCH,
 	SQL_TO_CHAR,
 	SQL_CURRENT_TIMESTAMP,
 	SQL_EXPIRE,

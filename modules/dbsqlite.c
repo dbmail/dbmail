@@ -52,6 +52,9 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_TO_DATETIME:
 			return "DATETIME(%s)";
 		break;
+		case SQL_TO_UNIXEPOCH:
+			return "STRFTIME('%%s',%s)";
+		break;
 		case SQL_CURRENT_TIMESTAMP:
 			return "STRFTIME('%Y-%m-%d %H:%M:%S','now','localtime')";
 		break;

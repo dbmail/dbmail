@@ -1,3 +1,23 @@
+2007-07-03  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_db.c, check_dbmail_mailbox.c, check_dbmail_user.c, 
+	db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, dbmail.conf, 
+	dbmailtypes.h, imapcommands.c, modules/dbmysql.c, modules/dbpgsql.c, 
+	modules/dbsqlite.c, sql/mysql/2_2_5-2_3_0.mysql, 
+	sql/postgresql/2_2_5-2_3_0.pgsql, sql/postgresql/create_tables.pgsql, 
+	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite, 
+	test-scripts/testimap.py:
+	merge branch/fastmailbox
+
+2007-07-02  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, dbmail-imapsession.c:
+	fix g_strncasecmp problem (JF)
+	* ChangeLog, serverparent.c:
+	allow zero spare children
+	* dbmail-imapsession.c, imapd.c:
+	fix sig11 in iconv code (bug #579)
+
 2007-07-02  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:

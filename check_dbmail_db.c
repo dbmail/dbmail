@@ -57,6 +57,15 @@ char *alias_mailbox = "testfailalias+foomailbox@nonexistantdomain";
 char *userpart_catchall = "testfailcatchall@";
 char *domain_catchall = "@nonexistantdomain";
 
+static u64_t get_mailbox_id(const char *name)
+{
+	u64_t id, owner;
+	auth_user_exists("testuser1",&owner);
+	db_find_create_mailbox(name, BOX_COMMANDLINE, owner, &id);
+	return id;
+}
+
+
 /*
  *
  * the test fixtures
@@ -95,9 +104,12 @@ void setup(void)
 void teardown(void)
 {
 	u64_t mailbox_id=0;
-	if (db_findmailbox("testcreatebox",testidnr,&mailbox_id))
+	if (db_findmailbox("INBOX/Trash",testidnr,&mailbox_id))
 		db_delete_mailbox(mailbox_id,0,0);
 			
+	if (db_findmailbox("testcreatebox",testidnr,&mailbox_id))
+		db_delete_mailbox(mailbox_id,0,0);
+
 	if (db_findmailbox("testpermissionbox",testidnr,&mailbox_id)) {
 		db_mailbox_set_permission(mailbox_id, IMAPPERM_READWRITE);
 		db_delete_mailbox(mailbox_id,0,0);
@@ -868,6 +880,23 @@ END_TEST
  */
 //int db_getmailbox(mailbox_t * mb);
 
+START_TEST(test_db_getmailbox)
+{
+	int res;
+	mailbox_t mb;
+	memset(&mb,0,sizeof(mailbox_t));
+	
+	mb.uid = get_mailbox_id("INBOX");
+	
+	res = db_getmailbox(&mb);
+	res = db_getmailbox(&mb);
+	res = db_getmailbox(&mb);
+
+
+}
+END_TEST
+
+
 /**
  * \brief find owner of a mailbox
  * \param mboxid id of mailbox
@@ -1191,6 +1220,7 @@ Suite *dbmail_db_suite(void)
 	tcase_add_checked_fixture(tc_db, setup, teardown);
 	tcase_add_test(tc_db, test_db_query);
 	tcase_add_test(tc_db, test_db_createmailbox);
+	tcase_add_test(tc_db, test_db_getmailbox);
 	tcase_add_test(tc_db, test_db_mailbox_create_with_parents);
 	tcase_add_test(tc_db, test_db_delete_mailbox);
 	tcase_add_test(tc_db, test_db_mailbox_set_permission);
