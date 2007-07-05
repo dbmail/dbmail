@@ -330,6 +330,7 @@ int db_query(const char *the_query)
 {
 	time_t before, after;
 	char *errmsg;
+	int res, retry=5;
 
 	if (lastq) {
 		if (lastq->resp) sqlite3_free_table(lastq->resp);
@@ -342,13 +343,26 @@ int db_query(const char *the_query)
 	}
 	TRACE(TRACE_DEBUG,"%s", the_query);
 
-	before = time(NULL);
-	if (sqlite3_get_table(conn, the_query, &lastq->resp,
-				(int *)&lastq->rows, (int *)&lastq->cols, &errmsg) != SQLITE_OK) {
+	while (TRUE) {
+		before = time(NULL);
+		res = sqlite3_get_table(conn, the_query, &lastq->resp,
+			 (int *)&lastq->rows, (int *)&lastq->cols, &errmsg);
+
+		if (res == SQLITE_OK)
+			break;
+		
+		if ((res == SQLITE_BUSY || res == SQLITE_LOCKED) && (retry-- > 0)) {
+			TRACE(TRACE_DEBUG,"database locked, retrying...");
+			sqlite3_free(errmsg);
+			usleep(200);
+			continue;
+		}
+
 		TRACE(TRACE_ERROR, "sqlite3_get_table failed: %s", errmsg);
 		sqlite3_free(errmsg);
 		return -1;
 	}
+
 	after = time(NULL);
 
 	if (before == (time_t)-1 || after == (time_t)-1) {
