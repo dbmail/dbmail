@@ -1,3 +1,24 @@
+2007-07-05  Paul Stevens <paul@nfg.nl>
+
+	* modules/dbsqlite.c:
+	add incremental sleep time between retries in case of sqlite locks
+
+2007-07-04  Paul Stevens <paul@nfg.nl>
+
+	* modules/dbsqlite.c:
+	add retry loop to sqlite db_query
+
+2007-07-03  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_db.c, check_dbmail_mailbox.c, 
+	check_dbmail_user.c, db.c, db.h, dbmail-imapsession.c, 
+	dbmail-imapsession.h, dbmail.conf, dbmailtypes.h, imapcommands.c, 
+	modules/dbmysql.c, modules/dbpgsql.c, modules/dbsqlite.c, 
+	sql/mysql/2_2_5-2_3_0.mysql, sql/postgresql/2_2_5-2_3_0.pgsql, 
+	sql/postgresql/create_tables.pgsql, sql/sqlite/2_2_5-2_3_0.sqlite, 
+	sql/sqlite/create_tables.sqlite, test-scripts/testimap.py:
+	merge branch/fastmailbox
+
 2007-07-03  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_db.c, check_dbmail_mailbox.c, check_dbmail_user.c, 
