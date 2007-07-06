@@ -472,27 +472,20 @@ void dsnuser_free_list(struct dm_list *deliveries)
 	dm_list_free(&deliveries->start);
 }
 
-delivery_status_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
+dsn_class_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
 {
-	delivery_status_t dsn;
-	
-	dsn.class = DSN_CLASS_NONE;
-	dsn.subject = 0;
-	dsn.detail = 0;
-
-	if (ok)
-		dsn.class = DSN_CLASS_OK;
-	if (fail_quota)
-		dsn.class = DSN_CLASS_FAIL, dsn.subject = 2, dsn.detail = 2;
-	if (fail)
-		dsn.class = DSN_CLASS_FAIL;
 	if (temp)
-		dsn.class = DSN_CLASS_TEMP;
-	
-	return dsn;
+		return DSN_CLASS_TEMP;
+	if (fail)
+		return DSN_CLASS_FAIL;
+	if (fail_quota)
+		return DSN_CLASS_QUOTA;
+	if (ok)
+		return DSN_CLASS_OK;
+	return DSN_CLASS_NONE;
 }
 
-delivery_status_t dsnuser_worstcase_list(struct dm_list * deliveries)
+dsn_class_t dsnuser_worstcase_list(struct dm_list * deliveries)
 {
 	delivery_status_t dsn;
 	struct element *tmp;

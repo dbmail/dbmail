@@ -118,7 +118,7 @@ int dsnuser_resolve(deliver_to_user_t *dsnuser);
  * \return
  *   - see dsn_class_t for details.
  */
-delivery_status_t dsnuser_worstcase_list(struct dm_list *deliveries);
+dsn_class_t dsnuser_worstcase_list(struct dm_list *deliveries);
 
 /**
  * \brief Given true/false values for each of the three
@@ -132,6 +132,6 @@ delivery_status_t dsnuser_worstcase_list(struct dm_list *deliveries);
  * \return
  *   - see dsn_class_t for details.
  */
-delivery_status_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota);
+dsn_class_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota);
 
 #endif				/* DSN_H */

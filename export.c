@@ -48,8 +48,6 @@ int do_showhelp(void) {
 	printf("                   \"1:* SINCE 1-May-2007 BEFORE 1-Jun-2007\"\n");
 	printf("     -d            flag exported messages as \\Deleted (use dbmail-util to expunge)\n");
 	printf("\n");
-	printf("Summary of options for all modes:\n");
-	printf("\n");
         printf("Common options for all DBMail utilities:\n");
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -q        quietly skip interactive prompts\n"
