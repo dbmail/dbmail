@@ -185,6 +185,7 @@ void SetTraceLevel(const char *service_name)
 void GetDBParams(db_param_t * db_params)
 {
 	field_t port_string, sock_string, serverid_string;
+	field_t query_time;
 	
 	if (config_get_value("driver", "DBMAIL", db_params->driver) < 0)
 		TRACE(TRACE_FATAL, "error getting config! [driver]");
@@ -210,6 +211,27 @@ void GetDBParams(db_param_t * db_params)
 		TRACE(TRACE_FATAL, "error getting config! [encoding]");
 	if (config_get_value("table_prefix", "DBMAIL", db_params->pfx) < 0)
 		TRACE(TRACE_FATAL, "error getting config! [table_prefix]");
+
+	if (config_get_value("query_time_info", "DBMAIL", query_time) < 0)
+		TRACE(TRACE_FATAL, "error getting config! [query_time_info]");
+		if (strlen(query_time) != 0)
+			db_params->query_time_info = (unsigned int) strtoul(query_time, NULL, 10);
+		else
+			db_params->query_time_info = 10;
+
+	if (config_get_value("query_time_message", "DBMAIL", query_time) < 0)
+		TRACE(TRACE_FATAL, "error getting config! [query_time_message]");
+		if (strlen(query_time) != 0)
+			db_params->query_time_message = (unsigned int) strtoul(query_time, NULL, 10);
+		else
+			db_params->query_time_message = 20;
+
+	if (config_get_value("query_time_warning", "DBMAIL", query_time) < 0)
+		TRACE(TRACE_FATAL, "error getting config! [query_time_warning]");
+		if (strlen(query_time) != 0)
+			db_params->query_time_warning = (unsigned int) strtoul(query_time, NULL, 10);
+		else
+			db_params->query_time_warning = 30;
 
 	if (strcmp(db_params->pfx, "\"\"") == 0) {
 		/* FIXME: It appears that when the empty string is quoted

@@ -606,7 +606,7 @@ int insert_messages(struct DbmailMessage *message,
 			}
 		} /* from: the useridnr for loop */
 
-		final_dsn = dsnuser_worstcase_int(has_2, has_4, has_5, has_5_2);
+		final_dsn.class = dsnuser_worstcase_int(has_2, has_4, has_5, has_5_2);
 		switch (final_dsn.class) {
 		case DSN_CLASS_OK:
 			/* Success. Address related. Valid. */
@@ -705,7 +705,7 @@ int send_alert(u64_t user_idnr, char *subject, char *body)
 		from = DEFAULT_POSTMASTER;
 
 	// Set the \Flagged flag.
-	memset(msgflags, 0, IMAP_NFLAGS);
+	memset(msgflags, 0, sizeof(int) * IMAP_NFLAGS);
 	msgflags[IMAP_FLAG_FLAGGED] = 1;
 
 	// Get the user's login name.

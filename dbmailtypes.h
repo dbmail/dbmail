@@ -99,6 +99,9 @@ typedef struct {
 	field_t pfx;		/**< prefix for tables e.g. dbmail_ */
 	unsigned int serverid;	/**< unique id for dbmail instance used in clusters */
 	field_t encoding;	/**< character encoding to use */
+	unsigned int query_time_info;
+	unsigned int query_time_message;
+	unsigned int query_time_warning;
 } db_param_t;
 
 /** configuration items */
