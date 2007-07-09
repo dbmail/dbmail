@@ -1,3 +1,15 @@
+2007-07-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* dsn.c, dsn.c, pipe.c, main.c:
+	Properly fixed incorrect dsn class for mailbox over quota (closes bug
+	#617)
+	* dbmailtypes.h, config.c, dbmodule.c, modules/dbsqlite.c,
+	modules/dbmysql.c, modules/dbpgsql.c:
+	Added three new config options for escalating the trace level of slow
+	queries. Moved query timing from each modules/dbfoo.c to dbmodule.c.
+	* export.c:
+	Removed extra words from help output.
+
 2007-07-05  Paul Stevens <paul@nfg.nl>
 
 	* modules/dbsqlite.c:

@@ -267,7 +267,6 @@ u64_t db_insert_result(const char *sequence_identifier)
 
 int db_query(const char *q)
 {
-	time_t before, after;
 	int PQresultStatusVar;
 	
 	db_free_result();
@@ -279,25 +278,8 @@ int db_query(const char *q)
 
 	TRACE(TRACE_DEBUG, "[%s]", q);
 
-	before = time(NULL);
 	if (! (res = PQexec(conn, q)))
 		return DM_EQUERY;
-	after = time(NULL);
-
-	if (before == (time_t)-1 || after == (time_t)-1) {
-		/* Can't log because time(2) failed. */
-	} else {
-		/* This is signed on the chance that ntpd ran during the query
-		 * so it might look like it went back in time. */
-		int elapsed = (int)((time_t) (after - before));
-		TRACE(TRACE_DEBUG, "last query took [%d] seconds", elapsed);
-		if (elapsed > 10)
-			TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", q, elapsed);
-		if (elapsed > 20)
-			TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", q, elapsed);
-		if (elapsed > 40)
-			TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", q, elapsed);
-	}
 	
 	PQresultStatusVar = PQresultStatus(res);
 
