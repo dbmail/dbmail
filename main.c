@@ -344,17 +344,22 @@ int main(int argc, char *argv[])
 		exitcode = EX_TEMPFAIL;
 	}
 
-      freeall:			/* Goto's here! */
+	freeall:	/* Goto's here! */
 	
 	/* If there wasn't already an EX_TEMPFAIL from insert_messages(),
 	 * then see if one of the status flags was marked with an error. */
 	if (!exitcode) {
-
 		const char *class, *subject, *detail;
 		delivery_status_t final_dsn;
+		set_dsn(&final_dsn, 0, 0, 0);
 
-		/* Get one reasonable error code for everyone. */
-		final_dsn = dsnuser_worstcase_list(&dsnusers);
+		/* Get one reasonable error code for everyone.
+		 * This is an inherently unreasonable process,
+		 * and can lead to repeated attempts to deliver mail
+		 * when just one of several recipients has a problem. */
+		final_dsn.class = dsnuser_worstcase_list(&dsnusers);
+		if (final_dsn.class == 6) /* Hack for DSN_CLASS_QUOTA */
+			set_dsn(&final_dsn, 5, 2, 2);
 		dsn_tostring(final_dsn, &class, &subject, &detail);
 
 		switch (final_dsn.class) {
@@ -367,17 +372,22 @@ int main(int argc, char *argv[])
 		case DSN_CLASS_NONE:
 		case DSN_CLASS_QUOTA:
 		case DSN_CLASS_FAIL:
-			/* shout */
-			TRACE(TRACE_WARNING, "%d%d%d  %s %s %s\r\n",
-					final_dsn.class, final_dsn.subject, final_dsn.detail,
-					class, subject, detail);
-
 			if (final_dsn.subject == 2) /* Mailbox Status */
 				exitcode = EX_CANTCREAT;
 			else
 				exitcode = EX_NOUSER;
 			break;
 		}
+
+		/* Unfortunately, dbmail-smtp only gets to return a single worst-case code. */
+		TRACE(TRACE_MESSAGE, "exit code [%d] from DSN [%d%d%d  %s %s %s]",
+			exitcode,
+			final_dsn.class, final_dsn.subject, final_dsn.detail,
+			class, subject, detail);
+	} else {
+		/* Something went wrong earlier on, get louder about it. */
+		TRACE(TRACE_WARNING, "exit code [%d] because something went wrong;"
+			" turn up trace level for more detail", exitcode);
 	}
 
 	dbmail_message_free(msg);
@@ -386,7 +396,7 @@ int main(int argc, char *argv[])
 	g_free(returnpath);
 	g_list_destroy(userlist);
 
-	TRACE(TRACE_DEBUG, "they're all free. we're done.");
+	TRACE(TRACE_DEBUG, "program memory free");
 
 	db_disconnect();
 	auth_disconnect();
@@ -394,7 +404,8 @@ int main(int argc, char *argv[])
 
 	g_mime_shutdown();
 
-	TRACE(TRACE_DEBUG, "exit code is [%d].", exitcode);
+	TRACE(TRACE_DEBUG, "library memory free");
+
 	return exitcode;
 }
 
