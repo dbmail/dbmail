@@ -68,7 +68,7 @@ int do_add(const char * const user,
 		user, enctype, maxmail, clientid);
 
 	if ((result = auth_user_exists(user, &useridnr))) {
-		qerrorf("Failed: check logs for details\n");
+		qerrorf("Failed: user name already exists\n");
 		return result;
 	}
 
