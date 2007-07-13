@@ -322,7 +322,7 @@ static int _messageblks_dump(struct DbmailMailbox *self, GMimeStream *ostream)
 				if (t->len > 0) {
 					message = dbmail_message_new();
 					message = dbmail_message_init_with_string(message,t);
-					if(dump_message_to_stream(message,ostream) > 0)
+					if (dump_message_to_stream(message,ostream) > 0)
 						count++;
 					dbmail_message_free(message);
 				}
@@ -407,6 +407,7 @@ static int _mimeparts_dump(struct DbmailMailbox *self, GMimeStream *ostream)
 	return count;
 }
 
+/* Caller must fclose the file pointer itself. */
 int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 {
 	int count = 0;
@@ -420,6 +421,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	assert(self->ids);
 
 	ostream = g_mime_stream_file_new(file);
+	g_mime_stream_file_set_owner (ostream, FALSE);
+
 	
 	count =+ _mimeparts_dump(self, ostream);
 	//count =+ _messageblks_dump(self, ostream);
