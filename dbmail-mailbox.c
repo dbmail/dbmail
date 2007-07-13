@@ -269,6 +269,7 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 	return r;
 }
 
+/* Caller must fclose the file pointer itself. */
 int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 {
 	unsigned i,j;
@@ -289,6 +290,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	q = g_string_new("");
 	t = g_string_new("");
 	ostream = g_mime_stream_file_new(file);
+	g_mime_stream_file_set_owner (ostream, FALSE);
+
 	
 	ids = g_tree_keys(self->ids);
 
@@ -351,7 +354,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	if (t->len) {
 		message = dbmail_message_new();
 		message = dbmail_message_init_with_string(message,t);
-		if (dump_message_to_stream(message,ostream) > 0)
+		if (dump_message_to_stream(message, ostream) > 0)
 			count++;
 		dbmail_message_free(message);
 	}

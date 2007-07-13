@@ -1,3 +1,10 @@
+2007-07-12  Aaron Stone  <aaron@serendipity.cx>
+
+	* export.c, man/dbmail-export.txt:
+	New options: -b basedir, -r recursive.
+	* dbmail-mailbox.c:
+	Tell GMime that it does not own the dbmail_mailbox_dump file pointer.
+
 2007-07-06  Aaron Stone  <aaron@serendipity.cx>
 
 	* dsn.c, dsn.c, pipe.c, main.c:

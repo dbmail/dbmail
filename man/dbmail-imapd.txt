@@ -75,7 +75,7 @@ For stunnel:::
   connect = 143
 
   # Useful if your preferred SMTP server doesn't do SSL/TLS.
-  # This is with your MTA configuration, not DBMAil, per se.
+  # This is with your MTA configuration, not DBMail, per se.
   [ssmtp]
   accept  = 465
   connect = 25
