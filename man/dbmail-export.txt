@@ -8,13 +8,12 @@ dbmail-export - export a mailbox from the DBMail mailsystem to mbox format.
 
 SYNOPSIS
 --------
-dbmail-export [-u user] [-m mailbox] [-o outfile] [-s imap search] [-d] [-f configFile]
+dbmail-export [-dr] [-u user] [-m mailbox] [-s imap search] [-o outfile|-b basedir] [-f configFile]
 
 DESCRIPTION
 -----------
 The dbmail-export program allows you to export a DBMail mailbox to an
 mbox formatted mailbox.
-
 
 OPTIONS
 -------
@@ -27,13 +26,20 @@ OPTIONS
 -o outfile::
   specify the file into which the exported mail will be saved.
 
+-b basedir::
+  specify the base directory into which the exported mailboxes will be saved.
+
 -s search::
   use an IMAP SEARCH string to select messages (default: 1:\*)
   for example, to export all messages received in May, use:
       "1:* SINCE 1-May-2007 BEFORE 1-Jun-2007"
 
 -d::
-  flag exported messages as \\Deleted (use dbmail-util to expunge)
+  flag exported messages as \\Deleted (use dbmail-util to expunge).
+
+-r::
+  export mailboxes recursively (default: true unless -m option also
+  specified).
 
 include::commonopts.txt[]
 
