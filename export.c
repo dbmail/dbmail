@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
-		"-u:m:o:s:dr" /* Major modes */
+		"-u:m:o:b:s:dr" /* Major modes */
 		"f:qvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
