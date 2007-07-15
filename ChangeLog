@@ -1,3 +1,18 @@
+2007-07-15  Paul J Stevens <paul@nfg.nl>
+
+	* modules/authldap.c:
+	use sigaction instead of signal in ldap code
+
+2007-07-14  Paul Stevens <paul@nfg.nl>
+
+	* VERSION:
+	v2.2.6-rc1
+
+2007-07-05  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, modules/dbsqlite.c:
+	add incremental sleep time between retries in case of sqlite locks
+
 2007-07-12  Aaron Stone  <aaron@serendipity.cx>
 
 	* export.c, man/dbmail-export.txt:
