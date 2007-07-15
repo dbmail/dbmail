@@ -1,3 +1,27 @@
+2007-07-15  Paul J Stevens <paul@nfg.nl>
+
+	* modules/authldap.c:
+	use sigaction instead of signal in ldap code
+
+2007-07-09  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, config.c, dbmailtypes.h, dbmodule.c, modules/dbmysql.c, 
+	modules/dbpgsql.c, modules/dbsqlite.c:
+	Added three new config options for escalating the trace level of slow 
+	queries. Moved query timing from each modules/ (Aaron)
+	* export.c:
+	Removed extra words from help output (Aaron)
+	* dsn.c, dsn.h, main.c, pipe.c:
+	Properly fixed incorrect dsn class for mailbox over quota (closes bug 
+	#617) (Aaron)
+
+2007-07-05  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, modules/dbsqlite.c:
+	add incremental sleep time between retries in case of sqlite locks
+	* modules/dbsqlite.c:
+	add retry loop to sqlite db_query
+
 2007-07-12  Aaron Stone  <aaron@serendipity.cx>
 
 	* export.c, man/dbmail-export.txt:
