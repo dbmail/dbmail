@@ -218,15 +218,19 @@ int auth_disconnect(void)
 {
 	/* Destroy the connection */
 	if (_ldap_conn != NULL) {
-		/* If LDAP server has gone, we will caught SIGPIPE in 
-		 * ldap_unbind... so we should catch it.
-		 */
-		sighandler_t sigh = signal(SIGPIPE, SIG_IGN);
+		/* If LDAP server has gone, we will catch a SIGPIPE in 
+		 * ldap_unbind... we should ignore it.  */
+		struct sigaction act, oldact;
+
+		memset(&act, 0, sizeof(act));
+		memset(&oldact, 0, sizeof(oldact));
+		act.sa_handler = SIG_IGN;
+		sigaction(SIGPIPE, &act, &oldact);
 
 		ldap_unbind(_ldap_conn);
 		_ldap_conn = NULL;
 
-		signal (SIGPIPE, sigh);
+		sigaction(SIGPIPE, &oldact, 0);
 	}
 	return 0;
 }
