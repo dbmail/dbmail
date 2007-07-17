@@ -34,12 +34,15 @@ int verbose = 0;
 
 extern db_param_t _db_params;
 
-int do_showhelp(void) {
-	
+void do_showhelp(void)
+{
 	printf(
+//	Try to stay under the standard 80 column width
+//	0........10........20........30........40........50........60........70........80
 	"*** dbmail-export ***\n"
 	"Use this program to export your DBMail mailboxes.\n"
-	"     -u username   specify a user\n"
+	"See the man page for more info. Summary:\n"
+	"     -u username   specify a user, wildcards ? and * accepted\n"
 	"     -m mailbox    specify a mailbox (default: export all mailboxes recursively)\n"
 	"     -b basedir    specify the destination base dir (default: ./user/mailbox.mbox)\n"
 	"                   note that files are always opened in append mode\n"
@@ -59,10 +62,6 @@ int do_showhelp(void) {
 	"     -V        show the version\n"
 	"     -h        show this help message\n"
 	);
-	
-	return 0;
-	
-
 }
 
 static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
@@ -185,8 +184,6 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 	 *   If we're dumping one mailbox for one user, it goes to
 	 *   stdout.  If we've been given -o -, dump everything to
 	 *   stdout (e.g., one giant mbox).  If we've been given foo
-	 *   What the fuck is wrong with the loser sitting next to me?
-	 *   Goddamit, this requires some blog action.
 	 */
 
 	if (!outfile && !basedir) {
@@ -340,7 +337,7 @@ int main(int argc, char *argv[])
 	}	
 
 	/* If nothing is happening, show the help text. */
-	if ((basedir && outfile) || show_help) {
+	if (!user || (basedir && outfile) || show_help) {
 		do_showhelp();
 		result = 1;
 		goto freeall;
@@ -370,10 +367,18 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
-	if (!user) {
-		/* Loop over all user accounts*/
-		GList *users = auth_get_known_users();
-		users = g_list_first(users);
+	/* Loop over all user accounts if there's a wildcard. */
+	if (strchr(user, '?') || strchr(user, '*')) {
+		GList *all_users = auth_get_known_users();
+		GList *matching_users = match_glob_list(user, all_users);
+		GList *users = g_list_first(matching_users);
+
+		if (!users) {
+			qerrorf("Error: no users matching [%s] were found.\n", user);
+			g_list_destroy(all_users);
+			result = -1;
+			goto freeall;
+		}
 
 		while (users) {
 			result = do_export(users->data, mailbox,
@@ -384,7 +389,11 @@ int main(int argc, char *argv[])
 				break;
 			users = g_list_next(users);
 		}
+
+		g_list_destroy(all_users);
+		g_list_destroy(matching_users);
 	} else {
+		/* No globbing, just run with this one user. */
 		result = do_export(user, mailbox,
 			basedir, outfile, search,
 			delete_after_dump, recursive);

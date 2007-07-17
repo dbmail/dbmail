@@ -1,3 +1,8 @@
+2007-07-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* export.c, man/dbmail-export.txt:
+	Require the -u argument, add support for wildcards.
+
 2007-07-15  Paul J Stevens <paul@nfg.nl>
 
 	* modules/authldap.c:
@@ -22,6 +27,7 @@
 	* modules/dbsqlite.c:
 	add retry loop to sqlite db_query
 
+>>>>>>> .r2711
 2007-07-12  Aaron Stone  <aaron@serendipity.cx>
 
 	* export.c, man/dbmail-export.txt:
