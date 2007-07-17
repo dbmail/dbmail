@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-export
 .\"    Author: 
 .\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 07/12/2007
+.\"      Date: 07/16/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-EXPORT" "8" "07/12/2007" "" ""
+.TH "DBMAIL\-EXPORT" "8" "07/16/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -19,7 +19,7 @@ The dbmail\-export program allows you to export a DBMail mailbox to an mbox form
 .SH "OPTIONS"
 .TP 3n
 \-u user
-specify the owner of the mailbox you want to export.
+specify the owner of the mailbox you want to export, using wildcards ? and * to match one or none, or one or more characters in the username, respectively.
 .TP 3n
 \-m mailbox
 specify the mailbox you want to export.
@@ -55,15 +55,25 @@ Show the version and copyright, then exit.
 \-h
 Show a brief summary of options, then exit.
 .SH "EXAMPLES"
-To export and delete all messages belonging to user \fIJoe\fR in mailbox \fIInbox\fR more than 30 days old, try this command line:
+To export and delete all messages belonging to user \fIJoe\fR in mailbox \fIInbox\fR more than 30 days old, try this command:
 .sp
 .RS 3n
 .nf
-dbmail\-export \-u joe \-m inbox \-o textbox5 \-d \-s "1:* BEFORE `date '+%e\-%b\-%Y' \-d '30 days ago'`"
+dbmail\-export \-u joe \-m inbox \-o joesinbox.mbox \-d \-s "1:* BEFORE `date '+%e\-%b\-%Y' \-d '30 days ago'`"
 .fi
 .sp
 .RE
 Note the careful bash quoting and backticks calling the GNU date(1) command. GNU date(1) has excellent features for retrieving relative dates. If you are using a different shell, you may need different quotes. Descriptions of relative dates are not supported by BSD date(1).
+.sp
+To export all mailboxes named Spam for all users into individual directories following the pattern SpamDump/<username>/Spam, try this command:
+.sp
+.RS 3n
+.nf
+dbmail\-export \-u \\* \-m Spam \-b SpamDump
+.fi
+.sp
+.RE
+Note the backslash to prevent the shell from expanding the \fB, as we want that \fR to be passed into DBMail for expansion based on the internal user list.
 .SH "BUGS"
 If you experience inexplicable problems with DBMail, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
 .SH "LICENSE"
