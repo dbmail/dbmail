@@ -18,7 +18,8 @@ mbox formatted mailbox.
 OPTIONS
 -------
 -u user::
-  specify the owner of the mailbox you want to export.
+  specify the owner of the mailbox you want to export, using wildcards ? and *
+  to match one or none, or one or more characters in the username, respectively. 
 
 -m mailbox::
   specify the mailbox you want to export.
@@ -47,13 +48,21 @@ EXAMPLES
 --------
 
 To export and delete all messages belonging to user 'Joe' in mailbox 'Inbox'
-more than 30 days old, try this command line:
+more than 30 days old, try this command:
 
-    dbmail-export -u joe -m inbox -o textbox5 -d -s "1:* BEFORE `date '+%e-%b-%Y' -d '30 days ago'`"
+    dbmail-export -u joe -m inbox -o joesinbox.mbox -d -s "1:* BEFORE `date '+%e-%b-%Y' -d '30 days ago'`"
 
 Note the careful bash quoting and backticks calling the GNU date(1) command.
 GNU date(1) has excellent features for retrieving relative dates. If you are
 using a different shell, you may need different quotes. Descriptions of
 relative dates are not supported by BSD date(1).
+
+To export all mailboxes named Spam for all users into individual directories
+following the pattern SpamDump/<username>/Spam, try this command:
+
+    dbmail-export -u \* -m Spam -b SpamDump
+
+Note the backslash to prevent the shell from expanding the *, as we want that
+* to be passed into DBMail for expansion based on the internal user list.
 
 include::footer.txt[]
