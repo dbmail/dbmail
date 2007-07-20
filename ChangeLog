@@ -1,3 +1,13 @@
+2007-07-19  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	do not add x-dbmail-physmessage-id header during retrieval
+
+2007-07-15  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, modules/authldap.c:
+	use sigaction instead of signal in ldap code
+
 2007-07-16  Aaron Stone  <aaron@serendipity.cx>
 
 	* export.c, man/dbmail-export.txt:
