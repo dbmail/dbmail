@@ -1,12 +1,16 @@
+2007-07-21  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.c:
+	login_/timeout cleanup
+	* dbmail.h.in:
+	GETCONFIGVALUE trimmed
+	* serverchild.c:
+	selfPipe modification
+
 2007-07-19  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c:
 	do not add x-dbmail-physmessage-id header during retrieval
-
-2007-07-15  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, modules/authldap.c:
-	use sigaction instead of signal in ldap code
 
 2007-07-16  Aaron Stone  <aaron@serendipity.cx>
 
@@ -22,11 +26,6 @@
 
 	* VERSION:
 	v2.2.6-rc1
-
-2007-07-05  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, modules/dbsqlite.c:
-	add incremental sleep time between retries in case of sqlite locks
 
 2007-07-12  Aaron Stone  <aaron@serendipity.cx>
 
@@ -60,15 +59,6 @@
 	* modules/dbsqlite.c:
 	add retry loop to sqlite db_query
 
-2007-07-02  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, dbmail-imapsession.c:
-	fix g_strncasecmp problem (JF)
-	* ChangeLog, serverparent.c:
-	allow zero spare children
-	* dbmail-imapsession.c, imapd.c:
-	fix sig11 in iconv code (bug #579)
-
 2007-07-02  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
@@ -82,14 +72,6 @@
 
 	* Makefile.in, list.c, man/Makefile.in:
 	minor g_list_dedup fix and update of autoconf chain
-
-2007-06-29  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, lmtp.c:
-	make lmtpd return temp failure in case of database failure during 
-	insertion
-	* check_dbmail_db.c, db.c:
-	catch potential segfault
 
 2007-06-30  Aaron Stone  <aaron@serendipity.cx>
 
