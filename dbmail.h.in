@@ -127,9 +127,8 @@
 
 #define GETCONFIGVALUE(key, sect, var) \
 	config_get_value(key, sect, var); \
-	if (strlen(var) == 0) \
-		TRACE(TRACE_DEBUG, "no value for "#key" in section "#sect); \
-	TRACE(TRACE_DEBUG, "key "#key" section "#sect" var "#var" value [%s]", var)
+	if (strlen(var) > 0) \
+		TRACE(TRACE_DEBUG, "key "#key" section "#sect" var "#var" value [%s]", var)
 	/* No final ';' so macro can be called "like a function" */
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
