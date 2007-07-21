@@ -34,13 +34,13 @@ volatile sig_atomic_t childSig = 0;
 extern volatile sig_atomic_t alarm_occured;
 
 
-int connected = 0;
-int selfPipe[2];
+static int connected = 0;
+static int selfPipe[2];
 volatile clientinfo_t client;
 
 static void disconnect_all(void);
 
-int PerformChildTask(ChildInfo_t * info);
+static int PerformChildTask(ChildInfo_t * info);
 
 void client_close(void)
 {
@@ -85,7 +85,8 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 
 	// Write to self-pipe to prevent select signal races.
 	// See http://cr.yp.to/docs/selfpipe.html
-	write(selfPipe[1], "S", 1);
+	if (selfPipe[1] > -1)
+		write(selfPipe[1], "S", 1);
 
 	switch (sig) {
 	case SIGCHLD:
@@ -182,10 +183,22 @@ int DelChildSigHandler()
 pid_t CreateChild(ChildInfo_t * info)
 {
 	extern int isGrandChildProcess;
-	pid_t pid = fork();
+	pid_t pid;
+
+	// Create a self-pipe to prevent select signal races.
+	// See http://cr.yp.to/docs/selfpipe.html
+	pipe(selfPipe);
+	fcntl(selfPipe[0], F_SETFL, O_NONBLOCK);
+	fcntl(selfPipe[1], F_SETFL, O_NONBLOCK);
+
+ 	pid = fork();
 
 	if (! pid) {
-		if (child_register() == -1) {
+
+		close(selfPipe[1]);
+		selfPipe[1] = -1;
+
+		if ( child_register() == -1 ) {
 			TRACE(TRACE_FATAL, "child_register failed");
 			_exit(0);
 		}
@@ -197,19 +210,20 @@ pid_t CreateChild(ChildInfo_t * info)
  		SetChildSigHandler();
 		
  		TRACE(TRACE_INFO, "signal handler placed, going to perform task now");
-
-		// Create a self-pipe to prevent select signal races.
-		// See http://cr.yp.to/docs/selfpipe.html
-		pipe(selfPipe);
-		fcntl(selfPipe[0], F_SETFL, O_NONBLOCK);
-		fcntl(selfPipe[1], F_SETFL, O_NONBLOCK);
  		
-		if (PerformChildTask(info) == -1)
+		if (PerformChildTask(info) == -1) {
+			close(selfPipe[0]);
+			selfPipe[0] = -1;
 			return -1;
+		}
 		
  		child_unregister();
  		exit(0);
 	} else {
+
+		close(selfPipe[0]);
+		selfPipe[0] = -1;
+
  		usleep(5000);
 		/* check for failed forkes */
 		if (waitpid(pid, NULL, WNOHANG|WUNTRACED) == pid) 
@@ -224,8 +238,6 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	int ip, result, flags;
 	int active = 0, maxfd = 0;
 	socklen_t len;
-
-	TRACE(TRACE_INFO, "waiting for connection");
 
 	/* This is adapted from man 2 select */
 	FD_ZERO(&rfds);
@@ -249,12 +261,9 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	// See http://cr.yp.to/docs/selfpipe.html
 	if (FD_ISSET(selfPipe[0], &rfds)) {
 		char buf[1];
-		TRACE(TRACE_INFO, "received signal");
 		read(selfPipe[0], buf, 1);
 		return -1;
 	}
-
-	TRACE(TRACE_INFO, "received connection");
 
 	/* This is adapted from man 2 select */
 	for (ip = 0; ip < info->numSockets; ip++) {
