@@ -18,6 +18,7 @@ struct ImapSession {
 	char *tag;
 	char *command;
 	int command_type;
+	int timeout;
 	char **args;
 	u64_t args_idx;
 	fetch_items_t *fi;
