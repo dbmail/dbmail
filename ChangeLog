@@ -1,12 +1,24 @@
-2007-07-16  Aaron Stone  <aaron@serendipity.cx>
+2007-07-22  Paul J Stevens <paul@nfg.nl>
+	* dbmail-imapsession.c, dbmail-imapsession.h:
+	speedup fetch by buffering output
 
+2007-07-16  Aaron Stone  <aaron@serendipity.cx>
 	* export.c, man/dbmail-export.txt:
 	Require the -u argument, add support for wildcards.
 
 2007-07-15  Paul J Stevens <paul@nfg.nl>
-
 	* modules/authldap.c:
 	use sigaction instead of signal in ldap code
+
+2007-07-12  Aaron Stone  <aaron@serendipity.cx>
+
+	* export.c, man/dbmail-export.txt:
+	New options: -b basedir, -r recursive.
+	* dbmail-mailbox.c:
+	Tell GMime that it does not own the dbmail_mailbox_dump file pointer.
+	* contrib/dbmail-removeversion.patch contrib/expirebox.sh:
+	Removed obsolete patch (see banner option in dbmail.conf) and obsolete
+	mail expiry script (see dbmail-export -s, -m, -d options).
 
 2007-07-09  Paul Stevens <paul@nfg.nl>
 
@@ -19,24 +31,6 @@
 	* dsn.c, dsn.h, main.c, pipe.c:
 	Properly fixed incorrect dsn class for mailbox over quota (closes bug 
 	#617) (Aaron)
-
-2007-07-05  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, modules/dbsqlite.c:
-	add incremental sleep time between retries in case of sqlite locks
-	* modules/dbsqlite.c:
-	add retry loop to sqlite db_query
-
->>>>>>> .r2711
-2007-07-12  Aaron Stone  <aaron@serendipity.cx>
-
-	* export.c, man/dbmail-export.txt:
-	New options: -b basedir, -r recursive.
-	* dbmail-mailbox.c:
-	Tell GMime that it does not own the dbmail_mailbox_dump file pointer.
-	* contrib/dbmail-removeversion.patch contrib/expirebox.sh:
-	Removed obsolete patch (see banner option in dbmail.conf) and obsolete
-	mail expiry script (see dbmail-export -s, -m, -d options).
 
 2007-07-06  Aaron Stone  <aaron@serendipity.cx>
 

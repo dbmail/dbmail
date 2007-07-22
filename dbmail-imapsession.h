@@ -14,6 +14,7 @@ struct ImapSession {
 	clientinfo_t *ci;
 	u64_t msg_idnr;  // replace this with a GList
 	GMimeStream *fstream; // gmime filter wrapper around the TX handler in clientinfo_t
+	GString *buff; // use buffered writes
 	gboolean use_uid;
 	char *tag;
 	char *command;
@@ -68,6 +69,9 @@ int dbmail_imap_session_discard_to_eol(struct ImapSession *self);
  *   -1 on possibly recoverable errors
  *   -2 on serious unrecoverable errors
  */
+void dbmail_imap_session_buff_clear(struct ImapSession *self);
+void dbmail_imap_session_buff_append(struct ImapSession *self, char *message, ...);
+void dbmail_imap_session_buff_flush(struct ImapSession *self);
 int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...);
 
 int dbmail_imap_session_set_state(struct ImapSession *self, int state);
