@@ -1646,6 +1646,8 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 	ud->userid = userid;
 	ud->state = IMAPCS_AUTHENTICATED;
 
+	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
+
 	return 0;
 
 }
