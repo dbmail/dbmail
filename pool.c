@@ -52,6 +52,7 @@ int set_lock(int type)
 {
 	int result, serr;
 	struct flock lock;
+	static int retry = 0;
 	lock.l_type = type; /* F_RDLCK, F_WRLCK, F_UNLOCK */
 	lock.l_start = 0;
 	lock.l_whence = 0;
@@ -63,15 +64,19 @@ int set_lock(int type)
 			case EACCES:
 			case EAGAIN:
 			case EDEADLK:
-				TRACE(TRACE_ERROR, "Error setting lock. Trying again.");
+				if (retry++ > 2)
+					TRACE(TRACE_WARNING, "Error setting lock. Still trying...");
 				usleep(10);
 				set_lock(type);
 				break;
 			default:
 				// ignore the rest
+				retry = 0;
 				break;
 		}
 		errno = serr;
+	} else {
+		retry = 0;
 	}
 	return result;
 }
