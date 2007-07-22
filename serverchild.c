@@ -35,7 +35,10 @@ extern volatile sig_atomic_t alarm_occured;
 
 
 static int connected = 0;
+
+static enum pipeHalf { READ = 0, WRITE = 1 };
 static int selfPipe[2];
+
 volatile clientinfo_t client;
 
 static void disconnect_all(void);
@@ -83,12 +86,11 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	 * *** glibc detected *** corrupted double-linked list: 0x0805f028 ***
 	 * Right, so keep that in mind! */
 
-	// Write to self-pipe to prevent select signal races.
-	// See http://cr.yp.to/docs/selfpipe.html
-	if (selfPipe[1] > -1)
-		write(selfPipe[1], "S", 1);
+	if (selfPipe[WRITE] > -1)
+		write(selfPipe[WRITE], 0x10, 1);
 
 	switch (sig) {
+
 	case SIGCHLD:
 		break;
 	case SIGALRM:
@@ -148,6 +150,8 @@ int SetChildSigHandler()
 	sigaction(SIGALRM,	&act, 0);
 	sigaction(SIGCHLD,	&act, 0);
 
+	TRACE(TRACE_INFO, "signal handler placed");
+
 	return 0;
 }
 int DelChildSigHandler()
@@ -185,19 +189,9 @@ pid_t CreateChild(ChildInfo_t * info)
 	extern int isGrandChildProcess;
 	pid_t pid;
 
-	// Create a self-pipe to prevent select signal races.
-	// See http://cr.yp.to/docs/selfpipe.html
-	pipe(selfPipe);
-	fcntl(selfPipe[0], F_SETFL, O_NONBLOCK);
-	fcntl(selfPipe[1], F_SETFL, O_NONBLOCK);
-
  	pid = fork();
 
 	if (! pid) {
-
-		close(selfPipe[1]);
-		selfPipe[1] = -1;
-
 		if ( child_register() == -1 ) {
 			TRACE(TRACE_FATAL, "child_register failed");
 			_exit(0);
@@ -207,23 +201,24 @@ pid_t CreateChild(ChildInfo_t * info)
  		ChildStopRequested = 0;
 		alarm_occured = 0;
 		childSig = 0;
+
+		if (pipe(selfPipe))
+			return -1;
+
+		fcntl(selfPipe[READ], F_SETFL, O_NONBLOCK);
+		fcntl(selfPipe[WRITE], F_SETFL, O_NONBLOCK);
+
  		SetChildSigHandler();
-		
- 		TRACE(TRACE_INFO, "signal handler placed, going to perform task now");
  		
 		if (PerformChildTask(info) == -1) {
-			close(selfPipe[0]);
-			selfPipe[0] = -1;
+			close(selfPipe[READ]); selfPipe[READ] = -1;
+			close(selfPipe[WRITE]); selfPipe[WRITE] = -1;
 			return -1;
 		}
 		
  		child_unregister();
  		exit(0);
 	} else {
-
-		close(selfPipe[0]);
-		selfPipe[0] = -1;
-
  		usleep(5000);
 		/* check for failed forkes */
 		if (waitpid(pid, NULL, WNOHANG|WUNTRACED) == pid) 
@@ -246,10 +241,8 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 		maxfd = MAX(maxfd, info->listenSockets[ip]);
 	}
 
-	// Reading end of our self-pipe.
-	// See http://cr.yp.to/docs/selfpipe.html
-	FD_SET(selfPipe[0], &rfds);
-	maxfd = MAX(maxfd, selfPipe[0]);
+	FD_SET(selfPipe[READ], &rfds);
+	maxfd = MAX(maxfd, selfPipe[READ]);
 
 	/* A null timeval means block indefinitely until there's activity. */
 	result = select(maxfd+1, &rfds, NULL, NULL, NULL);
@@ -259,9 +252,10 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	// Clear the self-pipe and return; we received a signal
 	// and we need to loop again upstream to handle it.
 	// See http://cr.yp.to/docs/selfpipe.html
-	if (FD_ISSET(selfPipe[0], &rfds)) {
+	if (FD_ISSET(selfPipe[READ], &rfds)) {
 		char buf[1];
-		read(selfPipe[0], buf, 1);
+		while (read(selfPipe[READ], buf, 1) > 0)
+			;
 		return -1;
 	}
 
