@@ -1,12 +1,24 @@
 2007-07-22  Paul J Stevens <paul@nfg.nl>
+	
 	* dbmail-imapsession.c, dbmail-imapsession.h:
 	speedup fetch by buffering output
 
+2007-07-21  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.c:
+	login_/timeout cleanup
+	* dbmail.h.in:
+	GETCONFIGVALUE trimmed
+	* serverchild.c:
+	selfPipe modification
+
 2007-07-16  Aaron Stone  <aaron@serendipity.cx>
+
 	* export.c, man/dbmail-export.txt:
 	Require the -u argument, add support for wildcards.
 
 2007-07-15  Paul J Stevens <paul@nfg.nl>
+
 	* modules/authldap.c:
 	use sigaction instead of signal in ldap code
 
@@ -85,27 +97,10 @@
 	* dbmail-imapsession.c, imapd.c:
 	fix sig11 in iconv code (bug #579)
 
-2007-07-02  Paul J Stevens <paul@nfg.nl>
-
-	* dbmail-imapsession.c:
-	fix g_strncasecmp problem (JF)
-	* ChangeLog, serverparent.c:
-	allow zero spare children
-	* dbmail-imapsession.c, imapd.c:
-	fix sig11 in iconv code (bug #579)
-
 2007-07-01  Paul Stevens <paul@nfg.nl>
 
 	* Makefile.in, list.c, man/Makefile.in:
 	minor g_list_dedup fix and update of autoconf chain
-
-2007-06-29  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, lmtp.c:
-	make lmtpd return temp failure in case of database failure during 
-	insertion
-	* check_dbmail_db.c, db.c:
-	catch potential segfault
 
 2007-06-30  Aaron Stone  <aaron@serendipity.cx>
 
@@ -211,22 +206,6 @@
 
 	* ChangeLog, db.c, dbmailtypes.h, modules/dbmysql.c, 
 	modules/dbpgsql.c, modules/dbsqlite.c:
-	add timewindow to suppress_duplicate detection
-	* ChangeLog, dbmail.conf, sort.c:
-	add suppress_duplicate to dbmail.conf
-	* ChangeLog, db.c:
-	check for resent-message-id during duplicate check
-	* ChangeLog, db.c, db.h, sort.c:
-	avoid duplicate message-ids in a mailbox
-	* dbmail-imapsession.h:
-	add missing prototype declaration
-	* ChangeLog, dbmail-imapsession.c, imap4.c:
-	test and finish IDLE using thunderbird and outlook
-
-2007-06-18  Paul J Stevens <paul@nfg.nl>
-
-	* db.c, dbmailtypes.h, modules/dbmysql.c, modules/dbpgsql.c, 
-	modules/dbsqlite.c:
 	add timewindow to suppress_duplicate detection
 	* ChangeLog, dbmail.conf, sort.c:
 	add suppress_duplicate to dbmail.conf

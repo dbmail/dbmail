@@ -1610,10 +1610,7 @@ int dbmail_imap_session_discard_to_eol(struct ImapSession *self)
 	/* loop until we get a newline terminated chunk */
 	while (!done)  {
 		memset(buffer, 0, MAX_LINESIZE);
-		if (!client_is_authenticated(self))
-			alarm(ci->login_timeout);
-		else
-			alarm(ci->timeout);
+		alarm(self->timeout);
 		if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
 			alarm(0);
 			TRACE(TRACE_ERROR, "error reading from client");
@@ -1645,10 +1642,7 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 	assert(buffer);
 	memset(buffer, 0, MAX_LINESIZE);
 
-	if (!client_is_authenticated(self))
-		alarm(ci->login_timeout);
-	else
-		alarm(ci->timeout);
+	alarm(self->timeout);
 	alarm_occured = 0;
 
 	fgets(buffer, MAX_LINESIZE, ci->rx);
@@ -2291,6 +2285,8 @@ int dbmail_imap_session_set_state(struct ImapSession *self, int state)
 		case IMAPCS_AUTHENTICATED:
 			ud->state = state;
 			memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+			// change from login_timeout to main timeout
+			self->timeout = self->ci->timeout; 
 			break;
 			
 		default:
@@ -2615,10 +2611,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				
 				for (cnt = 0, dataidx = 0; cnt < quotedSize; cnt++) {
 					/* dont wait forever, but reset after every fgetc */
-					if (!client_is_authenticated(self))
-						alarm(ci->login_timeout);
-					else
-						alarm(ci->timeout);
+					alarm(self->timeout);
 					if (! (gotc = fgetc(ci->rx)))
 						break;
 					
@@ -2640,7 +2633,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 						dbmail_imap_session_printf(self, "%s", IMAP_TIMEOUT_MSG);
 						client_close();
 						TRACE(TRACE_ERROR, "timeout occurred in fgetc; got [%d] of [%d]; timeout [%d]", 
-								cnt, quotedSize, ci->timeout);
+								cnt, quotedSize, self->timeout);
 						return NULL;
 					}
 				}

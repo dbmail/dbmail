@@ -84,6 +84,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 	struct ImapSession *session;
 
 	session = dbmail_imap_session_new();
+	session->timeout = ci->login_timeout;
 	dbmail_imap_session_setClientinfo(session,ci);
 
 	if (! (ud = dbmail_imap_userdata_new()))
