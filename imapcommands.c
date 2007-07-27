@@ -156,6 +156,7 @@ int _ic_login(struct ImapSession *self)
 	child_reg_connected_user(self->args[self->args_idx]);
 
 	dbmail_imap_session_printf(self, "%s OK LOGIN completed\r\n", self->tag);
+
 	return 0;
 }
 
@@ -216,6 +217,8 @@ int _ic_authenticate(struct ImapSession *self)
 
 	dbmail_imap_session_printf(self, "%s OK AUTHENTICATE completed\r\n", self->tag);
 	
+	child_reg_connected_user(username);
+
 	g_free(username);
 	g_free(password);
 	return 0;
