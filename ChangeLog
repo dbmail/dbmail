@@ -1,3 +1,9 @@
+2007-07-27  Aaron Stone  <aaron@serendipity.cx>
+
+	* imapcommands.c:
+	Accepted patch from Jonathan Fealy to allow unsubscribe from
+	nonexistent mailboxes.
+
 2007-07-21  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.c:
