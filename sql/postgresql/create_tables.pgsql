@@ -211,6 +211,7 @@ CREATE TABLE dbmail_headervalue (
 );
 CREATE UNIQUE INDEX dbmail_headervalue_1 ON dbmail_headervalue(physmessage_id, id);
 CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue(physmessage_id);
+CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue(headervalue);
 
 
 CREATE SEQUENCE dbmail_subjectfield_idnr_seq;
@@ -223,6 +224,7 @@ CREATE TABLE dbmail_subjectfield (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_subjectfield_1 ON dbmail_subjectfield(physmessage_id, id);
+CREATE INDEX dbmail_subjectfield_2 ON dbmail_subjectfield(subjectfield);
 
 
 CREATE SEQUENCE dbmail_datefield_idnr_seq;
@@ -235,6 +237,7 @@ CREATE TABLE dbmail_datefield (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_datefield_1 ON dbmail_datefield(physmessage_id, id);
+CREATE INDEX dbmail_datefield_2 ON dbmail_datefield(datefield);
 
 CREATE SEQUENCE dbmail_referencesfield_idnr_seq;
 CREATE TABLE dbmail_referencesfield (
@@ -246,6 +249,7 @@ CREATE TABLE dbmail_referencesfield (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_referencesfield_1 ON dbmail_referencesfield(physmessage_id, referencesfield);
+CREATE INDEX dbmail_referencesfield_2 ON dbmail_referencesfield(referencesfield);
 
 
 CREATE SEQUENCE dbmail_fromfield_idnr_seq;
@@ -259,6 +263,8 @@ CREATE TABLE dbmail_fromfield (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_fromfield_1 ON dbmail_fromfield(physmessage_id, id);
+CREATE INDEX dbmail_fromfield_2 ON dbmail_fromfield(fromaddr);
+CREATE INDEX dbmail_fromfield_3 ON dbmail_fromfield(fromname);
 
 CREATE SEQUENCE dbmail_tofield_idnr_seq;
 CREATE TABLE dbmail_tofield (
@@ -271,6 +277,8 @@ CREATE TABLE dbmail_tofield (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_tofield_1 ON dbmail_tofield(physmessage_id, id);
+CREATE INDEX dbmail_tofield_2 ON dbmail_tofield(toname);
+CREATE INDEX dbmail_tofield_3 ON dbmail_tofield(toaddr);
 
 CREATE SEQUENCE dbmail_replytofield_idnr_seq;
 CREATE TABLE dbmail_replytofield (
@@ -283,6 +291,8 @@ CREATE TABLE dbmail_replytofield (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_replytofield_1 ON dbmail_replytofield(physmessage_id, id);
+CREATE INDEX dbmail_replytofield_2 ON dbmail_replytofield(replytoname);
+CREATE INDEX dbmail_replytofield_3 ON dbmail_replytofield(replytoaddr);
 
 CREATE SEQUENCE dbmail_ccfield_idnr_seq;
 CREATE TABLE dbmail_ccfield (
@@ -295,6 +305,8 @@ CREATE TABLE dbmail_ccfield (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_ccfield_1 ON dbmail_ccfield(physmessage_id, id);
+CREATE INDEX dbmail_ccfield_2 ON dbmail_ccfield(ccname);
+CREATE INDEX dbmail_ccfield_3 ON dbmail_ccfield(ccaddr);
 
 CREATE TABLE dbmail_replycache (
     to_addr character varying(100) DEFAULT ''::character varying NOT NULL,
