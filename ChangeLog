@@ -1,5 +1,24 @@
-2007-07-22  Paul J Stevens <paul@nfg.nl>
-	
+2007-07-28  Paul Stevens <paul@nfg.nl>
+
+	* db.c, db.h, maintenance.c:
+	add missing integrity check (bug #305)
+	* serverchild.c:
+	fix trivial compiler warning
+
+2007-07-22  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	update client state after authentication
+	* serverchild.c:
+	final selfpipe mod
+	* pool.c:
+	retry locking before logging an error
+	* ChangeLog, dbmail-imapsession.c, dbmail-imapsession.h, imap4.c:
+	login_/timeout cleanup
+	* dbmail.h.in:
+	GETCONFIGVALUE trimmed
+	* serverchild.c:
+	selfPipe modification
 	* dbmail-imapsession.c, dbmail-imapsession.h:
 	speedup fetch by buffering output
 

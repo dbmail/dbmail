@@ -618,7 +618,7 @@ int _ic_subscribe(struct ImapSession *self)
 		return 1;
 
 	if (! (mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0]))) {
-		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
+		dbmail_imap_session_printf(self, "%s OK UNSUBSCRIBE on mailbox that does not exist\r\n", self->tag);
 		return 0;
 	}
 
