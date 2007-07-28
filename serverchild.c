@@ -36,7 +36,6 @@ extern volatile sig_atomic_t alarm_occured;
 
 static int connected = 0;
 
-static enum pipeHalf { READ = 0, WRITE = 1 };
 static int selfPipe[2];
 
 volatile clientinfo_t client;
@@ -86,8 +85,8 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	 * *** glibc detected *** corrupted double-linked list: 0x0805f028 ***
 	 * Right, so keep that in mind! */
 
-	if (selfPipe[WRITE] > -1)
-		write(selfPipe[WRITE], 0x10, 1);
+	if (selfPipe[1] > -1)
+		write(selfPipe[1], "S", 1);
 
 	switch (sig) {
 
@@ -205,14 +204,14 @@ pid_t CreateChild(ChildInfo_t * info)
 		if (pipe(selfPipe))
 			return -1;
 
-		fcntl(selfPipe[READ], F_SETFL, O_NONBLOCK);
-		fcntl(selfPipe[WRITE], F_SETFL, O_NONBLOCK);
+		fcntl(selfPipe[0], F_SETFL, O_NONBLOCK);
+		fcntl(selfPipe[1], F_SETFL, O_NONBLOCK);
 
  		SetChildSigHandler();
  		
 		if (PerformChildTask(info) == -1) {
-			close(selfPipe[READ]); selfPipe[READ] = -1;
-			close(selfPipe[WRITE]); selfPipe[WRITE] = -1;
+			close(selfPipe[0]); selfPipe[0] = -1;
+			close(selfPipe[1]); selfPipe[1] = -1;
 			return -1;
 		}
 		
@@ -241,8 +240,8 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 		maxfd = MAX(maxfd, info->listenSockets[ip]);
 	}
 
-	FD_SET(selfPipe[READ], &rfds);
-	maxfd = MAX(maxfd, selfPipe[READ]);
+	FD_SET(selfPipe[0], &rfds);
+	maxfd = MAX(maxfd, selfPipe[0]);
 
 	/* A null timeval means block indefinitely until there's activity. */
 	result = select(maxfd+1, &rfds, NULL, NULL, NULL);
@@ -252,9 +251,9 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	// Clear the self-pipe and return; we received a signal
 	// and we need to loop again upstream to handle it.
 	// See http://cr.yp.to/docs/selfpipe.html
-	if (FD_ISSET(selfPipe[READ], &rfds)) {
+	if (FD_ISSET(selfPipe[0], &rfds)) {
 		char buf[1];
-		while (read(selfPipe[READ], buf, 1) > 0)
+		while (read(selfPipe[0], buf, 1) > 0)
 			;
 		return -1;
 	}
