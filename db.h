@@ -665,6 +665,8 @@ int db_empty_mailbox(u64_t user_idnr);
 */
 int db_icheck_messageblks(struct dm_list *lost_list);
 
+int db_icheck_physmessages(gboolean cleanup);
+
 /**
  * \brief check for all messages that are not connected to
  *        mailboxes

@@ -549,14 +549,17 @@ int do_check_integrity(void)
 	time_t start, stop;
 	struct dm_list lostlist;
 	struct element *el;
+	const char *action;
+	int count = 0;
 	u64_t id;
 
-	if (no_to_all) {
-		qprintf("\nChecking DBMAIL messageblocks integrity...\n");
-	}
-	if (yes_to_all) {
-		qprintf("\nRepairing DBMAIL messageblocks integrity...\n");
-	}
+	if (yes_to_all)
+		action = "Repairing";
+	else
+		action = "Checking";
+
+	qprintf("\n%s DBMAIL messageblocks integrity...\n", action);
+
 	time(&start);
 
 	/* This is what we do:
@@ -607,14 +610,39 @@ int do_check_integrity(void)
 
 
 	time(&stop);
-	qverbosef("--- checking block integrity took %g seconds\n",
-	       difftime(stop, start));
-	qverbosef("--- checking block integrity took %g seconds\n",
-		difftime(stop, start));
+	qverbosef("--- %s block integrity took %g seconds\n",
+	       action, difftime(stop, start));
+
 
 	/* second part */
 	start = stop;
-	qprintf("\nChecking DBMAIL message integrity...\n");
+	qprintf("\n%s DBMAIL physmessage integrity...\n", action);
+	if ((count = db_icheck_physmessages(FALSE)) < 0) {
+		qerrorf("Failed. An error occurred. Please check log.\n");
+		serious_errors = 1;
+		return -1;
+	}
+	if (count > 0) {
+		qerrorf("Ok. Found [%d] unconnected physmessages", count);
+
+		if (yes_to_all) {
+			if (db_icheck_physmessages(TRUE) < 0)
+				qerrorf("Warning: could not delete orphaned physmessages. Check log.\n");
+			else
+				qerrorf("Ok. Orphaned physmessages deleted.\n");
+		}
+	} else {
+		qprintf("Ok. Found [%d] unconnected physmessages.\n", count);
+	}
+
+	time(&stop);
+	qverbosef("--- %s unconnected physmessages took %g seconds\n",
+		action, difftime(stop, start));
+
+
+	/* third part */
+	start = stop;
+	qprintf("\n%s DBMAIL message integrity...\n", action);
 
 	if (db_icheck_messages(&lostlist) < 0) {
 		qerrorf
@@ -661,13 +689,11 @@ int do_check_integrity(void)
 	}
 
 	time(&stop);
-	qverbosef("--- checking message integrity took %g seconds\n",
-	       difftime(stop, start));
-	qverbosef("--- checking message integrity took %g seconds\n",
-		difftime(stop, start));
+	qverbosef("--- %s message integrity took %g seconds\n",
+	       action, difftime(stop, start));
 
-	/* third part */
-	qprintf("\nChecking DBMAIL mailbox integrity...\n");
+	/* fourth part */
+	qprintf("\n%s DBMAIL mailbox integrity...\n", action);
 	start = stop;
 
 	if (db_icheck_mailboxes(&lostlist) < 0) {
@@ -709,10 +735,8 @@ int do_check_integrity(void)
 	}
 
 	time(&stop);
-	qverbosef("--- checking mailbox integrity took %g seconds\n",
-	       difftime(stop, start));
-	qverbosef("--- checking mailbox integrity took %g seconds\n",
-		difftime(stop, start));
+	qverbosef("--- %s mailbox integrity took %g seconds\n",
+	       action, difftime(stop, start));
 	
 	return 0;
 }
