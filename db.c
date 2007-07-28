@@ -1535,6 +1535,33 @@ int db_icheck_messageblks(struct dm_list *lost_list)
 	db_free_result();
 	return DM_SUCCESS;
 }
+int db_icheck_physmessages(gboolean cleanup)
+{
+	int result;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,sizeof(query));
+
+	if (cleanup) {
+		snprintf(query, DEF_QUERYSIZE, 
+			"DELETE FROM %sphysmessage WHERE id NOT IN "
+			"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
+	} else {
+		snprintf(query, DEF_QUERYSIZE, 
+			"SELECT COUNT(*) FROM %sphysmessage WHERE id NOT IN "
+			"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
+	}
+
+	if ((result = db_query(query)) < 0) {
+		db_free_result();
+		return result;
+	}
+
+	if (! cleanup)
+		result = db_get_result_int(0,0);
+
+	db_free_result();
+	return result;
+}
 
 int db_icheck_messages(struct dm_list *lost_list)
 {

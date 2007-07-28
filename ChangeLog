@@ -1,8 +1,33 @@
+2007-07-28  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, db.h, maintenance.c:
+	add missing integrity check (bug #305)
+	* serverchild.c:
+	fix trivial compiler warning
+
 2007-07-27  Aaron Stone  <aaron@serendipity.cx>
 
 	* imapcommands.c:
 	Accepted patch from Jonathan Fealy to allow unsubscribe from
 	nonexistent mailboxes.
+
+2007-07-26  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql, sql/postgresql/create_tables.pgsql, 
+	sql/sqlite/create_tables.sqlite:
+	add missing indexes
+
+2007-07-22  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	update client state after authentication
+	* pool.c:
+	retry locking before logging an error
+	* serverchild.c:
+	final selfpipe mod
+	* dbmail-imapsession.c, dbmail-imapsession.h, 
+	test-scripts/testimap.py:
+	speedup fetch by buffering output
 
 2007-07-21  Paul J Stevens <paul@nfg.nl>
 
