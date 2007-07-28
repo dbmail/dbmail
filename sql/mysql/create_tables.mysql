@@ -309,6 +309,8 @@ CREATE TABLE dbmail_fromfield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
+CREATE INDEX dbmail_fromfield_1 ON dbmail_fromfield(fromname);
+CREATE INDEX dbmail_fromfield_2 ON dbmail_fromfield(fromaddr);
 
 DROP TABLE IF EXISTS dbmail_tofield;
 CREATE TABLE dbmail_tofield (
@@ -322,6 +324,8 @@ CREATE TABLE dbmail_tofield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
+CREATE INDEX dbmail_fromfield_1 ON dbmail_tofield(toname);
+CREATE INDEX dbmail_fromfield_2 ON dbmail_tofield(toaddr);
 
 DROP TABLE IF EXISTS dbmail_replytofield;
 CREATE TABLE dbmail_replytofield (
@@ -335,6 +339,8 @@ CREATE TABLE dbmail_replytofield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
+CREATE INDEX dbmail_replytofield_1 ON dbmail_replytofield(replytoname);
+CREATE INDEX dbmail_replytofield_2 ON dbmail_replytofield(replytoaddr);
 
 DROP TABLE IF EXISTS dbmail_ccfield;
 CREATE TABLE dbmail_ccfield (
@@ -348,6 +354,8 @@ CREATE TABLE dbmail_ccfield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE InnoDB DEFAULT CHARSET=utf8 ;
+CREATE INDEX dbmail_ccfield_1 ON dbmail_ccfield(ccname);
+CREATE INDEX dbmail_ccfield_2 ON dbmail_ccfield(ccaddr);
 
 COMMIT;
 

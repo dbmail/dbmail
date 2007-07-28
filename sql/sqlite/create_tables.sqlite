@@ -682,6 +682,8 @@ CREATE TABLE dbmail_fromfield (
 );
 
 CREATE UNIQUE INDEX dbmail_fromfield_1 on dbmail_fromfield (physmessage_id, id);
+CREATE INDEX dbmail_fromfield_2 ON dbmail_fromfield(fromname);
+CREATE INDEX dbmail_fromfield_3 ON dbmail_fromfield(fromaddr);
 
 --	FOREIGN KEY (physmessage_id)
 --			REFERENCES dbmail_physmessage(id)
@@ -724,6 +726,8 @@ CREATE TABLE dbmail_tofield (
 );
 
 CREATE UNIQUE INDEX dbmail_tofield_1 on dbmail_tofield (physmessage_id, id);
+CREATE INDEX dbmail_tofield_2 ON dbmail_tofield(toname);
+CREATE INDEX dbmail_tofield_3 ON dbmail_tofield(toaddr);
 
 --	FOREIGN KEY (physmessage_id)
 --			REFERENCES dbmail_physmessage(id)
@@ -766,6 +770,8 @@ CREATE TABLE dbmail_replytofield (
 );
 
 CREATE UNIQUE INDEX dbmail_replytofield_1 on dbmail_replytofield (physmessage_id, id);
+CREATE INDEX dbmail_replytofield_2 ON dbmail_replytofield(replytoname);
+CREATE INDEX dbmail_replytofield_3 ON dbmail_replytofield(replytoaddr);
 
 --	FOREIGN KEY (physmessage_id)
 --			REFERENCES dbmail_physmessage(id)
@@ -809,6 +815,8 @@ CREATE TABLE dbmail_ccfield (
 );
 
 CREATE UNIQUE INDEX dbmail_ccfield_1 on dbmail_ccfield (physmessage_id, id);
+CREATE INDEX dbmail_ccfield_2 ON dbmail_ccfield(ccname);
+CREATE INDEX dbmail_ccfield_3 ON dbmail_ccfield(ccaddr);
 
 --	FOREIGN KEY (physmessage_id)
 --			REFERENCES dbmail_physmessage(id)
