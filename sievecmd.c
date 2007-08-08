@@ -48,8 +48,9 @@ static int do_list(u64_t user_idnr);
 static int do_activate(u64_t user_idnr, char *name);
 static int do_deactivate(u64_t user_idnr, char *name);
 static int do_remove(u64_t user_idnr, char *name);
+static int do_edit(u64_t user_idnr, char *name);
 static int do_insert(u64_t user_idnr, char *name, char *source);
-static int do_cat(u64_t user_idnr, char *name);
+static int do_cat(u64_t user_idnr, char *name, FILE *out);
 
 int main(int argc, char *argv[])
 {
@@ -62,7 +63,7 @@ int main(int argc, char *argv[])
 	extern int opterr;
 
 	int activate = 0, deactivate = 0, insert = 0;
-	int remove = 0, list = 0, cat = 0, help = 0;
+	int remove = 0, list = 0, cat = 0, help = 0, edit = 0;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
@@ -70,7 +71,7 @@ int main(int argc, char *argv[])
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
-		"-a::d:i:c::r:u:l" /* Major modes */
+		"-a::d:i:c::r:u:le::" /* Major modes */
 		/*"i"*/ "f:qnyvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
@@ -103,6 +104,13 @@ int main(int argc, char *argv[])
 			} else if (!script_source) {
 				script_source = g_strdup(optarg);
 			}
+			break;
+		case 'e':
+			edit = 1;
+
+			if (optarg)
+				script_name = g_strdup(optarg);
+
 			break;
 		case 'c':
 			cat = 1;
@@ -183,11 +191,11 @@ int main(int argc, char *argv[])
 */
 
 	/* Only one major mode is allowed */
-	if ((insert + remove + list + cat > 1)
-	/* Only insert is allowed together with activate or deactivate */
+	if ((edit + insert + remove + list + cat > 1)
+	/* Only insert/edit are allowed together with activate or deactivate */
 	 || ((remove + list + cat == 1) && (activate + deactivate > 0))
 	/* You may either activate or deactivate as a mode on its own*/
-	 || (((insert + remove + list + cat == 0) && (activate + deactivate != 1)))
+	 || (((edit + insert + remove + list + cat == 0) && (activate + deactivate != 1)))
 	 || (help || !user_name || (no_to_all && yes_to_all))) {
 		do_showhelp();
 		goto mainend;
@@ -235,15 +243,18 @@ int main(int argc, char *argv[])
 		res = do_insert(user_idnr, script_name, script_source);
 	if (remove)
 		res = do_remove(user_idnr, script_name);
+	if (edit)
+		res = do_edit(user_idnr, script_name);
 	if (activate)
-		if (!(insert && res)) /* Don't activate the script if it wasn't inserted */
+		/* Don't activate the script if it wasn't inserted/edited */
+		if (!(insert && res) && !(edit && res))
 			res = do_activate(user_idnr, script_name);
 	if (deactivate)
 		res = do_deactivate(user_idnr, script_name);
 	if (list)
 		res = do_list(user_idnr);
 	if (cat)
-		res = do_cat(user_idnr, script_name);
+		res = do_cat(user_idnr, script_name, stdout);
 	if (help)
 		res = do_showhelp();
 
@@ -298,7 +309,100 @@ int do_deactivate(u64_t user_idnr, char *name)
 	return 0;
 }
 
-int do_cat(u64_t user_idnr, char *name)
+int do_edit(u64_t user_idnr, char *name)
+{
+	int ret = 0;
+	int editor_val = 0;
+	int old_yes_to_all = yes_to_all;
+	char *tmp = NULL, *editor = NULL, *editor_cmd = NULL;
+	FILE *ftmp = NULL;
+	char *scriptname = NULL;
+	struct stat stat_before, stat_after;
+
+	if (!name) {
+		if (db_get_sievescript_active(user_idnr, &scriptname)) {
+			qerrorf("Database error when fetching active script!\n");
+			ret = 1;
+			goto cleanup;
+		}
+		
+		if (scriptname == NULL) {
+			qerrorf("No active script found!\n");
+			ret = 1;
+			goto cleanup;
+		}
+
+		name = scriptname;
+	}
+
+	/* Check for the EDITOR environment variable. */
+	editor = getenv("EDITOR");
+
+	if (!editor) {
+		qerrorf("No EDITOR environment variable.\n");
+		ret = 1;
+		goto cleanup;
+	}
+
+	/* Open a temp file. */
+	if (!(tmp = tempnam(NULL, "dbmail"))) {
+		qerrorf("Could not make temporary file name: %s\n", strerror(errno));
+		ret = 1;
+		goto cleanup;
+	}
+
+	if (!(ftmp = fopen(tmp, "w+"))) {
+		qerrorf("Could not open temporary file [%s]: %s\n", tmp, strerror(errno));
+		ret = 1;
+		goto cleanup;
+	}
+
+	/* do_cat the script. */
+	if (do_cat(user_idnr, name, ftmp)) {
+		qerrorf("Could not dump script [%s] to temporary file.\n", name);
+		ret = 1;
+		goto cleanup;
+	}
+
+	/* Make sure that the file is written before we call the editor. */
+	fflush(ftmp);
+	fstat(fileno(ftmp), &stat_before);
+
+	/* Call the editor. */
+	editor_cmd = g_strdup_printf("%s %s", editor, tmp);
+	if ((editor_val = system(editor_cmd))) {
+		qerrorf("Execution of EDITOR [%s] returned non-zero [%d].\n", editor, editor_val);
+		ret = 1;
+		goto cleanup;
+	}
+
+	fstat(fileno(ftmp), &stat_after);
+
+	/* If the file does not appear to have changed, cancel insertion. */
+	if ((stat_before.st_mtime == stat_after.st_mtime)
+	 && (stat_before.st_size == stat_after.st_size)) {
+		qprintf("File not modified, canceling.\n");
+		ret = 0;
+		goto cleanup;
+	}
+
+	/* do_insert the script (set yes_to_all as we will overwrite). */
+	yes_to_all = 1;
+	ret = do_insert(user_idnr, name, tmp);
+
+	/* Ok, all done. */
+cleanup:
+	g_free(scriptname);
+	g_free(editor_cmd);
+	g_free(tmp);
+	if (ftmp) fclose(ftmp);
+	if (tmp) unlink(tmp);
+	yes_to_all = old_yes_to_all;
+
+	return ret;
+}
+
+int do_cat(u64_t user_idnr, char *name, FILE *out)
 {
 	int res = 0;
 	char *buf = NULL;
@@ -331,7 +435,7 @@ int do_cat(u64_t user_idnr, char *name)
 		return -1;
 	}
 
-	printf("%s", buf);
+	fputs(buf, out);
 
 	g_free(buf);
 	if (!name)
