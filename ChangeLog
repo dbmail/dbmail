@@ -2,6 +2,8 @@
 
 	* sievecmd.c:
 	Added new -e option to edit scripts in-place.
+	* export.c:
+	Added new -D option to set deleted status on messages.
 
 2007-07-28  Paul J Stevens <paul@nfg.nl>
 

@@ -1,5 +1,6 @@
 /*
  Copyright (C) 2005-2006 NFG Net Facilities Group BV, support@nfg.nl
+ Copyright (C) 2007 Aaron Stone aaron@serendity.cx
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -42,17 +43,22 @@ void do_showhelp(void)
 	"*** dbmail-export ***\n"
 	"Use this program to export your DBMail mailboxes.\n"
 	"See the man page for more info. Summary:\n"
-	"     -u username   specify a user, wildcards ? and * accepted\n"
+	"     -u username   specify a user, wildcards ? and * accepted, but please be\n"
+	"                   careful that you may need to escape these from your shell\n"
 	"     -m mailbox    specify a mailbox (default: export all mailboxes recursively)\n"
-	"     -b basedir    specify the destination base dir (default: ./user/mailbox.mbox)\n"
+	"     -b basedir    specify the destination base dir (default: current directory)\n"
 	"                   note that files are always opened in append mode\n"
 	"     -o outfile    specify the output file (default: stdout)\n"
 	"                   note that files are always opened in append mode\n"
 	"     -s search     use an IMAP SEARCH string to select messages (default: 1:*)\n"
 	"                   for example, to export all messages received in May:\n"
 	"                   \"1:* SINCE 1-May-2007 BEFORE 1-Jun-2007\"\n"
-	"     -d            flag exported messages as \\Deleted (use dbmail-util to expunge)\n"
-	"     -r            export mailboxes recursively (default: true unless -m option is specified)\n"
+	"     -d            set \\Deleted flag on exported messages\n"
+	"     -D            set delete status on exported messages\n"
+	"                   note that dbmail-util can be used to set deleted status for\n"
+	"                   \\Deleted messages, and to purge messages with deleted status\n"
+	"     -r            export mailboxes recursively (default: true unless -m option\n"
+	"                   is specified)\n"
 	"\n"
         "Common options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
@@ -116,19 +122,33 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 	}
 
 	if (delete_after_dump) {
-		// Flag the selected messaged \\Deleted
 		int deleted_flag[IMAP_NFLAGS];
-		memset(&deleted_flag, 0, IMAP_NFLAGS * sizeof(int));
+		memset(deleted_flag, 0, IMAP_NFLAGS * sizeof(int));
 		deleted_flag[IMAP_FLAG_DELETED] = 1;
 
 		GList *ids = g_tree_keys(mb->ids);
 
-		while (ids) {
-			if (db_set_msgflag(*(u64_t *)ids->data, mailbox_idnr, deleted_flag, IMAPFA_ADD) < 0) {
-				qerrorf("Error setting flags for message [%llu]\n", *(u64_t *)ids->data);
-				result = -1;
-				goto cleanup;
+                while (ids) {
+			// Flag the selected messages \\Deleted
+			// Following this, dbmail-util -d sets deleted status
+			if (delete_after_dump & 1) {
+				if (db_set_msgflag(*(u64_t *)ids->data, mailbox_idnr, deleted_flag, IMAPFA_ADD) < 0) {
+					qerrorf("Error setting flags for message [%llu]\n", *(u64_t *)ids->data);
+					result = -1;
+				}
 			}
+
+			// Set deleted status on each message
+			// Following this, dbmail-util -p sets purge status
+			if (delete_after_dump & 2) {
+				if (db_set_message_status(*(u64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
+					qerrorf("Error setting status for message [%llu]\n", *(u64_t *)ids->data);
+					result = -1;
+				}
+			}
+
+			if (!g_list_next(ids))
+				break;
 			ids = g_list_next(ids);
 		}
 
@@ -251,7 +271,7 @@ int main(int argc, char *argv[])
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
-		"-u:m:o:b:s:dr" /* Major modes */
+		"-u:m:o:b:s:dDr" /* Major modes */
 		"f:qvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
@@ -279,7 +299,10 @@ int main(int argc, char *argv[])
 				outfile = optarg;
 			break;
 		case 'd':
-			delete_after_dump = 1;
+			delete_after_dump |= 1;
+			break;
+		case 'D':
+			delete_after_dump |= 2;
 			break;
 		case 'r':
 			recursive = 1;
