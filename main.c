@@ -60,29 +60,30 @@ int yes_to_all = 0;
 int reallyquiet = 0;
 int quiet = 0;
 
-int do_showhelp(void) {
-	printf("*** dbmail-smtp ***\n");
+void do_showhelp(void) {
+	printf(
+	"*** dbmail-smtp ***\n"
+//	Try to stay under the standard 80 column width
+//	0........10........20........30........40........50........60........70........80
+	"Use this program to deliver mail from your MTA or on the command line.\n"
+	"See the man page for more info. Summary:\n\n"
+	"     -t [headerfield]   for normal deliveries (default is \"delivered-to\")\n"
+	"     -d [addresses]     for delivery without using scanner\n"
+	"     -u [usernames]     for direct delivery to users\n"
+	"     -m \"mailbox\"     for delivery to a specific mailbox\n"
+	"     -M \"mailbox\"     as -m, but skip permissions checks and Sieve scripts\n"
+	"     -r return path     for address of bounces and other error reports\n"
 
-	printf("Use this program to deliver mail from your MTA or on the command line.\n");
-	printf("See the man page for more info. Summary:\n\n");
-	printf("     -t [headerfield]   for normal deliveries (default is \"delivered-to\")\n");
-	printf("     -d [addresses]     for delivery without using scanner\n");
-	printf("     -u [usernames]     for direct delivery to users\n");
-	printf("     -m \"mailbox\"     for delivery to a specific mailbox\n");
-	printf("     -M \"mailbox\"     as -m, but skip permissions checks and Sieve scripts\n");
-	printf("     -r return path     for address of bounces and other error reports\n");
-
-	printf("\nCommon options for all DBMail utilities:\n");
-	printf("     -f file   specify an alternative config file\n");
-	printf("     -q        quietly skip interactive prompts\n"
-	       "               use twice to suppress error messages\n");
-	printf("     -n        show the intended action but do not perform it, no to all\n");
-	printf("     -y        perform all proposed actions, as though yes to all\n");
-	printf("     -v        verbose details\n");
-	printf("     -V        show the version\n");
-	printf("     -h        show this help message\n");
-
-	return 0;
+	"\nCommon options for all DBMail utilities:\n"
+	"     -f file   specify an alternative config file\n"
+	"     -q        quietly skip interactive prompts\n"
+	"               use twice to suppress error messages\n"
+	"     -n        show the intended action but do not perform it, no to all\n"
+	"     -y        perform all proposed actions, as though yes to all\n"
+	"     -v        verbose details\n"
+	"     -V        show the version\n"
+	"     -h        show this help message\n"
+	);
 }
 
 int main(int argc, char *argv[])
