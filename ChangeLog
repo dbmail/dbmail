@@ -6,6 +6,8 @@
 	Added new -D option to set deleted status on messages.
 	* user.c:
 	Cleaned up the help text a little bit.
+	* modules/sortsieve.c:
+	Accepted modified version of patch for bug #632.
 
 2007-07-28  Paul J Stevens <paul@nfg.nl>
 
