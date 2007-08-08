@@ -8,7 +8,7 @@ dbmail-export - export a mailbox from the DBMail mailsystem to mbox format.
 
 SYNOPSIS
 --------
-dbmail-export [-dr] [-u user] [-m mailbox] [-s imap search] [-o outfile|-b basedir] [-f configFile]
+dbmail-export [-dDr] [-u user] [-m mailbox] [-s imap search] [-o outfile|-b basedir] [-f configFile]
 
 DESCRIPTION
 -----------
@@ -37,6 +37,9 @@ OPTIONS
 
 -d::
   flag exported messages as \\Deleted (use dbmail-util to expunge).
+
+-D::
+  set delete status on exported messages (user dbmail-util to purge).
 
 -r::
   export mailboxes recursively (default: true unless -m option also
