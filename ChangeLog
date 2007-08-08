@@ -4,7 +4,7 @@
 	Added new -e option to edit scripts in-place.
 	* export.c:
 	Added new -D option to set deleted status on messages.
-	* user.c:
+	* main.c, user.c:
 	Cleaned up the help text a little bit.
 	* modules/sortsieve.c:
 	Accepted modified version of patch for bug #632.
