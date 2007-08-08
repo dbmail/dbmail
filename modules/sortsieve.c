@@ -225,10 +225,11 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	extern const char * imap_flag_desc[];
 	char * const * flags;
 	const char * mailbox;
-	int *msgflags = NULL;
+	int msgflags[IMAP_NFLAGS];
+	int *has_msgflags = NULL;
 
 	mailbox = sieve2_getvalue_string(s, "mailbox");
-	flags = sieve2_getvalue_stringlist(s, "imapflags");
+	flags = sieve2_getvalue_stringlist(s, "flags");
 
 	/* This condition exists for the KEEP callback. */
 	if (! mailbox) {
@@ -238,30 +239,32 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	/* If there were any imapflags, set them. */
 	if (flags) {
 		int i, j;
-		msgflags = g_new0(int, IMAP_NFLAGS);
+		memset(msgflags, 0, IMAP_NFLAGS * sizeof(int));
 
-		for (i = 0; flags[i]; i++) { // Loop through all script/user-specified flags.
-			for (j = 0; imap_flag_desc[j]; j++) { // Find the ones we support.
+		// Loop through all script/user-specified flags.
+		for (i = 0; flags[i]; i++) {
+			// Find the ones we support.
+			for (j = 0; imap_flag_desc[j] && j < IMAP_NFLAGS; j++) {
 				if (g_strcasestr(imap_flag_desc[j], flags[i])) {
-					msgflags[i] = 1;
+					// Flag 'em.
+					msgflags[j] = 1;
+					// Only pass msgflags if we found something.
+					has_msgflags = msgflags;
 				}
 			}
 		}
 	}
 
-	TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s]", mailbox);
+	TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s] flags are [%s]", mailbox);
 
 	/* Don't cancel the keep if there's a problem storing the message. */
 	if (sort_deliver_to_mailbox(m->message, m->user_idnr,
-			mailbox, BOX_SORTING, msgflags) != DSN_CLASS_OK) {
+			mailbox, BOX_SORTING, has_msgflags) != DSN_CLASS_OK) {
 		TRACE(TRACE_ERROR, "Could not file message into mailbox; not cancelling keep.");
 		m->result->cancelkeep = 0;
 	} else {
 		m->result->cancelkeep = 1;
 	}
-
-	if (msgflags)
-		g_free(msgflags);
 
 	return SIEVE2_OK;
 }
