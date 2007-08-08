@@ -1,3 +1,14 @@
+2007-08-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* sievecmd.c:
+	Added new -e option to edit scripts in-place.
+	* export.c:
+	Added new -D option to set deleted status on messages.
+	* main.c, user.c:
+	Cleaned up the help text a little bit.
+	* modules/sortsieve.c:
+	Accepted modified version of patch for bug #632.
+
 2007-07-28  Paul Stevens <paul@nfg.nl>
 
 	* db.c, db.h, maintenance.c:

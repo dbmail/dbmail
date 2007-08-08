@@ -35,52 +35,55 @@ char *configFile = DEFAULT_CONFIG_FILE;
 extern db_param_t _db_params;
 
 /* UI policy */
-int yes_to_all;
-int no_to_all;
-int verbose;
-int quiet; 		/* Don't be helpful. */
-int reallyquiet;	/* Don't print errors. */
+int yes_to_all = 0;
+int no_to_all = 0;
+int verbose = 0;
+int quiet = 0;          /* Don't be helpful. */
+int reallyquiet = 0;    /* Don't print errors. */
 
-int do_showhelp(void) {
-	
-	printf("*** dbmail-users ***\n");
-	printf("Use this program to manage your DBMail users.\n");
-	printf("See the man page for more info. Modes of operation:\n\n");
-	printf("     -a user   add a user\n");
-	printf("     -d user   delete a user\n");
-	printf("     -c user   change details for a user\n");
-	printf("     -e user   empty all mailboxes for a user\n");
-	printf("     -l uspec  list information for matching users\n");
-	printf("     -x alias  create an external forwarding address\n");
-	printf("\nSummary of options for all modes:\n");
-	printf("     -w passwd specify user's password on the command line\n");
-	printf("     -W [file] read from a file or prompt for a user's password\n");
-	printf("     -p pwtype password type may be one of the following:\n"
-	       "               plaintext, crypt, md5-hash, md5-digest, md5-base64\n"
-	       "               each type may be given a '-raw' suffix to indicate\n"
-	       "               that the password argument has already been encoded.\n");
-	printf("     -P [file] pull encrypted password from the shadow file\n");
-	printf("     -u user   new username (only useful for -c, change)\n");
-	printf("     -g client assign the user to a client\n");
-	printf("     -m max    set the maximum mail quota in <bytes>B,\n"
-	       "               <kbytes>K, or <mbytes>M, default in bytes\n"
-	       "               specify 0 to remove any mail quota limits\n");
-	printf("     -s alia.. adds a list of recipient aliases\n");
-	printf("     -S alia.. removes a list of recipient aliases (wildcards supported)\n");
-	printf("     -t fwds.. adds a list of deliver-to forwards\n");
-	printf("     -T fwds.. removes a list of deliver-to forwards (wildcards supported)\n");
-        printf("\nCommon options for all DBMail utilities:\n");
-	printf("     -f file   specify an alternative config file\n");
-	printf("     -q        quietly skip interactive prompts\n"
-	       "               use twice to suppress error messages\n");
-	printf("     -n        show the intended action but do not perform it, no to all\n");
-	printf("     -y        perform all proposed actions, as though yes to all\n");
-	printf("     -v        verbose details\n");
-	printf("     -V        show the version\n");
-	printf("     -h        show this help message\n");
-	
+int do_showhelp(void)
+{
+	printf(
+//	Try to stay under the standard 80 column width
+//	0........10........20........30........40........50........60........70........80
+	"*** dbmail-users ***\n"
+	"Use this program to manage your DBMail users.\n"
+	"See the man page for more info. Modes of operation:\n\n"
+	"     -a user   add a user\n"
+	"     -d user   delete a user\n"
+	"     -c user   change details for a user\n"
+	"     -e user   empty all mailboxes for a user\n"
+	"     -l uspec  list information for matching users\n"
+	"     -x alias  create an external forwarding address\n"
+	"\nSummary of options for all modes:\n"
+	"     -w passwd specify user's password on the command line\n"
+	"     -W [file] read from a file or prompt for a user's password\n"
+	"     -p pwtype password type may be one of the following:\n"
+	"               plaintext, crypt, md5-hash, md5-digest, md5-base64\n"
+	"               each type may be given a '-raw' suffix to indicate\n"
+	"               that the password argument has already been encoded.\n"
+	"     -P [file] pull encrypted password from the shadow file\n"
+	"     -u user   new username (only useful for -c, change)\n"
+	"     -g client assign the user to a client\n"
+	"     -m max    set the maximum mail quota in <bytes>B,\n"
+	"               <kbytes>K, or <mbytes>M, default in bytes\n"
+	"               specify 0 to remove any mail quota limits\n"
+	"     -s alia.. adds a list of recipient aliases\n"
+	"     -S alia.. removes a list of recipient aliases (wildcards supported)\n"
+	"     -t fwds.. adds a list of deliver-to forwards\n"
+	"     -T fwds.. removes a list of deliver-to forwards (wildcards supported)\n"
+        "\nCommon options for all DBMail utilities:\n"
+	"     -f file   specify an alternative config file\n"
+	"     -q        quietly skip interactive prompts\n"
+	"               use twice to suppress error messages\n"
+	"     -n        show the intended action but do not perform it, no to all\n"
+	"     -y        perform all proposed actions, as though yes to all\n"
+	"     -v        verbose details\n"
+	"     -V        show the version\n"
+	"     -h        show this help message\n"
+	);
+
 	return 0;
-	
 }
 
 int main(int argc, char *argv[])
