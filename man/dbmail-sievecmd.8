@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-sievecmd
 .\"    Author: 
 .\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 06/24/2007
+.\"      Date: 08/07/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-SIEVECMD" "8" "06/24/2007" "" ""
+.TH "DBMAIL\-SIEVECMD" "8" "08/07/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -13,7 +13,7 @@
 .SH "NAME"
 dbmail\-sievecmd \- manipulates Sieve scripts in the DBMail database.
 .SH "SYNOPSIS"
-dbmail\-sievecmd \-u username [\-l] [\-a scriptname] [\-d scriptname] [\-i scriptname file] [\-c [scriptname]] [\-r scriptname] [\-f configfile] [\-nvVh]
+dbmail\-sievecmd \-u username [\-l] [\-a scriptname] [\-d scriptname] [\-i scriptname file] [\-c [scriptname]] [\-e [scriptname]] [\-r scriptname] [\-f configfile] [\-nvVh]
 .SH "DESCRIPTION"
 DBMail stores Sieve scripts in a table in the DBMail database. These scripts are used to sort incoming mail for the email users. Each user has their own script space and may upload scripts to the dbmail\-timsieved(8) daemon. The dbmail\-sievecmd(8) utility provides a convenient method for the system administrator to work with Sieve scripts from the command line.
 .SH "OPTIONS"
@@ -46,6 +46,9 @@ will be read.
 \-c [scriptname]
 Print out the named script. If no script is given, the active script is printed.
 .TP 3n
+\-e [scriptname]
+Edit the named script. If no script is given, the active script is printed. The EDITOR environment variable is used to find the editor program.
+.TP 3n
 \-r scriptname
 Remove the named script. If the script was active, no script will be active after it is deletion.
 .SH "COMMON OPTIONS"
@@ -65,7 +68,7 @@ Show the version and copyright, then exit.
 \-h
 Show a brief summary of options, then exit.
 .SH "BUGS"
-If you experience inexplicable problems with DBMAil, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
+If you experience inexplicable problems with DBMail, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
 .SH "LICENSE"
 DBMail and its components are distributed under the terms of the GNU General Public License. Copyrights are held variously by the authors listed below.
 .SH "AUTHOR(S)"
@@ -81,6 +84,7 @@ Koningsweg 4
 3582 GE Utrecht
 http://www.ic\-s.nl
 .fi
+.sp
 .RE
 .SH "REFERENCES"
 .TP 3

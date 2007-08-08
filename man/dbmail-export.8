@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-export
 .\"    Author: 
 .\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 07/16/2007
+.\"      Date: 08/07/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-EXPORT" "8" "07/16/2007" "" ""
+.TH "DBMAIL\-EXPORT" "8" "08/07/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -13,7 +13,7 @@
 .SH "NAME"
 dbmail\-export \- export a mailbox from the DBMail mailsystem to mbox format.
 .SH "SYNOPSIS"
-dbmail\-export [\-dr] [\-u user] [\-m mailbox] [\-s imap search] [\-o outfile|\-b basedir] [\-f configFile]
+dbmail\-export [\-dDr] [\-u user] [\-m mailbox] [\-s imap search] [\-o outfile|\-b basedir] [\-f configFile]
 .SH "DESCRIPTION"
 The dbmail\-export program allows you to export a DBMail mailbox to an mbox formatted mailbox.
 .SH "OPTIONS"
@@ -35,6 +35,9 @@ use an IMAP SEARCH string to select messages (default: 1:*) for example, to expo
 .TP 3n
 \-d
 flag exported messages as \\\\Deleted (use dbmail\-util to expunge).
+.TP 3n
+\-D
+set delete status on exported messages (user dbmail\-util to purge).
 .TP 3n
 \-r
 export mailboxes recursively (default: true unless \-m option also specified).
