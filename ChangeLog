@@ -1,3 +1,8 @@
+2007-08-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* sievecmd.c:
+	Added new -e option to edit scripts in-place.
+
 2007-07-28  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, db.h, maintenance.c:
