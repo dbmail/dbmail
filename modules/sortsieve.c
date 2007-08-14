@@ -156,13 +156,67 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (md5_handle)
 		g_free(md5_handle);
 
-	m->result->cancelkeep = 0;
 	return SIEVE2_OK;
 }
 
-int sort_notify(sieve2_context_t *s UNUSED, void *my UNUSED)
+int sort_notify(sieve2_context_t *s, void *my)
 {
-	return SIEVE2_ERROR_UNSUPPORTED;
+	struct sort_context *m = (struct sort_context *)my;
+	const char *message, *subject, *fromaddr, *handle;
+	const char *rc_to, *rc_from, *rc_handle;
+	char *md5_handle = NULL;
+	int days, mime;
+
+	days = sieve2_getvalue_int(s, "days");
+	mime = sieve2_getvalue_int(s, "mime"); // mime: 1 if message is mime coded. FIXME.
+	message = sieve2_getvalue_string(s, "message");
+	subject = sieve2_getvalue_string(s, "subject");
+	fromaddr = sieve2_getvalue_string(s, "fromaddr"); // From: specified by the script.
+	handle = sieve2_getvalue_string(s, "hash");
+
+	/* Default to a week, upper limit of a month.
+	 * This is our only loop prevention mechanism! The value must be
+	 * greater than 0, else the replycache code will always indicate
+	 * that we haven't seen anything since 0 days ago... */
+	if (days == 0) days = 7;
+	if (days < 1) days = 1;
+	if (days > 30) days = 30;
+
+	if (handle) {
+		rc_handle = handle;
+	} else {
+		char *tmp;
+		tmp = g_strconcat(subject, message, NULL);
+		rc_handle = md5_handle = dm_md5((const unsigned char * const) tmp);
+		g_free(tmp);
+	}
+
+	// FIXME: should be validated as a user might try
+	// to forge an address from their script.
+	rc_from = fromaddr;
+	if (!rc_from)
+		rc_from = dbmail_message_get_header(m->message, "Delivered-To");
+	if (!rc_from)
+		rc_from = m->message->envelope_recipient->str;
+
+	rc_to = dbmail_message_get_header(m->message, "Reply-To");
+	if (!rc_to)
+		rc_to = dbmail_message_get_header(m->message, "Return-Path");
+
+	if (db_replycache_validate(rc_to, rc_from, rc_handle, days) == DM_SUCCESS) {
+		if (send_vacation(m->message, rc_to, rc_from, subject, message, rc_handle) == 0)
+			db_replycache_register(rc_to, rc_from, rc_handle);
+		TRACE(TRACE_INFO, "Sending vacation to [%s] from [%s] handle [%s] repeat days [%d]",
+			rc_to, rc_from, rc_handle, days);
+	} else {
+		TRACE(TRACE_INFO, "Vacation suppressed to [%s] from [%s] handle [%s] repeat days [%d]",
+			rc_to, rc_from, rc_handle, days);
+	}
+
+	if (md5_handle)
+		g_free(md5_handle);
+
+	return SIEVE2_OK;
 }
 
 int sort_redirect(sieve2_context_t *s, void *my)
@@ -243,19 +297,42 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 
 		// Loop through all script/user-specified flags.
 		for (i = 0; flags[i]; i++) {
+			int supported = 0;
 			// Find the ones we support.
 			for (j = 0; imap_flag_desc[j] && j < IMAP_NFLAGS; j++) {
-				if (g_strcasestr(imap_flag_desc[j], flags[i])) {
-					// Flag 'em.
+				// Point to the first character after the last '\'
+				char *flag = strrchr(flags[i], '\\');
+				if (g_strcasestr(imap_flag_desc[j], flag ? ++flag : flags[i])) {
+					supported = 1;
 					msgflags[j] = 1;
 					// Only pass msgflags if we found something.
 					has_msgflags = msgflags;
 				}
 			}
+			if (supported) {
+				TRACE(TRACE_DEBUG, "Adding flag [%s]", flags[i]);
+			} else {
+				TRACE(TRACE_DEBUG, "Unsupported flag [%s]", flags[i]);
+			}
 		}
 	}
 
-	TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s] flags are [%s]", mailbox);
+	if (has_msgflags) {
+		// TODO: Don't do all this at lower trace levels
+		int i;
+		char text_msgflags[IMAP_NFLAGS * 10];
+		memset(text_msgflags, 0, IMAP_NFLAGS * 10);
+		extern const char * imap_flag_desc_escaped[];
+		for (i = 0; imap_flag_desc_escaped[i] && i < IMAP_NFLAGS; i++) {
+			if (msgflags[i]) {
+				g_strlcat(text_msgflags, imap_flag_desc_escaped[i], IMAP_NFLAGS * 10);
+				g_strlcat(text_msgflags, " ", IMAP_NFLAGS * 10);
+			}
+		}
+		TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s] flags are [%s]", mailbox, text_msgflags);
+	} else {
+		TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s] no flags", mailbox);
+	}
 
 	/* Don't cancel the keep if there's a problem storing the message. */
 	if (sort_deliver_to_mailbox(m->message, m->user_idnr,
@@ -393,10 +470,13 @@ int sort_getenvelope(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
 
-	sieve2_setvalue_string(s, "to",
-		m->message->envelope_recipient->str);
-	sieve2_setvalue_string(s, "from",
-		(char *)dbmail_message_get_header(m->message, "Return-Path"));
+	char *to = m->message->envelope_recipient->str;
+	char *from  = (char *)dbmail_message_get_header(m->message, "Return-Path");
+
+	TRACE(TRACE_INFO, "Getting envelope, to [%s] from [%s]", to, from);
+
+	sieve2_setvalue_string(s, "to", to);
+	sieve2_setvalue_string(s, "from", from);
 
 	return SIEVE2_OK;
 }
@@ -773,11 +853,12 @@ sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
 			res, sieve2_errstr(res));
 		exitnull = 1;
 	}
+
+	/* At this point the callbacks are called from within libSieve. */
+
 	if (! sort_context->result->cancelkeep) {
 		TRACE(TRACE_INFO, "No actions taken; message must be kept.");
 	}
-
-	/* At this point the callbacks are called from within libSieve. */
 
 freesieve:
 	if (sort_context->s_buf)
@@ -800,10 +881,8 @@ freesieve:
 void sort_free_result(sort_result_t *result)
 {
 	if (result == NULL) return;
-	if (result->errormsg != NULL) 
-		g_string_free(result->errormsg, TRUE);
-	if (result->rejectmsg != NULL) 
-		g_string_free(result->rejectmsg, TRUE);
+	if (result->errormsg) g_string_free(result->errormsg, TRUE);
+	if (result->rejectmsg) g_string_free(result->rejectmsg, TRUE);
 	g_free(result);
 }
 
@@ -828,18 +907,21 @@ int sort_get_reject(sort_result_t *result)
 const char *sort_get_rejectmsg(sort_result_t *result)
 {
 	if (result == NULL) return NULL;
+	if (result->rejectmsg == NULL) return NULL;
 	return result->rejectmsg->str;
 }
 
 int sort_get_error(sort_result_t *result)
 {
 	if (result == NULL) return 0;
+	if (result->errormsg == NULL) return 0;
 	return result->errormsg->len;
 }
 
 const char * sort_get_errormsg(sort_result_t *result)
 {
 	if (result == NULL) return NULL;
+	if (result->errormsg == NULL) return NULL;
 	return result->errormsg->str;
 }
 

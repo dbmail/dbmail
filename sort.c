@@ -91,16 +91,6 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		}
 	}
 
-	/* Sieve actions:
-	 * (m = must implement, s = should implement, e = extension)
-	 * m Keep - implicit default action.
-	 * m Discard - requires us to skip the default action.
-	 * m Redirect - add to the forwarding list.
-	 * s Fileinto - change the destination mailbox.
-	 * s Reject - nope, sorry. we killed bounce().
-	 * e Vacation - share with the auto reply code.
-	 */
-
 	if (cancelkeep) {
 		// The implicit keep has been cancelled.
 		// This may necessarily imply that the message
@@ -151,7 +141,7 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		TRACE(TRACE_DEBUG, "Checking if we have the right to post incoming messages");
         
 		mailbox_t mbox;
-		memset(&mbox, '\0', sizeof(mbox));
+		memset(&mbox, 0, sizeof(mbox));
 		mbox.uid = mboxidnr;
 		
 		switch (acl_has_right(&mbox, useridnr, ACL_RIGHT_POST)) {
