@@ -2639,13 +2639,20 @@ char *db_imap_utf7_like(const char *column,
 		const char *filter)
 {
 	GString *like;
-	char *sensitive, *insensitive, *tmplike;
+	char *sensitive, *insensitive, *tmplike, *escaped;
+	char ** tmparr;
 	size_t i, len = strlen(mailbox);
 	int verbatim = 0, has_sensitive_part = 0;
 
 	like = g_string_new("");
-	sensitive = dm_stresc(mailbox);
-	insensitive = dm_stresc(mailbox);
+
+	tmparr = g_strsplit(mailbox, "_", -1);
+	escaped = g_strjoinv("\\_",tmparr);
+	g_free(tmparr);
+
+	sensitive = dm_stresc(escaped);
+	insensitive = dm_stresc(escaped);
+	g_free(escaped);
 
 	for (i = 0; i < len; i++) {
 		switch (mailbox[i]) {

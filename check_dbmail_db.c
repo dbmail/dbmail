@@ -928,7 +928,7 @@ END_TEST
  */
 START_TEST(test_db_mailbox_create_with_parents)
 {
-	u64_t mailbox_idnr = 0;
+	u64_t mailbox_idnr = 0, mb1 = 0, mb2 = 0, mb3 = 0;
 	const char *message;
 	int result;
 	int only_empty = 0, update_curmail_size = 0 ;
@@ -949,6 +949,22 @@ START_TEST(test_db_mailbox_create_with_parents)
 	result = db_delete_mailbox(mailbox_idnr, only_empty, update_curmail_size);
 	fail_unless(result == 0, "Failed at db_findmailbox or db_delete_mailbox");
 
+	result = db_mailbox_create_with_parents("INBOX/Foo/Bar-Baz", BOX_COMMANDLINE, useridnr, &mb1, &message);
+	fail_unless(result == 0 && mb1 != 0, "Failed at db_mailbox_create_with_parents: [%s]", message);
+
+	result = db_mailbox_create_with_parents("INBOX/Foo/Bar_Baz", BOX_COMMANDLINE, useridnr, &mb2, &message);
+	fail_unless(result == 0 && mb2 != 0, "Failed at db_mailbox_create_with_parents: [%s]", message);
+
+	result = db_mailbox_create_with_parents("INBOX/Foo/Bar=Baz", BOX_COMMANDLINE, useridnr, &mb3, &message);
+	fail_unless(result == 0 && mb3 != 0, "Failed at db_mailbox_create_with_parents: [%s]", message);
+
+	result = db_delete_mailbox(mb1, only_empty, update_curmail_size);
+	fail_unless(result == 0, "Failed at db_findmailbox or db_delete_mailbox");
+	result = db_delete_mailbox(mb2, only_empty, update_curmail_size);
+	fail_unless(result == 0, "Failed at db_findmailbox or db_delete_mailbox");
+	result = db_delete_mailbox(mb3, only_empty, update_curmail_size);
+	fail_unless(result == 0, "Failed at db_findmailbox or db_delete_mailbox");
+
 	result = db_findmailbox("INBOX/FOO", useridnr, &mailbox_idnr);
 	fail_unless(result == 1 && mailbox_idnr != 0, "Failed at db_findmailbox(\"INBOX/FOO\")");
 	result = db_delete_mailbox(mailbox_idnr, only_empty, update_curmail_size);
@@ -959,6 +975,7 @@ START_TEST(test_db_mailbox_create_with_parents)
 	result = db_delete_mailbox(mailbox_idnr, only_empty, update_curmail_size);
 	fail_unless(result == 0, "We just deleted inbox. Something silly.");
 	/* Cool, we've cleaned up after ourselves. */
+
 }
 END_TEST
 
