@@ -1,3 +1,8 @@
+2007-08-24  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_db.c, db.c:
+	escape underscore in mailbox names during matching (bug #639)
+
 2007-08-07  Aaron Stone  <aaron@serendipity.cx>
 
 	* sievecmd.c:
