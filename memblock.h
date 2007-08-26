@@ -54,9 +54,6 @@ void mclose(MEM ** m);
 int mwrite(const void *data, int size, MEM * m);
 int mread(void *data, int size, MEM * m);
 int mseek(MEM * m, long offset, int whence);
-long mtell(MEM * m);
 void mrewind(MEM * m);
-void mreset(MEM * m);
-char *merror(void);
 
 #endif

@@ -60,11 +60,8 @@ MEM *mopen()
 	}
 
 	mp->firstblk = g_new0(memblock_t, 1);
-	if (!mp->firstblk) {
-		__m_errno = M_NOMEM;
-		g_free(mp);
-		return NULL;
-	}
+
+	memset(mp->firstblk->data, 0, _MEMBLOCK_SIZE);
 
 	mp->firstblk->nextblk = NULL;
 	mp->firstblk->prevblk = NULL;
@@ -324,37 +321,6 @@ int mseek(MEM * m, long offset, int whence)
 
 
 /*
- * mtell()
- *
- * gives the current position in bytes (absolute cnt)
- */
-long mtell(MEM * m)
-{
-	memblock_t *tmp;
-	long pos = 0;
-
-	if (!m) {
-		__m_errno = M_BADMEM;
-		return -1;
-	}
-
-	tmp = m->firstblk;
-	while (tmp && tmp != m->currblk) {
-		pos += _MEMBLOCK_SIZE;
-		tmp = tmp->nextblk;
-	}
-
-	if (!tmp) {
-		__m_errno = M_BADMEM;
-		return -1;
-	}
-
-	pos += m->mpos;
-	return pos;
-}
-
-
-/*
  * mrewind()
  *
  * equivalent to mseek(m, 0, SEEK_SET)
@@ -363,56 +329,6 @@ void mrewind(MEM * m)
 {
 	mseek(m, 0, SEEK_SET);
 	__m_errno = M_NOERROR;
-}
-
-
-/*
- * merror()
- *
- * returns a ptr to a string describing the status of the last operation
- */
-char *merror()
-{
-	if (__m_errno >= 0 && __m_errno < M_LASTERR) {
-		strncpy(__m_error_str, __m_error_desc[__m_errno],
-			MAX_ERROR_SIZE);
-		return __m_error_str;
-	} else
-		return NULL;
-}
-
-
-/*
- * mreset()
- *
- * restores a memory block to the state just after it was created with mopen()
- */
-void mreset(MEM * m)
-{
-	memblock_t *tmp, *next;
-
-	__m_errno = M_NOERROR;
-
-	if (!m)
-		return;
-
-	tmp = m->firstblk;
-	if (tmp)
-		tmp = tmp->nextblk;
-
-	while (tmp) {
-		next = tmp->nextblk;	/* save address */
-		g_free(tmp);
-		tmp = next;
-		m->nblocks--;
-	}
-
-	m->firstblk->nextblk = NULL;
-	m->mpos = 0;
-	m->eom = 0;
-
-	m->currblk = m->firstblk;
-	m->lastblk = m->firstblk;
 }
 
 
@@ -431,10 +347,8 @@ int __m_blkadd(MEM * m)
 	}
 
 	newblk = g_new0(memblock_t, 1);
-	if (!newblk) {
-		__m_errno = M_NOMEM;
-		return 0;
-	}
+
+	memset(newblk->data, 0, _MEMBLOCK_SIZE);
 
 	newblk->prevblk = m->lastblk;
 	newblk->nextblk = NULL;
