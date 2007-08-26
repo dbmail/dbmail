@@ -1,3 +1,8 @@
+2007-08-26  Paul J Stevens <paul@nfg.nl>
+
+	* memblock.c, memblock.h:
+	memblock cleanup (bug #628)
+
 2007-08-24  Paul Stevens <paul@nfg.nl>
 
 	* check_dbmail_db.c, db.c:
