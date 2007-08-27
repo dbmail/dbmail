@@ -30,7 +30,6 @@
 
 #include "dbmail.h"
 
-#define DEF_QUERYSIZE 1024
 #define DUMP_BUF_SIZE 1024
 
 #define ICHECK_RESULTSETSIZE 1000000
