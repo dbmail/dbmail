@@ -3720,20 +3720,22 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 	return DM_SUCCESS;		/* success */
 }
 
-#define EXPIRE_SIZE 64
 #define EXPIRE_DAYS 3
 int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 {
 	int rows;
 	char *safe_messageid;
-	char query[DEF_QUERYSIZE], expire[EXPIRE_SIZE];
-	memset(query,0,DEF_QUERYSIZE);
-	memset(expire,0,EXPIRE_SIZE);
+	char query[DEF_QUERYSIZE], expire[DEF_FRAGSIZE], partial[DEF_FRAGSIZE];
+
+	memset(query,0,sizeof(query));
+	memset(expire,0,sizeof(expire));
+	memset(partial,0,sizeof(partial));
 
 	g_return_val_if_fail(messageid!=NULL,0);
 
 	safe_messageid = dm_stresc(messageid);
-	snprintf(expire, EXPIRE_SIZE, db_get_sql(SQL_EXPIRE), EXPIRE_DAYS);
+	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), EXPIRE_DAYS);
+	snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headername");
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT message_idnr FROM %smessages m "
 		"JOIN %sphysmessage p ON m.physmessage_id=p.id "
@@ -3741,9 +3743,9 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 		"JOIN %sheadername n ON v.headername_id=n.id "
 		"WHERE m.mailbox_idnr=%llu "
 		"AND n.headername IN ('resent-message-id','message-id') "
-		"AND v.headervalue='%s'" 
+		"AND %s='%s'" 
 		"AND p.internal_date > %s", DBPFX, DBPFX, DBPFX, DBPFX, 
-		mailbox_idnr, safe_messageid, expire);
+		mailbox_idnr, partial, safe_messageid, expire);
 	g_free(safe_messageid);
 	
 	if (db_query(query) == DM_EQUERY)

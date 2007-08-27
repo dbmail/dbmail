@@ -290,7 +290,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	q = g_string_new("");
 	t = g_string_new("");
 	ostream = g_mime_stream_file_new(file);
-	g_mime_stream_file_set_owner (ostream, FALSE);
+	g_mime_stream_file_set_owner ((GMimeStreamFile *)ostream, FALSE);
 
 	
 	ids = g_tree_keys(self->ids);
@@ -1204,6 +1204,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	u64_t id;
 	char gt_lt = 0;
 	const char *op;
+	char partial[DEF_FRAGSIZE];
 	
 	GString *t;
 	GString *q;
@@ -1247,33 +1248,38 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			
 		case IST_HDR:
 		
+		memset(partial,0,sizeof(partial));
+		snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "headervalue");
 		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			 "JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			 "JOIN %sheadervalue v ON v.physmessage_id=p.id "
 			 "JOIN %sheadername n ON v.headername_id=n.id "
 			 "WHERE mailbox_idnr = %llu "
 			 "AND status IN (%d,%d) "
-			 "AND headername %s '%s' AND headervalue %s '%%%s%%' "
+			 "AND headername %s '%s' AND %s %s '%%%s%%' "
 			 "ORDER BY message_idnr", 
 			 DBPFX, DBPFX, DBPFX, DBPFX,
 			 dbmail_mailbox_get_id(self), 
 			 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
 			 db_get_sql(SQL_INSENSITIVE_LIKE), s->hdrfld, 
-			 db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
+			 partial, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
 			break;
 
 		case IST_DATA_TEXT:
+
+		memset(partial,0,sizeof(partial));
+		snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "headervalue");
 		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			"JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			"JOIN %sheadervalue v on v.physmessage_id=p.id "
 			"WHERE mailbox_idnr = %llu "
 			"AND status IN (%d,%d) "
-			"AND headervalue %s '%%%s%%' "
+			"AND %s %s '%%%s%%' "
 			"ORDER BY message_idnr",
 			DBPFX, DBPFX, DBPFX, 
 			dbmail_mailbox_get_id(self),
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-			db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
+			partial, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
 			break;
 			
 		case IST_IDATE:
