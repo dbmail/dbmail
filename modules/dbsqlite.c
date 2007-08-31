@@ -44,6 +44,7 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_ENCODE_ESCAPE:
 		case SQL_TO_CHAR:
 		case SQL_STRCASE:
+		case SQL_PARTIAL:
 			return "%s";
 		break;
 		case SQL_TO_DATE:

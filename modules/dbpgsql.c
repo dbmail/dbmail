@@ -69,6 +69,9 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_STRCASE:
 			return "LOWER(%s)";
 		break;
+		case SQL_PARTIAL:
+			return "SUBSTRING(%s,0,255)";
+		break;
 	}
 	return NULL;
 }

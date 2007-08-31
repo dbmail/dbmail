@@ -67,6 +67,7 @@ const char * db_get_sql(sql_fragment_t frag)
 		break;
 		case SQL_STRCASE:
 		case SQL_ENCODE_ESCAPE:
+		case SQL_PARTIAL:
 			return "%s";
 		break;
 	}

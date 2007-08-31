@@ -57,6 +57,8 @@ CREATE TABLE dbmail_headervalue (
 );
 CREATE UNIQUE INDEX dbmail_headervalue_1 ON dbmail_headervalue(physmessage_id, id);
 CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue(physmessage_id);
+CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue(substring(headervalue,0,255)));
+
 
 
 -- provide separate storage of commonly used headers
