@@ -805,21 +805,23 @@ END_TEST
 START_TEST(test_db_imap_utf7_like)
 {
 	char *trythese[] = {
-		"INBOX/&BekF3AXVBd0-",
 		"Inbox",
 		"Listen/F% %/Users",
+		"xx1_&AOcA4w-o",
+		"INBOX/&BekF3AXVBd0-",
 		NULL };
 	char *getthese[] = {
-		"name LIKE BINARY '______&BekF3AXVBd0_/%' AND name LIKE 'INBOX/____________-/%'",
 		"name LIKE 'Inbox/%'",
 		"name LIKE 'Listen/F% %/Users/%'",
+		"name LIKE BINARY '___\\\\_&AOcA4w__/%' AND name LIKE 'xx1\\\\________-o/%'",
+		"name LIKE BINARY '______&BekF3AXVBd0_/%' AND name LIKE 'INBOX/____________-/%'",
 		NULL };
 	int i;
 
 	for (i = 0; trythese[i] != NULL; i++) {
 		char *result = db_imap_utf7_like("name", trythese[i], "/%");
 
-		fail_unless(strcmp(result, getthese[i])==0, "Failed to make db_imap_utf7_like string for [%s]", trythese[i]);
+		fail_unless(strcmp(result, getthese[i])==0, "Failed to make db_imap_utf7_like string for [%s]:\n[%s] !=\n[%s]", trythese[i], result, getthese[i]);
 
 		g_free(result);
 	}
