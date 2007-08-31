@@ -1,5 +1,8 @@
-2007-08-27  Paul J Stevens <paul@nfg.nl>
+2007-08-31  Paul J Stevens <paul@nfg.nl>
+	* check_dbmail_db.c, db.c:
+	fix regression for bug #639 (bug #641)
 
+2007-08-27  Paul J Stevens <paul@nfg.nl>
 	* db.c, db.h, dbmail-mailbox.c, dbmail.h.in, dbmailtypes.h, 
 	man/Makefile.in, modules/dbmysql.c, modules/dbpgsql.c, 
 	modules/dbsqlite.c, sql/postgresql/create_tables.pgsql, 
