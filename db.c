@@ -2641,8 +2641,9 @@ char *db_imap_utf7_like(const char *column,
 	GString *like;
 	char *sensitive, *insensitive, *tmplike, *escaped;
 	char ** tmparr;
-	size_t i, len = strlen(mailbox);
+	size_t i, len;
 	int verbatim = 0, has_sensitive_part = 0;
+	char p = 0, c = 0;
 
 	like = g_string_new("");
 
@@ -2654,8 +2655,14 @@ char *db_imap_utf7_like(const char *column,
 	insensitive = dm_stresc(escaped);
 	g_free(escaped);
 
+ 	len = strlen(sensitive);
+
 	for (i = 0; i < len; i++) {
-		switch (mailbox[i]) {
+		c = sensitive[i];
+		if (i>0)
+			p = sensitive[i-1];
+
+		switch (c) {
 		case '&':
 			verbatim = 1;
 			has_sensitive_part = 1;
@@ -2669,9 +2676,11 @@ char *db_imap_utf7_like(const char *column,
 		 * and the case insensitive part matches anything,
 		 * and vice versa.*/
 		if (verbatim) {
-			insensitive[i] = '_';
+			if (insensitive[i] != '\\')
+				insensitive[i] = '_';
 		} else {
-			sensitive[i] = '_';
+			if (sensitive[i] != '\\')
+				sensitive[i] = '_';
 		}
 	}
 
