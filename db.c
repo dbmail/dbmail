@@ -3791,7 +3791,7 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 
 	safe_messageid = dm_stresc(messageid);
 	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), EXPIRE_DAYS);
-	snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headername");
+	snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT message_idnr FROM %smessages m "
 		"JOIN %sphysmessage p ON m.physmessage_id=p.id "
@@ -3799,7 +3799,7 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 		"JOIN %sheadername n ON v.headername_id=n.id "
 		"WHERE m.mailbox_idnr=%llu "
 		"AND n.headername IN ('resent-message-id','message-id') "
-		"AND %s='%s'" 
+		"AND %s='%s' " 
 		"AND p.internal_date > %s", DBPFX, DBPFX, DBPFX, DBPFX, 
 		mailbox_idnr, partial, safe_messageid, expire);
 	g_free(safe_messageid);
