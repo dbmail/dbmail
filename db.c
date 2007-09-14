@@ -2660,7 +2660,7 @@ char *db_imap_utf7_like(const char *column,
 
 	tmparr = g_strsplit(mailbox, "_", -1);
 	escaped = g_strjoinv("\\_",tmparr);
-	g_free(tmparr);
+	g_strfreev(tmparr);
 
 	sensitive = dm_stresc(escaped);
 	insensitive = dm_stresc(escaped);

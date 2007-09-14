@@ -204,7 +204,8 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
 	}
 	
 	dbmail_imap_session_bodyfetch_free(self);
-	memset(self->fi,'\0',sizeof(fetch_items_t));
+	g_free(self->fi);
+	self->fi = g_new0(fetch_items_t,1);
 	return self;
 }
      

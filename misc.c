@@ -2160,15 +2160,19 @@ char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 {
 	char * subj=NULL;
+	size_t l;
 	iconv_t conv_iconv;
 
 	dbmail_iconv_init();
 
-	if (str_in==NULL)
+	if ( str_in == NULL )
 		return NULL;
 	
-	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)))
-		return g_strdup(str_in);
+	if ( (l = strlen(str_in)) == 0 )
+		return NULL;
+	
+	if (! g_mime_utils_text_is_8bit((unsigned char *)str_in, l) )
+		return g_strndup(str_in, l);
 
 	if ((subj=g_mime_iconv_strdup(ic->to_db,str_in)) != NULL)
 		return subj;

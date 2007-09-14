@@ -1,3 +1,18 @@
+2007-09-14  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_message.c, db.c, dbmail-imapsession.c, misc.c:
+	valgrind cleanups
+
+2007-09-13  Paul J Stevens <paul@nfg.nl>
+
+	* test-scripts/cleanlog.sh:
+	fix cleanlog script
+
+2007-09-05  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, db.c:
+	fix regression for bug #634 (bug #642)
+
 2007-09-05  Paul Stevens <paul@nfg.nl>
 
 	* db.c:
