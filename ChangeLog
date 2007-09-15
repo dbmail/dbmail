@@ -3,32 +3,16 @@
 	* check_dbmail_message.c, db.c, dbmail-imapsession.c, misc.c:
 	valgrind cleanups
 
-2007-09-05  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, db.c:
-	fix regression for bug #634 (bug #642)
-
 2007-09-05  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:
 	fix regression for bug #634 (bug #642)
-
-2007-09-02  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, sql/postgresql/create_tables.pgsql, 
-	sql/postgresql/migrate_from_2.0_to_2.2.pgsql:
-	fix typo
 
 2007-09-02  Paul J Stevens <paul@nfg.nl>
 
 	* sql/postgresql/create_tables.pgsql, 
 	sql/postgresql/migrate_from_2.0_to_2.2.pgsql:
 	fix typo
-
-2007-08-31  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, check_dbmail_db.c, db.c:
-	fix regression for bug #639 (bug #641)
 
 2007-08-31  Paul J Stevens <paul@nfg.nl>
 	* check_dbmail_db.c, db.c:
