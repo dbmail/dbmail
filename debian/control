@@ -23,7 +23,7 @@ Description: base package for the dbmail email solution
 
 Package: dbmail-pgsql
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
 Description: Postgresql module for Dbmail
  This package provides a module for adding Postgresql database 
  support to DBMAIL.
@@ -33,7 +33,7 @@ Description: Postgresql module for Dbmail
 
 Package: dbmail-mysql
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
 Description: MySQL module for Dbmail
  This package provides a module for adding MySQL database 
  support to DBMAIL.

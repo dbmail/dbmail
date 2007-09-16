@@ -83,14 +83,14 @@ clean1:
 	# run clean
 	dh_testroot
 	dh_testdir
-	-$(MAKE) distclean
+	[ ! -f Makefile ] || $(MAKE) distclean
 	dh_clean
 	debconf-updatepo
 	rm -rf stamps autom4te.cache || true
 
 # maintainer target
 mrproper:
-	-$(MAKE) distclean
+	[ ! -f Makefile ] || $(MAKE) distclean
 	rm -f `find . -name ".#*"`
 	rm -f `find . -name "*.la"`
 	rm -f `find . -name "*.lo"`
