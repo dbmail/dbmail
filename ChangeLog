@@ -1,3 +1,25 @@
+2007-09-16  Paul J Stevens <paul@nfg.nl>
+
+	* misc.c:
+	fix regression
+
+2007-09-15  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/control, debian/dbmail.postinst, 
+	debian/dbmail.postrm, debian/patches/00-etch.dpatch, 
+	debian/patches/00list, debian/rules:
+	debian updates
+	* debian/changelog:
+	v2.2.6
+	* ChangeLog:
+	blah
+
+2007-09-14  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_message.c, db.c, dbmail-imapsession.c, 
+	misc.c:
+	valgrind cleanups
+
 2007-09-14  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_message.c, db.c, dbmail-imapsession.c, misc.c:
