@@ -5,12 +5,12 @@
 ## DP: No description.
 
 @DPATCH@
-diff -urNad dbmail-2.2.5~/debian/changelog dbmail-2.2.5/debian/changelog
---- dbmail-2.2.5~/debian/changelog	2007-05-15 21:40:33.000000000 +0200
-+++ dbmail-2.2.5/debian/changelog	2007-05-15 21:41:39.000000000 +0200
+diff -urNad dbmail-2.2.6~/debian/changelog dbmail-2.2.6/debian/changelog
+--- dbmail-2.2.6~/debian/changelog	2007-09-15 09:29:23.000000000 +0200
++++ dbmail-2.2.6/debian/changelog	2007-09-15 10:38:29.000000000 +0200
 @@ -1,4 +1,4 @@
--dbmail (2.2.5-1) unstable; urgency=low
-+dbmail (2.2.5-1) stable; urgency=low
+-dbmail (2.2.6-1) unstable; urgency=low
++dbmail (2.2.6-1) stable; urgency=low
  
-   * new upstream release (Closes: #412741, #415958, #423832)
-   * update postinst (Closes: #418582)
+   * new upstream release
+ 

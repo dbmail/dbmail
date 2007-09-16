@@ -1,8 +1,9 @@
 dbmail (2.2.6-1) unstable; urgency=low
 
-  * new upstream release
+  * new upstream release (Closes: #421018)
+  * update postinst and postrm (Closes: #427895, #427896)
 
- -- Paul J Stevens <paul@nfg.nl>  Sat, 15 Sep 2007 10:31:23 +0200
+ -- Paul J Stevens <paul@nfg.nl>  Sat, 15 Sep 2007 10:42:41 +0200
 
 dbmail (2.2.5-1) unstable; urgency=low
 
@@ -11,13 +12,13 @@ dbmail (2.2.5-1) unstable; urgency=low
 
  -- Paul J Stevens <paul@nfg.nl>  Tue, 15 May 2007 13:47:50 +0200
 
-dbmail (2.2.4-1) unstable;  urgency=low
+dbmail (2.2.4-1) unstable; urgency=low
 
   * 2.2.4 release
 
  -- Paul J Stevens <paul@nfg.nl>  Sun, 11 Mar 2007 21:54:37 +0100
 
-dbmail (2.2.3-1) unstable; urgency=low 
+dbmail (2.2.3-1) unstable; urgency=low
 
   [ Paul J Stevens ]  
   * remove configure code from postinst, leaving the driver alone.

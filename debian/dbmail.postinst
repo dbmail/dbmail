@@ -110,11 +110,13 @@ case "$1" in
 	oldmask=`umask`
 	umask 026
 	
-	gunzip ${CONFIG_EX}.gz 2>/dev/null || true
-	gunzip ${DEBIAN_CONFIG_EX}.gz 2>/dev/null || true
+	gunzip -c ${CONFIG_EX}.gz 1> ${CONFIG_EX} 2>/dev/null || true
+	gunzip -c ${DEBIAN_CONFIG_EX}.gz 1> ${DEBIAN_CONFIG_EX} 2>/dev/null || true
 	
 	ucf --debconf-ok $CONFIG_EX $CONFIG
 	ucf --debconf-ok $DEBIAN_CONFIG_EX $DEBIAN_CONFIG
+
+	rm ${CONFIG_EX} ${DEBIAN_CONFIG_EX}
 		
 	# activate the sqlite driver by default 
 	sed -i 's/\(^driver\W*=\)\(\W*$\)/\1 sqlite/' $CONFIG
