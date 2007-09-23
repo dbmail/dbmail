@@ -645,7 +645,7 @@ static void show_alias(const char * const name, int concise)
 }
 
 /* TODO: Non-concise output, like the old dbmail-users used to have. */
-static void show_user(u64_t useridnr, int concise)
+static void show_user(u64_t useridnr, int concise UNUSED)
 {
 	u64_t cid, quotum, quotumused;
 	GList *userlist = NULL;
