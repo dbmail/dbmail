@@ -159,37 +159,30 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	return SIEVE2_OK;
 }
 
+/*
+From http://www.ietf.org/internet-drafts/draft-ietf-sieve-notify-07.txt
+
+   Usage:  notify [":from" string]
+           [":importance" <"1" / "2" / "3">]
+           [":options" string-list]
+           [":message" string]
+           <method: string>
+
+Right-o.
+ */
 int sort_notify(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
-	const char *message, *subject, *fromaddr, *handle;
-	const char *rc_to, *rc_from, *rc_handle;
-	char *md5_handle = NULL;
-	int days, mime;
+	const char *message, *fromaddr, *method;
+	const char *rc_to, *rc_from;
+	int importance;
+	char * const * options;
 
-	days = sieve2_getvalue_int(s, "days");
-	mime = sieve2_getvalue_int(s, "mime"); // mime: 1 if message is mime coded. FIXME.
+	fromaddr = sieve2_getvalue_string(s, "fromaddr");
+	method = sieve2_getvalue_string(s, "method");
 	message = sieve2_getvalue_string(s, "message");
-	subject = sieve2_getvalue_string(s, "subject");
-	fromaddr = sieve2_getvalue_string(s, "fromaddr"); // From: specified by the script.
-	handle = sieve2_getvalue_string(s, "hash");
-
-	/* Default to a week, upper limit of a month.
-	 * This is our only loop prevention mechanism! The value must be
-	 * greater than 0, else the replycache code will always indicate
-	 * that we haven't seen anything since 0 days ago... */
-	if (days == 0) days = 7;
-	if (days < 1) days = 1;
-	if (days > 30) days = 30;
-
-	if (handle) {
-		rc_handle = handle;
-	} else {
-		char *tmp;
-		tmp = g_strconcat(subject, message, NULL);
-		rc_handle = md5_handle = dm_md5((const unsigned char * const) tmp);
-		g_free(tmp);
-	}
+	importance = sieve2_getvalue_int(s, "importance");
+	options = sieve2_getvalue_stringlist(s, "options");
 
 	// FIXME: should be validated as a user might try
 	// to forge an address from their script.
@@ -203,18 +196,9 @@ int sort_notify(sieve2_context_t *s, void *my)
 	if (!rc_to)
 		rc_to = dbmail_message_get_header(m->message, "Return-Path");
 
-	if (db_replycache_validate(rc_to, rc_from, rc_handle, days) == DM_SUCCESS) {
-		if (send_vacation(m->message, rc_to, rc_from, subject, message, rc_handle) == 0)
-			db_replycache_register(rc_to, rc_from, rc_handle);
-		TRACE(TRACE_INFO, "Sending vacation to [%s] from [%s] handle [%s] repeat days [%d]",
-			rc_to, rc_from, rc_handle, days);
-	} else {
-		TRACE(TRACE_INFO, "Vacation suppressed to [%s] from [%s] handle [%s] repeat days [%d]",
-			rc_to, rc_from, rc_handle, days);
-	}
+//	send_notification(m->message, rc_to, rc_from, method, message);
 
-	if (md5_handle)
-		g_free(md5_handle);
+	TRACE(TRACE_INFO, "Sending notification to [%s] from [%s]", rc_to, rc_from);
 
 	return SIEVE2_OK;
 }
@@ -346,6 +330,10 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	return SIEVE2_OK;
 }
 
+/* This should only happen if the user has uploaded an invalid script.
+ * Possible causes are a homebrew script uploader that does not do proper
+ * validation, libSieve's removal of a deprecated Sieve language feature,
+ * or perhaps some bugginess elsewhere. */
 int sort_errparse(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
@@ -383,6 +371,11 @@ int sort_errexec(sieve2_context_t *s, void *my)
 
 	TRACE(TRACE_INFO, "Error is EXEC: Message is [%s]", message);
 
+	/* This turns out to be incredibly annoying, as libSieve
+	 * throws execution errors on malformed addresses coming
+	 * from the wild. As you might guess, that happens with
+	 * greater than trivial frequency.
+
 	g_string_append_printf(m->result->errormsg, "Execution error: %s", message);
 
 	if (m->message) {
@@ -395,6 +388,7 @@ int sort_errexec(sieve2_context_t *s, void *my)
 		send_alert(m->user_idnr, "Sieve script run error", alertbody);
 		g_free(alertbody);
 	}
+	*/
 
 	m->result->error_runtime = 1;
 	return SIEVE2_OK;
@@ -671,7 +665,8 @@ static int sort_startup(sieve2_context_t **s2c,
 		}
 	}
 	if (sieve_config.notify) {
-		TRACE(TRACE_DEBUG, "Sieve notify enabled.");
+		TRACE(TRACE_ERROR, "Sieve notify is not supported in this release.");
+		/*
 		res = sieve2_callbacks(sieve2_context, notify_callbacks);
 		if (res != SIEVE2_OK) {
 			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
@@ -679,6 +674,7 @@ static int sort_startup(sieve2_context_t **s2c,
 			sort_teardown(&sieve2_context, &sort_context);
 			return DM_EGENERAL;
 		}
+		*/
 	}
 	if (sieve_config.debug) {
 		TRACE(TRACE_DEBUG, "Sieve debugging enabled.");
@@ -726,8 +722,11 @@ const char * sort_listextensions(void)
 		sieve2_callbacks(sieve2_context, vacation_callbacks);
 	}
 	if (sieve_config.notify) {
+		TRACE(TRACE_ERROR, "Sieve notify is not supported in this release.");
+		/*
 		TRACE(TRACE_DEBUG, "Sieve notify enabled.");
 		sieve2_callbacks(sieve2_context, notify_callbacks);
+		*/
 	}
 	if (sieve_config.debug) {
 		TRACE(TRACE_DEBUG, "Sieve debugging enabled.");
