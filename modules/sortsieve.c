@@ -160,9 +160,43 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	return SIEVE2_OK;
 }
 
-int sort_notify(sieve2_context_t *s UNUSED, void *my UNUSED)
+/*
+From http://www.ietf.org/internet-drafts/draft-ietf-sieve-notify-07.txt
+
+   Usage:  notify [":from" string] [":importance" <"1" / "2" / "3">]
+                  [":options" string-list] [":message" string] <method: string>
+*/
+int sort_notify(sieve2_context_t *s, void *my)
 {
-	return SIEVE2_ERROR_UNSUPPORTED;
+	struct sort_context *m = (struct sort_context *)my;
+	const char *message, *fromaddr, *method;
+	const char *rc_to, *rc_from;
+	int importance;
+	char * const * options;
+
+	fromaddr = sieve2_getvalue_string(s, "fromaddr");
+	method = sieve2_getvalue_string(s, "method");
+	message = sieve2_getvalue_string(s, "message");
+	importance = sieve2_getvalue_int(s, "importance");
+	options = sieve2_getvalue_stringlist(s, "options");
+
+	// FIXME: should be validated as a user might try
+	// to forge an address from their script.
+	rc_from = fromaddr;
+	if (!rc_from)
+		rc_from = dbmail_message_get_header(m->message, "Delivered-To");
+	if (!rc_from)
+		rc_from = m->message->envelope_recipient->str;
+
+	rc_to = dbmail_message_get_header(m->message, "Reply-To");
+	if (!rc_to)
+		rc_to = dbmail_message_get_header(m->message, "Return-Path");
+
+//	send_notification(m->message, rc_to, rc_from, method, message);
+
+	TRACE(TRACE_INFO, "Notification from [%s] to [%s] was not sent as notify is not supported in this release.", rc_from, rc_to);
+
+	return SIEVE2_OK;
 }
 
 int sort_redirect(sieve2_context_t *s, void *my)
@@ -269,6 +303,10 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	return SIEVE2_OK;
 }
 
+/* This should only happen if the user has uploaded an invalid script.
+ * Possible causes are a homebrew script uploader that does not do proper
+ * validation, libSieve's removal of a deprecated Sieve language feature,
+ * or perhaps some bugginess elsewhere. */
 int sort_errparse(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
@@ -306,6 +344,11 @@ int sort_errexec(sieve2_context_t *s, void *my)
 
 	TRACE(TRACE_INFO, "Error is EXEC: Message is [%s]", message);
 
+	/* This turns out to be incredibly annoying, as libSieve
+	 * throws execution errors on malformed addresses coming
+	 * from the wild. As you might guess, that happens with
+	 * greater than trivial frequency.
+
 	g_string_append_printf(m->result->errormsg, "Execution error: %s", message);
 
 	if (m->message) {
@@ -318,6 +361,7 @@ int sort_errexec(sieve2_context_t *s, void *my)
 		send_alert(m->user_idnr, "Sieve script run error", alertbody);
 		g_free(alertbody);
 	}
+	*/
 
 	m->result->error_runtime = 1;
 	return SIEVE2_OK;
@@ -591,7 +635,7 @@ static int sort_startup(sieve2_context_t **s2c,
 		}
 	}
 	if (sieve_config.notify) {
-		TRACE(TRACE_DEBUG, "Sieve notify enabled.");
+		TRACE(TRACE_ERROR, "Sieve notify is not supported in this release.");
 		res = sieve2_callbacks(sieve2_context, notify_callbacks);
 		if (res != SIEVE2_OK) {
 			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
@@ -646,7 +690,7 @@ const char * sort_listextensions(void)
 		sieve2_callbacks(sieve2_context, vacation_callbacks);
 	}
 	if (sieve_config.notify) {
-		TRACE(TRACE_DEBUG, "Sieve notify enabled.");
+		TRACE(TRACE_ERROR, "Sieve notify is not supported in this release.");
 		sieve2_callbacks(sieve2_context, notify_callbacks);
 	}
 	if (sieve_config.debug) {

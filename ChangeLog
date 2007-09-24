@@ -1,3 +1,11 @@
+2007-09-23  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/sortsieve.c:
+	Comment out send_alert for execution errors (always caused by
+	malformed addresses at this time, and very annoying).
+	Clean up the send_notify function and clarify that it is unsupported
+	at this time.
+
 2007-09-14  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_message.c, db.c, dbmail-imapsession.c, misc.c:
