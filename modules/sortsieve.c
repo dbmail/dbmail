@@ -162,14 +162,9 @@ int sort_vacation(sieve2_context_t *s, void *my)
 /*
 From http://www.ietf.org/internet-drafts/draft-ietf-sieve-notify-07.txt
 
-   Usage:  notify [":from" string]
-           [":importance" <"1" / "2" / "3">]
-           [":options" string-list]
-           [":message" string]
-           <method: string>
-
-Right-o.
- */
+   Usage:  notify [":from" string] [":importance" <"1" / "2" / "3">]
+                  [":options" string-list] [":message" string] <method: string>
+*/
 int sort_notify(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
@@ -198,7 +193,7 @@ int sort_notify(sieve2_context_t *s, void *my)
 
 //	send_notification(m->message, rc_to, rc_from, method, message);
 
-	TRACE(TRACE_INFO, "Sending notification to [%s] from [%s]", rc_to, rc_from);
+	TRACE(TRACE_INFO, "Notification from [%s] to [%s] was not sent as notify is not supported in this release.", rc_from, rc_to);
 
 	return SIEVE2_OK;
 }
@@ -666,7 +661,6 @@ static int sort_startup(sieve2_context_t **s2c,
 	}
 	if (sieve_config.notify) {
 		TRACE(TRACE_ERROR, "Sieve notify is not supported in this release.");
-		/*
 		res = sieve2_callbacks(sieve2_context, notify_callbacks);
 		if (res != SIEVE2_OK) {
 			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
@@ -674,7 +668,6 @@ static int sort_startup(sieve2_context_t **s2c,
 			sort_teardown(&sieve2_context, &sort_context);
 			return DM_EGENERAL;
 		}
-		*/
 	}
 	if (sieve_config.debug) {
 		TRACE(TRACE_DEBUG, "Sieve debugging enabled.");
@@ -723,10 +716,7 @@ const char * sort_listextensions(void)
 	}
 	if (sieve_config.notify) {
 		TRACE(TRACE_ERROR, "Sieve notify is not supported in this release.");
-		/*
-		TRACE(TRACE_DEBUG, "Sieve notify enabled.");
 		sieve2_callbacks(sieve2_context, notify_callbacks);
-		*/
 	}
 	if (sieve_config.debug) {
 		TRACE(TRACE_DEBUG, "Sieve debugging enabled.");
