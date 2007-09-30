@@ -45,6 +45,11 @@ set -e
 
 [ -e /etc/default/dbmail ] && . /etc/default/dbmail
 
+if [ ! -d ${PID_DIR} ]; then
+	mkdir -p -m 0755 ${PID_DIR}
+	chown dbmail:dbmail ${PID_DIR}
+fi
+
 service_start() {
 	eval '_daemon=$'$1
 	eval '_name=$'$1'_NAME'

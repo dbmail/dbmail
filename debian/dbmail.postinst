@@ -24,26 +24,9 @@ test $DEBIAN_SCRIPT_DEBUG && set -v -x
 #     so that unnecessary prompting doesn't happen if a package's
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
-create_user() {
-	# creating dbmail group if he isn't already there
-	getent group dbmail >/dev/null 2>&1 || \
-		addgroup --system dbmail >/dev/null 2>&1 || true
-
-	# creating dbmail user if he isn't already there
-	getent passwd dbmail >/dev/null 2>&1 || \
-		adduser \
-		  --system \
-		  --ingroup dbmail \
-		  --home /dev/null \
-		  --gecos "Dbmail SQL mailserver" \
-		  --shell /bin/false \
-		  dbmail  >/dev/null 2>&1 || true
-}
-
 
 case "$1" in
     install|upgrade)
-    	create_user
     ;;
     configure)
 

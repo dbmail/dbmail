@@ -1,0 +1,40 @@
+#!/bin/sh
+
+set -e
+
+# summary of how this script can be called:
+#        * <new-preinst> `install'
+#        * <new-preinst> `install' <old-version>
+#        * <new-preinst> `upgrade' <old-version>
+#        * <old-preinst> `abort-upgrade' <new-version>
+
+case "$1" in
+    install|upgrade)
+	# creating dbmail group if he isn't already there
+	getent group dbmail >/dev/null 2>&1 || \
+		addgroup --system dbmail >/dev/null 2>&1 || true
+
+	# creating dbmail user if he isn't already there
+	getent passwd dbmail >/dev/null 2>&1 || \
+		adduser \
+		  --system \
+		  --ingroup dbmail \
+		  --home /dev/null \
+		  --gecos "Dbmail SQL mailserver" \
+		  --shell /bin/false \
+		  dbmail  >/dev/null 2>&1 || true
+    ;;
+
+    abort-upgrade)
+    ;;
+
+    *)
+        echo "preinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+
