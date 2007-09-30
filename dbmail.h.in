@@ -30,8 +30,8 @@
 #include "config.h"
 #endif
 
-#define _XOPEN_SOURCE /* glibc2 */
-#define __EXTENSIONS__ /* solaris */
+#define _XOPEN_SOURCE 	500 	/* glibc2 */
+#define __EXTENSIONS__ 		/* solaris */
 
 #include <assert.h>
 #include <arpa/inet.h>
