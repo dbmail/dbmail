@@ -414,7 +414,7 @@ CREATE TABLE dbmail_sievescripts (
 );
 CREATE INDEX dbmail_sievescripts_1 ON dbmail_sievescripts(name);
 CREATE INDEX dbmail_sievescripts_2 ON dbmail_sievescripts(owner_idnr);
-CREATE INDEX dbmail_sievescripts_3 ON dbmail_sievescripts(owner_idnr,name);
+CREATE UNIQUE INDEX dbmail_sievescripts_3 ON dbmail_sievescripts(owner_idnr,name);
 
 CREATE TRIGGER fk_insert_sievescripts_owner_idnr
 	BEFORE INSERT ON dbmail_sievescripts

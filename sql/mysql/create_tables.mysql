@@ -208,7 +208,7 @@ CREATE TABLE dbmail_sievescripts (
   active tinyint(1) default '0' not null,
   INDEX (name),
   INDEX (owner_idnr),
-  INDEX (owner_idnr, name),
+  UNIQUE INDEX (owner_idnr, name),
   FOREIGN KEY owner_idnr_fk (owner_idnr)
     REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

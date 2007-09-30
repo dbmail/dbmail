@@ -318,7 +318,7 @@ CREATE TABLE dbmail_sievescripts (
 	PRIMARY KEY	(id)
 );
 
-CREATE INDEX dbmail_sievescripts_1 on dbmail_sievescripts(owner_idnr,name);
+CREATE UNIQUE INDEX dbmail_sievescripts_1 on dbmail_sievescripts(owner_idnr,name);
 CREATE INDEX dbmail_sievescripts_2 on dbmail_sievescripts(owner_idnr,active);
 
 CREATE SEQUENCE dbmail_envelope_idnr_seq;

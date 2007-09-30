@@ -1,3 +1,5 @@
+DROP INDEX dbmail_sievescripts_3;
+CREATE UNIQUE INDEX dbmail_sievescripts_3 ON dbmail_sievescripts(owner_idnr,name);
 
 DROP TABLE IF EXISTS dbmail_mimeparts;
 CREATE TABLE dbmail_mimeparts (

@@ -1,4 +1,7 @@
 
+DROP INDEX dbmail_sievescripts_1;
+CREATE UNIQUE INDEX dbmail_sievescripts_1 ON dbmail_sievescripts(owner_idnr, name);
+
 SET client_encoding = 'UTF8';
 
 CREATE TABLE dbmail_mimeparts (
