@@ -280,7 +280,7 @@ enum BODY_FETCH_ITEM_TYPES {
 };
 
 /* maximum size of a mailbox name */
-#define IMAP_MAX_MAILBOX_NAMELEN 100
+#define IMAP_MAX_MAILBOX_NAMELEN 255
 
 /* length of internaldate string 
  * DD-MMM-YYYY hh:mm:ss +HHMM

@@ -26,6 +26,7 @@ SET FOREIGN_KEY_CHECKS=1;
 
 ALTER TABLE dbmail_mailboxes ADD mtime DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00';
 ALTER TABLE dbmail_mailboxes ADD KEY mtime (mtime);
+ALTER TABLE dbmail_mailboxes CHANGE name name VARCHAR(255) NOT NULL DEFAULT '';
 
 DROP INDEX dbmail_sievescripts_1 ON dbmail_sievescripts;
 CREATE UNIQUE INDEX dbmail_sievescripts_1 ON dbmail_sievescripts(owner_idnr, name);

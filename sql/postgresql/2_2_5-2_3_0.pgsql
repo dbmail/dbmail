@@ -34,8 +34,8 @@ ALTER TABLE ONLY dbmail_partlists
 ALTER TABLE ONLY dbmail_partlists
     ADD CONSTRAINT dbmail_partlists_physmessage_id_fkey FOREIGN KEY (physmessage_id) REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
-ALTER TABLE ONLY dbmail_mailboxes
-    ADD mtime TIMESTAMP WITHOUT TIME ZONE;
+ALTER TABLE ONLY dbmail_mailboxes ALTER COLUMN name TYPE VARCHAR(255);
+ALTER TABLE ONLY dbmail_mailboxes ADD mtime TIMESTAMP WITHOUT TIME ZONE;
 
 CREATE PROCEDURAL LANGUAGE plpgsql;
 

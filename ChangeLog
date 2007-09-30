@@ -1,5 +1,13 @@
 2007-09-30  Paul J Stevens <paul@nfg.nl>
 
+	* dbmailtypes.h, sql/mysql/2_2_5-2_3_0.mysql, 
+	sql/mysql/create_tables.mysql, sql/postgresql/2_2_5-2_3_0.pgsql, 
+	sql/postgresql/create_tables.pgsql:
+	increate max mailbox name size to 255 (bug #563)
+	* sql/mysql/2_2_5-2_3_0.mysql, sql/mysql/create_tables.mysql, 
+	sql/postgresql/2_2_5-2_3_0.pgsql, sql/postgresql/create_tables.pgsql, 
+	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite:
+	fix bug #636
 	* debian/dbmail.init, debian/dbmail.postinst, debian/dbmail.preinst:
 	debian updates (ubuntu)
 

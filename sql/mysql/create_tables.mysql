@@ -68,7 +68,7 @@ DROP TABLE IF EXISTS dbmail_mailboxes;
 CREATE TABLE dbmail_mailboxes (
 	mailbox_idnr bigint(21) NOT NULL auto_increment,
 	owner_idnr bigint(21) NOT NULL default '0',
-	name varchar(100) NOT NULL default '',
+	name varchar(255) NOT NULL default '',
 	seen_flag tinyint(1) NOT NULL default '0',
 	answered_flag tinyint(1) NOT NULL default '0',
 	deleted_flag tinyint(1) NOT NULL default '0',

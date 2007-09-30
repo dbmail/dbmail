@@ -64,7 +64,7 @@ CREATE SEQUENCE dbmail_mailbox_idnr_seq;
 CREATE TABLE dbmail_mailboxes (
    mailbox_idnr INT8 DEFAULT nextval('dbmail_mailbox_idnr_seq'),
    owner_idnr INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
-   name VARCHAR(100) NOT NULL,
+   name VARCHAR(255) NOT NULL,
    seen_flag INT2 DEFAULT '0' NOT NULL,
    answered_flag INT2 DEFAULT '0' NOT NULL,
    deleted_flag INT2 DEFAULT '0' NOT NULL,
