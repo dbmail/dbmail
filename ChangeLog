@@ -6,6 +6,11 @@
 	Clean up the send_notify function and clarify that it is unsupported
 	at this time.
 
+2007-09-16  Paul J Stevens <paul@nfg.nl>
+
+	* misc.c:
+	fix regression
+
 2007-09-14  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_message.c, db.c, dbmail-imapsession.c, misc.c:
