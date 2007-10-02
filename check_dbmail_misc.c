@@ -148,6 +148,21 @@ START_TEST(test_dbmail_iconv_str_to_db)
 }
 END_TEST
 
+START_TEST(test_create_unique_id)
+{
+	char *a = g_new0(char, 64);
+	char *b = g_new0(char, 64);
+	create_unique_id(a,0);
+	create_unique_id(b,0);
+	fail_unless(strlen(a)==32, "create_unique_id produced incorrect string length [%s]", a);
+	fail_unless(strlen(b)==32, "create_unique_id produced incorrect string length [%s]", b);
+	fail_unless(!MATCH(a,b),"create_unique_id shouldn't produce identical output");
+
+	g_free(a);
+	g_free(b);
+}
+END_TEST
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -159,6 +174,7 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_g_strcasestr);
 	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
 	tcase_add_test(tc_misc, test_dbmail_iconv_str_to_db);
+	tcase_add_test(tc_misc, test_create_unique_id);
 	
 	return s;
 }
