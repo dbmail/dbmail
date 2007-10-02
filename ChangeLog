@@ -1,3 +1,11 @@
+2007-10-02  Paul J Stevens <paul@nfg.nl>
+
+	* pipe.c:
+	limit the scope of the transaction during message insertion to avoid 
+	deadlocks
+	* check_dbmail_misc.c, misc.c:
+	generate better randomness by using the glib calls in create_unique_id
+
 2007-09-30  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail.h.in:
