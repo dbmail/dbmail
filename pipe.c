@@ -549,6 +549,9 @@ int insert_messages(struct DbmailMessage *message,
 		TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
 		break;
 	}
+	/* if committing the transaction fails, a rollback is performed */
+	if (db_commit_transaction() < 0) 
+		return -1;
 
 	tmpid = message->id; // for later removal
 
@@ -662,10 +665,6 @@ int insert_messages(struct DbmailMessage *message,
 	if (db_delete_message(tmpid) < 0) 
 		TRACE(TRACE_ERROR, "failed to delete temporary message [%llu]", message->id);
 	TRACE(TRACE_DEBUG, "temporary message deleted from database. Done.");
-
-	/* if committing the transaction fails, a rollback is performed */
-	if (db_commit_transaction() < 0) 
-		return -1;
 
 	return 0;
 }
