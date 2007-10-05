@@ -125,19 +125,26 @@ START_TEST(test_mailbox_remove_namespace)
 }
 END_TEST
 
+
 START_TEST(test_dbmail_iconv_str_to_db) 
 {
 	const char *val = "=?windows-1251?B?0+/w4OLr5e335fHq6Okg8/fl8iDiIPHu4vDl7OXt7e7pIOru7O/g7ejo?=";
+	const char *u71 = "Neue =?ISO-8859-1?Q?L=F6sung?= =?ISO-8859-1?Q?f=FCr?= unsere Kunden";
+	const char *u72 = "=?ISO-8859-1?Q?L=F6sung?=";
+	const char *u73 = "=?ISO-8859-1?Q?f=FCr?=";
+	const char *exp = "Neue Lösung für unsere Kunden";
+	const char *exp2 = "Lösung";
+	const char *exp3 = "für";
 	char *u8, *val2, *u82, *u83, *val3;
 
-	u8 = g_mime_utils_header_decode_text((const unsigned char *)val);
-	val2 = g_mime_utils_header_encode_text((const unsigned char *)u8);
-	u82 = g_mime_utils_header_decode_text((const unsigned char *)val2);
+	u8 = g_mime_utils_header_decode_text(val);
+	val2 = g_mime_utils_header_encode_text(u8);
+	u82 = g_mime_utils_header_decode_text(val2);
 
 	fail_unless(strcmp(u8,u82)==0,"decode/encode failed in test_dbmail_iconv_str_to_db");
 
 	val3 = dbmail_iconv_db_to_utf7(u8);
-	u83 = g_mime_utils_header_decode_text((const unsigned char *)val3);
+	u83 = g_mime_utils_header_decode_text(val3);
 
 	fail_unless(strcmp(u8,u83)==0,"decode/encode failed in test_dbmail_iconv_str_to_db\n[%s]\n[%s]\n", u8, u83);
 	g_free(u8);
@@ -145,6 +152,25 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	g_free(u83);
 	g_free(val2);
 	g_free(val3);
+
+	// 
+	//
+	u8 = dbmail_iconv_decode_text(u71);
+	fail_unless(strcmp(u8,exp)==0, "decode failed [%s] != [%s]", u8, exp);
+	u82 = dbmail_iconv_decode_text(u8);
+	fail_unless(strcmp(u82,exp)==0, "decode failed [%s] != [%s]", u82, exp);
+	g_free(u8);
+	g_free(u82);
+
+	u8 = dbmail_iconv_decode_text(u72);
+	fail_unless(strcmp(u8,exp2)==0,"decode failed [%s] != [%s]", u8, exp2);
+	g_free(u8);
+
+	u8 = dbmail_iconv_decode_text(u73);
+	fail_unless(strcmp(u8,exp3)==0,"decode failed [%s] != [%s]", u8, exp3);
+	g_free(u8);
+
+
 }
 END_TEST
 

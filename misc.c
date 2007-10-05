@@ -647,7 +647,7 @@ char * dm_base_subject(const char *subject)
 	if (g_mime_utils_text_is_8bit((unsigned char *)subject, strlen(subject))) 
 		tmp = g_strdup(subject);
 	else 
-		tmp = g_mime_utils_header_decode_text((unsigned char *)subject);
+		tmp = dbmail_iconv_decode_text((unsigned char *)subject);
 	saved = tmp;
 	
 	dm_pack_spaces(tmp);
@@ -2121,8 +2121,6 @@ void dbmail_iconv_init(void)
 	initialized = TRUE;
 }
 
-
-
 /* convert not encoded field to utf8 */
 char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 {
@@ -2219,6 +2217,63 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 
 	return g_mime_utils_header_encode_text((unsigned char *)str_in);
 }
+
+/* work around a bug in gmime where utf7 strings are not completely decoded */
+char * dbmail_iconv_decode_text(const char *in)
+{
+	size_t i=0, l=0, r=0, len;
+	char p2=0, p = 0, c, n = 0;
+	char *res, *s;
+	gboolean inword = FALSE;
+	GString *buf = g_string_new("");
+	GString *str = g_string_new("");
+
+	len = strlen(in);
+	for (i = 0; i<len; i++)
+	{
+		c = in[i];
+		n = in[i+1];
+
+		if ((c == '=') && (n == '?')) {
+			inword = TRUE;
+			l = i;
+		}
+
+		if ((p2 == '?') && (p == '=')) {
+			inword = FALSE;
+			r = i;
+		}
+
+		if (l < r) {
+			s = g_mime_utils_header_decode_text(buf->str);
+			g_string_append_printf(str, "%s", s);
+			g_free(s);
+			l = r;
+			i = r;
+			g_string_printf(buf,"%s","");
+			g_string_append_c(str, in[i]);
+		} else if (inword) {
+			g_string_append_c(buf, in[i]);
+		} else {
+			g_string_append_c(str, in[i]);
+		}
+		p2 = p;
+		p = c;
+	}
+	if (buf->len) {
+		s = g_mime_utils_header_decode_text(buf->str);
+		g_string_append_printf(str, "%s", s);
+		g_free(s);
+	}
+	g_string_free(buf,TRUE);
+
+	res = str->str;
+	g_string_free(str,FALSE);
+
+	return res;
+
+}
+
 
 
 /* envelope access point */
