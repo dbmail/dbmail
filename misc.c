@@ -101,7 +101,7 @@ void create_unique_id(char *target, u64_t message_idnr)
 	char *md5_str;
 
 	a_message_idnr = g_strdup_printf("%llu",message_idnr);
-	a_rand = g_strdup_printf("%d",rand());
+	a_rand = g_strdup_printf("%d",g_random_int());
 
 	if (message_idnr != 0)
 		snprintf(target, UID_SIZE, "%s:%s",
