@@ -83,6 +83,10 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 		g_free(self->fi);
 		self->fi = NULL;
 	}
+	if (self->charset) {
+		g_free(self->charset);
+		self->charset = NULL;
+	}
 	
 	g_free(self);
 }
@@ -712,7 +716,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	if (! (search_keys && search_keys[*idx]))
 		return 1;
 
-	char *t = NULL, *key = search_keys[*idx];
+	char *p = NULL, *t = NULL, *key = search_keys[*idx];
 
 	search_key_t *value = g_new0(search_key_t,1);
 	
@@ -823,7 +827,13 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	 * HEADER search keys
 	 */
 #define IMAP_SET_SEARCH		(*idx)++; \
-		t = dm_stresc(search_keys[*idx]); \
+		if ((p = dbmail_iconv_str_to_db((const char *)search_keys[*idx], self->charset)) != NULL) {  \
+			t = dm_stresc(p); \
+			g_free(p); \
+		} else { \
+			TRACE(TRACE_WARNING, "search_key [%s] is not charset [%s]", search_keys[*idx], self->charset); \
+			t = dm_stresc(search_keys[*idx]); \
+		} \
 		strncpy(value->search, t, MAX_SEARCH_LEN); \
 		g_free(t); \
 		(*idx)++
@@ -1051,8 +1061,10 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		
 	/* ignore the charset. Let the database handle this */
         } else if ( MATCH(key, "charset") )  {
-                (*idx)++;
-                (*idx)++; // FIXME: should we check for valid charset here?
+                (*idx)++;// FIXME: check for valid charset here
+		self->charset = g_strdup(search_keys[*idx]);
+		TRACE(TRACE_DEBUG,"using charset [%s] for searching", self->charset);
+                (*idx)++; 
 	} else {
 		/* unknown search key */
 		TRACE(TRACE_DEBUG,"unknown search key [%s]", key);
