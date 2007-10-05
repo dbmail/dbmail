@@ -1,6 +1,16 @@
-2007-10-02  Paul J Stevens <paul@nfg.nl>
+2007-09-28  Paul J Stevens <paul@nfg.nl>
 
-	* pipe.c:
+	* dbmail-mailbox.c, dbmail-mailbox.h:
+	respect charset argument during search (bug #646)
+
+2007-10-05  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.h.in:
+	fix build for freebsd after _XOPEN_SOURCE change
+
+2007-10-02  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, pipe.c:
 	limit the scope of the transaction during message insertion to avoid 
 	deadlocks
 	* check_dbmail_misc.c, misc.c:

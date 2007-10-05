@@ -48,6 +48,7 @@ struct DbmailMailbox {
 	GTree *ids; 		// key: uid, value: msn
 	GTree *msn; 		// key: msn, value: uid
 	GNode *search;
+	gchar *charset;		// charset used during search/sort
 
 	fetch_items_t *fi;	// imap fetch
 
