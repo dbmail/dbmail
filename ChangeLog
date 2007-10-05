@@ -1,6 +1,8 @@
 2007-10-05  Paul J Stevens <paul@nfg.nl>
 
-	* check_dbmail_misc.c, misc.c, misc.h:
+	* VERSION:
+	v2.2.7-rc3
+	* ChangeLog, check_dbmail_misc.c, misc.c, misc.h:
 	work around incomplete utf7 decoding by gmime (bug #649)
 	* ChangeLog, dbmail-mailbox.c, dbmail-mailbox.h:
 	respect charset argument during search (bug #646)
