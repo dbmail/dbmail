@@ -1,10 +1,9 @@
-2007-09-28  Paul J Stevens <paul@nfg.nl>
-
-	* dbmail-mailbox.c, dbmail-mailbox.h:
-	respect charset argument during search (bug #646)
-
 2007-10-05  Paul J Stevens <paul@nfg.nl>
 
+	* check_dbmail_misc.c, misc.c, misc.h:
+	work around incomplete utf7 decoding by gmime (bug #649)
+	* ChangeLog, dbmail-mailbox.c, dbmail-mailbox.h:
+	respect charset argument during search (bug #646)
 	* dbmail.h.in:
 	fix build for freebsd after _XOPEN_SOURCE change
 
@@ -20,6 +19,11 @@
 
 	* dbmail.h.in:
 	fix bug #643
+
+2007-09-28  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c, dbmail-mailbox.h:
+	respect charset argument during search (bug #646)
 
 2007-09-23  Aaron Stone  <aaron@serendipity.cx>
 
