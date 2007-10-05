@@ -30,7 +30,12 @@
 #include "config.h"
 #endif
 
-#define _XOPEN_SOURCE /* glibc2 */
+#ifdef __FreeBSD__
+#define _XOPEN_SOURCE
+#else
+#define _XOPEN_SOURCE	500
+#endif
+
 #define __EXTENSIONS__ /* solaris */
 
 #include <assert.h>
