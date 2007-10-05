@@ -1,5 +1,7 @@
-2007-10-05  Paul J Stevens <paul@nfg.nl>
+2007-10-05  Paul Stevens <paul@nfg.nl>
 
+	* dbmail-mailbox.c, dbmail-mailbox.h:
+	respect charset argument during search (bug #646)
 	* dbmail-imapsession.c, dbmail-imapsession.h, imapcommands.c:
 	allow IDLE command after authentication (bug #648)
 	* check_dbmail_misc.c, misc.c, misc.h:
