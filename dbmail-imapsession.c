@@ -1973,9 +1973,8 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	unsigned oldexists, oldrecent, olduidnext;
         struct DbmailMailbox *mailbox = NULL;
 	gboolean showexists = FALSE;
-	static int idle_keepalive = 0;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	if (! ud->state == IMAPCS_SELECTED)
+	if (ud->state != IMAPCS_SELECTED)
 		return 0;
 
 	oldmtime = ud->mailbox.mtime;
@@ -2015,12 +2014,6 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	// EXPUNGE
 	switch (self->command_type) {
 		case IMAP_COMM_IDLE:
-			// send a keepalive message every 10 * IDLE_TIMEOUT seconds
-			// this will cause most clients to issue a DONE/IDLE cycle
-			if (idle_keepalive++ == 10) {
-				dbmail_imap_session_printf(self, "* OK\r\n");
-				idle_keepalive = 0;
-			}
 			// experimental: send '* STATUS' updates for all subscribed 
 			// mailboxes if they have changed
 			dbmail_imap_session_mbxinfo_notify(self);
@@ -2169,13 +2162,14 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 }
 
 #define IDLE_BUFFER 8
-int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
+int dbmail_imap_session_idle(struct ImapSession *self)
 {
 	char buffer[IDLE_BUFFER];
 	int result = 0, idle_timeout = IDLE_TIMEOUT;
 	clientinfo_t *ci = self->ci;
 	field_t val;
-	
+	static int idle_keepalive = 0;
+
 	GETCONFIGVALUE("idle_timeout", "IMAP", val);
 	if ( strlen(val) && (idle_timeout = atoi(val)) <= 0 ) {
 		TRACE(TRACE_ERROR, "illegal value for idle_timeout [%s]", val);
@@ -2219,6 +2213,13 @@ int dbmail_imap_session_mailbox_idle(struct ImapSession *self)
 
 		if (alarm_occured) {
 			alarm_occured = 0;
+			// send a keepalive message every 10 * IDLE_TIMEOUT seconds
+			// this will cause most clients to issue a DONE/IDLE cycle
+			if (idle_keepalive++ == 10) {
+				dbmail_imap_session_printf(self, "* OK\r\n");
+				idle_keepalive = 0;
+			}
+	
 			dbmail_imap_session_mailbox_status(self,TRUE);
 			continue;
 		}

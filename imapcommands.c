@@ -903,6 +903,27 @@ int _ic_status(struct ImapSession *self)
 	return 0;
 }
 
+/*
+ * _ic_idle
+ *
+ * non-expunging close for select mailbox and return to AUTH state
+ *
+ */
+
+int _ic_idle(struct ImapSession *self)
+{
+	int result;
+	if (!check_state_and_args(self, "IDLE", 0, 0, IMAPCS_AUTHENTICATED))
+		return 1;	/* error, return */
+
+	if ((result = dbmail_imap_session_idle(self)) != 0)
+		return result;
+
+	dbmail_imap_session_printf(self, "%s OK IDLE terminated\r\n", self->tag);
+	return 0;
+}
+
+
 
 /*
  * _ic_append()
@@ -1184,27 +1205,6 @@ int _ic_unselect(struct ImapSession *self)
 	dbmail_imap_session_printf(self, "%s OK UNSELECT completed\r\n", self->tag);
 	return 0;
 }
-
-/*
- * _ic_idle
- *
- * non-expunging close for select mailbox and return to AUTH state
- *
- */
-
-int _ic_idle(struct ImapSession *self)
-{
-	int result;
-	if (!check_state_and_args(self, "IDLE", 0, 0, IMAPCS_SELECTED))
-		return 1;	/* error, return */
-
-	if ((result = dbmail_imap_session_mailbox_idle(self)) != 0)
-		return result;
-
-	dbmail_imap_session_printf(self, "%s OK IDLE terminated\r\n", self->tag);
-	return 0;
-}
-
 
 /*
  * _ic_expunge()
