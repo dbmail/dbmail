@@ -1,3 +1,25 @@
+2007-10-05  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-imapsession.h, imapcommands.c:
+	allow IDLE command after authentication (bug #648)
+	* check_dbmail_misc.c, misc.c, misc.h:
+	work around incomplete utf7 decoding by gmime (bug #649)
+	* dbmail.h.in:
+	fix build for freebsd after _XOPEN_SOURCE change
+
+2007-10-02  Paul Stevens <paul@nfg.nl>
+
+	* pipe.c:
+	limit the scope of the transaction during message insertion to avoid 
+	deadlocks
+	* check_dbmail_misc.c, misc.c:
+	generate better randomness by using the glib calls in create_unique_id
+
+2007-10-01  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
+	fix segfault while storing broken multipart messages
+
 2007-09-30  Paul J Stevens <paul@nfg.nl>
 
 	* dbmailtypes.h, sql/mysql/2_2_5-2_3_0.mysql, 
