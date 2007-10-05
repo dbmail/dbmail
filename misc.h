@@ -182,4 +182,5 @@ void dbmail_iconv_init(void);
 char * dbmail_iconv_str_to_db(const char* str_in, const char *charset);
 char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset);
 char * dbmail_iconv_db_to_utf7(const char* str_in);
+char * dbmail_iconv_decode_text(const char *in);
 #endif
