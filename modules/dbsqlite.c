@@ -33,11 +33,6 @@ db_param_t _db_params;
 
 static sqlite3 *conn;
 
-/* SQLITE3 internals... */
-extern int sqlite3ReadUtf8(const unsigned char *);
-extern const unsigned char sqlite3UpperToLower[];
-extern int sqlite3utf8CharLen(const char *pData, int nByte);
-
 const char * db_get_sql(sql_fragment_t frag)
 {
 	switch(frag) {
@@ -92,25 +87,6 @@ struct qtmp {
 
 struct qtmp *lastq = 0;
 
-static void dbsqlite_current_timestamp(sqlite3_context *f, int argc UNUSED, const sqlite3_value **argv UNUSED)
-{
-	char timestr[21];
-	struct tm tm;
-	time_t now;
-
-	time(&now);
-	localtime_r(&now, &tm);
-	strftime(timestr, sizeof(timestr)-1, "%Y-%m-%d %H:%M:%S", &tm);
-	(void)sqlite3_result_text(f,timestr,-1,SQLITE_TRANSIENT);
-}
-
-static void dbsqlite_current_timestamp_unix(sqlite3_context *f, int argc UNUSED,  const sqlite3_value **argv UNUSED)
-{
-	char buf[63];
-	sprintf(buf, "%ld", time(NULL)); /* assumes time() is signed int */
-	(void)sqlite3_result_text(f,buf,-1,SQLITE_TRANSIENT);
-}
-
 /* this is lifted directly from sqlite -- cut here -- */
 struct compareInfo {
 	unsigned char matchAll;
@@ -120,7 +96,7 @@ struct compareInfo {
 };
 static const struct compareInfo likeInfo = { '%', '_',   0, 0 };
 #define sqliteNextChar(X)  while( (0xc0&*++(X))==0x80 ){}
-#define sqliteCharVal(X)   sqlite3ReadUtf8(X)
+#define sqliteCharVal(X)   g_utf8_get_char((const char *)X)
 
 static int patternCompare(
   const unsigned char *zPattern,              /* The glob pattern */
@@ -147,7 +123,7 @@ static int patternCompare(
         }
         zPattern++;
       }
-      if( c && esc && sqlite3ReadUtf8(&zPattern[1])==esc ){
+      if( c && esc && (const int)g_utf8_get_char((const char *)&zPattern[1])==esc ){
         unsigned char const *zTemp = &zPattern[1];
         sqliteNextChar(zTemp);
         c = *zTemp;
@@ -162,9 +138,9 @@ static int patternCompare(
       }else{
         while( (c2 = *zString)!=0 ){
           if( noCase ){
-            c2 = sqlite3UpperToLower[c2];
-            c = sqlite3UpperToLower[c];
-            while( c2 != 0 && c2 != c ){ c2 = sqlite3UpperToLower[*++zString]; }
+            c2 = g_ascii_tolower(c2);
+            c = g_ascii_tolower(c);
+            while( c2 != 0 && c2 != c ){ c2 = g_ascii_tolower(*++zString); }
           }else{
             while( c2 != 0 && c2 != c ){ c2 = *++zString; }
           }
@@ -208,12 +184,12 @@ static int patternCompare(
       if( c2==0 || (seen ^ invert)==0 ) return 0;
       sqliteNextChar(zString);
       zPattern++;
-    }else if( esc && !prevEscape && sqlite3ReadUtf8(zPattern)==esc){
+    }else if( esc && !prevEscape && (const int)g_utf8_get_char((const char *)zPattern)==esc){
       prevEscape = 1;
       sqliteNextChar(zPattern);
     }else{
       if( noCase ){
-        if( sqlite3UpperToLower[c] != sqlite3UpperToLower[*zString] ) return 0;
+        if( g_ascii_tolower(c) != g_ascii_tolower(*zString) ) return 0;
       }else{
         if( c != *zString ) return 0;
       }
@@ -237,12 +213,12 @@ static void dbsqlite_cslike(sqlite3_context *context, int argc, sqlite3_value **
 		** Otherwise, return an error.
 		*/
 		const unsigned char *zEsc = sqlite3_value_text(argv[2]);
-		if (sqlite3utf8CharLen((const char *)zEsc, -1) != 1) {
+		if (g_utf8_strlen((const char *)zEsc, -1) != 1) {
 			sqlite3_result_error(context, 
 				"ESCAPE expression must be a single character", -1);
 			return;
 		}
-		escape = sqlite3ReadUtf8(zEsc);
+		escape = g_utf8_get_char((const char *)zEsc);
 	}
 	if (zA && zB) {
 		sqlite3_result_int(context, patternCompare(zA, zB, &likeInfo, escape));
