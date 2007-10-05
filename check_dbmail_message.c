@@ -214,16 +214,37 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	//FILE *a = fopen("/tmp/expect.txt","w");
-	//FILE *b = fopen("/tmp/result.txt","w");
-	//fwrite(expect,strlen(expect),1,a);
-	//fwrite(expect,strlen(t),1,b);
 	fail_unless(strncmp(expect,t,strlen(expect))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
 	
 	dbmail_message_free(n);
 	g_free(expect);
 	g_free(t);
+	//
+	//-----------------------------------------
+	//
+	//
+	s = g_string_new(broken_message);
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+	expect = dbmail_message_to_string(m);
+	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
 
+	dbmail_message_store(m);
+	physid = dbmail_message_get_physid(m);
+	dbmail_message_free(m);
+
+	n = dbmail_message_new();
+	dbmail_message_set_physid(n, physid);
+	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_FULL);
+	fail_unless(n != NULL, "_mime_retrieve failed");
+		
+	t = dbmail_message_to_string(n);
+	fail_unless(strncmp(expect,t,strlen(expect))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+
+	dbmail_message_free(n);
+	g_free(expect);
+	g_free(t);
 }
 END_TEST
 

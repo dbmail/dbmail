@@ -94,6 +94,8 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	assert(s);
 
 	i = find_end_of_header(s);
+	if (i >= strlen(s))
+		return NULL;
 	
 	b = s+i;
 	l = strlen(b);
@@ -355,8 +357,10 @@ static gboolean _dm_store_mime_text(GMimeObject *object, struct DbmailMessage *m
 	_store_blob(m, head, 1);
 	g_free(head);
 
-	_store_blob(m, text, 0);
-	g_free(text);
+	if (text) {
+		_store_blob(m, text, 0);
+		g_free(text);
+	}
 
 	return FALSE;
 }
@@ -378,20 +382,22 @@ static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessa
 
 	if (g_mime_content_type_is_type(content_type, "multipart", "mixed")) {
 		text = g_mime_object_get_body(object);
-		t = strlen(text);
+		if (text) {
+			t = strlen(text);
 
-		while(t>2 && i++ < t && text[i+2]) {
-			if ((i==0 || text[i] == '\n') && text[i+1]=='-' && text[i+2]=='-')
-				break;
+			while(t>2 && i++ < t && text[i+2]) {
+				if ((i==0 || text[i] == '\n') && text[i+1]=='-' && text[i+2]=='-')
+					break;
+			}
+
+			if (i>0 && i<t) {
+				text[i] = '\0';
+				text = g_realloc(text,i);
+				_store_blob(m, text, 0);
+			}
+
+			g_free(text);
 		}
-
-		if (i>0 && i<t) {
-			text[i] = '\0';
-			text = g_realloc(text,i);
-			_store_blob(m, text, 0);
-		}
-
-		g_free(text);
 	}
 
 	if (boundary) {
