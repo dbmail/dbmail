@@ -1,5 +1,9 @@
 2007-10-05  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-imapsession.c, dbmail-imapsession.h, imapcommands.c:
+	allow IDLE command after authentication (bug #648)
+	* modules/dbsqlite.c:
+	remove sqlite3 internals
 	* VERSION:
 	v2.2.7-rc3
 	* ChangeLog, check_dbmail_misc.c, misc.c, misc.h:
