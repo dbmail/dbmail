@@ -1645,7 +1645,6 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 
 	/* update client info */
 	ud->userid = userid;
-	ud->state = IMAPCS_AUTHENTICATED;
 
 	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 
@@ -1826,8 +1825,10 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
         struct DbmailMailbox *mailbox = NULL;
 	gboolean showexists = FALSE;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	if (ud->state != IMAPCS_SELECTED)
+	if (ud->state != IMAPCS_SELECTED) {
+		TRACE(TRACE_DEBUG,"do nothing: state [%d]", ud->state);
 		return 0;
+	}
 
 	oldexists = ud->mailbox.exists;
 	oldrecent = ud->mailbox.recent;
@@ -2120,16 +2121,16 @@ int dbmail_imap_session_set_state(struct ImapSession *self, int state)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	switch (state) {
 		case IMAPCS_AUTHENTICATED:
-			ud->state = state;
 			memset(&ud->mailbox, 0, sizeof(ud->mailbox));
 			// change from login_timeout to main timeout
 			self->timeout = self->ci->timeout; 
-			break;
-			
+		break;
 		default:
-			ud->state = state;
-			break;
+		break;
 	}
+	ud->state = state;
+
+	TRACE(TRACE_DEBUG,"state [%d]", ud->state);
 	return 0;
 }
 
