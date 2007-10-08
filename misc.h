@@ -115,6 +115,7 @@ GList * g_tree_keys(GTree *tree);
 GList * g_tree_values(GTree *tree);
 void tree_dump(GTree *t);
 int g_tree_merge(GTree *a, GTree *b, int condition);
+void g_list_merge(GList **a, GList *b, int condition, GCompareFunc func);
 	
 char * dm_stresc(const char * from);
 char * dm_strnesc(const char * from, size_t len);

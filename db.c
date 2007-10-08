@@ -2965,7 +2965,6 @@ int db_getmailbox_flags(mailbox_t *mb)
 	db_free_result();
 
 	return DM_SUCCESS;
-
 }
 
 int db_getmailbox_count(mailbox_t *mb)
@@ -3028,6 +3027,44 @@ int db_getmailbox_count(mailbox_t *mb)
 	return DM_SUCCESS;
 }
 
+int db_getmailbox_keywords(mailbox_t *mb)
+{
+	int i, rows;
+	const char *key;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,sizeof(query));
+	GList *keys = NULL;
+
+	snprintf(query, DEF_QUERYSIZE, "SELECT DISTINCT(keyword) FROM %skeywords k "
+		"JOIN %smessages m ON k.message_idnr=m.message_idnr "
+		"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
+		"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, mb->uid);
+
+	if (db_query(query) == DM_EQUERY)
+		return DM_EQUERY;
+
+	if (mb->keywords) {
+		g_list_destroy(mb->keywords);
+		mb->keywords = NULL;
+	}
+
+	rows = db_num_rows();
+
+	if (! rows) {
+		db_free_result();
+		return DM_SUCCESS;
+	}
+
+	for (i=0; i<rows; i++) {
+		key = db_get_result(i,0);
+		keys = g_list_prepend(keys, g_strdup(key));
+	}
+
+	mb->keywords = keys;
+
+	return DM_SUCCESS;
+}
+
 int db_getmailbox_mtime(mailbox_t * mb)
 {
 	char q[DEF_QUERYSIZE];
@@ -3076,6 +3113,8 @@ int db_getmailbox(mailbox_t * mb)
 	if ((res = db_getmailbox_flags(mb)) != DM_SUCCESS)
 		return res;
 	if ((res = db_getmailbox_count(mb)) != DM_SUCCESS)
+		return res;
+	if ((res = db_getmailbox_keywords(mb)) != DM_SUCCESS)
 		return res;
 
 	return DM_SUCCESS;
@@ -4180,10 +4219,87 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	return val;
 }
 
-int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_type)
+static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, msginfo_t *msginfo)
+{
+	char *safe;
+	char query[DEF_QUERYSIZE];
+
+	if (keywords == NULL)
+		return DM_SUCCESS;
+
+	if (action_type == IMAPFA_REMOVE) {
+		keywords = g_list_first(keywords);
+		db_begin_transaction();
+		while (keywords->data) {
+
+			safe = dm_stresc((char *)keywords->data);
+			memset(query,0,sizeof(query));
+			snprintf(query, DEF_QUERYSIZE, "DELETE FROM %skeywords WHERE message_idnr=%llu "
+				"AND keyword = '%s'", DBPFX, msg_idnr, safe);
+			g_free(safe);
+
+			if (db_query(query) == DM_EQUERY) {
+				db_rollback_transaction();
+				db_free_result();
+				return DM_EQUERY;
+			}
+			if (! g_list_next(keywords))
+				break;
+
+			keywords = g_list_next(keywords);
+		}
+		db_commit_transaction();
+		db_free_result();
+	}
+
+	if (action_type == IMAPFA_ADD || action_type == IMAPFA_REPLACE) {
+
+		db_begin_transaction();
+
+		if (action_type == IMAPFA_REPLACE) {
+			memset(query,0,sizeof(query));
+			snprintf(query, DEF_QUERYSIZE, "DELETE FROM %skeywords WHERE message_idnr=%llu",
+				DBPFX, msg_idnr);
+			if (db_query(query) == DM_EQUERY) {
+				db_rollback_transaction();
+				db_free_result();
+				return DM_EQUERY;
+			}
+		}
+
+		keywords = g_list_first(keywords);
+		while (keywords) {
+
+			if ((! msginfo) || (! g_list_find_custom(msginfo->keywords, (char *)keywords->data, (GCompareFunc)g_ascii_strcasecmp))) {
+				safe = dm_stresc((char *)keywords->data);
+				memset(query,0,sizeof(query));
+				snprintf(query, DEF_QUERYSIZE, "INSERT INTO %skeywords (message_idnr, keyword) "
+					"VALUES (%llu, '%s')", DBPFX, msg_idnr, safe);
+				g_free(safe);
+
+				if (db_query(query) == DM_EQUERY) {
+					db_rollback_transaction();
+					db_free_result();
+					return DM_EQUERY;
+				}
+			}
+
+			if (! g_list_next(keywords))
+				break;
+
+			keywords = g_list_next(keywords);
+		}
+		db_commit_transaction();
+		db_free_result();
+	}
+
+	return DM_SUCCESS;
+}
+
+int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywords, int action_type, msginfo_t *msginfo)
 {
 	size_t i, pos = 0;
-	char query[DEF_QUERYSIZE]; 
+	char query[DEF_QUERYSIZE];
 
 	memset(query,0,DEF_QUERYSIZE);
 	pos += snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0", DBPFX);
@@ -4225,6 +4341,8 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 	}
 
 	db_free_result();
+
+	db_set_msgkeywords(msg_idnr, keywords, action_type, msginfo);
 
 	return DM_SUCCESS;
 }

@@ -112,9 +112,10 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[1][0][:11],'[TRYCREATE]')
         # test flags
         self.o.create('testappend')
-        self.o.append('testappend','\Flagged',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
+        self.o.append('testappend','\Flagged Userflag',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
         result = self.o.select('testappend')
         id = result[1][0]
+        self.assertEquals(int(id),1);
         
         result = self.o.fetch(id,"(UID BODY[])")
         self.assertEquals(result[0],'OK')
@@ -130,8 +131,9 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         self.assertEquals(strip_crlf(result[1][0][1]),TESTMSG['strict822'].get_payload())
 
-#        expect = '  FLAGS (\\Seen \\Flagged \\Recent))'
-#        self.assertEquals(result,expect)
+        result = self.o.fetch(id,"(FLAGS)")
+        expect = '1 (FLAGS (\\Seen \\Flagged Userflag))'
+        self.assertEquals(result[1][0],expect)
 
     def testCheck(self):
         """ 
@@ -507,6 +509,9 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.select()[0],'OK')
         self.assertEquals(self.o.select('INBOX')[0],'OK')
         self.assertEquals(self.o.select('INBOX',1)[0],'OK')
+        self.o.create('testflag')
+        self.o.append('testflag','\Flagged Userflag',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
+        self.assertEquals('Userflag' in self.o.untagged_responses['PERMANENTFLAGS'][0].split(' '), True)
 
     def testSetacl(self):
         """ 

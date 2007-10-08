@@ -1,9 +1,12 @@
-1 login testuser1 test
-2 select inbox
-3 store 1 +flags (\Flagged)
-4 store 1 +flags (\Flagged)
-5 store 1 +flags.silent (\Flagged)
-6 store 1 -flags (\Flagged)
-7 store 1 -flags (\Answered)
-8 store 1 flags (\Answered)
-9 logout
+x login testuser1 test
+x select inbox
+x store 1 +flags (\Flagged)
+x store 1 +flags (\Flagged)
+x store 1 +flags.silent (\Flagged)
+x store 1 -flags (\Flagged)
+x store 1 -flags (\Answered)
+x store 1 +flags (Junk Trash)
+x store 1 -flags (Junk)
+x store 1 flags (\Answered Junk)
+x store 1 flags (\Answered)
+x logout

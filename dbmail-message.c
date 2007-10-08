@@ -1002,6 +1002,8 @@ size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean c
 	char *s, *t; size_t r;
 	s = dbmail_message_body_to_string(self);
 
+	if (! s) return 0;
+
 	if (crlf) {
 		t = get_crlf_encoded(s);
 		r = strlen(t);

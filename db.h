@@ -1212,7 +1212,7 @@ int db_get_msgflag(const char *flag_name,
  * 		-  0 on success
  */
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
-		   int action_type);
+		   GList *keywords, int action_type, msginfo_t *msginfo);
 
 /**
  * \brief check if a user has a certain right to a mailbox

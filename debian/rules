@@ -13,7 +13,9 @@ export WITH_PGSQL=--with-pgsql
 export WITH_LDAP=--with-auth-ldap
 export SHARED=--enable-shared=yes
 export SHARED=--enable-static=no
+export MANPAGES=--enable-manpages=yes
 export REAL_CLEAN=
+export RECONFIG=
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
@@ -34,6 +36,7 @@ ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_LDAP=
 	export WITH_SIEVE=
 	export WITH_INGRES=
+	export MANPAGES=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes
 	CFLAGS += -g
@@ -58,6 +61,7 @@ ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
 endif
 ifneq (,$(findstring trunk,$(DBMAIL_VERSION)))
 	export REAL_CLEAN=mrproper
+	export RECONFIG=configure
 endif
 
 # dpatch
@@ -68,7 +72,8 @@ include /usr/share/dpatch/dpatch.make
 
 CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
-	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
+	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(MANPAGES) \
+	$(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
 stamps/build: stamps patch $(PACKAGES)
@@ -83,7 +88,7 @@ stamps/configure:
 	touch $@
 
 dbmail: stamps/dbmail
-stamps/dbmail:
+stamps/dbmail: $(RECONFIG)
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure $(CONFFLAGS) 
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
@@ -170,5 +175,5 @@ binary-%: build install
 	
 binary: binary-indep binary-arch
 
-.PHONY: build clean clean1 mrproper patch binary binary-common binary-indep binary-arch unpatch configure install
+.PHONY: build clean clean1 mrproper patch binary binary-common binary-indep binary-arch unpatch install
 

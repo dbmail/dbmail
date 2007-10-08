@@ -563,8 +563,8 @@ START_TEST(test_imap_get_envelope_koi)
 	
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
 	/* full-circle? */
-	q = g_mime_utils_header_decode_text((unsigned char *)t);
-	w = g_mime_utils_header_encode_text((unsigned char *)q);
+	q = g_mime_utils_header_decode_text((const char *)t);
+	w = g_mime_utils_header_encode_text((const char *)q);
 	
 	fail_unless(strcmp(t,w)==0,"encode/decode/encode loop failed");
 
@@ -632,7 +632,9 @@ START_TEST(test_imap_get_envelope_latin)
 	m = dbmail_message_init_with_string(m, s);
 	g_string_free(s,TRUE);
 	
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
+//	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
+
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
 
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
 	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);

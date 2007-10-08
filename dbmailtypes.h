@@ -329,6 +329,7 @@ typedef struct {
 typedef struct {
 	u64_t uid, msguidnext, owner_idnr;
 	char *name;
+	GList *keywords;
 	unsigned no_select, no_inferiors, exists, recent, unseen, no_children, flags;
 	int permission;
 	time_t mtime;
@@ -408,6 +409,7 @@ typedef struct {
 	int flags[IMAP_NFLAGS];
 	char internaldate[IMAP_INTERNALDATE_LEN];
 	u64_t rfcsize, uid;
+	GList *keywords;
 } msginfo_t;
 
 /*

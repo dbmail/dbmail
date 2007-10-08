@@ -88,7 +88,7 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_disconnect",          (gpointer)&db->disconnect          )
 	||  !g_module_symbol(module, "db_check_connection",    (gpointer)&db->check_connection    )
 	||  !g_module_symbol(module, "db_query",               (gpointer)&db->query               )
--	||  !g_module_symbol(module, "db_insert_result",       (gpointer)&db->insert_result       ) // deprecated: mysql-only
+	||  !g_module_symbol(module, "db_insert_result",       (gpointer)&db->insert_result       ) // deprecated: mysql-only
 	||  !g_module_symbol(module, "db_sequence_nextval",    (gpointer)&db->sequence_nextval    )
 	||  !g_module_symbol(module, "db_sequence_currval",    (gpointer)&db->sequence_currval    )
 	||  !g_module_symbol(module, "db_num_rows",            (gpointer)&db->num_rows            )

@@ -189,6 +189,37 @@ START_TEST(test_create_unique_id)
 }
 END_TEST
 
+START_TEST(test_g_list_merge)
+{
+	char *s;
+
+	GList *a = NULL, *b = NULL;
+	a = g_list_append(a, g_strdup("A"));
+	a = g_list_append(a, g_strdup("B"));
+	a = g_list_append(a, g_strdup("C"));
+	
+	b = g_list_append(b, g_strdup("D"));
+
+	g_list_merge(&a, b, IMAPFA_ADD, (GCompareFunc)g_ascii_strcasecmp);
+	s = dbmail_imap_plist_as_string(a);
+	fail_unless(MATCH(s,"(A B C D)"), "g_list_merge ADD failed 1");
+
+	b = g_list_append(b, g_strdup("A"));
+
+	g_list_merge(&a, b, IMAPFA_ADD, (GCompareFunc)g_ascii_strcasecmp);
+	s = dbmail_imap_plist_as_string(a);
+	fail_unless(MATCH(s,"(A B C D)"), "g_list_merge ADD failed 2");
+
+	g_list_merge(&a, b, IMAPFA_REMOVE, (GCompareFunc)g_ascii_strcasecmp);
+	s = dbmail_imap_plist_as_string(a);
+	fail_unless(MATCH(s,"(B C)"), "g_list_merge REMOVE failed");
+
+	g_list_merge(&a, b, IMAPFA_REPLACE, (GCompareFunc)g_ascii_strcasecmp);
+	s = dbmail_imap_plist_as_string(a);
+	fail_unless(MATCH(s,"(D A)"), "g_list_merge REPLACE failed");
+}
+END_TEST
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -201,6 +232,7 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
 	tcase_add_test(tc_misc, test_dbmail_iconv_str_to_db);
 	tcase_add_test(tc_misc, test_create_unique_id);
+	tcase_add_test(tc_misc, test_g_list_merge);
 	
 	return s;
 }

@@ -1,13 +1,35 @@
+2007-10-08  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, check_dbmail_message.c, check_dbmail_misc.c, 
+	db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, 
+	dbmail-message.c, dbmailtypes.h, dbmodule.c, 
+	debian/dbmail-mysql.examples, debian/dbmail-pgsql.examples, 
+	debian/dbmail.examples, debian/rules, export.c, imap4.h, 
+	imapcommands.c, misc.c, misc.h, modules/dbsqlite.c, sort.c, 
+	sql/mysql/2_2_5-2_3_0.mysql, sql/mysql/create_tables.mysql, 
+	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite, 
+	test-scripts/testimap.py, test-scripts/teststore.imap:
+	merge labels branch
+
+2007-10-06  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, imapcommands.c:
+	make noop work again
+
 2007-10-05  Paul Stevens <paul@nfg.nl>
 
-	* dbmail-mailbox.c, dbmail-mailbox.h:
+	* ChangeLog, dbmail-mailbox.c, dbmail-mailbox.h:
 	respect charset argument during search (bug #646)
+	* ChangeLog:
+	Merge branch 'master' of git+ssh://nfg3.nfgs.net/var/git/dbmail
 	* dbmail-imapsession.c, dbmail-imapsession.h, imapcommands.c:
 	allow IDLE command after authentication (bug #648)
 	* check_dbmail_misc.c, misc.c, misc.h:
 	work around incomplete utf7 decoding by gmime (bug #649)
 	* dbmail.h.in:
 	fix build for freebsd after _XOPEN_SOURCE change
+	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
+	fix segfault while storing broken multipart messages
 
 2007-10-02  Paul Stevens <paul@nfg.nl>
 

@@ -87,7 +87,7 @@ typedef struct {
 typedef struct {
 	int state;		/* IMAP state of client */
 	u64_t userid;		/* userID of client in dbase */
-	mailbox_t mailbox;	/* currently selected mailbox */
+	mailbox_t *mailbox;	/* currently selected mailbox */
 } imap_userdata_t;
 
 imap_userdata_t * dbmail_imap_userdata_new(void);

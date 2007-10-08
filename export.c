@@ -132,7 +132,7 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 			// Flag the selected messages \\Deleted
 			// Following this, dbmail-util -d sets deleted status
 			if (delete_after_dump & 1) {
-				if (db_set_msgflag(*(u64_t *)ids->data, mailbox_idnr, deleted_flag, IMAPFA_ADD) < 0) {
+				if (db_set_msgflag(*(u64_t *)ids->data, mailbox_idnr, deleted_flag, NULL, IMAPFA_ADD, NULL) < 0) {
 					qerrorf("Error setting flags for message [%llu]\n", *(u64_t *)ids->data);
 					result = -1;
 				}

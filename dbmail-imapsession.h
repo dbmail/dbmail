@@ -40,7 +40,7 @@ typedef struct {
 	gboolean silent;
 	int action;
 	int flaglist[IMAP_NFLAGS];
-	int msgflags[IMAP_NFLAGS];
+	GList *keywords;
 } cmd_store_t;
 
 typedef struct {
@@ -80,6 +80,11 @@ int client_is_authenticated(struct ImapSession * self);
 int check_state_and_args(struct ImapSession * self, const char * command, int minargs, int maxargs, int state);
 int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, char * password);
 int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value);
+
+
+void dbmail_imap_session_get_mbxinfo(struct ImapSession *self);
+mailbox_t * dbmail_imap_session_mbxinfo_lookup(struct ImapSession *self, u64_t mailbox_idnr);
+
 u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, const char * mailbox);
 int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr, ACLRight_t right);
 int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t idnr);

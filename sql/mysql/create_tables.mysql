@@ -78,13 +78,16 @@ CREATE TABLE dbmail_mailboxes (
 	no_inferiors tinyint(1) NOT NULL default '0',
 	no_select tinyint(1) NOT NULL default '0',
 	permission tinyint(1) default '2',
+	mtime DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
 	PRIMARY KEY  (mailbox_idnr),
 	INDEX name_index (name),
 	INDEX owner_idnr_index (owner_idnr),
+	INDEX mtime_index (mtime),
 	UNIQUE INDEX owner_idnr_name_index (owner_idnr, name),
 	FOREIGN KEY owner_idnr_fk (owner_idnr) 
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 
 DROP TABLE IF EXISTS dbmail_subscription;
 CREATE TABLE dbmail_subscription (
@@ -426,5 +429,36 @@ CREATE TABLE `dbmail_partlists` (
   CONSTRAINT `dbmail_partlists_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `dbmail_partlists_ibfk_2` FOREIGN KEY (`part_id`) REFERENCES `dbmail_mimeparts` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+DROP TABLE IF EXISTS dbmail_keywords;
+CREATE TABLE dbmail_keywords (
+	message_idnr bigint(21) NOT NULL,
+	keyword varchar(64) NOT NULL,
+	PRIMARY KEY  (message_idnr,keyword),
+	CONSTRAINT dbmail_keywords_ibfk_1 FOREIGN KEY (message_idnr) REFERENCES dbmail_messages (message_idnr) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- keep the modification timestamp on mailboxes up-to-date
+DELIMITER |
+DROP TRIGGER IF EXISTS tr_insert_message_mailbox|
+CREATE TRIGGER tr_insert_message_mailbox AFTER INSERT ON dbmail_messages 
+	FOR EACH ROW BEGIN 
+		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=NEW.mailbox_idnr; 
+	END;
+|
+DROP TRIGGER IF EXISTS tr_update_message_mailbox|
+CREATE TRIGGER tr_update_message_mailbox AFTER UPDATE ON dbmail_messages 
+	FOR EACH ROW BEGIN 
+		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=OLD.mailbox_idnr; 
+	END;
+|
+DROP TRIGGER IF EXISTS tr_delete_message_mailbox|
+CREATE TRIGGER tr_delete_message_mailbox AFTER DELETE ON dbmail_messages 
+	FOR EACH ROW BEGIN 
+		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=OLD.mailbox_idnr; 
+	END;
+|
+DELIMITER ;
 
 

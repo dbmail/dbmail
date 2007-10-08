@@ -207,7 +207,7 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		if (msgflags) {
 			TRACE(TRACE_MESSAGE, "message id=%llu, setting imap flags", 
 				newmsgidnr);
-			db_set_msgflag(newmsgidnr, mboxidnr, msgflags, IMAPFA_ADD);
+			db_set_msgflag(newmsgidnr, mboxidnr, msgflags, NULL, IMAPFA_ADD, NULL);
 		}
 		message->id = newmsgidnr;
 		return DSN_CLASS_OK;

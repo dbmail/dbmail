@@ -1291,6 +1291,60 @@ gint ucmp(const u64_t *a, const u64_t *b)
 	return -1;
 }
 
+/*
+ * a and b are lists of char keys
+ * matching is done using func
+ * for each key in b, keys are copied into or removed from a and freed
+ */
+
+void g_list_merge(GList **a, GList *b, int condition, GCompareFunc func)
+{
+	gchar *t;
+
+	b = g_list_first(b);
+
+	if (condition == IMAPFA_ADD) {
+		while (b) {
+			t = (gchar *)b->data;
+			if (! g_list_find_custom(*(GList **)a, t, (GCompareFunc)func))
+				*(GList **)a = g_list_append(*(GList **)a, g_strdup(t));
+			if (! g_list_next(b))
+				break;
+			b = g_list_next(b);
+		}
+	}
+	if (condition == IMAPFA_REMOVE) {
+		GList *el = NULL;
+
+		while (b) {
+			*(GList **)a = g_list_first(*(GList **)a);
+			t = (gchar *)b->data;
+			if ((el = g_list_find_custom(*(GList **)a, t, (GCompareFunc)func)) != NULL) {
+				*(GList **)a = g_list_remove_link(*(GList **)a, el);
+				g_list_destroy(el);
+			}
+
+			if (! g_list_next(b))
+				break;
+			b = g_list_next(b);
+		}
+	}
+	if (condition == IMAPFA_REPLACE) {
+		g_list_destroy(*(GList **)a);
+		*(GList **)a = NULL;
+
+		while (b) {
+			t = (gchar *)b->data;
+			*(GList **)a = g_list_append(*(GList **)a, g_strdup(t));
+			if (! g_list_next(b))
+				break;
+			b = g_list_next(b);
+		}
+	}
+
+
+}
+
 /* Read from instream until ".\r\n", discarding what is read. */
 int discard_client_input(FILE * instream)
 {
@@ -1499,7 +1553,7 @@ static void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gbo
 
 static void get_param_list(gpointer key, gpointer value, gpointer data)
 {
-	gchar *s = g_mime_utils_header_encode_text((unsigned char *)((GMimeParam *)value)->value);
+	gchar *s = g_mime_utils_header_encode_text(((GMimeParam *)value)->value);
 	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", (char *)key);
 	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", s);
 	g_free(s);
@@ -1891,7 +1945,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 
 			/* personal name */
 			if (ia->name && ia->value.addr) {
-				name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
+				name = g_mime_utils_header_encode_phrase(ia->name);
 				g_strdelimit(name,"\"\\",' ');
 				g_strstrip(name);
 				s = dbmail_imap_astring_as_string(name);
@@ -2210,12 +2264,12 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 
 	if ((! g_utf8_validate((const char *)str_in,-1,NULL)) && ((subj=g_mime_iconv_strdup(ic->from_db, str_in))!=NULL)) {
  		gchar *subj2;
-		subj2 = g_mime_utils_header_encode_text((unsigned char *)subj);
+		subj2 = g_mime_utils_header_encode_text((const char *)subj);
   		g_free(subj);
  		return subj2;
   	}
 
-	return g_mime_utils_header_encode_text((unsigned char *)str_in);
+	return g_mime_utils_header_encode_text(str_in);
 }
 
 /* work around a bug in gmime where utf7 strings are not completely decoded */
@@ -2307,7 +2361,7 @@ char * imap_get_envelope(GMimeMessage *message)
 		char *charset = message_get_charset(message);
 		char * subj = dbmail_iconv_str_to_utf8(result, charset);
 		g_free(charset);
-		s = g_mime_utils_header_encode_text((unsigned char *)subj);
+		s = g_mime_utils_header_encode_text((const char *)subj);
 		t = dbmail_imap_astring_as_string(s);
 		g_free(s);
 		g_free(subj);
@@ -2549,7 +2603,7 @@ char * imap_cleanup_address(const char *a)
 
 char * imap_flags_as_string(msginfo_t *msginfo)
 {
-	GList *sublist = NULL;
+	GList *t, *sublist = NULL;
 	int j;
 	char *s;
 
@@ -2557,6 +2611,15 @@ char * imap_flags_as_string(msginfo_t *msginfo)
 		if (msginfo->flags[j])
 			sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
 	}
+	
+	t = g_list_first(msginfo->keywords);
+	while (t) {
+		sublist = g_list_append(sublist, g_strdup((gchar *)t->data));
+		if (! g_list_next(t))
+			break;
+		t = g_list_next(t);
+	}
+	
 	s = dbmail_imap_plist_as_string(sublist);
 	g_list_destroy(sublist);
 	return s;
