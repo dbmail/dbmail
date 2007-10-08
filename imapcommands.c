@@ -254,6 +254,8 @@ int _ic_select(struct ImapSession *self)
 	if ((result = dbmail_imap_session_mailbox_open(self, mailbox))) 
 		return result;
 
+	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
+
 	if ((result = dbmail_imap_session_mailbox_show_info(self)))
 		return result;
 
@@ -282,7 +284,6 @@ int _ic_select(struct ImapSession *self)
 		return -1;
 	}
 
-	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
 	dbmail_imap_session_printf(self, "%s OK [%s] SELECT completed\r\n", self->tag,
 		permstring);
 	return 0;
@@ -308,14 +309,14 @@ int _ic_examine(struct ImapSession *self)
 	if ((result = dbmail_imap_session_mailbox_open(self, mailbox)))
 		return result;
 
+	/* update permission: examine forces read-only */
+	ud->mailbox.permission = IMAPPERM_READ;
+
+	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
+
 	if ((result = dbmail_imap_session_mailbox_show_info(self)))
 		return result;
 	
-	/* update permission: examine forces read-only */
-	ud->mailbox.permission = IMAPPERM_READ;
-	
-	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
-
 	dbmail_imap_session_printf(self, "%s OK [READ-ONLY] EXAMINE completed\r\n", self->tag);
 	return 0;
 }
