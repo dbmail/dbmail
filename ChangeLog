@@ -1,3 +1,8 @@
+2007-10-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* sievecmd.c:
+	Merge new features from 2.2 branch.
+
 2007-10-08  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, check_dbmail_message.c, check_dbmail_misc.c, 

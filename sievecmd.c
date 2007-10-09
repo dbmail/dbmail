@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
-		"-a::d:i:c::r:u:le::" /* Major modes */
+		"-a::d::i:c::r:u:le::" /* Major modes */
 		/*"i"*/ "f:qnyvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
@@ -273,6 +273,11 @@ int do_activate(u64_t user_idnr, char *name)
 {
 	int res = 0;
 
+	if (!name) {
+		qerrorf("Must give the name of a script to activate.\n");
+		return -1;
+	}
+
 	res = db_activate_sievescript(user_idnr, name);
 	if (res == -3) {
 		qerrorf("Script [%s] does not exist.\n", name);
@@ -293,6 +298,21 @@ int do_activate(u64_t user_idnr, char *name)
 int do_deactivate(u64_t user_idnr, char *name)
 {
 	int res = 0;
+	char *scriptname = NULL;
+
+	if (!name) {
+		if (db_get_sievescript_active(user_idnr, &scriptname)) {
+			qerrorf("Database error when fetching active script.\n");
+			return -1;
+		}
+		
+		if (scriptname == NULL) {
+			qerrorf("No active script found.\n");
+			return -1;
+		}
+
+		name = scriptname;
+	}
 
 	res = db_deactivate_sievescript(user_idnr, name);
 	if (res == -3) {
@@ -305,6 +325,8 @@ int do_deactivate(u64_t user_idnr, char *name)
 	qprintf("Script [%s] is now deactivated."
 		" No scripts are currently active.\n",
 		name);
+
+	g_free(scriptname);
 
 	return 0;
 }
@@ -388,7 +410,23 @@ int do_edit(u64_t user_idnr, char *name)
 
 	/* do_insert the script (set yes_to_all as we will overwrite). */
 	yes_to_all = 1;
-	ret = do_insert(user_idnr, name, tmp);
+	if (do_insert(user_idnr, name, tmp)) {
+		char dbmail_invalid_file[] = "dbmail-invalid.xxx.sieve";
+		struct stat stat_inv;
+		int i;
+		/* Save the script locally. */
+		for (i = 0; i < 20; i++) {
+			sprintf(dbmail_invalid_file, "dbmail-invalid.%d.sieve", i);
+			if (stat(dbmail_invalid_file, &stat_inv)) {
+				/* Try to rename the tmp file to this unused name. */
+				if (rename(tmp, dbmail_invalid_file) == 0)
+					break;
+				else
+					qerrorf("Could not save script to [%s]: %s\n", dbmail_invalid_file, strerror(errno));
+			}
+		}
+		qerrorf("Saved script to [%s]\n", dbmail_invalid_file);
+	}
 
 	/* Ok, all done. */
 cleanup:
@@ -590,35 +628,39 @@ int do_list(u64_t user_idnr)
 
 int do_showhelp(void)
 {
-	printf("*** dbmail-sievecmd ***\n");
+	printf(
+	"*** dbmail-sievecmd ***\n"
+//	Try to stay under the standard 80 column width
+//	0........10........20........30........40........50........60........70........80
+	"Use this program to manage your users' Sieve scripts.\n"
+	"See the man page for more info. Summary:\n\n"
+	"     -u username            Username of script user \n"
+	"     -l                     List scripts belonging to user \n"
+	"     -a scriptname          Activate the named script \n"
+	"                            (only one script can be active; \n"
+	"                             deactivates any others) \n"
+	"     -d [scriptname]        Deactivate the named script \n"
+	"     -c [scriptname]        Print the contents of the named script\n"
+	"     -e [scriptname]        Edit the contents of the named script\n"
+	"                            (if no script is given, the active \n"
+	"                             script is printed) \n"
+	"     -i scriptname file     Insert the named script from file \n"
+	"                            (a single dash, -, indicates input \n"
+	"                             from STDIN) \n"
+	"     -r scriptname          Remove the named script \n"
+	"                            (if script was active, no script is \n"
+	"                             active after deletion) \n"
 
-	printf("Use this program to manage your users' Sieve scripts.\n");
-	printf("See the man page for more info. Summary:\n\n");
-	printf("     -u username            Username of script user \n");
-	printf("     -l                     List scripts belonging to user \n");
-	printf("     -a scriptname          Activate the named script \n");
-	printf("                            (only one script can be active; \n"
-	       "                             deactivates any others) \n");
-	printf("     -d scriptname          Deactivate the named script \n");
-	printf("                            (no scripts will be active after this) \n");
-	printf("     -i scriptname file     Insert the named script from file \n");
-	printf("                            (a single dash, -, indicates input \n"
-	       "                             from STDIN) \n");
-	printf("     -c [scriptname]        Print the contents of the named script\n");
-	printf("                            (if no script is given, the active \n"
-	       "                             script is printed) \n");
-	printf("     -r scriptname          Remove the named script \n");
-	printf("                            (if script was active, no script is \n"
-	       "                             active after deletion) \n");
-        printf("\nCommon options for all DBMail utilities:\n");
-	printf("     -f file   specify an alternative config file\n");
-	printf("     -q        quietly skip interactive prompts\n"
-	       "               use twice to suppress error messages\n");
-	printf("     -n        show the intended action but do not perform it, no to all\n");
-	printf("     -y        perform all proposed actions, as though yes to all\n");
-	printf("     -v        verbose details\n");
-	printf("     -V        show the version\n");
-	printf("     -h        show this help message\n");
+        "\nCommon options for all DBMail utilities:\n"
+	"     -f file   specify an alternative config file\n"
+	"     -q        quietly skip interactive prompts\n"
+	"               use twice to suppress error messages\n"
+	"     -n        show the intended action but do not perform it, no to all\n"
+	"     -y        perform all proposed actions, as though yes to all\n"
+	"     -v        verbose details\n"
+	"     -V        show the version\n"
+	"     -h        show this help message\n"
+	);
 
 	return 0;
 }
