@@ -39,25 +39,28 @@ serverConfig_t config;
 /* loudness and assumptions */
 static int verbose = 0;
 
-int do_showhelp(void) {
-	printf("*** dbmail-top ***\n");
-
-	printf("Use this program to watch the status of your DBMail daemons.\n");
-	printf("See the man page for more info.\n\n");
-
-	printf("\nCommon options for all DBMail utilities:\n");
-	printf("     -p file   specify an alternative pid file\n");
-	printf("     -s file   specify an alternative state file\n");
-	printf("     -f file   specify an alternative config file\n");
-	printf("     -q        quietly skip interactive prompts\n"
-	       "               use twice to suppress error messages\n");
-	printf("     -n        show the intended action but do not perform it, no to all\n");
-	printf("     -y        perform all proposed actions, as though yes to all\n");
-	printf("     -v        verbose details\n");
-	printf("     -V        show the version\n");
-	printf("     -h        show this help message\n");
-
-	return 0;
+void do_showhelp(void)
+{
+	printf(
+	"*** dbmail-top ***\n"
+//	Try to stay under the standard 80 column width
+//	0........10........20........30........40........50........60........70........80
+	"Use this program to watch the status of your DBMail daemons.\n"
+	"See the man page for more info.\n"
+	"      TODO: add options to specify each daemon's pid and state files,\n"
+	"            overriding/augmenting the standard -p and -s options.\n"
+	"\nCommon options for all DBMail utilities:\n"
+	"     -p file   specify an alternative pid file\n"
+	"     -s file   specify an alternative state file\n"
+	"     -f file   specify an alternative config file\n"
+//	"     -q        quietly skip interactive prompts\n"
+//	"               use twice to suppress error messages\n"
+//	"     -n        show the intended action but do not perform it, no to all\n"
+//	"     -y        perform all proposed actions, as though yes to all\n"
+//	"     -v        verbose details\n"
+	"     -V        show the version\n"
+	"     -h        show this help message\n"
+	);
 }
 
 int main(int argc, char **argv)
