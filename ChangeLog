@@ -1,3 +1,13 @@
+2007-10-12  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	missed a case of utf7 decoding (bug #649)
+
+2007-10-09  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail.init, debian/dbmail.postinst, debian/dbmail.preinst:
+	packaging updates
+
 2007-10-06  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, imapcommands.c:
