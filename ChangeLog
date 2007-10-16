@@ -1,3 +1,18 @@
+2007-10-16  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
+	check_dbmail_misc.c, dbmail-message.c, misc.c, misc.h:
+	cleanup the iconv infrastructure a bit more
+
+2007-10-12  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog:
+	Merge branch 'dbmail_2_2' of git+ssh://nfg3.nfgs.net/var/git/dbmail
+	* dbmail-message.c:
+	missed a case of utf7 decoding (bug #649)
+	* debian/dbmail.init, debian/dbmail.postinst, debian/dbmail.preinst:
+	packaging updates
+
 2007-10-12  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c:

@@ -554,7 +554,9 @@ END_TEST
 
 START_TEST(test_imap_get_envelope_koi)
 {
-	char *t,*q, *w;
+	char *t;
+	const char *exp = "(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"test\" ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((NIL NIL \"nobody\" \"foo.ru\")) NIL NIL NIL NIL)";
+
 	struct DbmailMessage *m = dbmail_message_new();
 	GString *s = g_string_new(encoded_message_koi);
 
@@ -562,17 +564,11 @@ START_TEST(test_imap_get_envelope_koi)
 	g_string_free(s,TRUE);
 	
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
-	/* full-circle? */
-	q = g_mime_utils_header_decode_text((unsigned char *)t);
-	w = g_mime_utils_header_encode_text((unsigned char *)q);
 	
-	fail_unless(strcmp(t,w)==0,"encode/decode/encode loop failed");
+	fail_unless(strcmp(t,exp)==0,"encode/decode/encode loop failed\n[%s] !=\n[%s]", t,exp);
 
 	g_free(t);
-	g_free(q);
-	g_free(w);
 	dbmail_message_free(m);
-	
 }
 END_TEST
 
@@ -599,6 +595,8 @@ START_TEST(test_imap_cleanup_address)
 	F("=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\n"
 	"	<fordfrog@gentoo.org>\n", "\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" <fordfrog@gentoo.org>");
 
+	F("=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>",
+		"\"=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=\" <over.there@hotmail.com>");
 
 }
 END_TEST
@@ -631,8 +629,8 @@ START_TEST(test_imap_get_envelope_latin)
 	s = g_string_new(encoded_message_latin_2);
 	m = dbmail_message_init_with_string(m, s);
 	g_string_free(s,TRUE);
-	
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
+
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
 
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
 	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);

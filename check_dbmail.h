@@ -33,6 +33,15 @@ char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n"
 	"    this is a test message\n"
 	"\n";
     
+char * utf7_header = "From: \"Some Body\" <s.body@freeler.nl>\n"
+	"Subject: simple subject\n"
+	"To: =?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>\n"
+	"Date: Thu, 11 Oct 2007 19:00:37 +0200\n"
+	"MIME-Version: 1.0\n"
+	"\n"
+	" test message\n"
+	"\n";
+
 char *multipart_message = "From: \"Brother from another planet\" <vol@inter7.com>\n"
 	"To: \"Brother from another planet\" <vol@inter7.com>\n"
 	"Reply-to: \"Brother from another planet\" <vol@inter7.com>\n"

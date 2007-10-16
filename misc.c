@@ -647,7 +647,7 @@ char * dm_base_subject(const char *subject)
 	if (g_mime_utils_text_is_8bit((unsigned char *)subject, strlen(subject))) 
 		tmp = g_strdup(subject);
 	else 
-		tmp = dbmail_iconv_decode_text((unsigned char *)subject);
+		tmp = dbmail_iconv_decode_text(subject);
 	saved = tmp;
 	
 	dm_pack_spaces(tmp);
@@ -1499,7 +1499,7 @@ static void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gbo
 
 static void get_param_list(gpointer key, gpointer value, gpointer data)
 {
-	gchar *s = g_mime_utils_header_encode_text((unsigned char *)((GMimeParam *)value)->value);
+	gchar *s = g_mime_utils_header_encode_text((const char *)((GMimeParam *)value)->value);
 	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", (char *)key);
 	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", s);
 	g_free(s);
@@ -1891,7 +1891,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 
 			/* personal name */
 			if (ia->name && ia->value.addr) {
-				name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
+				name = g_mime_utils_header_encode_phrase((const char *)ia->name);
 				g_strdelimit(name,"\"\\",' ');
 				g_strstrip(name);
 				s = dbmail_imap_astring_as_string(name);
@@ -2106,6 +2106,7 @@ void dbmail_iconv_init(void)
 		g_strlcpy(ic->msg_charset, g_mime_locale_charset(), FIELDSIZE);
 	}
 
+
 	TRACE(TRACE_DEBUG,"Initialize DB encoding surface [UTF-8..%s]", ic->db_charset);
 	ic->to_db = g_mime_iconv_open(ic->db_charset,"UTF-8");
 	assert(ic->to_db != (iconv_t)-1);
@@ -2210,12 +2211,12 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 
 	if ((! g_utf8_validate((const char *)str_in,-1,NULL)) && ((subj=g_mime_iconv_strdup(ic->from_db, str_in))!=NULL)) {
  		gchar *subj2;
-		subj2 = g_mime_utils_header_encode_text((unsigned char *)subj);
+		subj2 = g_mime_utils_header_encode_text((const char *)subj);
   		g_free(subj);
  		return subj2;
   	}
 
-	return g_mime_utils_header_encode_text((unsigned char *)str_in);
+	return g_mime_utils_header_encode_text(str_in);
 }
 
 /* work around a bug in gmime where utf7 strings are not completely decoded */
@@ -2273,7 +2274,61 @@ char * dbmail_iconv_decode_text(const char *in)
 	return res;
 
 }
+/*
+ * dbmail_iconv_decode_address
+ * \param address the raw address header value
+ * \result allocated string containing a utf8 encoded representation
+ * 		of the input address
+ *
+ * 	paranoia rulez here, since input is untrusted
+ */
+char * dbmail_iconv_decode_address(char *address)
+{
+	InternetAddressList *l;
+	char *r = NULL, *t = NULL, *s = NULL;
 
+	if (address == NULL) return NULL;
+
+ 	// first make the address rfc2047 compliant if it happens to 
+ 	// contain 8bit data
+	if ( (g_mime_utils_text_is_8bit((unsigned char *)address, strlen(address))) )
+		s = g_mime_utils_header_encode_text((const char *)address);
+	else
+		s = g_strdup(address);
+
+	// cleanup broken addresses before parsing
+	t = imap_cleanup_address((const char *)s); g_free(s);
+
+	// feed the result to gmime's address parser and
+	// render it back to a hopefully now sane string
+	l = internet_address_parse_string(t); g_free(t);
+	s = internet_address_list_to_string(l, FALSE);
+	internet_address_list_destroy(l);
+
+	// now we're set to decode the rfc2047 address header
+	// into clean utf8
+	r = dbmail_iconv_decode_text(s); g_free(s);
+
+	return r;
+}
+
+char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr)
+{
+	char *tmp_raw;
+	char *value;
+
+	if ((tmp_raw = dbmail_iconv_str_to_utf8((const char *)in, charset)) == NULL) {
+		TRACE(TRACE_WARNING, "unable to decode headervalue [%s] using charset [%s]", in, charset);
+		return NULL;
+	}
+	
+	if (isaddr)
+		value = dbmail_iconv_decode_address(tmp_raw);
+	else
+		value = dbmail_iconv_decode_text(tmp_raw);
+
+	return value;
+}
 
 
 /* envelope access point */
@@ -2307,7 +2362,7 @@ char * imap_get_envelope(GMimeMessage *message)
 		char *charset = message_get_charset(message);
 		char * subj = dbmail_iconv_str_to_utf8(result, charset);
 		g_free(charset);
-		s = g_mime_utils_header_encode_text((unsigned char *)subj);
+		s = g_mime_utils_header_encode_text((const char *)subj);
 		t = dbmail_imap_astring_as_string(s);
 		g_free(s);
 		g_free(subj);
