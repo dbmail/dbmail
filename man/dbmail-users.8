@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-users
 .\"    Author: 
-.\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 07/28/2007
+.\" Generator: DocBook XSL Stylesheets v1.71.0 <http://docbook.sf.net/>
+.\"      Date: 10/16/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-USERS" "8" "07/28/2007" "" ""
+.TH "DBMAIL\-USERS" "8" "10/16/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -23,74 +23,118 @@ dbmail\-users \-x alias [ \-t forwards ] [ \-T forwards ]
 .SH "DESCRIPTION"
 The dbmail\-users program enables you to manage the DBMail users. It lets you add, delete and change users as well as show information about a specific user or display a list of existing users. It also has the capability of adding/removing separate aliases.
 .SH "MODE OPTIONS"
-.TP 3n
+.PP
 \-a user
+.RS 3n
 Add a user
-.TP 3n
+.RE
+.PP
 \-d user
+.RS 3n
 Delete a user
-.TP 3n
+.RE
+.PP
 \-c user
+.RS 3n
 Change details for a user
-.TP 3n
+.RE
+.PP
 \-e user
+.RS 3n
 Empty all mailboxes for a user
-.TP 3n
+.RE
+.PP
 \-l uspec
+.RS 3n
 List information for matching users
-.TP 3n
+.RE
+.PP
 \-x alias
+.RS 3n
 Create an external forwarding address
+.RE
 .SH "MINOR OPTIONS"
-.TP 3n
+.PP
 \-w passwd
+.RS 3n
 Specify user's password on the command line
-.TP 3n
+.RE
+.PP
 \-W [file]
+.RS 3n
 Read from a file or prompt for a user's password
-.TP 3n
+.RE
+.PP
 \-p pwtype
+.RS 3n
 Password type may be one of the following: plaintext, crypt, md5\-hash, md5\-digest, crypt\-raw, md5\-hash\-raw, md5\-digest\-raw, md5\-base64, md5\-base64\-raw.
-.TP 3n
+.RE
+.PP
 \-P [file]
+.RS 3n
 Pull encrypted password from the shadow file
-.TP 3n
+.RE
+.PP
 \-u user
+.RS 3n
 New username (only useful for \-c, change)
-.TP 3n
+.RE
+.PP
 \-g cid
+.RS 3n
 Assign the user to a client group.
-.TP 3n
+.RE
+.PP
 \-m max
+.RS 3n
 Set the maximum mail quota in <bytes>B, <kbytes>K, or <mbytes>M, default in bytes If set to 0, there will be no limit.
-.TP 3n
+.RE
+.PP
 \-s alias[,alias\&...]
+.RS 3n
 Adds a list of recipient aliases. An alias is an e\-mail address that is being delivered to the DBMail mailsystem and should be delivered to this user.
-.TP 3n
+.RE
+.PP
 \-S alias[,alias\&...]
+.RS 3n
 Removes a list of recipient aliases. Use wildcards ? and * to match any single character and any number of characters, respectively.
-.TP 3n
+.RE
+.PP
 \-t forward[,forward\&...]
+.RS 3n
 Adds a list of deliver\-to forwards.
-.TP 3n
+.RE
+.PP
 \-T forward[,forward\&...]
+.RS 3n
 Removes a list of deliver\-to forwards. Use wildcards ? and * to match any single character and any number of characters, respectively.
+.RE
 .SH "COMMON OPTIONS"
-.TP 3n
+.PP
 \-f configfile
+.RS 3n
 Specify an alternate config file. The utilities are currently hardcoded to use /etc/dbmail.conf for their configs, and will halt if the config file cannot be found. Use the \-f configfile option to specify your system's preferred config file location.
-.TP 3n
+.RE
+.PP
 \-q
+.RS 3n
 Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout. Use two \-q's to silence errors which would otherwise be printed to stderr.
-.TP 3n
+.RE
+.PP
 \-v
+.RS 3n
 Operate verbosely. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity.
-.TP 3n
+.RE
+.PP
 \-V
+.RS 3n
 Show the version and copyright, then exit.
-.TP 3n
+.RE
+.PP
 \-h
+.RS 3n
 Show a brief summary of options, then exit.
+.RE
 .SH "ALIASES VS. FORWARDS"
 One question we often see on the dbmail@dbmail.org mailing list is what the difference is between aliases and forwards. When using dbmail\-users, the different command line options are there because an alias attaches some arbitrary address to a particular user's account, while a forward attaches some arbitrary address another arbitrary address or pipe out.
 .sp

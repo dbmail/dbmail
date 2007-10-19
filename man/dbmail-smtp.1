@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-smtp
 .\"    Author: 
-.\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 07/28/2007
+.\" Generator: DocBook XSL Stylesheets v1.71.0 <http://docbook.sf.net/>
+.\"      Date: 10/16/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-SMTP" "1" "07/28/2007" "" ""
+.TH "DBMAIL\-SMTP" "1" "10/16/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -17,40 +17,62 @@ dbmail\-smtp [\-t headerfield] [\-d addresses] [\-u usernames] [\-m|\-M mailboxn
 .SH "DESCRIPTION"
 The dbmail\-smtp program inserts messages from the commandline or from any MTA into the DBMail mailsystem. The program reads from standard input.
 .SH "OPTIONS"
-.TP 3n
+.PP
 \-t headerfield
+.RS 3n
 Deliver messages to the recipient MIME header specified in headerfield. The default header to use is the "Delivered\-To:" header.
-.TP 3n
+.RE
+.PP
 \-d addresses\&...
+.RS 3n
 Deliver messages to the recipients specified by addresses. This option is mostly used for delivery from an MTA. Seperate multiple addresses by spaces.
-.TP 3n
+.RE
+.PP
 \-u usernames\&...
+.RS 3n
 Deliver messages straight to the given username. Seperate multiple usernames with spaces.
-.TP 3n
+.RE
+.PP
 \-m mailboxname
+.RS 3n
 Deliver messages to mailbox mailboxname of the recipient. If this mailbox does not exist yet, it is created. Sieve scripts will be run normally, possibly altering the destination mailbox.
-.TP 3n
+.RE
+.PP
 \-M mailboxname
+.RS 3n
 Deliver messages to mailbox mailboxname of the recipient. If this mailbox does not exist yet, it is created. Sieve scripts are not run. Permission checks are not performed for mailbox creation or message delivery.
-.TP 3n
+.RE
+.PP
 \-r returnpath
+.RS 3n
 Set return path for bounces and other error reports to return path.
+.RE
 .SH "COMMON OPTIONS"
-.TP 3n
+.PP
 \-f configfile
+.RS 3n
 Specify an alternate config file. The utilities are currently hardcoded to use /etc/dbmail.conf for their configs, and will halt if the config file cannot be found. Use the \-f configfile option to specify your system's preferred config file location.
-.TP 3n
+.RE
+.PP
 \-q
+.RS 3n
 Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout. Use two \-q's to silence errors which would otherwise be printed to stderr.
-.TP 3n
+.RE
+.PP
 \-v
+.RS 3n
 Operate verbosely. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity.
-.TP 3n
+.RE
+.PP
 \-V
+.RS 3n
 Show the version and copyright, then exit.
-.TP 3n
+.RE
+.PP
 \-h
+.RS 3n
 Show a brief summary of options, then exit.
+.RE
 .SH "BUGS"
 If you experience inexplicable problems with DBMail, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
 .SH "LICENSE"

@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-export
 .\"    Author: 
-.\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 08/07/2007
+.\" Generator: DocBook XSL Stylesheets v1.71.0 <http://docbook.sf.net/>
+.\"      Date: 10/16/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-EXPORT" "8" "08/07/2007" "" ""
+.TH "DBMAIL\-EXPORT" "8" "10/16/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -17,46 +17,72 @@ dbmail\-export [\-dDr] [\-u user] [\-m mailbox] [\-s imap search] [\-o outfile|\
 .SH "DESCRIPTION"
 The dbmail\-export program allows you to export a DBMail mailbox to an mbox formatted mailbox.
 .SH "OPTIONS"
-.TP 3n
+.PP
 \-u user
+.RS 3n
 specify the owner of the mailbox you want to export, using wildcards ? and * to match one or none, or one or more characters in the username, respectively.
-.TP 3n
+.RE
+.PP
 \-m mailbox
+.RS 3n
 specify the mailbox you want to export.
-.TP 3n
+.RE
+.PP
 \-o outfile
+.RS 3n
 specify the file into which the exported mail will be saved.
-.TP 3n
+.RE
+.PP
 \-b basedir
+.RS 3n
 specify the base directory into which the exported mailboxes will be saved.
-.TP 3n
+.RE
+.PP
 \-s search
+.RS 3n
 use an IMAP SEARCH string to select messages (default: 1:*) for example, to export all messages received in May, use: "1:* SINCE 1\-May\-2007 BEFORE 1\-Jun\-2007"
-.TP 3n
+.RE
+.PP
 \-d
+.RS 3n
 flag exported messages as \\\\Deleted (use dbmail\-util to expunge).
-.TP 3n
+.RE
+.PP
 \-D
+.RS 3n
 set delete status on exported messages (user dbmail\-util to purge).
-.TP 3n
+.RE
+.PP
 \-r
+.RS 3n
 export mailboxes recursively (default: true unless \-m option also specified).
+.RE
 .SH "COMMON OPTIONS"
-.TP 3n
+.PP
 \-f configfile
+.RS 3n
 Specify an alternate config file. The utilities are currently hardcoded to use /etc/dbmail.conf for their configs, and will halt if the config file cannot be found. Use the \-f configfile option to specify your system's preferred config file location.
-.TP 3n
+.RE
+.PP
 \-q
+.RS 3n
 Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout. Use two \-q's to silence errors which would otherwise be printed to stderr.
-.TP 3n
+.RE
+.PP
 \-v
+.RS 3n
 Operate verbosely. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity.
-.TP 3n
+.RE
+.PP
 \-V
+.RS 3n
 Show the version and copyright, then exit.
-.TP 3n
+.RE
+.PP
 \-h
+.RS 3n
 Show a brief summary of options, then exit.
+.RE
 .SH "EXAMPLES"
 To export and delete all messages belonging to user \fIJoe\fR in mailbox \fIInbox\fR more than 30 days old, try this command:
 .sp

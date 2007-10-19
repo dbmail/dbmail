@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-sievecmd
 .\"    Author: 
-.\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 08/07/2007
+.\" Generator: DocBook XSL Stylesheets v1.71.0 <http://docbook.sf.net/>
+.\"      Date: 10/16/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-SIEVECMD" "8" "08/07/2007" "" ""
+.TH "DBMAIL\-SIEVECMD" "8" "10/16/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -17,23 +17,32 @@ dbmail\-sievecmd \-u username [\-l] [\-a scriptname] [\-d scriptname] [\-i scrip
 .SH "DESCRIPTION"
 DBMail stores Sieve scripts in a table in the DBMail database. These scripts are used to sort incoming mail for the email users. Each user has their own script space and may upload scripts to the dbmail\-timsieved(8) daemon. The dbmail\-sievecmd(8) utility provides a convenient method for the system administrator to work with Sieve scripts from the command line.
 .SH "OPTIONS"
-.TP 3n
+.PP
 \-u username
+.RS 3n
 Specify the user whose scripts we will be modifying.
-.TP 3n
+.RE
+.PP
 \-l
+.RS 3n
 List scripts belonging to user
-.TP 3n
+.RE
+.PP
 \-a scriptname
+.RS 3n
 Activates
 scriptname, deactivating all other scripts.
-.TP 3n
+.RE
+.PP
 \-d scriptname
+.RS 3n
 Deactivates
 scriptname
 if it was active.
-.TP 3n
+.RE
+.PP
 \-i scriptname file
+.RS 3n
 Creates a script called
 scriptname
 by importing
@@ -42,31 +51,48 @@ file
 is \- (dash) or unspecified,
 \fIstdin\fR
 will be read.
-.TP 3n
+.RE
+.PP
 \-c [scriptname]
+.RS 3n
 Print out the named script. If no script is given, the active script is printed.
-.TP 3n
+.RE
+.PP
 \-e [scriptname]
+.RS 3n
 Edit the named script. If no script is given, the active script is printed. The EDITOR environment variable is used to find the editor program.
-.TP 3n
+.RE
+.PP
 \-r scriptname
+.RS 3n
 Remove the named script. If the script was active, no script will be active after it is deletion.
+.RE
 .SH "COMMON OPTIONS"
-.TP 3n
+.PP
 \-f configfile
+.RS 3n
 Specify an alternate config file. The utilities are currently hardcoded to use /etc/dbmail.conf for their configs, and will halt if the config file cannot be found. Use the \-f configfile option to specify your system's preferred config file location.
-.TP 3n
+.RE
+.PP
 \-q
+.RS 3n
 Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout. Use two \-q's to silence errors which would otherwise be printed to stderr.
-.TP 3n
+.RE
+.PP
 \-v
+.RS 3n
 Operate verbosely. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity.
-.TP 3n
+.RE
+.PP
 \-V
+.RS 3n
 Show the version and copyright, then exit.
-.TP 3n
+.RE
+.PP
 \-h
+.RS 3n
 Show a brief summary of options, then exit.
+.RE
 .SH "BUGS"
 If you experience inexplicable problems with DBMail, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
 .SH "LICENSE"

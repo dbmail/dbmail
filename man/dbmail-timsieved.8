@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-timsieved
 .\"    Author: 
-.\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
-.\"      Date: 07/28/2007
+.\" Generator: DocBook XSL Stylesheets v1.71.0 <http://docbook.sf.net/>
+.\"      Date: 10/16/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-TIMSIEVED" "8" "07/28/2007" "" ""
+.TH "DBMAIL\-TIMSIEVED" "8" "10/16/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -17,28 +17,42 @@ dbmail\-timsieved [\-f configfile] [\-p pidfile] [\-nvVh]
 .SH "DESCRIPTION"
 The dbmail\-timsieved daemon will spawn child processes as specified in the dbmail.conf file. These processes listen, by default, on port 2000 of the localhost interface.
 .SH "OPTIONS"
-.TP 3n
+.PP
 \-p pidfile
+.RS 3n
 Specify an alternate pid file. The daemons are currently hardcoded to use /var/run/dbmail\-<daemon> for their pid files, and will halt if the pid file cannot be written. Use the \-p pidfile option to place the pid file in your system's preferred location.
-.TP 3n
+.RE
+.PP
 \-n
+.RS 3n
 No daemonize. The program remains attached to the console from which it was started. This is quite useful for debugging when combined with the \-v option.
+.RE
 .SH "COMMON OPTIONS"
-.TP 3n
+.PP
 \-f configfile
+.RS 3n
 Specify an alternate config file. The utilities are currently hardcoded to use /etc/dbmail.conf for their configs, and will halt if the config file cannot be found. Use the \-f configfile option to specify your system's preferred config file location.
-.TP 3n
+.RE
+.PP
 \-q
+.RS 3n
 Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout. Use two \-q's to silence errors which would otherwise be printed to stderr.
-.TP 3n
+.RE
+.PP
 \-v
+.RS 3n
 Operate verbosely. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity.
-.TP 3n
+.RE
+.PP
 \-V
+.RS 3n
 Show the version and copyright, then exit.
-.TP 3n
+.RE
+.PP
 \-h
+.RS 3n
 Show a brief summary of options, then exit.
+.RE
 .SH "BUGS"
 If you experience inexplicable problems with DBMail, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
 .SH "LICENSE"
