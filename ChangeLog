@@ -1,3 +1,17 @@
+2007-10-19  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	v2.2.7-rc4
+	* pool.h:
+	increase HARD_MAX_CHILDREN to 1024
+	* modules/authldap.c:
+	small logging change in dm_ldap_mod_field
+	* man/dbmail-export.8, man/dbmail-imapd.8, man/dbmail-lmtpd.8, 
+	man/dbmail-pop3d.8, man/dbmail-sievecmd.8, man/dbmail-smtp.1, 
+	man/dbmail-timsieved.8, man/dbmail-users.8, man/dbmail-util.8, 
+	man/dbmail.1, man/dbmail.conf.5:
+	updated manpages
+
 2007-10-16  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
@@ -6,17 +20,10 @@
 
 2007-10-12  Paul Stevens <paul@nfg.nl>
 
-	* ChangeLog:
-	Merge branch 'dbmail_2_2' of git+ssh://nfg3.nfgs.net/var/git/dbmail
 	* dbmail-message.c:
 	missed a case of utf7 decoding (bug #649)
 	* debian/dbmail.init, debian/dbmail.postinst, debian/dbmail.preinst:
 	packaging updates
-
-2007-10-12  Paul J Stevens <paul@nfg.nl>
-
-	* dbmail-message.c:
-	missed a case of utf7 decoding (bug #649)
 
 2007-10-09  Paul J Stevens <paul@nfg.nl>
 
