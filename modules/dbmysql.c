@@ -79,7 +79,7 @@ static unsigned last_row_number = 0; /* the number of the row in last_row */
 
 
 /* database parameters */
-db_param_t _db_params;
+extern db_param_t _db_params;
 
 /* static functions, only used locally */
 

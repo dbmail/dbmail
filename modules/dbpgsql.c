@@ -79,7 +79,7 @@ static void _create_binary_table(void);
 static void _free_binary_table(void);
 static void _set_binary_table(unsigned row, unsigned field);
 static char*** bintbl = NULL;
-db_param_t _db_params;
+extern db_param_t _db_params;
 
 int db_connect()
 {
