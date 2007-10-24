@@ -647,7 +647,7 @@ char * dm_base_subject(const char *subject)
 	if (g_mime_utils_text_is_8bit((unsigned char *)subject, strlen(subject))) 
 		tmp = g_strdup(subject);
 	else 
-		tmp = dbmail_iconv_decode_text((unsigned char *)subject);
+		tmp = dbmail_iconv_decode_text(subject);
 	saved = tmp;
 	
 	dm_pack_spaces(tmp);
@@ -2160,6 +2160,7 @@ void dbmail_iconv_init(void)
 		g_strlcpy(ic->msg_charset, g_mime_locale_charset(), FIELDSIZE);
 	}
 
+
 	TRACE(TRACE_DEBUG,"Initialize DB encoding surface [UTF-8..%s]", ic->db_charset);
 	ic->to_db = g_mime_iconv_open(ic->db_charset,"UTF-8");
 	assert(ic->to_db != (iconv_t)-1);
@@ -2327,7 +2328,61 @@ char * dbmail_iconv_decode_text(const char *in)
 	return res;
 
 }
+/*
+ * dbmail_iconv_decode_address
+ * \param address the raw address header value
+ * \result allocated string containing a utf8 encoded representation
+ * 		of the input address
+ *
+ * 	paranoia rulez here, since input is untrusted
+ */
+char * dbmail_iconv_decode_address(char *address)
+{
+	InternetAddressList *l;
+	char *r = NULL, *t = NULL, *s = NULL;
 
+	if (address == NULL) return NULL;
+
+ 	// first make the address rfc2047 compliant if it happens to 
+ 	// contain 8bit data
+	if ( (g_mime_utils_text_is_8bit((unsigned char *)address, strlen(address))) )
+		s = g_mime_utils_header_encode_text((const char *)address);
+	else
+		s = g_strdup(address);
+
+	// cleanup broken addresses before parsing
+	t = imap_cleanup_address((const char *)s); g_free(s);
+
+	// feed the result to gmime's address parser and
+	// render it back to a hopefully now sane string
+	l = internet_address_parse_string(t); g_free(t);
+	s = internet_address_list_to_string(l, FALSE);
+	internet_address_list_destroy(l);
+
+	// now we're set to decode the rfc2047 address header
+	// into clean utf8
+	r = dbmail_iconv_decode_text(s); g_free(s);
+
+	return r;
+}
+
+char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr)
+{
+	char *tmp_raw;
+	char *value;
+
+	if ((tmp_raw = dbmail_iconv_str_to_utf8((const char *)in, charset)) == NULL) {
+		TRACE(TRACE_WARNING, "unable to decode headervalue [%s] using charset [%s]", in, charset);
+		return NULL;
+	}
+	
+	if (isaddr)
+		value = dbmail_iconv_decode_address(tmp_raw);
+	else
+		value = dbmail_iconv_decode_text(tmp_raw);
+
+	return value;
+}
 
 
 /* envelope access point */

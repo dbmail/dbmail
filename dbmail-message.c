@@ -1346,7 +1346,6 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	GString *q;
 	GTuples *values;
 	unsigned char *raw;
-	gchar *value = NULL;
 	unsigned i;
 	gboolean isaddr = 0;
 
@@ -1373,42 +1372,16 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	for (i=0; i<values->len;i++) {
 		raw = (unsigned char *)g_tuples_index(values,i,1);
 		
-                char *tmp_raw = NULL;
-                char *tmp_raw2 = NULL;
-		
-		const char *charset = dbmail_message_get_charset(self);
-
-		if (isaddr) {
-			InternetAddressList *alist;
-
-                        tmp_raw = dbmail_iconv_str_to_utf8((const char *)raw, charset);
-                        if ((tmp_raw != NULL) && (g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
-                            tmp_raw2 = g_mime_utils_header_encode_text((unsigned char *)tmp_raw);
-                            g_free(tmp_raw);
-                            tmp_raw = tmp_raw2;
-                        }
-
-			gchar *t = imap_cleanup_address((const char *)tmp_raw);
-			alist = internet_address_parse_string(t);
-			g_free(t);
-			g_free(tmp_raw);
-		
-			tmp_raw = internet_address_list_to_string(alist, TRUE);
-			value = dbmail_iconv_decode_text(tmp_raw);
-			internet_address_list_destroy(alist);
-
-			safe_value = dm_stresc(value);
-			g_free(value);
-		} else {
-			tmp_raw = dbmail_iconv_str_to_db((const char *)raw, charset);
-			if ((tmp_raw != NULL) && (!g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
-				tmp_raw2 = dbmail_iconv_decode_text(tmp_raw);
-				g_free(tmp_raw);
-				tmp_raw = tmp_raw2;
-			}
-			safe_value = dm_stresc((const char *)tmp_raw);
-		}
-		g_free(tmp_raw);
+ 		char *value = NULL;
+  		const char *charset = dbmail_message_get_charset(self);
+  
+ 		value = dbmail_iconv_decode_field((const char *)raw, charset, isaddr);
+ 
+ 		if (! value)
+ 			continue;
+ 
+ 		safe_value = dm_stresc(value);
+ 		g_free(value);
 
 		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
 				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
@@ -1443,8 +1416,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		ia = ialist->address;
 		g_return_if_fail(ia != NULL);
 
-		rname = ia->name ? ia->name: "";
-		rname=dbmail_iconv_str_to_db(rname, charset);
+		rname=dbmail_iconv_str_to_db(ia->name ? ia->name: "", charset);
 		/* address fields are truncated to column width */
 		name = dm_strnesc(rname, CACHE_WIDTH_ADDR);
 		addr = dm_strnesc(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
@@ -1488,80 +1460,71 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 	}
 	g_string_free(q,TRUE);
 }
+#define DM_ADDRESS_TYPE_TO "To"
+#define DM_ADDRESS_TYPE_CC "Cc"
+#define DM_ADDRESS_TYPE_FROM "From"
+#define DM_ADDRESS_TYPE_REPL "Reply-to"
 
+static InternetAddressList * dm_message_get_addresslist(const struct DbmailMessage *self, const char * type)
+{
+	const char *addr = NULL;
+	char *charset = NULL;
+	char *value = NULL;
+	InternetAddressList *list;
+
+	if (! (addr = (char *)dbmail_message_get_header(self, type)))
+		return NULL;
+
+	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
+	value = dbmail_iconv_decode_field(addr, charset, TRUE);
+	list = internet_address_parse_string(value);
+
+	g_free(value);
+
+	return list;
+}
 
 void dbmail_message_cache_tofield(const struct DbmailMessage *self)
 {
 	InternetAddressList *list;
 
-	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_TO);
-	if (list == NULL)
+	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_TO)))
 		return;
 	insert_address_cache(self->physid, "to", list,self);
+	internet_address_list_destroy(list);
 }
 
 void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
 {
 	InternetAddressList *list;
-	
-	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_CC);
-	if (list == NULL)
+
+	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_CC)))
 		return;
 	insert_address_cache(self->physid, "cc", list,self);
-	
+	internet_address_list_destroy(list);
+
 }
+
 void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 {
-	const char *addr;
-	char *value, *charset;
 	InternetAddressList *list;
 
-	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
-
-	// g_mime_message_get_sender fails to get 8-bit header, so we use dbmail_message_get_header
-	addr = (char *)dbmail_message_get_header(self, "From");
-	value = dbmail_iconv_str_to_db(addr, charset);
-	if (value != NULL) if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
-	    char *value2 = g_mime_utils_header_encode_text((unsigned char *)value);
-	    g_free(value);
-	    value = value2;
-	}
-	
-	list = internet_address_parse_string(value);
-	g_free(value);
-	
-	if (list == NULL)
+	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_FROM)))
 		return;
 	insert_address_cache(self->physid, "from", list,self);
 	internet_address_list_destroy(list);
-
 }
+
 void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
 {
-	const char *addr;
-	char *value, *charset;
 	InternetAddressList *list;
 
-	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
-
-	// g_mime_message_get_reply_to fails to get 8-bit header, so we use dbmail_message_get_header
-	addr = (char *)dbmail_message_get_header(self, "Reply-to");
-	value = dbmail_iconv_str_to_db(addr, charset);
-	if (value != NULL) if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
-	    char *value2 = g_mime_utils_header_encode_text((unsigned char *)value);
-	    g_free(value);
-	    value = value2;
-	}
-	
-	list = internet_address_parse_string(value);
-	g_free(value);
-
-	if (list == NULL)
+	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_REPL)))
 		return;
 	insert_address_cache(self->physid, "replyto", list,self);
 	internet_address_list_destroy(list);
-
 }
+
 
 void dbmail_message_cache_datefield(const struct DbmailMessage *self)
 {

@@ -110,7 +110,7 @@ START_TEST(test_mailbox_remove_namespace)
 	int i;
 
 	for (i = 0; patterns[i]; i++) {
-		simple = mailbox_remove_namespace(patterns[i], &namespace, &username);
+		simple = (char *)mailbox_remove_namespace(patterns[i], &namespace, &username);
 		fail_unless(
 			((simple == NULL && expected[i][2] == NULL) || strcmp(simple, expected[i][2])==0) &&
 			((username== NULL && expected[i][1] == NULL) || strcmp(username, expected[i][1])==0) &&
@@ -170,6 +170,25 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	fail_unless(strcmp(u8,exp3)==0,"decode failed [%s] != [%s]", u8, exp3);
 	g_free(u8);
 
+}
+END_TEST
+
+START_TEST(test_dbmail_iconv_decode_address)
+{
+	const char *u71 = "=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>";
+	const char *ex1 = "\":: [ Arrty ] :: [ Roy (L) Stèphanie ]\" <over.there@hotmail.com>";
+	const char *u72 = "=?utf-8?Q?Jos=E9_M=2E_Mart=EDn?= <jmartin@onsager.ugr.es>"; // latin-1 masking as utf8
+	const char *ex2 = "\"Jos? M. Mart?n\" <jmartin@onsager.ugr.es>";
+
+	char *u8;
+	
+	u8 = dbmail_iconv_decode_address(u71);
+	fail_unless(strcmp(u8,ex1)==0,"decode failed\n[%s] != \n[%s]\n", u8, ex1);
+	g_free(u8);
+
+	u8 = dbmail_iconv_decode_address(u72);
+	fail_unless(strcmp(u8,ex2)==0,"decode failed\n[%s] != \n[%s]\n", u8, ex2);
+	g_free(u8);
 
 }
 END_TEST
@@ -231,6 +250,7 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_g_strcasestr);
 	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
 	tcase_add_test(tc_misc, test_dbmail_iconv_str_to_db);
+	tcase_add_test(tc_misc, test_dbmail_iconv_decode_address);
 	tcase_add_test(tc_misc, test_create_unique_id);
 	tcase_add_test(tc_misc, test_g_list_merge);
 	

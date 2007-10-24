@@ -549,13 +549,30 @@ START_TEST(test_dbmail_message_encoded)
 {
 	struct DbmailMessage *m = dbmail_message_new();
 	GString *s = g_string_new(encoded_message_koi);
+	const char *exp = ":: [ Arrty ] :: [ Roy (L) Stèphanie ]  <over.there@hotmail.com>";
+	u64_t id = 0;
 
 	m = dbmail_message_init_with_string(m, s);
-	g_string_free(s,TRUE);
 
 	fail_unless(strcmp(dbmail_message_get_header(m,"From"),"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=<bad@foo.ru>")==0, 
 			"dbmail_message_get_header failed for koi-8 encoded header");
 	dbmail_message_free(m);
+
+
+	m = dbmail_message_new();
+	g_string_printf(s, "%s", utf7_header);
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s, TRUE);
+
+	dbmail_message_store(m);
+	id = dbmail_message_get_physid(m);
+	dbmail_message_free(m);
+
+	m = dbmail_message_new();
+	m = dbmail_message_retrieve(m, id, DBMAIL_MESSAGE_FILTER_FULL);
+	dbmail_message_free(m);
+
+
 }
 END_TEST
 START_TEST(test_dbmail_message_8bit)
