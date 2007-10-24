@@ -459,6 +459,24 @@ CREATE TRIGGER tr_delete_message_mailbox AFTER DELETE ON dbmail_messages
 		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=OLD.mailbox_idnr; 
 	END;
 |
+DROP TRIGGER IF EXISTS tr_insert_keyword_mailbox|
+CREATE TRIGGER tr_insert_keyword_mailbox AFTER INSERT ON dbmail_keywords 
+	FOR EACH ROW BEGIN 
+		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=NEW.message_idnr); 
+	END;
+|
+DROP TRIGGER IF EXISTS tr_update_keyword_mailbox|
+CREATE TRIGGER tr_update_keyword_mailbox AFTER UPDATE ON dbmail_keywords 
+	FOR EACH ROW BEGIN 
+		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=OLD.message_idnr); 
+	END;
+|
+DROP TRIGGER IF EXISTS tr_delete_keyword_mailbox|
+CREATE TRIGGER tr_delete_keyword_mailbox AFTER DELETE ON dbmail_keywords 
+	FOR EACH ROW BEGIN 
+		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=OLD.message_idnr); 
+	END;
+|
 DELIMITER ;
 
 
