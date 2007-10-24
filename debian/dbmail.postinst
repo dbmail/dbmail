@@ -30,8 +30,6 @@ case "$1" in
     ;;
     configure)
 
-	create_user
-
 	. /usr/share/debconf/confmodule
 	db_get dbmail/do_debconf || true; DO_DEBCONF=$RET
 	db_get dbmail/dbmail/authdriver || true; AUTHDRIVER=$RET
