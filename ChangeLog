@@ -1,7 +1,71 @@
-2007-10-08  Aaron Stone  <aaron@serendipity.cx>
+2007-10-24  Paul J Stevens <paul@nfg.nl>
 
-	* sievecmd.c:
-	Merge new features from 2.2 branch.
+	* check_dbmail_misc.c, misc.c:
+	fix a mistake in the state machine used in dbmail_iconv_decode_text
+	* pool.h:
+	decrease HARD_MAX_CHILDREN to 300 to avoid segfaults
+
+2007-10-23  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql:
+	add missing triggers
+
+2007-10-22  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/2_2_5-2_3_0.mysql, sql/postgresql/2_2_5-2_3_0.pgsql, 
+	sql/postgresql/create_tables.pgsql:
+	update postgresql scripts for keywords
+
+2007-10-21  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, dbmail-imapsession.c, imap4.c, imap4.h, 
+	test-scripts/testimap.py:
+	wip misc fixes and add and fix a testcase for imap/status
+
+2007-10-19  Paul J Stevens <paul@nfg.nl>
+
+	* acl.c, acl.h, check_dbmail_db.c, check_dbmail_imapd.c, db.c, db.h, 
+	dbmail-imapsession.c, dbmail-imapsession.h, dbmailtypes.h, imap4.c, 
+	imap4.h, imapcommands.c, misc.c, misc.h, sort.c:
+	rename msginfo_t to MessageInfo and mailbox_t to MailboxInfo
+	* dbmailtypes.h:
+	cleanups
+	* db.c, dbmail-imapsession.c, dbmailtypes.h, imapcommands.c, 
+	test-scripts/testimap.py:
+	fix more testcases
+	* dbmail-imapsession.c, imapcommands.c, 
+	sql/sqlite/create_tables.sqlite, test-scripts/testimap.py:
+	fix some regressions after the labels changes
+
+2007-10-16  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
+	check_dbmail_misc.c, dbmail-message.c, misc.c, misc.h:
+	cleanup the iconv infrastructure a bit more
+
+2007-10-12  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	missed a case of utf7 decoding (bug #649)
+
+2007-10-08  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail.postinst:
+	fix error
+	* dbmodule.c, dbmodule.h:
+	disable some unused code
+	* ChangeLog, check_dbmail_imapd.c, check_dbmail_message.c, 
+	check_dbmail_misc.c, db.c, db.h, dbmail-imapsession.c, 
+	dbmail-imapsession.h, dbmail-message.c, dbmailtypes.h, dbmodule.c, 
+	debian/dbmail-mysql.examples, debian/dbmail-pgsql.examples, 
+	debian/dbmail.examples, debian/rules, export.c, imap4.h, 
+	imapcommands.c, misc.c, misc.h, modules/dbsqlite.c, sort.c, 
+	sql/mysql/2_2_5-2_3_0.mysql, sql/mysql/create_tables.mysql, 
+	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite, 
+	test-scripts/testimap.py, test-scripts/teststore.imap:
+	merge labels branch
+	* dbmail-imapsession.c, imapcommands.c:
+	make noop work again
 
 2007-10-08  Paul J Stevens <paul@nfg.nl>
 
