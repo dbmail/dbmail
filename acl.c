@@ -52,7 +52,7 @@ static int acl_get_rightsstring(u64_t userid, u64_t mboxid,
 				/*@out@*/ char *rightsstring);
 
 
-int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
+int acl_has_right(MailboxInfo *mailbox, u64_t userid, ACLRight_t right)
 {
 	u64_t anyone_userid;
 	int test;
@@ -331,7 +331,7 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 {
 	int result;
 	u64_t owner_idnr;
-	mailbox_t mailbox;
+	MailboxInfo mailbox;
 	struct ACLMap map;
 
 	assert(rightsstring);
@@ -346,7 +346,7 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 		return 1;
 	}
 	
-	memset(&mailbox, '\0', sizeof(mailbox_t));
+	memset(&mailbox, '\0', sizeof(MailboxInfo));
 	memset(&map, '\0', sizeof(struct ACLMap));
 	
 	mailbox.uid = mboxid;

@@ -937,17 +937,17 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 			    int only_subscribed);
 /**
  * \brief get info on a mailbox. Info is filled in in the
- *        mailbox_t struct.
- * \param mb the mailbox_t to fill in. (mb->uid needs to be
+ *        MailboxInfo struct.
+ * \param mb the MailboxInfo to fill in. (mb->uid needs to be
  *        set already!
  * \return
  *     - -1 on failure
  *     - 0 on success
  */
-int db_getmailbox_flags(mailbox_t * mb);
-int db_getmailbox_count(mailbox_t * mb);
-int db_getmailbox_mtime(mailbox_t * mb);
-int db_getmailbox(mailbox_t * mb);
+int db_getmailbox_flags(MailboxInfo * mb);
+int db_getmailbox_count(MailboxInfo * mb);
+int db_getmailbox_mtime(MailboxInfo * mb);
+int db_getmailbox(MailboxInfo * mb);
 
 /**
  * \brief find owner of a mailbox
@@ -1212,7 +1212,7 @@ int db_get_msgflag(const char *flag_name,
  * 		-  0 on success
  */
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
-		   GList *keywords, int action_type, msginfo_t *msginfo);
+		   GList *keywords, int action_type, MessageInfo *msginfo);
 
 /**
  * \brief check if a user has a certain right to a mailbox
@@ -1224,7 +1224,7 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
  *     -  0 if no right
  *     -  1 if user has the right
  */
-int db_acl_has_right(mailbox_t *mailbox, u64_t user_idnr, const char *right_flag);
+int db_acl_has_right(MailboxInfo *mailbox, u64_t user_idnr, const char *right_flag);
 /**
  * \brief get all permissions on a mailbox for a user
  * \param mailbox
@@ -1232,7 +1232,7 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t user_idnr, const char *right_flag
  * \param map result 
  * 
  */
-int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map);
+int db_acl_get_acl_map(MailboxInfo *mailbox, u64_t userid, struct ACLMap *map);
 
 /**
  * \brief set one right in an acl for a user
@@ -1281,7 +1281,7 @@ int db_acl_get_identifier(u64_t mboxid,
 char *date2char_str(const char *column);
 
 
-int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb);
+int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, MailboxInfo * mb);
 
 /* 
  * db-user accessors

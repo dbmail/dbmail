@@ -696,7 +696,7 @@ int _ic_list(struct ImapSession *self)
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
 	
-	mailbox_t *mb = NULL;
+	MailboxInfo *mb = NULL;
 	GList * plist = NULL;
 	gchar * pstring;
 
@@ -743,7 +743,7 @@ int _ic_list(struct ImapSession *self)
 		return 1;
 	}
 
-	mb = g_new0(mailbox_t,1);
+	mb = g_new0(MailboxInfo,1);
 
 	for (i = 0; i < nchildren; i++) {
 		if ((db_getmailbox_list_result(children[i], ud->userid, mb) != 0))
@@ -804,7 +804,7 @@ int _ic_lsub(struct ImapSession *self)
 int _ic_status(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	mailbox_t *mb;
+	MailboxInfo *mb;
 	u64_t id;
 	int i, endfound, result;
 	GString *response;
@@ -940,8 +940,8 @@ int _ic_append(struct ImapSession *self)
 	int flaglist[IMAP_NFLAGS];
 	int flagcount = 0;
 	GList *keywords = NULL;
-	mailbox_t *mailbox = NULL;
-	msginfo_t *msginfo = NULL;
+	MailboxInfo *mailbox = NULL;
+	MessageInfo *msginfo = NULL;
 
 	memset(flaglist,0,sizeof(flaglist));
 
@@ -1507,7 +1507,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, struct ImapSession *
 	cmd_store_t *cmd = (cmd_store_t *)self->cmd;
 
 	u64_t *msn;
-	msginfo_t *msginfo;
+	MessageInfo *msginfo;
 	char *s;
 	int i;
 
@@ -1725,7 +1725,7 @@ int _ic_copy(struct ImapSession *self)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t destmboxid;
 	int result;
-	mailbox_t *destmbox;
+	MailboxInfo *destmbox;
 	cmd_copy_t cmd;
 	
 	if (!check_state_and_args(self, "COPY", 2, 2, IMAPCS_SELECTED))
@@ -1960,7 +1960,7 @@ int _ic_setacl(struct ImapSession *self)
 	int result;
 	u64_t mboxid;
 	u64_t targetuserid;
-	mailbox_t *mailbox;
+	MailboxInfo *mailbox;
 
 	if (!check_state_and_args(self, "SETACL", 3, 3, IMAPCS_AUTHENTICATED))
 		return 1;
@@ -2000,7 +2000,7 @@ int _ic_deleteacl(struct ImapSession *self)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
 	u64_t targetuserid;
-	mailbox_t *mailbox;
+	MailboxInfo *mailbox;
 
 	if (!check_state_and_args(self, "DELETEACL", 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
@@ -2069,7 +2069,7 @@ int _ic_listrights(struct ImapSession *self)
 	u64_t mboxid;
 	u64_t targetuserid;
 	char *listrights_string;
-	mailbox_t *mailbox;
+	MailboxInfo *mailbox;
 
 	if (!check_state_and_args(self, "LISTRIGHTS", 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;

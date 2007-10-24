@@ -129,11 +129,38 @@ typedef struct {
 	int (*ClientHandler) (clientinfo_t *);
 } ChildInfo_t;
 
+typedef struct {
+	int no_daemonize;
+	int log_verbose;
+	char *pidFile;
+	char *stateFile;
+	int startChildren;
+	int minSpareChildren;
+	int maxSpareChildren;
+	int maxChildren;
+	int childMaxConnect;
+	int timeout;
+	int login_timeout;
+	char **iplist; // Allocated memory.
+	int ipcount;
+	int *listenSockets; // Allocated memory.
+	int service_before_smtp;
+	int port;
+	int backlog;
+	int resolveIP;
+	field_t serverUser, serverGroup;
+	field_t socket;
+	field_t log, error_log;
+	field_t pid_dir;
+	field_t state_dir;
+	int (*ClientHandler) (clientinfo_t *);
+} serverConfig_t;
 
-/*
- * structures used by POP mechanism
- *
- */
+
+
+/**********************************************************************
+ *                              POP3
+**********************************************************************/
 
 /** all virtual_ definitions are session specific
  *  when a RSET occurs all will be set to the real values */
@@ -171,33 +198,34 @@ typedef enum {
  * struct for a POP3 session.
  */
 typedef struct {
-	int error_count;/**< number of errors that have occured */
-	Pop3State_t state; /**< current POP state */
-	int was_apop;	/**< 1 if session was  session was apop (no plaintext password) */
+	Pop3State_t state;		/**< current POP state */
 
-	int SessionResult; /**< what happened during the session */
+	int error_count;		/**< number of errors that have occured */
+	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */
+	int SessionResult;		/**< what happened during the session */
 
 	char *username;
 	char *password;
+	char *apop_stamp;		/**< timestamp for APOP */
 
-	char *apop_stamp; /**< timestamp for APOP */
-
-	u64_t useridnr;	/**< Used by timsieved */
-
-	u64_t totalsize;/**< total size of messages */
+	u64_t useridnr;			/**< Used by timsieved */
+	u64_t totalsize;		/**< total size of messages */
 	u64_t virtual_totalsize;
-	u64_t totalmessages; /**< number of messages */
+	u64_t totalmessages; 		/**< number of messages */
 	u64_t virtual_totalmessages;
 
-	struct dm_list messagelst; /** list of messages */
+	struct dm_list messagelst;	/** list of messages */
 } PopSession_t;
 
+
+/**********************************************************************
+ *                               IMAP
+ *********************************************************************/
 
 
 /*
  * define some IMAP symbols
  */
-#define IMAP_NFLAGS 6
 
 enum IMAP_COMMAND_TYPES { 
 	IMAP_COMM_NONE,
@@ -258,6 +286,16 @@ enum IMAP4_FLAGS {
 	IMAPFLAG_RECENT		= 0x20
 };
 
+typedef enum {
+	IMAP_FLAG_SEEN,
+	IMAP_FLAG_ANSWERED,
+	IMAP_FLAG_DELETED,
+	IMAP_FLAG_FLAGGED,
+	IMAP_FLAG_DRAFT,
+	IMAP_FLAG_RECENT
+} imap_flag_t;
+
+
 enum IMAP4_PERMISSION { 
 	IMAPPERM_READ		= 0x01,
 	IMAPPERM_READWRITE	= 0x02 
@@ -294,34 +332,6 @@ enum BODY_FETCH_ITEM_TYPES {
 
 /* max length of number/dots part specifier */
 #define IMAP_MAX_PARTSPEC_LEN 100
-
-
-typedef struct {
-	int no_daemonize;
-	int log_verbose;
-	char *pidFile;
-	char *stateFile;
-	int startChildren;
-	int minSpareChildren;
-	int maxSpareChildren;
-	int maxChildren;
-	int childMaxConnect;
-	int timeout;
-	int login_timeout;
-	char **iplist; // Allocated memory.
-	int ipcount;
-	int *listenSockets; // Allocated memory.
-	int service_before_smtp;
-	int port;
-	int backlog;
-	int resolveIP;
-	field_t serverUser, serverGroup;
-	field_t socket;
-	field_t log, error_log;
-	field_t pid_dir;
-	field_t state_dir;
-	int (*ClientHandler) (clientinfo_t *);
-} serverConfig_t;
 
 /*
  * search data types
@@ -412,26 +422,27 @@ typedef struct {
 	gboolean is_inbox;
 	// reference dbmail_keywords
 	GList *keywords;
-} mailbox_t;
+} MailboxInfo;
 
 /*
  * cached message info
  */
+#define IMAP_NFLAGS 6
 typedef struct {
 	// map dbmail_messages
-	int flags[IMAP_NFLAGS];
-	char internaldate[IMAP_INTERNALDATE_LEN];
 	u64_t id;
 	u64_t mailbox_id;
 	u64_t rfcsize;
+	int flags[IMAP_NFLAGS];
+	char internaldate[IMAP_INTERNALDATE_LEN];
 	// reference dbmail_keywords
 	GList *keywords;
-} msginfo_t;
+} MessageInfo;
 
 
-/************************************************************************/
-
-
+/*************************************************************************
+*                                 SIEVE
+*************************************************************************/
 
 /*
  * A struct to hold info about a Sieve script
@@ -440,13 +451,6 @@ typedef struct ssinfo {
 	char *name;
 	int active;
 } sievescript_info_t;
-
-/* messageblk types */
-typedef enum {
-	BODY_BLOCK = 0,
-	HEAD_BLOCK = 1
-} blocktype_t;
-
 /*
  * A struct to say which Sieve allocations
  * will need an associated free.
@@ -530,15 +534,4 @@ typedef enum {
 	SQL_PARTIAL
 		
 } sql_fragment_t;
-
-typedef enum {
-	IMAP_FLAG_SEEN,
-	IMAP_FLAG_ANSWERED,
-	IMAP_FLAG_DELETED,
-	IMAP_FLAG_FLAGGED,
-	IMAP_FLAG_DRAFT,
-	IMAP_FLAG_RECENT
-} imap_flag_t;
-
-
 #endif

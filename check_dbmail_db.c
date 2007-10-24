@@ -873,20 +873,20 @@ START_TEST(test_db_findmailbox_by_regex)
 END_TEST
 /**
  * \brief get info on a mailbox. Info is filled in in the
- *        mailbox_t struct.
- * \param mb the mailbox_t to fill in. (mb->uid needs to be
+ *        MailboxInfo struct.
+ * \param mb the MailboxInfo to fill in. (mb->uid needs to be
  *        set already!
  * \return
  *     - -1 on failure
  *     - 0 on success
  */
-//int db_getmailbox(mailbox_t * mb);
+//int db_getmailbox(MailboxInfo * mb);
 
 START_TEST(test_db_getmailbox)
 {
 	int res;
-	mailbox_t mb;
-	memset(&mb,0,sizeof(mailbox_t));
+	MailboxInfo mb;
+	memset(&mb,0,sizeof(MailboxInfo));
 	
 	mb.uid = get_mailbox_id("INBOX");
 	

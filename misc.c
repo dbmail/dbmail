@@ -2656,7 +2656,7 @@ char * imap_cleanup_address(const char *a)
 	return r;
 }
 
-char * imap_flags_as_string(msginfo_t *msginfo)
+char * imap_flags_as_string(MessageInfo *msginfo)
 {
 	GList *t, *sublist = NULL;
 	int j;

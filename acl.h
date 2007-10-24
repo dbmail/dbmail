@@ -44,7 +44,7 @@
  *     -  0 if no right
  *     -  1 if user has this right
  */
-int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right);
+int acl_has_right(MailboxInfo *mailbox, u64_t userid, ACLRight_t right);
 
 /**
  * \brief sets new rights to a mailbox for a user.

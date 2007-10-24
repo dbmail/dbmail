@@ -150,7 +150,7 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		// we've looked up a #Public or a #Users mailbox.
 		TRACE(TRACE_DEBUG, "Checking if we have the right to post incoming messages");
         
-		mailbox_t mbox;
+		MailboxInfo mbox;
 		memset(&mbox, '\0', sizeof(mbox));
 		mbox.uid = mboxidnr;
 		

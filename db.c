@@ -278,7 +278,7 @@ int db_rollback_transaction()
 
 int mailbox_is_writable(u64_t mailbox_idnr)
 {
-	mailbox_t mb;
+	MailboxInfo mb;
 	memset(&mb,'\0', sizeof(mb));
 	mb.uid = mailbox_idnr;
 	
@@ -1765,9 +1765,9 @@ int db_set_isheader(GList *lost)
 	while(slices) {
 		snprintf(query, DEF_QUERYSIZE,
 			"UPDATE %smessageblks"
-			" SET is_header = %u"
+			" SET is_header = 1"
 			" WHERE messageblk_idnr IN (%s)",
-			DBPFX, HEAD_BLOCK, (gchar *)slices->data);
+			DBPFX, (gchar *)slices->data);
 
 		if (db_query(query) == -1) {
 			TRACE(TRACE_ERROR, "could not access messageblks table");
@@ -2921,7 +2921,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 	return DM_SUCCESS;
 }
 
-int db_getmailbox_flags(mailbox_t *mb)
+int db_getmailbox_flags(MailboxInfo *mb)
 {
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
@@ -2967,7 +2967,7 @@ int db_getmailbox_flags(mailbox_t *mb)
 	return DM_SUCCESS;
 }
 
-int db_getmailbox_count(mailbox_t *mb)
+int db_getmailbox_count(MailboxInfo *mb)
 {
 	unsigned exists = 0, seen = 0, recent = 0;
 	char query[DEF_QUERYSIZE]; 
@@ -3027,7 +3027,7 @@ int db_getmailbox_count(mailbox_t *mb)
 	return DM_SUCCESS;
 }
 
-int db_getmailbox_keywords(mailbox_t *mb)
+int db_getmailbox_keywords(MailboxInfo *mb)
 {
 	int i, rows;
 	const char *key;
@@ -3065,7 +3065,7 @@ int db_getmailbox_keywords(mailbox_t *mb)
 	return DM_SUCCESS;
 }
 
-int db_getmailbox_mtime(mailbox_t * mb)
+int db_getmailbox_mtime(MailboxInfo * mb)
 {
 	char q[DEF_QUERYSIZE];
 	char t[DEF_FRAGSIZE];
@@ -3097,7 +3097,7 @@ int db_getmailbox_mtime(mailbox_t * mb)
 }
 
 
-int db_getmailbox(mailbox_t * mb)
+int db_getmailbox(MailboxInfo * mb)
 {
 	int res;
 	time_t oldmtime;
@@ -3222,8 +3222,8 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 		}
 
 		/* Prepend a mailbox struct onto the list. */
-		mailbox_t *mbox;
-		mbox = g_new0(mailbox_t, 1);
+		MailboxInfo *mbox;
+		mbox = g_new0(MailboxInfo, 1);
 		*mailboxes = g_list_prepend(*mailboxes, mbox);
 
 		/* If the mboxid is 0, then we know
@@ -3261,7 +3261,7 @@ egeneral:
 	GList *tmp;
 	tmp = g_list_first(*mailboxes);
 	while (tmp) {
-		mailbox_t *mbox = (mailbox_t *)tmp->data;
+		MailboxInfo *mbox = (MailboxInfo *)tmp->data;
 		if (mbox) {
 			g_free(mbox->name);
 			g_free(mbox);
@@ -3328,7 +3328,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 	mailbox_item = g_list_first(mailbox_list);
 	while (mailbox_item) {
-		mailbox_t *mbox = (mailbox_t *)mailbox_item->data;
+		MailboxInfo *mbox = (MailboxInfo *)mailbox_item->data;
 
 		/* Needs to be created. */
 		if (mbox->uid == 0) {
@@ -3420,7 +3420,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 	mailbox_item = g_list_first(mailbox_list);
 	while (mailbox_item) {
-		mailbox_t *mbox = (mailbox_t *)mailbox_item->data;
+		MailboxInfo *mbox = (MailboxInfo *)mailbox_item->data;
 		g_free(mbox->name);
 		g_free(mbox);
 		mailbox_item = g_list_next(mailbox_item);
@@ -4215,7 +4215,7 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	return val;
 }
 
-static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, msginfo_t *msginfo)
+static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, MessageInfo *msginfo)
 {
 	char *safe;
 	char query[DEF_QUERYSIZE];
@@ -4292,7 +4292,7 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 	return DM_SUCCESS;
 }
 
-int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywords, int action_type, msginfo_t *msginfo)
+int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo)
 {
 	size_t i, pos = 0;
 	char query[DEF_QUERYSIZE];
@@ -4343,7 +4343,7 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 	return DM_SUCCESS;
 }
 
-int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
+int db_acl_has_right(MailboxInfo *mailbox, u64_t userid, const char *right_flag)
 {
 	int result;
 	char query[DEF_QUERYSIZE]; 
@@ -4415,7 +4415,7 @@ static int acl_query(u64_t mailbox_idnr, u64_t userid)
 	return DM_SUCCESS;
 
 }
-int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map)
+int db_acl_get_acl_map(MailboxInfo *mailbox, u64_t userid, struct ACLMap *map)
 {
 	int i, result, test;
 	u64_t anyone;
@@ -4743,7 +4743,7 @@ int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
 		return DM_SUCCESS;
 }
 
-int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb)
+int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, MailboxInfo * mb)
 {
 	/* query mailbox for LIST results */
 	char *mbxname, *name;

@@ -252,7 +252,7 @@ struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, c
 }
 
 
-static void _mbxinfo_keywords_destroy(u64_t UNUSED *id, mailbox_t *mb, gpointer UNUSED x)
+static void _mbxinfo_keywords_destroy(u64_t UNUSED *id, MailboxInfo *mb, gpointer UNUSED x)
 {
 	if (mb->keywords)
 		g_list_destroy(mb->keywords);
@@ -727,7 +727,7 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 	unsigned nrows, i, j, k;
 	const char *query_result, *keyword;
 	char *to_char_str;
-	msginfo_t *result;
+	MessageInfo *result;
 	GTree *msginfo;
 	GList *l, *t;
 	u64_t *uid, *lo, *hi;
@@ -793,7 +793,7 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 		if (! g_tree_lookup(ids,&id))
 			continue;
 		
-		result = g_new0(msginfo_t,1);
+		result = g_new0(MessageInfo,1);
 
 		/* id */
 		result->id = id;
@@ -859,7 +859,7 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 			else \
 				dbmail_imap_session_buff_append(self, " ")
 
-static gboolean _get_mailbox(u64_t UNUSED *id, mailbox_t *mb, struct ImapSession *self)
+static gboolean _get_mailbox(u64_t UNUSED *id, MailboxInfo *mb, struct ImapSession *self)
 {
 	int result;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
@@ -884,7 +884,7 @@ void dbmail_imap_session_get_mbxinfo(struct ImapSession *self)
 	GTree *mbxinfo = NULL;
 	int i, r;
 	u64_t *id;
-	mailbox_t *mb;
+	MailboxInfo *mb;
 	char q[DEF_QUERYSIZE];
 	memset(q,0,DEF_QUERYSIZE);
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
@@ -904,7 +904,7 @@ void dbmail_imap_session_get_mbxinfo(struct ImapSession *self)
 
 	for (i=0;i<r;i++) {	
 		id = g_new0(u64_t,1);
-		mb = g_new0(mailbox_t,1);
+		mb = g_new0(MailboxInfo,1);
 
 		*id = db_get_result_u64(i,0);
 		mb->uid = *id;
@@ -938,7 +938,7 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 	u64_t actual_cnt, tmpdumpsize;
 	gchar *s = NULL;
 	
-	msginfo_t *msginfo = g_tree_lookup(self->msginfo, uid);
+	MessageInfo *msginfo = g_tree_lookup(self->msginfo, uid);
 
 	g_return_val_if_fail(msginfo,-1);
 	
@@ -1848,7 +1848,7 @@ int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr,
 {
 	int access;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	mailbox_t *mailbox;
+	MailboxInfo *mailbox;
 
 	mailbox = dbmail_imap_session_mbxinfo_lookup(self, idnr);
 
@@ -1882,10 +1882,10 @@ int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t 
 	return 0;
 }
 
-static gboolean imap_msginfo_notify(u64_t *uid, msginfo_t *msginfo, struct ImapSession *self)
+static gboolean imap_msginfo_notify(u64_t *uid, MessageInfo *msginfo, struct ImapSession *self)
 {
 	u64_t *msn;
-	msginfo_t *newmsginfo;
+	MessageInfo *newmsginfo;
 	char *s;
 	int i;
 
@@ -1922,7 +1922,7 @@ static gboolean imap_msginfo_notify(u64_t *uid, msginfo_t *msginfo, struct ImapS
 
 	return FALSE;
 }
-static gboolean imap_mbxinfo_notify(u64_t UNUSED *id, mailbox_t *mb, struct ImapSession *self)
+static gboolean imap_mbxinfo_notify(u64_t UNUSED *id, MailboxInfo *mb, struct ImapSession *self)
 {
 	time_t oldmtime = mb->mtime;
 	unsigned oldexists = mb->exists;
@@ -2153,17 +2153,17 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 	return 0;
 }
 	
-mailbox_t * dbmail_imap_session_mbxinfo_lookup(struct ImapSession *self, u64_t mailbox_idnr)
+MailboxInfo * dbmail_imap_session_mbxinfo_lookup(struct ImapSession *self, u64_t mailbox_idnr)
 {
-	mailbox_t *mb = NULL;
+	MailboxInfo *mb = NULL;
 	u64_t *id;
 
 	if (! self->mbxinfo)
 		dbmail_imap_session_get_mbxinfo(self);
 
 	/* fetch the cached mailbox metadata */
-	if ((mb = (mailbox_t *)g_tree_lookup(self->mbxinfo, &mailbox_idnr)) == NULL) {
-		mb = g_new0(mailbox_t,1);
+	if ((mb = (MailboxInfo *)g_tree_lookup(self->mbxinfo, &mailbox_idnr)) == NULL) {
+		mb = g_new0(MailboxInfo,1);
 		id = g_new0(u64_t,1);
 
 		*id = mailbox_idnr;
@@ -2318,7 +2318,7 @@ static int imap_session_update_recent(struct ImapSession *self)
 	GList *slices, *topslices, *recent;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
-	msginfo_t *msginfo = NULL;
+	MessageInfo *msginfo = NULL;
 	gchar *uid = NULL;
 	u64_t id = 0;
 

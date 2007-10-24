@@ -29,7 +29,7 @@ struct ImapSession {
 	GTree *headers;
 	GTree *envelopes;
 	GTree *msginfo; // cache msginfo
-	GTree *mbxinfo; // cache mailbox_t
+	GTree *mbxinfo; // cache MailboxInfo
 	GList *recent;
 	GList *ids_list;
 	gpointer cmd; // command structure
@@ -83,7 +83,7 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 
 
 void dbmail_imap_session_get_mbxinfo(struct ImapSession *self);
-mailbox_t * dbmail_imap_session_mbxinfo_lookup(struct ImapSession *self, u64_t mailbox_idnr);
+MailboxInfo * dbmail_imap_session_mbxinfo_lookup(struct ImapSession *self, u64_t mailbox_idnr);
 
 u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, const char * mailbox);
 int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr, ACLRight_t right);

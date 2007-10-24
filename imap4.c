@@ -62,14 +62,6 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 };
 
 
-imap_userdata_t * dbmail_imap_userdata_new(void)
-{
-	imap_userdata_t *ud;
-	ud = g_new0(imap_userdata_t,1);
-	ud->state = IMAPCS_NON_AUTHENTICATED;
-	return ud;
-}
-
 /*
  * Main handling procedure
  *
@@ -80,17 +72,14 @@ int IMAPClientHandler(clientinfo_t * ci)
 	char line[MAX_LINESIZE], *tag = NULL, *cpy, **args, *command;
 	int done, result, readresult, nfaultyresponses, serr;
 	size_t i;
-	imap_userdata_t *ud = NULL;
 	struct ImapSession *session;
 
 	session = dbmail_imap_session_new();
 	session->timeout = ci->login_timeout;
 	dbmail_imap_session_setClientinfo(session,ci);
 
-	if (! (ud = dbmail_imap_userdata_new()))
-		return -1;
-	
-	session->ci->userData = ud;
+	session->ci->userData = g_new0(imap_userdata_t,1);
+	session->ci->userData->state = IMAPCS_NON_AUTHENTICATED;
 
 	/* greet user */
 	field_t banner;

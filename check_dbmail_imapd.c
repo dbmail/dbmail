@@ -186,7 +186,7 @@ END_TEST
 //struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag);
 //struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command);
 //struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args);
-//struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo);
+//struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, MessageInfo * msginfo);
 //struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
 //void dbmail_imap_session_delete(struct ImapSession * self);
 //int dbmail_imap_session_readln(struct ImapSession * self, char * buffer);
