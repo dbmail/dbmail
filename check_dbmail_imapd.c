@@ -143,9 +143,11 @@ END_TEST
 
 static clientinfo_t * ci_new(void)
 {
+	imap_userdata_t *ud = g_new0(imap_userdata_t,1);
 	clientinfo_t *ci = g_new0(clientinfo_t,1);
 	FILE *fd = fopen("/dev/null","w");
-	ci->userData = dbmail_imap_userdata_new();
+	ud->state = IMAPCS_NON_AUTHENTICATED;
+	ci->userData = ud;
 	ci->rx = stdin;
 	ci->tx = fd;
 	//ci->tx = stderr;

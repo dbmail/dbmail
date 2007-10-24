@@ -90,8 +90,6 @@ typedef struct {
 	MailboxInfo *mailbox;	/* currently selected mailbox */
 } imap_userdata_t;
 
-imap_userdata_t * dbmail_imap_userdata_new(void);
-
 int IMAPClientHandler(clientinfo_t * ci);
 
 #endif

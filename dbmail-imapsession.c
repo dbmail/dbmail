@@ -2171,9 +2171,9 @@ MailboxInfo * dbmail_imap_session_mbxinfo_lookup(struct ImapSession *self, u64_t
 
 		g_tree_insert(self->mbxinfo, id, mb);
 
-		_get_mailbox(0,mb,self);
-
 	}
+	_get_mailbox(0,mb,self);
+
 	return mb;
 }
 

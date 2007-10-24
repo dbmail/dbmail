@@ -34,6 +34,7 @@ import sys, traceback, getopt, string
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
 import email
+import time
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
@@ -98,7 +99,11 @@ class testImapServer(unittest.TestCase):
     def setUp(self,username="testuser1",password="test"):
         self.o = getsock()
         self.o.debug = DEBUG
-        return self.o.login(username,password)
+        self.o.login(username,password)
+
+        self.p = getsock()
+        self.p.debug = DEBUG
+        self.p.login(username,password)
 
     def testAppend(self):
         """ 
@@ -577,7 +582,12 @@ class testImapServer(unittest.TestCase):
         """
         self.o.create("test status");
         self.o.status("test status",'(UIDNEXT UIDVALIDITY MESSAGES UNSEEN RECENT)');
-        self.assertEquals(self.o.status('INBOX','(UIDNEXT MESSAGES UNSEEN RECENT)')[0],'OK')
+        before = self.o.status('INBOX','(UNSEEN RECENT)')
+        self.assertEquals(before[0],'OK')
+        time.sleep(1)
+        self.assertEquals(self.p.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
+        after = self.o.status('INBOX','(UNSEEN RECENT)')
+        self.assertNotEquals(before[1],after[1])
 
 
     def testStore(self):

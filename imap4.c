@@ -71,6 +71,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 {
 	char line[MAX_LINESIZE], *tag = NULL, *cpy, **args, *command;
 	int done, result, readresult, nfaultyresponses, serr;
+	imap_userdata_t *ud = NULL;
 	size_t i;
 	struct ImapSession *session;
 
@@ -78,8 +79,10 @@ int IMAPClientHandler(clientinfo_t * ci)
 	session->timeout = ci->login_timeout;
 	dbmail_imap_session_setClientinfo(session,ci);
 
-	session->ci->userData = g_new0(imap_userdata_t,1);
-	session->ci->userData->state = IMAPCS_NON_AUTHENTICATED;
+	ud = g_new0(imap_userdata_t,1);
+	ud->state = IMAPCS_NON_AUTHENTICATED;
+
+	session->ci->userData = ud;
 
 	/* greet user */
 	field_t banner;
