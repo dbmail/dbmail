@@ -399,4 +399,43 @@ CREATE TRIGGER mailbox_stamp_update
     FOR EACH ROW
     EXECUTE PROCEDURE mailbox_mtime_update();
 
+CREATE TABLE dbmail_keywords (
+	message_idnr bigint NOT NULL,
+	keyword varchar(64) NOT NULL
+);
+ALTER TABLE ONLY dbmail_keywords
+    ADD CONSTRAINT dbmail_keywords_pkey PRIMARY KEY (message_idnr, keyword);
+ALTER TABLE ONLY dbmail_keywords
+    ADD CONSTRAINT dbmail_keywords_fkey FOREIGN KEY (message_idnr) REFERENCES dbmail_messages (message_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+CREATE FUNCTION insert_keyword_mailbox() RETURNS "trigger" AS $$
+BEGIN
+	UPDATE dbmail_mailboxes SET mtime=NOW() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=NEW.message_idnr); 
+	RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+ALTER FUNCTION public.insert_keyword_mailbox() OWNER TO dbmail;
+
+CREATE FUNCTION update_keyword_mailbox() RETURNS "trigger" AS $$
+BEGIN
+	UPDATE dbmail_mailboxes SET mtime=NOW() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=OLD.message_idnr); 
+	RETURN OLD;
+END;
+$$
+    LANGUAGE plpgsql;
+ALTER FUNCTION public.update_keyword_mailbox() OWNER TO dbmail;
+
+
+CREATE TRIGGER insert_keyword_mailbox
+	AFTER INSERT ON dbmail_keywords
+	FOR EACH ROW
+	EXECUTE PROCEDURE insert_keyword_mailbox();
+
+CREATE TRIGGER update_keyword_mailbox
+	AFTER DELETE OR UPDATE ON dbmail_keywords
+	FOR EACH ROW
+	EXECUTE PROCEDURE update_keyword_mailbox();
+
 COMMIT;
