@@ -408,7 +408,7 @@ typedef struct {
 typedef struct {
 	int flags[IMAP_NFLAGS];
 	char internaldate[IMAP_INTERNALDATE_LEN];
-	u64_t rfcsize, uid;
+	u64_t rfcsize, id, mailbox_id;
 	GList *keywords;
 } msginfo_t;
 

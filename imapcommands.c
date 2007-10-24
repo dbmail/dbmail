@@ -97,8 +97,6 @@ int _ic_noop(struct ImapSession *self)
 
 	if (ud->state == IMAPCS_SELECTED)
 		dbmail_imap_session_mailbox_status(self, TRUE);
-	else
-		TRACE(TRACE_DEBUG,"state: %d", ud->state);
 	
 	dbmail_imap_session_printf(self, "%s OK NOOP completed\r\n", self->tag);
 	return 0;

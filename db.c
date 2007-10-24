@@ -3089,6 +3089,8 @@ int db_getmailbox_mtime(mailbox_t * mb)
 		mb->name = g_strdup(db_get_result(0,0));
 
 	mb->mtime = (time_t)db_get_result_int(0,1);
+	TRACE(TRACE_DEBUG,"mtime [%lu]", mb->mtime);
+
 	db_free_result();
 
 	return DM_SUCCESS;
@@ -3098,7 +3100,7 @@ int db_getmailbox_mtime(mailbox_t * mb)
 int db_getmailbox(mailbox_t * mb)
 {
 	int res;
-	int oldmtime;
+	time_t oldmtime;
 	
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
 
@@ -3107,7 +3109,7 @@ int db_getmailbox(mailbox_t * mb)
 	if ((res = db_getmailbox_mtime(mb)) != DM_SUCCESS)
 		return res;
 
-	if (mb->msguidnext && mb->flags && mb->mtime == oldmtime)
+	if ( mb->msguidnext && mb->flags && (mb->mtime == oldmtime) )
 		return DM_SUCCESS;
 
 	if ((res = db_getmailbox_flags(mb)) != DM_SUCCESS)
@@ -4032,8 +4034,6 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 	}
 
 	if (nmsgs && msg_idnrs) {
-
-
 		/* first select msg UIDs */
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM %smessages WHERE "
@@ -4043,7 +4043,6 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 			 MESSAGE_STATUS_DELETE);
 
 		if (db_query(query) == -1) {
-
 			TRACE(TRACE_ERROR, "could not select messages in mailbox");
 			return DM_EQUERY;
 		}
@@ -4076,11 +4075,8 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not update messages in mailbox");
-		if (msg_idnrs)
-			g_free(*msg_idnrs);
-
-		if (nmsgs)
-			*nmsgs = 0;
+		if (msg_idnrs) g_free(*msg_idnrs);
+		if (nmsgs) *nmsgs = 0;
 
 		return DM_EQUERY;
 	}

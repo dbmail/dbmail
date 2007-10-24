@@ -18,9 +18,10 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 # 
 
-# For a protocol trace set to 4
 DEBUG = 0
-#DEBUG = 4
+
+# For a protocol trace set to 4
+DEBUG = 4
 
 # select 'stream' for non-forking mode
 TYPE = 'stream'
@@ -513,6 +514,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.select('INBOX',1)[0],'OK')
         self.o.create('testflag')
         self.o.append('testflag','\Flagged Userflag',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
+        self.o.select('testflag')
         self.assertEquals('Userflag' in self.o.untagged_responses['PERMANENTFLAGS'][0].split(' '), True)
 
     def testSetacl(self):
@@ -593,12 +595,12 @@ class testImapServer(unittest.TestCase):
 
         self.assertEquals(self.o.store('1:*', '-FLAGS', '\Deleted')[0],'OK')
         self.assertRaises(self.o.error,self.o.store, '1:*', '-FLAGS', '\Recent')
-        
+        self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
         print
         print p.untagged_responses
-
-        self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
         p.noop()
+        print p.untagged_responses
+        return
         self.o.expunge()
         p.noop()
         print p.untagged_responses

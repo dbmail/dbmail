@@ -794,6 +794,13 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 			continue;
 		
 		result = g_new0(msginfo_t,1);
+
+		/* id */
+		result->id = id;
+
+		/* mailbox_id */
+		result->mailbox_id = ud->mailbox->uid;
+
 		/* flags */
 		for (j = 0; j < IMAP_NFLAGS; j++)
 			result->flags[j] = db_get_result_bool(i, j);
@@ -808,11 +815,9 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 		/* rfcsize */
 		result->rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
 		
-		/* uid */
-		result->uid = id;
 
 		uid = g_new0(u64_t,1);
-		*uid = result->uid;
+		*uid = result->id;
 		
 		g_tree_insert(msginfo, uid, result); 
 	}
@@ -963,7 +968,7 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 	}
 	if (self->fi->getUID) {
 		SEND_SPACE;
-		dbmail_imap_session_buff_append(self, "UID %llu", msginfo->uid);
+		dbmail_imap_session_buff_append(self, "UID %llu", msginfo->id);
 	}
 
 	if (self->fi->getMIME_IMB) {
@@ -2306,11 +2311,18 @@ int dbmail_imap_session_mailbox_close(struct ImapSession *self)
 	return 0;
 }
 
-static int imap_session_update_recent(GList *recent) 
+static int imap_session_update_recent(struct ImapSession *self) 
 {
-	GList *slices, *topslices;
+
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	GList *slices, *topslices, *recent;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
+	msginfo_t *msginfo = NULL;
+	gchar *uid = NULL;
+	u64_t id = 0;
+
+	recent = self->recent;
 
 	if (recent == NULL)
 		return 0;
@@ -2332,20 +2344,36 @@ static int imap_session_update_recent(GList *recent)
 		slices = g_list_next(slices);
 	}
 	db_commit_transaction();
-	
         g_list_destroy(topslices);
+
+	// update cached values
+	recent = g_list_first(recent);
+	while (recent) {
+		// self->recent is a list of chars so we need to convert them
+		// back to u64_t
+		uid = (gchar *)recent->data;
+		id = strtoull(uid, NULL, 10);
+		assert(id);
+		if ( (msginfo = g_tree_lookup(self->msginfo, &id)) != NULL) {
+			msginfo->flags[IMAP_FLAG_RECENT] = 0;
+			if ( (ud->mailbox) && (ud->mailbox->uid == msginfo->mailbox_id) )
+				ud->mailbox->recent--;
+		} else {
+			TRACE(TRACE_WARNING,"can't find msginfo for [%llu]", id);
+		}
+		if (! g_list_next(recent))
+			break;
+		recent = g_list_next(recent);
+	}
+
 	return 0;
 }
 
 int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) 
 {
-	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	imap_session_update_recent(self->recent);
+	imap_session_update_recent(self);
 	g_list_destroy(self->recent);
-
-	//FIXME
 	self->recent = NULL;
-	if (ud->mailbox) ud->mailbox->recent = 0;
 
 	return 0;
 }
