@@ -1394,7 +1394,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			g_free(tmp_raw);
 		
 			tmp_raw = internet_address_list_to_string(alist, TRUE);
-			value = g_mime_utils_header_decode_text((const unsigned char *)tmp_raw);
+			value = dbmail_iconv_decode_text(tmp_raw);
 			internet_address_list_destroy(alist);
 
 			safe_value = dm_stresc(value);
@@ -1402,9 +1402,9 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		} else {
 			tmp_raw = dbmail_iconv_str_to_db((const char *)raw, charset);
 			if ((tmp_raw != NULL) && (!g_mime_utils_text_is_8bit((unsigned char *)tmp_raw, strlen(tmp_raw)))) {
-			    tmp_raw2 = g_mime_utils_header_decode_text((unsigned char *)tmp_raw);
-			    g_free(tmp_raw);
-			    tmp_raw = tmp_raw2;
+				tmp_raw2 = dbmail_iconv_decode_text(tmp_raw);
+				g_free(tmp_raw);
+				tmp_raw = tmp_raw2;
 			}
 			safe_value = dm_stresc((const char *)tmp_raw);
 		}
