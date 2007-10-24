@@ -28,7 +28,8 @@
 #include <sqlite3.h>
 #define THIS_MODULE "sql"
 
-db_param_t _db_params;
+extern db_param_t _db_params;
+
 #define DBPFX _db_params.pfx
 
 static sqlite3 *conn;
