@@ -485,10 +485,11 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, mods);
 	if (_ldap_err) {
-		TRACE(TRACE_ERROR,"error changing field [%s] to value [%s]: %s", fieldname, newvalue, ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR,"dn: %s, %s: %s [%s]", _ldap_dn, fieldname, newvalue, ldap_err2string(_ldap_err));
 		ldap_memfree(_ldap_dn);
 		return -1;
 	}
+	TRACE(TRACE_DEBUG,"dn: %s, %s: %s", _ldap_dn, fieldname, newvalue);
 	ldap_memfree(_ldap_dn);
 	return 0;
 }
