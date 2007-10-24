@@ -10,7 +10,7 @@
 
 #include "dbmail.h"
 
-#define HARD_MAX_CHILDREN 1024
+#define HARD_MAX_CHILDREN 300
 
 #define STATE_NOOP -1
 #define STATE_IDLE 0
