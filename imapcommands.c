@@ -260,6 +260,9 @@ int _ic_select(struct ImapSession *self)
 	if ((result = dbmail_imap_session_mailbox_open(self, mailbox))) 
 		return result;
 
+	/* update permission: select implies read-write */
+	ud->mailbox->permission = IMAPPERM_READWRITE;
+
 	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
 
 	if ((result = dbmail_imap_session_mailbox_show_info(self)))
@@ -426,7 +429,7 @@ int _ic_delete(struct ImapSession *self)
 		}
 
 		/* check if this was the currently selected mailbox */
-		if (mboxid == ud->mailbox->uid) 
+		if (ud->mailbox && (mboxid == ud->mailbox->uid)) 
 			dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 
 		/* ok done */
@@ -1613,8 +1616,8 @@ int _ic_store(struct ImapSession *self)
 		for (j = 0; j < IMAP_NFLAGS; j++) {
 			/* storing the recent flag explicitely is not allowed */
 			if (MATCH(self->args[k+i],"\\Recent")) {
-				j = IMAP_NFLAGS;
-				break;
+				dbmail_imap_session_printf(self, "%s BAD invalid flag list to STORE command\r\n", self->tag);
+				return 1;
 			}
 				
 			if (MATCH(self->args[k+i], imap_flag_desc_escaped[j])) {

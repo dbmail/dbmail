@@ -433,8 +433,10 @@ class testImapServer(unittest.TestCase):
 
         getFreshbox('recenttestbox')
         self.o.select('recenttestbox',readonly)
-        self.o.fetch("1:*","(Flags)")
+        self.assertEquals(int(self.o.untagged_responses['RECENT'][0]) > 1, True)
         self.assertEquals(int(self.o.recent()[1][0]) > 0, True)
+        self.o.fetch("1:*","(Flags)")
+        self.o.fetch("1:*","(Flags)")
 
         self.o.select('recenttestbox')
         self.o.fetch("1:*","(Flags)")
@@ -592,11 +594,14 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.store('1:*', '-FLAGS', '\Deleted')[0],'OK')
         self.assertRaises(self.o.error,self.o.store, '1:*', '-FLAGS', '\Recent')
         
-        print p.noop()
+        print
+        print p.untagged_responses
+
         self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
-        print p.noop()
-        print self.o.expunge()
-        print p.noop()
+        p.noop()
+        self.o.expunge()
+        p.noop()
+        print p.untagged_responses
 
         self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
         self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')

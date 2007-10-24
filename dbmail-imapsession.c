@@ -2339,9 +2339,13 @@ static int imap_session_update_recent(GList *recent)
 
 int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) 
 {
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	imap_session_update_recent(self->recent);
 	g_list_destroy(self->recent);
+
+	//FIXME
 	self->recent = NULL;
+	if (ud->mailbox) ud->mailbox->recent = 0;
 
 	return 0;
 }
