@@ -1,3 +1,8 @@
+2007-10-24  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c, misc.c:
+	fix a mistake in the state machine used in dbmail_iconv_text_decode
+
 2007-10-20  Paul J Stevens <paul@nfg.nl>
 
 	* pool.h:

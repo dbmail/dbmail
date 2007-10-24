@@ -132,9 +132,12 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	const char *u71 = "Neue =?ISO-8859-1?Q?L=F6sung?= =?ISO-8859-1?Q?f=FCr?= unsere Kunden";
 	const char *u72 = "=?ISO-8859-1?Q?L=F6sung?=";
 	const char *u73 = "=?ISO-8859-1?Q?f=FCr?=";
+	const char *u74 = "... =?ISO-8859-1?Q?=DCbergabe?= ...";
+	const char *u75 = "=?iso-8859-1?q?a?=";
 	const char *exp = "Neue Lösung für unsere Kunden";
 	const char *exp2 = "Lösung";
 	const char *exp3 = "für";
+
 	char *u8, *val2, *u82, *u83, *val3;
 
 	u8 = g_mime_utils_header_decode_text(val);
@@ -169,6 +172,18 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	u8 = dbmail_iconv_decode_text(u73);
 	fail_unless(strcmp(u8,exp3)==0,"decode failed [%s] != [%s]", u8, exp3);
 	g_free(u8);
+
+	u8 = g_mime_utils_header_decode_text(u74);
+	u82 = dbmail_iconv_decode_text(u74);
+	fail_unless(strcmp(u8,u82)==0, "decode failed [%s] != [%s]", u8, u82);
+	g_free(u8);
+	g_free(u82);
+
+	u8 = g_mime_utils_header_decode_text(u75);
+	u82 = dbmail_iconv_decode_text(u75);
+	fail_unless(strcmp(u8,u82)==0, "decode failed [%s] != [%s]", u8, u82);
+	g_free(u8);
+	g_free(u82);
 
 }
 END_TEST

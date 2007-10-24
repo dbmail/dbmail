@@ -2219,13 +2219,13 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 	return g_mime_utils_header_encode_text(str_in);
 }
 
-/* work around a bug in gmime where utf7 strings are not completely decoded */
+/* work around a bug in gmime (< 2.2.10) where utf7 strings are not completely decoded */
 char * dbmail_iconv_decode_text(const char *in)
 {
-	size_t i=0, l=0, r=0, len;
+	size_t i=0, l=0, r=0, len, wlen=0;
 	char p2=0, p = 0, c, n = 0;
 	char *res, *s;
-	gboolean inword = FALSE;
+	gboolean inchar = FALSE, inword = FALSE;
 	GString *buf = g_string_new("");
 	GString *str = g_string_new("");
 
@@ -2235,14 +2235,18 @@ char * dbmail_iconv_decode_text(const char *in)
 		c = in[i];
 		n = in[i+1];
 
-		if ((c == '=') && (n == '?')) {
-			inword = TRUE;
+		if ((c == '=') && (n == '?') && (inword == FALSE) && (inchar == FALSE)) {
+			inchar = TRUE;
 			l = i;
-		}
-
-		if ((p2 == '?') && (p == '=')) {
+		} else if (((p2 == 'q') || (p2 == 'Q')) && (p == '?') && inchar) {
+			inchar = FALSE;
+			inword = TRUE;
+			wlen = 0;
+		} else if ((p2 == '?') && (p == '=') && inword && wlen) {
 			inword = FALSE;
 			r = i;
+		} else if (inword) {
+			wlen++;
 		}
 
 		if (l < r) {
@@ -2253,11 +2257,12 @@ char * dbmail_iconv_decode_text(const char *in)
 			i = r;
 			g_string_printf(buf,"%s","");
 			g_string_append_c(str, in[i]);
-		} else if (inword) {
+		} else if (inword || inchar) {
 			g_string_append_c(buf, in[i]);
 		} else {
 			g_string_append_c(str, in[i]);
 		}
+
 		p2 = p;
 		p = c;
 	}
