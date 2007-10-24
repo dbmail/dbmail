@@ -323,20 +323,6 @@ typedef struct {
 	int (*ClientHandler) (clientinfo_t *);
 } serverConfig_t;
 
-/* 
- * (imap) mailbox data type
- */
-typedef struct {
-	u64_t uid, msguidnext, owner_idnr;
-	char *name;
-	GList *keywords;
-	unsigned no_select, no_inferiors, exists, recent, unseen, no_children, flags;
-	int permission;
-	time_t mtime;
-	gboolean is_public, is_users, is_inbox;
-} mailbox_t;
-
-
 /*
  * search data types
  */
@@ -382,35 +368,70 @@ typedef struct {
 	gboolean merged;
 } search_key_t;
 
-/**
- * remembering database positions for mail
- */
-typedef struct {
-	u64_t block, pos;
-} db_pos_t;
 
-/* 
- * simple cache mechanism
+
+
+/************************************************************************ 
+ *                      simple cache mechanism
+ ***********************************************************************/
+
+/*
+ * cached raw message data
  */
 typedef struct {
 	struct DbmailMessage *dmsg;
-	MEM *memdump, *tmpdump;
+	MEM *memdump;
+	MEM *tmpdump;
 	u64_t num;
-	int file_dumped, msg_parsed;
 	u64_t dumpsize;
+	int file_dumped;
+	int msg_parsed;
 } cache_t;
 
-
-/*
- * structure for basic message info 
- * so it can be retrieved at once
+/* 
+ * cached mailbox info
  */
 typedef struct {
+	// map dbmail_mailboxes
+	u64_t uid;
+	u64_t msguidnext;
+	u64_t owner_idnr;
+	char *name;
+	time_t mtime;
+	unsigned no_select;
+	unsigned no_children;
+	unsigned no_inferiors;
+	unsigned exists;
+	unsigned recent;
+	unsigned unseen;
+	unsigned flags;
+	int permission;
+	// 
+	gboolean is_public;
+	gboolean is_users;
+	gboolean is_inbox;
+	// reference dbmail_keywords
+	GList *keywords;
+} mailbox_t;
+
+/*
+ * cached message info
+ */
+typedef struct {
+	// map dbmail_messages
 	int flags[IMAP_NFLAGS];
 	char internaldate[IMAP_INTERNALDATE_LEN];
-	u64_t rfcsize, id, mailbox_id;
+	u64_t id;
+	u64_t mailbox_id;
+	u64_t rfcsize;
+	// reference dbmail_keywords
 	GList *keywords;
 } msginfo_t;
+
+
+/************************************************************************/
+
+
 
 /*
  * A struct to hold info about a Sieve script
