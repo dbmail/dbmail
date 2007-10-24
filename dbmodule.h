@@ -17,8 +17,10 @@ typedef struct {
 	int (* check_connection)(void);
 	int (* query)(const char *the_query);
 	u64_t (* insert_result)(const char *sequence_identifier);
+#if 0
 	u64_t (* sequence_nextval)(const char *sequence_identifier);
 	u64_t (* sequence_currval)(const char *sequence_identifier);
+#endif
 	unsigned (* num_rows)(void);
 	unsigned (* num_fields)(void);
 	const char * (* get_result)(unsigned row, unsigned field);

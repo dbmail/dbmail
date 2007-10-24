@@ -89,8 +89,10 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_check_connection",    (gpointer)&db->check_connection    )
 	||  !g_module_symbol(module, "db_query",               (gpointer)&db->query               )
 	||  !g_module_symbol(module, "db_insert_result",       (gpointer)&db->insert_result       ) // deprecated: mysql-only
+#if 0
 	||  !g_module_symbol(module, "db_sequence_nextval",    (gpointer)&db->sequence_nextval    )
 	||  !g_module_symbol(module, "db_sequence_currval",    (gpointer)&db->sequence_currval    )
+#endif
 	||  !g_module_symbol(module, "db_num_rows",            (gpointer)&db->num_rows            )
 	||  !g_module_symbol(module, "db_num_fields",          (gpointer)&db->num_fields          )
 	||  !g_module_symbol(module, "db_get_result",          (gpointer)&db->get_result          )
@@ -160,10 +162,13 @@ int db_query(const char *the_query)
 }
 u64_t db_insert_result(const char *sequence_identifier)
 	{ return db->insert_result(sequence_identifier); }
+#if 0
 u64_t db_sequence_nextval(const char *sequence_identifier)
 	{ return db->sequence_nextval(sequence_identifier); }
 u64_t db_sequence_currval(const char *sequence_identifier)
 	{ return db->sequence_currval(sequence_identifier); }
+#endif
+
 unsigned db_num_rows(void)
 	{ return db->num_rows(); }
 unsigned db_num_fields(void)
