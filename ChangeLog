@@ -1,3 +1,8 @@
+2007-10-27  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	v2.2.7
+
 2007-10-26  Paul J Stevens <paul@nfg.nl>
 
 	* contrib/startup-scripts/debian/dbmail-imapd, 
