@@ -1,3 +1,12 @@
+2007-10-26  Paul J Stevens <paul@nfg.nl>
+
+	* contrib/startup-scripts/debian/dbmail-imapd, 
+	contrib/startup-scripts/debian/dbmail-lmtpd, 
+	contrib/startup-scripts/debian/dbmail-pop3d:
+	removed old debian scripts
+	* contrib/expiretrash.sh:
+	added file
+
 2007-10-24  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_misc.c, misc.c:
