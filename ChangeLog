@@ -1,3 +1,8 @@
+2007-10-29  Paul J Stevens <paul@nfg.nl>
+
+	* debug.c:
+	fix ifdef for BSDs
+
 2007-10-27  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION:
