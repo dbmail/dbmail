@@ -574,7 +574,7 @@ END_TEST
 
 
 			
-#define F(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[" a "] should have yielded \n[" b "] but got \n[%s]", c)
+#define F(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[%s] should have yielded \n[%s] but got \n[%s]", a,b,c)
 #define Fnull(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[] should have yielded \n[" b "] but got \n[%s]", c)
 	
 START_TEST(test_imap_cleanup_address)
@@ -597,6 +597,10 @@ START_TEST(test_imap_cleanup_address)
 
 	F("=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>",
 		"\"=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=\" <over.there@hotmail.com>");
+
+	F("\"First Address\" <first@foo.com>, =?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>",
+		"\"First Address\" <first@foo.com>, \"=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=\" <over.there@hotmail.com>");
+
 
 }
 END_TEST
@@ -638,6 +642,22 @@ START_TEST(test_imap_get_envelope_latin)
 	g_free(t);
 	g_free(expect);
 	dbmail_message_free(m);
+
+	/*  */
+	m = dbmail_message_new();
+	s = g_string_new(encoded_message_utf8);
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+
+	//strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
+
+	t = imap_get_envelope(GMIME_MESSAGE(m->content));
+	//fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);
+	
+	g_free(t);
+	//g_free(expect);
+	dbmail_message_free(m);
+
 
 
 }

@@ -305,6 +305,15 @@ char *encoded_message_latin_2 = "From: =?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28ford
 	"\n"
 	"test\n";
 
+char *encoded_message_utf8 = "From: nobody@nowhere.org\n"
+	"To: nobody@foo.org\n"
+	"Subject: =?utf-8?b?w6nDqcOp?=\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain\n"
+	"\n"
+	"test\n\n";
+
+
 char *multipart_mixed = "Received: from RAIVO (raivo.kisise [192.168.111.49])\n"
 	"	by test.kisise (Postfix) with ESMTP id 5C4981214C\n"
 	"	for <test@test.kisise>; Thu,  5 Oct 2006 04:18:26 +0300 (EEST)\n"

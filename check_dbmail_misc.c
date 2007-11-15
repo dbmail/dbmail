@@ -134,6 +134,7 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	const char *u73 = "=?ISO-8859-1?Q?f=FCr?=";
 	const char *u74 = "... =?ISO-8859-1?Q?=DCbergabe?= ...";
 	const char *u75 = "=?iso-8859-1?q?a?=";
+	const char *u76 = "=?utf-8?b?w6nDqcOp?=";
 	const char *exp = "Neue Lösung für unsere Kunden";
 	const char *exp2 = "Lösung";
 	const char *exp3 = "für";
@@ -184,6 +185,14 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	fail_unless(strcmp(u8,u82)==0, "decode failed [%s] != [%s]", u8, u82);
 	g_free(u8);
 	g_free(u82);
+
+	u8 = g_mime_utils_header_decode_text(u76);
+	u82 = dbmail_iconv_decode_text(u76);
+	fail_unless(strcmp(u8,u82)==0, "decode failed [%s] != [%s]", u8, u82);
+	g_free(u8);
+	g_free(u82);
+
+
 
 }
 END_TEST

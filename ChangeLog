@@ -1,3 +1,9 @@
+2007-11-15  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
+	check_dbmail_misc.c, misc.c:
+	make imap_cleanup_address also handle addresslists
+
 2007-10-29  Paul J Stevens <paul@nfg.nl>
 
 	* debug.c:
