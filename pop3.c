@@ -82,9 +82,6 @@ int pop3_handle_connection(clientinfo_t * ci)
 	/* setting Session variables */
 	memset(&session,0,sizeof(session));
 	
-	/* clear the message list */
-	dm_list_init(&session.messagelst);
-
 	/* getting hostname */
 	gethostname(myhostname, 64);
 	myhostname[63] = '\0';	/* make sure string is terminated */
@@ -278,7 +275,6 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	u64_t result;
 	int validate_result;
 	u64_t top_lines, top_messageid;
-	struct element *tmpelement;
 	unsigned char *md5_apop_he;
 	char *searchptr;
 	u64_t user_idnr;
@@ -449,16 +445,19 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
 
-		tmpelement = dm_list_getstart(&session->messagelst);
+		session->messagelst = g_list_first(session->messagelst);
+
 		if (value != NULL) {
 			/* they're asking for a specific message */
-			while (tmpelement != NULL) {
-				msg = (struct message *)tmpelement->data;
+			while (session->messagelst) {
+				msg = (struct message *)session->messagelst->data;
 				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
 					ci_write((FILE *) stream, "+OK %llu %llu\r\n", msg->messageid,msg->msize);
 					found = 1;
 				}
-				tmpelement = tmpelement->nextnode;
+				if (! g_list_next(session->messagelst))
+					break;
+				session->messagelst = g_list_next(session->messagelst);
 			}
 			if (!found)
 				return pop3_error(session, stream, "-ERR [%s] no such message\r\n", value);
@@ -473,11 +472,13 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 		if (session->virtual_totalmessages > 0) {
 			/* traversing list */
-			while (tmpelement != NULL) {
-				msg = (struct message *)tmpelement->data;
+			while (session->messagelst) {
+				msg = (struct message *)session->messagelst->data;
 				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
 					ci_write((FILE *) stream, "%llu %llu\r\n", msg->messageid,msg->msize);
-				tmpelement = tmpelement->nextnode;
+				if (! g_list_next(session->messagelst))
+					break;
+				session->messagelst = g_list_next(session->messagelst);
 			}
 		}
 		ci_write((FILE *) stream, ".\r\n");
@@ -499,19 +500,21 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
 
-		tmpelement = dm_list_getstart(&(session->messagelst));
+		session->messagelst = g_list_first(session->messagelst);
 
 		/* selecting a message */
 		TRACE(TRACE_DEBUG, "RETR command, selecting message");
 		
-		while (tmpelement != NULL) {
-			msg = (struct message *) tmpelement->data;
+		while (session->messagelst) {
+			msg = (struct message *) session->messagelst->data;
 			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
 				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
 				ci_write((FILE *) stream, "+OK %llu octets\r\n", msg->msize);
 				return db_send_message_lines((void *) stream, msg->realmessageid, -2, 0);
 			}
-			tmpelement = tmpelement->nextnode;
+			if (! g_list_next(session->messagelst))
+				break;
+			session->messagelst = g_list_next(session->messagelst);
 		}
 		return pop3_error(session, stream, "-ERR [%s] no such message\r\n", value);
 
@@ -519,11 +522,11 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
 
-		tmpelement = dm_list_getstart(&(session->messagelst));
+		session->messagelst = g_list_first(session->messagelst);
 
 		/* selecting a message */
-		while (tmpelement != NULL) {
-			msg = (struct message *) tmpelement->data;
+		while (session->messagelst) {
+			msg = (struct message *)session->messagelst->data;
 			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
 				msg->virtual_messagestatus = MESSAGE_STATUS_DELETE;
 				session->virtual_totalsize -= msg->msize;
@@ -532,7 +535,9 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 				ci_write((FILE *) stream, "+OK message %llu deleted\r\n", msg->messageid);
 				return 1;
 			}
-			tmpelement = tmpelement->nextnode;
+			if (! g_list_next(session->messagelst))
+				break;
+			session->messagelst = g_list_next(session->messagelst);
 		}
 		return pop3_error(session, stream, "-ERR [%s] no such message\r\n", value);
 
@@ -540,15 +545,18 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
 
-		tmpelement = dm_list_getstart(&(session->messagelst));
+		session->messagelst = g_list_first(session->messagelst);
 
 		session->virtual_totalsize = session->totalsize;
 		session->virtual_totalmessages = session->totalmessages;
 
-		while (tmpelement != NULL) {
-			msg = (struct message *) tmpelement->data;
+		while (session->messagelst) {
+			msg = (struct message *)session->messagelst->data;
 			msg->virtual_messagestatus = msg->messagestatus;
-			tmpelement = tmpelement->nextnode;
+
+			if (! g_list_next(session->messagelst))
+				break;
+			session->messagelst = g_list_next(session->messagelst);
 		}
 
 		ci_write((FILE *) stream, "+OK %llu messages (%llu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
@@ -559,16 +567,18 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
 
-		tmpelement = dm_list_getstart(&(session->messagelst));
+		session->messagelst = g_list_first(session->messagelst);
 
-		while (tmpelement != NULL) {
-			msg = (struct message *) tmpelement->data;
+		while (session->messagelst) {
+			msg = (struct message *)session->messagelst->data;
 			if (msg->virtual_messagestatus == MESSAGE_STATUS_NEW) {
 				/* we need the last message that has been accessed */
 				ci_write((FILE *) stream, "+OK %llu\r\n", msg->messageid - 1);
 				return 1;
 			}
-			tmpelement = tmpelement->nextnode;
+			if (! g_list_next(session->messagelst))
+				break;
+			session->messagelst = g_list_next(session->messagelst);
 		}
 
 		/* all old messages */
@@ -587,17 +597,20 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
 
-		tmpelement = dm_list_getstart(&(session->messagelst));
+		session->messagelst = g_list_first(session->messagelst);
 
 		if (value != NULL) {
 			/* they're asking for a specific message */
-			while (tmpelement != NULL) {
-				msg = (struct message *)tmpelement->data;
+			while (session->messagelst) {
+				msg = (struct message *)session->messagelst->data;
 				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
 					ci_write((FILE *) stream, "+OK %llu %s\r\n", msg->messageid,msg->uidl);
 					found = 1;
 				}
-				tmpelement = tmpelement->nextnode;
+
+				if (! g_list_next(session->messagelst))
+					break;
+				session->messagelst = g_list_next(session->messagelst);
 			}
 			if (!found)
 				return pop3_error(session, stream, "-ERR [%s] no such message\r\n", value);
@@ -610,12 +623,14 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 		if (session->virtual_totalmessages > 0) {
 			/* traversing list */
-			while (tmpelement != NULL) {
-				msg = (struct message *)tmpelement->data; 
+			while (session->messagelst) {
+				msg = (struct message *)session->messagelst->data; 
 				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
 					ci_write((FILE *) stream, "%llu %s\r\n", msg->messageid, msg->uidl);
 
-				tmpelement = tmpelement->nextnode;
+				if (! g_list_next(session->messagelst))
+					break;
+				session->messagelst = g_list_next(session->messagelst);
 			}
 		}
 
@@ -760,18 +775,21 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 		TRACE(TRACE_DEBUG, "TOP command (partially) retrieving message");
 
-		tmpelement = dm_list_getstart(&(session->messagelst));
+		session->messagelst = g_list_first(session->messagelst);
 
 		/* selecting a message */
 		TRACE(TRACE_DEBUG, "TOP command, selecting message");
 
-		while (tmpelement != NULL) {
-			msg = (struct message *) tmpelement->data;
+		while (session->messagelst) {
+			msg = (struct message *) session->messagelst->data;
 			if (msg->messageid == top_messageid && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
 				ci_write((FILE *) stream, "+OK %llu lines of message %llu\r\n", top_lines, top_messageid);
 				return db_send_message_lines(stream, msg->realmessageid, top_lines, 0);
 			}
-			tmpelement = tmpelement->nextnode;
+			if (! g_list_next(session->messagelst))
+				break;
+			session->messagelst = g_list_next(session->messagelst);
+
 		}
 		return pop3_error(session, stream, "-ERR no such message\r\n");
 

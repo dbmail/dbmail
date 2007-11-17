@@ -100,35 +100,29 @@ void teardown(void)
  * supposed to be given. The rest of the message will be read from instream
  * \return 0
  */
-//int insert_messages(struct DbmailMessage *message,
-//		struct dm_list *headerfields, 
-//		struct dm_list *dsnusers,
-//		struct dm_list *returnpath);
+//int insert_messages(struct DbmailMessage *message, GList *dsnusers)
 
 START_TEST(test_insert_messages)
 {
 	int result;
 	struct DbmailMessage *message;
-	struct dm_list dsnusers;
+	GList *dsnusers = NULL;
 	GString *tmp;
-	deliver_to_user_t dsnuser;
+	deliver_to_user_t *dsnuser = g_new0(deliver_to_user_t,1);
 	
 	message = dbmail_message_new();
 	tmp = g_string_new(multipart_message);
 	message = dbmail_message_init_with_string(message,tmp);
 
-	dm_list_init(&dsnusers);
+	dsnuser_init(dsnuser);
+	dsnuser->address = g_strdup("testuser1");
+	dsnusers = g_list_prepend(dsnusers, dsnuser);
 	
-	dsnuser_init(&dsnuser);
-	dsnuser.address = "testuser1";
-	dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
-	
-	result = insert_messages(message, &dsnusers);
+	result = insert_messages(message, dsnusers);
 
 	fail_unless(result==0,"insert_messages failed");
 
-	dm_list_free(&dsnusers.start);
-	dsnuser_free(&dsnuser);
+	dsnuser_free_list(dsnusers);
 	g_string_free(tmp,TRUE);
 	dbmail_message_free(message);
 }
@@ -337,19 +331,16 @@ END_TEST
  * \param checks used internally, \b should be 0 on call
  * \return number of deliver_to addresses found
  */
-//int auth_check_user_ext(const char *username, struct dm_list *userids,
-//			struct dm_list *fwds, int checks);
+//int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int checks);
 START_TEST(test_auth_check_user_ext)
 {
-	struct dm_list uids;
-	struct dm_list fwds;
+	GList *uids = NULL;
+	GList *fwds = NULL;
 	int checks = 0;
 	int result;
-	dm_list_init(&uids);
-	dm_list_init(&fwds);
 	result = auth_check_user_ext("foobar@foobar.org",&uids,&fwds,checks);
-	dm_list_free(&uids.start);
-	dm_list_free(&fwds.start);
+	g_list_destroy(uids);
+	g_list_destroy(fwds);
 }
 END_TEST
 /**

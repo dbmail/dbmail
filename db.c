@@ -2308,14 +2308,14 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		/* message status */
 		tmpmessage->messagestatus = db_get_result_u64(i, 2);
 		/* virtual message status */
-		tmpmessage->virtual_messagestatus = tmpmessage.messagestatus;
+		tmpmessage->virtual_messagestatus = tmpmessage->messagestatus;
 		/* unique id */
 		query_result = db_get_result(i, 3);
 		if (query_result)
-			strncpy(tmpmessage>uidl, query_result, UID_SIZE);
+			strncpy(tmpmessage->uidl, query_result, UID_SIZE);
 
 		session_ptr->totalmessages++;
-		session_ptr->totalsize += tmpmessage.msize;
+		session_ptr->totalsize += tmpmessage->msize;
 		/* descending to create inverted list */
 		message_counter--;
 		tmpmessage->messageid = (u64_t) message_counter;

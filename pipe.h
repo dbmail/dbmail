@@ -27,7 +27,7 @@
  * \brief Inserts a message in the database.
  * \return 0
  */
-int insert_messages(struct DbmailMessage *message, struct dm_list *dsnusers);
+int insert_messages(struct DbmailMessage *message, GList *dsnusers);
 
 /**
  * \brief Store a messagebody into the database,
@@ -48,8 +48,7 @@ int send_vacation(struct DbmailMessage *message,
 		const char *subject, const char *body, const char *handle);
 int send_redirect(struct DbmailMessage *message,
 		const char *to, const char *from);
-int send_forward_list(struct DbmailMessage *message,
-		struct dm_list *targets, const char *from);
+int send_forward_list(struct DbmailMessage *message, GList *targets, const char *from);
 int send_alert(u64_t user_idnr, char *subject, char *body);
 
 #endif

@@ -41,9 +41,6 @@ char *configFile = DEFAULT_CONFIG_FILE;
 
 extern db_param_t _db_params;	/* set up database login data */
 
-deliver_to_user_t dsnuser;
-
-//char *header = NULL;
 int brute_force = 0;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
@@ -90,6 +87,7 @@ int main(int argc, char *argv[])
 	char *returnpath = NULL;
 	GList *userlist = NULL;
 	GList *dsnusers = NULL;
+	deliver_to_user_t *dsnuser;
 	
 	g_mime_init(0);
 	
@@ -159,7 +157,7 @@ int main(int argc, char *argv[])
 			dsnuser->address = g_strdup(optarg);
 			dsnuser->source = BOX_COMMANDLINE;
 
-			dsnusers = g_list_prepend(dnsusers, dnsuser);
+			dsnusers = g_list_prepend(dsnusers, dsnuser);
 
 			break;
 
@@ -171,7 +169,7 @@ int main(int argc, char *argv[])
 			dsnuser->address = g_strdup(optarg);
 			dsnuser->source = BOX_COMMANDLINE;
 
-			dnsuers = g_list_prepend(dsnusers, dsnuser);
+			dsnusers = g_list_prepend(dsnusers, dsnuser);
 
 			break;
 

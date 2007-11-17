@@ -150,8 +150,7 @@ char *auth_getencryption(u64_t user_idnr);
  * \param checks used internally, \b should be -1 on call
  * \return number of deliver_to addresses found
  */
-int auth_check_user_ext(const char *username, struct dm_list *userids,
-			struct dm_list *fwds, int checks);
+int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int checks);
 /**
  * \brief add a new user to the database (whichever type of database is 
  * implemented)

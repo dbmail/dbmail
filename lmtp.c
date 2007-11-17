@@ -81,21 +81,18 @@ void lmtp_init(PopSession_t *session)
 	session->virtual_totalmessages = 0;
 
 	/* set the lists to zero length */
-	dm_list_init(&rcpt);
-	dm_list_init(&from);
+	session->rcpt = NULL;
+	session->from = NULL;
+
 }
 
 int lmtp_reset(PopSession_t * session)
 {
-	if (dm_list_length(&rcpt) > 0) {
-		dsnuser_free_list(&rcpt);
-	}
-	dm_list_init(&rcpt);
+	dsnuser_free_list(session->rcpt);
+	session->rcpt = NULL;
 
-	if (dm_list_length(&from) > 0) {
-		dm_list_free(&from.start);
-	}
-	dm_list_init(&from);
+	g_list_destroy(session->from);
+	session->from = NULL;
 
 	session->state = LHLO;
 
@@ -395,11 +392,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 			 * */
 			if (session->state != LHLO) {
 				ci_write((FILE *) stream, "550 Command out of sequence.\r\n");
-			} else if (dm_list_length(&from) > 0) {
-				ci_write((FILE *) stream,
-					"500 Sender already received. Use RSET to clear.\r\n");
-				TRACE(TRACE_ERROR, "Sender already received: %s",
-				      (char *)(dm_list_getstart(&from)->data));
+			} else if (g_list_length(session->from) > 0) {
+				ci_write((FILE *) stream, "500 Sender already received. Use RSET to clear.\r\n");
+				TRACE(TRACE_ERROR, "Sender already received: %s", (char *)(g_list_first(session->from)->data));
 			} else {
 				/* First look for an email address.
 				 * Don't bother verifying or whatever,
@@ -471,10 +466,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				if (goodtogo) {
 					/* Sure fine go ahead. */
-					dm_list_nodeadd(&from, tmpaddr, strlen(tmpaddr)+1);
-					ci_write((FILE *) stream,
-						"250 Sender <%s> OK\r\n",
-						(char *)(dm_list_getstart(&from)->data));
+					session->from = g_list_prepend(session->from, g_strdup(tmpaddr));
+					ci_write((FILE *) stream, "250 Sender <%s> OK\r\n", (char *)(session->from->data));
 					child_reg_connected_user(tmpaddr);
 				}
 				if (tmpaddr != NULL)
@@ -498,38 +491,33 @@ int lmtp(void *stream, void *instream, char *buffer,
 					ci_write((FILE *) stream,
 						"500 No address found.\r\n");
 				} else {
-					/* Note that this is not a pointer, but really is on the stack!
-					 * Because dm_list_nodeadd() memcpy's the structure, we don't need
-					 * it to live any longer than the duration of this stack frame. */
-					deliver_to_user_t dsnuser;
+					deliver_to_user_t *dsnuser = g_new0(deliver_to_user_t,1);
 
-					dsnuser_init(&dsnuser);
+					dsnuser_init(dsnuser);
 
 					/* find_bounded() allocated tmpaddr for us, and that's ok
 					 * since dsnuser_free() will free it for us later on. */
-					dsnuser.address = tmpaddr;
+					dsnuser->address = tmpaddr;
 
-					if (dsnuser_resolve(&dsnuser) != 0) {
+					if (dsnuser_resolve(dsnuser) != 0) {
 						TRACE(TRACE_ERROR, "dsnuser_resolve_list failed");
 						ci_write((FILE *) stream, "430 Temporary failure in recipient lookup\r\n");
-						dsnuser_free(&dsnuser);
+						dsnuser_free(dsnuser);
 						return 1;
 					}
 
 					/* Class 2 means the address was deliverable in some way. */
-					switch (dsnuser.dsn.class) {
+					switch (dsnuser->dsn.class) {
 					case DSN_CLASS_OK:
-						ci_write((FILE *) stream, "250 Recipient <%s> OK\r\n",
-							dsnuser.address);
+						ci_write((FILE *) stream, "250 Recipient <%s> OK\r\n", dsnuser->address);
 						/* A successfully found recipient goes onto the list.
 						 * The struct will be free'd from lmtp_reset(). */
-						dm_list_nodeadd(&rcpt, &dsnuser, sizeof(deliver_to_user_t));
+						session->rcpt = g_list_prepend(session->rcpt, dsnuser);
 						break;
 					default:
-						ci_write((FILE *) stream, "550 Recipient <%s> FAIL\r\n",
-							dsnuser.address);
+						ci_write((FILE *) stream, "550 Recipient <%s> FAIL\r\n", dsnuser->address);
 						/* If the user wasn't added, free the non-entry. */
-						dsnuser_free(&dsnuser);
+						dsnuser_free(dsnuser);
 						break;
 					}
 				}
@@ -543,31 +531,26 @@ int lmtp(void *stream, void *instream, char *buffer,
 			if (session->state != LHLO) {
 				ci_write((FILE *) stream,
 					"550 Command out of sequence\r\n");
-			} else if (dm_list_length(&rcpt) < 1) {
-				ci_write((FILE *) stream,
-					"503 No valid recipients\r\n");
+			} else if (g_list_length(session->rcpt) < 1) {
+				ci_write((FILE *) stream, "503 No valid recipients\r\n");
 			} else {
-				if (dm_list_length(&rcpt) > 0 && dm_list_length(&from) > 0) {
+				if (g_list_length(session->rcpt) > 0 && g_list_length(session->from) > 0) {
 					TRACE(TRACE_DEBUG, "requesting sender to begin message.");
-					ci_write((FILE *) stream,
-						"354 Start mail input; end with <CRLF>.<CRLF>\r\n");
+					ci_write((FILE *) stream, "354 Start mail input; end with <CRLF>.<CRLF>\r\n");
 				} else {
-					if (dm_list_length(&rcpt) < 1) {
+					if (g_list_length(session->rcpt) < 1) {
 						TRACE(TRACE_DEBUG, "no valid recipients found, cancel message.");
-						ci_write((FILE *) stream,
-							"503 No valid recipients\r\n");
+						ci_write((FILE *) stream, "503 No valid recipients\r\n");
 					}
-					if (dm_list_length(&from) < 1) {
+					if (g_list_length(session->from) < 1) {
 						TRACE(TRACE_DEBUG, "no sender provided, session cancelled.");
-						ci_write((FILE *) stream,
-							"554 No valid sender.\r\n");
+						ci_write((FILE *) stream, "554 No valid sender.\r\n");
 					}
 					return 1;
 				}
 
 				/* Anonymous Block */
 				{
-					struct element *element;
 					struct DbmailMessage *msg;
 					char *s;
 
@@ -590,8 +573,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 
-					dbmail_message_set_header(msg, "Return-Path", from.start->data);
-					if (insert_messages(msg, &rcpt) == -1) {
+					dbmail_message_set_header(msg, "Return-Path", (char *)session->from->data);
+					if (insert_messages(msg, session->rcpt) == -1) {
 						ci_write((FILE *) stream, "430 Message not received\r\n");
 					} else {
 						/* The DATA command itself it not given a reply except
@@ -599,14 +582,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 						const char *class, *subject, *detail;
 
 						/* The replies MUST be in the order received */
-						rcpt.start =
-						    dm_list_reverse(rcpt.start);
+						session->rcpt = g_list_reverse(session->rcpt);
 
-						for (element = dm_list_getstart(&rcpt);
-						     element != NULL;
-						     element = element->nextnode) {
-							deliver_to_user_t * dsnuser =
-							    (deliver_to_user_t *) element->data;
+						while (session->rcpt) {
+							deliver_to_user_t * dsnuser = (deliver_to_user_t *)session->rcpt->data;
 							dsn_tostring(dsnuser->dsn, &class, &subject, &detail);
 
 							/* Give a simple OK, otherwise a detailed message. */
@@ -621,6 +600,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 									        dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
 									        dsnuser->address, class, subject, detail);
 							}
+							if (! g_list_next(session->rcpt))
+								break;
+							session->rcpt = g_list_next(session->rcpt);
 						}
 					}
 					dbmail_message_free(msg);

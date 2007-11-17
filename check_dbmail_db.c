@@ -587,7 +587,7 @@ END_TEST
 *      - 0 on success
 * \attention caller should free this memory
 */
-//int db_icheck_messageblks(struct dm_list *lost_list);
+//int db_icheck_messageblks(GList **lost);
 
 /**
  * \brief check for all messages that are not connected to
@@ -600,7 +600,7 @@ END_TEST
  *      - 0 on success
  * \attention caller should free this memory
  */
-//int db_icheck_messages(struct dm_list *lost_list);
+//int db_icheck_messages(GList **lost);
 
 /**
  * \brief check for all mailboxes that are not connected to
@@ -613,7 +613,7 @@ END_TEST
  *      - 0 on success
  * \attention caller should free this memory
  */
-//int db_icheck_mailboxes(struct dm_list *lost_list);
+//int db_icheck_mailboxes(GList **lost);
 
 /**
  * \brief check for all messages that are not connected to physmessage
@@ -628,7 +628,7 @@ END_TEST
  *      - 0 on success
  * \attention caller should free this memory
  */
-//int db_icheck_null_messages(struct dm_list *lost_list);
+//int db_icheck_null_messages(GList **lost);
 
 /**
  * \brief check for all physmessage records that have no messageblks 
@@ -642,7 +642,7 @@ END_TEST
  *     -  0 on success.
  * \attention caller should free this memory
  */
-//int db_icheck_null_physmessages(struct dm_list *lost_list);
+//int db_icheck_null_physmessages(GList **lost);
 
 /**
  * \brief check for is_header flag on messageblks

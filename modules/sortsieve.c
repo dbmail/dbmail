@@ -36,7 +36,7 @@ struct sort_context {
 	u64_t user_idnr;
 	struct DbmailMessage *message;
 	struct sort_result *result;
-	struct dm_list freelist;
+	GList *freelist;
 };
 
 /* Returned opaquely as type sort_result_t. */
@@ -289,7 +289,7 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 		}
 	}
 
-	TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s] flags are [%s]", mailbox);
+	TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s] flags are [%s]", mailbox, (char *)flags);
 
 	/* Don't cancel the keep if there's a problem storing the message. */
 	if (sort_deliver_to_mailbox(m->message, m->user_idnr,
@@ -420,7 +420,7 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	g_tuples_destroy(headers);
 
 	/* We have to free the header array, but not its contents. */
-	dm_list_nodeadd(&m->freelist, &bodylist, sizeof(char **));
+	m->freelist = g_list_prepend(m->freelist, &bodylist);
 
 	for (i = 0; bodylist[i] != NULL; i++) {
 		TRACE(TRACE_INFO, "Getting header [%s] returning value [%s]",
@@ -501,8 +501,8 @@ int sort_getsubaddress(sieve2_context_t *s, void *my)
 	sieve2_setvalue_string(s, "localpart", localpart);
 	sieve2_setvalue_string(s, "domain", domain);
 
-	dm_list_nodeadd(&m->freelist, &user, sizeof(char *));
-	dm_list_nodeadd(&m->freelist, &localpart, sizeof(char *));
+	m->freelist = g_list_prepend(m->freelist, &user);
+	m->freelist = g_list_prepend(m->freelist, &localpart);
 
 	return SIEVE2_OK;
 }
@@ -578,7 +578,7 @@ static int sort_teardown(sieve2_context_t **s2c,
 	struct sort_context *sort_context = *sc;
 	int res;
 
-	dm_list_free(&sort_context->freelist.start);
+	g_list_destroy(sort_context->freelist);
 
 	if (sort_context) {
 		g_free(sort_context);
@@ -662,7 +662,7 @@ static int sort_startup(sieve2_context_t **s2c,
 	}
 	memset(sort_context, 0, sizeof(struct sort_context));
 
-	dm_list_init(&sort_context->freelist);
+	sort_context->freelist = NULL;
 
 	*s2c = sieve2_context;
 	*sc = sort_context;

@@ -195,7 +195,7 @@ typedef enum {
 } Pop3State_t;
 
 /**
- * struct for a POP3 session.
+ * struct for a POP3 session. Also used for LMTP session.
  */
 typedef struct {
 	Pop3State_t state;		/**< current POP state */
@@ -215,6 +215,8 @@ typedef struct {
 	u64_t virtual_totalmessages;
 
 	GList *messagelst;		/** list of messages */
+	GList *from;			// lmtp senders
+	GList *rcpt;			// lmtp recipients
 } PopSession_t;
 
 

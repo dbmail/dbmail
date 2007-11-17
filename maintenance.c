@@ -390,7 +390,8 @@ GList *find_dangling_aliases(const char * const name)
 	while (uids) {
 		username = auth_get_userid(*(u64_t *)uids->data);
 		if (!username)
-			dangling = g_list_prepend(dangling, userids->data);
+			dangling = g_list_prepend(dangling, uids->data);
+
 		g_free(username);
 		if (! g_list_next(uids))
 			break;

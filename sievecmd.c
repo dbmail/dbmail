@@ -600,8 +600,8 @@ int do_list(u64_t user_idnr)
 	}
 
 	if (g_list_length(scriptlist) > 0) {
-		printf("Found %ld scripts:\n",
-		       g_list_length(&scriptlist));
+		printf("Found %u scripts:\n",
+		       g_list_length(scriptlist));
 	} else
 		qprintf("No scripts found!\n");
 

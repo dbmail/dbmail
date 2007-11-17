@@ -296,7 +296,7 @@ void dm_ldap_freeresult(GList *entlist)
 	g_list_free(g_list_first(entlist));
 }
 
-GList * dm_ldap_entdm_list_get_values(GList *entlist)
+static GList * dm_ldap_ent_get_values(GList *entlist)
 {
 	GList *fldlist, *attlist;
 	GList *values = NULL;
@@ -366,7 +366,7 @@ static u64_t dm_ldap_get_freeid(const gchar *attribute)
 	g_string_printf(q,"(%s=*)", attribute);
 	entlist = __auth_get_every_match(q->str, attrs);
 	
-	ids = dm_ldap_entdm_list_get_values(entlist);
+	ids = dm_ldap_ent_get_values(entlist);
 	
 	/* get the valid range */
 	if (strcmp(attribute,_ldap_cfg.field_nid)==0) {
@@ -511,10 +511,10 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
  * retlist
  *  has the "rows" that matched
  *   {
- *     (struct dm_list *)data
+ *     (GList *)data
  *       has the fields you requested
  *       {
- *         (struct dm_list *)data
+ *         (GList *)data
  *           has the values for the field
  *           {
  *             (char *)data
@@ -828,7 +828,7 @@ GList * auth_get_known_users(void)
 	
 	TRACE(TRACE_INFO, "found %d users", g_list_length(entlist));
 
-	users = dm_ldap_entdm_list_get_values(entlist);
+	users = dm_ldap_ent_get_values(entlist);
 	
 	dm_ldap_freeresult(entlist);
 	return users;
@@ -853,7 +853,7 @@ GList * auth_get_known_aliases(void)
 	
 	TRACE(TRACE_INFO, "found %d aliases", g_list_length(entlist));
 
-	aliases = dm_ldap_entdm_list_get_values(entlist);
+	aliases = dm_ldap_ent_get_values(entlist);
 	
 	dm_ldap_freeresult(entlist);
 	return aliases;
@@ -1316,7 +1316,7 @@ int auth_get_users_from_clientid(u64_t client_id UNUSED,
  * 		- -2 on memory failure
  * 		- -1 on database failure
  * 		- 0 on success
- * \attention aliases list needs to be empty. Method calls dm_list_init()
+ * \attention aliases list needs to be empty.
  *            which sets list->start to NULL.
  */
 
@@ -1354,7 +1354,7 @@ GList * auth_get_user_aliases(u64_t user_idnr)
  * 		- -2 on memory failure
  * 		- -1 on database failure
  * 		- 0 on success
- * \attention aliases list needs to be empty. Method calls dm_list_init()
+ * \attention aliases list needs to be empty.
  *            which sets list->start to NULL.
  */
 

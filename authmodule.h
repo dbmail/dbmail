@@ -22,8 +22,7 @@ typedef struct {
 	int (* getclientid)(u64_t user_idnr, u64_t * client_idnr);
 	int (* getmaxmailsize)(u64_t user_idnr, u64_t * maxmail_size);
 	char * (* getencryption)(u64_t user_idnr);
-	int (* check_user_ext)(const char *username, struct dm_list *userids,
-			struct dm_list *fwds, int checks);
+	int (* check_user_ext)(const char *username, GList **userids, GList **fwds, int checks);
 	int (* adduser)(const char *username, const char *password, const char *enctype,
 			u64_t clientid, u64_t maxmail, u64_t * user_idnr);
 	int (* delete_user)(const char *username);

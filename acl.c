@@ -196,15 +196,14 @@ char *acl_get_acl(u64_t mboxid)
         char *identifier_astring;  /* identifier as IMAP astring */
 	char rightsstring[NR_ACL_FLAGS + 1];
 	int result;
-	struct dm_list identifier_list;
-	struct element *identifier_elm;
+	GList *identifier_list = NULL;
 	unsigned nr_identifiers = 0;
 
 	result = db_acl_get_identifier(mboxid, &identifier_list);
 
 	if (result < 0) {
 		TRACE(TRACE_ERROR, "error when getting identifier list for mailbox [%llu].", mboxid);
-		dm_list_free(&identifier_list.start);
+		g_list_destroy(identifier_list);
 		return NULL;
 	}
 
@@ -213,49 +212,42 @@ char *acl_get_acl(u64_t mboxid)
 	 */
 	if (db_get_mailbox_owner(mboxid, &userid) < 0) {
 		TRACE(TRACE_ERROR, "error querying ownership of mailbox");
-		dm_list_free(&identifier_list.start);
+		g_list_destroy(identifier_list);
 		return NULL;
 	}
 
 	if ((username = auth_get_userid(userid)) == NULL) {
 		TRACE(TRACE_ERROR, "error getting username for user [%llu]", userid);
-		dm_list_free(&identifier_list.start);
+		g_list_destroy(identifier_list);
 		return NULL;
 	}
 	
-	if (dm_list_nodeadd(&identifier_list, username, strlen(username) + 1) == NULL) { 
-		TRACE(TRACE_ERROR, "error adding username to list");
-		dm_list_free(&identifier_list.start);
-		g_free(username);
-		return NULL;
-	}
-	
-	g_free(username);
+	identifier_list = g_list_append(identifier_list, username);
 
 	TRACE(TRACE_DEBUG, "before looping identifiers!");
 	
-	identifier_elm = dm_list_getstart(&identifier_list);
-	while (identifier_elm) {
+	identifier_list = g_list_first(identifier_list);
+	while (identifier_list) {
 		nr_identifiers++;
-		identifier_astring = dbmail_imap_astring_as_string(identifier_elm->data);
+		identifier_astring = dbmail_imap_astring_as_string((const char *)identifier_list->data);
 		acl_string_size += strlen(identifier_astring) + NR_ACL_FLAGS + 2;
 		g_free(identifier_astring);
-		identifier_elm = identifier_elm->nextnode;
+
+		if (! g_list_next(identifier_list))
+			break;
+		identifier_list = g_list_next(identifier_list);
 	}
 
 	TRACE(TRACE_DEBUG, "acl_string size = %zd", acl_string_size);
 
-	if (! (acl_string = g_new0(char, acl_string_size + 1))) {
-		dm_list_free(&identifier_list.start);
-		TRACE(TRACE_FATAL, "error allocating memory");
-		return NULL;
-	}
+	acl_string = g_new0(char, acl_string_size + 1);
 	
-	identifier_elm = dm_list_getstart(&identifier_list);
-	while (identifier_elm) {
-		identifier = (char *) identifier_elm->data;
+	identifier_list = g_list_first(identifier_list);
+
+	while (identifier_list) {
+		identifier = (char *) identifier_list->data;
 		if (acl_get_rightsstring_identifier(identifier, mboxid, rightsstring) < 0) {
-			dm_list_free(&identifier_list.start);
+			g_list_destroy(identifier_list);
 			g_free(acl_string);
 			return NULL;
 		}
@@ -266,9 +258,12 @@ char *acl_get_acl(u64_t mboxid)
 			(void) snprintf(&acl_string[acl_strlen], acl_string_size - acl_strlen, "%s %s ", identifier_astring, rightsstring);
 			g_free(identifier_astring);
 		}
-		identifier_elm = identifier_elm->nextnode;
+
+		if (! g_list_next(identifier_list))
+			break;
+		identifier_list = g_list_next(identifier_list);
 	}
-	dm_list_free(&identifier_list.start);
+	g_list_destroy(identifier_list);
 	
 	return g_strstrip(acl_string);
 }

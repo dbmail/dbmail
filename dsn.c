@@ -254,9 +254,7 @@ static int address_has_alias_mailbox(deliver_to_user_t *delivery)
 			&newaddress_len, &zapped_len) != 0)
 		return 0;
 
-	alias_count = auth_check_user_ext(newaddress,
-				delivery->userids,
-				delivery->forwards, 0);
+	alias_count = auth_check_user_ext(newaddress, &delivery->userids, &delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases", newaddress, alias_count);
 
 	g_free(newaddress);
@@ -461,7 +459,6 @@ dsn_class_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
 dsn_class_t dsnuser_worstcase_list(GList *deliveries)
 {
 	delivery_status_t dsn;
-	struct element *tmp;
 	int ok = 0, temp = 0, fail = 0, fail_quota = 0;
 
 	deliveries = g_list_first(deliveries);
