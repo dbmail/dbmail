@@ -203,6 +203,8 @@ START_TEST(test_dbmail_iconv_decode_address)
 	const char *ex1 = "\":: [ Arrty ] :: [ Roy (L) Stèphanie ]\" <over.there@hotmail.com>";
 	const char *u72 = "=?utf-8?Q?Jos=E9_M=2E_Mart=EDn?= <jmartin@onsager.ugr.es>"; // latin-1 masking as utf8
 	const char *ex2 = "\"Jos? M. Mart?n\" <jmartin@onsager.ugr.es>";
+	const char *u73 = "=?utf-8?B?Ik9ubGluZSBSZXplcnZhxI1uw60gU3lzdMOpbSBTTU9TSyI=?= <e@mail>";
+	char *ex3;
 
 	char *u8;
 	
@@ -213,6 +215,12 @@ START_TEST(test_dbmail_iconv_decode_address)
 	u8 = dbmail_iconv_decode_address(u72);
 	fail_unless(strcmp(u8,ex2)==0,"decode failed\n[%s] != \n[%s]\n", u8, ex2);
 	g_free(u8);
+
+	u8 = dbmail_iconv_decode_address(u73);
+	ex3 = g_mime_utils_header_decode_text(u73);
+	fail_unless(strcmp(u8,ex3)==0,"decode failed\n[%s] != \n[%s]\n", u8, ex3);
+	g_free(u8);
+	g_free(ex3);
 
 }
 END_TEST

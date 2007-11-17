@@ -1,3 +1,8 @@
+2007-11-17  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c, misc.c:
+	fix misunderstanding of rfc2047 encoded addresses (bug #655)
+
 2007-11-15  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
