@@ -198,7 +198,7 @@ char * dbmail_iconv_decode_text(const char *in)
 		if ((c == '=') && (n == '?') && (inword == FALSE) && (inchar == FALSE)) {
 			inchar = TRUE;
 			l = i;
-		} else if (((p2 == 'q') || (p2 == 'Q')) && (p == '?') && inchar) {
+ 		} else if (((p2 == 'q') || (p2 == 'Q') || (p2 == 'b') || (p2 == 'B')) && (p == '?') && inchar) {
 			inchar = FALSE;
 			inword = TRUE;
 			wlen = 0;

@@ -491,22 +491,15 @@ char * dm_strnesc(const char * from, size_t len)
 }
 	
 /* 
- *
- * replace tabs with spaces and all multi-spaces with single spaces 
- *
+ * replace all multi-spaces with single spaces 
  */
-
-void  dm_pack_spaces(char *in) 
+static void pack_char(char *in, char c)
 {
-	char *tmp, *saved;
-	/* replace tabs with spaces */
-	g_strdelimit(in,"\t",' ');
-	
-	/* replace all multi-spaces with single spaces */
-	tmp = g_strdup(in);
+	char *saved;
+	char *tmp = g_strdup(in);
 	saved = tmp;
 	while(*tmp) {
-		if ((*tmp == ' ') && (*(tmp+1) == ' ')) {
+		if ((*tmp == c) && (*(tmp+1) == c)) {
 			tmp++;
 		} else {
 			*in++=*tmp++;
@@ -514,6 +507,19 @@ void  dm_pack_spaces(char *in)
 	}
 	g_free(saved);
 	*in='\0';
+}
+
+/* 
+ *
+ * replace tabs with spaces and all multi-spaces with single spaces 
+ *
+ */
+
+void  dm_pack_spaces(char *in) 
+{
+	/* replace tabs with spaces */
+	g_strdelimit(in,"\t",' ');
+	pack_char(in,' ');
 }
 /* 
  * base-subject
@@ -1427,6 +1433,11 @@ char *dbmail_imap_astring_as_string(const char *s)
 	}
 	r = g_strdup_printf("\"%s\"", l);
 	g_free(t);
+
+	// oops: if the rfc2047 encoded address names contain
+	// encoded double-quotes, imap_cleanup_address has added quotes that are now
+	// redundant. we need to strip those
+	pack_char(r,'"');
 
 	return r;
 

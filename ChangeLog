@@ -1,3 +1,62 @@
+2007-11-17  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c, dm_iconv.c, dm_misc.c:
+	fix misunderstanding of rfc2047 encoded addresses (bug #655)
+
+2007-11-15  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
+	check_dbmail_misc.c, dm_misc.c:
+	make imap_cleanup_address also handle addresslists
+
+2007-10-29  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.am, acl.c, acl.h, config.c, db.c, db.h, 
+	dbmail-imapsession.h, dbmail-message.h, dbmail.h.in, dbmailtypes.h, 
+	debug.c, debug.h, dm_acl.c, dm_acl.h, dm_config.c, dm_db.c, dm_db.h, 
+	dm_debug.c, dm_debug.h, dm_dsn.c, dm_dsn.h, dm_memblock.c, 
+	dm_memblock.h, dm_misc.c, dm_misc.h, dm_pidfile.c, dm_pipe.c, 
+	dm_pipe.h, dm_quota.c, dm_quota.h, dsn.c, dsn.h, memblock.c, 
+	memblock.h, misc.c, misc.h, pidfile.c, pipe.c, pipe.h, pool.c, 
+	pool.h, quota.c, quota.h, serverpool.c, serverpool.h:
+	rename a bunch of files
+	* Makefile.am, check_dbmail_list.c, dbmail-user.c, dbmail.h.in, 
+	dm_list.c, dm_list.h, list.c, list.h, maintenance.c, misc.c, misc.h:
+	re-organize the GList utility functions
+	* Makefile.am, check_dbmail_imapd.c, dbmail-imapsession.c, 
+	dbmail.h.in, dm_base64.h, dm_imaputil.c, dm_imaputil.h, imap4.c, 
+	imapcommands.c, misc.h:
+	remove dm_imaputil.[ch] files
+	* Makefile.am, dbmail.h.in, dm_iconv.c, dm_iconv.h, misc.c, misc.h:
+	move iconv code to separate module
+	* acl.c, auth.h, authmodule.h, check_dbmail_db.c, 
+	check_dbmail_deliver.c, db.c, dbmailtypes.h, dsn.c, lmtp.c, main.c, 
+	maintenance.c, modules/authldap.c, modules/sortsieve.c, pipe.c, 
+	pipe.h, pop3.c, sievecmd.c:
+	finish dm_list cleanup
+	* authmodule.c, db.c, db.h, dbmail-user.c, dbmailtypes.h, dsn.c, 
+	dsn.h, list.c, list.h, lmtp.c, main.c, maintenance.c, 
+	modules/authldap.c, modules/authsql.c, pipe.c, sievecmd.c, timsieve.c:
+	wip dm_list cleanup
+	* debug.c:
+	fix def for BSDs
+
+2007-10-28  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, db.h, maintenance.c:
+	cleanup old dm_list code
+	* dm_imaputil.c, dm_imaputil.h, imap4.c:
+	remove unused code
+
+2007-10-27  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, contrib/startup-scripts/debian/dbmail-imapd, 
+	contrib/startup-scripts/debian/dbmail-lmtpd, 
+	contrib/startup-scripts/debian/dbmail-pop3d:
+	removed old debian scripts
+	* contrib/expiretrash.sh:
+	added file
+
 2007-10-26  Paul J Stevens <paul@nfg.nl>
 
 	* contrib/startup-scripts/debian/dbmail-imapd, 
