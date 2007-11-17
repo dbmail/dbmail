@@ -586,6 +586,14 @@ START_TEST(test_dbmail_message_8bit)
 	dbmail_message_store(m);
 	dbmail_message_free(m);
 
+	/* */
+	m = dbmail_message_new();
+	s = g_string_new(encoded_message_utf8);
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s, TRUE);
+
+	dbmail_message_store(m);
+	dbmail_message_free(m);
 }
 END_TEST
 

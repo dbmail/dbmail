@@ -2182,7 +2182,7 @@ char * imap_cleanup_address(const char *a)
 {
 	char *r, *t;
 	char *inptr;
-	char prev,next=0;
+	char prev, next=0;
 	unsigned incode=0, inquote=0;
 	size_t i, l;
 	GString *s;
@@ -2198,50 +2198,46 @@ char * imap_cleanup_address(const char *a)
 	dm_pack_spaces(t);
 	inptr = t;
 	inptr = g_strstrip(inptr);
-	prev = *inptr;
-	if (*(inptr+1))
-		next=*(inptr+1);
+	prev = inptr[0];
 	
-	// quote encoded string
-	if (*inptr == '=' && next=='?') {
-		if (prev != '"')
-			g_string_append_c(s,'"');
-		inquote=1;
-		incode=1;
-	}
-
 	l = strlen(inptr);
+
 	for (i = 0; i < l - 1; i++) {
 
-		next=inptr[i+1];
-
-		if (inptr[i] == '<')
-			break;
-
-		if (inptr[i] == ' ' && next=='<')
-			break;
-
-		if (inptr[i] == '=' && next=='?')
-			incode=1;
-
-		if (prev=='?' && inptr[i]=='=')
-			incode=0;
+		next = inptr[i+1];
 
 		if (incode && (inptr[i] == '"' || inptr[i] == ' '))
 			continue; // skip illegal chars inquote
 
-		prev = inptr[i];
+		if ((! inquote) && inptr[i]=='"')
+			inquote = 1;
+		else if (inquote && inptr[i] == '"')
+			inquote = 0;
+
+		// quote encoded string
+		if (inptr[i] == '=' && next == '?' && (! incode)) {
+			incode=1;
+			if (prev != '"' && (! inquote)) {
+				g_string_append_c(s,'"');
+				inquote = 1;
+			}
+		} 
 
 		g_string_append_c(s,inptr[i]); 
 
+		if (inquote && incode && prev == '?' && inptr[i] == '=' && (next == '"' || next == ' ' || next == '<')) {
+			if ((next != '"' ) && ((i < l-2) && (inptr[i+2] != '='))) {
+				g_string_append_c(s, '"');
+				inquote = 0;
+			}
+			if (next == '<')
+				g_string_append_c(s,' ');
+			incode=0;
+		}
+
+		prev = inptr[i];
 	}
 
-	if (inquote)
-		g_string_append_c(s,'"');
-
-	if (inptr[i] == '<' && prev != inptr[i] && prev != ' ')
-		g_string_append_c(s,' ');
-		
 	inptr+=i;
 
 	if (*inptr)
