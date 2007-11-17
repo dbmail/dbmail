@@ -168,23 +168,4 @@ char * imap_cleanup_address(const char *a);
 
 char * message_get_charset(GMimeMessage *self);
 
-
-struct DbmailIconv {
-	field_t db_charset;
-	field_t msg_charset;
-
-	iconv_t to_db;
-	iconv_t from_db;
-	iconv_t from_msg;
-};
-
-
-void dbmail_iconv_init(void);
-char * dbmail_iconv_str_to_db(const char* str_in, const char *charset);
-char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset);
-char * dbmail_iconv_db_to_utf7(const char* str_in);
-char * dbmail_iconv_decode_text(const char *in);
-char * dbmail_iconv_decode_address(char *address);
-char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr);
-
 #endif
