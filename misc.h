@@ -149,7 +149,6 @@ int check_date(const char *date);
  */
 int discard_client_input(FILE * instream);
 
-// moved here from dm_imaputil.h
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
 GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList *ialist);

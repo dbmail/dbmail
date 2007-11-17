@@ -715,7 +715,7 @@ int _ic_list(struct ImapSession *self)
 
 	/* check the reference name, should contain only accepted mailboxname chars */
 	for (i = 0, slen = strlen(AcceptedMailboxnameChars); self->args[0][i]; i++) {
-		if (stridx(AcceptedMailboxnameChars, self->args[0][i]) == slen) {
+		if (index(AcceptedMailboxnameChars, self->args[0][i]) == NULL) {
 			/* wrong char found */
 			dbmail_imap_session_printf(self,
 				"%s BAD reference name contains invalid characters\r\n",

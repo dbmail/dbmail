@@ -426,7 +426,6 @@ START_TEST(test_internet_address_parse_string)
 		char *expect = "((NIL NIL \"undisclosed-recipients\" NIL))";
 		GList *list = NULL;
 
-		// Copied from dm_imaputil.c, envelope_address_part
 		t = imap_cleanup_address(result);
 		alist = internet_address_parse_string(t);
 		g_free(t);

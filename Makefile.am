@@ -82,7 +82,7 @@ dbmail_smtp_LDADD = libdbmail.la
 dbmail_pop3d_SOURCES = pop3.c pop3d.c
 dbmail_pop3d_LDADD = libdbmail.la
 
-dbmail_imapd_SOURCES = quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c imapd.c dbmail-imapsession.c
+dbmail_imapd_SOURCES = quota.c imap4.c imapcommands.c memblock.c imapd.c dbmail-imapsession.c
 dbmail_imapd_LDADD = libdbmail.la
 
 dbmail_top_SOURCES = top.c
@@ -191,7 +191,7 @@ check_dbmail_mailbox_SOURCES=check_dbmail_mailbox.c
 check_dbmail_mailbox_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_mailbox_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_imapd_SOURCES=quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
+check_dbmail_imapd_SOURCES=quota.c imap4.c imapcommands.c memblock.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
 check_dbmail_imapd_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_imapd_INCLUDES=@CHECK_CFLAGS@
 

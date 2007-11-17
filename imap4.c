@@ -77,6 +77,15 @@ static int checktag(const char *s)
 	}
 	return 1;
 }
+
+static size_t stridx(const char *s, char c)
+{
+	size_t i;
+
+	for (i = 0; s[i] && s[i] != c; i++);
+
+	return i;
+}
 /*
  * Main handling procedure
  *

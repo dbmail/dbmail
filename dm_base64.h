@@ -18,8 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dm_imaputil.h 1878 2005-09-04 06:34:44Z paul $
- * dm_base64.h
+/* $Id: dm_base64.h 1878 2005-09-04 06:34:44Z paul $
  *
  * Base64 encoding and decoding routines.
  */

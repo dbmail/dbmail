@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2007 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -20,7 +20,7 @@
 
 /* 
  * 
- * dm_imaputil.c
+ * dbmail-imapsession.c
  *
  * IMAP-server utility functions implementations
  */
