@@ -1496,14 +1496,12 @@ int db_empty_mailbox(u64_t user_idnr)
 	return result;
 }
 
-int db_icheck_messageblks(struct dm_list *lost_list)
+int db_icheck_messageblks(GList **lost)
 {
-	u64_t messageblk_idnr;
+	u64_t messageblk_idnr, *idnr;
 	int i, n;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
-	dm_list_init(lost_list);
 
 	/* get all lost message blocks. Instead of doing all kinds of 
 	 * nasty stuff here, we let the RDBMS handle all this. Problem
@@ -1533,19 +1531,15 @@ int db_icheck_messageblks(struct dm_list *lost_list)
 		if (!(messageblk_idnr = db_get_result_u64(i, 0)))
 			continue;
 
-		TRACE(TRACE_INFO, "found lost block id [%llu]",
-		      messageblk_idnr);
-		if (!dm_list_nodeadd
-		    (lost_list, &messageblk_idnr, sizeof(u64_t))) {
-			TRACE(TRACE_ERROR, "could not add block to list");
-			dm_list_free(&lost_list->start);
-			db_free_result();
-			return -2;
-		}
+		TRACE(TRACE_INFO, "found lost block id [%llu]", messageblk_idnr);
+		idnr = g_new0(u64_t,1);
+		*idnr = messageblk_idnr;
+		*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
 	}
 	db_free_result();
 	return DM_SUCCESS;
 }
+
 int db_icheck_physmessages(gboolean cleanup)
 {
 	int result;
@@ -1574,15 +1568,13 @@ int db_icheck_physmessages(gboolean cleanup)
 	return result;
 }
 
-int db_icheck_messages(struct dm_list *lost_list)
+int db_icheck_messages(GList ** lost)
 {
 	u64_t message_idnr;
+	u64_t *idnr;
 	int i, n;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
-
-	dm_list_init(lost_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT msg.message_idnr FROM %smessages msg "
@@ -1607,26 +1599,23 @@ int db_icheck_messages(struct dm_list *lost_list)
 			continue;
 
 		TRACE(TRACE_INFO, "found lost message id [%llu]", message_idnr);
-		if (!dm_list_nodeadd(lost_list, &message_idnr, sizeof(u64_t))) {
-			TRACE(TRACE_ERROR, "could not add message to list");
-			dm_list_free(&lost_list->start);
-			db_free_result();
-			return -2;
-		}
+		idnr = g_new0(u64_t,1);
+		*idnr = message_idnr;
+
+		*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
 	}
+
 	db_free_result();
+
 	return DM_SUCCESS;
 }
 
-int db_icheck_mailboxes(struct dm_list *lost_list)
+int db_icheck_mailboxes(GList **lost)
 {
-	u64_t mailbox_idnr;
+	u64_t mailbox_idnr, *idnr;
 	int i, n;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
-
-	dm_list_init(lost_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mbx.mailbox_idnr FROM %smailboxes mbx "
@@ -1650,28 +1639,22 @@ int db_icheck_mailboxes(struct dm_list *lost_list)
 		if (!(mailbox_idnr = db_get_result_u64(i, 0)))
 			continue;
 
-		TRACE(TRACE_INFO, "found lost mailbox id [%llu]",
-		      mailbox_idnr);
-		if (!dm_list_nodeadd(lost_list, &mailbox_idnr, sizeof(u64_t))) {
-			TRACE(TRACE_ERROR, "could not add mailbox to list");
-			dm_list_free(&lost_list->start);
-			db_free_result();
-			return -2;
-		}
+		TRACE(TRACE_INFO, "found lost mailbox id [%llu]", mailbox_idnr);
+		idnr = g_new0(u64_t,1);
+		*idnr = mailbox_idnr;
+
+		*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
 	}
 	db_free_result();
 	return DM_SUCCESS;
 }
 
-int db_icheck_null_physmessages(struct dm_list *lost_list)
+int db_icheck_null_physmessages(GList **lost)
 {
-	u64_t physmessage_id;
+	u64_t physmessage_id, *idnr;
 	unsigned i, n;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
-
-	dm_list_init(lost_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.id FROM %sphysmessage pm "
@@ -1696,27 +1679,21 @@ int db_icheck_null_physmessages(struct dm_list *lost_list)
 			continue;
 
 		TRACE(TRACE_INFO, "found empty physmessage_id [%llu]", physmessage_id);
-		if (!dm_list_nodeadd
-		    (lost_list, &physmessage_id, sizeof(u64_t))) {
-			TRACE(TRACE_ERROR, "could not add physmessage to list");
-			dm_list_free(&lost_list->start);
-			db_free_result();
-			return -2;
-		}
+		idnr = g_new0(u64_t,1);
+		*idnr = physmessage_id;
+
+		*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
 	}
 	db_free_result();
 	return DM_SUCCESS;
 }
 
-int db_icheck_null_messages(struct dm_list *lost_list)
+int db_icheck_null_messages(GList **lost)
 {
-	u64_t message_idnr;
+	u64_t message_idnr, *idnr;
 	int i, n;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
-
-	dm_list_init(lost_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT msg.message_idnr FROM %smessages msg "
@@ -1740,12 +1717,10 @@ int db_icheck_null_messages(struct dm_list *lost_list)
 			continue;
 
 		TRACE(TRACE_INFO, "found empty message id [%llu]", message_idnr);
-		if (!dm_list_nodeadd(lost_list, &message_idnr, sizeof(u64_t))) {
-			TRACE(TRACE_ERROR, "could not add message to list");
-			dm_list_free(&lost_list->start);
-			db_free_result();
-			return -2;
-		}
+		idnr = g_new0(u64_t,1);
+		*idnr = message_idnr;
+
+		*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
 	}
 	db_free_result();
 	return DM_SUCCESS;
@@ -2380,7 +2355,6 @@ int db_update_pop(PopSession_t * session_ptr)
 	u64_t user_idnr = 0;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
 
 	/* get first element in list */
 	tmpelement = dm_list_getstart(&session_ptr->messagelst);

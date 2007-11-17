@@ -464,82 +464,87 @@ int do_dangling_aliases(void)
 int do_null_messages(void)
 {
 	time_t start, stop;
-	struct dm_list lostlist;
-	struct element *el;
-	u64_t id;
+	GList *lost = NULL;
+	u64_t *id;
+	long count;
 
-	if (no_to_all) {
+	if (no_to_all)
 		qprintf("\nChecking DBMAIL for NULL messages...\n");
-	}
-	if (yes_to_all) {
+	if (yes_to_all)
 		qprintf("\nRepairing DBMAIL for NULL messages...\n");
-	}
+
 	time(&start);
 
-	if (db_icheck_null_messages(&lostlist) < 0) {
+	if (db_icheck_null_messages(&lost) < 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
+		g_list_destroy(lost);
 		serious_errors = 1;
 		return -1;
 	}
 
-	if (lostlist.total_nodes > 0) {
-		qerrorf("Ok. Found [%ld] NULL messages.\n",
-		       lostlist.total_nodes);
-	} else {
-		qprintf("Ok. Found [%ld] NULL messages.\n",
-		       lostlist.total_nodes);
-	}
+	count = g_list_length(lost);
+	if (count > 0)
+		qerrorf("Ok. Found [%ld] NULL messages.\n", count);
+	else
+		qprintf("Ok. Found [%ld] NULL messages.\n", count);
 
 	if (yes_to_all) {
-		if (lostlist.total_nodes > 0) {
-			el = lostlist.start;
-			while (el) {
-				id = *((u64_t *) el->data);
-				if (db_set_message_status(id, MESSAGE_STATUS_ERROR) < 0)
-					qerrorf("Warning: could not set status on message [%llu]. Check log.\n", id);
+		if (count > 0) {
+			lost = g_list_first(lost);
+			while (lost) {
+				id = (u64_t *)lost->data;
+				if (db_set_message_status(*id, MESSAGE_STATUS_ERROR) < 0)
+					qerrorf("Warning: could not set status on message [%llu]. Check log.\n", *id);
 				else
-					qverbosef("[%llu] set to MESSAGE_STATUS_ERROR)\n", id);
+					qverbosef("[%llu] set to MESSAGE_STATUS_ERROR)\n", *id);
         
-				el = el->nextnode;
+				if (! g_list_next(lost))
+					break;
+				lost = g_list_next(lost);
 			}
-        
-			dm_list_free(&lostlist.start);
 		}
 	}
 
+	g_list_destroy(lost);
+	lost = NULL;
+
 	time(&stop);
-	qverbosef("--- checking NULL messages took %g seconds\n",
-	       difftime(stop, start));
+	qverbosef("--- checking NULL messages took %g seconds\n", difftime(stop, start));
 	qprintf("\nChecking DBMAIL for NULL physmessages...\n");
 	time(&start);
-	if (db_icheck_null_physmessages(&lostlist) < 0) {
+	if (db_icheck_null_physmessages(&lost) < 0) {
 		qerrorf("Failed, an error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
-	if (lostlist.total_nodes > 0) {
-		qerrorf("Ok. Found [%ld] physmessages without messageblocks.\n",
-		     lostlist.total_nodes);
+	count = g_list_length(lost);
 
-		el = lostlist.start;
-		while (el) {
-			id = *((u64_t *) el->data);
-			if (db_delete_physmessage(id) < 0)
-				qerrorf("Warning: could not delete physmessage [%llu]. Check log.\n", id);
+	if (count > 0) {
+		qerrorf("Ok. Found [%ld] physmessages without messageblocks.\n", count);
+
+		lost = g_list_first(lost);
+		while (lost) {
+			id = (u64_t *) lost->data;
+
+			if (db_delete_physmessage(*id) < 0)
+				qerrorf("Warning: could not delete physmessage [%llu]. Check log.\n", *id);
 			else
-				qverbosef("[%llu] deleted.\n", id);
-			el = el->nextnode;
+				qverbosef("[%llu] deleted.\n", *id);
+
+			if (! g_list_next(lost))
+				break;
+			lost = g_list_next(lost);
 		}
-		dm_list_free(&lostlist.start);
+
 	} else {
-		qprintf("Ok. Found [%ld] physmessages without messageblocks.\n",
-		    lostlist.total_nodes);
+		qprintf("Ok. Found [%ld] physmessages without messageblocks.\n", count);
 	}
 
+	g_list_destroy(lost);
+
 	time(&stop);
-	qverbosef("--- checking NULL physmessages took %g seconds\n",
-		difftime(stop, start));
+	qverbosef("--- checking NULL physmessages took %g seconds\n", difftime(stop, start));
 	
 	return 0;
 }
@@ -547,11 +552,10 @@ int do_null_messages(void)
 int do_check_integrity(void)
 {
 	time_t start, stop;
-	struct dm_list lostlist;
-	struct element *el;
+	GList *lost;
 	const char *action;
-	int count = 0;
-	u64_t id;
+	long count = 0;
+	u64_t *id;
 
 	if (yes_to_all)
 		action = "Repairing";
@@ -570,49 +574,47 @@ int do_check_integrity(void)
 	 */
 
 	/* first part */
-	if (db_icheck_messageblks(&lostlist) < 0) {
+	if (db_icheck_messageblks(&lost) < 0) {
 		qerrorf("Failed. An error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
-	if (lostlist.total_nodes > 0) {
-		qerrorf("Ok. Found [%ld] unconnected messageblks:\n",
-		     lostlist.total_nodes);
+	count = g_list_length(lost);
 
-		el = lostlist.start;
-		while (el) {
-			id = *((u64_t *) el->data);
+	if (count > 0) {
+		qerrorf("Ok. Found [%ld] unconnected messageblks:\n", count);
+
+		lost = g_list_first(lost);
+
+		while (lost) {
+			id = (u64_t *) lost->data;
 			if (no_to_all) {
-				qerrorf("%llu ", id);
+				qerrorf("%llu ", *id);
 			} else if (yes_to_all) {
-				if (db_delete_messageblk(id) < 0)
-					qerrorf
-					    ("Warning: could not delete messageblock #%llu. Check log.\n",
-					     id);
+				if (db_delete_messageblk(*id) < 0)
+					qerrorf ("Warning: could not delete messageblock #%llu. Check log.\n", *id);
 				else
-					qerrorf
-					    ("%llu (removed from dbase)\n",
-					     id);
+					qerrorf ("%llu (removed from dbase)\n", *id);
 			}
 
-			el = el->nextnode;
-		}
+			if (! g_list_next(lost))
+				break;
 
-		dm_list_free(&lostlist.start);
+			lost = g_list_next(lost);
+		}
 
 		qerrorf("\n");
 		has_errors = 1;
 	} else {
-		qprintf("Ok. Found [%ld] unconnected messageblks.\n",
-		     lostlist.total_nodes);
+		qprintf("Ok. Found [%ld] unconnected messageblks.\n", count);
 	}
 
+	g_list_destroy(lost);
+	lost = NULL;
 
 	time(&stop);
-	qverbosef("--- %s block integrity took %g seconds\n",
-	       action, difftime(stop, start));
-
+	qverbosef("--- %s block integrity took %g seconds\n", action, difftime(stop, start));
 
 	/* second part */
 	start = stop;
@@ -623,8 +625,7 @@ int do_check_integrity(void)
 		return -1;
 	}
 	if (count > 0) {
-		qerrorf("Ok. Found [%d] unconnected physmessages", count);
-
+		qerrorf("Ok. Found [%ld] unconnected physmessages", count);
 		if (yes_to_all) {
 			if (db_icheck_physmessages(TRUE) < 0)
 				qerrorf("Warning: could not delete orphaned physmessages. Check log.\n");
@@ -632,61 +633,57 @@ int do_check_integrity(void)
 				qerrorf("Ok. Orphaned physmessages deleted.\n");
 		}
 	} else {
-		qprintf("Ok. Found [%d] unconnected physmessages.\n", count);
+		qprintf("Ok. Found [%ld] unconnected physmessages.\n", count);
 	}
 
 	time(&stop);
 	qverbosef("--- %s unconnected physmessages took %g seconds\n",
 		action, difftime(stop, start));
 
-
 	/* third part */
 	start = stop;
 	qprintf("\n%s DBMAIL message integrity...\n", action);
 
-	if (db_icheck_messages(&lostlist) < 0) {
-		qerrorf
-		    ("Failed. An error occured. Please check log.\n");
+	if (db_icheck_messages(&lost) < 0) {
+		qerrorf ("Failed. An error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
-	if (lostlist.total_nodes > 0) {
+	count = g_list_length(lost);
+
+	if (count > 0) {
 		has_errors = 1;
-		qerrorf("Ok. Found [%ld] unconnected messages:\n",
-		       lostlist.total_nodes);
+		qerrorf("Ok. Found [%ld] unconnected messages:\n", count);
 	} else {
-		qprintf("Ok. Found [%ld] unconnected messages.\n",
-		       lostlist.total_nodes);
+		qprintf("Ok. Found [%ld] unconnected messages.\n", count);
 	}
 
 	if (yes_to_all) {
-		if (lostlist.total_nodes > 0) {
-			el = lostlist.start;
-			while (el) {
-				id = *((u64_t *) el->data);
+		if (count > 0) {
+			lost = g_list_first(lost);
+			
+			while (lost) {
+				id = (u64_t *) lost->data;
         
 				if (no_to_all) {
-					qerrorf("%llu ", id);
+					qerrorf("%llu ", *id);
 				} else if (yes_to_all) {
-					if (db_delete_message(id) < 0)
-						qerrorf
-						    ("Warning: could not delete message #%llu. Check log.\n",
-						     id);
+					if (db_delete_message(*id) < 0)
+						qerrorf ("Warning: could not delete message #%llu. Check log.\n", *id);
 					else
-						qerrorf
-						    ("%llu (removed from dbase)\n",
-						     id);
+						qerrorf ("%llu (removed from dbase)\n", *id);
 				}
         
-				el = el->nextnode;
+				if (! g_list_next(lost))
+					break;
+				lost = g_list_next(lost);
 			}
-        
 			qerrorf("\n");
-			dm_list_free(&lostlist.start);
-        
 		}
 	}
+	g_list_destroy(lost);
+	lost = NULL;
 
 	time(&stop);
 	qverbosef("--- %s message integrity took %g seconds\n",
@@ -696,43 +693,44 @@ int do_check_integrity(void)
 	qprintf("\n%s DBMAIL mailbox integrity...\n", action);
 	start = stop;
 
-	if (db_icheck_mailboxes(&lostlist) < 0) {
-		qerrorf
-		    ("Failed. An error occured. Please check log.\n");
+	if (db_icheck_mailboxes(&lost) < 0) {
+		qerrorf ("Failed. An error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
-	if (lostlist.total_nodes > 0) {
+	count = g_list_length(lost);
+	if (count > 0) {
 		has_errors = 1;
-		qerrorf("Ok. Found [%ld] unconnected mailboxes.\n",
-		    lostlist.total_nodes);
+		qerrorf("Ok. Found [%ld] unconnected mailboxes.\n", count);
 	} else {
-		qprintf("Ok. Found [%ld] unconnected mailboxes.\n",
-		    lostlist.total_nodes);
+		qprintf("Ok. Found [%ld] unconnected mailboxes.\n", count);
 	}
 
 	if (yes_to_all) {
-		if (lostlist.total_nodes > 0) {
+		if (count > 0) {
         
-			el = lostlist.start;
-			while (el) {
-				id = *((u64_t *) el->data);
+			lost = g_list_first(lost);
+			while (lost) {
+				id = (u64_t *) lost->data;
         
 				if (no_to_all) {
-					qerrorf("%llu ", id);
+					qerrorf("%llu ", *id);
 				} else if (yes_to_all) {
-					if (db_delete_mailbox(id, 0, 0))
-						qerrorf("Warning: could not delete mailbox #%llu. Check log.\n", id);
+					if (db_delete_mailbox(*id, 0, 0))
+						qerrorf("Warning: could not delete mailbox #%llu. Check log.\n", *id);
 					else
-						qerrorf("%llu (removed from dbase)\n", id);
+						qerrorf("%llu (removed from dbase)\n", *id);
 				}
-				el = el->nextnode;
+				if (! g_list_next(lost))
+					break;
+				lost = g_list_next(lost);
 			}
 			qerrorf("\n");
-			dm_list_free(&lostlist.start);
 		}
 	}
+
+	g_list_destroy(lost);
 
 	time(&stop);
 	qverbosef("--- %s mailbox integrity took %g seconds\n",

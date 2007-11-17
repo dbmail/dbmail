@@ -662,7 +662,7 @@ int db_empty_mailbox(u64_t user_idnr);
 *      - 0 on success
 * \attention caller should free this memory
 */
-int db_icheck_messageblks(struct dm_list *lost_list);
+int db_icheck_messageblks(GList **lost);
 
 int db_icheck_physmessages(gboolean cleanup);
 
@@ -677,7 +677,7 @@ int db_icheck_physmessages(gboolean cleanup);
  *      - 0 on success
  * \attention caller should free this memory
  */
-int db_icheck_messages(struct dm_list *lost_list);
+int db_icheck_messages(GList **lost);
 
 /**
  * \brief check for all mailboxes that are not connected to
@@ -690,7 +690,7 @@ int db_icheck_messages(struct dm_list *lost_list);
  *      - 0 on success
  * \attention caller should free this memory
  */
-int db_icheck_mailboxes(struct dm_list *lost_list);
+int db_icheck_mailboxes(GList **lost);
 
 /**
  * \brief check for all messages that are not connected to physmessage
@@ -705,7 +705,7 @@ int db_icheck_mailboxes(struct dm_list *lost_list);
  *      - 0 on success
  * \attention caller should free this memory
  */
-int db_icheck_null_messages(struct dm_list *lost_list);
+int db_icheck_null_messages(GList **lost);
 
 /**
  * \brief check for all physmessage records that have no messageblks 
@@ -719,7 +719,7 @@ int db_icheck_null_messages(struct dm_list *lost_list);
  *     -  0 on success.
  * \attention caller should free this memory
  */
-int db_icheck_null_physmessages(struct dm_list *lost_list);
+int db_icheck_null_physmessages(GList **lost);
 
 /**
  * \brief check for is_header flag on messageblks
