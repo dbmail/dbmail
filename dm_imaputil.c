@@ -24,31 +24,8 @@
  *
  * IMAP-server utility functions implementations
  */
-
-
 #include "dbmail.h"
 
-#define THIS_MODULE "imap"
-
-
-#define BUFLEN 2048
-#define SEND_BUF_SIZE 1024
-#define MAX_ARGS 512
-
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
-
-/* consts */
-const char AcceptedChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "!@#$%^&*()-=_+`~[]{}\\|'\" ;:,.<>/? \n\r";
-
-const char AcceptedTagChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
-/*
- *
- */
 size_t stridx(const char *s, char ch)
 {
 	size_t i;
@@ -57,40 +34,3 @@ size_t stridx(const char *s, char ch)
 
 	return i;
 }
-
-/*
- * checktag()
- *
- * performs a check to see if the read data is valid
- * returns 0 if invalid, 1 otherwise
- */
-int checktag(const char *s)
-{
-	int i;
-
-	for (i = 0; s[i]; i++) {
-		if (!strchr(AcceptedTagChars, s[i])) {
-			/* wrong char found */
-			return 0;
-		}
-	}
-	return 1;
-}
-
-/* unwrap strings */
-int mime_unwrap(char *to, const char *from) 
-{
-	while (*from) {
-		if (((*from == '\n') || (*from == '\r')) && isspace(*(from+1))) {
-			from+=2;
-			continue;
-		}
-		*to++=*from++;
-	}
-	*to='\0';
-	return 0;
-}
-
-
-
-

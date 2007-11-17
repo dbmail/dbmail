@@ -31,8 +31,4 @@
 
 size_t stridx(const char *s, char ch);
 
-int checktag(const char *s);
-
-int mime_unwrap(char *to, const char *from); 
-
 #endif

@@ -44,6 +44,10 @@ const char *IMAP_COMMANDS[] = {
 };
 
 
+const char AcceptedTagChars[] =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
+
 
 const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 	NULL,
@@ -61,7 +65,18 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 	NULL
 };
 
+static int checktag(const char *s)
+{
+	int i;
 
+	for (i = 0; s[i]; i++) {
+		if (!strchr(AcceptedTagChars, s[i])) {
+			/* wrong char found */
+			return 0;
+		}
+	}
+	return 1;
+}
 /*
  * Main handling procedure
  *
