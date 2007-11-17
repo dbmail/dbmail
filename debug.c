@@ -23,7 +23,7 @@
  * Debugging and memory checking functions */
 
 #include "dbmail.h"
-#if defined(BSD4_4)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(BSD4_4)
 extern char     *__progname;            /* Program name, from crt0. */
 #else
 char            *__progname = NULL;
