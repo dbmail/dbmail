@@ -36,6 +36,20 @@ struct ImapSession {
 	gboolean error; // command result
 };
 
+/*
+ * cached raw message data
+ */
+typedef struct {
+	struct DbmailMessage *dmsg;
+	MEM *memdump;
+	MEM *tmpdump;
+	u64_t num;
+	u64_t dumpsize;
+	int file_dumped;
+	int msg_parsed;
+} cache_t;
+
+
 typedef struct {
 	gboolean silent;
 	int action;

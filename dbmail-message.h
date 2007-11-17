@@ -42,43 +42,6 @@
  */
 
 
-
-enum DBMAIL_MESSAGE_CLASS {
-	DBMAIL_MESSAGE,
-	DBMAIL_MESSAGE_PART
-};
-
-typedef enum DBMAIL_MESSAGE_FILTER_TYPES { 
-	DBMAIL_MESSAGE_FILTER_FULL = 1,
-	DBMAIL_MESSAGE_FILTER_HEAD,
-	DBMAIL_MESSAGE_FILTER_BODY
-} message_filter_t;
-
-typedef enum DBMAIL_STREAM_TYPE {
-	DBMAIL_STREAM_PIPE = 1,
-	DBMAIL_STREAM_LMTP,
-	DBMAIL_STREAM_RAW
-} dbmail_stream_t;
-
-struct DbmailMessage {
-	u64_t id;
-	u64_t physid;
-	time_t internal_date;
-	int *internal_date_gmtoff;
-	GString *envelope_recipient;
-	enum DBMAIL_MESSAGE_CLASS klass;
-	GByteArray *raw;
-	GMimeObject *content;
-	GRelation *headers;
-	GHashTable *header_dict;
-	GTree *header_name;
-	GTree *header_value;
-	gchar *charset;
-	int part_key;
-	int part_depth;
-	int part_order;
-};
-
 /*
  * initializers
  */

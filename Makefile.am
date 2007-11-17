@@ -43,13 +43,13 @@ sbin_PROGRAMS = dbmail-smtp \
 COMMON = dbmail-user.c \
 	dbmail-message.c \
 	dbmail-mailbox.c \
-	config.c \
-	debug.c \
+	dm_config.c \
+	dm_debug.c \
 	dm_list.c \
-	db.c \
-	acl.c \
-	misc.c \
-	pidfile.c \
+	dm_db.c \
+	dm_acl.c \
+	dm_misc.c \
+	dm_pidfile.c \
 	dm_md5.c \
 	dm_sha1.c \
 	dm_match.c \
@@ -59,17 +59,22 @@ COMMON = dbmail-user.c \
 SERVER = server.c \
 	serverchild.c \
 	serverparent.c \
-	pool.c \
+	serverpool.c \
 	dm_cidr.c
 	
-DELIVER = pipe.c \
-	dsn.c \
+DELIVER = dm_pipe.c \
+	dm_dsn.c \
 	sort.c
 
 MODULES = dbmodule.c \
 	authmodule.c \
 	sortmodule.c
 
+IMAPD = dm_quota.c \
+	dm_memblock.c \
+	imap4.c \
+	imapcommands.c \
+	dbmail-imapsession.c
 
 AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 
@@ -82,7 +87,7 @@ dbmail_smtp_LDADD = libdbmail.la
 dbmail_pop3d_SOURCES = pop3.c pop3d.c
 dbmail_pop3d_LDADD = libdbmail.la
 
-dbmail_imapd_SOURCES = quota.c imap4.c imapcommands.c memblock.c imapd.c dbmail-imapsession.c
+dbmail_imapd_SOURCES = $(IMAPD) imapd.c 
 dbmail_imapd_LDADD = libdbmail.la
 
 dbmail_top_SOURCES = top.c
@@ -94,7 +99,7 @@ dbmail_util_LDADD = libdbmail.la
 dbmail_users_SOURCES = user.c
 dbmail_users_LDADD = libdbmail.la
 
-dbmail_export_SOURCES = export.c memblock.c dbmail-imapsession.c
+dbmail_export_SOURCES = export.c dm_memblock.c dbmail-imapsession.c
 dbmail_export_LDADD = libdbmail.la
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
@@ -191,7 +196,7 @@ check_dbmail_mailbox_SOURCES=check_dbmail_mailbox.c
 check_dbmail_mailbox_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_mailbox_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_imapd_SOURCES=quota.c imap4.c imapcommands.c memblock.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
+check_dbmail_imapd_SOURCES=$(IMAPD) check_dbmail_imapd.c
 check_dbmail_imapd_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_imapd_INCLUDES=@CHECK_CFLAGS@
 

@@ -78,29 +78,31 @@
 #include <ldap.h>
 #endif
 
-#include "dm_list.h"
-#include "memblock.h"
 #include "dbmailtypes.h"
-#include "debug.h"
-#include "dsn.h"
-#include "acl.h"
-#include "misc.h"
-#include "pipe.h"
-#include "db.h"
-#include "auth.h"
-#include "sort.h"
+#include "dm_list.h"
+#include "dm_memblock.h"
+#include "dm_debug.h"
+#include "dm_dsn.h"
+#include "dm_acl.h"
+#include "dm_misc.h"
+#include "dm_pipe.h"
 #include "imap4.h"
 #include "imapcommands.h"
 #include "server.h"
 #include "serverchild.h"
 #include "serverparent.h"
-#include "pool.h"
+#include "serverpool.h"
 #include "pop3.h"
-#include "quota.h"
+#include "dm_quota.h"
 #include "lmtp.h"
 
+#include "dm_db.h"
 #include "dbmodule.h"
+
+#include "auth.h"
 #include "authmodule.h"
+
+#include "sort.h"
 #include "sortmodule.h"
 
 #include "dm_md5.h"
@@ -130,6 +132,7 @@
 #include "dbmail-user.h"
 #include "dbmail-mailbox.h"
 #include "dbmail-imapsession.h"
+
 
 #define GETCONFIGVALUE(key, sect, var) \
 	config_get_value(key, sect, var); \
