@@ -214,7 +214,7 @@ typedef struct {
 	u64_t totalmessages; 		/**< number of messages */
 	u64_t virtual_totalmessages;
 
-	struct dm_list messagelst;	/** list of messages */
+	GList *messagelst;		/** list of messages */
 } PopSession_t;
 
 

@@ -870,11 +870,10 @@ GList * auth_get_known_aliases(void)
 
 
 	
-int auth_check_user_ext(const char *address, struct dm_list *userids,
-			struct dm_list *fwds, int checks)
+int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int checks)
 {
 	int occurences = 0;
-	u64_t id;
+	u64_t id, *uid;
 	char *endptr = NULL;
 	char query[AUTH_QUERY_SIZE];
 	char *fields[] = { 
@@ -906,13 +905,14 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 			 * else it could be the first query failure */
 
 			id = strtoull(address, &endptr, 10);
-			if (*endptr == 0) {
-				/* numeric deliver-to --> this is a userid */
+			if (*endptr == 0) { /* numeric deliver-to --> this is a userid */
 				TRACE(TRACE_DEBUG, "adding [%llu] to userids", id);
-				dm_list_nodeadd(userids, &id, sizeof(id));
+				uid = g_new0(u64_t,1);
+				*uid = id;
+				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
 			} else {
 				TRACE(TRACE_DEBUG, "adding [%s] to forwards", address);
-				dm_list_nodeadd(fwds, address, strlen(address) + 1);
+				*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(address));
 			}
 			return 1;
 		} else {

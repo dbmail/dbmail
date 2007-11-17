@@ -37,10 +37,6 @@
 /* syslog */
 #define PNAME "dbmail/smtp"
 
-struct dm_list dsnusers;		/* list of deliver_to_user_t structs */
-struct dm_list users;		/* list of email addresses in message */
-struct element *tmp;
-
 char *configFile = DEFAULT_CONFIG_FILE;
 
 extern db_param_t _db_params;	/* set up database login data */
@@ -93,13 +89,11 @@ int main(int argc, char *argv[])
 	struct DbmailMessage *msg = NULL;
 	char *returnpath = NULL;
 	GList *userlist = NULL;
+	GList *dsnusers = NULL;
 	
 	g_mime_init(0);
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
-
-	dm_list_init(&users);
-	dm_list_init(&dsnusers);
 
 	/* Check for commandline options.
 	 * The initial '-' means that arguments which are not associated
@@ -160,32 +154,24 @@ int main(int argc, char *argv[])
 		case 'u':
 			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to usernames");
 
-			dsnuser_init(&dsnuser);
-			dsnuser.address = g_strdup(optarg);
-			dsnuser.source = BOX_COMMANDLINE;
+			dsnuser = g_new0(deliver_to_user_t,1);
+			dsnuser_init(dsnuser);
+			dsnuser->address = g_strdup(optarg);
+			dsnuser->source = BOX_COMMANDLINE;
 
-			/* Add argument onto the users list. */
-			if (dm_list_nodeadd (&dsnusers, &dsnuser, sizeof(deliver_to_user_t)) == 0) {
-				TRACE(TRACE_ERROR, "out of memory while adding usernames");
-				exitcode = EX_TEMPFAIL;
-				goto freeall;
-			}
+			dsnusers = g_list_prepend(dnsusers, dnsuser);
 
 			break;
 
 		case 'd':
 			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to email addresses");
 
-			dsnuser_init(&dsnuser);
-			dsnuser.address = g_strdup(optarg);
-			dsnuser.source = BOX_COMMANDLINE;
+			dsnuser = g_new0(deliver_to_user_t,1);
+			dsnuser_init(dsnuser);
+			dsnuser->address = g_strdup(optarg);
+			dsnuser->source = BOX_COMMANDLINE;
 
-			/* Add argument onto the users list. */
-			if (dm_list_nodeadd (&dsnusers, &dsnuser, sizeof(deliver_to_user_t)) == 0) {
-				TRACE(TRACE_ERROR, "out of memory while adding email addresses");
-				exitcode = EX_TEMPFAIL;
-				goto freeall;
-			}
+			dnsuers = g_list_prepend(dsnusers, dsnuser);
 
 			break;
 
@@ -302,15 +288,13 @@ int main(int argc, char *argv[])
 
 		/* Loop through the users list, moving the entries into the dsnusers list. */
 		userlist = g_list_first(userlist);
-		while (1) {
-			dsnuser_init(&dsnuser);
-			dsnuser.address = g_strdup((char *) userlist->data);
+		while (userlist) {
+			dsnuser = g_new0(deliver_to_user_t,1);
+			dsnuser_init(dsnuser);
+			dsnuser->address = g_strdup((char *) userlist->data);
+	
+			dsnusers = g_list_prepend(dsnusers, dsnuser);
 
-			if (! dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t))) {
-				TRACE(TRACE_ERROR,"out of memory in dm_list_nodeadd");
-				exitcode = EX_TEMPFAIL;
-				goto freeall;
-			}
 			if (! g_list_next(userlist))
 				break;
 			userlist = g_list_next(userlist);
@@ -321,17 +305,21 @@ int main(int argc, char *argv[])
 	if (deliver_to_mailbox != NULL) {
 		TRACE(TRACE_DEBUG, "setting mailbox for all deliveries to [%s]", deliver_to_mailbox);
 		/* Loop through the dsnusers list, setting the destination mailbox. */
-		for (tmp = dm_list_getstart(&dsnusers); tmp != NULL; tmp = tmp->nextnode) {
-			((deliver_to_user_t *)tmp->data)->mailbox = g_strdup(deliver_to_mailbox);
+		dsnusers = g_list_first(dsnusers);
+		while (dsnusers) {
+			((deliver_to_user_t *)dsnusers->data)->mailbox = g_strdup(deliver_to_mailbox);
 			if (brute_force) {
-				((deliver_to_user_t *)tmp->data)->source = BOX_BRUTEFORCE;
+				((deliver_to_user_t *)dsnusers->data)->source = BOX_BRUTEFORCE;
 			} else {
-				((deliver_to_user_t *)tmp->data)->source = BOX_COMMANDLINE;
+				((deliver_to_user_t *)dsnusers->data)->source = BOX_COMMANDLINE;
 			}
+			if (! g_list_next(dsnusers))
+				break;
+			dsnusers = g_list_next(dsnusers);
 		}
 	}
 
-	if (dsnuser_resolve_list(&dsnusers) == -1) {
+	if (dsnuser_resolve_list(dsnusers) == -1) {
 		TRACE(TRACE_ERROR, "dsnuser_resolve_list failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;
@@ -339,7 +327,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* inserting messages into the database */
-	if (insert_messages(msg, &dsnusers) == -1) {
+	if (insert_messages(msg, dsnusers) == -1) {
 		TRACE(TRACE_ERROR, "insert_messages failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;
@@ -358,7 +346,7 @@ int main(int argc, char *argv[])
 		 * This is an inherently unreasonable process,
 		 * and can lead to repeated attempts to deliver mail
 		 * when just one of several recipients has a problem. */
-		final_dsn.class = dsnuser_worstcase_list(&dsnusers);
+		final_dsn.class = dsnuser_worstcase_list(dsnusers);
 		if (final_dsn.class == 6) /* Hack for DSN_CLASS_QUOTA */
 			set_dsn(&final_dsn, 5, 2, 2);
 		dsn_tostring(final_dsn, &class, &subject, &detail);
@@ -392,10 +380,9 @@ int main(int argc, char *argv[])
 	}
 
 	dbmail_message_free(msg);
-	dsnuser_free_list(&dsnusers);
-	dm_list_free(&users.start);
-	g_free(returnpath);
+	dsnuser_free_list(dsnusers);
 	g_list_destroy(userlist);
+	g_free(returnpath);
 
 	TRACE(TRACE_DEBUG, "program memory free");
 

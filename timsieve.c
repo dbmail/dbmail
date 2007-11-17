@@ -604,26 +604,26 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			break;
 		}
 		
-		struct dm_list scriptlist;
-		struct element *tmp;
+		GList *scriptlist = NULL;
 
 		if (db_get_sievescript_listall (session->useridnr, &scriptlist) < 0) {
 			ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
 		} else {
-			if (dm_list_length(&scriptlist) == 0) {
+			if (g_list_length(scriptlist) == 0) {
 				/* The command hasn't failed, but there aren't any scripts */
 				ci_write((FILE *) stream, "OK \"No scripts found.\"\r\n");
 			} else {
-				tmp = dm_list_getstart(&scriptlist);
-				while (tmp != NULL) {
-					sievescript_info_t *info = (sievescript_info_t *) tmp->data;
+				scriptlist = g_list_first(scriptlist);
+				while (scriptlist) {
+					sievescript_info_t *info = (sievescript_info_t *) scriptlist->data;
 					ci_write((FILE *)stream, "\"%s\"%s\r\n", info->name, (info-> active == 1 ?  " ACTIVE" : ""));
-					tmp = tmp->nextnode;
+					if (! g_list_next(scriptlist))
+						break;
+					scriptlist = g_list_next(scriptlist);
 				}
 				ci_write((FILE *) stream, "OK\r\n");
 			}
-			if (scriptlist.start)
-				dm_list_free(&scriptlist.start);
+			g_list_destroy(scriptlist);
 		}
 		return 1;
 		

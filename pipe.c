@@ -207,28 +207,23 @@ int send_redirect(struct DbmailMessage *message, const char *to, const char *fro
 	return send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 }
 
-int send_forward_list(struct DbmailMessage *message,
-		struct dm_list *targets, const char *from)
+int send_forward_list(struct DbmailMessage *message, GList *targets, const char *from)
 {
 	int result = 0;
-	struct element *target;
 	field_t postmaster;
 
-	TRACE(TRACE_INFO, "delivering to [%ld] external addresses", dm_list_length(targets));
-
 	if (!from) {
-		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
+		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0)
 			TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
-		}
 		if (strlen(postmaster))
 			from = postmaster;
 		else
 			from = DEFAULT_POSTMASTER;
 	}
-
-	target = dm_list_getstart(targets);
-	while (target != NULL) {
-		char *to = (char *)target->data;
+	targets = g_list_first(targets);
+	TRACE(TRACE_INFO, "delivering to [%ld] external addresses", g_list_length(targets));
+	while (target) {
+		char *to = (char *)targets->data;
 
 		if (!to || strlen(to) < 1) {
 			TRACE(TRACE_ERROR, "forwarding address is zero length, message not forwarded.");
@@ -261,8 +256,10 @@ int send_forward_list(struct DbmailMessage *message,
 				result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 			}
 		}
+		if (! g_list_next(targets))
+			break
+		targets = g_list_next(targets);
 
-		target = target->nextnode;
 	}
 
 	return result;
@@ -524,12 +521,10 @@ int store_message_in_blocks(const char *message, u64_t message_size,
  *   - 0 on success
  *   - -1 on full failure
  */
-int insert_messages(struct DbmailMessage *message, 
-		struct dm_list *dsnusers)
+int insert_messages(struct DbmailMessage *message, GList *dsnusers)
 {
 	u64_t bodysize, rfcsize;
 	u64_t tmpid;
-	struct element *element;
 	u64_t msgsize;
 
  	delivery_status_t final_dsn;
@@ -564,56 +559,57 @@ int insert_messages(struct DbmailMessage *message,
 	// before we've started delivering the message.
 
 	/* Loop through the users list. */
-	for (element = dm_list_getstart(dsnusers); element != NULL; element = element->nextnode) {
+	dsnusers = g_list_first(dsnusers);
+	while (dsnusers) {
 		
-		struct element *userid_elem;
+		GList *userids;
+
 		int has_2 = 0, has_4 = 0, has_5 = 0, has_5_2 = 0;
 		
-		deliver_to_user_t *delivery = (deliver_to_user_t *) element->data;
+		deliver_to_user_t *delivery = (deliver_to_user_t *) dsnusers->data;
 		
 		/* Each user may have a list of user_idnr's for local
 		 * delivery. */
-		for (userid_elem = dm_list_getstart(delivery->userids); userid_elem != NULL; userid_elem = userid_elem->nextnode) {
-			u64_t useridnr = *(u64_t *) userid_elem->data;
+		userids = g_list_first(delivery->userids);
+		while (userids) {
+			u64_t useridnr = (u64_t *) userids->data;
 			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%llu]", useridnr);
 
-			switch (sort_and_deliver(message,
-					delivery->address, useridnr,
-					delivery->mailbox, delivery->source)) {
+			switch (sort_and_deliver(message, delivery->address, useridnr, delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
-				/* Indicate success. */
 				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%llu]", useridnr);
 				has_2 = 1;
 				break;
 			case DSN_CLASS_FAIL:
-				/* Indicate permanent failure. */
 				TRACE(TRACE_ERROR, "permanent failure sort_and_deliver for useridnr [%llu]", useridnr);
 				has_5 = 1;
 				break;
 			case DSN_CLASS_QUOTA:
-			/* Indicate over quota. */
 				TRACE(TRACE_MESSAGE, "mailbox over quota, message rejected for useridnr [%llu]", useridnr);
 				has_5_2 = 1;
 				break;
 			case DSN_CLASS_TEMP:
 			default:
-				/* Assume a temporary failure */
 				TRACE(TRACE_ERROR, "unknown temporary failure in sort_and_deliver for useridnr [%llu]", useridnr);
 				has_4 = 1;
 				break;
 			}
 
 			/* Automatic reply and notification */
-			if (execute_auto_ran(message, useridnr) < 0) {
+			if (execute_auto_ran(message, useridnr) < 0)
 				TRACE(TRACE_ERROR, "error in execute_auto_ran(), but continuing delivery normally.");
-			}
-		} /* from: the useridnr for loop */
+
+			if (! g_list_next(userids))
+				break;
+			userids = g_list_next(userids);
+
+		}
 
 		final_dsn.class = dsnuser_worstcase_int(has_2, has_4, has_5, has_5_2);
 		switch (final_dsn.class) {
 		case DSN_CLASS_OK:
 			/* Success. Address related. Valid. */
-			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
+			set_dsn(delivery->dsn, DSN_CLASS_OK, 1, 5);
 			break;
 		case DSN_CLASS_TEMP:
 			/* sort_and_deliver returns TEMP is useridnr is 0, aka,
@@ -621,19 +617,19 @@ int insert_messages(struct DbmailMessage *message,
 
 			/* If there's a problem with the delivery address, but
 			 * there are proper forwarding addresses, we're OK. */
-			if (dm_list_length(delivery->forwards) > 0) {
+			if (g_list_length(delivery->forwards) > 0) {
 				/* Success. Address related. Valid. */
-				set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
+				set_dsn(delivery->dsn, DSN_CLASS_OK, 1, 5);
 				break;
 			}
 			/* Fall through to FAIL. */
 		case DSN_CLASS_FAIL:
 			/* Permanent failure. Address related. Does not exist. */
-			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 1, 1);
+			set_dsn(delivery->dsn, DSN_CLASS_FAIL, 1, 1);
 			break;
 		case DSN_CLASS_QUOTA:
 			/* Permanent failure. Mailbox related. Over quota limit. */
-			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 2, 2);
+			set_dsn(delivery->dsn, DSN_CLASS_FAIL, 2, 2);
 			break;
 		case DSN_CLASS_NONE:
 			/* Leave the DSN status at whatever dsnuser_resolve set it at. */
@@ -641,23 +637,23 @@ int insert_messages(struct DbmailMessage *message,
 		}
 
 		TRACE(TRACE_DEBUG, "deliver [%ld] messages to external addresses",
-			dm_list_length(delivery->forwards));
+			g_list_length(delivery->forwards));
 
 		/* Each user may also have a list of external forwarding addresses. */
-		if (dm_list_length(delivery->forwards) > 0) {
+		if (g_list_length(delivery->forwards) > 0) {
 
 			TRACE(TRACE_DEBUG, "delivering to external addresses");
+			const char *from = dbmail_message_get_header(message, "Return-Path");
 
 			/* Forward using the temporary stored message. */
-			if (send_forward_list(message, delivery->forwards,
-					dbmail_message_get_header(message, "Return-Path")) < 0) {
+			if (send_forward_list(message, delivery->forwards, from) < 0) {
 				/* If forward fails, tell the sender that we're
 				 * having a transient error. They'll resend. */
 				TRACE(TRACE_MESSAGE, "forwaring failed, reporting transient error.");
-				set_dsn(&delivery->dsn, DSN_CLASS_TEMP, 1, 1);
+				set_dsn(delivery->dsn, DSN_CLASS_TEMP, 1, 1);
 			}
 		}
-	}			/* from: the delivery for loop */
+	}
 
 	/* Always delete the temporary message, even if the delivery failed.
 	 * It is the MTA's job to requeue or bounce the message,

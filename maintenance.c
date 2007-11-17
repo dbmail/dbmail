@@ -371,16 +371,13 @@ GList *find_dangling_aliases(const char * const name)
 {
 	int result;
 	char *username;
-	struct dm_list uids;
-	struct dm_list fwds;
-	GList *userids = NULL;
+	GList *uids = NULL;
+	GList *fwds = NULL;
 	GList *dangling = NULL;
 
 	/* For each alias, figure out if it resolves to a valid user
 	 * or some forwarding address. If neither, remove it. */
 
-	dm_list_init(&fwds);
-	dm_list_init(&uids);
 	result = auth_check_user_ext(name,&uids,&fwds,0);
 	
 	if (!result) {
@@ -389,19 +386,15 @@ GList *find_dangling_aliases(const char * const name)
 		return dangling;
 	}
 
-	if (dm_list_getstart(&uids))
-		userids = g_list_copy_list(userids,dm_list_getstart(&uids));
-
-	userids = g_list_first(userids);
-	while (userids) {
-		username = auth_get_userid(*(u64_t *)userids->data);
-		if (!username) {
+	uids = g_list_first(uids);
+	while (uids) {
+		username = auth_get_userid(*(u64_t *)uids->data);
+		if (!username)
 			dangling = g_list_prepend(dangling, userids->data);
-		}
 		g_free(username);
-		if (! g_list_next(userids))
+		if (! g_list_next(uids))
 			break;
-		userids = g_list_next(userids);
+		uids = g_list_next(uids);
 	}
 
 	return dangling;

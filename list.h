@@ -27,31 +27,6 @@
 #include <glib.h>
 #include <sys/types.h>
 
-/*
- * list data types
- */
-struct element {
-	void *data;
-	size_t dsize;
-	struct element *nextnode;
-};
-
-
-struct dm_list {
-	struct element *start;
-	long total_nodes;
-};
-
-
-void dm_list_init(struct dm_list *tlist);
-void dm_list_free(struct element **start);
-long dm_list_length(struct dm_list *tlist);
-
-struct element *dm_list_nodeadd(struct dm_list *tlist, const void *data, size_t dsize);
-struct element *dm_list_getstart(struct dm_list *tlist);
-struct element *dm_list_reverse(struct element *start);
-
-GList * g_list_copy_list(GList *dst, struct element *el);
 GList *g_list_slices(GList *list, unsigned limit);
 GList *g_list_slices_u64(GList *list, unsigned limit);
 GList *g_list_dedup(GList *list);

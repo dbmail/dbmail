@@ -592,23 +592,22 @@ int do_remove(u64_t user_idnr, char *name)
 
 int do_list(u64_t user_idnr)
 {
-	struct dm_list scriptlist;
-	struct element *tmp;
+	GList *scriptlist = NULL;
 
 	if (db_get_sievescript_listall(user_idnr, &scriptlist) < 0) {
 		qerrorf("Error retrieving Sieve script list.\n");
 		return -1;
 	}
 
-	if (dm_list_length(&scriptlist) > 0) {
+	if (g_list_length(scriptlist) > 0) {
 		printf("Found %ld scripts:\n",
-		       dm_list_length(&scriptlist));
+		       g_list_length(&scriptlist));
 	} else
 		qprintf("No scripts found!\n");
 
-	tmp = dm_list_getstart(&scriptlist);
-	while (tmp) {
-		sievescript_info_t *info = (sievescript_info_t *) tmp->data;
+	scriptlist = g_list_first(scriptlist);
+	while (scriptlist) {
+		sievescript_info_t *info = (sievescript_info_t *) scriptlist->data;
 		if (info->active == 1)
 			printf("  + ");
 		else
@@ -616,11 +615,13 @@ int do_list(u64_t user_idnr)
 		printf("%s\n", info->name);
 
 		g_free(info->name);
-		tmp = tmp->nextnode;
+		
+		if (! g_list_next(scriptlist))
+			break;
+		scriptlist = g_list_next(scriptlist);
 	}
 
-	if (scriptlist.start)
-		dm_list_free(&scriptlist.start);
+	g_list_destroy(scriptlist);
 
 	return 0;
 }

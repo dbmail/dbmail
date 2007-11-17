@@ -384,14 +384,13 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname);
 /**
  * \brief get a list of sieve scripts for a user
  * \param user_idnr user id
- * \param scriptlist pointer to struct dm_list that will hold script names
+ * \param scriptlist pointer to GList ** that will hold script names
  * \return
  *        - -2 on failure of allocating memory for string
  *        - -1 on database failure
  *        - 0 on success
- * \attention caller should free the struct dm_list and its contents
  */
-int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist);
+int db_get_sievescript_listall(u64_t user_idnr, GList **scriptlist);
 /**
  * \brief rename a sieve script for a user
  * \param user_idnr user id
@@ -1269,8 +1268,7 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid);
  *     -  1 on success
  * \note identifier_list needs to be empty on call.
  */
-int db_acl_get_identifier(u64_t mboxid, 
-			  /*@out@*/ struct dm_list *identifier_list);
+int db_acl_get_identifier(u64_t mboxid, /*@out@*/ GList  **identifier_list);
 /**
  * constructs a string for use in queries. This is used to not be dependent
  * on the internal representation of a date in the database. Whenever the

@@ -590,26 +590,17 @@ static void show_alias(const char * const name, int concise)
 {
 	int result;
 	char *username;
-	struct dm_list uids;
-	struct dm_list fwds;
 	GList *userids = NULL;
 	GList *forwards = NULL;
 
 	/* not a user, search aliases */
-	dm_list_init(&fwds);
-	dm_list_init(&uids);
-	result = auth_check_user_ext(name,&uids,&fwds,0);
+	result = auth_check_user_ext(name,&userids,&forwards,0);
 	
 	if (!result) {
 		qerrorf("Nothing found searching for [%s].\n", name);
 		return;
 	}
 
-	if (dm_list_getstart(&uids))
-		userids = g_list_copy_list(userids,dm_list_getstart(&uids));
-	if (dm_list_getstart(&fwds))
-		forwards = g_list_copy_list(forwards,dm_list_getstart(&fwds));
-	
 	if (forwards) {
 		if (concise) {
 			GString *fwdlist = g_list_join(forwards,",");

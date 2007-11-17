@@ -187,17 +187,8 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 	dsnuser->mailbox = NULL;
 	dsnuser->source = BOX_NONE;
 
-	dsnuser->userids = g_new0(struct dm_list, 1);
-	if (dsnuser->userids == NULL)
-		return -1;
-	dsnuser->forwards = g_new0(struct dm_list, 1);
-	if (dsnuser->forwards == NULL) {
-		g_free(dsnuser->userids);
-		return -1;
-	}
-
-	dm_list_init(dsnuser->userids);
-	dm_list_init(dsnuser->forwards);
+	dsnuser->userids = NULL;
+	dsnuser->forwards = NULL;
 
 	TRACE(TRACE_DEBUG, "dsnuser initialized");
 	return 0;
@@ -212,20 +203,13 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	dsnuser->dsn.detail = 0;
 	dsnuser->source = BOX_NONE;
 
-	dm_list_free(&dsnuser->userids->start);
-	dm_list_free(&dsnuser->forwards->start);
-
-	if (dsnuser->userids)	
-		g_free(dsnuser->userids);
-	if (dsnuser->forwards)
-		g_free(dsnuser->forwards);
+	g_list_destroy(dsnuser->userids);
+	g_list_destroy(dsnuser->forwards);
 
 	dsnuser->address = NULL;
-       if (dsnuser->mailbox)
-               g_free(dsnuser->mailbox); //allocated by dbmail-smtp main.c line ~ 319 g_strdup
+	if (dsnuser->mailbox)
+               g_free(dsnuser->mailbox);
 	dsnuser->mailbox = NULL;
-	dsnuser->userids = NULL;
-	dsnuser->forwards = NULL;
 	
 	TRACE(TRACE_DEBUG, "dsnuser freed");
 }
@@ -245,9 +229,7 @@ static int address_has_alias(deliver_to_user_t *delivery)
 	if (!delivery->address)
 		return 0;
 
-	alias_count = auth_check_user_ext(delivery->address,
-				delivery->userids,
-				delivery->forwards, 0);
+	alias_count = auth_check_user_ext(delivery->address, &delivery->userids, &delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases", delivery->address, alias_count);
 
 	if (alias_count > 0)
@@ -288,7 +270,7 @@ static int address_has_alias_mailbox(deliver_to_user_t *delivery)
 static int address_is_username_mailbox(deliver_to_user_t *delivery)
 {
 	int user_exists;
-	u64_t userid;
+	u64_t userid, *uid;
 	char *newaddress;
 	size_t newaddress_len, zapped_len;
 
@@ -315,11 +297,9 @@ static int address_is_username_mailbox(deliver_to_user_t *delivery)
 		return 0;
 	}
 
-	if (dm_list_nodeadd(delivery->userids, &userid, sizeof(u64_t)) == 0) {
-		TRACE(TRACE_ERROR, "out of memory");
-		g_free(newaddress);
-		return -1;
-	}
+	uid = g_new0(u64_t,1);
+	*uid = userid;
+	delivery->userids = g_list_prepend(delivery->userids, uid);
 
 	TRACE(TRACE_DEBUG, "added user [%s] id [%llu] to delivery list", newaddress, userid);
 
@@ -330,7 +310,7 @@ static int address_is_username_mailbox(deliver_to_user_t *delivery)
 static int address_is_username(deliver_to_user_t *delivery)
 {
 	int user_exists;
-	u64_t userid;
+	u64_t userid, *uid;
 
 	if (!delivery->address)
 		return 0;
@@ -349,10 +329,9 @@ static int address_is_username(deliver_to_user_t *delivery)
 		return 0;
 	}
 
-	if (dm_list_nodeadd(delivery->userids, &userid, sizeof(u64_t)) == 0) {
-		TRACE(TRACE_ERROR, "out of memory");
-		return -1;
-	}
+	uid = g_new0(u64_t,1);
+	*uid = userid;
+	delivery->userids = g_list_prepend(delivery->userids, uid);
 
 	TRACE(TRACE_DEBUG, "added user [%s] id [%llu] to delivery list", delivery->address, userid);
 
@@ -382,8 +361,7 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 		TRACE(TRACE_DEBUG, "domain [%s] checking for domain forwards", my_domain);
         
 		/* Checking for domain aliases */
-		domain_count = auth_check_user_ext(my_domain, delivery->userids,
-				delivery->forwards, 0);
+		domain_count = auth_check_user_ext(my_domain, &delivery->userids, &delivery->forwards, 0);
         
 		if (domain_count > 0) {
 			/* This is the way to succeed out. */
@@ -417,12 +395,9 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 	}
 
 	TRACE(TRACE_DEBUG, "domain [%s] found total of [%d] aliases", my_domain, domain_count);
-
 	g_free(my_domain);
-
-	if (domain_count > 0) {
+	if (domain_count > 0)
 		return 1;
-	}
 
 	return 0;
 }
@@ -440,9 +415,8 @@ static int address_is_userpart_catchall(deliver_to_user_t *delivery)
 
 	userpartcut = strchr(userpart, '@');
 
-	if (userpartcut == NULL) {
+	if (userpartcut == NULL)
 		return 0;
-	}
 
 	/* Stomp _after_ the @-sign. */
 	*(userpartcut + 1) = '\0';
@@ -450,26 +424,25 @@ static int address_is_userpart_catchall(deliver_to_user_t *delivery)
 	TRACE(TRACE_DEBUG, "userpart [%s] checking for userpart forwards", userpart);
 
 	/* Checking for userpart aliases */
-	userpart_count = auth_check_user_ext(userpart, delivery->userids,
-			delivery->forwards, 0);
+	userpart_count = auth_check_user_ext(userpart, &delivery->userids, &delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "userpart [%s] found total of [%d] aliases", userpart, userpart_count);
 
-	if (userpart_count == 0) {
+	if (userpart_count == 0)
 		return 0;
-	}
 
 	return 1;
 }
 
-void dsnuser_free_list(struct dm_list *deliveries)
+void dsnuser_free_list(GList *deliveries)
 {
-	struct element *tmp;
-
-	for (tmp = dm_list_getstart(deliveries); tmp != NULL;
-	     tmp = tmp->nextnode)
-		dsnuser_free((deliver_to_user_t *) tmp->data);
-
-	dm_list_free(&deliveries->start);
+	deliveries = g_list_first(deliveries);
+	while (deliveries) {
+		dsnuser_free((deliver_to_user_t *) deliveries->data);
+		if (! g_list_next(deliveries))
+			break;
+		deliveries = g_list_next(deliveries);
+	}
+	g_list_free(g_list_first(deliveries));
 }
 
 dsn_class_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
@@ -485,38 +458,37 @@ dsn_class_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
 	return DSN_CLASS_NONE;
 }
 
-dsn_class_t dsnuser_worstcase_list(struct dm_list * deliveries)
+dsn_class_t dsnuser_worstcase_list(GList *deliveries)
 {
 	delivery_status_t dsn;
 	struct element *tmp;
 	int ok = 0, temp = 0, fail = 0, fail_quota = 0;
-	
 
+	deliveries = g_list_first(deliveries);
+	
 	/* Get one reasonable error code for everyone. */
-	for (tmp = dm_list_getstart(deliveries); tmp != NULL;
-	     tmp = tmp->nextnode) {
-		dsn = ((deliver_to_user_t *) tmp->data)->dsn;
+	while (deliveries) {
+		dsn = ((deliver_to_user_t *) deliveries->data)->dsn;
 		switch (dsn.class) {
-		case DSN_CLASS_OK:
-			/* Success. */
+		case DSN_CLASS_OK:	/* Success. */
 			ok = 1;
 			break;
-		case DSN_CLASS_TEMP:
-			/* Temporary transient failure. */
+		case DSN_CLASS_TEMP:	/* Temporary transient failure. */
 			temp = 1;
 			break;
 		case DSN_CLASS_FAIL:
-		case DSN_CLASS_QUOTA:
-			/* Permanent failure. */
+		case DSN_CLASS_QUOTA:	/* Permanent failure. */
 			if (dsn.subject == 2)
 				fail_quota = 1;
 			else
 				fail = 1;
 			break;
-		case DSN_CLASS_NONE:
-			/* Nothing doing. */
+		case DSN_CLASS_NONE:	/* Nothing doing. */
 			break;
 		}
+		if (! g_list_next(deliveries))
+			break;
+		deliveries = g_list_next(deliveries);
 	}
 
 	/* If we never made it into the list, all zeroes will
@@ -524,17 +496,19 @@ dsn_class_t dsnuser_worstcase_list(struct dm_list * deliveries)
 	return dsnuser_worstcase_int(ok, temp, fail, fail_quota);
 }
 
-int dsnuser_resolve_list(struct dm_list *deliveries)
+int dsnuser_resolve_list(GList *deliveries)
 {
 	int ret;
-	struct element *element;
+
+	deliveries = g_list_first(deliveries);
 
 	/* Loop through the users list */
-	for (element = dm_list_getstart(deliveries); element != NULL;
-	     element = element->nextnode) {
-		if ((ret = dsnuser_resolve((deliver_to_user_t *) element->data)) != 0) {
+	while (deliveries) {
+		if ((ret = dsnuser_resolve((deliver_to_user_t *) deliveries->data)) != 0)
 			return ret;
-		}
+		if (! g_list_next(deliveries))
+			break;
+		deliveries = g_list_next(deliveries);
 	}
 
 	return 0;
@@ -542,6 +516,7 @@ int dsnuser_resolve_list(struct dm_list *deliveries)
 
 int dsnuser_resolve(deliver_to_user_t *delivery)
 {
+	u64_t *uid;
 	/* If the userid is already set, then we're doing direct-to-userid.
 	 * We just want to make sure that the userid actually exists... */
 	if (delivery->useridnr != 0) {
@@ -561,11 +536,9 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 			break;
 		case 0:
 			/* Copy the delivery useridnr into the userids list. */
-			if (dm_list_nodeadd(delivery->userids, &delivery->useridnr,
-			     sizeof(delivery->useridnr)) == 0) {
-				TRACE(TRACE_ERROR, "out of memory");
-				return -1;
-			}
+			uid = g_new0(u64_t,1);
+			*uid = delivery->useridnr;
+			delivery->userids = g_list_prepend(delivery->userids, uid);
 
 			/* Success. Address related. Valid. */
 			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);

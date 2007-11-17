@@ -720,14 +720,13 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
 	return DM_SUCCESS;
 }
 
-int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
+int db_get_sievescript_listall(u64_t user_idnr, GList **scriptlist)
 {
 	int i, n;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
 
-	dm_list_init(scriptlist);
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT name,active FROM %ssievescripts WHERE "
 		"owner_idnr = %llu",
@@ -740,12 +739,12 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 	}
 
 	for (i = 0, n = db_num_rows(); i < n; i++) {
-		struct ssinfo info;
+		struct ssinfo *info = g_new0(struct ssinfo,1);
 
-		info.name = g_strdup(db_get_result(i, 0));   
-		info.active = db_get_result_int(i, 1);
+		info->name = g_strdup(db_get_result(i, 0));   
+		info->active = db_get_result_int(i, 1);
 
-		dm_list_nodeadd(scriptlist, &info, sizeof(struct ssinfo));	
+		*(GList **)scriptlist = g_list_prepend(*(GList **)scriptlist, info);
 	}
 
 	db_free_result();
@@ -2253,16 +2252,13 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 
 int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 {
-	struct message tmpmessage;
+	struct message *tmpmessage;
 	int message_counter = 0;
 	unsigned i;
 	const char *query_result;
 	u64_t mailbox_idnr;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
-
-	dm_list_init(&session_ptr->messagelst);
 
 	if (db_find_create_mailbox("INBOX", BOX_DEFAULT, user_idnr, &mailbox_idnr) < 0) {
 		TRACE(TRACE_MESSAGE, "find_create INBOX for user [%llu] failed, exiting..", user_idnr);
@@ -2304,27 +2300,28 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	/* filling the list */
 	TRACE(TRACE_DEBUG, "adding items to list");
 	for (i = 0; i < db_num_rows(); i++) {
+		tmpmessage = g_new0(struct message,1);
 		/* message size */
-		tmpmessage.msize = db_get_result_u64(i, 0);
+		tmpmessage->msize = db_get_result_u64(i, 0);
 		/* real message id */
-		tmpmessage.realmessageid = db_get_result_u64(i, 1);
+		tmpmessage->realmessageid = db_get_result_u64(i, 1);
 		/* message status */
-		tmpmessage.messagestatus = db_get_result_u64(i, 2);
+		tmpmessage->messagestatus = db_get_result_u64(i, 2);
 		/* virtual message status */
-		tmpmessage.virtual_messagestatus =
-		    tmpmessage.messagestatus;
+		tmpmessage->virtual_messagestatus = tmpmessage.messagestatus;
 		/* unique id */
 		query_result = db_get_result(i, 3);
 		if (query_result)
-			strncpy(tmpmessage.uidl, query_result, UID_SIZE);
+			strncpy(tmpmessage>uidl, query_result, UID_SIZE);
 
 		session_ptr->totalmessages++;
 		session_ptr->totalsize += tmpmessage.msize;
 		/* descending to create inverted list */
 		message_counter--;
-		tmpmessage.messageid = (u64_t) message_counter;
-		dm_list_nodeadd(&session_ptr->messagelst, &tmpmessage,
-			     sizeof(tmpmessage));
+		tmpmessage->messageid = (u64_t) message_counter;
+
+		session_ptr->messagelst = g_list_prepend(session_ptr->messagelst, tmpmessage);
+
 	}
 
 	TRACE(TRACE_DEBUG, "adding succesful");
@@ -2346,45 +2343,40 @@ void db_session_cleanup(PopSession_t * session_ptr)
 	session_ptr->virtual_totalsize = 0;
 	session_ptr->totalmessages = 0;
 	session_ptr->virtual_totalmessages = 0;
-	dm_list_free(&(session_ptr->messagelst.start));
+	g_list_destroy(session_ptr->messagelst);
 }
 
 int db_update_pop(PopSession_t * session_ptr)
 {
-	struct element *tmpelement;
+	GList *messagelst;
 	u64_t user_idnr = 0;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
 	/* get first element in list */
-	tmpelement = dm_list_getstart(&session_ptr->messagelst);
+	messagelst = g_list_first(session_ptr->messagelst);
 
-	while (tmpelement != NULL) {
+	while (messagelst) {
 		/* check if they need an update in the database */
-		if (((struct message *) tmpelement->data)->
-		    virtual_messagestatus !=
-		    ((struct message *) tmpelement->data)->messagestatus) {
-			/* use one message to get the user_idnr that goes with the
-			   messages */
+		struct message *msg = (struct message *)messagelst->data;
+		if (msg->virtual_messagestatus != msg->messagestatus) {
+			/* use one message to get the user_idnr that goes with the messages */
 			if (user_idnr == 0)
-				user_idnr =
-				    db_get_useridnr(((struct message *)
-						     tmpelement->data)->
-						    realmessageid);
+				user_idnr = db_get_useridnr(msg->realmessageid);
 
 			/* yes they need an update, do the query */
 			snprintf(query, DEF_QUERYSIZE,
 				 "UPDATE %smessages set status=%d WHERE "
 				 "message_idnr=%llu AND status < %d",DBPFX,
-				 ((struct message *)
-				  tmpelement->data)->virtual_messagestatus,
-				 ((struct message *) tmpelement->data)->
-				 realmessageid, MESSAGE_STATUS_DELETE);
+				 msg->virtual_messagestatus,
+				 msg->realmessageid, MESSAGE_STATUS_DELETE);
 
 			if (db_query(query) == DM_EQUERY)
 				return DM_EQUERY;
 		}
-		tmpelement = tmpelement->nextnode;
+		if (! g_list_next(messagelst))
+			break;
+		messagelst = g_list_next(messagelst);
 	}
 
 	/* because the status of some messages might have changed (for instance
@@ -4550,17 +4542,12 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid)
 	return DM_EGENERAL;
 }
 
-int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
+int db_acl_get_identifier(u64_t mboxid, GList **identifier_list)
 {
 	unsigned i, n;
 	const char *result_string;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
-
-
-	assert(identifier_list != NULL);
-
-	dm_list_init(identifier_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %susers.userid FROM %susers, %sacl "
@@ -4577,13 +4564,12 @@ int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
 
 	n = db_num_rows();
 	for (i = 0; i < n; i++) {
-		result_string = db_get_result(i, 0);
-		if (!result_string || !dm_list_nodeadd(identifier_list, result_string, strlen(result_string) + 1)) {
+		if (! (result_string = db_get_result(i, 0))) {
 			db_free_result();
 			return -2;
 		}
-		TRACE(TRACE_DEBUG, "added [%s] to identifier list",
-		      result_string);
+		*(GList **)identifier_list = g_list_prepend(*(GList **)identifier_list, g_strdup(result_string));
+		TRACE(TRACE_DEBUG, "added [%s] to identifier list", result_string);
 	}
 	db_free_result();
 	return DM_EGENERAL;

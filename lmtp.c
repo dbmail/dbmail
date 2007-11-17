@@ -39,9 +39,6 @@
 
 extern volatile sig_atomic_t alarm_occured;
 
-/* These are needed across multiple calls to lmtp() */
-static struct dm_list from, rcpt;
-
 /* allowed lmtp commands */
 static const char *const commands[] = {
 	"LHLO", "QUIT", "RSET", "DATA", "MAIL",

@@ -143,8 +143,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	{ return auth->getmaxmailsize(user_idnr, maxmail_size); }
 char *auth_getencryption(u64_t user_idnr)
 	{ return auth->getencryption(user_idnr); }
-int auth_check_user_ext(const char *username, struct dm_list *userids,
-		struct dm_list *fwds, int checks)
+int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int checks)
 	{ return auth->check_user_ext(username, userids, fwds, checks); }
 int auth_adduser(const char *username, const char *password, const char *enctype,
 		u64_t clientid, u64_t maxmail, u64_t * user_idnr)

@@ -201,13 +201,13 @@ char *auth_getencryption(u64_t user_idnr)
 	return __auth_encryption_desc_string;
 }
 
-int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm_list *fwds, int checks)
+int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int checks)
 {
 	int occurences = 0;
 	void *saveres;
 	u64_t counter;
 	char *endptr;
-	u64_t id;
+	u64_t id, *uid;
 	unsigned num_rows;
 	char *escaped_username;
 
@@ -251,13 +251,15 @@ int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm
 			 * else it could be the first query failure */
 			id = strtoull(username, &endptr, 10);
 
-			if (*endptr == 0)
-				dm_list_nodeadd(userids, &id, sizeof(id));
-			/* numeric deliver-to --> this is a userid */
-			else
-				dm_list_nodeadd(fwds, username,
-					     strlen(username) + 1);
+			if (*endptr == 0) {
+				/* numeric deliver-to --> this is a userid */
+				uid = g_new0(u64_t,1);
+				*uid = id;
+				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
 
+			} else {
+				*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(username));
+			}
 			TRACE(TRACE_DEBUG, "adding [%s] to deliver_to address", username);
 			db_free_result();
 			db_set_result_set(saveres);
