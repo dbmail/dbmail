@@ -23,6 +23,20 @@
  * functions to create lists and add/delete items */
 
 #include "dbmail.h"
+
+
+void g_list_destroy(GList *l)
+{
+	l = g_list_first(l);
+	g_list_foreach(l,(GFunc)g_free,NULL);
+
+	l = g_list_first(l);
+	g_list_free(l);
+}
+
+
+
+
 /*
  * return a list of strings (a,b,c,..N)
  */
@@ -83,7 +97,7 @@ GList *g_list_slices_u64(GList *list, unsigned limit)
 	return new;
 }
 
-GList *g_list_dedup_func(GList *list, GCompareFunc compare_func, int freeitems)
+GList *g_list_dedup(GList *list, GCompareFunc compare_func, int freeitems)
 {
 	char *lastdata = NULL;
 
@@ -104,15 +118,107 @@ GList *g_list_dedup_func(GList *list, GCompareFunc compare_func, int freeitems)
 	return g_list_first(list);
 }
 
-/* Given a _sorted_ list of _char *_ entries, removes duplicates and frees them. */
-GList *g_list_dedup(GList *list)
+GString * g_list_join(GList * list, const gchar * sep)
 {
-	return g_list_dedup_func(list, (GCompareFunc)strcmp, TRUE);
+	GString *string = g_string_new("");
+	if (sep == NULL)
+		sep="";
+	if (list == NULL)
+		return string;
+	list = g_list_first(list);
+	g_string_append_printf(string,"%s",(gchar *)list->data);
+	while((list = g_list_next(list))) {
+		g_string_append_printf(string,"%s%s", sep,(gchar *)list->data);
+		if (! g_list_next(list))
+			break;
+	}
+	return string;	
+}
+GString * g_list_join_u64(GList * list, const gchar * sep)
+{
+	u64_t *token;
+	GString *string = g_string_new("");
+	if (sep == NULL)
+		sep="";
+	if (list == NULL)
+		return string;
+	list = g_list_first(list);
+	token = (u64_t*)list->data;
+	g_string_append_printf(string,"%llu",*token);
+	while((list = g_list_next(list))) {
+		token = (u64_t*)list->data;
+		g_string_append_printf(string,"%s%llu", sep,*token);
+		if (! g_list_next(list))
+			break;
+	}
+	return string;	
 }
 
-/* Given a _sorted_ list of pointers to u64's, removes duplicates and frees the pointers to them. */
-GList *g_list_dedup_u64_p(GList *list)
+/*
+ * append a formatted string to a GList
+ */
+GList * g_list_append_printf(GList * list, const char * format, ...)
 {
-	return g_list_dedup_func(list, (GCompareFunc)ucmp, TRUE);
+	va_list argp;
+	va_start(argp, format);
+	list = g_list_append(list, g_strdup_vprintf(format, argp));
+	va_end(argp);
+	return list;
 }
+
+
+/*
+ * a and b are lists of char keys
+ * matching is done using func
+ * for each key in b, keys are copied into or removed from a and freed
+ */
+
+void g_list_merge(GList **a, GList *b, int condition, GCompareFunc func)
+{
+	gchar *t;
+
+	b = g_list_first(b);
+
+	if (condition == IMAPFA_ADD) {
+		while (b) {
+			t = (gchar *)b->data;
+			if (! g_list_find_custom(*(GList **)a, t, (GCompareFunc)func))
+				*(GList **)a = g_list_append(*(GList **)a, g_strdup(t));
+			if (! g_list_next(b))
+				break;
+			b = g_list_next(b);
+		}
+	}
+	if (condition == IMAPFA_REMOVE) {
+		GList *el = NULL;
+
+		while (b) {
+			*(GList **)a = g_list_first(*(GList **)a);
+			t = (gchar *)b->data;
+			if ((el = g_list_find_custom(*(GList **)a, t, (GCompareFunc)func)) != NULL) {
+				*(GList **)a = g_list_remove_link(*(GList **)a, el);
+				g_list_destroy(el);
+			}
+
+			if (! g_list_next(b))
+				break;
+			b = g_list_next(b);
+		}
+	}
+	if (condition == IMAPFA_REPLACE) {
+		g_list_destroy(*(GList **)a);
+		*(GList **)a = NULL;
+
+		while (b) {
+			t = (gchar *)b->data;
+			*(GList **)a = g_list_append(*(GList **)a, g_strdup(t));
+			if (! g_list_next(b))
+				break;
+			b = g_list_next(b);
+		}
+	}
+
+
+}
+
 

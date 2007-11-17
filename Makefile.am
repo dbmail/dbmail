@@ -45,7 +45,7 @@ COMMON = dbmail-user.c \
 	dbmail-mailbox.c \
 	config.c \
 	debug.c \
-	list.c \
+	dm_list.c \
 	db.c \
 	acl.c \
 	misc.c \

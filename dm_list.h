@@ -29,6 +29,14 @@
 
 GList *g_list_slices(GList *list, unsigned limit);
 GList *g_list_slices_u64(GList *list, unsigned limit);
-GList *g_list_dedup(GList *list);
+GList *g_list_dedup(GList *list, GCompareFunc compare_func, int freeitems);
+
+GString * g_list_join(GList * list, const gchar * sep);
+GString * g_list_join_u64(GList * list, const gchar * sep);
+GList * g_list_append_printf(GList * list, const char * format, ...);
+
+void g_list_destroy(GList *list);
+void g_list_merge(GList **a, GList *b, int condition, GCompareFunc func);
+
 
 #endif

@@ -558,7 +558,7 @@ int do_show(const char * const name)
 
 		/* show all aliases with forwarding addresses */
 		aliases = auth_get_known_aliases();
-		aliases = g_list_dedup(aliases);
+		aliases = g_list_dedup(aliases, (GCompareFunc)strcmp, TRUE);
 		if (g_list_length(aliases) > 0) {
 			aliases = g_list_first(aliases);
 			while (aliases) {

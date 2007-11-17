@@ -87,7 +87,7 @@ START_TEST(test_dbmail_list_dedup)
 
 	g_list_destroy(concat);
 
-	list = g_list_dedup(list);
+	list = g_list_dedup(list, (GCompareFunc)strcmp, TRUE);
 	concat = g_list_slices(list, 100);
 
 	fail_unless(strcmp("qux,baz,bar,foo", concat->data) == 0,

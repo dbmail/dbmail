@@ -103,19 +103,15 @@ int find_bounded(const char * const value, char left, char right,
 int zap_between(const char * const instring, signed char left, signed char right,
 		char **outstring, size_t *outlen, size_t *zaplen);
 
-GString * g_list_join(GList * list, const gchar * sep);
-GString * g_list_join_u64(GList * list, const gchar * sep);
 GList * g_string_split(GString * string, const gchar * sep);
-GList * g_list_append_printf(GList * list, const char * format, ...);
+
 char * g_strcasestr(const char *haystack, const char *needle);
 
 gint ucmp(const u64_t *a, const u64_t *b);
-void g_list_destroy(GList *list);
 GList * g_tree_keys(GTree *tree);
 GList * g_tree_values(GTree *tree);
 void tree_dump(GTree *t);
 int g_tree_merge(GTree *a, GTree *b, int condition);
-void g_list_merge(GList **a, GList *b, int condition, GCompareFunc func);
 	
 char * dm_stresc(const char * from);
 char * dm_strnesc(const char * from, size_t len);
@@ -131,7 +127,6 @@ int dm_sock_score(const char *base, const char *test);
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny);
 int dm_valid_format(const char *str);
 
-GList * g_tree_keys(GTree *tree);
 
 char *date_sql2imap(const char *sqldate);
 char *date_imap2sql(const char *imapdate);

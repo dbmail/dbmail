@@ -413,7 +413,7 @@ int do_dangling_aliases(void)
 		qprintf("\nRemoving aliases with nonexistent delivery userid's...\n");
 
 	aliases = auth_get_known_aliases();
-	aliases = g_list_dedup(aliases);
+	aliases = g_list_dedup(aliases, (GCompareFunc)strcmp, TRUE);
 	aliases = g_list_first(aliases);
 	while (aliases) {
 		char deliver_to[21];

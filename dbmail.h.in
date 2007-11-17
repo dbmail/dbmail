@@ -78,7 +78,7 @@
 #include <ldap.h>
 #endif
 
-#include "list.h"
+#include "dm_list.h"
 #include "memblock.h"
 #include "dbmailtypes.h"
 #include "debug.h"

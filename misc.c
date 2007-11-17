@@ -437,42 +437,6 @@ int zap_between(const char * const instring, signed char left, signed char right
  *
  *
  */
-GString * g_list_join(GList * list, const gchar * sep)
-{
-	GString *string = g_string_new("");
-	if (sep == NULL)
-		sep="";
-	if (list == NULL)
-		return string;
-	list = g_list_first(list);
-	g_string_append_printf(string,"%s",(gchar *)list->data);
-	while((list = g_list_next(list))) {
-		g_string_append_printf(string,"%s%s", sep,(gchar *)list->data);
-		if (! g_list_next(list))
-			break;
-	}
-	return string;	
-}
-GString * g_list_join_u64(GList * list, const gchar * sep)
-{
-	u64_t *token;
-	GString *string = g_string_new("");
-	if (sep == NULL)
-		sep="";
-	if (list == NULL)
-		return string;
-	list = g_list_first(list);
-	token = (u64_t*)list->data;
-	g_string_append_printf(string,"%llu",*token);
-	while((list = g_list_next(list))) {
-		token = (u64_t*)list->data;
-		g_string_append_printf(string,"%s%llu", sep,*token);
-		if (! g_list_next(list))
-			break;
-	}
-	return string;	
-}
-
 
 GList * g_string_split(GString * string, const gchar * sep)
 {
@@ -491,18 +455,6 @@ GList * g_string_split(GString * string, const gchar * sep)
 	g_strfreev(array);
 	return list;
 }
-/*
- * append a formatted string to a GList
- */
-GList * g_list_append_printf(GList * list, const char * format, ...)
-{
-	va_list argp;
-	va_start(argp, format);
-	list = g_list_append(list, g_strdup_vprintf(format, argp));
-	va_end(argp);
-	return list;
-}
-
 char * g_strcasestr(const char *haystack, const char *needle)
 {
 	// Like strstr, but case insensitive.
@@ -1104,16 +1056,6 @@ int num_from_imapdate(const char *date)
 
 	return atoi(datenum);
 }
-
-void g_list_destroy(GList *l)
-{
-	l = g_list_first(l);
-	g_list_foreach(l,(GFunc)g_free,NULL);
-
-	l = g_list_first(l);
-	g_list_free(l);
-}
-
 static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)
 {
 	*(GList **)l = g_list_prepend(*(GList **)l, key);
@@ -1290,61 +1232,6 @@ gint ucmp(const u64_t *a, const u64_t *b)
 		return 0;
 	return -1;
 }
-
-/*
- * a and b are lists of char keys
- * matching is done using func
- * for each key in b, keys are copied into or removed from a and freed
- */
-
-void g_list_merge(GList **a, GList *b, int condition, GCompareFunc func)
-{
-	gchar *t;
-
-	b = g_list_first(b);
-
-	if (condition == IMAPFA_ADD) {
-		while (b) {
-			t = (gchar *)b->data;
-			if (! g_list_find_custom(*(GList **)a, t, (GCompareFunc)func))
-				*(GList **)a = g_list_append(*(GList **)a, g_strdup(t));
-			if (! g_list_next(b))
-				break;
-			b = g_list_next(b);
-		}
-	}
-	if (condition == IMAPFA_REMOVE) {
-		GList *el = NULL;
-
-		while (b) {
-			*(GList **)a = g_list_first(*(GList **)a);
-			t = (gchar *)b->data;
-			if ((el = g_list_find_custom(*(GList **)a, t, (GCompareFunc)func)) != NULL) {
-				*(GList **)a = g_list_remove_link(*(GList **)a, el);
-				g_list_destroy(el);
-			}
-
-			if (! g_list_next(b))
-				break;
-			b = g_list_next(b);
-		}
-	}
-	if (condition == IMAPFA_REPLACE) {
-		g_list_destroy(*(GList **)a);
-		*(GList **)a = NULL;
-
-		while (b) {
-			t = (gchar *)b->data;
-			*(GList **)a = g_list_append(*(GList **)a, g_strdup(t));
-			if (! g_list_next(b))
-				break;
-			b = g_list_next(b);
-		}
-	}
-
-
-}
-
 /* Read from instream until ".\r\n", discarding what is read. */
 int discard_client_input(FILE * instream)
 {
