@@ -4186,13 +4186,10 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 	char *safe;
 	char query[DEF_QUERYSIZE];
 
-	if (keywords == NULL)
-		return DM_SUCCESS;
-
 	if (action_type == IMAPFA_REMOVE) {
 		keywords = g_list_first(keywords);
 		db_begin_transaction();
-		while (keywords->data) {
+		while (keywords) {
 
 			safe = dm_stresc((char *)keywords->data);
 			memset(query,0,sizeof(query));
@@ -4230,8 +4227,8 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 		}
 
 		keywords = g_list_first(keywords);
-		while (keywords) {
 
+		while (keywords) {
 			if ((! msginfo) || (! g_list_find_custom(msginfo->keywords, (char *)keywords->data, (GCompareFunc)g_ascii_strcasecmp))) {
 				safe = dm_stresc((char *)keywords->data);
 				memset(query,0,sizeof(query));
