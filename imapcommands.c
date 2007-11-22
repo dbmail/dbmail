@@ -1408,7 +1408,7 @@ int _dm_imapsession_get_ids(struct ImapSession *self, const char *set)
 	while (retry > 0) {
 
 		self->ids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
-		if (g_tree_nnodes(self->ids)> 0)
+		if (self->ids && g_tree_nnodes(self->ids)> 0)
 			break;
 
 		if ((result = dbmail_mailbox_open(self->mailbox))!= DM_SUCCESS)
