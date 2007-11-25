@@ -476,6 +476,9 @@ START_TEST(test_dbmail_mailbox_get_set)
 	fail_unless(d==1,"mailbox_get_set failed");
 	g_tree_destroy(set);
 
+	set = dbmail_mailbox_get_set(mb,"-1:1",0);
+	fail_unless(set == NULL);
+
 
 	// UID sets
 	char *s, *t;

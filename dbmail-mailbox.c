@@ -1520,6 +1520,10 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		
 		rest = sets->data;
 		
+		if ( rest[0] == '-' ) {
+			error = TRUE;
+			break;
+		}
 		if (rest[0] == '*') {
 			l = hi;
 			r = l;
@@ -1540,6 +1544,12 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		if (rest[0]==':') {
 			if (strlen(rest)>1)
 				rest++;
+
+			if (rest[0] == '-' ) {
+				error = TRUE;
+				break;
+			}
+
 			if (rest[0] == '*') 
 				r = hi;
 			else {

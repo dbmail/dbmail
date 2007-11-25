@@ -288,8 +288,11 @@ class testImapServer(unittest.TestCase):
         self.o.select('INBOX')
         self.o.fetch("1:*","(UID FULL)")
 
-        #self.assertRaises(self.o.error,self.o.fetch("1:*","(BODY.PEEK)"))
         self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
+
+        # bogus ranges
+        self.assertRaises(self.o.error,self.o.fetch,"-10:10","(Flags)")
+        self.assertRaises(self.o.error,self.o.fetch,"10:-10","(Flags)")
 
     def testGetacl(self):
         """ 
