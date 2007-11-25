@@ -1520,20 +1520,17 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		
 		rest = sets->data;
 		
-		if ( rest[0] == '-' ) {
-			error = TRUE;
-			break;
-		}
 		if (rest[0] == '*') {
 			l = hi;
 			r = l;
 			if (strlen(rest) > 1)
 				rest++;
 		} else {
-			if (! (l = strtoull(sets->data,&rest,10))) {
+			if (! (l = dm_strtoull(sets->data,&rest,10))) {
 				error = TRUE;
 				break;
 			}
+
 			if (l == 0xffffffff) // outlook
 				l = hi;
 
@@ -1545,15 +1542,15 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 			if (strlen(rest)>1)
 				rest++;
 
-			if (rest[0] == '-' ) {
-				error = TRUE;
-				break;
-			}
-
 			if (rest[0] == '*') 
 				r = hi;
 			else {
-				r = strtoull(rest,NULL,10);
+				
+				if (! (r = strtoull(rest,NULL,10))) {
+					error = TRUE;
+					break;
+				}
+
 				if (r == 0xffffffff) // outlook
 					r = hi;
 			}

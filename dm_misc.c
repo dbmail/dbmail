@@ -2307,4 +2307,17 @@ char * imap_flags_as_string(MessageInfo *msginfo)
 	return s;
 }
 
+long long unsigned dm_strtoull(const char *nptr, char **endptr, int base)
+{
+	errno = 0;
+	long long int r = strtoll(nptr, endptr, base);
+	if (errno)
+		return (long long unsigned)0;
+
+	if (r < 0) {
+		errno = EINVAL;
+		return (long long unsigned)0;
+	}
+	return (long long unsigned)r;
+}
 

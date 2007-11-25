@@ -162,4 +162,5 @@ char * imap_cleanup_address(const char *a);
 
 char * message_get_charset(GMimeMessage *self);
 
+long long unsigned dm_strtoull(const char *nptr, char **endptr, int base);
 #endif
