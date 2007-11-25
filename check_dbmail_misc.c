@@ -240,6 +240,16 @@ START_TEST(test_create_unique_id)
 }
 END_TEST
 
+START_TEST(test_dm_strtoull)
+{
+	fail_unless(dm_strtoull("10",NULL,10)==10);
+	fail_unless(dm_strtoull(" 10",NULL,10)==10);
+	fail_unless(dm_strtoull("-10",NULL,10)==0);
+	fail_unless(dm_strtoull("10",NULL,16)==16);
+	fail_unless(dm_strtoull("10",NULL,2)==2);
+}
+END_TEST
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -253,6 +263,7 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_dbmail_iconv_str_to_db);
 	tcase_add_test(tc_misc, test_dbmail_iconv_decode_address);
 	tcase_add_test(tc_misc, test_create_unique_id);
+	tcase_add_test(tc_misc, test_dm_strtoull);
 	
 	return s;
 }

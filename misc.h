@@ -186,4 +186,5 @@ char * dbmail_iconv_decode_text(const char *in);
 char * dbmail_iconv_decode_address(char *address);
 char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr);
 
+long long unsigned dm_strtoull(const char *nptr, char **endptr, int base);
 #endif

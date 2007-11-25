@@ -1,3 +1,9 @@
+2007-11-25  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_misc.c, dbmail-mailbox.c, misc.c, misc.h:
+	add dm_strtoull call that will return 0 and set errno when the string 
+	conversion would result in a negative integer
+
 2007-11-22  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_mailbox.c, dbmail-mailbox.c, imapcommands.c, 
