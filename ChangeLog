@@ -10,6 +10,11 @@
 	test-scripts/testimap.py:
 	disallow negative seq-numbers
 
+2007-11-18  Paul J Stevens <paul@nfg.nl>
+
+	* INSTALL:
+	minor pgsql update in INSTALL
+
 2007-11-17  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_misc.c, misc.c:

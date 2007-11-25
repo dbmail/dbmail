@@ -1,7 +1,7 @@
-/*  
-   (c) 2000-2004 IC&S, The Netherlands 
-   (c) 2004-2006 NFG, The Netherlands
-   */
+/*
+ (c) 2000-2004 IC&S, The Netherlands 
+ (c) 2004-2007 NFG, The Netherlands
+*/
 
 DBMAIL Installation
 ===================
@@ -77,10 +77,10 @@ What do you need?
 	password you want to use. After doing this you should create the
 	database for dbmail:
 
-	createdb -U dbmail dbmail
+	createdb -E utf8 -U postgres -O dbmail dbmail
 
 	The first dbmail is the user you just created, the second the name of
-	the database.  Of course you can use an other database name. After
+	the database. Of course you can use an other database name. After
 	setting up the user and database it's time to create the tables, do a:
 
 	psql -U dbmail dbmail < sql/postgresql/create_tables.pgsql
@@ -91,14 +91,9 @@ What do you need?
 	SQLite setup
 	------------
 
-	Create the database by running.
-
-	sqlite3 /path/to/dbmail.db < sql/sqlite/create_tables.sqlite
-
-	Finally make sure the database file is owned by the user running the dbmail
-	server.
-
-	chown dbmail:dbmail /path/to/dbmail.db
+	Dbmail will automatically create the database specified in dbmail.conf. 
+	All you need to do is make sure that the directory which will contain
+	the database file exists, and is writable for the dbmail user.
 
 2. 	Set the database settings
 
@@ -130,8 +125,7 @@ What do you need?
 	dbmail-users utility. The other way is doing it in the database
 	itself. To do it using the dbmail-users utility and do the following:
 
-	dbmail-users -a <username> -w <password> -g <clientid>\
-	             -m <maxmail> [-s aliases]
+	dbmail-users -a <username> -w <password> -g <clientid> -m <maxmail> [-s aliases]
 	
 	clientid can be left 0 (this is if you want certain mail administrators
 	administer specific groups of mail users). maxmail is the maximum
@@ -143,8 +137,7 @@ What do you need?
 	a domain the mail server delivers to.
 	
 	example: 
-	./dbmail-users -a john -w secret -g 0 -m 25M\
-	               -s john@dude.org john@dude.net @net.com
+	./dbmail-users -a john -w secret -g 0 -m 25M -s john@dude.org,john@dude.net,@net.com
 	
 	This will create a user john, with a password secret. It will set
 	john's mail limit 25 Mb and all mail for john@dude.org, john@dude.net
@@ -208,6 +201,6 @@ What do you need?
 	Please note that DBMail logs a lot of relevant data to the mail log
 	(often located at /var/log/maillog or /var/log/mail.log). This can
 	help you often if something is not working, e.g. if there's no
-	connection to the database.  
+	connection to the database.
 
 
