@@ -149,9 +149,6 @@ int db_connect()
 	/* connect */
 	mysql_init(&conn);
 
-	/* auto re-connect */
-	conn.reconnect = 1;
-
 	/* use the standard MySQL port by default */
 	if (_db_params.port == 0)
 		_db_params.port = DB_MYSQL_STANDARD_PORT;
@@ -168,7 +165,6 @@ int db_connect()
 		} else
 			sock = _db_params.sock;
 	}
-
 
 	if (mysql_real_connect(&conn, _db_params.host, _db_params.user,
 			       _db_params.pass, _db_params.db,

@@ -1,5 +1,8 @@
 2007-11-29  Paul J Stevens <paul@nfg.nl>
 
+	* modules/dbmysql.c:
+	remove silent autoreconnects in the mysql driver to prevent resetting 
+	the client encoding (bug #655)
 	* dbmail-mailbox.c:
 	add correct From_ headers while exporting email (closes #656)
 
