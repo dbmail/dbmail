@@ -283,6 +283,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	GList *ids, *cids = NULL, *slice, *topslice;
 	struct DbmailMessage *message = NULL;
 	GString *q, *t;
+	const char *internal_date = NULL;
+	char * date2char;
 
 	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
 		TRACE(TRACE_DEBUG,"cannot dump empty mailbox");
@@ -312,13 +314,16 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	g_list_destroy(cids);
 	
 	g_list_free(g_list_first(ids));
+	date2char = date2char_str("internal_date");
 
 	while (slice) {
-		g_string_printf(q,"SELECT is_header,messageblk FROM %smessageblks b "
+		g_string_printf(q,"SELECT is_header,messageblk,%s FROM %smessageblks b "
+				"JOIN %sphysmessage p ON b.physmessage_id = p.id "
 				"JOIN %smessages m USING (physmessage_id) "
 				"WHERE message_idnr IN (%s) "
 				"ORDER BY messageblk_idnr ",
-				DBPFX, DBPFX,
+				date2char,
+				DBPFX, DBPFX, DBPFX,
 				(char *)slice->data);
 		
 		if (db_query(q->str) == -1) {
@@ -338,6 +343,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 				if (t->len > 0) {
 					message = dbmail_message_new();
 					message = dbmail_message_init_with_string(message,t);
+					dbmail_message_set_internal_date(message, (char *)internal_date);
 					if(dump_message_to_stream(message,ostream) > 0)
 						count++;
 					dbmail_message_free(message);
@@ -346,6 +352,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 			} else {
 				g_string_append(t, db_get_result(i,1));
 			}
+			internal_date = db_get_result(i,2);
 		}
 		db_free_result();
 
@@ -354,10 +361,12 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 		
 		slice = g_list_next(slice);
 	}
+	g_free(date2char);
 	
 	if (t->len) {
 		message = dbmail_message_new();
 		message = dbmail_message_init_with_string(message,t);
+		dbmail_message_set_internal_date(message, (char *)internal_date);
 		if (dump_message_to_stream(message, ostream) > 0)
 			count++;
 		dbmail_message_free(message);

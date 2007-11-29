@@ -1,3 +1,8 @@
+2007-11-29  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c:
+	add correct From_ headers while exporting email (closes #656)
+
 2007-11-25  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_misc.c, dbmail-mailbox.c, misc.c, misc.h:
