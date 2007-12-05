@@ -1106,6 +1106,8 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 {
 	assert(physid);
 	
+	//FIXME: fails to retrieve the internal_date (bug #656)
+	
 	dbmail_message_set_physid(self, physid);
 	
 	switch (filter) {
