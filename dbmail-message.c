@@ -680,7 +680,7 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 	GMimeStream *fstream, *bstream, *mstream;
 	GMimeFilter *filter;
 	GMimeParser *parser;
-	gchar *buf, *from;
+	gchar *buf, *from = NULL;
 	ssize_t getslen, putslen;
 	FILE *tmp;
 	int res = 0;
@@ -719,7 +719,7 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 			
 			while ((getslen = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) > 0) {
 				if (firstline && strncmp(buf,"From ",5)==0)
-					g_mime_parser_set_scan_from(parser,TRUE);
+					from = g_strdup(buf);
 				firstline=FALSE;
 
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
@@ -768,8 +768,7 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 		case DBMAIL_MESSAGE:
 			TRACE(TRACE_DEBUG,"parse message");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
-			if (g_mime_parser_get_scan_from(parser)) {
-				from = g_mime_parser_get_from(parser);
+			if (from)
 				dbmail_message_set_internal_date(self, from);
 				g_free(from);
 			}

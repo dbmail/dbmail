@@ -1,3 +1,23 @@
+2007-12-05  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
+	avoid gmime mbox parser to prevent unwanted message truncation
+
+2007-12-03  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c, dbmail-message.c:
+	add proper envelope date during messageblks dump
+
+2007-11-25  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_misc.c, dbmail-mailbox.c, dm_misc.c, 
+	dm_misc.h:
+	add dm_strtoull call that will return 0 and set errno when the string 
+	conversion would result in a negative integer
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, imapcommands.c, 
+	test-scripts/testimap.py:
+	disallow negative seq-numbers
+
 2007-11-25  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_misc.c, dbmail-mailbox.c, dm_misc.c, dm_misc.h:

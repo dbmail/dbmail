@@ -382,6 +382,17 @@ START_TEST(test_dbmail_message_to_string)
         g_string_free(s,TRUE);
 	g_free(result);
 	dbmail_message_free(m);
+
+	//
+	s = g_string_new(simple_with_from);
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,s);
+	result = dbmail_message_to_string(m);
+	fail_unless(MATCH(s->str,result), "[%s] =! [%s]\n", s->str, result);
+	g_string_free(s,TRUE);
+	g_free(result);
+	dbmail_message_free(m);
+
 }
 END_TEST
     
