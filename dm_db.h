@@ -119,6 +119,7 @@ int db_disconnect(void);
  */
 int db_query(const char *the_query);
 
+int db_retry_query(char *query, int tries, int sleeptime);
 /**
  * \brief get number of rows in result set.
  * \return 
@@ -195,8 +196,8 @@ unsigned long db_escape_string(char *to,
  * \return length of escaped string
  * \attention behaviour is undefined if to and from overlap
  */
-unsigned long db_escape_binary(char *to,
-			       const char *from, unsigned long length);
+char * db_escape_binary(const char *from, unsigned long length);
+
 
 /**
  * \brief get length in bytes of a result field in a result set.
@@ -282,22 +283,18 @@ int db_rollback_transaction(void);
 
 int mailbox_is_writable(u64_t mailbox_idnr);
 
-/**
- * set savepoint to transaction
- * \param name
- * \return
- *     - -1 on error
- *     -  0 otherwise
- */
-int db_savepoint_transaction(const char*);
 
-/**
- * rollback transaction to savepoint
- * \param name
- * \return
- *     - -1 on error
- *     -  0 otherwise
+/*
+ *
+ * savepoint setup
+ *
  */
+// public calls
+int db_savepoint(const char * id);
+int db_savepoint_rollback(const char *id);
+
+// private calls
+int db_savepoint_transaction(const char*);
 int db_rollback_savepoint_transaction(const char*);
 
 /* shared implementattion from hereon */
@@ -545,15 +542,6 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
  */
 int db_update_message(u64_t message_idnr, const char *unique_id,
 		      u64_t message_size, u64_t rfc_size);
-/**
- * \brief set unique id of a message 
- * \param message_idnr
- * \param unique_id unique id of message
- * \return 
- *     - -1 on database error
- *     -  0 on success
- */
-int db_message_set_unique_id(u64_t message_idnr, const char *unique_id);
 
 /**
  * \brief set messagesize and rfcsize of a message
@@ -1314,5 +1302,8 @@ int db_count_replycache(timestring_t lasttokeep, u64_t *affected_rows);
 
 /* get driver specific SQL snippets */
 const char * db_get_sql(sql_fragment_t frag);
+
+int db_mailbox_mtime_update(u64_t mailbox_id);
+int db_message_mailbox_mtime_update(u64_t message_id);
 
 #endif

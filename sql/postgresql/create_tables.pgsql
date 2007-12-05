@@ -367,38 +367,6 @@ ALTER TABLE ONLY dbmail_partlists
 ALTER TABLE ONLY dbmail_mailboxes
     ADD mtime TIMESTAMP WITHOUT TIME ZONE;
 
-CREATE PROCEDURAL LANGUAGE plpgsql;
-
-CREATE FUNCTION mailbox_mtime_insert() RETURNS "trigger"
-    AS $$
-BEGIN
-	UPDATE dbmail_mailboxes SET mtime=NOW() WHERE mailbox_idnr=NEW.mailbox_idnr;
-	RETURN NEW;
-END;
-$$
-    LANGUAGE plpgsql;
-ALTER FUNCTION public.mailbox_mtime_insert() OWNER TO dbmail;
-
-CREATE FUNCTION mailbox_mtime_update() RETURNS "trigger"
-    AS $$
-BEGIN
-	UPDATE dbmail_mailboxes SET mtime=NOW() WHERE mailbox_idnr=OLD.mailbox_idnr;
-	RETURN OLD;
-END;
-$$
-    LANGUAGE plpgsql;
-ALTER FUNCTION public.mailbox_mtime_update() OWNER TO dbmail;
-
-CREATE TRIGGER mailbox_stamp_insert
-    AFTER INSERT ON dbmail_messages
-    FOR EACH ROW
-    EXECUTE PROCEDURE mailbox_mtime_insert();
-
-CREATE TRIGGER mailbox_stamp_update
-    AFTER DELETE OR UPDATE ON dbmail_messages
-    FOR EACH ROW
-    EXECUTE PROCEDURE mailbox_mtime_update();
-
 CREATE TABLE dbmail_keywords (
 	message_idnr bigint NOT NULL,
 	keyword varchar(64) NOT NULL
@@ -408,34 +376,5 @@ ALTER TABLE ONLY dbmail_keywords
 ALTER TABLE ONLY dbmail_keywords
     ADD CONSTRAINT dbmail_keywords_fkey FOREIGN KEY (message_idnr) REFERENCES dbmail_messages (message_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
 
-
-CREATE FUNCTION insert_keyword_mailbox() RETURNS "trigger" AS $$
-BEGIN
-	UPDATE dbmail_mailboxes SET mtime=NOW() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=NEW.message_idnr); 
-	RETURN NEW;
-END;
-$$
-    LANGUAGE plpgsql;
-ALTER FUNCTION public.insert_keyword_mailbox() OWNER TO dbmail;
-
-CREATE FUNCTION update_keyword_mailbox() RETURNS "trigger" AS $$
-BEGIN
-	UPDATE dbmail_mailboxes SET mtime=NOW() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=OLD.message_idnr); 
-	RETURN OLD;
-END;
-$$
-    LANGUAGE plpgsql;
-ALTER FUNCTION public.update_keyword_mailbox() OWNER TO dbmail;
-
-
-CREATE TRIGGER insert_keyword_mailbox
-	AFTER INSERT ON dbmail_keywords
-	FOR EACH ROW
-	EXECUTE PROCEDURE insert_keyword_mailbox();
-
-CREATE TRIGGER update_keyword_mailbox
-	AFTER DELETE OR UPDATE ON dbmail_keywords
-	FOR EACH ROW
-	EXECUTE PROCEDURE update_keyword_mailbox();
 
 COMMIT;

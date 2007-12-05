@@ -99,6 +99,8 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_free_result",         (gpointer)&db->free_result         )
 	||  !g_module_symbol(module, "db_escape_string",       (gpointer)&db->escape_string       )
 	||  !g_module_symbol(module, "db_escape_binary",       (gpointer)&db->escape_binary       )
+	||  !g_module_symbol(module, "db_savepoint",           (gpointer)&db->savepoint           )
+	||  !g_module_symbol(module, "db_savepoint_rollback",  (gpointer)&db->savepoint_rollback  )
 	||  !g_module_symbol(module, "db_do_cleanup",          (gpointer)&db->do_cleanup          )
 	||  !g_module_symbol(module, "db_get_length",          (gpointer)&db->get_length          )
 	||  !g_module_symbol(module, "db_get_affected_rows",   (gpointer)&db->get_affected_rows   )
@@ -180,9 +182,13 @@ void db_free_result(void)
 unsigned long db_escape_string(char *to,
 		const char *from, unsigned long length)
 	{ return db->escape_string(to, from, length); }
-unsigned long db_escape_binary(char *to,
-		const char *from, unsigned long length)
-	{ return db->escape_binary(to, from, length); }
+char * db_escape_binary(const char *from, unsigned long length)
+	{ return db->escape_binary(from, length); }
+int db_savepoint(const char *id)
+	{ return db->savepoint(id); }
+int db_savepoint_rollback(const char *id)
+	{ return db->savepoint_rollback(id); }
+
 int db_do_cleanup(const char **tables, int num_tables)
 	{ return db->do_cleanup(tables, num_tables); }
 u64_t db_get_length(unsigned row, unsigned field)

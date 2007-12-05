@@ -65,6 +65,9 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_INSENSITIVE_LIKE:
 			return "LIKE";
 		break;
+		case SQL_IGNORE:
+			return "IGNORE";
+		break;
 		case SQL_STRCASE:
 		case SQL_ENCODE_ESCAPE:
 		case SQL_PARTIAL:
@@ -311,10 +314,22 @@ unsigned long db_escape_string(char *to, const char *from, unsigned long length)
 	return mysql_real_escape_string(&conn, to, from, length);
 }
 
-unsigned long db_escape_binary(char *to, const char *from, unsigned long length)
+char * db_escape_binary(const char *from, unsigned long length)
 {
-	return db_escape_string(to,from,length);
+	char * to = g_new0(char, strlen(from)*2 + 1);
+	db_escape_string(to,from,length);
+	return to;
 }
+
+int db_savepoint(const char *id)
+{
+	return db_savepoint_transaction(id);
+}
+int db_savepoint_rollback(const char *id)
+{
+	return db_rollback_savepoint_transaction(id);
+}
+
 
 int db_do_cleanup(const char **tables, int num)
 {

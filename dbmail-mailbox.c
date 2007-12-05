@@ -1388,11 +1388,11 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			"JOIN %smessages m ON m.physmessage_id=s.id "
 			"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
 			"WHERE b.mailbox_idnr=%llu AND m.status IN (%d,%d) "
-			"AND l.part_key > 1 OR l.is_header=0 "
+			"AND (l.part_key > 1 OR l.is_header=0) "
 			"GROUP BY m.message_idnr,p.data HAVING %s %s '%%%s%%';",
 			DBPFX,DBPFX,DBPFX,DBPFX,DBPFX,dbmail_mailbox_get_id(self),
 			MESSAGE_STATUS_NEW,MESSAGE_STATUS_SEEN,
-			t->str, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
+			t->str, db_get_sql(SQL_SENSITIVE_LIKE), s->search); // pgsql will trip over ilike against bytea 
 
 #if 0
 		g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "k.messageblk");

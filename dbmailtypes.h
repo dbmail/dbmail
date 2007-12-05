@@ -51,8 +51,7 @@
 #define FIELDSIZE 1024
 
 /** use 64-bit unsigned integers as common data type */
-//typedef unsigned long long u64_t;
-#define u64_t guint64
+typedef unsigned long long u64_t;
 
 typedef enum {
 	DM_EQUERY 	= -1,
@@ -557,7 +556,8 @@ typedef enum {
 	SQL_INSENSITIVE_LIKE,
 	SQL_ENCODE_ESCAPE,
 	SQL_STRCASE,
-	SQL_PARTIAL
+	SQL_PARTIAL,
+	SQL_IGNORE
 		
 } sql_fragment_t;
 #endif

@@ -1,6 +1,15 @@
 2007-12-05  Paul J Stevens <paul@nfg.nl>
 
-	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
+	* check_dbmail_db.c, check_dbmail_imapd.c, check_dbmail_misc.c, 
+	dbmail-imapsession.c, dbmail-mailbox.c, dbmail-message.c, 
+	dbmailtypes.h, dbmodule.c, dbmodule.h, dm_db.c, dm_db.h, dm_iconv.c, 
+	dm_misc.c, dm_misc.h, dm_pipe.c, maintenance.c, modules/dbmysql.c, 
+	modules/dbpgsql.c, modules/dbsqlite.c, sql/mysql/2_2_5-2_3_0.mysql, 
+	sql/mysql/create_tables.mysql, sql/postgresql/2_2_5-2_3_0.pgsql, 
+	sql/postgresql/create_tables.pgsql, sql/sqlite/2_2_5-2_3_0.sqlite, 
+	test-scripts/testimap.py:
+	merge imaptest branch
+	* ChangeLog, check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
 	avoid gmime mbox parser to prevent unwanted message truncation
 
 2007-12-03  Paul J Stevens <paul@nfg.nl>

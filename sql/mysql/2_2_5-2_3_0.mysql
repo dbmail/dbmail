@@ -31,29 +31,6 @@ ALTER TABLE dbmail_mailboxes CHANGE name name VARCHAR(255) NOT NULL DEFAULT '';
 DROP INDEX dbmail_sievescripts_1 ON dbmail_sievescripts;
 CREATE UNIQUE INDEX dbmail_sievescripts_1 ON dbmail_sievescripts(owner_idnr, name);
 
-
-DELIMITER |
-DROP TRIGGER IF EXISTS tr_insert_message_mailbox|
-CREATE TRIGGER tr_insert_message_mailbox AFTER INSERT ON dbmail_messages 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=NEW.mailbox_idnr; 
-	END;
-|
-DROP TRIGGER IF EXISTS tr_update_message_mailbox|
-CREATE TRIGGER tr_update_message_mailbox AFTER UPDATE ON dbmail_messages 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=OLD.mailbox_idnr; 
-	END;
-|
-DROP TRIGGER IF EXISTS tr_delete_message_mailbox|
-CREATE TRIGGER tr_delete_message_mailbox AFTER DELETE ON dbmail_messages 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=OLD.mailbox_idnr; 
-	END;
-|
-DELIMITER ;
-
-
 DROP TABLE IF EXISTS dbmail_keywords;
 CREATE TABLE dbmail_keywords (
 	message_idnr bigint(21) NOT NULL,
@@ -61,25 +38,4 @@ CREATE TABLE dbmail_keywords (
 	PRIMARY KEY  (message_idnr,keyword),
 	CONSTRAINT dbmail_keywords_ibfk_1 FOREIGN KEY (message_idnr) REFERENCES dbmail_messages (message_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-DELIMITER |
-DROP TRIGGER IF EXISTS tr_insert_keyword_mailbox|
-CREATE TRIGGER tr_insert_keyword_mailbox AFTER INSERT ON dbmail_keywords 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=NEW.message_idnr); 
-	END;
-|
-DROP TRIGGER IF EXISTS tr_update_keyword_mailbox|
-CREATE TRIGGER tr_update_keyword_mailbox AFTER UPDATE ON dbmail_keywords 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=OLD.message_idnr); 
-	END;
-|
-DROP TRIGGER IF EXISTS tr_delete_keyword_mailbox|
-CREATE TRIGGER tr_delete_keyword_mailbox AFTER DELETE ON dbmail_keywords 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=now() WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=OLD.message_idnr); 
-	END;
-|
-DELIMITER ;
 

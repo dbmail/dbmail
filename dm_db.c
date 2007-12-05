@@ -34,6 +34,10 @@
 #define THIS_MODULE "db"
 #define DEF_FRAGSIZE 64
 
+static volatile int transaction = 0;
+static volatile time_t transaction_before = 0;
+static volatile time_t transaction_after = 0;
+
 // Flag order defined in dbmailtypes.h
 static const char *db_flag_desc[] = {
 	"seen_flag",
@@ -114,6 +118,24 @@ static char *char2date_str(const char *date);
  */
 static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
 
+int db_retry_query(char *query, int tries, int sleeptime)
+{
+	int result = 0, try = tries;
+	assert(query);
+	while (try-- > 0) {
+		db_begin_transaction();
+		if ((result = db_query(query)) == DM_EQUERY) {
+			db_rollback_transaction();
+			usleep(sleeptime);
+		} else {
+			result = db_commit_transaction();
+			break;
+		}
+	}
+	return result;
+}
+
+
 /*
  * check to make sure the database has been upgraded
  */
@@ -180,10 +202,6 @@ int db_use_usermap(void)
 	return use_usermap;
 }
 
-static int transaction = 0;
-static time_t transaction_before = 0;
-static time_t transaction_after = 0;
-
 int db_begin_transaction()
 {
 	char query[DEF_QUERYSIZE]; 
@@ -236,6 +254,7 @@ int db_commit_transaction()
 	}
 	return DM_SUCCESS;
 }
+
 
 int db_rollback_transaction()
 {
@@ -1131,6 +1150,7 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 	
 	*physmessage_id = 0;
 	
+	db_begin_transaction();
 	if (internal_date != NULL) {
 		to_date_str = char2date_str(internal_date);
 		snprintf(query, DEF_QUERYSIZE,
@@ -1144,36 +1164,18 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 	}
 	
 	if (db_query(query) == -1) {
+		db_rollback_transaction();
 		TRACE(TRACE_ERROR, "insertion of physmessage failed" );
 		return DM_EQUERY;
 	}
 	*physmessage_id = db_insert_result("physmessage_id");
 
-	return DM_EGENERAL;
+	return db_commit_transaction();
 }
 
 int db_insert_physmessage(u64_t * physmessage_id)
 {
 	return db_insert_physmessage_with_internal_date(NULL, physmessage_id);
-}
-
-int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
-{
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-	assert(unique_id);
-	
-	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %smessages SET unique_id = '%s', status = %d "
-		 "WHERE message_idnr = %llu", DBPFX, unique_id, MESSAGE_STATUS_NEW,
-		 message_idnr);
-	if (db_query(query) == DM_EQUERY) {
-		TRACE(TRACE_ERROR, "setting unique id for message [%llu] failed",
-		      message_idnr);
-		return DM_EQUERY;
-	}
-	return DM_SUCCESS;
 }
 
 int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
@@ -1195,6 +1197,25 @@ int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
 	}
 	return DM_SUCCESS;
 }
+
+static int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
+{
+	int result;
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
+
+	assert(unique_id);
+	
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE %smessages SET unique_id = '%s', status = %d "
+		 "WHERE message_idnr = %llu", DBPFX, unique_id, MESSAGE_STATUS_NEW,
+		 message_idnr);
+	result = db_query(query);
+	db_free_result();
+
+	return result;
+}
+
 
 int db_update_message(u64_t message_idnr, const char *unique_id,
 		      u64_t message_size, u64_t rfc_size)
@@ -1228,10 +1249,8 @@ int db_insert_message_block_physmessage(const char *block,
 					u64_t * messageblk_idnr,
 					unsigned is_header)
 {
-	char *escaped_query = NULL;
-	unsigned maxesclen = (READ_BLOCK_SIZE + 1) * 5 + DEF_QUERYSIZE;
-	unsigned startlen = 0;
-	unsigned esclen = 0;
+	char *query = NULL;
+	char *safe;
 
 	assert(messageblk_idnr != NULL);
 	*messageblk_idnr = 0;
@@ -1241,32 +1260,20 @@ int db_insert_message_block_physmessage(const char *block,
 		return DM_EQUERY;
 	}
 
-	if (block_size > READ_BLOCK_SIZE) {
-		TRACE(TRACE_ERROR, "blocksize [%llu], maximum is [%ld]",
-		      block_size, READ_BLOCK_SIZE);
-		return DM_EQUERY;
-	}
-
-	escaped_query = g_new0(char, maxesclen);
-
-	startlen = snprintf(escaped_query, maxesclen,
-		     "INSERT INTO %smessageblks "
-		     "(is_header, messageblk,blocksize, physmessage_id) "
-		     "VALUES (%u,'",DBPFX, is_header);
-	
 	/* escape & add data */
-	esclen = db_escape_binary(&escaped_query[startlen], block, block_size);
-	snprintf(&escaped_query[esclen + startlen],
-		 maxesclen - esclen - startlen, "', %llu, %llu)",
-		 block_size, physmessage_id);
-
-	if (db_query(escaped_query) == DM_EQUERY) {
-		g_free(escaped_query);
+	safe = db_escape_binary(block, block_size);
+	query = g_strdup_printf("INSERT INTO %smessageblks "
+		     "(is_header, messageblk,blocksize, physmessage_id) "
+		     "VALUES (%u,'%s', %llu, %llu)",DBPFX, is_header, safe, block_size, physmessage_id);
+	g_free(safe);
+	
+	if (db_query(query) == DM_EQUERY) {
+		g_free(query);
 		return DM_EQUERY;
 	}
 
 	/* all done, clean up & exit */
-	g_free(escaped_query);
+	g_free(query);
 
 	*messageblk_idnr = db_insert_result("messageblk_idnr");
 	return DM_SUCCESS;
@@ -1998,12 +2005,16 @@ int db_icheck_envelope(GList **lost)
 
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status)
 {
+	int result;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
 	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET status = %d WHERE message_idnr = %llu",
 		DBPFX, status, message_idnr);
-	return db_query(query);
+
+
+	result = db_query(query);
+	return result;
 }
 
 int db_delete_messageblk(u64_t messageblk_idnr)
@@ -3757,6 +3768,8 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 		return DM_EQUERY;
 	}
 
+	db_mailbox_mtime_update(mailbox_idnr);
+
 	if (user_quotum_dec(user_idnr, mailbox_size) < 0) {
 		TRACE(TRACE_ERROR, "error subtracting mailbox size from "
 		      "used quotum for mailbox [%llu], user [%llu]. Database "
@@ -3780,6 +3793,10 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 		TRACE(TRACE_ERROR, "could not update messages in mailbox");
 		return DM_EQUERY;
 	}
+
+	db_mailbox_mtime_update(mailbox_to);
+	db_mailbox_mtime_update(mailbox_from);
+
 	return DM_SUCCESS;		/* success */
 }
 
@@ -3850,6 +3867,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	char unique_id[UID_SIZE];
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
+	int result = 0;
 
 
 	/* Get the size of the message to be copied. */
@@ -3883,14 +3901,15 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		 "FROM %smessages WHERE message_idnr = %llu",DBPFX,
 		 mailbox_to, unique_id,DBPFX, msg_idnr);
 
-	if (db_query(query) == -1) {
+	if ((result = db_retry_query(query,3,2000)) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "error copying message");
-		return DM_EQUERY;
+		db_free_result();
+		return DM_EQUERY;	
 	}
 
-	/* get the id of the inserted record */
 	*newmsg_idnr = db_insert_result("message_idnr");
 
+	db_mailbox_mtime_update(mailbox_to);
 	/* update quotum */
 	if (user_quotum_inc(user_idnr, msgsize) == -1) {
 		TRACE(TRACE_ERROR, "error setting the new quotum "
@@ -3990,6 +4009,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 	u64_t mailbox_size;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
+	int result = 0;
 
 
 	if (db_get_mailbox_size(mailbox_idnr, 1, &mailbox_size) < 0) {
@@ -4039,7 +4059,10 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		 MESSAGE_STATUS_DELETE, mailbox_idnr,
 		 MESSAGE_STATUS_DELETE);
 
-	if (db_query(query) == -1) {
+	result = db_retry_query(query,3,200);
+
+	db_free_result();
+	if (result == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "could not update messages in mailbox");
 		if (msg_idnrs) g_free(*msg_idnrs);
 		if (nmsgs) *nmsgs = 0;
@@ -4047,7 +4070,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		return DM_EQUERY;
 	}
 
-	db_free_result();
+	db_mailbox_mtime_update(mailbox_idnr);
 
 	if (user_quotum_dec(user_idnr, mailbox_size) < 0) {
 		TRACE(TRACE_ERROR, "error decreasing used quotum for "
@@ -4302,6 +4325,8 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 	db_free_result();
 
 	db_set_msgkeywords(msg_idnr, keywords, action_type, msginfo);
+
+	db_mailbox_mtime_update(mailbox_idnr);
 
 	return DM_SUCCESS;
 }
@@ -5225,3 +5250,41 @@ int db_user_log_login(u64_t user_idnr)
 	return result;
 	
 }
+
+int db_mailbox_mtime_update(u64_t mailbox_id)
+{
+	int result;
+	char query[DEF_QUERYSIZE];
+	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
+	memset(query,0,DEF_QUERYSIZE);
+
+	db_begin_transaction();
+	db_savepoint("mtime_update");
+	snprintf(query,DEF_QUERYSIZE,"UPDATE %s %smailboxes SET mtime=%s WHERE mailbox_idnr=%llu",
+		db_get_sql(SQL_IGNORE), DBPFX, now, mailbox_id);
+	if ((result = db_query(query)) == DM_EQUERY)
+		result = db_savepoint_rollback("mtime_update");
+	db_free_result();
+
+	return db_commit_transaction();
+}
+int db_message_mailbox_mtime_update(u64_t message_id)
+{
+	int result;
+	char query[DEF_QUERYSIZE];
+	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
+	memset(query,0,DEF_QUERYSIZE);
+
+	db_begin_transaction();
+	db_savepoint("mtime_update");
+	snprintf(query,DEF_QUERYSIZE,"UPDATE %s %smailboxes SET mtime=%s "
+		"WHERE mailbox_idnr=(SELECT mailbox_idnr FROM %smessages WHERE message_idnr=%llu)",
+		db_get_sql(SQL_IGNORE), DBPFX, now, DBPFX, message_id);
+
+	if ((result = db_query(query)) == DM_EQUERY)
+		result = db_savepoint_rollback("mtime_update");
+	db_free_result();
+
+	return db_commit_transaction();
+}
+

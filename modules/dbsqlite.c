@@ -80,6 +80,10 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_INSENSITIVE_LIKE:
 			return "LIKE";
 		break;
+
+		case SQL_IGNORE:
+			return "OR IGNORE";
+		break;
 	}
 	return NULL;
 }
@@ -358,10 +362,22 @@ unsigned long db_escape_string(char *to, const char *from, unsigned long length)
 	return did;
 }
 
-unsigned long db_escape_binary(char *to, const char *from, unsigned long length)
+char * db_escape_binary(const char *from, unsigned long length)
 {
-	return db_escape_string(to,from,length); /* duh */
+	char * to = g_new0(char, strlen(from)*2 + 1);
+	db_escape_string(to,from,length);
+	return to;
 }
+
+int db_savepoint(const char *id)
+{
+	return 0;
+}
+int db_savepoint_rollback(const char *id)
+{
+	return 0;
+}
+
 
 int db_do_cleanup(const char **tables UNUSED, int num_tables UNUSED)
 {

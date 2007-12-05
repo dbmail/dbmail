@@ -274,6 +274,11 @@ char * dbmail_iconv_decode_address(char *address)
 	// into clean utf8
 	r = dbmail_iconv_decode_text(s); g_free(s);
 
+	// oops: if the rfc2047 encoded address names contain
+	// encoded double-quotes, imap_cleanup_address has added quotes that are now
+	// redundant. we need to strip those
+	pack_char(r,'"');
+
 	return r;
 }
 

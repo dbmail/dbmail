@@ -951,13 +951,6 @@ START_TEST(test_listex_match)
 }
 END_TEST
 
-START_TEST(test_dm_getguid)
-{
-	fail_unless(dm_getguid(1) < dm_getguid(99), "dm_getguid failed");
-	fail_unless(dm_getguid(99) < dm_getguid(1), "dm_getguid failed");
-}
-END_TEST
-
 /* this test will fail if you're not in the CET timezone */
 #define D(x,y) fail_unless(strncasecmp(date_sql2imap(x),y,IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed")
 START_TEST(test_date_sql2imap)
@@ -1013,7 +1006,6 @@ Suite *dbmail_suite(void)
 
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_base_subject);
-	tcase_add_test(tc_misc, test_dm_getguid);
 	return s;
 }
 

@@ -164,7 +164,7 @@ static gboolean blob_exists(const char *id)
 
 	snprintf(query, DEF_QUERYSIZE, "SELECT id FROM %smimeparts WHERE id='%s'", DBPFX, id);
 	if (db_query(query) == DM_EQUERY)
-		return FALSE;
+		TRACE(TRACE_FATAL,"Unable to select from mimeparts table");
 	
 	rows = db_num_rows();
 	db_free_result();
@@ -182,6 +182,8 @@ static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_hea
 	const char *id;
 	size_t len;
 
+	assert(buf);
+
 	if (is_header) {
 		m->part_key++;
 		m->part_order=0;
@@ -195,17 +197,21 @@ static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_hea
 
 	// store this message fragment
 	if (! blob_exists(id)) {
-		safe = dm_stresc(buf);
-		g_string_printf(q, "INSERT INTO %smimeparts "
+		safe = dm_strbinesc(buf);
+		assert(safe);
+		//safe = dm_stresc(buf);
+
+		db_begin_transaction();
+		g_string_printf(q, "INSERT %s INTO %smimeparts "
 				"(id, data, size) VALUES ("
-				"'%s', '%s', %u)", 
-				DBPFX, id, safe, len);
+				"'%s', '%s', %zd)", 
+				db_get_sql(SQL_IGNORE), DBPFX, id, safe, len);
 		g_free(safe);
 
-		if (db_query(q->str) == DM_EQUERY) {
-			g_string_free(q,TRUE);
-			return DM_EQUERY;
-		}
+		if (db_query(q->str) == DM_EQUERY)
+			db_rollback_transaction();
+		else
+			db_commit_transaction();
 
 		db_free_result();
 	}
@@ -217,10 +223,13 @@ static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_hea
 		DBPFX, dbmail_message_get_physid(m), is_header, 
 		m->part_key, m->part_depth, m->part_order, id);
 
+	db_begin_transaction();
 	if (db_query(q->str) == DM_EQUERY) {
+		db_rollback_transaction();
 		g_string_free(q,TRUE);
 		return DM_EQUERY;
 	}
+	db_commit_transaction();
 	db_free_result();
 
 	m->part_order++;
@@ -1180,6 +1189,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 	body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
 
 	if (_dm_message_store(self)) {
+		TRACE(TRACE_FATAL,"Failed to store mimeparts");
 
 		/* store body in several blocks (if needed */
 		if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0) {
@@ -1216,6 +1226,7 @@ int _message_insert(struct DbmailMessage *self,
 	char *internal_date = NULL;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
+	int try=3;
 
 	assert(unique_id);
 	assert(mailbox);
@@ -1236,6 +1247,7 @@ int _message_insert(struct DbmailMessage *self,
 	localtime_r(&tv.tv_sec, &gmt);
 	thisyear = gmt.tm_year + 1900;
 	internal_date = dbmail_message_get_internal_date(self, thisyear);
+	int result = 0;
 
 	/* insert a new physmessage entry */
 	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1)  {
@@ -1245,22 +1257,24 @@ int _message_insert(struct DbmailMessage *self,
 	g_free(internal_date);
 
 	dbmail_message_set_physid(self, physmessage_id);
-	
+
 	/* now insert an entry into the messages table */
 	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
-		 "%smessages(mailbox_idnr, physmessage_id, unique_id,"
-		 "recent_flag, status) "
-		 "VALUES (%llu, %llu, '%s', 1, %d)",
-		 DBPFX, mailboxid, physmessage_id, unique_id,
-		 MESSAGE_STATUS_INSERT);
+			"%smessages(mailbox_idnr, physmessage_id, unique_id,"
+			"recent_flag, status) "
+			"VALUES (%llu, %llu, '%s', 1, %d)",
+			DBPFX, mailboxid, physmessage_id, unique_id,
+			MESSAGE_STATUS_INSERT);
 
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "query failed");
-		return -1;
+	if ((result = db_retry_query(query,3,200)) == DM_EQUERY) {
+		TRACE(TRACE_ERROR,"inserting message failed");
+		return result;
 	}
 
 	self->id = db_insert_result("message_idnr");
-	return 1;
+	db_free_result();
+
+	return result;
 }
 
 int dbmail_message_cache_headers(const struct DbmailMessage *self)
@@ -1268,6 +1282,7 @@ int dbmail_message_cache_headers(const struct DbmailMessage *self)
 	assert(self);
 	assert(self->physid);
 
+	db_begin_transaction();
 	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
 	
 	dbmail_message_cache_tofield(self);
@@ -1279,7 +1294,7 @@ int dbmail_message_cache_headers(const struct DbmailMessage *self)
 	dbmail_message_cache_referencesfield(self);
 	dbmail_message_cache_envelope(self);
 
-	return 1;
+	return db_commit_transaction();
 }
 #define CACHE_WIDTH_VALUE 255
 #define CACHE_WIDTH_FIELD 255
@@ -1294,6 +1309,7 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 	gchar *case_header;
 	gchar *safe_header;
 	gchar *tmpheader;
+	int try=3;
 
 	// rfc822 headernames are case-insensitive
 	if (! (tmpheader = dm_strnesc(header,CACHE_WIDTH_NAME)))
@@ -1311,27 +1327,35 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 	GString *q = g_string_new("");
 
 	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
-	g_string_printf(q, "SELECT id FROM %sheadername WHERE %s='%s'", DBPFX, case_header, safe_header);
-	g_free(case_header);
 
-	if (db_query(q->str) == -1) {
-		g_string_free(q,TRUE);
-		g_free(safe_header);
-		return -1;
-	}
-	if (db_num_rows() < 1) {
-		db_free_result();
-		g_string_printf(q, "INSERT INTO %sheadername (headername) VALUES ('%s')", DBPFX, safe_header);
+	while (try-- > 0) { // deal with race conditions from other process inserting the same headername
+		db_savepoint("header_id");	
+		g_string_printf(q, "SELECT id FROM %sheadername WHERE %s='%s'", DBPFX, case_header, safe_header);
+		g_free(case_header);
+
 		if (db_query(q->str) == -1) {
+			db_savepoint_rollback("header_id");
 			g_string_free(q,TRUE);
 			g_free(safe_header);
 			return -1;
 		}
-		tmp = db_insert_result("headername_idnr");
-	} else {
-		tmp = db_get_result_u64(0,0);
-		db_free_result();
+		if (db_num_rows() < 1) {
+			db_free_result();
+			g_string_printf(q, "INSERT %s INTO %sheadername (headername) VALUES ('%s')", 
+				db_get_sql(SQL_IGNORE), DBPFX, safe_header);
+			if (db_query(q->str) == -1) {
+				db_savepoint_rollback("header_id");
+			} else {
+				tmp = db_insert_result("headername_idnr");
+			}
+		} else {
+			tmp = db_get_result_u64(0,0);
+			db_free_result();
+		}
+		if (tmp) break;
+		usleep(200);
 	}
+
 	*id = tmp;
 	g_hash_table_insert(self->header_dict, (gpointer)(g_strdup(safe_header)), GUINT_TO_POINTER((unsigned)tmp));
 	g_free(safe_header);

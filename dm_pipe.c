@@ -526,27 +526,20 @@ int insert_messages(struct DbmailMessage *message, GList *dsnusers)
 	u64_t bodysize, rfcsize;
 	u64_t tmpid;
 	u64_t msgsize;
+	int result=0;
 
  	delivery_status_t final_dsn;
 
 	/* first start a new database transaction */
-	if (db_begin_transaction() < 0) {
-		TRACE(TRACE_ERROR, "error executing db_begin_transaction(). aborting delivery...");
-		return -1;
+
+	if ((result = dbmail_message_store(message)) == DM_EQUERY) {
+		TRACE(TRACE_ERROR,"storing message failed");
+	} else {
+		TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
 	}
 
-	switch (dbmail_message_store(message)) {
-	case -1:
-		TRACE(TRACE_ERROR, "failed to store temporary message.");
-		db_rollback_transaction();
-		return -1;
-	default:
-		TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
-		break;
-	}
-	/* if committing the transaction fails, a rollback is performed */
-	if (db_commit_transaction() < 0) 
-		return -1;
+	if (result == DM_EQUERY)
+		return result;
 
 	tmpid = message->id; // for later removal
 

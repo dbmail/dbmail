@@ -113,8 +113,12 @@ GList * g_tree_values(GTree *tree);
 void tree_dump(GTree *t);
 int g_tree_merge(GTree *a, GTree *b, int condition);
 	
+void pack_char(char *in, char c);
 char * dm_stresc(const char * from);
 char * dm_strnesc(const char * from, size_t len);
+char * dm_strbinesc(const char * from);
+char * dm_strnbinesc(const char * from, size_t len);
+
 char * dm_shellesc(const char * command);
 void dm_pack_spaces(char *in);
 char * dm_base_subject(const char *subject);

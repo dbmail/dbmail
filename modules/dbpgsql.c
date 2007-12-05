@@ -51,6 +51,7 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_EXPIRE:
 			return "NOW() - INTERVAL '%d DAY'";
 		break;
+		case SQL_IGNORE:
 		case SQL_BINARY:
 			return "";
 		break;
@@ -72,6 +73,7 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_PARTIAL:
 			return "SUBSTRING(%s,0,255)";
 		break;
+			
 	}
 	return NULL;
 }
@@ -302,17 +304,27 @@ unsigned long db_escape_string(char *to,
 	return PQescapeString(to, from, length);
 }
 
-unsigned long db_escape_binary(char *to,
-			       const char *from, unsigned long length)
+char * db_escape_binary(const char *from, unsigned long length)
 {
 	size_t to_length;
 	unsigned char *esc_to;
+	char *to;
 
 	esc_to = PQescapeBytea((const unsigned char *)from, length, &to_length);
-	strncpy(to, (const char *)esc_to, to_length);
+	to = g_strndup((char *)esc_to, to_length);
 	PQfreemem(esc_to);
-	return (unsigned long)(to_length - 1);
+	return to;
 }
+
+int db_savepoint(const char *id)
+{
+	return db_savepoint_transaction(id);
+}
+int db_savepoint_rollback(const char *id)
+{
+	return db_rollback_savepoint_transaction(id);
+}
+
 int db_do_cleanup(const char **tables, int num_tables)
 {
 	int result = 0;

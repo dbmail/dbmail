@@ -285,8 +285,19 @@ END_TEST
  * \return length of escaped string
  * \attention behaviour is undefined if to and from overlap
  */
-//unsigned long db_escape_binary(char *to,
-//			       const char *from, unsigned long length);
+//char * db_escape_binary(const char *from, unsigned long length);
+START_TEST(test_db_escape_binary)
+{
+	const char *from = "test";
+	unsigned long olen = strlen(from);
+	char *to;
+
+	to = db_escape_binary(from, olen);
+
+	fail_unless(to!=NULL);
+	fail_unless(MATCH(to,from), "[%s] != \n[%s]\n", to, from);
+}
+END_TEST
 
 /**
  * \brief get length in bytes of a result field in a result set.
@@ -1246,6 +1257,7 @@ Suite *dbmail_db_suite(void)
 	tcase_add_test(tc_db, test_db_imap_utf7_like);
 	tcase_add_test(tc_db, test_db_replycache);
 	tcase_add_test(tc_db, test_db_findmailbox_by_regex);
+	tcase_add_test(tc_db, test_db_escape_binary);
 	return s;
 }
 

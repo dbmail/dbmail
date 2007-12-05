@@ -546,7 +546,7 @@ int do_null_messages(void)
 int do_check_integrity(void)
 {
 	time_t start, stop;
-	GList *lost;
+	GList *lost = NULL;
 	const char *action;
 	long count = 0;
 	u64_t *id;

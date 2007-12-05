@@ -490,10 +490,21 @@ char * dm_strnesc(const char * from, size_t len)
 	return to;
 }
 	
+char * dm_strbinesc(const char * from)
+{
+	return dm_strnbinesc(from, strlen(from));
+}
+
+char * dm_strnbinesc(const char * from, size_t len)
+{
+	assert(from);
+	len = min(strlen(from),len);
+	return db_escape_binary(from, len);
+}
 /* 
  * replace all multi-spaces with single spaces 
  */
-static void pack_char(char *in, char c)
+void pack_char(char *in, char c)
 {
 	char *saved;
 	char *tmp = g_strdup(in);
@@ -1433,11 +1444,6 @@ char *dbmail_imap_astring_as_string(const char *s)
 	}
 	r = g_strdup_printf("\"%s\"", l);
 	g_free(t);
-
-	// oops: if the rfc2047 encoded address names contain
-	// encoded double-quotes, imap_cleanup_address has added quotes that are now
-	// redundant. we need to strip those
-	pack_char(r,'"');
 
 	return r;
 

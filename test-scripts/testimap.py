@@ -21,7 +21,7 @@
 DEBUG = 0
 
 # For a protocol trace set to 4
-DEBUG = 4
+#DEBUG = 4
 
 # select 'stream' for non-forking mode
 TYPE = 'stream'

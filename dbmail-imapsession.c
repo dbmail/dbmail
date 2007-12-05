@@ -2366,6 +2366,9 @@ static int imap_session_update_recent(struct ImapSession *self)
 		recent = g_list_next(recent);
 	}
 
+	if ( (ud->mailbox) && (ud->mailbox->uid) )
+		db_mailbox_mtime_update(ud->mailbox->uid);
+
 	return 0;
 }
 

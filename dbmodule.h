@@ -27,8 +27,9 @@ typedef struct {
 	void (* free_result)(void);
 	unsigned long (* escape_string)(char *to,
 	                    const char *from, unsigned long length );
-	unsigned long (* escape_binary)(char *to,
-	       	       const char *from, unsigned long length );
+	char * (* escape_binary)(const char *from, unsigned long length );
+	int (* savepoint)(const char *id);
+	int (* savepoint_rollback)(const char *id);
 	int (* do_cleanup)(const char **tables, int num_tables);
 	u64_t (* get_length)(unsigned row, unsigned field);
 	u64_t (* get_affected_rows)(void);
