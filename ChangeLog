@@ -1,3 +1,8 @@
+2007-12-05  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
+	avoid gmime mbox parser to prevent unwanted message truncation
+
 2007-11-29  Paul J Stevens <paul@nfg.nl>
 
 	* modules/dbmysql.c:
