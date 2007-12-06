@@ -1,3 +1,15 @@
+dbmail (2.2.7-1) unstable; urgency=low
+
+  * upstream release
+
+ -- Paul J Stevens <paul@nfg.nl>  Sat, 27 Oct 2007 10:39:37 +0200
+
+dbmail (2.2.6-2) unstable; urgency=low
+
+  * fix a critical regression in 2.2.6-1
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 18 Sep 2007 11:24:04 +0200
+
 dbmail (2.2.6-1) unstable; urgency=low
 
   * new upstream release (Closes: #421018)
