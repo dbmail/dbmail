@@ -14,7 +14,7 @@ dbmail-users { -a username | -c username } [ -g clientid ] [ -m maxmail]
 
 dbmail-users { -d username | -e username }
 
-dbmail-users -l userspec
+dbmail-users -l [userspec]
 
 dbmail-users -x alias [ -t forwards ] [ -T forwards ]
 
@@ -41,8 +41,14 @@ MODE OPTIONS
 -e  user::
   Empty all mailboxes for a user
 
--l  uspec::
-  List information for matching users
+-l  [userspec]::
+  List information for matching users. If no userspec is given, lists all users and forwards in this format:
+
+   -- users --
+      username : the letter 'x' : user id number : client id number : quota : used : comma, separated, aliases
+
+   -- forwards --
+      alias: comma, separated, forwards
 
 -x  alias::
   Create an external forwarding address
