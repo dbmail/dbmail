@@ -21,8 +21,6 @@
 
 BEGIN TRANSACTION;
 
-SET client_encoding = 'UTF8';
-
 CREATE SEQUENCE dbmail_alias_idnr_seq;
 CREATE TABLE dbmail_aliases (
     alias_idnr INT8 DEFAULT nextval('dbmail_alias_idnr_seq'),

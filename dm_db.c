@@ -2540,12 +2540,11 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
 	 * this also means that the status will be set to '001'
          */
 
-	if (db_begin_transaction() == DM_EQUERY) {
-	        dbmail_message_free(message);
+        if (dbmail_message_store(message) < 0) {
+		dbmail_message_free(message);
 		return DM_EQUERY;
 	}
 
-        dbmail_message_store(message);
 	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr);
 	db_delete_message(message->id);
         dbmail_message_free(message);
@@ -2554,18 +2553,13 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
             case -2:
                     TRACE(TRACE_DEBUG, "error copying message to user [%llu],"
                             "maxmail exceeded", user_idnr);
-		    db_rollback_transaction();
                     return -2;
             case -1:
                     TRACE(TRACE_ERROR, "error copying message to user [%llu]", 
                             user_idnr);
-		    db_rollback_transaction();
                     return -1;
         }
                 
-	if (db_commit_transaction() == DM_EQUERY)
-		return DM_EQUERY;
-	
         TRACE(TRACE_MESSAGE, "message id=%llu is inserted", *msg_idnr);
         
         return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
