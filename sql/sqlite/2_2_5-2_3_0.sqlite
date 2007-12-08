@@ -91,6 +91,7 @@ CREATE TRIGGER fk_delete_partlists_physmessage_id
 	END;
 
 ALTER TABLE dbmail_mailboxes ADD mtime DATETIME DEFAULT '0' NOT NULL;
+CREATE INDEX dbmail_mailbox_4 ON dbmail_mailboxes(mtime);
 
 CREATE TABLE dbmail_keywords (
 	keyword		TEXT NOT NULL,

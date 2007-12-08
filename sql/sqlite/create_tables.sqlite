@@ -60,6 +60,7 @@ CREATE TABLE dbmail_mailboxes (
 CREATE INDEX dbmail_mailboxes_1 ON dbmail_mailboxes(name);
 CREATE INDEX dbmail_mailboxes_2 ON dbmail_mailboxes(owner_idnr);
 CREATE UNIQUE INDEX dbmail_mailboxes_3 ON dbmail_mailboxes(owner_idnr,name);
+CREATE INDEX dbmail_mailbox_4 ON dbmail_mailboxes(mtime);
 
 CREATE TRIGGER fk_insert_mailboxes_users_idnr
 	BEFORE INSERT ON dbmail_mailboxes

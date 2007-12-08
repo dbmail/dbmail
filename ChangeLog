@@ -1,6 +1,11 @@
 2007-12-08  Paul J Stevens <paul@nfg.nl>
 
-	* dm_db.c:
+	* sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite:
+	add missing index
+	* sql/sqlite/create_tables.sqlite:
+	remove last mtime triggers
+	* ChangeLog, dm_db.c, sql/mysql/create_tables.mysql, 
+	sql/postgresql/2_2_5-2_3_0.pgsql, sql/postgresql/create_tables.pgsql:
 	prevent nested transactions during message storage
 
 2007-12-05  Paul Stevens <paul@nfg.nl>
