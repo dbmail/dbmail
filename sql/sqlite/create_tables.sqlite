@@ -1018,25 +1018,6 @@ CREATE TRIGGER fk_delete_partlists_physmessage_id
 		DELETE FROM dbmail_partlists WHERE physmessage_id = OLD.id;
 	END;
 
-DROP TRIGGER IF EXISTS mailbox_mtime_insert;
-CREATE TRIGGER mailbox_mtime_insert
-	AFTER INSERT ON dbmail_messages
-	FOR EACH ROW BEGIN
-		UPDATE dbmail_mailboxes SET mtime=DATETIME('now') WHERE mailbox_idnr=NEW.mailbox_idnr;
-	END;
-DROP TRIGGER IF EXISTS mailbox_mtime_update;
-CREATE TRIGGER mailbox_mtime_update
-	AFTER UPDATE ON dbmail_messages
-	FOR EACH ROW BEGIN
-		UPDATE dbmail_mailboxes SET mtime=DATETIME('now') WHERE mailbox_idnr=OLD.mailbox_idnr;
-	END;
-DROP TRIGGER IF EXISTS mailbox_mtime_delete;
-CREATE TRIGGER mailbox_mtime_delete
-	AFTER DELETE ON dbmail_messages
-	FOR EACH ROW BEGIN
-		UPDATE dbmail_mailboxes SET mtime=DATETIME('now') WHERE mailbox_idnr=OLD.mailbox_idnr;
-	END;
-
 CREATE TABLE dbmail_keywords (
 	keyword		TEXT NOT NULL,
 	message_idnr	INT NOT NULL
@@ -1079,21 +1060,4 @@ CREATE TRIGGER fk_delete_dbmail_keywords_dbmail_messages_message_idnr
 		DELETE FROM dbmail_keywords WHERE message_idnr = OLD.message_idnr;
 	END;
 
-DROP TRIGGER IF EXISTS tr_insert_keyword_mailbox;
-CREATE TRIGGER tr_insert_keyword_mailbox AFTER INSERT ON dbmail_keywords 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=DATETIME('now') WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=NEW.message_idnr); 
-	END;
-
-DROP TRIGGER IF EXISTS tr_update_keyword_mailbox;
-CREATE TRIGGER tr_update_keyword_mailbox AFTER UPDATE ON dbmail_keywords 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=DATETIME('now') WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=OLD.message_idnr); 
-	END;
-
-DROP TRIGGER IF EXISTS tr_delete_keyword_mailbox;
-CREATE TRIGGER tr_delete_keyword_mailbox AFTER DELETE ON dbmail_keywords 
-	FOR EACH ROW BEGIN 
-		UPDATE dbmail_mailboxes SET mtime=DATETIME('now') WHERE mailbox_idnr=(SELECT mailbox_idnr FROM dbmail_messages WHERE message_idnr=OLD.message_idnr); 
-	END;
 
