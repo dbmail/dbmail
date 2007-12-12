@@ -1,3 +1,13 @@
+2007-12-12  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	v2.2.8
+
+2007-12-06  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog:
+	update debian changelog
+
 2007-12-05  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION:
