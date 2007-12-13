@@ -1,3 +1,8 @@
+2007-12-13  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog:
+	update debian/changelog
+
 2007-12-12  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION:
