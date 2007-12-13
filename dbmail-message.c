@@ -777,7 +777,7 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 		case DBMAIL_MESSAGE:
 			TRACE(TRACE_DEBUG,"parse message");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
-			if (from)
+			if (from) {
 				dbmail_message_set_internal_date(self, from);
 				g_free(from);
 			}
@@ -1226,7 +1226,6 @@ int _message_insert(struct DbmailMessage *self,
 	char *internal_date = NULL;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
-	int try=3;
 
 	assert(unique_id);
 	assert(mailbox);
