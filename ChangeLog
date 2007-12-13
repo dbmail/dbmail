@@ -1,6 +1,8 @@
 2007-12-13  Paul J Stevens <paul@nfg.nl>
 
-	* debian/changelog:
+	* VERSION, debian/changelog:
+	v2.3.0
+	* ChangeLog, debian/changelog:
 	update debian/changelog after 2.2.8 release
 
 2007-12-08  Paul J Stevens <paul@nfg.nl>
