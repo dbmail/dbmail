@@ -1228,6 +1228,10 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		TRACE(TRACE_DEBUG, "username or password is NULL");
 		return 0;
 	}
+	if (strlen(password) == 0) {
+		TRACE(TRACE_WARNING, "User \"%s\" try to use anonimous LDAP bind!", username);
+		return 0;
+	}
 
 	/* the shared mailbox user should not log in! */
 	if (strcmp(username, PUBLIC_FOLDER_USER) == 0)
