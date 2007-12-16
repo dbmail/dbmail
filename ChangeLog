@@ -1,5 +1,9 @@
 2007-12-16  Paul J Stevens <paul@nfg.nl>
 
+	* modules/authldap.c:
+	ldap reconnect fix (bug #663)
+	* modules/authldap.c:
+	ldap anonbind fix (bug #662)
 	* check_dbmail_common.c, config.c, debug.c, debug.h:
 	silence log messages from glib (bug #656)
 

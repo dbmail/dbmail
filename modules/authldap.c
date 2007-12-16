@@ -56,7 +56,9 @@ _ldap_cfg_t _ldap_cfg;
 static GList * __auth_get_every_match(const char *q, char **retfields);
 
 static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name);
-static int auth_reconnect(void);
+static int authldap_connect(void);
+static int authldap_disconnect(void);
+static int authldap_reconnect(void);
 static int auth_search(const gchar *query);
 
 static void __auth_get_config(void)
@@ -136,14 +138,19 @@ static int auth_ldap_bind(void)
 
 }
 
+/* Module api wrappers */
+int auth_connect(void)
+	{ return authldap_connect(); }
+int auth_disconnect(void)
+	{ return authldap_disconnect(); }
 /*
- * auth_connect()
+ * authldap_connect()
  *
  * initializes the connection for authentication.
  * 
  * returns 0 on success, -1 on failure
  */
-int auth_connect(void)
+static int authldap_connect(void)
 {
 	int version = 0;
 #ifdef HAVE_LDAP_INITIALIZE
@@ -214,7 +221,7 @@ int auth_connect(void)
 	return auth_ldap_bind();	
 }
 
-int auth_disconnect(void) 
+static int authldap_disconnect(void) 
 {
 	/* Destroy the connection */
 	if (_ldap_conn != NULL) {
@@ -235,6 +242,12 @@ int auth_disconnect(void)
 	return 0;
 }
 
+static int authldap_reconnect(void)
+{
+	authldap_disconnect();
+	return authldap_connect();
+}
+
 static int auth_search(const gchar *query)
 {
 	int c=0;
@@ -252,7 +265,7 @@ static int auth_search(const gchar *query)
 		switch (_ldap_err) {
 			case LDAP_SERVER_DOWN:
 				TRACE(TRACE_WARNING, "LDAP gone away: %s. Try to reconnect(%d/5).", ldap_err2string(_ldap_err),c);
-				if (auth_reconnect())
+				if (authldap_reconnect())
 					sleep(2); // reconnect failed. wait before trying again
 				break;
 			default:
@@ -264,13 +277,6 @@ static int auth_search(const gchar *query)
 	
 	TRACE(TRACE_FATAL,"unrecoverable error while talking to ldap server");
 	return -1;
-}
-
-
-static int auth_reconnect(void)
-{
-	auth_disconnect();
-	return auth_connect();
 }
 
 void dm_ldap_freeresult(GList *entlist)
