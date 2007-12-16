@@ -57,4 +57,5 @@ void trace(trace_t level, const char * module,
 
 void configure_debug(trace_t trace_syslog, trace_t trace_stderr);
 
+void null_logger(const char UNUSED *log_domain, GLogLevelFlags UNUSED log_level, const char UNUSED *message, gpointer UNUSED data);
 #endif

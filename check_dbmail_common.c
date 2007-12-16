@@ -83,6 +83,13 @@ START_TEST(test_db_connect)
 }
 END_TEST
 
+START_TEST(test_glog)
+{
+	// this should not print anything on stdout/stderr
+	g_log("test",G_LOG_LEVEL_CRITICAL, "this should not be printed");
+}
+END_TEST
+
 Suite *dbmail_common_suite(void)
 {
 	Suite *s = suite_create("Dbmail Common");
@@ -95,6 +102,7 @@ Suite *dbmail_common_suite(void)
 	tcase_add_checked_fixture(tc_config, setup, teardown);
 	tcase_add_test(tc_config, test_read_config);
 	tcase_add_test(tc_config, test_db_connect);
+	tcase_add_test(tc_config, test_glog);
 	
 	//tcase_add_checked_fixture(tc_main, setup, teardown);
 	return s;

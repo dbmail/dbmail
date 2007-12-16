@@ -52,6 +52,9 @@ int config_read(const char *config_filename)
 		return -1;
 	}
 
+	// silence the glib logger
+	g_log_set_default_handler((GLogFunc)null_logger, NULL);
+
 	configured = 1;
         return 0;
 }

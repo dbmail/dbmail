@@ -54,6 +54,12 @@ static const char * const trace_text[] = {
 	"Debug"
 };
 
+void null_logger(const char UNUSED *log_domain, GLogLevelFlags UNUSED log_level, const char UNUSED *message, gpointer UNUSED data)
+{
+	// ignore glib messages	
+	return;
+}
+
 static const char * trace_to_text(trace_t level)
 {
 	return trace_text[level];
