@@ -1,3 +1,19 @@
+2007-12-16  Paul J Stevens <paul@nfg.nl>
+
+	* modules/authldap.c:
+	ldap reconnect fix (bug #663)
+	* modules/authldap.c:
+	ldap anonbind fix (bug #662)
+	* check_dbmail_common.c, dm_config.c, dm_debug.c, dm_debug.h:
+	silence log messages from glib (bug #656)
+
+2007-12-13  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, VERSION, debian/changelog:
+	v2.3.0
+	* ChangeLog, debian/changelog:
+	update debian/changelog after 2.2.8 release
+
 2007-12-13  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION, debian/changelog:
