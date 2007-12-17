@@ -277,9 +277,13 @@ int db_check_connection()
 
 u64_t db_insert_result(const char *sequence_identifier UNUSED)
 {
+	db_query("SELECT LAST_INSERT_ID()");
+	return db_get_result_u64(0,0);
+#if 0
 	u64_t insert_result;
 	insert_result = mysql_insert_id(&conn);
 	return insert_result;
+#endif
 }
 
 int db_query(const char *q)

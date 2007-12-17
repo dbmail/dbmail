@@ -1,3 +1,15 @@
+2007-12-17  Paul J Stevens <paul@nfg.nl>
+
+	* modules/dbmysql.c:
+	use last_insert_id() rather than mysql_insert_id to retrieve last 
+	auto_increment
+	* check_dbmail_message.c, dbmail-mailbox.c:
+	add a missing case of dm_strtoull in dbmail_mailbox_get_set
+	* check_dbmail_imapd.c, dbmail-message.c:
+	do not add From_ header as part of the message during insertion
+	* debian/rules:
+	minor change
+
 2007-12-16  Paul J Stevens <paul@nfg.nl>
 
 	* modules/authldap.c:
