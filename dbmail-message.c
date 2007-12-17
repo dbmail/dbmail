@@ -727,12 +727,15 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 			
 			while ((getslen = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) > 0) {
-				if (firstline && strncmp(buf,"From ",5)==0)
+				if (firstline && strncmp(buf,"From ",5)==0) {
 					from = g_strdup(buf);
-				firstline=FALSE;
+					firstline=FALSE;
+					continue;
+				}
 
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 					break;
+
 				putslen = g_mime_stream_write(fstream, buf, getslen);
 
 				if (g_mime_stream_flush(fstream)) {
@@ -1271,6 +1274,7 @@ int _message_insert(struct DbmailMessage *self,
 	}
 
 	self->id = db_insert_result("message_idnr");
+	TRACE(TRACE_DEBUG,"new message_idnr [%llu]", self->id);
 	db_free_result();
 
 	return result;
