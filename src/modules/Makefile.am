@@ -16,10 +16,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-INCLUDES = -I$(top_srcdir)
+INCLUDES = -I$(top_srcdir)/src
 AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@
-
-
 
 #AM_LDFLAGS = -Wl,--export-dynamic
 if SHARED

@@ -1,60 +1,36 @@
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
-#
-# This program is free software; you can redistribute it and/or 
-# modify it under the terms of the GNU General Public License 
-# as published by the Free Software Foundation; either 
-# version 2 of the License, or (at your option) any later 
-# version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# Copyright (C) 2004-2008 NFG Net Facilities Group support@nfg.nl
 
-AC_INIT([main.c])
-AC_CONFIG_AUX_DIR(buildtools)
+AC_INIT([dbmail], [dbmail@dbmail.org])
+AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h:config.in)
-DBMAIL_MSG_CONFIGURE_START
-DBMAIL_SET_VERSION
-# Initialize the package and major.minor version.
-# The full version that is printed out is kept in VERSION
-# and represented by the DBMAIL_VERSION define.
-AM_INIT_AUTOMAKE(dbmail, 2.2)
+
+# ---------------------------------------------
+DM_MSG_CONFIGURE_START
+DM_SET_VERSION
+AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
-
-pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
-                  /usr/local/include /usr/freeware/include/pgsql \
-                  /usr/freeware/include $HOME/include $HOME/pgsql/include \
-		  /usr/local/pgsql/include /usr/include/postgresql $HOME"
-
-ldapprefixes="/usr /usr/local"
-sieveprefixes="/usr /usr/local"
-
 AC_DEFINE(_GNU_SOURCE,'','Defined GNU SOURCE')
 
-# Turn off both defaults.
+# ---------------------------------------------
+# shared or static
+# ---------------------------------------------
 AM_ENABLE_SHARED(no)
 AM_ENABLE_STATIC(no)
-# Check if one was specified.
-# Stop with an error if both.
-# Default to shared if neither.
-DBMAIL_SET_SHARED_OR_STATIC
+DM_SET_SHARED_OR_STATIC
 AM_CONDITIONAL(SHARED, [ test "$enable_shared" = "yes" ])
 AM_CONDITIONAL(STATIC, [ test "$enable_static" = "yes" ])
 
+# ---------------------------------------------
 DM_DEFINES
-DBMAIL_BOTH_SQL_CHECK
-DBMAIL_CHECK_SQL_LIBS
-DBMAIL_LDAP_CONF
-DBMAIL_SIEVE_CONF
-DBMAIL_CHECK_GLIB
-DBMAIL_CHECK_GMIME
-DBMAIL_CHECK_GC
-DBMAIL_PATH_CHECK
+DM_SQL_CHECK
+DM_SQL_LIBS
+DM_LDAP_CONF
+DM_SIEVE_CONF
+DM_CHECK_GLIB
+DM_CHECK_GMIME
+DM_CHECK_GC
+DM_PATH_CHECK
 gl_GETOPT
 CMU_SOCKETS
 
@@ -121,6 +97,6 @@ AC_SUBST(DM_PKGLIBDIR)
 
 AC_PROG_LIBTOOL
 
-AC_OUTPUT(dbmail.h Makefile modules/Makefile man/Makefile)
+AC_OUTPUT(src/dbmail.h Makefile src/Makefile src/modules/Makefile man/Makefile test/Makefile)
 
-DBMAIL_MSG_CONFIGURE_RESULTS
+DM_MSG_CONFIGURE_RESULTS

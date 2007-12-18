@@ -1,3 +1,85 @@
+2007-12-18  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.am, README, README.aliases, README.exim, README.ldap, 
+	README.postfix, README.qmail, README.sieve, README.smtp, 
+	README.solaris, README.usermap, acinclude.m4, auth.h, authmodule.c, 
+	authmodule.h, check_dbmail.h, check_dbmail_auth.c, 
+	check_dbmail_common.c, check_dbmail_db.c, check_dbmail_deliver.c, 
+	check_dbmail_dsn.c, check_dbmail_imapd.c, check_dbmail_list.c, 
+	check_dbmail_mailbox.c, check_dbmail_message.c, check_dbmail_misc.c, 
+	check_dbmail_server.c, check_dbmail_user.c, check_dbmail_util.c, 
+	configure.in, dbmail-imapsession.c, dbmail-imapsession.h, 
+	dbmail-mailbox.c, dbmail-mailbox.h, dbmail-message.c, 
+	dbmail-message.h, dbmail-user.c, dbmail-user.h, dbmail.h.in, 
+	dbmail.supp, dbmailtypes.h, dbmodule.c, dbmodule.h, debian/rules, 
+	dm_acl.c, dm_acl.h, dm_base64.c, dm_base64.h, dm_cidr.c, dm_cidr.h, 
+	dm_config.c, dm_db.c, dm_db.h, dm_debug.c, dm_debug.h, dm_dsn.c, 
+	dm_dsn.h, dm_getopt.c, dm_getopt.h, dm_iconv.c, dm_iconv.h, 
+	dm_list.c, dm_list.h, dm_match.c, dm_match.h, dm_md5.c, dm_md5.h, 
+	dm_memblock.c, dm_memblock.h, dm_misc.c, dm_misc.h, dm_pidfile.c, 
+	dm_pipe.c, dm_pipe.h, dm_quota.c, dm_quota.h, dm_sha1.c, dm_sha1.h, 
+	doc/README.aliases, doc/README.exim, doc/README.ldap, 
+	doc/README.postfix, doc/README.qmail, doc/README.sieve, 
+	doc/README.smtp, doc/README.solaris, doc/README.usermap, export.c, 
+	imap4.c, imap4.h, imapcommands.c, imapcommands.h, imapd.c, lmtp.c, 
+	lmtp.h, lmtpd.c, main.c, maintenance.c, modules/Makefile.am, 
+	modules/authldap.c, modules/authsql.c, modules/dbingres.c, 
+	modules/dbmysql.c, modules/dbpgsql.c, modules/dbsqlite.c, 
+	modules/sortnull.c, modules/sortsieve.c, pop3.c, pop3.h, pop3d.c, 
+	server.c, server.h, serverchild.c, serverchild.h, serverparent.c, 
+	serverparent.h, serverpool.c, serverpool.h, serversession.c, 
+	serversession.h, sievecmd.c, sort.c, sort.h, sortmodule.c, 
+	sortmodule.h, src/Makefile.am, src/auth.h, src/authmodule.c, 
+	src/authmodule.h, src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmail-mailbox.c, src/dbmail-mailbox.h, src/dbmail-message.c, 
+	src/dbmail-message.h, src/dbmail-user.c, src/dbmail-user.h, 
+	src/dbmail.h.in, src/dbmailtypes.h, src/dbmodule.c, src/dbmodule.h, 
+	src/dm_acl.c, src/dm_acl.h, src/dm_base64.c, src/dm_base64.h, 
+	src/dm_cidr.c, src/dm_cidr.h, src/dm_config.c, src/dm_db.c, 
+	src/dm_db.h, src/dm_debug.c, src/dm_debug.h, src/dm_dsn.c, 
+	src/dm_dsn.h, src/dm_getopt.c, src/dm_getopt.h, src/dm_iconv.c, 
+	src/dm_iconv.h, src/dm_list.c, src/dm_list.h, src/dm_match.c, 
+	src/dm_match.h, src/dm_md5.c, src/dm_md5.h, src/dm_memblock.c, 
+	src/dm_memblock.h, src/dm_misc.c, src/dm_misc.h, src/dm_pidfile.c, 
+	src/dm_pipe.c, src/dm_pipe.h, src/dm_quota.c, src/dm_quota.h, 
+	src/dm_sha1.c, src/dm_sha1.h, src/export.c, src/imap4.c, src/imap4.h, 
+	src/imapcommands.c, src/imapcommands.h, src/imapd.c, src/lmtp.c, 
+	src/lmtp.h, src/lmtpd.c, src/main.c, src/maintenance.c, 
+	src/modules/Makefile.am, src/modules/authldap.c, 
+	src/modules/authsql.c, src/modules/dbingres.c, src/modules/dbmysql.c, 
+	src/modules/dbpgsql.c, src/modules/dbsqlite.c, 
+	src/modules/sortnull.c, src/modules/sortsieve.c, src/pop3.c, 
+	src/pop3.h, src/pop3d.c, src/server.c, src/server.h, 
+	src/serverchild.c, src/serverchild.h, src/serverparent.c, 
+	src/serverparent.h, src/serverpool.c, src/serverpool.h, 
+	src/serversession.c, src/serversession.h, src/sievecmd.c, src/sort.c, 
+	src/sort.h, src/sortmodule.c, src/sortmodule.h, src/timsieve.c, 
+	src/timsieve.h, src/timsieved.c, src/top.c, src/user.c, 
+	test/Makefile.am, test/check_dbmail.h, test/check_dbmail_auth.c, 
+	test/check_dbmail_common.c, test/check_dbmail_db.c, 
+	test/check_dbmail_deliver.c, test/check_dbmail_dsn.c, 
+	test/check_dbmail_imapd.c, test/check_dbmail_list.c, 
+	test/check_dbmail_mailbox.c, test/check_dbmail_message.c, 
+	test/check_dbmail_misc.c, test/check_dbmail_server.c, 
+	test/check_dbmail_user.c, test/check_dbmail_util.c, timsieve.c, 
+	timsieve.h, timsieved.c, top.c, user.c:
+	merging cleantree
+
+	This re-organizes the whole code-tree drastically, emptying the
+	tree-root and moving all code into subdirs.
+
+2007-12-17  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, modules/dbmysql.c:
+	use last_insert_id() rather than mysql_insert_id to retrieve last 
+	auto_increment
+	* check_dbmail_message.c, dbmail-mailbox.c:
+	add a missing case of dm_strtoull in dbmail_mailbox_get_set
+	* check_dbmail_imapd.c, dbmail-message.c:
+	do not add From_ header as part of the message during insertion
+	* debian/rules:
+	minor change
+
 2007-12-17  Paul J Stevens <paul@nfg.nl>
 
 	* modules/dbmysql.c:
