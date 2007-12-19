@@ -1,6 +1,8 @@
 2007-12-19  Paul J Stevens <paul@nfg.nl>
 
-	* debian/changelog, debian/dbmail.docs, debian/rules:
+	* VERSION:
+	update VERSION
+	* ChangeLog, debian/changelog, debian/dbmail.docs, debian/rules:
 	v2.3.1
 
 2007-12-18  Paul J Stevens <paul@nfg.nl>
