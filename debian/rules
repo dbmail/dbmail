@@ -10,7 +10,7 @@ export WITH_SIEVE=--with-sieve
 export WITH_SQLITE=--with-sqlite 
 export WITH_MYSQL=--with-mysql
 export WITH_PGSQL=--with-pgsql
-export WITH_LDAP=--with-auth-ldap
+export WITH_LDAP=--with-ldap
 export SHARED=--enable-shared=yes
 export SHARED=--enable-static=no
 export MANPAGES=--enable-manpages=yes

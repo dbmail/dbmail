@@ -1,3 +1,8 @@
+2007-12-19  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/dbmail.docs, debian/rules:
+	v2.3.1
+
 2007-12-18  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.am, README, README.aliases, README.exim, README.ldap, 
@@ -68,18 +73,6 @@
 	This re-organizes the whole code-tree drastically, emptying the
 	tree-root and moving all code into subdirs.
 
-2007-12-17  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, modules/dbmysql.c:
-	use last_insert_id() rather than mysql_insert_id to retrieve last 
-	auto_increment
-	* check_dbmail_message.c, dbmail-mailbox.c:
-	add a missing case of dm_strtoull in dbmail_mailbox_get_set
-	* check_dbmail_imapd.c, dbmail-message.c:
-	do not add From_ header as part of the message during insertion
-	* debian/rules:
-	minor change
-
 2007-12-17  Paul J Stevens <paul@nfg.nl>
 
 	* modules/dbmysql.c:
@@ -100,13 +93,6 @@
 	ldap anonbind fix (bug #662)
 	* check_dbmail_common.c, dm_config.c, dm_debug.c, dm_debug.h:
 	silence log messages from glib (bug #656)
-
-2007-12-13  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, VERSION, debian/changelog:
-	v2.3.0
-	* ChangeLog, debian/changelog:
-	update debian/changelog after 2.2.8 release
 
 2007-12-13  Paul J Stevens <paul@nfg.nl>
 
@@ -141,20 +127,6 @@
 	* ChangeLog, check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
 	avoid gmime mbox parser to prevent unwanted message truncation
 
-2007-12-05  Paul J Stevens <paul@nfg.nl>
-
-	* check_dbmail_db.c, check_dbmail_imapd.c, check_dbmail_misc.c, 
-	dbmail-imapsession.c, dbmail-mailbox.c, dbmail-message.c, 
-	dbmailtypes.h, dbmodule.c, dbmodule.h, dm_db.c, dm_db.h, dm_iconv.c, 
-	dm_misc.c, dm_misc.h, dm_pipe.c, maintenance.c, modules/dbmysql.c, 
-	modules/dbpgsql.c, modules/dbsqlite.c, sql/mysql/2_2_5-2_3_0.mysql, 
-	sql/mysql/create_tables.mysql, sql/postgresql/2_2_5-2_3_0.pgsql, 
-	sql/postgresql/create_tables.pgsql, sql/sqlite/2_2_5-2_3_0.sqlite, 
-	test-scripts/testimap.py:
-	merge imaptest branch
-	* ChangeLog, check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
-	avoid gmime mbox parser to prevent unwanted message truncation
-
 2007-12-03  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c, dbmail-message.c:
@@ -181,13 +153,6 @@
 	* check_dbmail_mailbox.c, dbmail-mailbox.c, imapcommands.c, 
 	test-scripts/testimap.py:
 	disallow negative seq-numbers
-
-2007-11-18  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, dm_db.c:
-	fix IMAPFA_REPLACE case for empty keywords list
-	* INSTALL:
-	minor pgsql update in INSTALL
 
 2007-11-18  Paul J Stevens <paul@nfg.nl>
 
@@ -333,19 +298,6 @@
 	* dbmail-imapsession.c, imapcommands.c:
 	make noop work again
 
-2007-10-08  Paul J Stevens <paul@nfg.nl>
-
-	* check_dbmail_imapd.c, check_dbmail_message.c, check_dbmail_misc.c, 
-	db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, 
-	dbmail-message.c, dbmailtypes.h, dbmodule.c, 
-	debian/dbmail-mysql.examples, debian/dbmail-pgsql.examples, 
-	debian/dbmail.examples, debian/rules, export.c, imap4.h, 
-	imapcommands.c, misc.c, misc.h, modules/dbsqlite.c, sort.c, 
-	sql/mysql/2_2_5-2_3_0.mysql, sql/mysql/create_tables.mysql, 
-	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite, 
-	test-scripts/testimap.py, test-scripts/teststore.imap:
-	merge labels branch
-
 2007-10-06  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, imapcommands.c:
@@ -417,19 +369,8 @@
 
 2007-09-05  Paul Stevens <paul@nfg.nl>
 
-	* ChangeLog, db.c:
-	fix regression for bug #634 (bug #642)
-
-2007-09-05  Paul Stevens <paul@nfg.nl>
-
 	* db.c:
 	fix regression for bug #634 (bug #642)
-
-2007-09-02  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, sql/postgresql/create_tables.pgsql, 
-	sql/postgresql/migrate_from_2.0_to_2.2.pgsql:
-	fix typo
 
 2007-09-02  Paul J Stevens <paul@nfg.nl>
 
@@ -447,11 +388,6 @@
 	sql/postgresql/migrate_from_2.0_to_2.2.pgsql:
 	add partial index to headervalue field (bug #634)
 
-2007-08-31  Paul J Stevens <paul@nfg.nl>
-
-	* check_dbmail_db.c, db.c:
-	fix regression for bug #639 (bug #641)
-
 2007-08-27  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, db.h, dbmail-mailbox.c, dbmail.h.in, dbmailtypes.h, 
@@ -459,11 +395,6 @@
 	sql/postgresql/create_tables.pgsql, 
 	sql/postgresql/migrate_from_2.0_to_2.2.pgsql:
 	add partial index to headervalue field (bug #634)
-
-2007-08-26  Paul Stevens <paul@nfg.nl>
-
-	* ChangeLog, memblock.c, memblock.h:
-	memblock cleanup (bug #628)
 
 2007-08-26  Paul J Stevens <paul@nfg.nl>
 
@@ -582,17 +513,6 @@
 	sql/mysql/2_2_5-2_3_0.mysql, sql/postgresql/2_2_5-2_3_0.pgsql, 
 	sql/postgresql/create_tables.pgsql, sql/sqlite/2_2_5-2_3_0.sqlite, 
 	sql/sqlite/create_tables.sqlite, test-scripts/testimap.py:
-	merge branch/fastmailbox
-
-2007-07-03  Paul J Stevens <paul@nfg.nl>
-
-	* check_dbmail_db.c, check_dbmail_mailbox.c, check_dbmail_user.c, 
-	db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, dbmail.conf, 
-	dbmailtypes.h, imapcommands.c, modules/dbmysql.c, modules/dbpgsql.c, 
-	modules/dbsqlite.c, sql/mysql/2_2_5-2_3_0.mysql, 
-	sql/postgresql/2_2_5-2_3_0.pgsql, sql/postgresql/create_tables.pgsql, 
-	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite, 
-	test-scripts/testimap.py:
 	merge branch/fastmailbox
 
 2007-07-02  Paul Stevens <paul@nfg.nl>
