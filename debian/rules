@@ -54,7 +54,7 @@ ifneq (,$(findstring ingres,$(DEB_BUILD_OPTIONS)))
 	export WITH_INGRES=--with-ingres=/opt/Ingres/IngresII
 endif
 ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
-	export WITH_LDAP=--with-auth-ldap
+	export WITH_LDAP=--with-ldap
 endif
 ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
 	export WITH_SIEVE=--with-sieve

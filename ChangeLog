@@ -1,3 +1,52 @@
+2007-12-30  Paul J Stevens <paul@nfg.nl>
+
+	* debian/rules:
+	fix ldap build
+	* man/dbmail-imapd.txt:
+	fix formatting
+	* src/dbmail-user.c, src/dm_digest.c, src/dm_digest.h, src/dm_md5.c, 
+	src/dm_misc.c, src/dm_misc.h, src/dm_pipe.c, src/modules/authsql.c, 
+	test/check_dbmail_misc.c:
+	add whirlpool and sha-2 support
+	* src/dbmail-message.c:
+	cleanup preparing for collision handling
+
+2007-12-29  Paul J Stevens <paul@nfg.nl>
+
+	* debian/control:
+	add libmhash-dev build-dep
+	* sql/sqlite/create_tables.sqlite, src/Makefile.am, src/dbmail.h.in, 
+	src/dm_digest.c, src/dm_digest.h, src/dm_md5.h, src/dm_sha1.c, 
+	src/dm_sha1.h, test/check_dbmail_misc.c:
+	merge dm_sha1 and dm_md5 files and add tiger support
+	* acinclude.m4, src/dbmail-message.c, src/dbmail-user.c, 
+	src/dbmail.h.in, src/dm_md5.c, src/dm_misc.c, src/dm_sha1.c, 
+	src/dm_sha1.h, src/modules/authsql.c, src/modules/sortsieve.c, 
+	test/check_dbmail_misc.c:
+	replace sha1 and md5 implementations with mhash calls
+
+2007-12-28  Paul J Stevens <paul@nfg.nl>
+
+	* src/maintenance.c:
+	disable null_physmessage check
+	* acinclude.m4, configure.in, dbmail.conf:
+	begin adding mhash
+
+2007-12-27  Paul J Stevens <paul@nfg.nl>
+
+	* src/Makefile.am, src/dbmail-imapsession.c, src/dbmail.h.in, 
+	src/dm_base64.c, src/dm_base64.h, src/dm_md5.c, src/dm_misc.c, 
+	src/dm_misc.h, test/check_dbmail_imapd.c, test/check_dbmail_misc.c:
+	use glib base64 calls and remove dm_base64 files
+	* src/dbmail-message.c, src/dm_db.c, src/dm_misc.c, src/dm_pipe.c, 
+	src/main.c, test/check_dbmail.h, test/check_dbmail_message.c:
+	fix insertion
+
+2007-12-19  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, VERSION:
+	update VERSION
+
 2007-12-19  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION:
