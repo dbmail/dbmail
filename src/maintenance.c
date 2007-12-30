@@ -504,6 +504,12 @@ int do_null_messages(void)
 
 	time(&stop);
 	qverbosef("--- checking NULL messages took %g seconds\n", difftime(stop, start));
+#if 0
+	// 
+	//
+	// disabled in 2.3+
+	//
+	//
 	qprintf("\nChecking DBMAIL for NULL physmessages...\n");
 	time(&start);
 	if (db_icheck_null_physmessages(&lost) < 0) {
@@ -539,6 +545,7 @@ int do_null_messages(void)
 
 	time(&stop);
 	qverbosef("--- checking NULL physmessages took %g seconds\n", difftime(stop, start));
+#endif
 	
 	return 0;
 }
