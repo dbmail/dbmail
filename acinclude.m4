@@ -30,6 +30,7 @@ AC_MSG_RESULT([
  STATIC:                    $enable_static
  CHECK:                     $with_check
  SOCKETS:                   $SOCKETLIB
+ MHASH:                     $MHASHLIB
 
 ])
 ])
@@ -386,6 +387,102 @@ if ( test [ "x$lookforldap" != "xno" ] ); then
         AC_SUBST(LDAPINC)
         AUTHALIB="modules/.libs/libauth_ldap.a"
         AUTHLTLIB="modules/libauth_ldap.la"
+    fi
+fi
+])
+
+AC_DEFUN([DM_MHASH_INC],[
+    AC_COMPILE_IFELSE(
+    AC_LANG_PROGRAM([[
+        #define NULL 0
+        #include <mhash.h>]]),
+    [$1],
+    [$2])
+])
+dnl Check for MHASH library.
+AC_DEFUN([DM_MHASH_LIB],[
+    AC_LINK_IFELSE(
+    AC_LANG_PROGRAM([[
+        #define NULL 0
+        #include <mhash.h>]]),
+    [$1],
+    [$2])
+])
+
+AC_DEFUN([DM_CHECK_MHASH], [dnl
+WARN=0
+
+AC_ARG_WITH(mhash,[  --with-mhash=PATH	  path to MHASH base directory (e.g. /usr/local or /usr)],
+	[lookformhash="$withval"],[lookformhash="yes"])
+
+if ( test [ "x$lookformhash" != "xno" ] ); then
+
+    if ( test [ "x$lookformhash" != "xyes" ] && test [ "x$lookformhash" != "xno" ] ); then
+        mhashprefixes=$lookformhash
+    fi
+
+    AC_MSG_CHECKING([for MHASH headers])
+    STOP_LOOKING_FOR_MHASH=""
+    while test [ -z $STOP_LOOKING_FOR_MHASH ]; do 
+
+	if ( test [ "x$lookformhash" = "xyes" ] ); then
+            DM_MHASH_INC([MHASHINC=""], [MHASHINC="failed"])
+            if test [ "x$MHASHINC" != "xfailed" ]; then
+                break
+            fi
+        fi
+ 
+        for TEST_PATH in $mhashprefixes; do
+	    TEST_PATH="$TEST_PATH/include"
+            SAVE_CFLAGS=$CFLAGS
+            CFLAGS="$CFLAGS -I$TEST_PATH"
+            DM_MHASH_INC([MHASHINC="-I$TEST_PATH"], [MHASHINC="failed"])
+            CFLAGS=$SAVE_CFLAGS
+            if test [ "x$MHASHINC" != "xfailed" ]; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_MHASH="done"
+    done
+
+    if test [ "x$MHASHINC" = "xfailed" ]; then
+        AC_MSG_ERROR([Could not find MHASH headers.])
+    else
+        AC_MSG_RESULT($MHASHINC)
+    fi
+
+    AC_MSG_CHECKING([for MHASH libraries])
+    STOP_LOOKING_FOR_MHASH=""
+    while test [ -z $STOP_LOOKING_FOR_MHASH ]; do 
+
+        if ( test [ "x$lookformhash" = "xyes" ] ); then
+            DM_MHASH_LIB([MHASHLIB="-lmhash"], [MHASHLIB="failed"])
+            if test [ "x$MHASHLIB" != "xfailed" ]; then
+                break
+            fi
+        fi
+ 
+        for TEST_PATH in $mhashprefixes; do
+	    TEST_PATH="$TEST_PATH/lib"
+            SAVE_CFLAGS=$CFLAGS
+            CFLAGS="$CFLAGS -L$TEST_PATH $MHASHINC"
+            DM_MHASH_LIB([MHASHLIB="-L$TEST_PATH -lmhash"], [MHASHLIB="failed"])
+            CFLAGS=$SAVE_CFLAGS
+            if test [ "x$MHASHLIB" != "xfailed" ]; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_MHASH="done"
+    done
+
+    if test [ "x$MHASHLIB" = "xfailed" ]; then
+        AC_MSG_ERROR([Could not find MHASH library.])
+    else
+        AC_MSG_RESULT($MHASHLIB)
+        AC_SUBST(MHASHLIB)
+        AC_SUBST(MHASHINC)
     fi
 fi
 ])
