@@ -161,9 +161,49 @@ static gboolean blob_exists(const char *id)
 	return rows ? TRUE : FALSE;
 }
 
-char * get_digest(const char *buf)
+static int * insert_blob(const char *buf, const char *id)
 {
-	return dm_sha1(buf);
+	assert(buf);
+	GString *q;
+	char *safe;
+
+	q = g_string_new("");
+	safe = dm_strbinesc(buf);
+	g_string_printf(q, "INSERT INTO %smimeparts (id, data, size) VALUES ("
+			"'%s', '%s', %zd)", DBPFX, id, safe, strlen(buf));
+	g_free(safe);
+
+	if (db_query(q->str) == DM_EQUERY) {
+		g_string_free(q,TRUE);
+		return DM_EQUERY;
+	}
+
+	db_free_result();
+	g_string_free(q,TRUE);
+
+	return DM_SUCCESS;
+}
+
+static int register_blob(struct DbmailMessage *m, const char *id, gboolean is_header)
+{
+	GString *q;
+
+	q = g_string_new("");
+	g_string_printf(q, "INSERT INTO %spartlists "
+		"(physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
+		"VALUES (%llu,%u,%u,%u,%u,'%s')", 
+		DBPFX, dbmail_message_get_physid(m), is_header, 
+		m->part_key, m->part_depth, m->part_order, id);
+
+	if (db_query(q->str) == DM_EQUERY) {
+		g_string_free(q,TRUE);
+		return DM_EQUERY;
+	}
+
+	db_free_result();
+	g_string_free(q,TRUE);
+
+	return DM_SUCCESS;
 }
 
 static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_header)
@@ -179,40 +219,22 @@ static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_hea
 		m->part_order=0;
 	}
 
-	q = g_string_new("");
-
-	id = get_digest(buf);
+	// we need a valid non-colliding key
+	id = get_id_for_blob(buf);
 
 	// store this message fragment
 	if (! blob_exists(id)) {
-		safe = dm_strbinesc(buf);
-		assert(safe);
-		g_string_printf(q, "INSERT INTO %smimeparts (id, data, size) VALUES ("
-				"'%s', '%s', %zd)", DBPFX, id, safe, strlen(buf));
-
-		if (db_query(q->str) == DM_EQUERY) {
-			g_string_free(q,TRUE);
+		if (insert_blob(buf, id) == DM_EQUERY)
 			return DM_EQUERY;
-		}
-
-		g_free(safe);
-		db_free_result();
 	}
 
 	// register this message fragment
-	g_string_printf(q, "INSERT INTO %spartlists "
-		"(physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
-		"VALUES (%llu,%u,%u,%u,%u,'%s')", 
-		DBPFX, dbmail_message_get_physid(m), is_header, 
-		m->part_key, m->part_depth, m->part_order, id);
-
-	if (db_query(q->str) == DM_EQUERY) {
-		g_string_free(q,TRUE);
+	if (register_blob(m, id, is_header) == DM_EQUERY)
 		return DM_EQUERY;
-	}
-	db_free_result();
+
+	g_free(id);
+
 	m->part_order++;
-	g_string_free(q,TRUE);
 
 	return 0;
 
