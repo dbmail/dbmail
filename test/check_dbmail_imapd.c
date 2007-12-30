@@ -209,25 +209,30 @@ END_TEST
 START_TEST(test_imap_session_prompt)
 {
 	int result;
+	gchar *tmp;
 	unsigned char tmpline[MAX_LINESIZE];
 	clientinfo_t *ci = ci_new_writable();
 	struct ImapSession *s = dbmail_imap_session_new();
 	s = dbmail_imap_session_setClientinfo(s,ci);
 	unsigned char *testuser = (unsigned char *)"testuser1";
 
-	base64_encode(tmpline, testuser, strlen("testuser1"));
-	fprintf(ci->tx, "%s\r\n", tmpline);
+	tmp = (gchar *)g_base64_encode(testuser, strlen("testuser1"));
+	fprintf(ci->tx, "%s\r\n", tmp);
 	fflush(ci->tx);
+	g_free(tmp);
+	memset(tmpline,0,sizeof(tmpline));
 	result = dbmail_imap_session_prompt(s, "username", (char *)tmpline);
 	fail_unless(result==0,"dbmail_imap_session_prompt failed");
-	fail_unless(strcmp((char *)tmpline,(char *)testuser)==0,"failed at the username prompt");
+	fail_unless(strcmp((char *)tmpline,(char *)testuser)==0,"failed at the username prompt [%s] != [%s]", tmpline, testuser);
 
 	// Read back whatever the prompt was.
 	fgets((char *)tmpline, MAX_LINESIZE, ci->rx);
 
-	base64_encode(tmpline, (unsigned char *)"test", strlen("test"));
-	fprintf(ci->tx, "%s\r\n", tmpline);
+	tmp = (gchar *)g_base64_encode((unsigned char *)"test", strlen("test"));
+	fprintf(ci->tx, "%s\r\n", tmp);
 	fflush(ci->tx);
+	g_free(tmp);
+	memset(tmpline,0,sizeof(tmpline));
 	result = dbmail_imap_session_prompt(s, "password", (char *)tmpline);
 	fail_unless(result==0,"dbmail_imap_session_prompt failed");
 	fail_unless(strcmp((char *)tmpline,"test")==0,"failed at the password prompt");

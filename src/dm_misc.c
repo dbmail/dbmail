@@ -2329,3 +2329,43 @@ long long unsigned dm_strtoull(const char *nptr, char **endptr, int base)
 	return (long long unsigned)r;
 }
 
+/* A frontend to the base64_decode_internal() that deals with embedded strings. */
+char **base64_decodev(char *str)
+{
+	size_t i, j, n;
+	int numstrings = 0;
+	size_t decodelen = 0;
+	char *decoded;
+	char **ret = NULL;
+
+	/* Base64 always decodes to a shorter string. */
+	decoded = (char *)g_base64_decode((const gchar *)str, &decodelen);
+
+	/* Count up the number of embedded strings... */
+	for (i = 0; i <= decodelen; i++) {
+		if (decoded[i] == '\0') {
+			numstrings++;
+		}
+	}
+
+	/* Allocate an array large enough
+	 * for the strings and a final NULL. */
+	ret = g_new0(char *, (numstrings + 1));
+
+	/* Copy each nul terminated string to the array. */
+	for (i = j = n = 0; i <= decodelen; i++) {
+		if (decoded[i] == '\0') {
+			ret[n] = g_strdup(decoded + j);
+			j = i + 1;
+			n++;
+		}
+	}
+
+	/* Put the final NULL on the end of the array. */
+	ret[n] = NULL;
+
+	g_free(decoded);
+
+	return ret;
+}
+

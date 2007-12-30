@@ -1781,17 +1781,17 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value )
 {
 	char *buf, *prompt64, *promptcat;
-	int buflen;
+	guchar * tmp;
+	size_t buflen;
 	
 	g_return_val_if_fail(prompt != NULL, -1);
 	
 	buf = g_new0(char, MAX_LINESIZE);
 			
 	/* base64 encoding increases string length by about 40%. */
-	prompt64 = g_new0(char, strlen(prompt) * 2);
 
 	promptcat = g_strdup_printf("%s\r\n", prompt);
-	base64_encode((unsigned char *)prompt64, (unsigned char *)promptcat, strlen(promptcat));
+	prompt64 = (char *)g_base64_encode((const guchar *)promptcat, strlen(promptcat));
 
 	dbmail_imap_session_printf(self, "+ %s\r\n", prompt64);
 	fflush(self->ci->tx);
@@ -1803,10 +1803,9 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 		return -1;
 	}
 
-	/* value is the same size as buf.
-	 * base64 decoding is always shorter. */
-	buflen = base64_decode(value, buf);
-	value[buflen] = '\0';
+	tmp = g_base64_decode((const gchar *)buf, &buflen);
+	strncpy(value,(const char *)tmp,strlen((char *)tmp));
+	g_free(tmp);
 	
 	/* Double check in case the algorithm went nuts. */
 	if (buflen >= (MAX_LINESIZE - 1)) {

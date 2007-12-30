@@ -291,6 +291,25 @@ START_TEST(test_dm_strbinesc)
 }
 END_TEST
 
+START_TEST(test_base64_decodev)
+{
+	int i;
+	char **result;
+	const char *in = "proxy\0user\0pass";
+	gchar *out = g_base64_encode((const guchar *)in,16);
+
+	result = base64_decodev(out);
+	for (i=0; result[i] != NULL; i++)
+		;
+
+	fail_unless(i==4,"base64_decodev failed");
+	fail_unless(MATCH(result[0],"proxy"), "base64_decodev failed");
+	fail_unless(MATCH(result[1],"user"), "base64_decodev failed");
+	fail_unless(MATCH(result[2],"pass"), "base64_decodev failed");
+	
+}
+END_TEST
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -307,6 +326,7 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_g_list_merge);
  	tcase_add_test(tc_misc, test_dm_strtoull);
 	tcase_add_test(tc_misc, test_dm_strbinesc);
+	tcase_add_test(tc_misc, test_base64_decodev);
 	
 	return s;
 }

@@ -326,7 +326,6 @@ char *dm_md5_base64(const unsigned char * const buf)
 {
 	struct GdmMD5Context mycontext;
 	unsigned char result[16];
-	unsigned char base64[24];
 
 	if (buf == NULL) {
 		TRACE(TRACE_ERROR, "received NULL argument");
@@ -337,9 +336,6 @@ char *dm_md5_base64(const unsigned char * const buf)
 	gdm_md5_update(&mycontext, buf, strlen((char *)buf));
 	gdm_md5_final(result, &mycontext);
 
-	memset(base64, '\0', sizeof(base64));
-	base64_encode(base64, result, sizeof(result));
-
-	return g_strdup((char *)base64);
+	return g_base64_encode(result, sizeof(result));
 }
 

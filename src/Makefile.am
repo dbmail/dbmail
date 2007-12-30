@@ -49,8 +49,7 @@ COMMON = dbmail-user.c \
 	dm_md5.c \
 	dm_sha1.c \
 	dm_match.c \
-	dm_iconv.c \
-	dm_base64.c $(DM_GETOPT)
+	dm_iconv.c $(DM_GETOPT)
 	
 SERVER = server.c \
 	serverchild.c \
