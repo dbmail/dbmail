@@ -668,7 +668,7 @@ int send_alert(u64_t user_idnr, char *subject, char *body)
 
 	// Only send each unique alert once a day.
 	char *tmp = g_strconcat(subject, body, NULL);
-	char *handle = dm_md5((unsigned char *)tmp);
+	char *handle = dm_md5(tmp);
 	char *userchar = g_strdup_printf("%llu", user_idnr);
 	if (db_replycache_validate(userchar, "send_alert", handle, 1) != DM_SUCCESS) {
 		TRACE(TRACE_INFO, "Already sent alert [%s] to user [%llu] today", subject, user_idnr);

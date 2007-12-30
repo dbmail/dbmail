@@ -22,9 +22,12 @@
 #ifndef _DM_DIGEST_H
 #define _DM_DIGEST_H
 
-char *dm_tiger(const unsigned char * const s);
-char *dm_sha1(const unsigned char * const s);
-char *dm_md5(const unsigned char * const s);
-char *dm_md5_base64(const unsigned char * const s);
+char *dm_tiger(const char * const s);
+char *dm_sha1(const char * const s);
+char *dm_sha256(const char * const s);
+char *dm_sha512(const char * const s);
+char *dm_whirlpool(const char * const s);
+char *dm_md5(const char * const s);
+char *dm_md5_base64(const char * const s);
 
 #endif

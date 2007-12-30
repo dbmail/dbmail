@@ -310,15 +310,36 @@ START_TEST(test_base64_decodev)
 }
 END_TEST
 
-#define S(a,b) fail_unless(MATCH(dm_sha1((a)),(b)), "sha1 failed [%s] != [%s]", dm_sha1(a), b)
+#define S1(a,b) fail_unless(MATCH(dm_sha1((a)),(b)), "sha1 failed [%s] != [%s]", dm_sha1(a), b)
 START_TEST(test_sha1)
 {
 	// test vectors from https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
-	S("", "da39a3ee5e6b4b0d3255bfef95601890afd80709");
-	S("a", "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8");
-	S("abc", "a9993e364706816aba3e25717850c26c9cd0d89d");
+	S1("", "da39a3ee5e6b4b0d3255bfef95601890afd80709");
+	S1("a", "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8");
+	S1("abc", "a9993e364706816aba3e25717850c26c9cd0d89d");
 }
 END_TEST
+
+#define S2(a,b) fail_unless(MATCH(dm_sha256((a)),(b)), "sha256 failed [%s] != [%s]", dm_sha256(a), b)
+START_TEST(test_sha256)
+{
+	// test vectors from https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
+	S2("", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+	S2("a", "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb");
+	S2("abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+}
+END_TEST
+
+#define S3(a,b) fail_unless(MATCH(dm_sha512((a)),(b)), "sha512 failed [%s] != [%s]", dm_sha512(a), b)
+START_TEST(test_sha512)
+{
+	// test vectors from https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
+	S3("", "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
+	S3("a", "1f40fc92da241694750979ee6cf582f2d5d7d28e18335de05abc54d0560e0f5302860c652bf08d560252aa5e74210546f369fbbbce8c12cfc7957b2652fe9a75");
+	S3("abc", "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f");
+}
+END_TEST
+
 
 #define M(a,b) fail_unless(MATCH(dm_md5((a)),(b)), "md5 failed [%s] != [%s]", dm_md5(a), b)
 START_TEST(test_md5)
@@ -338,6 +359,30 @@ START_TEST(test_tiger)
 }
 END_TEST
 
+#define W(a,b) fail_unless(MATCH(dm_whirlpool((a)),(b)), "whirlpool failed\n[%s] !=\n[%s]", dm_whirlpool(a), b)
+START_TEST(test_whirlpool)
+{
+	// the whirlpool test vectors are taken from the reference implementation (iso-test-vectors.txt)
+	W("","19fa61d75522a4669b44e39c1d2e1726c530232130d407f89afee0964997f7a73e83be698b288febcf88e3e03c4f0757ea8964e59b63d93708b138cc42a66eb3");
+	W("a","8aca2602792aec6f11a67206531fb7d7f0dff59413145e6973c45001d0087b42d11bc645413aeff63a42391a39145a591a92200d560195e53b478584fdae231a");
+	W("abc","4e2448a4c6f486bb16b6562c73b4020bf3043e3a731bce721ae1b303d97e6d4c7181eebdb6c57e277d0e34957114cbd6c797fc9d95d8b582d225292076d4eef5");
+}
+END_TEST
+
+
+START_TEST(test_get_id_for_blob)
+{
+	char *id;
+
+	id = get_id_for_blob("test message");
+
+//	printf("[%s]", id);
+
+	g_free(id);
+}
+END_TEST
+
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -356,8 +401,12 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_dm_strbinesc);
 	tcase_add_test(tc_misc, test_base64_decodev);
 	tcase_add_test(tc_misc, test_sha1);
+	tcase_add_test(tc_misc, test_sha256);
+	tcase_add_test(tc_misc, test_sha512);
+	tcase_add_test(tc_misc, test_whirlpool);
 	tcase_add_test(tc_misc, test_md5);
 	tcase_add_test(tc_misc, test_tiger);
+	tcase_add_test(tc_misc, test_get_id_for_blob);
 	
 	return s;
 }

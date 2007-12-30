@@ -435,7 +435,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		if (strncmp(query_result, "$1$", 3)) {
 			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
 			/* redundant statement: query_result = db_get_result(0, 1); */
-			md5str = dm_md5((unsigned char *)password);
+			md5str = dm_md5(password);
 			is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
 		} else {
 			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
@@ -449,12 +449,12 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	} else if (strcasecmp(query_result, "md5sum") == 0) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
 		query_result = db_get_result(0, 1);
-		md5str = dm_md5((unsigned char *)password);
+		md5str = dm_md5(password);
 		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
 	} else if (strcasecmp(query_result, "md5base64") == 0) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
 		query_result = db_get_result(0, 1);
-		md5str = dm_md5_base64((unsigned char *)password);
+		md5str = dm_md5_base64(password);
 		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
 		g_free(md5str);
 	}
@@ -502,7 +502,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 	TRACE(TRACE_DEBUG, "apop_stamp=[%s], userpw=[%s]", apop_stamp, query_result);
 
 	checkstring = g_strdup_printf("%s%s", apop_stamp, query_result);
-	md5_apop_we = dm_md5((unsigned char *)checkstring);
+	md5_apop_we = dm_md5(checkstring);
 
 	TRACE(TRACE_DEBUG, "checkstring for md5 [%s] -> result [%s]", checkstring, md5_apop_we);
 	TRACE(TRACE_DEBUG, "validating md5_apop_we=[%s] md5_apop_he=[%s]", md5_apop_we, md5_apop_he);
