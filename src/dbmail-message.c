@@ -145,17 +145,6 @@ gchar * get_crlf_encoded_opt(const gchar *string, int dots)
 
 }
 
-static int _get_sha1(const char *s, size_t len, unsigned char *sha1)
-{
-	SHA_CTX c;
-
-	SHA1_Init(&c);
-	SHA1_Update(&c,s,len);
-	SHA1_Final(sha1,&c);
-
-	return 0;
-}
-
 static gboolean blob_exists(const char *id)
 {
 	int rows;
@@ -172,15 +161,16 @@ static gboolean blob_exists(const char *id)
 	return rows ? TRUE : FALSE;
 }
 
+char * get_digest(const char *buf)
+{
+	return dm_sha1(buf);
+}
+
 static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_header)
 {
-	unsigned char sha1[20];
-	memset(sha1,0,sizeof(sha1));
-
 	GString *q;
 	char *safe = NULL;
-	const char *id;
-	size_t len;
+	char *id;
 
 	assert(buf);
 
@@ -191,16 +181,14 @@ static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_hea
 
 	q = g_string_new("");
 
-	len = strlen(buf);
-	_get_sha1(buf, len, sha1);
-	id = sha1_to_hex(sha1);
+	id = get_digest(buf);
 
 	// store this message fragment
 	if (! blob_exists(id)) {
 		safe = dm_strbinesc(buf);
 		assert(safe);
 		g_string_printf(q, "INSERT INTO %smimeparts (id, data, size) VALUES ("
-				"'%s', '%s', %zd)", DBPFX, id, safe, len);
+				"'%s', '%s', %zd)", DBPFX, id, safe, strlen(buf));
 
 		if (db_query(q->str) == DM_EQUERY) {
 			g_string_free(q,TRUE);

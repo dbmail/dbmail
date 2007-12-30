@@ -153,9 +153,6 @@ int sort_vacation(sieve2_context_t *s, void *my)
 			rc_to, rc_from, rc_handle, days);
 	}
 
-	if (md5_handle)
-		g_free(md5_handle);
-
 	m->result->cancelkeep = 0;
 	return SIEVE2_OK;
 }

@@ -437,7 +437,6 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 			/* redundant statement: query_result = db_get_result(0, 1); */
 			md5str = dm_md5((unsigned char *)password);
 			is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-			g_free(md5str);
 		} else {
 			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
 			strncpy(salt, query_result, 12);
@@ -452,7 +451,6 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		query_result = db_get_result(0, 1);
 		md5str = dm_md5((unsigned char *)password);
 		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-		g_free(md5str);
 	} else if (strcasecmp(query_result, "md5base64") == 0) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
 		query_result = db_get_result(0, 1);
@@ -516,7 +514,6 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 		user_idnr =
 		    (query_result) ? strtoull(query_result, NULL, 10) : 0;
 		db_free_result();
-		g_free(md5_apop_we);
 		g_free(checkstring);
 
 		db_user_log_login(user_idnr);
@@ -526,7 +523,6 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 	TRACE(TRACE_MESSAGE, "user [%s] could not be validated", username);
 
 	db_free_result();
-	g_free(md5_apop_we);
 	g_free(checkstring);
 	return 0;
 }

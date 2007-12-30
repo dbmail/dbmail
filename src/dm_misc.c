@@ -111,7 +111,6 @@ void create_unique_id(char *target, u64_t message_idnr)
 	md5_str = dm_md5((unsigned char *)target);
 	snprintf(target, UID_SIZE, "%s", md5_str);
 	TRACE(TRACE_DEBUG, "created: %s", target);
-	g_free(md5_str);
 	g_free(a_message_idnr);
 	g_free(a_rand);
 }

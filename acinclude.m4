@@ -449,6 +449,7 @@ if ( test [ "x$lookformhash" != "xno" ] ); then
     if test [ "x$MHASHINC" = "xfailed" ]; then
         AC_MSG_ERROR([Could not find MHASH headers.])
     else
+	CFLAGS="$CFLAGS $MHASHINC"
         AC_MSG_RESULT($MHASHINC)
     fi
 
@@ -480,6 +481,7 @@ if ( test [ "x$lookformhash" != "xno" ] ); then
     if test [ "x$MHASHLIB" = "xfailed" ]; then
         AC_MSG_ERROR([Could not find MHASH library.])
     else
+	LDFLAGS="$LDFLAGS $MHASHLIB"
         AC_MSG_RESULT($MHASHLIB)
         AC_SUBST(MHASHLIB)
         AC_SUBST(MHASHINC)

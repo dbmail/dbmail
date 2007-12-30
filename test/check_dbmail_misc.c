@@ -231,8 +231,8 @@ START_TEST(test_create_unique_id)
 	char *b = g_new0(char, 64);
 	create_unique_id(a,0);
 	create_unique_id(b,0);
-	fail_unless(strlen(a)==32, "create_unique_id produced incorrect string length [%s]", a);
-	fail_unless(strlen(b)==32, "create_unique_id produced incorrect string length [%s]", b);
+	fail_unless(strlen(a)==32, "create_unique_id produced incorrect string length [%s][%d]", a, strlen(a));
+	fail_unless(strlen(b)==32, "create_unique_id produced incorrect string length [%s][%d]", b, strlen(b));
 	fail_unless(!MATCH(a,b),"create_unique_id shouldn't produce identical output");
 
 	g_free(a);
@@ -286,7 +286,7 @@ START_TEST(test_dm_strbinesc)
 	char *from = "test\0d";
 	char *to = dm_strbinesc(from);
 
-	printf("[%s]", to);
+	//printf("[%s]", to);
 	g_free(to);
 }
 END_TEST
@@ -310,6 +310,25 @@ START_TEST(test_base64_decodev)
 }
 END_TEST
 
+#define S(a,b) fail_unless(MATCH(dm_sha1((a)),(b)), "sha1 failed [%s] != [%s]")
+START_TEST(test_sha1)
+{
+	// test vectors from https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
+	S("", "da39a3ee5e6b4b0d3255bfef95601890afd80709");
+	S("a", "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8");
+	S("abc", "a9993e364706816aba3e25717850c26c9cd0d89d");
+}
+END_TEST
+
+#define M(a,b) fail_unless(MATCH(dm_md5((a)),(b)), "md5 failed [%s] != [%s]")
+START_TEST(test_md5)
+{
+	M("","D41D8CD98F00B204E9800998ECF8427E");
+	M("a","0CC175B9C0F1B6A831C399E269772661");
+	M("abc", "900150983CD24FB0D6963F7D28E17F72");
+}
+END_TEST
+
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -327,6 +346,8 @@ Suite *dbmail_misc_suite(void)
  	tcase_add_test(tc_misc, test_dm_strtoull);
 	tcase_add_test(tc_misc, test_dm_strbinesc);
 	tcase_add_test(tc_misc, test_base64_decodev);
+	tcase_add_test(tc_misc, test_sha1);
+	tcase_add_test(tc_misc, test_md5);
 	
 	return s;
 }
