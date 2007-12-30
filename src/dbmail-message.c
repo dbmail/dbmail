@@ -199,20 +199,15 @@ static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_hea
 	if (! blob_exists(id)) {
 		safe = dm_strbinesc(buf);
 		assert(safe);
-		//safe = dm_stresc(buf);
+		g_string_printf(q, "INSERT INTO %smimeparts (id, data, size) VALUES ("
+				"'%s', '%s', %zd)", DBPFX, id, safe, len);
 
-		db_begin_transaction();
-		g_string_printf(q, "INSERT %s INTO %smimeparts "
-				"(id, data, size) VALUES ("
-				"'%s', '%s', %zd)", 
-				db_get_sql(SQL_IGNORE), DBPFX, id, safe, len);
+		if (db_query(q->str) == DM_EQUERY) {
+			g_string_free(q,TRUE);
+			return DM_EQUERY;
+		}
+
 		g_free(safe);
-
-		if (db_query(q->str) == DM_EQUERY)
-			db_rollback_transaction();
-		else
-			db_commit_transaction();
-
 		db_free_result();
 	}
 
@@ -223,15 +218,11 @@ static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_hea
 		DBPFX, dbmail_message_get_physid(m), is_header, 
 		m->part_key, m->part_depth, m->part_order, id);
 
-	db_begin_transaction();
 	if (db_query(q->str) == DM_EQUERY) {
-		db_rollback_transaction();
 		g_string_free(q,TRUE);
 		return DM_EQUERY;
 	}
-	db_commit_transaction();
 	db_free_result();
-
 	m->part_order++;
 	g_string_free(q,TRUE);
 
@@ -352,31 +343,44 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 	return self;
 }
 
-static gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m);
+static gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m, gboolean descend);
+
+static gboolean store_mime_object(GMimeObject *object, struct DbmailMessage *m)
+{
+	return _dm_store_mime_object(object,m,TRUE);
+}
+
+static void store_head(GMimeObject *object, struct DbmailMessage *m)
+{
+	char *head = g_mime_object_get_headers(object);
+	_store_blob(m, head, 1);
+	g_free(head);
+}
+
+static void store_body(GMimeObject *object, struct DbmailMessage *m)
+{
+	char *text = g_mime_object_get_body(object);
+	if (! text)
+		return;
+
+	_store_blob(m, text, 0);
+	g_free(text);
+}
+
 
 static gboolean _dm_store_mime_text(GMimeObject *object, struct DbmailMessage *m)
 {
-	char *head, *text;
-
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
-	head = g_mime_object_get_headers(object);
-	text = g_mime_object_get_body(object);
-
-	_store_blob(m, head, 1);
-	g_free(head);
-
-	if (text) {
-		_store_blob(m, text, 0);
-		g_free(text);
-	}
+	store_head(object, m);
+	store_body(object, m);
 
 	return FALSE;
 }
 
 static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessage *m, const GMimeContentType *content_type)
 {
-	char *head, *text;
+	char *text;
 	size_t i = 0, t;
 	const char *boundary;
 	int n;
@@ -384,17 +388,16 @@ static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessa
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
 	boundary = g_mime_content_type_get_parameter(content_type,"boundary");
-	head = g_mime_object_get_headers(object);
 
-	_store_blob(m, head, 1);
-	g_free(head);
+	store_head(object,m);
 
 	if (g_mime_content_type_is_type(content_type, "multipart", "mixed")) {
+		// store the pre-amble
 		text = g_mime_object_get_body(object);
 		if (text) {
 			t = strlen(text);
 
-			while(t>2 && i++ < t && text[i+2]) {
+			while(t>2 && i++ < t && text[i+2]) { // until first -- boundary
 				if ((i==0 || text[i] == '\n') && text[i+1]=='-' && text[i+2]=='-')
 					break;
 			}
@@ -414,7 +417,7 @@ static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessa
 		n = m->part_order;
 		m->part_order=0;
 	}
-	g_mime_multipart_foreach((GMimeMultipart *)object, (GMimePartFunc)_dm_store_mime_object, m);
+	g_mime_multipart_foreach((GMimeMultipart *)object, (GMimePartFunc)store_mime_object, m);
 
 	if (boundary) {
 		n++;
@@ -427,18 +430,15 @@ static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessa
 
 static gboolean _dm_store_mime_message(GMimeObject * object, struct DbmailMessage *m)
 {
-	char *head;
 	GMimeMessage *m2;
 
-	head = g_mime_object_get_headers(object);
-	_store_blob(m, head, 1);
-	g_free(head);
+	store_head(object, m);
 
 	m2 = g_mime_message_part_get_message(GMIME_MESSAGE_PART(object));
 
 	g_return_val_if_fail(GMIME_IS_MESSAGE(m2), TRUE);
 
-	_dm_store_mime_object(GMIME_OBJECT(m2), m);
+	_dm_store_mime_object(GMIME_OBJECT(m2), m, TRUE);
 
 	g_object_unref(m2);
 	
@@ -446,7 +446,7 @@ static gboolean _dm_store_mime_message(GMimeObject * object, struct DbmailMessag
 	
 }
 
-gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m)
+gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m, gboolean descend)
 {
 	const GMimeContentType *content_type;
 	GMimeObject *mime_part;
@@ -454,9 +454,9 @@ gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m)
 
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
-	if (GMIME_IS_MESSAGE(object))
+	if (descend && GMIME_IS_MESSAGE(object))
 		mime_part = g_mime_message_get_mime_part((GMimeMessage *)object);
-	else 
+	else
 		mime_part = object;
 
 	content_type = g_mime_object_get_content_type(mime_part);
@@ -470,7 +470,7 @@ gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m)
 	else 
 		r = _dm_store_mime_text((GMimeObject *)mime_part, m);
 
-	if (GMIME_IS_MESSAGE(object))
+	if (descend && GMIME_IS_MESSAGE(object))
 		g_object_unref(mime_part);
 
 	return r;
@@ -479,7 +479,7 @@ gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m)
 
 static gboolean _dm_message_store(struct DbmailMessage *m)
 {
-	return _dm_store_mime_object((GMimeObject *)m->content, m);
+	return _dm_store_mime_object((GMimeObject *)m->content, m, FALSE);
 }
 
 
@@ -780,6 +780,9 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 		case DBMAIL_MESSAGE:
 			TRACE(TRACE_DEBUG,"parse message");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
+			// adding a header will prime the gmime message structure, but we want
+			// to add an innocuous header
+			dbmail_message_set_header(self,"MIME-Version","1.0"); 
 			if (from) {
 				dbmail_message_set_internal_date(self, from);
 				g_free(from);
@@ -891,7 +894,7 @@ void dbmail_message_set_header(struct DbmailMessage *self, const char *header, c
 
 const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header)
 {
-	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
+	return g_mime_message_get_header(GMIME_MESSAGE(self->content), header);
 }
 
 GTuples * dbmail_message_get_header_repeated(const struct DbmailMessage *self, const char *header)
@@ -1157,66 +1160,91 @@ int dbmail_message_store(struct DbmailMessage *self)
 	u64_t hdrs_size, body_size, rfcsize;
 	char *domainname;
 	char *message_id;
+	int retry=4, delay=200;
 	
-	switch (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
-	case -1:
-		TRACE(TRACE_ERROR, "unable to find user_idnr for user [%s]", DBMAIL_DELIVERY_USERNAME);
-		return -1;
-		break;
-	case 0:
+	if (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr) <= 0) {
 		TRACE(TRACE_ERROR, "unable to find user_idnr for user [%s]. Make sure this system user is in the database!", DBMAIL_DELIVERY_USERNAME);
-		return -1;
-		break;
+		return DM_EQUERY;
 	}
 	
 	create_unique_id(unique_id, user_idnr);
-	/* create a message record */
-	if(_message_insert(self, user_idnr, DBMAIL_TEMPMBOX, unique_id) < 0)
-		return -1;
 
-	/* make sure the message has a message-id, else threading breaks */
-	if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {
-		domainname = g_new0(gchar, 255);
-		if (getdomainname(domainname,255))
-			strcpy(domainname,"(none)");
-		message_id = g_mime_utils_generate_message_id(domainname);
-		g_mime_message_set_message_id(GMIME_MESSAGE(self->content), message_id);
-		g_free(message_id);
-		g_free(domainname);
-	}
+	while (retry-- > 0) {
+		db_begin_transaction();
 
-	hdrs = dbmail_message_hdrs_to_string(self);
-	body = dbmail_message_body_to_string(self);
+		/* create a message record */
+		if(_message_insert(self, user_idnr, DBMAIL_TEMPMBOX, unique_id) < 0) {
+			db_rollback_transaction();
+			usleep(delay);
+			continue;
+		}
 
-	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
-	body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
+		/* make sure the message has a message-id, else threading breaks */
+		if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {
+			domainname = g_new0(gchar, 255);
+			if (getdomainname(domainname,255))
+				strcpy(domainname,"(none)");
+			message_id = g_mime_utils_generate_message_id(domainname);
+			g_mime_message_set_message_id(GMIME_MESSAGE(self->content), message_id);
+			g_free(message_id);
+			g_free(domainname);
+		}
 
-	if (_dm_message_store(self)) {
-		TRACE(TRACE_FATAL,"Failed to store mimeparts");
+		hdrs = dbmail_message_hdrs_to_string(self);
+		body = dbmail_message_body_to_string(self);
 
-		/* store body in several blocks (if needed */
-		if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0) {
+		hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
+		body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
+
+		if (_dm_message_store(self)) {
+			TRACE(TRACE_FATAL,"Failed to store mimeparts");
+			db_rollback_transaction();
+			usleep(delay);
+
+// deprecated code. Just here to apeace the linker (??)
+
+			/* store body in several blocks (if needed */
+			if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0) {
+				g_free(hdrs);
+				g_free(body);
+				return -1;
+			}
+
+			if (store_message_in_blocks(body, body_size, self->id) < 0) {
+				g_free(hdrs);
+				g_free(body);
+				return -1;
+			}
+
 			g_free(hdrs);
-			return -1;
-		}
-		if (store_message_in_blocks(body, body_size, self->id) < 0) {
 			g_free(body);
-			return -1;
+// deprecated--/>
+
+			db_rollback_transaction();
+			usleep(delay);
+			continue;
+
 		}
+
+		rfcsize = (u64_t)dbmail_message_get_rfcsize(self);
+		if (db_update_message(self->id, unique_id, (hdrs_size + body_size), rfcsize) < 0) {
+			db_rollback_transaction();
+			usleep(delay);
+			continue;
+		}
+
+		/* store message headers */
+		if (dbmail_message_cache_headers(self) < 0) {
+			db_rollback_transaction();
+			usleep(delay);
+			continue;
+			}
+		
+		/* ready for commit */
+		break;
 	}
 
-	g_free(hdrs);
-	g_free(body);
-
-	rfcsize = (u64_t)dbmail_message_get_rfcsize(self);
-	if (db_update_message(self->id, unique_id, (hdrs_size + body_size), rfcsize) < 0) 
-		return -1;
-
-	/* store message headers */
-	if (dbmail_message_cache_headers(self) < 0)
-		return -1;
-
-	return 1;
+	return db_commit_transaction();
 }
 
 int _message_insert(struct DbmailMessage *self, 
@@ -1268,7 +1296,7 @@ int _message_insert(struct DbmailMessage *self,
 			DBPFX, mailboxid, physmessage_id, unique_id,
 			MESSAGE_STATUS_INSERT);
 
-	if ((result = db_retry_query(query,3,200)) == DM_EQUERY) {
+	if ((result = db_query(query)) == DM_EQUERY) {
 		TRACE(TRACE_ERROR,"inserting message failed");
 		return result;
 	}
@@ -1285,7 +1313,11 @@ int dbmail_message_cache_headers(const struct DbmailMessage *self)
 	assert(self);
 	assert(self->physid);
 
-	db_begin_transaction();
+	if (! GMIME_IS_MESSAGE(self->content)) {
+		TRACE(TRACE_ERROR,"self->content is not a message");
+		return -1;
+	}
+
 	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
 	
 	dbmail_message_cache_tofield(self);
@@ -1297,7 +1329,7 @@ int dbmail_message_cache_headers(const struct DbmailMessage *self)
 	dbmail_message_cache_referencesfield(self);
 	dbmail_message_cache_envelope(self);
 
-	return db_commit_transaction();
+	return DM_SUCCESS;
 }
 #define CACHE_WIDTH_VALUE 255
 #define CACHE_WIDTH_FIELD 255
@@ -1399,13 +1431,14 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	values = g_relation_select(self->headers,header,0);
 	for (i=0; i<values->len;i++) {
 		raw = (unsigned char *)g_tuples_index(values,i,1);
+		TRACE(TRACE_DEBUG,"raw header value [%s]", raw);
 		
  		char *value = NULL;
   		const char *charset = dbmail_message_get_charset(self);
   
  		value = dbmail_iconv_decode_field((const char *)raw, charset, isaddr);
  
- 		if (! value)
+ 		if ((! value) || (strlen(value) == 0))
  			continue;
  
  		safe_value = dm_stresc(value);

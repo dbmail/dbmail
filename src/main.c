@@ -250,13 +250,6 @@ int main(int argc, char *argv[])
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
-	
-	if (dbmail_message_get_hdrs_size(msg, FALSE) > READ_BLOCK_SIZE) {
-		TRACE(TRACE_ERROR, "failed to read header because header is too "
-			"big (larger than READ_BLOCK_SIZE (%llu))", (u64_t) READ_BLOCK_SIZE);
-		exitcode = EX_DATAERR;
-		goto freeall;
-	}
 
 	/* Use the -r flag to set the Return-Path header,
 	 * or leave an existing value,

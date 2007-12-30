@@ -534,12 +534,10 @@ int insert_messages(struct DbmailMessage *message, GList *dsnusers)
 
 	if ((result = dbmail_message_store(message)) == DM_EQUERY) {
 		TRACE(TRACE_ERROR,"storing message failed");
-	} else {
-		TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
-	}
-
-	if (result == DM_EQUERY)
 		return result;
+	} 
+
+	TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
 
 	tmpid = message->id; // for later removal
 

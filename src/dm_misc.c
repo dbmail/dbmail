@@ -2030,8 +2030,10 @@ char * imap_get_envelope(GMimeMessage *message)
 	char *result;
 	char *s = NULL, *t = NULL;
 
-	if (! GMIME_IS_MESSAGE(message))
+	if (! GMIME_IS_MESSAGE(message)) {
+		TRACE(TRACE_ERROR, "argument is not a message");
 		return NULL;
+	}
 	
 	part = GMIME_OBJECT(message);
 	/* date */

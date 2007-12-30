@@ -1150,7 +1150,6 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 	
 	*physmessage_id = 0;
 	
-	db_begin_transaction();
 	if (internal_date != NULL) {
 		to_date_str = char2date_str(internal_date);
 		snprintf(query, DEF_QUERYSIZE,
@@ -1164,13 +1163,12 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 	}
 	
 	if (db_query(query) == -1) {
-		db_rollback_transaction();
 		TRACE(TRACE_ERROR, "insertion of physmessage failed" );
 		return DM_EQUERY;
 	}
 	*physmessage_id = db_insert_result("physmessage_id");
 
-	return db_commit_transaction();
+	return 1;
 }
 
 int db_insert_physmessage(u64_t * physmessage_id)
@@ -3895,7 +3893,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		 "FROM %smessages WHERE message_idnr = %llu",DBPFX,
 		 mailbox_to, unique_id,DBPFX, msg_idnr);
 
-	if ((result = db_retry_query(query,3,2000)) == DM_EQUERY) {
+	if ((result = db_query(query)) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "error copying message");
 		db_free_result();
 		return DM_EQUERY;	
@@ -4053,7 +4051,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		 MESSAGE_STATUS_DELETE, mailbox_idnr,
 		 MESSAGE_STATUS_DELETE);
 
-	result = db_retry_query(query,3,200);
+	result = db_query(query);
 
 	db_free_result();
 	if (result == DM_EQUERY) {
