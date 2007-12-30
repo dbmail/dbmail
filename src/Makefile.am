@@ -46,8 +46,7 @@ COMMON = dbmail-user.c \
 	dm_acl.c \
 	dm_misc.c \
 	dm_pidfile.c \
-	dm_md5.c \
-	dm_sha1.c \
+	dm_digest.c \
 	dm_match.c \
 	dm_iconv.c $(DM_GETOPT)
 	

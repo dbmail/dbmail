@@ -19,15 +19,12 @@
  $Id: md5.h 1891 2005-10-03 10:01:21Z paul $
 */
 
-#ifndef _MD5_H
-#define _MD5_H
+#ifndef _DM_DIGEST_H
+#define _DM_DIGEST_H
 
-/**
- * \brief calculate md5-hash of a string
- * \param buf input string
- * \return md5 hash of buf
- */
-char *dm_md5(const unsigned char * const buf);
-char *dm_md5_base64(const unsigned char * const buf);
+char *dm_tiger(const unsigned char * const s);
+char *dm_sha1(const unsigned char * const s);
+char *dm_md5(const unsigned char * const s);
+char *dm_md5_base64(const unsigned char * const s);
 
 #endif

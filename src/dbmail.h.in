@@ -106,8 +106,7 @@
 #include "sort.h"
 #include "sortmodule.h"
 
-#include "dm_md5.h"
-#include "dm_sha1.h"
+#include "dm_digest.h"
 #include "dm_cidr.h"
 #include "dm_iconv.h"
 #include "dm_getopt.h"

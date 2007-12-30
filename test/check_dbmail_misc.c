@@ -310,7 +310,7 @@ START_TEST(test_base64_decodev)
 }
 END_TEST
 
-#define S(a,b) fail_unless(MATCH(dm_sha1((a)),(b)), "sha1 failed [%s] != [%s]")
+#define S(a,b) fail_unless(MATCH(dm_sha1((a)),(b)), "sha1 failed [%s] != [%s]", dm_sha1(a), b)
 START_TEST(test_sha1)
 {
 	// test vectors from https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
@@ -320,12 +320,21 @@ START_TEST(test_sha1)
 }
 END_TEST
 
-#define M(a,b) fail_unless(MATCH(dm_md5((a)),(b)), "md5 failed [%s] != [%s]")
+#define M(a,b) fail_unless(MATCH(dm_md5((a)),(b)), "md5 failed [%s] != [%s]", dm_md5(a), b)
 START_TEST(test_md5)
 {
-	M("","D41D8CD98F00B204E9800998ECF8427E");
-	M("a","0CC175B9C0F1B6A831C399E269772661");
-	M("abc", "900150983CD24FB0D6963F7D28E17F72");
+	M("","d41d8cd98f00b204e9800998ecf8427e");
+	M("a","0cc175b9c0f1b6a831c399e269772661");
+	M("abc", "900150983cd24fb0d6963f7d28e17f72");
+}
+END_TEST
+
+#define T(a,b) fail_unless(MATCH(dm_tiger((a)),(b)), "tiger failed [%s] != [%s]", dm_tiger(a), b)
+START_TEST(test_tiger)
+{
+	T("","3293ac630c13f0245f92bbb1766e16167a4e58492dde73f3");
+	T("a","77befbef2e7ef8ab2ec8f93bf587a7fc613e247f5f247809");
+	T("abc","2aab1484e8c158f2bfb8c5ff41b57a525129131c957b5f93");
 }
 END_TEST
 
@@ -348,6 +357,7 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_base64_decodev);
 	tcase_add_test(tc_misc, test_sha1);
 	tcase_add_test(tc_misc, test_md5);
+	tcase_add_test(tc_misc, test_tiger);
 	
 	return s;
 }
