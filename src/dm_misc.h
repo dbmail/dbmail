@@ -171,11 +171,4 @@ long long unsigned dm_strtoull(const char *nptr, char **endptr, int base);
 /* Free the result with g_strfreev. */
 char **base64_decodev(char *in);
 
-/*
- * determine the unique non-colliding id for a
- * blob in the mimeparts store
- *
- */
-char * get_id_for_blob(const char *buf);
-
 #endif

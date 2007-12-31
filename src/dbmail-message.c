@@ -145,53 +145,67 @@ gchar * get_crlf_encoded_opt(const gchar *string, int dots)
 
 }
 
-static gboolean blob_exists(const char *id)
+static u64_t blob_exists(const char *buf, const char *hash)
 {
-	int rows;
+	int i, rows;
+	u64_t id = 0;
+	const char *data;
 	char query[DEF_QUERYSIZE];
-	memset(query,0,DEF_QUERYSIZE);
+	size_t len;
+	assert(buf);
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT id FROM %smimeparts WHERE id='%s'", DBPFX, id);
+	memset(query,0,DEF_QUERYSIZE);
+	snprintf(query, DEF_QUERYSIZE, "SELECT id,data FROM %smimeparts WHERE hash='%s'", DBPFX, hash);
 	if (db_query(query) == DM_EQUERY)
 		TRACE(TRACE_FATAL,"Unable to select from mimeparts table");
 	
+	len = strlen(buf);
 	rows = db_num_rows();
-	db_free_result();
+	for (i=0; i< rows; i++) {
+		data = db_get_result(i,1);
+		if (memcmp(buf, data, len)==0) {
+			id = db_get_result_u64(i,0);
+			break;
+		}
+	}
 
-	return rows ? TRUE : FALSE;
+	return id;
 }
 
-static int * insert_blob(const char *buf, const char *id)
+static u64_t blob_insert(const char *buf, const char *hash)
 {
-	assert(buf);
 	GString *q;
-	char *safe;
+	char *safe = NULL;
+	u64_t id = 0;
 
+	assert(buf);
 	q = g_string_new("");
 	safe = dm_strbinesc(buf);
-	g_string_printf(q, "INSERT INTO %smimeparts (id, data, size) VALUES ("
-			"'%s', '%s', %zd)", DBPFX, id, safe, strlen(buf));
+	g_string_printf(q, "INSERT INTO %smimeparts (hash, data, size) VALUES ("
+			"'%s', '%s', %zd)", DBPFX, hash, safe, strlen(buf));
 	g_free(safe);
 
 	if (db_query(q->str) == DM_EQUERY) {
 		g_string_free(q,TRUE);
-		return DM_EQUERY;
+		return 0;
 	}
+
+	id = db_insert_result("mimeparts_id");
 
 	db_free_result();
 	g_string_free(q,TRUE);
 
-	return DM_SUCCESS;
+	return id;
 }
 
-static int register_blob(struct DbmailMessage *m, const char *id, gboolean is_header)
+static int register_blob(struct DbmailMessage *m, u64_t id, gboolean is_header)
 {
 	GString *q;
 
 	q = g_string_new("");
 	g_string_printf(q, "INSERT INTO %spartlists "
 		"(physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
-		"VALUES (%llu,%u,%u,%u,%u,'%s')", 
+		"VALUES (%llu,%u,%u,%u,%u,%llu)", 
 		DBPFX, dbmail_message_get_physid(m), is_header, 
 		m->part_key, m->part_depth, m->part_order, id);
 
@@ -206,12 +220,87 @@ static int register_blob(struct DbmailMessage *m, const char *id, gboolean is_he
 	return DM_SUCCESS;
 }
 
-static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_header)
+static char * blob_hash(const char *buf)
 {
-	GString *q;
-	char *safe = NULL;
-	char *id;
+	field_t hash_algorithm;
+	const char *digest;
+	static hashid type;
+	static int initialized=0;
 
+	if (! initialized) {
+		if (config_get_value("hash_algorithm", "DBMAIL", hash_algorithm) < 0)
+			g_strlcpy(hash_algorithm, "sha1", FIELDSIZE);
+
+		if (MATCH(hash_algorithm,"md5"))
+			type=MHASH_MD5;
+		else if (MATCH(hash_algorithm,"sha1"))
+			type=MHASH_SHA1;
+		else if (MATCH(hash_algorithm,"sha256"))
+			type=MHASH_SHA256;
+		else if (MATCH(hash_algorithm,"sha512"))
+			type=MHASH_SHA512;
+		else if (MATCH(hash_algorithm,"whirlpool"))
+			type=MHASH_WHIRLPOOL;
+		else if (MATCH(hash_algorithm,"tiger"))
+			type=MHASH_TIGER;
+		else {
+			TRACE(TRACE_WARNING,"hash algorithm not supported. Using SHA1.");
+			type=MHASH_SHA1;
+		}
+		initialized=1;
+	}
+
+	switch(type) {
+		case MHASH_MD5:
+			digest=dm_md5(buf);
+		break;
+		case MHASH_SHA1:
+			digest=dm_sha1(buf);		
+		break;
+		case MHASH_SHA256:
+			digest=dm_sha256(buf);		
+		break;
+		case MHASH_SHA512:
+			digest=dm_sha512(buf);		
+		break;
+		case MHASH_WHIRLPOOL:
+			digest=dm_whirlpool(buf);		
+		break;
+		case MHASH_TIGER:
+			digest=dm_tiger(buf);
+		break;
+		default:
+			digest=NULL;
+			TRACE(TRACE_FATAL,"unhandled hash algorithm");
+		break;
+	}
+
+	return g_strdup(digest);
+}
+
+
+static u64_t blob_store(const char *buf)
+{
+	u64_t id;
+	char *hash = blob_hash(buf);
+
+	// store this message fragment
+	if ((id = blob_exists(buf, (const char *)hash)) != 0) {
+		g_free(hash);
+		return id;
+	}
+
+	if ((id = blob_insert(buf, (const char *)hash)) != 0) {
+		g_free(hash);
+		return id;
+	}
+	
+	return 0;
+}
+
+static int _dm_store_blob(struct DbmailMessage *m, const char *buf, gboolean is_header)
+{
+	u64_t id;
 	assert(buf);
 
 	if (is_header) {
@@ -219,20 +308,12 @@ static int _store_blob(struct DbmailMessage *m, const char *buf, gboolean is_hea
 		m->part_order=0;
 	}
 
-	// we need a valid non-colliding key
-	id = get_id_for_blob(buf);
-
-	// store this message fragment
-	if (! blob_exists(id)) {
-		if (insert_blob(buf, id) == DM_EQUERY)
-			return DM_EQUERY;
-	}
+	if (! (id = blob_store(buf)))
+		return DM_EQUERY;
 
 	// register this message fragment
 	if (register_blob(m, id, is_header) == DM_EQUERY)
 		return DM_EQUERY;
-
-	g_free(id);
 
 	m->part_order++;
 
@@ -363,7 +444,7 @@ static gboolean store_mime_object(GMimeObject *object, struct DbmailMessage *m)
 static void store_head(GMimeObject *object, struct DbmailMessage *m)
 {
 	char *head = g_mime_object_get_headers(object);
-	_store_blob(m, head, 1);
+	_dm_store_blob(m, head, 1);
 	g_free(head);
 }
 
@@ -373,7 +454,7 @@ static void store_body(GMimeObject *object, struct DbmailMessage *m)
 	if (! text)
 		return;
 
-	_store_blob(m, text, 0);
+	_dm_store_blob(m, text, 0);
 	g_free(text);
 }
 
@@ -415,7 +496,7 @@ static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessa
 			if (i>0 && i<t) {
 				text[i] = '\0';
 				text = g_realloc(text,i);
-				_store_blob(m, text, 0);
+				_dm_store_blob(m, text, 0);
 			}
 
 			g_free(text);

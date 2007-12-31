@@ -2,13 +2,16 @@
 DROP INDEX dbmail_sievescripts_1;
 CREATE UNIQUE INDEX dbmail_sievescripts_1 ON dbmail_sievescripts(owner_idnr, name);
 
+CREATE SEQUENCE dbmail_mimeparts_id_seq;
 CREATE TABLE dbmail_mimeparts (
-    id character(64) NOT NULL,
+    id bigint NOT NULL DEFAULT nextval('dbmail_mimeparts_id_seq'),
+    hash character(256) NOT NULL,
     data bytea NOT NULL,
-    size bigint NOT NULL
+    size bigint NOT NULL,
+    PRIMARY KEY (id)
 );
 
-ALTER TABLE ONLY dbmail_mimeparts ADD CONSTRAINT dbmail_mimeparts_pkey PRIMARY KEY (id);
+CREATE INDEX dbmail_mimeparts_1 ON dbmail_mimeparts USING btree (hash);
 
 CREATE TABLE dbmail_partlists (
     physmessage_id bigint NOT NULL,
@@ -16,7 +19,7 @@ CREATE TABLE dbmail_partlists (
     part_key integer DEFAULT 0 NOT NULL,
     part_depth integer DEFAULT 0 NOT NULL,
     part_order integer DEFAULT 0 NOT NULL,
-    part_id character(64) NOT NULL
+    part_id bigint NOT NULL
 );
 
 CREATE INDEX dbmail_partlists_1 ON dbmail_partlists USING btree (physmessage_id);

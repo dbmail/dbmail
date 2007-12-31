@@ -932,12 +932,13 @@ CREATE TRIGGER fk_delete_envelope_physmessage_id
 
 DROP TABLE IF EXISTS dbmail_mimeparts;
 CREATE TABLE dbmail_mimeparts (
-	id	TEXT NOT NULL,
-	data	TEXT NOT NULL,
+	id	INTEGER NOT NULL PRIMARY KEY,
+	hash	TEXT NOT NULL,
+	data	BLOB NOT NULL,
 	size	INTEGER NOT NULL
 );
 
-CREATE UNIQUE INDEX dbmail_mimeparts_1 ON dbmail_mimeparts(id);
+CREATE INDEX dbmail_mimeparts_1 ON dbmail_mimeparts(hash);
 
 DROP TABLE IF EXISTS dbmail_partlists;
 CREATE TABLE dbmail_partlists (
@@ -946,7 +947,7 @@ CREATE TABLE dbmail_partlists (
 	part_key	INTEGER DEFAULT '0' NOT NULL,
 	part_depth	INTEGER DEFAULT '0' NOT NULL,
 	part_order	INTEGER DEFAULT '0' NOT NULL,
-	part_id		TEXT NOT NULL
+	part_id		INTEGER NOT NULL
 );
 
 CREATE INDEX dbmail_partlists_1 ON dbmail_partlists(physmessage_id);

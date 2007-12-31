@@ -2,10 +2,12 @@ SET FOREIGN_KEY_CHECKS=0;
 
 DROP TABLE IF EXISTS `dbmail_mimeparts`;
 CREATE TABLE `dbmail_mimeparts` (
-  `id` char(64) NOT NULL,
+  `id`   bigint(21) NOT NULL AUTO_INCREMENT,
+  `hash` char(64) NOT NULL,
   `data` longblob NOT NULL,
   `size` bigint(21) NOT NULL,
-  PRIMARY KEY  (`id`)
+  PRIMARY KEY  (`id`),
+  KEY `hash` (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `dbmail_partlists`;
@@ -15,7 +17,7 @@ CREATE TABLE `dbmail_partlists` (
   `part_key` smallint(6) NOT NULL default '0',
   `part_depth` smallint(6) NOT NULL default '0',
   `part_order` smallint(6) NOT NULL default '0',
-  `part_id` char(64) NOT NULL,
+  `part_id` bigint(21) NOT NULL,
   KEY `physmessage_id` (`physmessage_id`),
   KEY `part_id` (`part_id`),
   CONSTRAINT `dbmail_partlists_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,

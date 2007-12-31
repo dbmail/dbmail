@@ -369,20 +369,6 @@ START_TEST(test_whirlpool)
 }
 END_TEST
 
-
-START_TEST(test_get_id_for_blob)
-{
-	char *id;
-
-	id = get_id_for_blob("test message");
-
-//	printf("[%s]", id);
-
-	g_free(id);
-}
-END_TEST
-
-
 Suite *dbmail_misc_suite(void)
 {
 	Suite *s = suite_create("Dbmail Misc");
@@ -406,7 +392,6 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_whirlpool);
 	tcase_add_test(tc_misc, test_md5);
 	tcase_add_test(tc_misc, test_tiger);
-	tcase_add_test(tc_misc, test_get_id_for_blob);
 	
 	return s;
 }

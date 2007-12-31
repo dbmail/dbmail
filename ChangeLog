@@ -1,3 +1,12 @@
+2007-12-31  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/2_2_5-2_3_0.mysql, sql/mysql/create_tables.mysql, 
+	sql/postgresql/2_2_5-2_3_0.pgsql, sql/postgresql/create_tables.pgsql, 
+	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite, 
+	src/dbmail-message.c, src/dm_misc.c, src/dm_misc.h, 
+	test/check_dbmail_misc.c:
+	prevent hash collisions on mimeparts
+
 2007-12-30  Paul J Stevens <paul@nfg.nl>
 
 	* debian/rules:
