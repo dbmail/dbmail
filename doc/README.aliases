@@ -17,5 +17,5 @@ forwarded. The destination can also be a command:
 
 You can also use this scan mail for certain users:
 
-    "|/usr/bin/spamassasin | dbmail-smtp -d <username>"
+    "|/usr/bin/spamassasin | dbmail-deliver -d <username>"
 

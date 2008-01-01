@@ -27,7 +27,7 @@ DM_GETOPT = dm_getopt.c
 endif
 
 
-sbin_PROGRAMS = dbmail-smtp \
+sbin_PROGRAMS = dbmail-deliver \
 	dbmail-pop3d \
 	dbmail-imapd \
 	dbmail-top \
@@ -75,8 +75,8 @@ AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 INCLUDES = -I$(top_srcdir)
 
 
-dbmail_smtp_SOURCES = main.c
-dbmail_smtp_LDADD = libdbmail.la
+dbmail_deliver_SOURCES = main.c
+dbmail_deliver_LDADD = libdbmail.la
 
 dbmail_pop3d_SOURCES = pop3.c pop3d.c
 dbmail_pop3d_LDADD = libdbmail.la

@@ -3,6 +3,6 @@ mailbox2dbmail
 Author: Dan Weber <dan at mirrorlynx dot com>
 
 Use this program to copy mail from an mbox file, maildir or mhdir directory to dbmail.
-This program uses ./dbmail-smtp for injecting the emails into DBMail.
+This program uses ./dbmail-deliver for injecting the emails into DBMail.
 
 It needs python 2.2 or higher.

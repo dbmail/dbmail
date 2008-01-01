@@ -20,10 +20,10 @@
 
 /* 
  * 
- * main file for dbmail-smtp  */
+ * main file for dbmail-deliver  */
 
 #include "dbmail.h"
-#define THIS_MODULE "smtp"
+#define THIS_MODULE "deliver"
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -35,7 +35,7 @@
    this can be any value (so 8192 bytes is just a raw guess.. */
 #define READ_CHUNK_SIZE 8192
 /* syslog */
-#define PNAME "dbmail/smtp"
+#define PNAME "dbmail/deliver"
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
@@ -55,7 +55,7 @@ int quiet = 0;
 
 void do_showhelp(void) {
 	printf(
-	"*** dbmail-smtp ***\n"
+	"*** dbmail-deliver ***\n"
 //	Try to stay under the standard 80 column width
 //	0........10........20........30........40........50........60........70........80
 	"Use this program to deliver mail from your MTA or on the command line.\n"
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
 			if (optarg && strlen(optarg) > 0)
 				configFile = optarg;
 			else {
-				fprintf(stderr, "dbmail-smtp: -f requires a filename\n\n" );
+				fprintf(stderr, "dbmail-deliver: -f requires a filename\n\n" );
 				return 1;
 			}
 			break;
@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		/* Unfortunately, dbmail-smtp only gets to return a single worst-case code. */
+		/* Unfortunately, dbmail-deliver only gets to return a single worst-case code. */
 		TRACE(TRACE_MESSAGE, "exit code [%d] from DSN [%d%d%d  %s %s %s]",
 			exitcode,
 			final_dsn.class, final_dsn.subject, final_dsn.detail,

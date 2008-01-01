@@ -29,7 +29,7 @@ init_db() {
     echo "Populating database with $COUNT messages, please wait"
     while [ $i -lt $COUNT ] ; do
         num=$RANDOM
-        echo | formail -a Message-ID: -a "Subject: $num" | ./dbmail-smtp -u tst_source tst_target &>/dev/null
+        echo | formail -a Message-ID: -a "Subject: $num" | ./src/dbmail-deliver -u tst_source tst_target &>/dev/null
         i=$[$i+1]
 	echo -n "."
     done

@@ -1,19 +1,19 @@
-DBMAIL-SMTP(1)
+DBMAIL-DELIVER(1)
 ==============
 
 NAME
 ----
-dbmail-smtp - inserts messages into the DBMail mailsystem.
+dbmail-deliver - inserts messages into the DBMail mailsystem.
 
 
 SYNOPSIS
 --------
-dbmail-smtp [-t headerfield] [-d addresses] [-u usernames] [-m|-M mailboxname]
+dbmail-deliver [-t headerfield] [-d addresses] [-u usernames] [-m|-M mailboxname]
 [-r return path] [-f configFile]
 
 DESCRIPTION
 -----------
-The dbmail-smtp program inserts messages from the commandline or from
+The dbmail-deliver program inserts messages from the commandline or from
 any MTA into the DBMail mailsystem. The program reads from standard input.
 
 

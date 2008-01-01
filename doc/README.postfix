@@ -17,14 +17,14 @@ Using DBMail with Postfix
 	ready to deliver mails before sending your messages to it!
 
 	Now select a delivery method. You need to choose between dbmail-lmtpd
-	or dbmail-smtp.
+	or dbmail-deliver.
 
 	dbmail-lmtpd: network delivery, high performance, reliable performance
 	and bounce handling using a long running dedicated connection to the 
 	authentication and storage database. If you need server-side filtering 
 	you also need to enable sieve support in dbmail.
 	
-	dbmail-smtp: pipe delivery through a short lived process for local 
+	dbmail-deliver: pipe delivery through a short lived process for local 
 	delivery only. Initializes a new database connection for every incoming 
 	email. If you need server-side filtering, you can choose between using 
 	command line filtering as provided by procmail, or sieve support.
@@ -83,26 +83,26 @@ Using DBMail with Postfix
 
 	and you're on your way!
 
-3.	Using the Pipe interface (dbmail-smtp)
+3.	Using the Pipe interface (dbmail-deliver)
 
 	in /etc/postfix/master.cf add:
 	
-	dbmail-smtp    unix  -       n       n       -       -       pipe
+	dbmail-deliver    unix  -       n       n       -       -       pipe
 	    flags=  user=<dbmailuser>:<dbmailgroup> 
-		argv=/usr/local/sbin/dbmail-smtp -d ${recipient} -r ${sender}
+		argv=/usr/local/sbin/dbmail-deliver -d ${recipient} -r ${sender}
 	
 	where <dbmailuser> and <dbmailgroup> should be the user and group the
-	dbmail-smtp program should run as. The ${recipient} and ${sender} 
+	dbmail-deliver program should run as. The ${recipient} and ${sender} 
 	fields are filled in by Postfix.
 
 	To send all email to DBMail, add this in /etc/postfix/main.cf
 
-	mailbox_transport = dbmail-smtp:
+	mailbox_transport = dbmail-deliver:
 
 	If you want to decide whether or not to send to DBMail per domain,
 	add this in /etc/postfix/transport:
 	
-	<domain>        dbmail-smtp:
+	<domain>        dbmail-deliver:
 
 	See the section on running Postfix with LMTP if you don't understand
 	the transport file.
@@ -116,7 +116,7 @@ Using DBMail with Postfix
 4.	Postfix can also interface directly with MySQL or PostgreSQL to check 
 	for aliases before sending mail to dbmail (pipe or LMTP). This can 
 	improve performance, especially on a high-traffic server (SPAM!).
-	In the case of the use of dbmail-smtp, this is especially useful,
+	In the case of the use of dbmail-deliver, this is especially useful,
 	because it saves a process starting up and connecting to the database 
 	on every message.
 
@@ -149,7 +149,7 @@ Using DBMail with Postfix
 
 5.	Notes
 	
-	It's possible to use dbmail-lmtp on some domains, and dbmail-smtp on
+	It's possible to use dbmail-lmtp on some domains, and dbmail-deliver on
 	other domains. Just make both entries in /etc/postfix/master.cf and
 	add transport entries for both.
 

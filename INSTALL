@@ -148,12 +148,12 @@ What do you need?
 5.	Configure your MTA 
 
 	There are two ways to connect your MTA to DBMail. The MTA can start a
-	dbmail-smtp process and pipe SMTP commands and messages to it, or it
+	dbmail-deliver process and pipe SMTP commands and messages to it, or it
 	can use LMTP (Local Mail Transport Protocol) to deliver via
 	dbmail-lmtpd. LMTP is the preferred solution because it offers more
 	robust error handling and because it is a daemon, high traffic servers
 	will have reduced delays which would be incurred starting up a
-	dbmail-smtp process for each message.
+	dbmail-deliver process for each message.
 
 	The specifics of delivering to DBMail from your MTA can be found in the
 	README.<MTA Name> files. Currently there is documentation for Postfix,
@@ -161,7 +161,7 @@ What do you need?
 	project wiki, at http://www.dbmail.org/dokuwiki
 
 	If you use a different kind of MTA that we do not have documentation
-	for: The dbmail injector program, dbmail-smtp, can receive information
+	for: The dbmail injector program, dbmail-deliver, can receive information
 	in two ways. Either through raw mail (for example, delivered by
 	procmail) using the -n option or from a MTA with recipients in the
 	command line using the -d option. Be careful, the -n option is not

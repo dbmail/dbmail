@@ -14,7 +14,7 @@ of a DBMail system:
 
 `--------------------------`-----------------------------
 Configuration file         link:dbmail.conf.html[dbmail.conf(5)]
-Deliver mail               link:dbmail-smtp.html[dbmail-smtp(1)]
+Deliver mail               link:dbmail-deliver.html[dbmail-deliver(1)]
 Manage user accounts       link:dbmail-users.html[dbmail-users(8)]
 Export mailbox contents    link:dbmail-export.html[dbmail-export(8)]
 Manage Sieve scripts       link:dbmail-sievecmd.html[dbmail-sievecmd(8)]

@@ -88,7 +88,7 @@ void dsnuser_free_list(GList *deliveries);
  * and external forwarding addresses. Each dsnuser is flagged
  * with DSN codes so that successes and failures can be properly
  * indicated at the top of the delivery call chain, such as in
- * dbmail-smtp and dbmail-lmtpd.
+ * dbmail-deliver and dbmail-lmtpd.
  * \param deliveries Pointer to a list of dsnuser structs.
  * \return
  *   - 0 on success
@@ -101,7 +101,7 @@ int dsnuser_resolve_list(GList *deliveries);
  * an address/alias set. It will be resolved to deliveries and
  * flagged with a DSN code so that success or failure can be
  * properly indicated at the top of the delivery call chain,
- * such as in dbmail-smtp and dbmail-lmtpd.
+ * such as in dbmail-deliver and dbmail-lmtpd.
  * \param deliveries Pointer to a deliver_to_user_t.
  * \return
  *   - 0 on success

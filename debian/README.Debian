@@ -13,8 +13,8 @@ have changed and are incompatible with dbmail-2.x. Migration scripts
 for your database backend are provided in the examples directory. None
 of the dbmail-2 binaries will run until you have upgraded your database.
 
-The debian package runs dbmail-smtp as user dbmail via suid.
-This will allow normal users to insert mail through dbmail-smtp
+The debian package runs dbmail-deliver as user dbmail via suid.
+This will allow normal users to insert mail through dbmail-deliver
 (i.e. from procmail) without granting them access to dbmail.conf
 and the password contained therein.
 

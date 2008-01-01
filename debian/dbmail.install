@@ -2,7 +2,7 @@ usr/sbin/dbmail-export
 usr/sbin/dbmail-imapd
 usr/sbin/dbmail-lmtpd
 usr/sbin/dbmail-pop3d
-usr/sbin/dbmail-smtp
+usr/sbin/dbmail-deliver
 usr/sbin/dbmail-users
 usr/sbin/dbmail-util
 usr/lib/dbmail/libauth_sql.so*

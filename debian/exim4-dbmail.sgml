@@ -66,13 +66,13 @@ The tables for mysql and the dbmail user should now be set.  If you need to reco
 <sect1>Exim4<p>
 
 <sect2>Transports<p>
-Now we will begin to edit the values of the exim4 configuration.  First we will begin by adding a transport for communicating with dbmail-smtp.
+Now we will begin to edit the values of the exim4 configuration.  First we will begin by adding a transport for communicating with dbmail-deliver.
 <tscreen><verb> 
 
 ==================/etc/exim4/conf.d/transport/30_exim4-config_dbmailconfig============
 dbmail:
 	driver = pipe
-	command = "/usr/sbin/dbmail-smtp -d $(local_part)\@$domain"
+	command = "/usr/sbin/dbmail-deliver -d $(local_part)\@$domain"
 	return_fail_output
 	user = dbmail
 =======================================Done===============================

@@ -87,7 +87,7 @@ def getFreshbox(name):
     assert(name)
     cmd='./contrib/mailbox2dbmail/mailbox2dbmail ' \
         '-u testuser1 -t mbox -m test-scripts/testbox ' \
-        '-b "%s" -p ./dbmail-smtp -f /etc/dbmail/dbmail-test.conf' % name
+        '-b "%s" -p ./src/dbmail-deliver -f /etc/dbmail/dbmail-test.conf' % name
     print "loading new testbox [%s]. please wait..." % name
     s,o=commands.getstatusoutput(cmd)
     if s:

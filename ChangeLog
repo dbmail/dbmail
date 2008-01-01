@@ -1,10 +1,27 @@
-2007-12-31  Paul J Stevens <paul@nfg.nl>
+2008-01-01  Paul J Stevens <paul@nfg.nl>
 
-	* sql/mysql/2_2_5-2_3_0.mysql, sql/mysql/create_tables.mysql, 
-	sql/postgresql/2_2_5-2_3_0.pgsql, sql/postgresql/create_tables.pgsql, 
-	sql/sqlite/2_2_5-2_3_0.sqlite, sql/sqlite/create_tables.sqlite, 
-	src/dbmail-message.c, src/dm_misc.c, src/dm_misc.h, 
-	test/check_dbmail_misc.c:
+	* INSTALL, contrib/mailbox2dbmail/README, 
+	contrib/mailbox2dbmail/mailbox2dbmail, 
+	contrib/mailbox2dbmail/mailbox2dbmail.1, 
+	contrib/mailbox2dbmail/mailbox2dbmail.yo, debian/README.Debian, 
+	debian/dbmail.install, debian/dbmail.manpages, 
+	debian/dbmail.postinst, debian/exim4-dbmail.sgml, doc/README.aliases, 
+	doc/README.exim, doc/README.postfix, doc/README.qmail, 
+	man/Makefile.am, man/dbmail-deliver.txt, man/dbmail-smtp.txt, 
+	man/dbmail.txt, src/Makefile.am, src/dm_dsn.h, src/main.c, 
+	test-scripts/testimap.py, test-scripts/torture.sh:
+	rename dbmail-smtp to dbmail-deliver
+	* man/dbmail-util.txt, src/dbmail-message.c, src/dm_db.c, 
+	src/dm_db.h, src/dm_misc.c, src/dm_misc.h, src/maintenance.c:
+	add --rehash option to dbmail-util
+
+2007-12-31  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, sql/mysql/2_2_5-2_3_0.mysql, 
+	sql/mysql/create_tables.mysql, sql/postgresql/2_2_5-2_3_0.pgsql, 
+	sql/postgresql/create_tables.pgsql, sql/sqlite/2_2_5-2_3_0.sqlite, 
+	sql/sqlite/create_tables.sqlite, src/dbmail-message.c, src/dm_misc.c, 
+	src/dm_misc.h, test/check_dbmail_misc.c:
 	prevent hash collisions on mimeparts
 
 2007-12-30  Paul J Stevens <paul@nfg.nl>

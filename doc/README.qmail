@@ -32,7 +32,7 @@ the dev mailing list or file a bug with the project.
 5.	Now create a dot-qmail file in the dbmail home directory called 
 	.qmail-default that contains the next single line:
 
-	|/usr/local/sbin/dbmail-smtp -d ${RECIPIENT:7}
+	|/usr/local/sbin/dbmail-deliver -d ${RECIPIENT:7}
 
 	The pipe tells qmail to pipe the email through a command.  The 
 	${RECIPIENT:7} takes the environment variable $RECIPIENT and chops off
@@ -45,7 +45,7 @@ the dev mailing list or file a bug with the project.
 	dash '-' after the dbmail user's name). So, if the dbmail user's 
 	name you chose is joe, your .qmail-default file should contain:
 
-	|/usr/local/sbin/dbmail-smtp -d ${RECIPIENT:4}
+	|/usr/local/sbin/dbmail-deliver -d ${RECIPIENT:4}
 	
 	For more information about dot-qmail files please check the 
 	man page of dot-qmail, you can check it online at: 

@@ -15,12 +15,12 @@ by Thomas Mueller
 
 	Every router with local mail has to use 'transport = LOCAL_DELIVERY' then.
 
-3. 	dbmail-smtp
+3. 	dbmail-deliver
 
 	# transport using pipe
 	transport_dbmail:  
 		driver = pipe
-		command = "/usr/local/sbin/dbmail-smtp -d $local_part@$domain"
+		command = "/usr/local/sbin/dbmail-deliver -d $local_part@$domain"
 		return_fail_output
 		user = dbmail
 
