@@ -171,4 +171,7 @@ long long unsigned dm_strtoull(const char *nptr, char **endptr, int base);
 /* Free the result with g_strfreev. */
 char **base64_decodev(char *in);
 
+/* return an allocated string containing the cryptographic checksum for buf */
+char * dm_get_hash_for_string(const char *buf);
+
 #endif

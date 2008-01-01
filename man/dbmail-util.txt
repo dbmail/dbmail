@@ -78,6 +78,10 @@ OPTIONS
  Enter an interactive user management console in some future version
  where this feature is implemented. It is not currently available.
 
+--rehash::
+ Rebuild the hash values for all the message parts in the database. You 
+ need to run this after modifying the hash_algorithm config option.
+
 
 include::commonopts.txt[]
 

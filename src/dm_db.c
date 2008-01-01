@@ -5280,3 +5280,66 @@ int db_message_mailbox_mtime_update(u64_t message_id)
 	return db_commit_transaction();
 }
 
+int db_rehash_store(void)
+{
+
+	GList *ids = NULL;
+	char q[DEF_QUERYSIZE];
+	memset(q,0,DEF_QUERYSIZE);
+	int rows, i;
+	const char *buf;
+	char *hash;
+
+	snprintf(q,DEF_QUERYSIZE, "SELECT id FROM %smimeparts", DBPFX);
+	if (db_query(q) == DM_EQUERY) {
+		db_free_result();
+		return DM_EQUERY;
+	}
+
+	rows = db_num_rows();
+	for (i=0; i<rows; i++) {
+		u64_t *id = g_new0(u64_t,1);
+		*id = db_get_result_u64(i,0);
+		ids = g_list_prepend(ids, id);
+	}
+	db_free_result();
+
+	db_begin_transaction();
+
+	ids = g_list_first(ids);
+	while (ids) {
+		u64_t *id = ids->data;
+
+		memset(q,0,DEF_QUERYSIZE);
+		snprintf(q,DEF_QUERYSIZE,"SELECT data FROM %smimeparts WHERE id=%llu", DBPFX, *id);
+		if (db_query(q) == DM_EQUERY) {
+			g_list_destroy(ids);
+			db_rollback_transaction();
+			return DM_EQUERY;
+		}
+
+		buf = db_get_result(0,0);
+		hash = dm_get_hash_for_string(buf);
+		db_free_result();
+
+		memset(q,0,DEF_QUERYSIZE);
+		snprintf(q,DEF_QUERYSIZE,"UPDATE %smimeparts SET hash='%s' WHERE id=%llu", DBPFX, hash, *id);
+		if (db_query(q) == DM_EQUERY) {
+			g_free(hash);
+			g_list_destroy(ids);
+			db_rollback_transaction();
+			return DM_EQUERY;
+		}
+		g_free(hash);
+		db_free_result();
+
+
+		if (! g_list_next(ids))
+			break;
+		ids = g_list_next(ids);
+	}
+
+	return db_commit_transaction();
+}
+
+

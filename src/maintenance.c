@@ -61,6 +61,7 @@ static int do_header_cache(void);
 static int do_check_iplog(const char *timespec);
 static int do_check_replycache(const char *timespec);
 static int do_vacuum_db(void);
+static int do_rehash(void);
 
 int do_showhelp(void) {
 	printf("*** dbmail-util ***\n");
@@ -102,10 +103,15 @@ int main(int argc, char *argv[])
 	int check_iplog = 0, check_replycache = 0;
 	char *timespec_iplog = NULL, *timespec_replycache = NULL;
 	int null_messages = 0;
-	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0;
+	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0, rehash = 0;
 	int show_help = 0;
 	int do_nothing = 1;
 	int is_header = 0;
+	static struct option long_options[] = {
+		{ "rehash", 0, 0, 0 },
+		{ 0, 0, 0, 0 }
+	};
+	int opt_index = 0;
 	int opt;
 
 	g_mime_init(0);
@@ -114,10 +120,15 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-acbtl:r:puds" "i" "f:qnyvVh")) != -1) {
+	while ((opt = getopt_long(argc, argv, "-acbtl:r:puds" "i" "f:qnyvVh", long_options, &opt_index)) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
+		case 0:
+			do_nothing = 0;
+			if (strcmp(long_options[opt_index].name,"rehash")==0)
+				rehash = 1;
+			break;
 		case 'a':
 			/* This list should be kept up to date. */
 			vacuum_db = 1;
@@ -267,6 +278,7 @@ int main(int argc, char *argv[])
 	if (check_iplog) do_check_iplog(timespec_iplog);
 	if (check_replycache) do_check_replycache(timespec_replycache);
 	if (vacuum_db) do_vacuum_db();
+	if (rehash) do_rehash();
 
 	if (!has_errors && !serious_errors) {
 		qprintf("\nMaintenance done. No errors found.\n");
@@ -1015,6 +1027,22 @@ int do_vacuum_db(void)
 		qprintf("Ok. Database cleaned up.\n");
 	}
 	return 0;
+}
+
+int do_rehash(void)
+{
+	if (yes_to_all) {
+		qprintf ("Rebuild hash keys for stored message chunks...\n");
+		if (db_rehash_store() == DM_EQUERY) {
+			qerrorf("Failed. Please check the log.\n");
+			serious_errors = 1;
+			return -1;
+		}
+		qprintf ("Ok. Hash keys rebuild successfully.\n");
+	}
+
+	return 0;
+
 }
 
 /* Makes a date/time string: YYYY-MM-DD HH:mm:ss
