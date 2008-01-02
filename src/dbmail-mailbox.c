@@ -279,7 +279,6 @@ static int _messageblks_dump(struct DbmailMailbox *self, GMimeStream *ostream)
 	struct DbmailMessage *message = NULL;
 	GString *q, *t;
 	const char *internal_date;
-	char *date2char;
 	unsigned i,j;
 	int count=0;
 	gboolean h;
@@ -302,7 +301,6 @@ static int _messageblks_dump(struct DbmailMailbox *self, GMimeStream *ostream)
 	g_list_destroy(cids);
 	
 	g_list_free(g_list_first(ids));
-	date2char = date2char_str("internal_date");
 
 	while (slice) {
 		g_string_printf(q,"SELECT is_header,messageblk,%s FROM %smessageblks b "
@@ -310,7 +308,7 @@ static int _messageblks_dump(struct DbmailMailbox *self, GMimeStream *ostream)
 				"JOIN %smessages m USING (physmessage_id) "
 				"WHERE message_idnr IN (%s) "
 				"ORDER BY messageblk_idnr ",
-				date2char,
+				date2char_str("internal_date"),
 				DBPFX, DBPFX, DBPFX,
 				(char *)slice->data);
 		
@@ -349,7 +347,6 @@ static int _messageblks_dump(struct DbmailMailbox *self, GMimeStream *ostream)
 		
 		slice = g_list_next(slice);
 	}
-	g_free(date2char);
 	
 	if (t->len) {
 		message = dbmail_message_new();

@@ -45,7 +45,7 @@ extern db_param_t _db_params;
 static void _register_header(const char *header, const char *value, gpointer user_data);
 static gboolean _header_cache(const char *header, const char *value, gpointer user_data);
 
-static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_template);
+static struct DbmailMessage * _retrieve(struct DbmailMessage *self, const char *query_template);
 static void _map_headers(struct DbmailMessage *self);
 static int _set_content(struct DbmailMessage *self, const GString *content);
 static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
@@ -295,6 +295,7 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 {
 	char *str;
 	const char *boundary = NULL;
+	const char *internal_date = NULL;
 	char **blist = g_new0(char *,32);
 	int prevdepth, depth = 0, order, row, rows;
 	int key = 1;
@@ -306,11 +307,12 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 
 	assert(dbmail_message_get_physid(self));
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT data,l.part_key,l.part_depth,l.part_order,l.is_header "
+	snprintf(query, DEF_QUERYSIZE, "SELECT data,l.part_key,l.part_depth,l.part_order,l.is_header,%s "
 		"FROM %smimeparts p "
 		"JOIN %spartlists l ON p.id = l.part_id "
+		"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
 		"WHERE l.physmessage_id = %llu ORDER BY l.part_key,l.part_order ASC", 
-		DBPFX, DBPFX, dbmail_message_get_physid(self));
+		date2char_str("ph.internal_date"), DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "sql error");
@@ -335,6 +337,8 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 		depth = db_get_result_int(row,2);
 		order = db_get_result_int(row,3);
 		is_header = db_get_result_bool(row,4);
+		if (row == 0)
+			internal_date = db_get_result(row,5);
 
 		if (is_header)
 			prev_boundary = got_boundary;
@@ -366,8 +370,9 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 
 	db_free_result();
 
-
 	self = dbmail_message_init_with_string(self,m);
+	if (strlen(internal_date))
+		dbmail_message_set_internal_date(self, (char *)internal_date);
 	g_string_free(m,TRUE);
 	g_free(blist);
 
@@ -1062,7 +1067,7 @@ size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean c
 }
 
 
-static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_template)
+static struct DbmailMessage * _retrieve(struct DbmailMessage *self, const char *query_template)
 {
 	
 	int row = 0, rows = 0;
@@ -1070,7 +1075,7 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
 	struct DbmailMessage *store;
-
+	const char *internal_date;
 	
 	assert(dbmail_message_get_physid(self));
 	
@@ -1081,8 +1086,8 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 
 	self = store;
 
-	snprintf(query, DEF_QUERYSIZE, query_template, DBPFX, 
-			dbmail_message_get_physid(self));
+	snprintf(query, DEF_QUERYSIZE, query_template, date2char_str("p.internal_date"), 
+		DBPFX, DBPFX, dbmail_message_get_physid(self));
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "sql error");
@@ -1099,11 +1104,17 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	m = g_string_new("");
 	for (row=0; row < rows; row++) {
 		char *str = (char *)db_get_result(row,0);
+		if (row == 0)
+			internal_date = db_get_result(row,2);
+
 		g_string_append_printf(m, "%s", str);
 	}
 	db_free_result();
 	
 	self = dbmail_message_init_with_string(self,m);
+	if (strlen(internal_date))
+		dbmail_message_set_internal_date(self, (char *)internal_date);
+
 	g_string_free(m,TRUE);
 
 	return self;
@@ -1119,10 +1130,11 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
  */
 static struct DbmailMessage * _fetch_head(struct DbmailMessage *self)
 {
-	char *query_template = 	"SELECT messageblk, is_header "
-		"FROM %smessageblks "
-		"WHERE physmessage_id = %llu "
-		"AND is_header = '1'";
+	const char *query_template = 	"SELECT b.messageblk, b.is_header, %s "
+		"FROM %smessageblks b "
+		"JOIN %sphysmessage p ON b.physmessage_id=p.id "
+		"WHERE b.physmessage_id = %llu "
+		"AND b.is_header = '1'";
 	return _retrieve(self, query_template);
 
 }
@@ -1134,10 +1146,11 @@ static struct DbmailMessage * _fetch_head(struct DbmailMessage *self)
  */
 static struct DbmailMessage * _fetch_full(struct DbmailMessage *self) 
 {
-	char *query_template = "SELECT messageblk, is_header "
-		"FROM %smessageblks "
-		"WHERE physmessage_id = %llu "
-		"ORDER BY messageblk_idnr";
+	const char *query_template = "SELECT b.messageblk, b.is_header, %s "
+		"FROM %smessageblks b "
+		"JOIN %sphysmessage p ON b.physmessage_id=p.id "
+		"WHERE b.physmessage_id = %llu "
+		"ORDER BY b.messageblk_idnr";
 	return _retrieve(self, query_template);
 }
 
@@ -1150,8 +1163,6 @@ static struct DbmailMessage * _fetch_full(struct DbmailMessage *self)
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter)
 {
 	assert(physid);
-	
-	//FIXME: fails to retrieve the internal_date (bug #656)
 	
 	dbmail_message_set_physid(self, physid);
 	

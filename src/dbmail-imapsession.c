@@ -771,7 +771,6 @@ GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
 		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
 		 range, ud->mailbox->uid,
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,MESSAGE_STATUS_DELETE);
-	g_free(to_char_str);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select message");

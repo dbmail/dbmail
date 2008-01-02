@@ -4671,14 +4671,14 @@ u64_t db_get_result_u64(unsigned row, unsigned field)
 
 char *date2char_str(const char *column)
 {
-	unsigned len;
-	char *s;
-	
-	len = strlen(db_get_sql(SQL_TO_CHAR)) + MAX_COLUMN_LEN;
-	s = g_new0(char, len);
-	snprintf(s, len, db_get_sql(SQL_TO_CHAR), column);
+	static int bufno;
+	static char buflist[4][DEF_FRAGSIZE];
+	char *buffer = buflist[3 & ++bufno], *buf = buffer;
 
-	return s;
+	memset(buf, 0, DEF_FRAGSIZE);
+	snprintf(buf, DEF_FRAGSIZE, db_get_sql(SQL_TO_CHAR), column);
+
+	return buffer;
 }
 
 char *char2date_str(const char *date)

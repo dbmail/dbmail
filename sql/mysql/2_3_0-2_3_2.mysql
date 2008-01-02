@@ -1,0 +1,42 @@
+
+SET FOREIGN_KEY_CHECKS=0;
+
+DROP TABLE IF EXISTS `dbmail_mimeparts2`;
+CREATE TABLE `dbmail_mimeparts2` (
+	`id`   bigint(21) NOT NULL AUTO_INCREMENT,
+	`hash` char(128) NOT NULL,
+	`data` longblob NOT NULL,
+	`size` bigint(21) NOT NULL,
+	PRIMARY KEY  (`id`),
+	KEY `hash` (`hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `dbmail_partlists2`;
+CREATE TABLE `dbmail_partlists2` (
+	`physmessage_id` bigint(21) NOT NULL,
+	`is_header` tinyint(1) NOT NULL default '0',
+	`part_key` smallint(6) NOT NULL default '0',
+	`part_depth` smallint(6) NOT NULL default '0',
+	`part_order` smallint(6) NOT NULL default '0',
+	`part_id` bigint(21) NOT NULL,
+	KEY `physmessage_id` (`physmessage_id`),
+	KEY `part_id` (`part_id`),
+	CONSTRAINT `dbmail_partlists2_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT `dbmail_partlists2_ibfk_2` FOREIGN KEY (`part_id`) REFERENCES `dbmail_mimeparts2` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO dbmail_mimeparts2 (hash, data, size) SELECT id, data, size FROM dbmail_mimeparts;
+INSERT INTO dbmail_partlists2 (
+	physmessage_id, is_header, part_key, part_depth, part_order, part_id
+) SELECT 
+	p.physmessage_id,p.is_header,p.part_key,p.part_depth,p.part_order,m.id FROM dbmail_mimeparts2 m JOIN dbmail_partlists p ON p.part_id=m.hash;
+
+rename table dbmail_mimeparts to dbmail_mimeparts_old;
+rename table dbmail_partlists to dbmail_partlists_old;
+rename table dbmail_mimeparts2 to dbmail_mimeparts;
+rename table dbmail_partlists2 to dbmail_partlists;
+drop table dbmail_mimeparts_old;
+drop table dbmail_partlists_old;
+
+SET FOREIGN_KEY_CHECKS=1;
+
