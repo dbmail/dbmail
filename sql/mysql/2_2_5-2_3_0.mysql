@@ -3,7 +3,7 @@ SET FOREIGN_KEY_CHECKS=0;
 DROP TABLE IF EXISTS `dbmail_mimeparts`;
 CREATE TABLE `dbmail_mimeparts` (
   `id`   bigint(21) NOT NULL AUTO_INCREMENT,
-  `hash` char(64) NOT NULL,
+  `hash` char(128) NOT NULL,
   `data` longblob NOT NULL,
   `size` bigint(21) NOT NULL,
   PRIMARY KEY  (`id`),
