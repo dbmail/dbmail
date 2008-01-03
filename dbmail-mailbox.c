@@ -318,7 +318,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	while (slice) {
 		g_string_printf(q,"SELECT is_header,messageblk,%s FROM %smessageblks b "
 				"JOIN %sphysmessage p ON b.physmessage_id = p.id "
-				"JOIN %smessages m USING (physmessage_id) "
+				"JOIN %smessages m ON m.physmessage_id = p.id "
 				"WHERE message_idnr IN (%s) "
 				"ORDER BY messageblk_idnr ",
 				date2char,

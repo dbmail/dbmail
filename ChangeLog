@@ -1,3 +1,19 @@
+2008-01-03  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c:
+	use join compatible with mysql 4.1 during export
+	* dbmail-mailbox.c:
+	fix segfault (bug #668)
+	* man/dbmail-users.8:
+	update generated manpage
+
+2007-12-17  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, dbmail-message.c:
+	do not add From_ header as part of the message during insertion
+	* check_dbmail_message.c, dbmail-mailbox.c:
+	add a missing case of dm_strtoull in dbmail_mailbox_get_set
+
 2007-12-16  Paul J Stevens <paul@nfg.nl>
 
 	* modules/authldap.c:
