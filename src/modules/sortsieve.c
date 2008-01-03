@@ -417,7 +417,7 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	g_tuples_destroy(headers);
 
 	/* We have to free the header array, but not its contents. */
-	m->freelist = g_list_prepend(m->freelist, &bodylist);
+	m->freelist = g_list_prepend(m->freelist, bodylist);
 
 	for (i = 0; bodylist[i] != NULL; i++) {
 		TRACE(TRACE_INFO, "Getting header [%s] returning value [%s]",
@@ -498,8 +498,8 @@ int sort_getsubaddress(sieve2_context_t *s, void *my)
 	sieve2_setvalue_string(s, "localpart", localpart);
 	sieve2_setvalue_string(s, "domain", domain);
 
-	m->freelist = g_list_prepend(m->freelist, &user);
-	m->freelist = g_list_prepend(m->freelist, &localpart);
+	m->freelist = g_list_prepend(m->freelist, user);
+	m->freelist = g_list_prepend(m->freelist, localpart);
 
 	return SIEVE2_OK;
 }
