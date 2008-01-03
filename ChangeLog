@@ -1,7 +1,16 @@
+2008-01-03  Paul J Stevens <paul@nfg.nl>
+
+	* test-scripts/testimap.py:
+	fix testLogin
+	* src/modules/sortsieve.c:
+	fix segfault
+
 2008-01-02  Paul J Stevens <paul@nfg.nl>
 
-	* man/dbmail-deliver.txt, sql/mysql/2_2_5-2_3_0.mysql, 
-	sql/mysql/create_tables.mysql:
+	* debian/dbmail-mysql.examples:
+	debian updates
+	* ChangeLog, debian/changelog, man/dbmail-deliver.txt, 
+	sql/mysql/2_2_5-2_3_0.mysql, sql/mysql/create_tables.mysql:
 	small fixes
 	* sql/mysql/2_3_0-2_3_2.mysql, src/dbmail-imapsession.c, 
 	src/dbmail-mailbox.c, src/dbmail-message.c, src/dm_db.c:

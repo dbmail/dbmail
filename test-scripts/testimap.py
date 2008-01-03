@@ -42,7 +42,7 @@ unimplementedError = 'Dbmail testcase unimplemented'
 HOST,PORT = "localhost", 10143
 
 # for stdin/stdout testing
-DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
+DAEMONBIN = "./src/dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
 #DAEMONBIN = "CK_FORK=no G_SLICE=always-malloc valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
 
@@ -103,7 +103,7 @@ class testImapServer(unittest.TestCase):
 
         self.p = getsock()
         self.p.debug = DEBUG
-        self.p.login(username,password)
+        return self.p.login(username,password)
 
     def testAppend(self):
         """ 
