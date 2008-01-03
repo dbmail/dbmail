@@ -1475,7 +1475,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 				r = hi;
 			else {
 				
-				if (! (r = strtoull(rest,NULL,10))) {
+				if (! (r = dm_strtoull(rest,NULL,10))) {
 					error = TRUE;
 					break;
 				}
