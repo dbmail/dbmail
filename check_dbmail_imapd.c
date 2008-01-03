@@ -676,7 +676,18 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = imap_get_logical_part(object,"HEADER");
-	fail_unless(strlen(result)==169,"imap_get_partspec failed");
+	//"From nobody Wed Sep 14 16:47:48 2005\n" 
+	expect = g_strdup("Content-Type: text/plain; charset=\"us-ascii\"\n"
+	"MIME-Version: 1.0\n"
+	"Content-Transfer-Encoding: 7bit\n"
+	"To: testuser@foo.org\n"
+	"From: somewher@foo.org\n"
+	"Subject: dbmail test message\n"
+	"\n");
+
+	fail_unless(MATCH(expect,result),"imap_get_partsec failed [%s] !=\n[%s]\n", expect, result);
+	fail_unless(strlen(result)==169,"imap_get_partspec failed [%d] [%s]", strlen(result), result);
+	g_free(expect);
 	g_free(result);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
