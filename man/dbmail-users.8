@@ -1,11 +1,11 @@
 .\"     Title: dbmail\-users
 .\"    Author: 
 .\" Generator: DocBook XSL Stylesheets v1.71.0 <http://docbook.sf.net/>
-.\"      Date: 10/16/2007
+.\"      Date: 12/27/2007
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL\-USERS" "8" "10/16/2007" "" ""
+.TH "DBMAIL\-USERS" "8" "12/27/2007" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -17,7 +17,7 @@ dbmail\-users { \-a username | \-c username } [ \-g clientid ] [ \-m maxmail] [ 
 .sp
 dbmail\-users { \-d username | \-e username }
 .sp
-dbmail\-users \-l userspec
+dbmail\-users \-l [userspec]
 .sp
 dbmail\-users \-x alias [ \-t forwards ] [ \-T forwards ]
 .SH "DESCRIPTION"
@@ -44,9 +44,24 @@ Change details for a user
 Empty all mailboxes for a user
 .RE
 .PP
-\-l uspec
+\-l [userspec]
 .RS 3n
-List information for matching users
+List information for matching users. If no userspec is given, lists all users and forwards in this format:
+.sp
+.RS 3n
+.nf
+\-\- users \-\-
+   username : the letter 'x' : user id number : client id number : quota : used : comma, separated, aliases
+.fi
+.RE
+.sp
+.RS 3n
+.nf
+\-\- forwards \-\-
+   alias: comma, separated, forwards
+.fi
+.sp
+.RE
 .RE
 .PP
 \-x alias
