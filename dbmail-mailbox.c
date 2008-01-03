@@ -298,7 +298,6 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	ostream = g_mime_stream_file_new(file);
 	g_mime_stream_file_set_owner ((GMimeStreamFile *)ostream, FALSE);
 
-	
 	ids = g_tree_keys(self->ids);
 
 	while (ids) {
@@ -343,7 +342,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 				if (t->len > 0) {
 					message = dbmail_message_new();
 					message = dbmail_message_init_with_string(message,t);
-					dbmail_message_set_internal_date(message, (char *)internal_date);
+					if (strlen(internal_date))
+						dbmail_message_set_internal_date(message, (char *)internal_date);
 					if(dump_message_to_stream(message,ostream) > 0)
 						count++;
 					dbmail_message_free(message);
