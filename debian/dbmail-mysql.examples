@@ -1,5 +1,6 @@
 sql/mysql/2_1_7-2_2_0.mysql
 sql/mysql/2_2_5-2_3_0.mysql
+sql/mysql/2_3_0-2_3_2.mysql
 sql/mysql/create_tables.mysql
 sql/mysql/fix_foreign_keys.mysql
 sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql
