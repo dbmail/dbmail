@@ -1,3 +1,8 @@
+2008-01-07  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c:
+	fix another segfault during export (bug #668)
+
 2008-01-03  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c:

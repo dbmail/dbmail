@@ -283,7 +283,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	GList *ids, *cids = NULL, *slice, *topslice;
 	struct DbmailMessage *message = NULL;
 	GString *q, *t;
-	const char *internal_date = NULL;
+	char *internal_date = NULL;
 	char * date2char;
 
 	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
@@ -342,17 +342,18 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 				if (t->len > 0) {
 					message = dbmail_message_new();
 					message = dbmail_message_init_with_string(message,t);
-					if (strlen(internal_date))
-						dbmail_message_set_internal_date(message, (char *)internal_date);
+					if (internal_date && strlen(internal_date))
+						dbmail_message_set_internal_date(message, internal_date);
 					if(dump_message_to_stream(message,ostream) > 0)
 						count++;
 					dbmail_message_free(message);
 				}
+				if (internal_date) g_free(internal_date);
+				internal_date = g_strdup(db_get_result(i,2));
 				g_string_printf(t,"%s", db_get_result(i,1));
 			} else {
 				g_string_append(t, db_get_result(i,1));
 			}
-			internal_date = db_get_result(i,2);
 		}
 		db_free_result();
 
@@ -366,7 +367,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	if (t->len) {
 		message = dbmail_message_new();
 		message = dbmail_message_init_with_string(message,t);
-		dbmail_message_set_internal_date(message, (char *)internal_date);
+		dbmail_message_set_internal_date(message, internal_date);
+		if (internal_date) g_free(internal_date);
 		if (dump_message_to_stream(message, ostream) > 0)
 			count++;
 		dbmail_message_free(message);
