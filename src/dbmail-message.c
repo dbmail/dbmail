@@ -1305,7 +1305,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 
 		}
 
-		rfcsize = (u64_t)dbmail_message_get_rfcsize(self);
+		rfcsize = (u64_t)dbmail_message_get_size(self,TRUE);
 		if (db_update_message(self->id, unique_id, (hdrs_size + body_size), rfcsize) < 0) {
 			db_rollback_transaction();
 			usleep(delay*i);

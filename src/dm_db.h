@@ -544,18 +544,6 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 		      u64_t message_size, u64_t rfc_size);
 
 /**
- * \brief set messagesize and rfcsize of a message
- * \param physmessage_id 
- * \param message_size
- * \param rfc_size
- * \return
- *    - -1 on failure
- *    -  0 on succes
- */
-int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
-			     u64_t rfc_size);
-
-/**
  * \brief insert a messageblock for a specific physmessage
  * \param block the block
  * \param block_size size of block

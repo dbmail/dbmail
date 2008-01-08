@@ -502,8 +502,8 @@ START_TEST(test_imap_get_envelope)
 	message = dbmail_message_init_with_string(message, s);
 	g_string_free(s,TRUE);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL \"<1199706209l.3020l.1l@(none)>\")",1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
 
 	dbmail_message_free(message);
 	g_free(result);
@@ -516,8 +516,8 @@ START_TEST(test_imap_get_envelope)
 	g_string_free(s,TRUE);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" NIL NIL NIL NIL NIL NIL NIL NIL)", 1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" NIL NIL NIL NIL NIL NIL NIL \"<1199706209l.3020l.0l@(none)>\")", 1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
 
 	dbmail_message_free(message);
 	g_free(result);
@@ -561,7 +561,7 @@ END_TEST
 START_TEST(test_imap_get_envelope_koi)
 {
 	char *t;
-	const char *exp = "(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"test\" ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((NIL NIL \"nobody\" \"foo.ru\")) NIL NIL NIL NIL)";
+	const char *exp = "(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"test\" ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((NIL NIL \"nobody\" \"foo.ru\")) NIL NIL NIL \"<1199706209l.3020l.5l@(none)>\")";
 
 	struct DbmailMessage *m = dbmail_message_new();
 	GString *s = g_string_new(encoded_message_koi);
@@ -627,7 +627,7 @@ START_TEST(test_imap_get_envelope_latin)
 	
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
 	
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?iso-8859-1?Q?Re:_M=F3dulo_Extintores?=\" ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?iso-8859-1?Q?Re:_M=F3dulo_Extintores?=\" ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL \"<1199706209l.3020l.7l@(none)>\")",1024);
 	
 	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);
 
@@ -640,7 +640,7 @@ START_TEST(test_imap_get_envelope_latin)
 	m = dbmail_message_init_with_string(m, s);
 	g_string_free(s,TRUE);
 	
- 	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
+ 	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL \"<1199706209l.3020l.8l@(none)>\")",1024);
   
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
 	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);
@@ -683,16 +683,17 @@ START_TEST(test_imap_get_partspec)
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = imap_get_logical_part(object,"HEADER");
 	//"From nobody Wed Sep 14 16:47:48 2005\n" 
-	expect = g_strdup("Content-Type: text/plain; charset=\"us-ascii\"\n"
-	"MIME-Version: 1.0\n"
-	"Content-Transfer-Encoding: 7bit\n"
-	"To: testuser@foo.org\n"
-	"From: somewher@foo.org\n"
-	"Subject: dbmail test message\n"
-	"\n");
+	
+	expect = g_strdup("Message-Id: <1199706209l.3020l.1l@(none)>\n"
+			"To: testuser@foo.org\n"
+			"From: somewher@foo.org\n"
+			"Subject: dbmail test message\n"
+			"MIME-Version: 1.0\n"
+			"Content-Type: text/plain; charset=us-ascii\n"
+			"Content-Transfer-Encoding: 7bit\n"
+			"\n");
 
 	fail_unless(MATCH(expect,result),"imap_get_partsec failed [%s] !=\n[%s]\n", expect, result);
-	fail_unless(strlen(result)==169,"imap_get_partspec failed [%d] [%s]", strlen(result), result);
 	g_free(expect);
 	g_free(result);
 

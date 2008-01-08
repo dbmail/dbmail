@@ -1181,7 +1181,7 @@ int db_insert_physmessage(u64_t * physmessage_id)
 	return db_insert_physmessage_with_internal_date(NULL, physmessage_id);
 }
 
-int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
+static int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
 			     u64_t rfc_size)
 {
 	char query[DEF_QUERYSIZE]; 
