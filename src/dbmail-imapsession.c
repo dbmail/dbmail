@@ -1451,8 +1451,6 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         va_list ap;
         int len;
         FILE * fd;
-        int maxlen=100;
-        int result = 0;
         gchar *ln;
 	static int errcount = 0;
 
@@ -1465,18 +1463,9 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         if (! ln)
                 return -1;
 	
-        gchar *re = g_new0(gchar, maxlen+1);
-	
-        if ((result = snprintf(re,maxlen,"%s",ln))<0) {
-		g_free(re);
-		g_free(ln);
-                return -1;
-	}
-
         fd = self->ci->tx;
 
         if (feof(fd) || fflush(fd) < 0) {
-		g_free(re);
 		g_free(ln);
                 TRACE(TRACE_ERROR, "client socket closed");
 		return -2;
@@ -1485,7 +1474,6 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         len = g_mime_stream_write_string(self->fstream,ln);
 	
         if (len < 0) {
-		g_free(re);
 		g_free(ln);
                 TRACE(TRACE_ERROR, "write to client socket failed");
 		if (errcount++ > 1)
@@ -1494,12 +1482,8 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 	}
 	errcount = 0;
 
-        if (result < maxlen)
-                TRACE(TRACE_DEBUG,"RESPONSE: [%s]", re);
-        else
-                TRACE(TRACE_DEBUG,"RESPONSE: [%s...]", re);
+	TRACE(TRACE_INFO,"RESPONSE: [%s]", ln);
 
-        g_free(re);
 	g_free(ln);
 
         return len;

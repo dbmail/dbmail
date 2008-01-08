@@ -135,7 +135,7 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	fail_unless(strncmp(expect,t,strlen(expect))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
 
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
@@ -160,7 +160,7 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	fail_unless(strncmp(expect,t,strlen(expect))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
 
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
@@ -187,7 +187,7 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 		
 	t = dbmail_message_to_string(n);
-	fail_unless(strncmp(expect,t,strlen(expect))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
 
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
@@ -213,7 +213,7 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	fail_unless(strncmp(expect,t,strlen(expect))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
 	
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
@@ -252,7 +252,8 @@ START_TEST(test_dbmail_message_store)
 	fclose(j);
 #endif
 
-	//fail_unless(strncmp(expect,t,strlen(expect))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	//fail_unless(strcmp(expect,t)== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
 	g_free(expect);
@@ -290,7 +291,7 @@ START_TEST(test_dbmail_message_store2)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	fail_unless(strncmp(expect,t,strlen(expect))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
 	
 	dbmail_message_free(n);
 	g_free(expect);
@@ -304,6 +305,7 @@ START_TEST(test_dbmail_message_retrieve)
 {
 	struct DbmailMessage *m, *n;
 	GString *s;
+	char *expect, *t;
 	u64_t physid;
 
 	s = g_string_new(multipart_message);
@@ -328,6 +330,31 @@ START_TEST(test_dbmail_message_retrieve)
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
 
+	///
+	s = g_string_new(multipart_message2);
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, s);
+	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
+
+	dbmail_message_store(m);
+
+	expect = dbmail_message_to_string(m);
+
+	physid = dbmail_message_get_physid(m);
+	fail_unless(physid > 0, "dbmail_message_get_physid failed");
+	
+	n = dbmail_message_new();
+	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_FULL);	
+	fail_unless(n != NULL, "dbmail_message_retrieve failed");
+	fail_unless(n->content != NULL, "dbmail_message_retrieve failed");
+	t = dbmail_message_to_string(n);
+	fail_unless(strcmp(expect,t) == 0, "store store/retrieve failed\n[%s] !=\n[%s]\n", expect, t);
+
+	dbmail_message_free(m);
+	dbmail_message_free(n);
+	g_string_free(s,TRUE);
+	g_free(t);
+	g_free(expect);
 }
 END_TEST
 //struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);

@@ -86,7 +86,7 @@ void trace(trace_t level, const char * module,
 	const char *syslog_format = "%s:[%s] %s,%s(+%d): %s";
 	const char *stderr_format = "%s %s %s[%d]: %s:[%s] %s,%s(+%d): %s";
 	static int configured=0;
-	size_t l;
+	size_t l, maxlen=100;
 
 	/* Return now if we're not logging anything. */
 	if (level > TRACE_STDERR && level > TRACE_SYSLOG)
@@ -99,6 +99,9 @@ void trace(trace_t level, const char * module,
 	va_end(argp);
 	l = strlen(message);
 	
+	if (message[l] == '\n')
+		message[l] = '\0';
+
 	if (level <= TRACE_STDERR) {
 		time_t now = time(NULL);
 		struct tm *tmp = localtime(&now);
@@ -122,8 +125,8 @@ void trace(trace_t level, const char * module,
 	}
 
 	if (level <= TRACE_SYSLOG) {
-		if (message[l] == '\n')
-			message[l] = '\0';
+		size_t w = min(l,maxlen);
+		message[w] = '\0';
 		/* set LOG_ALERT at warnings */
 		if (level <= TRACE_WARNING)
 			syslog(LOG_ALERT, syslog_format, trace_to_text(level), module, file, function, line, message);
