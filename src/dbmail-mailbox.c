@@ -165,53 +165,7 @@ void mailbox_uid_msn_new(struct DbmailMailbox *self)
 	self->rows = 1;
 }
 
-static void mailbox_build_uid_map(struct DbmailMailbox *self)
-{
-	int i, rows;
-	u64_t *id, *msn;
-
-	mailbox_uid_msn_new(self);
-
-	rows = db_num_rows();
-	for (i=0; i< rows; i++) {
-		id = g_new0(u64_t,1);
-		*id = db_get_result_u64(i,0);
-
-		msn = g_new0(u64_t,1);
-		*msn = i+1;
-
-		g_tree_insert(self->ids,id,msn);
-		g_tree_insert(self->msn,msn,id);
-	}
-	
-	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
-}
-
 int dbmail_mailbox_open(struct DbmailMailbox *self)
-{
-	GString *q = g_string_new("");
-
-	g_string_printf(q, "SELECT message_idnr FROM %smessages "
-		 "WHERE mailbox_idnr = %llu "
-		 "AND status IN (%d,%d) "
-		 "ORDER BY message_idnr", DBPFX, 
-		 dbmail_mailbox_get_id(self), 
-		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-	
-	if (db_query(q->str) == DM_EQUERY) {
-		g_string_free(q,TRUE);
-		return DM_EQUERY;
-	}
-
-	g_string_free(q,TRUE);
-
-	mailbox_build_uid_map(self);
-
-	db_free_result();
-	return DM_SUCCESS;
-}
-
-GTree * dbmail_mailbox_get_msginfo(struct DbmailMailbox *self)
 {
 
 	unsigned nrows, i, j, k;
@@ -219,66 +173,51 @@ GTree * dbmail_mailbox_get_msginfo(struct DbmailMailbox *self)
 	char *to_char_str;
 	MessageInfo *result;
 	GTree *oldmsginfo, *msginfo;
-	GList *l, *t;
-	u64_t *uid, *lo, *hi;
+	u64_t *uid, *msn;
 	u64_t id;
-	char query[DEF_QUERYSIZE], range[DEF_FRAGSIZE];
+	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
-	memset(range,0,DEF_FRAGSIZE);
 	
-	if (! (self->ids && g_tree_nnodes(self->ids)>0))
-		return NULL;
-
-	l = g_tree_keys(self->ids);
-	t = l;
-
-	lo = (u64_t *)l->data;
-
-	l = g_list_last(l);
-	hi = (u64_t *)l->data;
-
-	g_list_free(t);	
-
 	k = 0;
 	to_char_str = date2char_str("internal_date");
 		
-	db_free_result();
-
-	if (*lo == *hi) 
-		snprintf(range,DEF_FRAGSIZE,"= %llu", *lo);
-	else
-		snprintf(range,DEF_FRAGSIZE,"BETWEEN %llu AND %llu", *lo, *hi);
-
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
 		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
 		 "FROM %smessages msg, %sphysmessage pm "
 		 "WHERE pm.id = msg.physmessage_id "
-		 "AND message_idnr %s "
 		 "AND mailbox_idnr = %llu AND status IN (%d,%d,%d) "
-		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
-		 range, self->id,
+		 "ORDER BY message_idnr ASC",
+		to_char_str,DBPFX,DBPFX, self->id,
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select message info");
-		return NULL;
+		return DM_EQUERY;
 	}
 
 	if ((nrows = db_num_rows()) == 0) {
 		TRACE(TRACE_ERROR, "empty result set");
 		db_free_result();
-		return NULL;
+		return DM_EQUERY;
 	}
 
-	msginfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	mailbox_uid_msn_new(self);
+	msginfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,(GDestroyNotify)g_free);
 
 	for (i = 0; i < nrows; i++) {
 
 		id = db_get_result_u64(i, IMAP_NFLAGS + 2);
 
-		if (! g_tree_lookup(self->ids,&id))
-			continue;
+		uid = g_new0(u64_t,1);
+		*uid = id;
+
+		msn = g_new0(u64_t,1);
+		*msn = i+1;
+
+		g_tree_insert(self->ids,uid,msn);
+		g_tree_insert(self->msn,msn,uid);
+
 		
 		result = g_new0(MessageInfo,1);
 
@@ -302,10 +241,6 @@ GTree * dbmail_mailbox_get_msginfo(struct DbmailMailbox *self)
 		/* rfcsize */
 		result->rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
 		
-
-		uid = g_new0(u64_t,1);
-		*uid = result->id;
-		
 		g_tree_insert(msginfo, uid, result); 
 	}
 
@@ -316,9 +251,9 @@ GTree * dbmail_mailbox_get_msginfo(struct DbmailMailbox *self)
 		"SELECT message_idnr, keyword FROM %skeywords k "
 		"JOIN %smessages m USING (message_idnr) "
 		"JOIN %smailboxes b USING (mailbox_idnr) "
-		"WHERE b.mailbox_idnr = %llu "
-		"AND message_idnr %s", DBPFX, DBPFX, DBPFX,
-		self->id, range);
+		"WHERE b.mailbox_idnr = %llu ",
+		DBPFX, DBPFX, DBPFX,
+		self->id);
 
 	if (db_query(query) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "db failure retrieving keywords");
@@ -343,8 +278,12 @@ GTree * dbmail_mailbox_get_msginfo(struct DbmailMailbox *self)
 	self->msginfo = msginfo;
 	if (oldmsginfo) g_tree_destroy(oldmsginfo);
 
-	return msginfo;
+	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
+
+	return DM_SUCCESS;
 }
+
+
 
 
 int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
@@ -1623,6 +1562,9 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	gboolean error = FALSE;
 	
 	b = NULL;
+
+	if (! self)
+		return NULL;
 
 	if (! self->ids)
 		dbmail_mailbox_open(self);

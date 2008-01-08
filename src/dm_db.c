@@ -4217,30 +4217,15 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 	}
 
 	if (action_type == IMAPFA_ADD || action_type == IMAPFA_REPLACE) {
+		gboolean restart=FALSE;
+		int retry=3;
+		while (retry-- > 0) {
+			db_begin_transaction();
 
-		db_begin_transaction();
-
-		if (action_type == IMAPFA_REPLACE) {
-			memset(query,0,sizeof(query));
-			snprintf(query, DEF_QUERYSIZE, "DELETE FROM %skeywords WHERE message_idnr=%llu",
-				DBPFX, msg_idnr);
-			if (db_query(query) == DM_EQUERY) {
-				db_rollback_transaction();
-				db_free_result();
-				return DM_EQUERY;
-			}
-		}
-
-		keywords = g_list_first(keywords);
-
-		while (keywords) {
-			if ((! msginfo) || (! g_list_find_custom(msginfo->keywords, (char *)keywords->data, (GCompareFunc)g_ascii_strcasecmp))) {
-				safe = dm_stresc((char *)keywords->data);
+			if (action_type == IMAPFA_REPLACE) {
 				memset(query,0,sizeof(query));
-				snprintf(query, DEF_QUERYSIZE, "INSERT INTO %skeywords (message_idnr, keyword) "
-					"VALUES (%llu, '%s')", DBPFX, msg_idnr, safe);
-				g_free(safe);
-
+				snprintf(query, DEF_QUERYSIZE, "DELETE FROM %skeywords WHERE message_idnr=%llu",
+					DBPFX, msg_idnr);
 				if (db_query(query) == DM_EQUERY) {
 					db_rollback_transaction();
 					db_free_result();
@@ -4248,13 +4233,44 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 				}
 			}
 
-			if (! g_list_next(keywords))
-				break;
+			keywords = g_list_first(keywords);
 
-			keywords = g_list_next(keywords);
+			while (keywords) {
+				if ((! msginfo) || (! g_list_find_custom(msginfo->keywords, (char *)keywords->data, (GCompareFunc)g_ascii_strcasecmp))) {
+					safe = dm_stresc((char *)keywords->data);
+					memset(query,0,sizeof(query));
+					snprintf(query, DEF_QUERYSIZE, "INSERT INTO %skeywords (message_idnr, keyword) "
+						"VALUES (%llu, '%s')", DBPFX, msg_idnr, safe);
+					g_free(safe);
+
+					if (db_query(query) == DM_EQUERY) {
+						db_rollback_transaction();
+						db_free_result();
+						restart = TRUE;
+						break;
+					}
+				}
+
+				if (! g_list_next(keywords))
+					break;
+
+				keywords = g_list_next(keywords);
+			}
+
+			if (restart) {
+				restart=FALSE;
+				usleep(200);
+				continue;
+			}
+			
+			if (db_commit_transaction() != DM_EQUERY) {
+				db_free_result();
+				break;
+			}
+
+			usleep(200);
+			continue;
 		}
-		db_commit_transaction();
-		db_free_result();
 	}
 
 	return DM_SUCCESS;

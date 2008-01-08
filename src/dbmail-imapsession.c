@@ -1899,16 +1899,6 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 			// ATTN: new messages shouldn't be visible in any way to a 
 			// client session until it has been announced with EXISTS
 			mailbox = dbmail_mailbox_new(self->mailbox->id);
-			if ((res = dbmail_mailbox_open(mailbox)) != DM_SUCCESS) {
-				dbmail_mailbox_free(mailbox);
-				return res;
-			}
-
-			if ((dbmail_mailbox_get_msginfo(mailbox)) == NULL) {
-				TRACE(TRACE_ERROR, "unable to retrieve msginfo");
-				dbmail_mailbox_free(mailbox);
-				return -1;
-			}
 		}
 	}
 
@@ -2066,10 +2056,6 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 
 	/* new mailbox structure */
 	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
-
-	/* update active msginfo cache */
-	if ( (dbmail_mailbox_get_msginfo(self->mailbox)) == NULL)
-	       TRACE(TRACE_WARNING, "unable to retrieve msginfo");
 
 	return 0;
 }

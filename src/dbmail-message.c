@@ -349,8 +349,10 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 			blist[depth] = (char *)boundary;
 		}
 
-		if (prevdepth > depth)
+		if (prevdepth > depth && blist[depth]) {
 			g_string_append_printf(m, "\n--%s--\n", blist[depth]);
+			blist[depth] = NULL;
+		}
 
 		if (depth>0)
 			boundary = (const char *)blist[depth-1];
@@ -362,10 +364,12 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 		if (is_header)
 			g_string_append_printf(m,"\n");
 	}
-	if (rows > 1 && boundary)
+	if (rows > 1 && boundary) {
 		g_string_append_printf(m, "\n--%s--\n", boundary);
+		boundary = NULL;
+	}
 
-	if (rows > 1 && depth > 0)
+	if (rows > 1 && depth > 0 && blist[0])
 		g_string_append_printf(m, "\n--%s--\n\n", blist[0]);
 
 	db_free_result();

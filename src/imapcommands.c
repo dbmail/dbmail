@@ -1410,16 +1410,8 @@ int _dm_imapsession_get_ids(struct ImapSession *self, const char *set)
 		g_tree_destroy(self->ids);
 		self->ids = NULL;
 	}
-	while (retry > 0) {
 
-		self->ids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
-		if (self->ids && g_tree_nnodes(self->ids)> 0)
-			break;
-
-		if ((result = dbmail_mailbox_open(self->mailbox))!= DM_SUCCESS)
-			return result;
-		retry--;
-	}
+	self->ids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
 
 	if ( (!self->ids) || (g_tree_nnodes(self->ids)==0) ) {
 		dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
