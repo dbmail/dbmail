@@ -941,7 +941,6 @@ int _ic_append(struct ImapSession *self)
 	int flagcount = 0;
 	GList *keywords = NULL;
 	MailboxInfo *mailbox = NULL;
-	MessageInfo *msginfo = NULL;
 
 	memset(flaglist,0,sizeof(flaglist));
 
@@ -1088,9 +1087,6 @@ int _ic_append(struct ImapSession *self)
 
 	result = db_imap_append_msg(self->args[i], strlen(self->args[i]), mboxid, ud->userid, sqldate, &msg_idnr);
 
-	if (self->msginfo)
-		msginfo = g_tree_lookup(self->msginfo, &msg_idnr);
-
 	switch (result) {
 	case -1:
 		TRACE(TRACE_ERROR, "error appending msg");
@@ -1113,11 +1109,12 @@ int _ic_append(struct ImapSession *self)
 	}
 
 	if (result == 0 && flagcount > 0) {
-		if (db_set_msgflag(msg_idnr, mboxid, flaglist, keywords, IMAPFA_ADD, msginfo) < 0) {
+		if (db_set_msgflag(msg_idnr, mboxid, flaglist, keywords, IMAPFA_ADD, NULL) < 0) {
 			TRACE(TRACE_ERROR, "error setting flags for message [%llu]", msg_idnr);
 			g_list_destroy(keywords);
 			return -1;
 		}
+		//FIXME: insert new Messageinfo struct into self->mailbox->msginfo
 	}
 
 	g_list_destroy(keywords);
@@ -1511,7 +1508,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, struct ImapSession *
 	char *s;
 	int i;
 
-	msginfo = g_tree_lookup(self->msginfo, id);
+	msginfo = g_tree_lookup(self->mailbox->msginfo, id);
 	if (! msginfo) {
 		TRACE(TRACE_WARNING, "unable to lookup msginfo struct for [%llu]", *id);
 		return TRUE;
@@ -1674,12 +1671,8 @@ int _ic_store(struct ImapSession *self)
 
   	if (g_tree_nnodes(self->mailbox->ids) > 0) {
  		if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS) {
- 			GTree *t;
- 			t = self->msginfo;
- 			if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
+ 			if ((dbmail_mailbox_get_msginfo(self->mailbox)) == NULL)
  				TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
- 			if(t)
- 				g_tree_destroy(t);
  
  			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
   		}

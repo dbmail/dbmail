@@ -28,7 +28,6 @@ struct ImapSession {
 	GTree *ids;
 	GTree *headers;
 	GTree *envelopes;
-	GTree *msginfo; // cache msginfo
 	GTree *mbxinfo; // cache MailboxInfo
 	GList *recent;
 	GList *ids_list;
@@ -113,7 +112,6 @@ int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self);
 int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self);
 
 int dbmail_imap_session_fetch_parse_args(struct ImapSession * self);
-GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids);
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self);
 
 void dbmail_imap_session_bodyfetch_new(struct ImapSession *self);

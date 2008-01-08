@@ -32,7 +32,6 @@
 #define SEND_BUF_SIZE 1024
 #define MAX_ARGS 512
 #define IDLE_TIMEOUT 30
-#define RANGE_SIZE 128
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
@@ -282,10 +281,6 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 	if (self->mailbox) {
 		dbmail_mailbox_free(self->mailbox);
 		self->mailbox = NULL;
-	}
-	if (self->msginfo) {
-		g_tree_destroy(self->msginfo);
-		self->msginfo = NULL;
 	}
 	if (self->mbxinfo) {
 		_mbxinfo_destroy(self);
@@ -720,139 +715,6 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self)
 	return 1; //theres more...
 }
 
-
-GTree * dbmail_imap_session_get_msginfo(struct ImapSession *self, GTree *ids)
-{
-
-	unsigned nrows, i, j, k;
-	const char *query_result, *keyword;
-	char *to_char_str;
-	MessageInfo *result;
-	GTree *msginfo;
-	GList *l, *t;
-	u64_t *uid, *lo, *hi;
-	u64_t id;
-	char query[DEF_QUERYSIZE], range[RANGE_SIZE];
-	memset(query,0,DEF_QUERYSIZE);
-	memset(range,0,RANGE_SIZE);
-	
-	if (! (ids && g_tree_nnodes(ids)>0))
-		return NULL;
-
-	l = g_tree_keys(ids);
-	t = l;
-
-	lo = (u64_t *)l->data;
-
-	l = g_list_last(l);
-	hi = (u64_t *)l->data;
-
-	g_list_free(t);	
-
-	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-
-	k = 0;
-	to_char_str = date2char_str("internal_date");
-		
-	db_free_result();
-
-	if (*lo == *hi) 
-		snprintf(range,RANGE_SIZE,"= %llu", *lo);
-	else
-		snprintf(range,RANGE_SIZE,"BETWEEN %llu AND %llu", *lo, *hi);
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
-		 "FROM %smessages msg, %sphysmessage pm "
-		 "WHERE pm.id = msg.physmessage_id "
-		 "AND message_idnr %s "
-		 "AND mailbox_idnr = %llu AND status IN (%d,%d,%d) "
-		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
-		 range, ud->mailbox->uid,
-		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,MESSAGE_STATUS_DELETE);
-
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not select message");
-		return NULL;
-	}
-
-	if ((nrows = db_num_rows()) == 0) {
-		TRACE(TRACE_ERROR, "empty result set");
-		db_free_result();
-		return NULL;
-	}
-
-	msginfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-
-	for (i = 0; i < nrows; i++) {
-
-		id = db_get_result_u64(i, IMAP_NFLAGS + 2);
-
-		if (! g_tree_lookup(ids,&id))
-			continue;
-		
-		result = g_new0(MessageInfo,1);
-
-		/* id */
-		result->id = id;
-
-		/* mailbox_id */
-		result->mailbox_id = ud->mailbox->uid;
-
-		/* flags */
-		for (j = 0; j < IMAP_NFLAGS; j++)
-			result->flags[j] = db_get_result_bool(i, j);
-
-		/* internal date */
-		query_result = db_get_result(i, IMAP_NFLAGS);
-		strncpy(result->internaldate,
-			(query_result) ? query_result :
-			"01-Jan-1970 00:00:01 +0100",
-			IMAP_INTERNALDATE_LEN);
-		
-		/* rfcsize */
-		result->rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
-		
-
-		uid = g_new0(u64_t,1);
-		*uid = result->id;
-		
-		g_tree_insert(msginfo, uid, result); 
-	}
-
-	db_free_result();
-
-	memset(query,0,sizeof(query));
-	snprintf(query, DEF_QUERYSIZE,
-		"SELECT message_idnr, keyword FROM %skeywords k "
-		"JOIN %smessages m USING (message_idnr) "
-		"JOIN %smailboxes b USING (mailbox_idnr) "
-		"WHERE b.mailbox_idnr = %llu "
-		"AND message_idnr %s", DBPFX, DBPFX, DBPFX,
-		ud->mailbox->uid, range);
-
-	if (db_query(query) == DM_EQUERY)
-		return msginfo;
-
-	if ((nrows = db_num_rows()) == 0) {
-		TRACE(TRACE_DEBUG, "no keywords");
-		db_free_result();
-		return msginfo;
-	}
-	
-	for (i = 0; i < nrows; i++) {
-		id = db_get_result_u64(i, 0);
-		keyword = db_get_result(i, 1);
-		result = g_tree_lookup(msginfo, &id);
-		result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-	}
-
-	db_free_result();
-
-	return msginfo;
-}
-
 #define SEND_SPACE if (self->fi->isfirstfetchout) \
 				self->fi->isfirstfetchout = 0; \
 			else \
@@ -937,7 +799,7 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 	u64_t actual_cnt, tmpdumpsize;
 	gchar *s = NULL;
 	
-	MessageInfo *msginfo = g_tree_lookup(self->msginfo, uid);
+	MessageInfo *msginfo = g_tree_lookup(self->mailbox->msginfo, uid);
 
 	g_return_val_if_fail(msginfo,-1);
 	
@@ -1125,16 +987,8 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, struct ImapSession 
 
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 {
-	GTree *t;
-	
-	t = self->msginfo;
-
-	if ((self->msginfo=dbmail_imap_session_get_msginfo(self, self->ids)) == NULL) {
+	if ((dbmail_mailbox_get_msginfo(self->mailbox)) == NULL)
 		TRACE(TRACE_INFO, "unable to retrieve msginfo. empty mailbox?");
-	}
-        if(t)
-                g_tree_destroy(t);
-
 	if (! self->ids)
 		TRACE(TRACE_INFO, "self->ids is NULL");
 	else {
@@ -1184,9 +1038,9 @@ static void _fetch_envelopes(struct ImapSession *self)
 	u64_t id;
 	static int lo = 0;
 	static u64_t hi = 0;
-	char range[RANGE_SIZE];
+	char range[DEF_FRAGSIZE];
 	GList *last;
-	memset(range,0,RANGE_SIZE);
+	memset(range,0,DEF_FRAGSIZE);
 
 	if (! self->envelopes) {
 		self->envelopes = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
@@ -1206,9 +1060,9 @@ static void _fetch_envelopes(struct ImapSession *self)
 	hi = *(u64_t *)last->data;
 
 	if (self->msg_idnr == hi)
-		snprintf(range,RANGE_SIZE,"= %llu", self->msg_idnr);
+		snprintf(range,DEF_FRAGSIZE,"= %llu", self->msg_idnr);
 	else
-		snprintf(range,RANGE_SIZE,"BETWEEN %llu AND %llu", self->msg_idnr, hi);
+		snprintf(range,DEF_FRAGSIZE,"BETWEEN %llu AND %llu", self->msg_idnr, hi);
 
         q = g_string_new("");
 	g_string_printf(q,"SELECT message_idnr,envelope "
@@ -1302,8 +1156,8 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 	static int lo = 0;
 	static u64_t hi = 0;
 	static u64_t ceiling = 0;
-	char range[RANGE_SIZE];
-	memset(range,0,RANGE_SIZE);
+	char range[DEF_FRAGSIZE];
+	memset(range,0,DEF_FRAGSIZE);
 
 	if (! self->headers) {
 		TRACE(TRACE_DEBUG, "init self->headers");
@@ -1350,9 +1204,9 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 	hi = *(u64_t *)last->data;
 
 	if (self->msg_idnr == hi)
-		snprintf(range,RANGE_SIZE,"= %llu", self->msg_idnr);
+		snprintf(range,DEF_FRAGSIZE,"= %llu", self->msg_idnr);
 	else
-		snprintf(range,RANGE_SIZE,"BETWEEN %llu AND %llu", self->msg_idnr, hi);
+		snprintf(range,DEF_FRAGSIZE,"BETWEEN %llu AND %llu", self->msg_idnr, hi);
 
 	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
 			"FROM %sheadervalue v "
@@ -1887,7 +1741,7 @@ static gboolean imap_msginfo_notify(u64_t *uid, MessageInfo *msginfo, struct Ima
 	char *s;
 	int i;
 
-	newmsginfo = g_tree_lookup(self->msginfo, uid);
+	newmsginfo = g_tree_lookup(self->mailbox->msginfo, uid);
 	msn = g_tree_lookup(self->mailbox->ids, uid);
 
 	if (! msn) {
@@ -2020,7 +1874,6 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	int res;
 	gboolean unhandled=FALSE;
 	time_t oldmtime;
-	GTree *oldmsginfo, *msginfo = NULL;
 	unsigned oldexists, oldrecent, olduidnext;
         struct DbmailMailbox *mailbox = NULL;
 	gboolean showexists = FALSE, showrecent = FALSE;
@@ -2034,7 +1887,6 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	oldexists = ud->mailbox->exists;
 	oldrecent = ud->mailbox->recent;
 	olduidnext = ud->mailbox->msguidnext;
-        oldmsginfo = self->msginfo;
 
 	if (! self->mbxinfo)
 		dbmail_imap_session_get_mbxinfo(self);
@@ -2054,7 +1906,7 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 				return res;
 			}
 
-			if ((msginfo = dbmail_imap_session_get_msginfo(self, mailbox->ids)) == NULL) {
+			if ((dbmail_mailbox_get_msginfo(mailbox)) == NULL) {
 				TRACE(TRACE_ERROR, "unable to retrieve msginfo");
 				dbmail_mailbox_free(mailbox);
 				return -1;
@@ -2105,20 +1957,20 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 		if (unhandled)
 			TRACE(TRACE_ERROR, "EXISTS/RECENT changed but client is not notified");
 
-		if (msginfo) {
-			self->msginfo = msginfo;
-			if (oldmsginfo) {
-				g_tree_foreach(oldmsginfo, (GTraverseFunc)imap_msginfo_notify, self);
-				g_tree_destroy(oldmsginfo);
-			}
-		}
 
 		if (mailbox) {
+
 			struct DbmailMailbox *b;
+
 			b = self->mailbox;
 			self->mailbox = mailbox;
+
+			if (b->msginfo)
+				g_tree_foreach(b->msginfo, (GTraverseFunc)imap_msginfo_notify, self);
+
 			dbmail_mailbox_free(b);
 		}
+
 	}
 	return 0;
 }
@@ -2142,7 +1994,7 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 	dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", string->str);
 
 	/* permanent flags */
-	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s *)]\r\n", string->str);
+	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", string->str);
 
 	/* UIDNEXT */
 	dbmail_imap_session_printf(self, "* OK [UIDNEXT %llu] Predicted next UID\r\n",
@@ -2183,7 +2035,6 @@ MailboxInfo * dbmail_imap_session_mbxinfo_lookup(struct ImapSession *self, u64_t
 int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mailbox)
 {
 	int result;
-	GTree *t;
 	u64_t mailbox_idnr;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	
@@ -2218,17 +2069,9 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	/* new mailbox structure */
 	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
 
-	/* switch active msginfo cache */
-	t = self->msginfo;
-	if ((self->msginfo = dbmail_imap_session_get_msginfo(self, self->mailbox->ids)) == NULL)
-	       TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
-
- 	/*
-	* make sure to cleanup the previously active cache: more than one mailbox 
- 	* can/will be opened before session is destroyed 
- 	*/
-	if(t)
-		g_tree_destroy(t);
+	/* update active msginfo cache */
+	if ( (dbmail_mailbox_get_msginfo(self->mailbox)) == NULL)
+	       TRACE(TRACE_WARNING, "unable to retrieve msginfo");
 
 	return 0;
 }
@@ -2357,7 +2200,7 @@ static int imap_session_update_recent(struct ImapSession *self)
 		uid = (gchar *)recent->data;
 		id = strtoull(uid, NULL, 10);
 		assert(id);
-		if ( (msginfo = g_tree_lookup(self->msginfo, &id)) != NULL) {
+		if ( (msginfo = g_tree_lookup(self->mailbox->msginfo, &id)) != NULL) {
 			msginfo->flags[IMAP_FLAG_RECENT] = 0;
 			if ( (ud->mailbox) && (ud->mailbox->uid == msginfo->mailbox_id) )
 				ud->mailbox->recent--;

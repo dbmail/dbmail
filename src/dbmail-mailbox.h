@@ -45,8 +45,12 @@ struct DbmailMailbox {
 	gchar *name;
 
 	GList *sorted;		// ordered list of UID values
+
+	GTree *msginfo; 	// cache MessageInfo
+
 	GTree *ids; 		// key: uid, value: msn
 	GTree *msn; 		// key: msn, value: uid
+
 	GNode *search;
 	gchar *charset;		// charset used during search/sort
 
@@ -61,6 +65,8 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id);
 int dbmail_mailbox_open(struct DbmailMailbox *self);
 int dbmail_mailbox_sort(struct DbmailMailbox *self);
 int dbmail_mailbox_search(struct DbmailMailbox *self);
+
+GTree * dbmail_mailbox_get_msginfo(struct DbmailMailbox *self);
 
 void dbmail_mailbox_set_id(struct DbmailMailbox *self, u64_t id);
 u64_t dbmail_mailbox_get_id(struct DbmailMailbox *self);

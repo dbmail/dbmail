@@ -70,7 +70,10 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 		g_tree_destroy(self->ids);		
 	if (self->msn)
 		g_tree_destroy(self->msn);
-
+	if (self->msginfo) {
+		g_tree_destroy(self->msginfo);
+		self->msginfo = NULL;
+	}
 	if (self->search) {
 		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_node_free, NULL);
@@ -207,6 +210,142 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 	db_free_result();
 	return DM_SUCCESS;
 }
+
+GTree * dbmail_mailbox_get_msginfo(struct DbmailMailbox *self)
+{
+
+	unsigned nrows, i, j, k;
+	const char *query_result, *keyword;
+	char *to_char_str;
+	MessageInfo *result;
+	GTree *oldmsginfo, *msginfo;
+	GList *l, *t;
+	u64_t *uid, *lo, *hi;
+	u64_t id;
+	char query[DEF_QUERYSIZE], range[DEF_FRAGSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+	memset(range,0,DEF_FRAGSIZE);
+	
+	if (! (self->ids && g_tree_nnodes(self->ids)>0))
+		return NULL;
+
+	l = g_tree_keys(self->ids);
+	t = l;
+
+	lo = (u64_t *)l->data;
+
+	l = g_list_last(l);
+	hi = (u64_t *)l->data;
+
+	g_list_free(t);	
+
+	k = 0;
+	to_char_str = date2char_str("internal_date");
+		
+	db_free_result();
+
+	if (*lo == *hi) 
+		snprintf(range,DEF_FRAGSIZE,"= %llu", *lo);
+	else
+		snprintf(range,DEF_FRAGSIZE,"BETWEEN %llu AND %llu", *lo, *hi);
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
+		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
+		 "FROM %smessages msg, %sphysmessage pm "
+		 "WHERE pm.id = msg.physmessage_id "
+		 "AND message_idnr %s "
+		 "AND mailbox_idnr = %llu AND status IN (%d,%d,%d) "
+		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
+		 range, self->id,
+		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,MESSAGE_STATUS_DELETE);
+
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "could not select message info");
+		return NULL;
+	}
+
+	if ((nrows = db_num_rows()) == 0) {
+		TRACE(TRACE_ERROR, "empty result set");
+		db_free_result();
+		return NULL;
+	}
+
+	msginfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+
+	for (i = 0; i < nrows; i++) {
+
+		id = db_get_result_u64(i, IMAP_NFLAGS + 2);
+
+		if (! g_tree_lookup(self->ids,&id))
+			continue;
+		
+		result = g_new0(MessageInfo,1);
+
+		/* id */
+		result->id = id;
+
+		/* mailbox_id */
+		result->mailbox_id = self->id;
+
+		/* flags */
+		for (j = 0; j < IMAP_NFLAGS; j++)
+			result->flags[j] = db_get_result_bool(i, j);
+
+		/* internal date */
+		query_result = db_get_result(i, IMAP_NFLAGS);
+		strncpy(result->internaldate,
+			(query_result) ? query_result :
+			"01-Jan-1970 00:00:01 +0100",
+			IMAP_INTERNALDATE_LEN);
+		
+		/* rfcsize */
+		result->rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
+		
+
+		uid = g_new0(u64_t,1);
+		*uid = result->id;
+		
+		g_tree_insert(msginfo, uid, result); 
+	}
+
+	db_free_result();
+
+	memset(query,0,sizeof(query));
+	snprintf(query, DEF_QUERYSIZE,
+		"SELECT message_idnr, keyword FROM %skeywords k "
+		"JOIN %smessages m USING (message_idnr) "
+		"JOIN %smailboxes b USING (mailbox_idnr) "
+		"WHERE b.mailbox_idnr = %llu "
+		"AND message_idnr %s", DBPFX, DBPFX, DBPFX,
+		self->id, range);
+
+	if (db_query(query) == DM_EQUERY) {
+		TRACE(TRACE_ERROR, "db failure retrieving keywords");
+	} else {
+		if ((nrows = db_num_rows()) == 0) {
+			TRACE(TRACE_DEBUG, "no keywords");
+			db_free_result();
+		} else {
+			for (i = 0; i < nrows; i++) {
+				id = db_get_result_u64(i, 0);
+				keyword = db_get_result(i, 1);
+				if ((result = g_tree_lookup(msginfo, &id)) != NULL)
+					result->keywords = g_list_append(result->keywords, g_strdup(keyword));
+			}
+		}
+	}
+
+	db_free_result();
+
+	/* switch to new cache and retire the old one */
+	oldmsginfo = self->msginfo;
+	self->msginfo = msginfo;
+	if (oldmsginfo) g_tree_destroy(oldmsginfo);
+
+	return msginfo;
+}
+
 
 int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
 {
