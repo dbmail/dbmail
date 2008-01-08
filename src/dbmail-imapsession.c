@@ -364,7 +364,6 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 {
 	u64_t tmpcnt = 0, outcnt = 0;
 	char *buf = NULL;
-	char *rfc = NULL;
 
 	TRACE(TRACE_DEBUG,"cache message [%llu] filter [%d]", self->msg_idnr, filter);
 
@@ -392,7 +391,6 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 		cached_msg.file_dumped = 1;
 
 		g_free(buf);
-		g_free(rfc);
 	}
 	
 	switch (filter) {
@@ -940,14 +938,16 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 		   flag be set! */
 		result = acl_has_right(ud->mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result == -1) {
-			dbmail_imap_session_buff_append(self, "\r\n *BYE internal dbase error\r\n");
+			dbmail_imap_session_buff_clear(self);
+			dbmail_imap_session_printf(self, "\r\n *BYE internal dbase error\r\n");
 			return -1;
 		}
 		
 		if (result == 1) {
 			result = db_set_msgflag(self->msg_idnr, ud->mailbox->uid, setSeenSet, NULL, IMAPFA_ADD, msginfo);
 			if (result == -1) {
-				dbmail_imap_session_buff_append(self, "\r\n* BYE internal dbase error\r\n");
+				dbmail_imap_session_buff_clear(self);
+				dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 				return -1;
 			}
 		}
@@ -979,8 +979,7 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, struct ImapSession 
 		return TRUE;
 	}
 
-	if (self->buff->len > 4096)
-		dbmail_imap_session_buff_flush(self);
+	dbmail_imap_session_buff_flush(self);
 
 	return FALSE;
 }
@@ -1108,6 +1107,7 @@ void _send_headers(struct ImapSession *self, const body_fetch_t *bodyfetch, gboo
 	gchar *tmp;
 	GString *ts;
 
+	TRACE(TRACE_DEBUG,"[%s] [%s]", bodyfetch->hdrplist, s);
 	dbmail_imap_session_buff_append(self,"HEADER.FIELDS%s %s] ", not ? ".NOT" : "", bodyfetch->hdrplist);
 
 	if (!s) {
@@ -1136,6 +1136,8 @@ void _send_headers(struct ImapSession *self, const body_fetch_t *bodyfetch, gboo
 		dbmail_imap_session_buff_append(self, "{%llu}\r\n%s\r\n", cnt+2, tmp);
 	}
 
+	dbmail_imap_session_buff_flush(self);
+
 	g_string_free(ts,TRUE);
 	g_free(tmp);
 }
@@ -1157,13 +1159,14 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 	char range[DEF_FRAGSIZE];
 	memset(range,0,DEF_FRAGSIZE);
 
-	if (! self->headers) {
-		TRACE(TRACE_DEBUG, "init self->headers");
-		self->headers = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-		ceiling = 0;
-		hi = 0;
-		lo = 0;
-	}
+	if (self->headers)
+		g_tree_destroy(self->headers);
+
+	TRACE(TRACE_DEBUG, "init self->headers");
+	self->headers = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	ceiling = 0;
+	hi = 0;
+	lo = 0;
 
 	if (! bodyfetch->hdrnames) {
 
@@ -1252,6 +1255,7 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 
 	s = g_tree_lookup(self->headers, &(self->msg_idnr));
 	_send_headers(self, bodyfetch, not, s);
+
 
 	return;
 }
@@ -1352,9 +1356,12 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		break;
 
 	default:
+		dbmail_imap_session_buff_clear(self);
 		dbmail_imap_session_printf(self, "\r\n* BYE internal server error\r\n");
 		return -1;
 	}
+
+	dbmail_imap_session_buff_flush(self);
 	
 	return 0;
 }

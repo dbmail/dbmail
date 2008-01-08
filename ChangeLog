@@ -1,6 +1,44 @@
-2008-01-03  Paul J Stevens <paul@nfg.nl>
+2008-01-08  Paul J Stevens <paul@nfg.nl>
 
-	* test-scripts/testimap.py:
+	* src/dbmail-imapsession.c:
+	reset header cache during fetch_items run
+	* src/dbmail-message.c, src/dm_db.c, src/dm_db.h, 
+	test/check_dbmail_imapd.c:
+	updates and cleanups
+	* src/dbmail-message.c, test/check_dbmail.h, 
+	test/check_dbmail_message.c:
+	finish mime iterator fix
+
+2008-01-07  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-message.c, src/dm_debug.c, 
+	test/check_dbmail.h, test/check_dbmail_message.c:
+	wip mime iterator fix
+
+2008-01-06  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-mailbox.c, 
+	src/dbmail-message.c, src/dm_db.c, src/imapcommands.c:
+	merge dbmail_mailbox_get_msginfo into dbmail_mailbox_open
+
+2008-01-05  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/imapcommands.c:
+	call dbmail_mailbox_get_msginfo less often
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmail-mailbox.c, src/dbmail-mailbox.h, src/imapcommands.c:
+	move MessageInfo cache from ImapSession to Mailbox
+
+2008-01-04  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-mailbox.c:
+	wip bug 659
+	* src/dbmail.h.in, src/dm_db.c, src/modules/dbmysql.c:
+	cleanups
+
+2008-01-03  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, test-scripts/testimap.py:
 	fix testLogin
 	* src/modules/sortsieve.c:
 	fix segfault
