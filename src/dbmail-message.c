@@ -36,6 +36,12 @@ extern db_param_t _db_params;
 #define DBMAIL_TEMPMBOX "INBOX"
 
 #define THIS_MODULE "message"
+
+
+//#define dprint(fmt, args...) printf(fmt, ##args)
+#define dprint(fmt, args...) 0
+
+
 /*
  * _register_header
  *
@@ -161,6 +167,9 @@ static u64_t blob_exists(const char *buf, const char *hash)
 	
 	len = strlen(buf);
 	rows = db_num_rows();
+	if (rows > 1)
+		TRACE(TRACE_INFO,"possible collision for hash [%s]", hash);
+
 	for (i=0; i< rows; i++) {
 		data = db_get_result(i,1);
 		if (memcmp(buf, data, len)==0) {
@@ -239,17 +248,18 @@ static u64_t blob_store(const char *buf)
 	return 0;
 }
 
-static int _dm_store_blob(struct DbmailMessage *m, const char *buf, gboolean is_header)
+static int store_blob(struct DbmailMessage *m, const char *buf, gboolean is_header)
 {
 	u64_t id;
-	assert(buf);
+
+	if (! buf) return 0;
 
 	if (is_header) {
 		m->part_key++;
 		m->part_order=0;
 	}
 
-	printf("<blob is_header=\"%d\" part_key=\"%d\" part_order=\"%d\">\n%s\n</blob>\n", is_header, m->part_key, m->part_order, buf);
+	dprint("<blob is_header=\"%d\" part_key=\"%d\" part_order=\"%d\">\n%s\n</blob>\n", is_header, m->part_key, m->part_order, buf);
 	if (! (id = blob_store(buf)))
 		return DM_EQUERY;
 
@@ -306,6 +316,7 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
 	GString *m;
+	gboolean finalized=FALSE;
 
 	assert(dbmail_message_get_physid(self));
 
@@ -342,15 +353,6 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 		if (row == 0)
 			internal_date = db_get_result(row,5);
 
-		// we need to skip the first (post-rfc822) mime-headers
-		// of the mime_part because they are already included as
-		// part of the rfc822 headers
-		TRACE(TRACE_DEBUG,"is_header [%d] key [%d] order [%d]", is_header, key, order);
-		if (is_header && key==2 && order==0) {
-			TRACE(TRACE_DEBUG,"skip");
-			continue;
-		}
-
 		if (is_header)
 			prev_boundary = got_boundary;
 
@@ -361,27 +363,38 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 		}
 
 		if (prevdepth > depth && blist[depth]) {
+			dprint("\n--%s at %d--\n", blist[depth], depth);
 			g_string_append_printf(m, "\n--%s--\n", blist[depth]);
 			blist[depth] = NULL;
+			finalized=TRUE;
 		}
 
-		if (depth>0)
+		if (depth>0 && blist[depth-1])
 			boundary = (const char *)blist[depth-1];
 
-		if (is_header && (!prev_header|| prev_boundary))
+		if (is_header && (!prev_header|| prev_boundary)) {
+			dprint("\n--%s\n", boundary);
 			g_string_append_printf(m, "\n--%s\n", boundary);
+		}
 
 		g_string_append_printf(m, "%s", str);
+		dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 
+			is_header, depth, key, order, str);
+
 		if (is_header)
 			g_string_append_printf(m,"\n");
 	}
-	if (rows > 1 && boundary) {
+	if (rows > 1 && boundary && !finalized) {
+		dprint("\n--%s-- final\n", boundary);
 		g_string_append_printf(m, "\n--%s--\n", boundary);
 	}
 
-	if (rows > 1 && depth > 0 && blist[0]) {
-		if (strcmp(blist[0],boundary)!=0)
+	if (rows > 1 && depth > 0 && blist[0] && !finalized) {
+		if (strcmp(blist[0],boundary)!=0) {
+			dprint("\n--%s-- final\n", blist[0]);
 			g_string_append_printf(m, "\n--%s--\n\n", blist[0]);
+		} else
+			g_string_append_printf(m, "\n");
 	}
 
 	db_free_result();
@@ -395,17 +408,12 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 	return self;
 }
 
-static gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m);
-
-static gboolean store_mime_object(GMimeObject *object, struct DbmailMessage *m)
-{
-	return _dm_store_mime_object(object,m);
-}
+static gboolean store_mime_object(GMimeObject *object, struct DbmailMessage *m);
 
 static void store_head(GMimeObject *object, struct DbmailMessage *m)
 {
 	char *head = g_mime_object_get_headers(object);
-	_dm_store_blob(m, head, 1);
+	store_blob(m, head, 1);
 	g_free(head);
 }
 
@@ -415,25 +423,23 @@ static void store_body(GMimeObject *object, struct DbmailMessage *m)
 	if (! text)
 		return;
 
-	_dm_store_blob(m, text, 0);
+	store_blob(m, text, 0);
 	g_free(text);
 }
 
 
-static gboolean _dm_store_mime_text(GMimeObject *object, struct DbmailMessage *m)
+static gboolean store_mime_text(GMimeObject *object, struct DbmailMessage *m, gboolean skiphead)
 {
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
-	store_head(object, m);
+	if (! skiphead) store_head(object, m);
 	store_body(object, m);
 
 	return FALSE;
 }
 
-static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessage *m, const GMimeContentType *content_type)
+static gboolean store_mime_multipart(GMimeObject *object, struct DbmailMessage *m, const GMimeContentType *content_type, gboolean skiphead)
 {
-	char *text;
-	size_t i = 0, t;
 	const char *boundary;
 	int n;
 
@@ -441,34 +447,17 @@ static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessa
 
 	boundary = g_mime_content_type_get_parameter(content_type,"boundary");
 
-	store_head(object,m);
+	if (! skiphead) store_head(object,m);
 
-	if (g_mime_content_type_is_type(content_type, "multipart", "mixed")) {
-		// store the pre-amble
-		text = g_mime_object_get_body(object);
-		if (text) {
-			t = strlen(text);
-
-			while(t>2 && i++ < t && text[i+2]) { // until first -- boundary
-				if ((i==0 || text[i] == '\n') && text[i+1]=='-' && text[i+2]=='-')
-					break;
-			}
-
-			if (i>0 && i<t) {
-				text[i] = '\0';
-				text = g_realloc(text,i);
-				_dm_store_blob(m, text, 0);
-			}
-
-			g_free(text);
-		}
-	}
+	if (g_mime_content_type_is_type(content_type, "multipart", "*"))
+		store_blob(m, g_mime_multipart_get_preface((GMimeMultipart *)object), 0);
 
 	if (boundary) {
 		m->part_depth++;
 		n = m->part_order;
 		m->part_order=0;
 	}
+
 	g_mime_multipart_foreach((GMimeMultipart *)object, (GMimePartFunc)store_mime_object, m);
 
 	if (boundary) {
@@ -477,20 +466,23 @@ static gboolean _dm_store_mime_multipart(GMimeObject *object, struct DbmailMessa
 		m->part_order=n;
 	}
 
+	if (g_mime_content_type_is_type(content_type, "multipart", "*"))
+		store_blob(m, g_mime_multipart_get_postface((GMimeMultipart *)object), 0);
+
 	return FALSE;
 }
 
-static gboolean _dm_store_mime_message(GMimeObject * object, struct DbmailMessage *m)
+static gboolean store_mime_message(GMimeObject * object, struct DbmailMessage *m, gboolean skiphead)
 {
 	GMimeMessage *m2;
 
-	store_head(object, m);
+	if (! skiphead) store_head(object, m);
 
 	m2 = g_mime_message_part_get_message(GMIME_MESSAGE_PART(object));
 
 	g_return_val_if_fail(GMIME_IS_MESSAGE(m2), TRUE);
 
-	_dm_store_mime_object(GMIME_OBJECT(m2), m);
+	store_mime_object(GMIME_OBJECT(m2), m);
 
 	g_object_unref(m2);
 	
@@ -498,16 +490,26 @@ static gboolean _dm_store_mime_message(GMimeObject * object, struct DbmailMessag
 	
 }
 
-gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m)
+gboolean store_mime_object(GMimeObject *object, struct DbmailMessage *m)
 {
 	const GMimeContentType *content_type;
 	GMimeObject *mime_part;
 	gboolean r = FALSE;
+	gboolean skiphead = FALSE;
 
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
 	if (GMIME_IS_MESSAGE(object)) {
+		dprint("\n<message>\n");
+
 		store_head(object,m);
+
+		// we need to skip the first (post-rfc822) mime-headers
+		// of the mime_part because they are already included as
+		// part of the rfc822 headers
+		skiphead = TRUE;
+
+		g_mime_header_set_raw (GMIME_MESSAGE(object)->mime_part->headers, NULL);
 		mime_part = g_mime_message_get_mime_part((GMimeMessage *)object);
 	} else
 		mime_part = object;
@@ -515,16 +517,23 @@ gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m)
 	content_type = g_mime_object_get_content_type(mime_part);
 
 	if (g_mime_content_type_is_type(content_type, "multipart", "*"))
-		r = _dm_store_mime_multipart((GMimeObject *)mime_part, m, content_type);
+		r = store_mime_multipart((GMimeObject *)mime_part, m, content_type, skiphead);
 
 	else if (g_mime_content_type_is_type(content_type, "message","*"))
-		r = _dm_store_mime_message((GMimeObject *)mime_part, m);
+		r = store_mime_message((GMimeObject *)mime_part, m, skiphead);
 
-	else 
-		r = _dm_store_mime_text((GMimeObject *)mime_part, m);
+	else if (g_mime_content_type_is_type(content_type, "text","*"))
+		if (GMIME_IS_MESSAGE(object))
+			store_body(object,m);
+		else
+			r = store_mime_text((GMimeObject *)mime_part, m, skiphead);
+	else
+		r = store_mime_text((GMimeObject *)mime_part, m, skiphead);
 
-	if (GMIME_IS_MESSAGE(object))
+	if (GMIME_IS_MESSAGE(object)) {
 		g_object_unref(mime_part);
+		dprint("\n</message>\n");
+	}
 
 	return r;
 }
@@ -533,9 +542,7 @@ gboolean _dm_store_mime_object(GMimeObject *object, struct DbmailMessage *m)
 static gboolean _dm_message_store(struct DbmailMessage *m)
 {
 	gboolean r;
-	printf("\n<message>\n");
-	r = _dm_store_mime_object((GMimeObject *)m->content, m);
-	printf("\n</message>\n");
+	r = store_mime_object((GMimeObject *)m->content, m);
 	return r;
 }
 
@@ -861,13 +868,35 @@ static void _map_headers(struct DbmailMessage *self)
 	GMimeObject *part;
 	assert(self->content);
 	self->headers = g_relation_new(2);
+
+//	g_mime_message_set_header(GMIME_MESSAGE(self->content), "X-DBMail", "transient header");
+//	g_mime_object_remove_header(GMIME_OBJECT(self->content), "X-DBMail");
+
 	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
 	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
 
-	 // gmime doesn't consider the content-type header to be a message-header so extract 
-	 // and register it separately
 	if (GMIME_IS_MESSAGE(self->content)) {
+		char *message_id = NULL;
 		char *type = NULL;
+
+		// this is needed to correctly initialize gmime's mime iterator
+		if (GMIME_MESSAGE(self->content)->mime_part)
+			g_mime_header_set_raw (GMIME_MESSAGE(self->content)->mime_part->headers, NULL);
+
+		/* make sure the message has a message-id, else threading breaks */
+		if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {
+			char *domainname = g_new0(gchar, 255);
+			if (getdomainname(domainname,255))
+				strcpy(domainname,"(none)");
+			message_id = g_mime_utils_generate_message_id(domainname);
+			g_mime_message_set_message_id(GMIME_MESSAGE(self->content), message_id);
+			g_free(message_id);
+			g_free(domainname);
+		}
+
+
+		// gmime doesn't consider the content-type header to be a message-header so extract 
+		// and register it separately
 		part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
 		if ((type = (char *)g_mime_object_get_header(part,"Content-Type"))!=NULL)
 			_register_header("Content-Type",type, (gpointer)self);
@@ -1221,8 +1250,6 @@ int dbmail_message_store(struct DbmailMessage *self)
 	char unique_id[UID_SIZE];
 	char *hdrs, *body;
 	u64_t hdrs_size, body_size, rfcsize;
-	char *domainname;
-	char *message_id;
 	int i=1, retry=10, delay=200;
 	
 	if (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr) <= 0) {
@@ -1241,21 +1268,6 @@ int dbmail_message_store(struct DbmailMessage *self)
 			usleep(delay*i);
 			continue;
 		}
-
-		/* make sure the message has a message-id, else threading breaks */
-		if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {
-			domainname = g_new0(gchar, 255);
-			if (getdomainname(domainname,255))
-				strcpy(domainname,"(none)");
-			message_id = g_mime_utils_generate_message_id(domainname);
-			g_mime_message_set_message_id(GMIME_MESSAGE(self->content), message_id);
-			g_free(message_id);
-			g_free(domainname);
-		}
-
-		// this dance appears to be needed to correctly initialize gmime's mime iterator
-		g_mime_message_set_header(GMIME_MESSAGE(self->content), "X-DBMail", "transient header");
-		g_mime_object_remove_header(GMIME_OBJECT(self->content), "X-DBMail");
 
 		hdrs = dbmail_message_hdrs_to_string(self);
 		body = dbmail_message_body_to_string(self);

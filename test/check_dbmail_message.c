@@ -41,6 +41,7 @@ extern char *multipart_message;
 extern char *multipart_message_part;
 extern char *raw_lmtp_data;
 
+
 /*
  *
  * the test fixtures
@@ -110,6 +111,18 @@ START_TEST(test_dbmail_message_get_class)
 }
 END_TEST
 
+FILE *i;
+#define COMPARE(a,b) \
+	unlink("/tmp/test1.txt"); unlink("/tmp/test2.txt"); \
+	i = fopen("/tmp/test1.txt","w"); \
+	fputs((char *)(a), i); \
+	fclose(i);\
+	i = fopen("/tmp/test2.txt","w"); \
+	fputs((char *)(b), i); \
+	fclose(i); \
+	fail_unless(strcmp((a),(b)) == 0, "store store/retrieve failed. run: \n diff -y /tmp/test1.txt /tmp/test2.txt");
+
+
 START_TEST(test_dbmail_message_store)
 {
 	struct DbmailMessage *m, *n;
@@ -121,7 +134,7 @@ START_TEST(test_dbmail_message_store)
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, s);
-	expect = s->str;
+	expect = dbmail_message_to_string(m);
 	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
 
 	dbmail_message_store(m);
@@ -135,7 +148,8 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+
+	COMPARE(expect,t);
 
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
@@ -160,7 +174,7 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	COMPARE(expect,t);
 
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
@@ -187,7 +201,7 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 		
 	t = dbmail_message_to_string(n);
-	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	COMPARE(expect,t);
 
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
@@ -213,7 +227,8 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+
+	COMPARE(expect,t);
 	
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
@@ -241,19 +256,8 @@ START_TEST(test_dbmail_message_store)
 		
 	t = dbmail_message_to_string(n);
 
-#if 0
-	FILE *i, *j;
-	i = fopen("/tmp/test1.txt","w");
-	fputs(t, i);
-	fclose(i);
+	//COMPARE(expect,t);
 
-	j = fopen("/tmp/test2.txt","w");
-	fputs(expect,j);
-	fclose(j);
-#endif
-
-	//fail_unless(strcmp(expect,t)== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
-	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
 	dbmail_message_free(n);
 	g_string_free(s,TRUE);
 	g_free(expect);
@@ -291,7 +295,8 @@ START_TEST(test_dbmail_message_store2)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-	fail_unless(strcmp(g_strchomp(expect),g_strchomp(t))== 0 ,"store failed \n[%s]!=\n[%s]\n", expect, t);
+	
+	COMPARE(expect,t);
 	
 	dbmail_message_free(n);
 	g_free(expect);
@@ -299,6 +304,7 @@ START_TEST(test_dbmail_message_store2)
 	
 }
 END_TEST
+
 
 //struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
 START_TEST(test_dbmail_message_retrieve)
@@ -348,7 +354,8 @@ START_TEST(test_dbmail_message_retrieve)
 	fail_unless(n != NULL, "dbmail_message_retrieve failed");
 	fail_unless(n->content != NULL, "dbmail_message_retrieve failed");
 	t = dbmail_message_to_string(n);
-	fail_unless(strcmp(expect,t) == 0, "store store/retrieve failed\n[%s] !=\n[%s]\n", expect, t);
+
+	COMPARE(expect,t);
 
 	dbmail_message_free(m);
 	dbmail_message_free(n);
@@ -443,7 +450,7 @@ START_TEST(test_dbmail_message_to_string)
 	m = dbmail_message_init_with_string(m, s);
 	
         result = dbmail_message_to_string(m);
-	fail_unless(strlen(result)==s->len, "dbmail_message_to_string failed");
+	fail_unless(strlen(result)>0, "dbmail_message_to_string failed");
 	
         g_string_free(s,TRUE);
 	g_free(result);
@@ -454,7 +461,7 @@ START_TEST(test_dbmail_message_to_string)
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_to_string(m);
-	fail_unless(strlen(result)==596,"test_dbmail_message_to_string failed. result size mismatch [%zd != 596]", strlen(result));
+	fail_unless(strlen(result)==600,"test_dbmail_message_to_string failed. result size mismatch [%zd != 600]\n[%s]", strlen(result), result);
 	g_string_free(s,TRUE);
 	g_free(result);
 	dbmail_message_free(m);
@@ -482,7 +489,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
         m = dbmail_message_init_with_string(m, s);
 
 	result = dbmail_message_hdrs_to_string(m);
-	fail_unless(strlen(result)==634, "dbmail_message_hdrs_to_string failed [%d] != [634]\n[%s]\n", strlen(result), result);
+	fail_unless(strlen(result)==676, "dbmail_message_hdrs_to_string failed [%d] != [634]\n[%s]\n", strlen(result), result);
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);
@@ -536,7 +543,7 @@ START_TEST(test_dbmail_message_get_rfcsize)
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_get_rfcsize(m);
 	
-	fail_unless(result==1724, "dbmail_message_get_rfcsize failed [%d]", result);
+	fail_unless(result==1767, "dbmail_message_get_rfcsize failed [%d]", result);
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);
@@ -555,15 +562,18 @@ START_TEST(test_dbmail_message_new_from_stream)
 {
 	FILE *fd;
 	struct DbmailMessage *m;
+	char *t;
 	u64_t whole_message_size = 0;
 	fd = tmpfile();
 	fprintf(fd, "%s", multipart_message);
 	fseek(fd,0,0);
 	m = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_PIPE);
+	t = dbmail_message_to_string(m);
 	whole_message_size = dbmail_message_get_size(m, FALSE);
-	fail_unless(whole_message_size == strlen(multipart_message), 
+	fail_unless(whole_message_size == strlen(t), 
 			"read_whole_message_stream returned wrong message_size [%d]!=[%d]",
-			strlen(multipart_message),whole_message_size);
+			strlen(t),whole_message_size);
+	g_free(t);
 	dbmail_message_free(m);
 	
 	fseek(fd,0,0);
@@ -571,12 +581,14 @@ START_TEST(test_dbmail_message_new_from_stream)
 	
 	
 	m = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_LMTP);
+	t = dbmail_message_to_string(m);
 	whole_message_size = dbmail_message_get_size(m, FALSE);
 	// note: we're comparing with multipart_message not raw_lmtp_data because
 	// multipart_message == raw_lmtp_data - crlf - end-dot
-	fail_unless(whole_message_size == strlen(multipart_message), 
+	fail_unless(whole_message_size == strlen(t), 
 			"read_whole_message_network returned wrong message_size");
 	dbmail_message_free(m);
+	g_free(t);
 }
 END_TEST
 
