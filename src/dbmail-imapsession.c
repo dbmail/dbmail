@@ -987,8 +987,6 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, struct ImapSession 
 
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 {
-	if ((dbmail_mailbox_get_msginfo(self->mailbox)) == NULL)
-		TRACE(TRACE_INFO, "unable to retrieve msginfo. empty mailbox?");
 	if (! self->ids)
 		TRACE(TRACE_INFO, "self->ids is NULL");
 	else {

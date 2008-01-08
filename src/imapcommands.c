@@ -1670,12 +1670,8 @@ int _ic_store(struct ImapSession *self)
 	result = DM_SUCCESS;
 
   	if (g_tree_nnodes(self->mailbox->ids) > 0) {
- 		if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS) {
- 			if ((dbmail_mailbox_get_msginfo(self->mailbox)) == NULL)
- 				TRACE(TRACE_DEBUG, "unable to retrieve msginfo");
- 
+ 		if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS)
  			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
-  		}
   	}	
 
 	if (result == DM_SUCCESS)
