@@ -215,6 +215,8 @@ int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
 		return DM_EGENERAL;
 	}
 
+	//FIXME: clearout this UID from the msginfo cache as well !! (bug #659)
+	
 	uid_msn_map(self);
 
 	return DM_SUCCESS;

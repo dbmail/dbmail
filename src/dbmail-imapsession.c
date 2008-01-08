@@ -2018,6 +2018,7 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 	*/
 
 	int res;
+	gboolean unhandled=FALSE;
 	time_t oldmtime;
 	GTree *oldmsginfo, *msginfo = NULL;
 	unsigned oldexists, oldrecent, olduidnext;
@@ -2064,12 +2065,17 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 
 	/* msg counts */
 	// EXPUNGE
+	//
+	if ((olduidnext != ud->mailbox->msguidnext) && (ud->mailbox->exists >= oldexists))
+		showexists = TRUE;
+	if (ud->mailbox->recent != oldrecent)
+		showrecent = TRUE;
+
 	switch (self->command_type) {
 		case IMAP_COMM_SELECT:
 		case IMAP_COMM_EXAMINE:
 			showexists = TRUE;
 			showrecent = TRUE;
-
 		case IMAP_COMM_IDLE:
 #if 0
 			// experimental: send '* STATUS' updates for all subscribed 
@@ -2081,11 +2087,6 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 
 		case IMAP_COMM_NOOP:
 		case IMAP_COMM_CHECK:
-	
-		if ((olduidnext != ud->mailbox->msguidnext) && (ud->mailbox->exists >= oldexists))
-			showexists = TRUE;
-		if (ud->mailbox->recent != oldrecent)
-			showrecent = TRUE;
 
 		if ((!update) || (showexists)) // never decrements
 			dbmail_imap_session_printf(self, "* %u EXISTS\r\n", ud->mailbox->exists);
@@ -2095,11 +2096,15 @@ int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean updat
 
 		break;
 		default:
+			unhandled=TRUE;
 		break;
 	}
 
 
 	if (update) {
+		if (unhandled)
+			TRACE(TRACE_ERROR, "EXISTS/RECENT changed but client is not notified");
+
 		if (msginfo) {
 			self->msginfo = msginfo;
 			if (oldmsginfo) {
