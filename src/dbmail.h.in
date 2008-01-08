@@ -1,7 +1,7 @@
 /*
- $Id: dbmail.h 2017 2006-03-07 05:58:02Z aaron $
-
- Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl
+ Copyright (C) 2001-2007 Aaron Stone, aaron@serendipity.cx
+ Copyright (C) 2004-2007 NFG Net Facilities Group BV, support@nfg.nl
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License as
@@ -127,11 +127,10 @@
 #include <endian.h>
 #endif
 
-#include "dbmail-message.h"
 #include "dbmail-user.h"
 #include "dbmail-mailbox.h"
+#include "dbmail-message.h"
 #include "dbmail-imapsession.h"
-
 
 #define GETCONFIGVALUE(key, sect, var) \
 	config_get_value(key, sect, var); \

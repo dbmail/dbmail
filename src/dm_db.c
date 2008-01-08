@@ -22,12 +22,6 @@
 /**
  * \file db.c
  * 
- * 
- *
- * implement database functionality. This used to split out
- * between MySQL and PostgreSQL, but this is now integrated. 
- * Only the actual calls to the database APIs are still in
- * place in the mysql/ and pgsql/ directories
  */
 
 #include "dbmail.h"
@@ -66,39 +60,38 @@ const char *imap_flag_desc_escaped[] = {
 	"\\Recent"
 };
 
-#define MAX_COLUMN_LEN 50
-#define MAX_DATE_LEN 50
-
 /* write-once global variable */
 db_param_t _db_params;
 
 #define DBPFX _db_params.pfx
 /** list of tables used in dbmail */
-#define DB_NTABLES 22
+#define DB_NTABLES 24
 const char *DB_TABLENAMES[DB_NTABLES] = {
-	"users", "aliases", "mailboxes",
-	"messages", "physmessage", "messageblks",
-	"acl", "subscription", "pbsp",
-	"auto_notifications", "auto_replies",
-	"headername", "headervalue",
-	"subjectfield", "datefield", "referencesfield",
-	"fromfield", "tofield", "replytofield",
-	"ccfield", "replycache", "usermap"
+	"users", 
+	"aliases", 
+	"mailboxes",
+	"messages", 
+	"physmessage", 
+	"messageblks",
+	"acl", 
+	"subscription", 
+	"pbsp",
+	"auto_notifications", 
+	"auto_replies",
+	"headername", 
+	"headervalue",
+	"subjectfield", 
+	"datefield", 
+	"referencesfield",
+	"fromfield", 
+	"tofield", 
+	"replytofield",
+	"ccfield", 
+	"replycache", 
+	"usermap", 
+	"mimeparts", 
+	"partlists", 
 };
-
-/** can be used for making queries to db backend */
-
-/* size of buffer for writing messages to a client */
-#define WRITE_BUFFER_SIZE 2048
-
-/** static functions */
-
-
-/** find a mailbox with a specific owner */
-static int db_findmailbox_owner(const char *name, u64_t owner_idnr, u64_t * mailbox_idnr);
-
-/** get the total size of messages in a mailbox. Does not work recursively! */
-static int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_size);
 
 /**
  * constructs a string for use in queries. This is used to not be dependent
@@ -107,16 +100,6 @@ static int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mai
  * implements the TO_DATE function, which handles this very well.
  */
 static char *char2date_str(const char *date);
-
-/**
- * check if the user_idnr is the same as that of the DBMAIL_DELIVERY_USERNAME
- * \param user_idnr user idnr to check
- * \return
- *     - -1 on error
- *     -  0 of different user
- *     -  1 if same user (user_idnr belongs to DBMAIL_DELIVERY_USERNAME
- */
-static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
 
 int db_retry_query(char *query, int tries, int sleeptime)
 {
@@ -146,35 +129,28 @@ int db_check_version(void)
 
 	memset(query,0,DEF_QUERYSIZE);
 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %sphysmessage LIMIT 1 OFFSET 0", DBPFX);
-	if (db_query(query) == -1) {
+	if (db_query(query) == DM_EQUERY)
 		TRACE(TRACE_FATAL, "pre-2.0 database incompatible. You need to run the conversion script");
-		return DM_EQUERY;
-	}
 	db_free_result();
 	
 	memset(query,0,DEF_QUERYSIZE);
 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %sheadervalue LIMIT 1 OFFSET 0", DBPFX);
-	if (db_query(query) == -1) {
+	if (db_query(query) == DM_EQUERY)
 		TRACE(TRACE_FATAL, "2.0 database incompatible. You need to add the header tables.");
-		return DM_EQUERY;
-	}
 	db_free_result();
  		
 	memset(query,0,DEF_QUERYSIZE);
  	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %senvelope LIMIT 1 OFFSET 0", DBPFX);
- 	if (db_query(query) == -1) {
+ 	if (db_query(query) == DM_EQUERY)
  		TRACE(TRACE_FATAL, "2.1 database incompatible. You need to add the envelopes table "
  				"and run dbmail-util -by");
-	}
 	db_free_result();
 
 	memset(query,0,DEF_QUERYSIZE);
  	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX);
- 	if (db_query(query) == -1) {
+ 	if (db_query(query) == DM_EQUERY)
  		TRACE(TRACE_FATAL, "2.2 database incompatible.");
-	}
 	db_free_result();
-
 
 	return DM_SUCCESS;
 }
@@ -186,10 +162,9 @@ int db_use_usermap(void)
 	char query[DEF_QUERYSIZE]; 
 	if (use_usermap != -1)
 		return use_usermap;
-	memset(query,0,DEF_QUERYSIZE);
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM %susermap WHERE 1 = 2",
-			DBPFX);
+	memset(query,0,DEF_QUERYSIZE);
+	snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM %susermap WHERE 1 = 2", DBPFX);
 	use_usermap = 0;
 	
 	if (db_query(query) != -1) {
@@ -406,6 +381,37 @@ int db_get_quotum_used(u64_t user_idnr, u64_t * curmail_size)
 	return DM_EGENERAL;
 }
 
+/**
+ * check if the user_idnr is the same as that of the DBMAIL_DELIVERY_USERNAME
+ * \param user_idnr user idnr to check
+ * \return
+ *     - -1 on error
+ *     -  0 of different user
+ *     -  1 if same user (user_idnr belongs to DBMAIL_DELIVERY_USERNAME
+ */
+
+static int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
+{
+	static int delivery_user_idnr_looked_up = 0;
+	static u64_t delivery_user_idnr;
+
+	if (delivery_user_idnr_looked_up == 0) {
+		TRACE(TRACE_DEBUG, "looking up user_idnr for [%s]",
+		      DBMAIL_DELIVERY_USERNAME);
+		if (auth_user_exists(DBMAIL_DELIVERY_USERNAME,
+				     &delivery_user_idnr) < 0) {
+			TRACE(TRACE_ERROR, "error looking up "
+			      "user_idnr for DBMAIL_DELIVERY_USERNAME");
+			return DM_EQUERY;
+		}
+		delivery_user_idnr_looked_up = 1;
+	}
+	
+	if (delivery_user_idnr == user_idnr)
+		return DM_EGENERAL;
+	else
+		return DM_SUCCESS;
+}
 /* this is a local (static) function */
 static int user_quotum_set(u64_t user_idnr, u64_t size)
 {
@@ -1155,7 +1161,6 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
 			 "VALUES (0, %s)", DBPFX,to_date_str);
-		g_free(to_date_str);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
@@ -1368,7 +1373,6 @@ int db_count_iplog(timestring_t lasttokeep, u64_t *affected_rows)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %spbsp WHERE since < %s",
 		 DBPFX, to_date_str);
-	g_free(to_date_str);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error executing query");
@@ -1392,7 +1396,6 @@ int db_cleanup_iplog(timestring_t lasttokeep, u64_t *affected_rows)
 	snprintf(query, DEF_QUERYSIZE,
 		 "DELETE FROM %spbsp WHERE since < %s",
 		 DBPFX, to_date_str);
-	g_free(to_date_str);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error executing query");
@@ -1416,7 +1419,6 @@ int db_count_replycache(timestring_t lasttokeep, u64_t *affected_rows)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %sreplycache WHERE lastseen < %s",
 		 DBPFX, to_date_str);
-	g_free(to_date_str);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error executing query");
@@ -1440,7 +1442,6 @@ int db_cleanup_replycache(timestring_t lasttokeep, u64_t *affected_rows)
 	snprintf(query, DEF_QUERYSIZE,
 		 "DELETE FROM %sreplycache WHERE lastseen < %s",
 		 DBPFX, to_date_str);
-	g_free(to_date_str);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error executing query");
@@ -2152,6 +2153,47 @@ static int mailbox_empty(u64_t mailbox_idnr)
 	return DM_SUCCESS;
 }
 
+/** get the total size of messages in a mailbox. Does not work recursively! */
+int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_size)
+{
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
+
+	assert(mailbox_size != NULL);
+
+	*mailbox_size = 0;
+
+	if (only_deleted)
+		snprintf(query, DEF_QUERYSIZE,
+			 "SELECT sum(pm.messagesize) FROM %smessages msg, "
+			 "%sphysmessage pm "
+			 "WHERE msg.physmessage_id = pm.id "
+			 "AND msg.mailbox_idnr = %llu "
+			 "AND msg.status < %d "
+			 "AND msg.deleted_flag = 1",DBPFX,DBPFX, mailbox_idnr,
+			 MESSAGE_STATUS_DELETE);
+	else
+		snprintf(query, DEF_QUERYSIZE,
+			 "SELECT sum(pm.messagesize) FROM %smessages msg, "
+			 "%sphysmessage pm "
+			 "WHERE msg.physmessage_id = pm.id "
+			 "AND msg.mailbox_idnr = %llu "
+			 "AND msg.status < %d",DBPFX,DBPFX, mailbox_idnr,
+			 MESSAGE_STATUS_DELETE);
+
+	if (db_query(query) == DM_EQUERY) {
+		TRACE(TRACE_ERROR, "could not calculate size of mailbox [%llu]", mailbox_idnr);
+		return DM_EQUERY;
+	}
+
+	if (db_num_rows() > 0)
+		*mailbox_size = db_get_result_u64(0, 0);
+
+	db_free_result();
+
+	return DM_SUCCESS;
+}
+
 int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		      int update_curmail_size)
 {
@@ -2173,12 +2215,8 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 	}
 
 	if (update_curmail_size) {
-		if (db_get_mailbox_size(mailbox_idnr, 0, &mailbox_size) < 0) {
-			TRACE(TRACE_ERROR, "error getting mailbox size "
-			      "for mailbox [%llu]",
-			      mailbox_idnr);
+		if (db_get_mailbox_size(mailbox_idnr, 0, &mailbox_size) == DM_EQUERY)
 			return DM_EQUERY;
-		}
 	}
 
 	if (mailbox_is_writable(mailbox_idnr))
@@ -2563,6 +2601,45 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
         return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
 }
 
+static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
+			 u64_t * mailbox_idnr)
+{
+	char *mailbox_like;
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
+
+
+	assert(mailbox_idnr != NULL);
+	*mailbox_idnr = 0;
+
+	mailbox_like = db_imap_utf7_like("name", name, ""); 
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT mailbox_idnr FROM %smailboxes "
+		 "WHERE %s AND owner_idnr=%llu",
+		 DBPFX, mailbox_like, owner_idnr);
+	g_free(mailbox_like);
+
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "could not select mailbox '%s'", name);
+		db_free_result();
+		return DM_EQUERY;
+	}
+
+	if (db_num_rows() < 1) {
+		TRACE(TRACE_DEBUG, "no mailbox found");
+		db_free_result();
+		return DM_SUCCESS;
+	} else {
+		*mailbox_idnr = db_get_result_u64(0, 0);
+		db_free_result();
+	}
+
+	if (*mailbox_idnr == 0)
+		return DM_SUCCESS;
+	return DM_EGENERAL;
+}
+
+
 int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
 	const char *simple_name;
@@ -2681,45 +2758,6 @@ char *db_imap_utf7_like(const char *column,
 
 	return tmplike;
 }
-
-static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
-			 u64_t * mailbox_idnr)
-{
-	char *mailbox_like;
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-
-	assert(mailbox_idnr != NULL);
-	*mailbox_idnr = 0;
-
-	mailbox_like = db_imap_utf7_like("name", name, ""); 
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT mailbox_idnr FROM %smailboxes "
-		 "WHERE %s AND owner_idnr=%llu",
-		 DBPFX, mailbox_like, owner_idnr);
-	g_free(mailbox_like);
-
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not select mailbox '%s'", name);
-		db_free_result();
-		return DM_EQUERY;
-	}
-
-	if (db_num_rows() < 1) {
-		TRACE(TRACE_DEBUG, "no mailbox found");
-		db_free_result();
-		return DM_SUCCESS;
-	} else {
-		*mailbox_idnr = db_get_result_u64(0, 0);
-		db_free_result();
-	}
-
-	if (*mailbox_idnr == 0)
-		return DM_SUCCESS;
-	return DM_EGENERAL;
-}
-
 static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char * pattern,
 			      u64_t ** mailboxes, unsigned int *nr_mailboxes)
 {
@@ -3692,47 +3730,6 @@ int db_setselectable(u64_t mailbox_idnr, int select_value)
 
 
 
-int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,
-			u64_t * mailbox_size)
-{
-	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
-
-	assert(mailbox_size != NULL);
-
-	*mailbox_size = 0;
-
-	if (only_deleted)
-		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT sum(pm.messagesize) FROM %smessages msg, "
-			 "%sphysmessage pm "
-			 "WHERE msg.physmessage_id = pm.id "
-			 "AND msg.mailbox_idnr = %llu "
-			 "AND msg.status < %d "
-			 "AND msg.deleted_flag = 1",DBPFX,DBPFX, mailbox_idnr,
-			 MESSAGE_STATUS_DELETE);
-	else
-		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT sum(pm.messagesize) FROM %smessages msg, "
-			 "%sphysmessage pm "
-			 "WHERE msg.physmessage_id = pm.id "
-			 "AND msg.mailbox_idnr = %llu "
-			 "AND msg.status < %d",DBPFX,DBPFX, mailbox_idnr,
-			 MESSAGE_STATUS_DELETE);
-
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not calculate size of mailbox [%llu]", mailbox_idnr);
-		return DM_EQUERY;
-	}
-
-	if (db_num_rows() > 0) {
-		*mailbox_size = db_get_result_u64(0, 0);
-		db_free_result();
-	}
-
-	return DM_SUCCESS;
-}
-
 int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 {
 	u64_t mailbox_size;
@@ -3743,11 +3740,8 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 	if (mailbox_is_writable(mailbox_idnr))
 		return DM_EQUERY;
 
-	if (db_get_mailbox_size(mailbox_idnr, 0, &mailbox_size) < 0) {
-		TRACE(TRACE_ERROR, "error getting size for mailbox [%llu]",
-		      mailbox_idnr);
+	if (db_get_mailbox_size(mailbox_idnr, 0, &mailbox_size) == DM_EQUERY)
 		return DM_EQUERY;
-	}
 
 	/* update messages belonging to this mailbox: mark as deleted (status 
 	   MESSAGE_STATUS_PURGE) */
@@ -4004,12 +3998,8 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 	int result = 0;
 
 
-	if (db_get_mailbox_size(mailbox_idnr, 1, &mailbox_size) < 0) {
-		TRACE(TRACE_ERROR, "error getting mailbox size "
-		      "for mailbox [%llu]",
-		      mailbox_idnr);
+	if (db_get_mailbox_size(mailbox_idnr, 1, &mailbox_size) == DM_EQUERY)
 		return DM_EQUERY;
-	}
 
 	if (nmsgs && msg_idnrs) {
 		/* first select msg UIDs */
@@ -4683,39 +4673,20 @@ char *date2char_str(const char *column)
 
 char *char2date_str(const char *date)
 {
-	char *s, *qs;
+	static int bufno;
+	static char buflist[4][DEF_FRAGSIZE];
+	char *buffer = buflist[3 * ++bufno], *buf = buffer;
+	char *qs;
+
+	memset(buf, 0, DEF_FRAGSIZE);
 
 	qs = g_strdup_printf("'%s'", date);
-	s = g_strdup_printf(db_get_sql(SQL_TO_DATETIME), qs);
+	snprintf(buf, DEF_FRAGSIZE, db_get_sql(SQL_TO_DATETIME), qs);
 	g_free(qs);
 
-	return s;
+	return buffer;
 }
 
-int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
-{
-	static int delivery_user_idnr_looked_up = 0;
-	static u64_t delivery_user_idnr;
-
-	if (delivery_user_idnr_looked_up == 0) {
-		TRACE(TRACE_DEBUG, "looking up user_idnr for [%s]",
-		      DBMAIL_DELIVERY_USERNAME);
-		if (auth_user_exists(DBMAIL_DELIVERY_USERNAME,
-				     &delivery_user_idnr) < 0) {
-			TRACE(TRACE_ERROR, "error looking up "
-			      "user_idnr for DBMAIL_DELIVERY_USERNAME");
-			return DM_EQUERY;
-		}
-		delivery_user_idnr_looked_up = 1;
-	} else 
-		TRACE(TRACE_DEBUG, "no need to look up user_idnr for [%s]",
-		      DBMAIL_DELIVERY_USERNAME);
-	
-	if (delivery_user_idnr == user_idnr)
-		return DM_EGENERAL;
-	else
-		return DM_SUCCESS;
-}
 
 int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, MailboxInfo * mb)
 {

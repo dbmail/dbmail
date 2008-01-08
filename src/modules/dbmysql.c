@@ -337,15 +337,15 @@ int db_savepoint_rollback(const char *id)
 
 int db_do_cleanup(const char **tables, int num)
 {
-	char the_query[DEF_QUERYSIZE];
+	char query[DEF_QUERYSIZE];
 	int i;
 	int result = 0;
 
 	for (i = 0; i < num; i++) {
-		snprintf(the_query, DEF_QUERYSIZE, "ANALYZE TABLE %s%s",
+		snprintf(query, DEF_QUERYSIZE, "ANALYZE TABLE %s%s",
 			 _db_params.pfx,tables[i]);
 
-		if (db_query(the_query) == DM_EQUERY) {
+		if (db_query(query) == DM_EQUERY) {
 			TRACE(TRACE_ERROR, "error analyzing table [%s%s]",
 			      _db_params.pfx,tables[i]);
 			result = DM_EQUERY;
