@@ -1330,7 +1330,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self),
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-			t->str, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
+			t->str, db_get_sql(SQL_SENSITIVE_LIKE), s->search);
 		break;
 
 		case IST_SIZE_LARGER:
