@@ -220,11 +220,7 @@ int StartServer(serverConfig_t * conf)
 		TRACE(TRACE_FATAL, "Unsupported database version.");
 	}
 	
-	pool_init(conf);
- 	pool_start();
- 	pool_adjust();
-    
- 	pool_stop();
+	pool_run(conf);
 
 	return Restart;
 }

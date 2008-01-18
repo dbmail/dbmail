@@ -838,44 +838,6 @@ void pool_start(void)
 
 	scoreboard_state();
 }
-	
-void pool_mainloop(void)
-{
-	int stopped = 0;
-	pid_t chpid;
-
- 	TRACE(TRACE_DEBUG, "starting main service loop");
- 	while (!GeneralStopRequested) {
-		if(get_sigchld){
-			get_sigchld = 0;
-			while((chpid = waitpid(-1,(int*)NULL,WNOHANG)) > 0) 
-				scoreboard_release(chpid);
-		}
-
-		if (mainStatus) {
-			mainStatus = 0;
-			scoreboard_state();
-		}
-
-		if (db_check_connection() != 0) {
-			
-			if (! stopped) 
-				pool_stop();
-		
-			stopped=1;
-			sleep(10);
-			
-		} else {
-			if (stopped) {
-				pool_start();
-				stopped=0;
-			}
-			
-			pool_adjust();
-			sleep(1);
-		}
-	}
-}
 void pool_adjust(void)
 {
 	/* 
@@ -971,6 +933,48 @@ void pool_stop(void)
 	}
 }
 
+
+void pool_run(serverConfig_t *conf)
+{
+	int stopped = 0;
+	pid_t chpid;
+
+	pool_init(conf);
+
+	pool_start();
+
+ 	TRACE(TRACE_DEBUG, "starting main service loop");
+ 	while (!GeneralStopRequested) {
+		if(get_sigchld){
+			get_sigchld = 0;
+			while((chpid = waitpid(-1,(int*)NULL,WNOHANG)) > 0) 
+				scoreboard_release(chpid);
+		}
+
+		if (mainStatus) {
+			mainStatus = 0;
+			scoreboard_state();
+		}
+
+		if (db_check_connection() != 0) {
+			
+			if (! stopped) 
+				pool_stop();
+		
+			stopped=1;
+			sleep(10);
+			
+		} else {
+			if (stopped) {
+				pool_start();
+				stopped=0;
+			}
+			
+			pool_adjust();
+			sleep(1);
+		}
+	}
+}
 void child_reg_connected_client(const char *ip, const char *name)
 {
 	int key;
