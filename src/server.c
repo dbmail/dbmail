@@ -43,12 +43,50 @@ int isGrandChildProcess = 0;
 pid_t ParentPID = 0;
 ChildInfo_t childinfo;
 
-/* some extra prototypes (defintions are below) */
-static void ParentSigHandler(int sig, siginfo_t * info, void *data);
-static int SetParentSigHandler(void);
-static int server_setup(serverConfig_t *conf);
+extern volatile sig_atomic_t connected;
+extern volatile clientinfo_t client;
 
-int SetParentSigHandler()
+static void sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+{
+	int saved_errno = errno;
+	Restart = 0;
+	
+	switch (sig) {
+
+	case SIGCHLD:
+		/* ignore, wait for child in main loop */
+		/* but we need to catch zombie */
+		get_sigchld = 1;
+		break;		
+
+	case SIGSEGV:
+		sleep(60);
+		_exit(1);
+		break;
+
+	case SIGHUP:
+		Restart = 1;
+		GeneralStopRequested = 1;
+		break;
+
+	case SIGUSR1:
+		mainStatus = 1;
+		break;
+
+	case SIGALRM:
+		alarm_occured = 1;
+		break;
+		
+	default:
+		GeneralStopRequested = 1;
+		break;
+	}
+
+	errno = saved_errno;
+}
+
+
+static int set_sighandler(void)
 {
 	struct sigaction act;
 	struct sigaction sact;
@@ -57,11 +95,11 @@ int SetParentSigHandler()
 	memset(&act, 0, sizeof(act));
 	memset(&sact, 0, sizeof(sact));
 
-	act.sa_sigaction = ParentSigHandler;
+	act.sa_sigaction = sighandler;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 
-	sact.sa_sigaction = ParentSigHandler;
+	sact.sa_sigaction = sighandler;
 	sigemptyset(&sact.sa_mask);
 	sact.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
 
@@ -80,13 +118,13 @@ int SetParentSigHandler()
 	return 0;
 }
 
-int server_setup(serverConfig_t *conf)
+static int server_setup(serverConfig_t *conf)
 {
 	ParentPID = getpid();
 	Restart = 0;
 	GeneralStopRequested = 0;
 	get_sigchld = 0;
-	SetParentSigHandler();
+	set_sighandler();
 
 	childinfo.maxConnect	= conf->childMaxConnect;
 	childinfo.listenSockets	= g_memdup(conf->listenSockets, conf->ipcount * sizeof(int));
@@ -99,6 +137,58 @@ int server_setup(serverConfig_t *conf)
 	return 0;
 }
 	
+static int manage_start_cli_server(ChildInfo_t * info)
+{
+	if (!info) {
+		TRACE(TRACE_ERROR, "NULL info supplied");
+		return -1;
+	}
+
+	if (db_connect() != 0) {
+		TRACE(TRACE_ERROR, "could not connect to database");
+		return -1;
+	}
+
+	if (auth_connect() != 0) {
+		TRACE(TRACE_ERROR, "could not connect to authentication");
+		return -1;
+	}
+
+	srand((int) ((int) time(NULL) + (int) getpid()));
+	connected = 1;
+
+	if (db_check_connection()) {
+		TRACE(TRACE_ERROR, "database has gone away");
+		return -1;
+	}
+
+		
+	memset((void *)&client, 0, sizeof(client));	/* zero-init */
+
+	client.timeout = info->timeout;
+	client.login_timeout = info->login_timeout;
+
+	/* make streams */
+	client.rx = stdin;
+	client.tx = stdout;
+
+	setvbuf(client.tx, (char *) NULL, _IOLBF, 0);
+	setvbuf(client.rx, (char *) NULL, _IOLBF, 0);
+
+	TRACE(TRACE_DEBUG, "client info init complete, calling client handler");
+
+	/* streams are ready, perform handling */
+	info->ClientHandler((clientinfo_t *)&client);
+
+	TRACE(TRACE_DEBUG, "client handling complete, closing streams");
+	client_close();
+	TRACE(TRACE_INFO, "connection closed"); 
+	disconnect_all();
+	
+	return 0;
+}
+
+
 int StartCliServer(serverConfig_t * conf)
 {
 	if (!conf)
@@ -114,8 +204,6 @@ int StartCliServer(serverConfig_t * conf)
 
 int StartServer(serverConfig_t * conf)
 {
-	int stopped = 0;
-	pid_t chpid;
 
 	if (!conf)
 		TRACE(TRACE_FATAL, "NULL configuration");
@@ -123,7 +211,6 @@ int StartServer(serverConfig_t * conf)
 	if (server_setup(conf))
 		return -1;
  	
- 	scoreboard_new(conf);
 
 	if (db_connect() != DM_SUCCESS) 
 		TRACE(TRACE_FATAL, "Unable to connect to database.");
@@ -133,42 +220,11 @@ int StartServer(serverConfig_t * conf)
 		TRACE(TRACE_FATAL, "Unsupported database version.");
 	}
 	
- 	manage_start_children();
- 	manage_spare_children();
- 	
- 	TRACE(TRACE_DEBUG, "starting main service loop");
- 	while (!GeneralStopRequested) {
-		if(get_sigchld){
-			get_sigchld = 0;
-			while((chpid = waitpid(-1,(int*)NULL,WNOHANG)) > 0) 
-				scoreboard_release(chpid);
-		}
-
-		if (mainStatus) {
-			mainStatus = 0;
-			scoreboard_state();
-		}
-
-		if (db_check_connection() != 0) {
-			
-			if (! stopped) 
-				manage_stop_children();
-		
-			stopped=1;
-			sleep(10);
-			
-		} else {
-			if (stopped) {
-				manage_start_children();
-				stopped=0;
-			}
-			
-			manage_spare_children();
-			sleep(1);
-		}
-	}
-   
- 	manage_stop_children();
+	pool_init(conf);
+ 	pool_start();
+ 	pool_adjust();
+    
+ 	pool_stop();
 
 	return Restart;
 }
@@ -327,51 +383,6 @@ int server_run(serverConfig_t *conf)
 	close_all_sockets(conf);
 	
 	return result;
-}
-
-void ParentSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
-{
-	int saved_errno = errno;
-	Restart = 0;
-	
-	/* this call is for a child but it's handler is not yet installed */
-	/*
-	if (ParentPID != getpid())
-		active_child_sig_handler(sig, info, data); 
-
-	*/ 
-	switch (sig) {
-
-	case SIGCHLD:
-		/* ignore, wait for child in main loop */
-		/* but we need to catch zombie */
-		get_sigchld = 1;
-		break;		
-
-	case SIGSEGV:
-		sleep(60);
-		_exit(1);
-		break;
-
-	case SIGHUP:
-		Restart = 1;
-		GeneralStopRequested = 1;
-		break;
-
-	case SIGUSR1:
-		mainStatus = 1;
-		break;
-
-	case SIGALRM:
-		alarm_occured = 1;
-		break;
-		
-	default:
-		GeneralStopRequested = 1;
-		break;
-	}
-
-	errno = saved_errno;
 }
 
 static int dm_socket(int domain)

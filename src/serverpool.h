@@ -38,29 +38,16 @@ typedef struct {
 	child_state_t child[HARD_MAX_CHILDREN];
 } Scoreboard_t;
 
+void pool_init(serverConfig_t *conf);
+void pool_start(void);
+void pool_adjust(void);
+void pool_mainloop(void);
+void pool_stop(void);
 
-void scoreboard_new(serverConfig_t * conf);
-void scoreboard_lock_new(void);
-void scoreboard_release(pid_t pid);
-void scoreboard_delete(void);
-int child_register(void);
-void child_reg_connected(void);
 void child_reg_connected_client(const char *ip, const char *name);
 void child_reg_connected_user(char *user);
-void child_reg_disconnected(void);
-void child_unregister(void);
-int count_children(void);
-int count_spare_children(void);
-pid_t get_idle_spare(void);
-int getKey(pid_t pid);
 
-void manage_start_children(void);
-void manage_restart_children(void);
-void manage_spare_children(void);
-void manage_stop_children(void);
-void scoreboard_setup(void);
-void scoreboard_conf_check(void);
-void scoreboard_state(void);
-void statefile_create(char *scoreFile);
+void client_close(void);
+void disconnect_all(void);
 
 #endif

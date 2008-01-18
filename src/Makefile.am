@@ -51,7 +51,6 @@ COMMON = dbmail-user.c \
 	dm_iconv.c $(DM_GETOPT)
 	
 SERVER = server.c \
-	serverchild.c \
 	serverparent.c \
 	serverpool.c \
 	dm_cidr.c

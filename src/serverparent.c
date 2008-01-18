@@ -39,6 +39,8 @@ extern volatile sig_atomic_t mainStatus;
 extern volatile sig_atomic_t mainStop;
 extern volatile sig_atomic_t mainSig;
 
+extern FILE *scoreFD;
+
 /* Not used, but required to link with libdbmail.so */
 int verbose = 0;
 int no_to_all = 0;
@@ -146,6 +148,54 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 
 	return 0;
 }
+
+static FILE *statefile_to_close;
+static char *statefile_to_remove;
+
+static void statefile_remove(void)
+{
+	int res;
+	extern int isChildProcess;
+
+	if (isChildProcess)
+		return;
+
+	if (statefile_to_close) {
+		res = fclose(statefile_to_close);
+		if (res) TRACE(TRACE_ERROR, "Error closing statefile: [%s].",
+			strerror(errno));
+		statefile_to_close = NULL;
+	}
+
+	if (statefile_to_remove) {
+		res = unlink(statefile_to_remove);
+		if (res) TRACE(TRACE_ERROR, "Error unlinking statefile [%s]: [%s].",
+			statefile_to_remove, strerror(errno));
+		g_free(statefile_to_remove);
+		statefile_to_remove = NULL;
+	}
+
+}
+
+static void statefile_create(char *scoreFile)
+{
+	TRACE(TRACE_DEBUG, "Creating scoreboard at [%s].", scoreFile);
+	if (!(scoreFD = fopen(scoreFile, "w"))) {
+		TRACE(TRACE_ERROR, "Cannot open scorefile [%s], error was [%s]",
+			scoreFile, strerror(errno));
+	}
+	chmod(scoreFile, 0644);
+	if (scoreFD == NULL) {
+		TRACE(TRACE_ERROR, "Could not create scoreboard [%s].", scoreFile );
+	}
+
+	atexit(statefile_remove);
+
+	statefile_to_close = scoreFD;
+	statefile_to_remove = g_strdup(scoreFile);
+}
+
+
 
 int serverparent_mainloop(serverConfig_t *config, const char *service, const char *servicename)
 {

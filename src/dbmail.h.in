@@ -90,7 +90,6 @@
 #include "imap4.h"
 #include "imapcommands.h"
 #include "server.h"
-#include "serverchild.h"
 #include "serverparent.h"
 #include "serverpool.h"
 #include "pop3.h"

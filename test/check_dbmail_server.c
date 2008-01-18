@@ -61,15 +61,6 @@ void teardown(void)
 	db_disconnect();
 	g_mime_shutdown();
 }
-
-START_TEST(test_scoreboard_new)
-{
-	serverConfig_t *config = g_new0(serverConfig_t,1);
-	scoreboard_new(config);
-	g_free(config);
-}
-END_TEST
-
 #define X(a,b,c,d) fail_unless(dm_sock_compare((b),(c),(d))==(a),"dm_sock_compare failed")
 #define Y(a,b,c) fail_unless(dm_sock_score((b),(c))==(a),"dm_sock_score failed")
 START_TEST(test_dm_sock_compare) 
@@ -108,7 +99,6 @@ Suite *dbmail_server_suite(void)
 	suite_add_tcase(s, tc_server);
 	
 	tcase_add_checked_fixture(tc_pool, setup, teardown);
-	tcase_add_test(tc_pool, test_scoreboard_new);
 	
 	tcase_add_checked_fixture(tc_server, setup, teardown);
 	tcase_add_test(tc_server, test_dm_sock_compare);
