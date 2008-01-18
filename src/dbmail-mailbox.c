@@ -165,6 +165,15 @@ void mailbox_uid_msn_new(struct DbmailMailbox *self)
 	self->rows = 1;
 }
 
+static void mailbox_set_msginfo(struct DbmailMailbox *self, GTree *msginfo)
+{
+	/* switch to new cache and retire the old one */
+	GTree *oldmsginfo = self->msginfo;
+	self->msginfo = msginfo;
+	if (oldmsginfo) g_tree_destroy(oldmsginfo);
+}
+
+
 int dbmail_mailbox_open(struct DbmailMailbox *self)
 {
 
@@ -172,7 +181,7 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 	const char *query_result, *keyword;
 	char *to_char_str;
 	MessageInfo *result;
-	GTree *oldmsginfo, *msginfo;
+	GTree *msginfo;
 	u64_t *uid, *msn;
 	u64_t id;
 	char query[DEF_QUERYSIZE];
@@ -191,19 +200,21 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		to_char_str,DBPFX,DBPFX, self->id,
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,MESSAGE_STATUS_DELETE);
 
-	if (db_query(query) == -1) {
+	if (db_query(query) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "could not select message info");
 		return DM_EQUERY;
 	}
 
-	if ((nrows = db_num_rows()) == 0) {
-		TRACE(TRACE_ERROR, "empty result set");
-		db_free_result();
-		return DM_EQUERY;
-	}
-
 	mailbox_uid_msn_new(self);
-	msginfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,(GDestroyNotify)g_free);
+	msginfo = g_tree_new_full((GCompareDataFunc)ucmp,
+		NULL,NULL,(GDestroyNotify)g_free);
+
+	if ((nrows = db_num_rows()) == 0) {
+		TRACE(TRACE_INFO, "empty result set");
+		mailbox_set_msginfo(self, msginfo);
+		db_free_result();
+		return DM_SUCCESS;
+	}
 
 	for (i = 0; i < nrows; i++) {
 
@@ -218,7 +229,7 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		g_tree_insert(self->ids,uid,msn);
 		g_tree_insert(self->msn,msn,uid);
 
-		
+
 		result = g_new0(MessageInfo,1);
 
 		/* id */
@@ -234,16 +245,15 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		/* internal date */
 		query_result = db_get_result(i, IMAP_NFLAGS);
 		strncpy(result->internaldate,
-			(query_result) ? query_result :
-			"01-Jan-1970 00:00:01 +0100",
-			IMAP_INTERNALDATE_LEN);
-		
+				(query_result) ? query_result :
+				"01-Jan-1970 00:00:01 +0100",
+				IMAP_INTERNALDATE_LEN);
+
 		/* rfcsize */
 		result->rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
-		
+
 		g_tree_insert(msginfo, uid, result); 
 	}
-
 	db_free_result();
 
 	memset(query,0,sizeof(query));
@@ -257,34 +267,32 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 
 	if (db_query(query) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "db failure retrieving keywords");
-	} else {
-		if ((nrows = db_num_rows()) == 0) {
-			TRACE(TRACE_DEBUG, "no keywords");
-			db_free_result();
-		} else {
-			for (i = 0; i < nrows; i++) {
-				id = db_get_result_u64(i, 0);
-				keyword = db_get_result(i, 1);
-				if ((result = g_tree_lookup(msginfo, &id)) != NULL)
-					result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-			}
-		}
+		g_tree_destroy(msginfo);
+		return DM_EQUERY;
+	}
+
+	if ((nrows = db_num_rows()) == 0) {
+		TRACE(TRACE_DEBUG, "no keywords");
+		db_free_result();
+		mailbox_set_msginfo(self, msginfo);
+		return DM_SUCCESS;
+	}
+	for (i = 0; i < nrows; i++) {
+		id = db_get_result_u64(i, 0);
+		keyword = db_get_result(i, 1);
+		if ((result = g_tree_lookup(msginfo, &id)) != NULL)
+			result->keywords = g_list_append(result->keywords, 
+				g_strdup(keyword));
 	}
 
 	db_free_result();
 
-	/* switch to new cache and retire the old one */
-	oldmsginfo = self->msginfo;
-	self->msginfo = msginfo;
-	if (oldmsginfo) g_tree_destroy(oldmsginfo);
-
-	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
+	mailbox_set_msginfo(self, msginfo);
+	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", 
+		g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
 
 	return DM_SUCCESS;
 }
-
-
-
 
 int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
 {

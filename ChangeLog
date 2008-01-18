@@ -1,3 +1,43 @@
+2008-01-18  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-mailbox.c:
+	fix opening empty mailboxes
+	* src/dbmail-imapsession.c:
+	fix _fetch_headers
+
+2008-01-09  Paul J Stevens <paul@nfg.nl>
+
+	* src/Makefile.am, src/dbmail.h.in, src/server.c, src/serverchild.c, 
+	src/serverchild.h, src/serverparent.c, src/serverpool.c, 
+	src/serverpool.h, test/check_dbmail_server.c:
+	cleanup the server code a little
+
+2008-01-08  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, src/dbmail-imapsession.c:
+	reset header cache during fetch_items run
+	* src/dbmail-message.c, src/dm_db.c, src/dm_db.h, 
+	test/check_dbmail_imapd.c:
+	updates and cleanups
+	* src/dbmail-message.c, test/check_dbmail.h, 
+	test/check_dbmail_message.c:
+	finish mime iterator fix
+	* src/dbmail-imapsession.c, src/dbmail-message.c, src/dm_debug.c, 
+	test/check_dbmail.h, test/check_dbmail_message.c:
+	wip mime iterator fix
+	* src/dbmail-imapsession.c, src/dbmail-mailbox.c, 
+	src/dbmail-message.c, src/dm_db.c, src/imapcommands.c:
+	merge dbmail_mailbox_get_msginfo into dbmail_mailbox_open
+	* src/dbmail-imapsession.c, src/imapcommands.c:
+	call dbmail_mailbox_get_msginfo less often
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmail-mailbox.c, src/dbmail-mailbox.h, src/imapcommands.c:
+	move MessageInfo cache from ImapSession to Mailbox
+	* src/dbmail-imapsession.c, src/dbmail-mailbox.c:
+	wip bug 659
+	* src/dbmail.h.in, src/dm_db.c, src/modules/dbmysql.c:
+	cleanups
+
 2008-01-08  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.c:
