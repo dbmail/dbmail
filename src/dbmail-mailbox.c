@@ -195,10 +195,10 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
 		 "FROM %smessages msg, %sphysmessage pm "
 		 "WHERE pm.id = msg.physmessage_id "
-		 "AND mailbox_idnr = %llu AND status IN (%d,%d,%d) "
+		 "AND mailbox_idnr = %llu AND status IN (%d,%d) "
 		 "ORDER BY message_idnr ASC",
 		to_char_str,DBPFX,DBPFX, self->id,
-		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,MESSAGE_STATUS_DELETE);
+		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	if (db_query(query) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "could not select message info");
