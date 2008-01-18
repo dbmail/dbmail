@@ -1105,18 +1105,17 @@ void _send_headers(struct ImapSession *self, const body_fetch_t *bodyfetch, gboo
 {
 	long long cnt = 0;
 	gchar *tmp;
+	gchar *s;
 	GString *ts;
 
-	char *s = g_tree_lookup(self->headers, &(self->msg_idnr));
-	assert(s);
-
-	TRACE(TRACE_DEBUG,"[%s] [%s]", bodyfetch->hdrplist, s);
 	dbmail_imap_session_buff_append(self,"HEADER.FIELDS%s %s] ", not ? ".NOT" : "", bodyfetch->hdrplist);
 
-	if (!s) {
+	if (! (s = g_tree_lookup(self->headers, &(self->msg_idnr)))) {
 		dbmail_imap_session_buff_append(self, "{2}\r\n\r\n");
 		return;
 	}
+
+	TRACE(TRACE_DEBUG,"[%s] [%s]", bodyfetch->hdrplist, s);
 
 	ts = g_string_new(s);
 
