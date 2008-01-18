@@ -1,6 +1,14 @@
 2008-01-18  Paul J Stevens <paul@nfg.nl>
 
+	* test-scripts/testimap.py:
+	update test
+	* src/dbmail-imapsession.c:
+	remove faulty assertion
+	* src/server.c, src/serverpool.c:
+	startup the processpool properly
 	* src/dbmail-mailbox.c:
+	ignore purged messages
+	* ChangeLog, src/dbmail-mailbox.c:
 	fix opening empty mailboxes
 	* src/dbmail-imapsession.c:
 	fix _fetch_headers

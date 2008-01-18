@@ -1,8 +1,8 @@
-dbmail (2.3.2rc1-1) experimental; urgency=low
+dbmail (2.3.2rc4-1) experimental; urgency=low
 
   * rc package
 
- -- Paul J Stevens <paul@nfg.nl>  Wed, 19 Dec 2007 10:34:53 +0100
+ -- Paul J Stevens <paul@nfg.nl>  Fri, 18 Jan 2008 10:34:00 +0100
 
 dbmail (2.3.0-1) experimental; urgency=low
 
