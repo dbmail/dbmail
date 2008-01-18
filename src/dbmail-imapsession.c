@@ -1101,11 +1101,14 @@ static void _fetch_envelopes(struct ImapSession *self)
 	dbmail_imap_session_buff_append(self, "ENVELOPE %s", s?s:"");
 }
 
-void _send_headers(struct ImapSession *self, const body_fetch_t *bodyfetch, gboolean not, const gchar *s)
+void _send_headers(struct ImapSession *self, const body_fetch_t *bodyfetch, gboolean not)
 {
 	long long cnt = 0;
 	gchar *tmp;
 	GString *ts;
+
+	char *s = g_tree_lookup(self->headers, &(self->msg_idnr));
+	assert(s);
 
 	TRACE(TRACE_DEBUG,"[%s] [%s]", bodyfetch->hdrplist, s);
 	dbmail_imap_session_buff_append(self,"HEADER.FIELDS%s %s] ", not ? ".NOT" : "", bodyfetch->hdrplist);
@@ -1136,8 +1139,6 @@ void _send_headers(struct ImapSession *self, const body_fetch_t *bodyfetch, gboo
 		dbmail_imap_session_buff_append(self, "{%llu}\r\n%s\r\n", cnt+2, tmp);
 	}
 
-	dbmail_imap_session_buff_flush(self);
-
 	g_string_free(ts,TRUE);
 	g_free(tmp);
 }
@@ -1148,25 +1149,31 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 {
 	unsigned i=0, rows=0;
 	GString *q = g_string_new("");
-	gchar *fld, *val, *old, *new = NULL, *s;
+	gchar *fld, *val, *old, *new = NULL;
 	u64_t *mid;
 	u64_t id;
 	GList *last;
 	int k;
+	static int argstart = 0;
 	static int lo = 0;
 	static u64_t hi = 0;
 	static u64_t ceiling = 0;
 	char range[DEF_FRAGSIZE];
 	memset(range,0,DEF_FRAGSIZE);
 
-	if (self->headers)
+	if (self->headers && bodyfetch->argstart != argstart) {
 		g_tree_destroy(self->headers);
+		self->headers = NULL;
+		argstart = bodyfetch->argstart;
+	}
 
-	TRACE(TRACE_DEBUG, "init self->headers");
-	self->headers = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	ceiling = 0;
-	hi = 0;
-	lo = 0;
+	if (! self->headers) {
+		TRACE(TRACE_DEBUG, "init self->headers");
+		self->headers = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+		ceiling = 0;
+		hi = 0;
+		lo = 0;
+	}
 
 	if (! bodyfetch->hdrnames) {
 
@@ -1185,16 +1192,13 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 		bodyfetch->hdrnames = h->str;
 
 		g_string_free(h,FALSE);
-
-
 	}
 
 	TRACE(TRACE_DEBUG,"for %llu [%s]", self->msg_idnr, bodyfetch->hdrplist);
 
 	// did we prefetch this message already?
-	s = g_tree_lookup(self->headers, &(self->msg_idnr));
 	if (self->msg_idnr <= ceiling) {
-		_send_headers(self, bodyfetch, not, s);
+		_send_headers(self, bodyfetch, not);
 		return;
 	}
 
@@ -1209,6 +1213,7 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 	else
 		snprintf(range,DEF_FRAGSIZE,"BETWEEN %llu AND %llu", self->msg_idnr, hi);
 
+	TRACE(TRACE_DEBUG,"prefetch %llu:%llu ceiling %llu [%s]", self->msg_idnr, hi, ceiling, bodyfetch->hdrplist);
 	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
 			"FROM %sheadervalue v "
 			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
@@ -1237,13 +1242,14 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 		
 		fld = (char *)db_get_result(i,1);
 		val = dbmail_iconv_db_to_utf7((char *)db_get_result(i,2));
-		TRACE(TRACE_DEBUG,"got hdrval [%s]", val);
-		
-		old = g_tree_lookup(self->headers, (gconstpointer)mid);
-		new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
-		g_free(val);
-		
-		g_tree_insert(self->headers,mid,new);
+		if (! val) {
+			TRACE(TRACE_DEBUG, "[%llu] no headervalue [%s]", id, fld);
+		} else {
+			old = g_tree_lookup(self->headers, (gconstpointer)mid);
+			new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
+			g_free(val);
+			g_tree_insert(self->headers,mid,new);
+		}
 		
 	}
 
@@ -1253,9 +1259,7 @@ static void _fetch_headers(struct ImapSession *self, body_fetch_t *bodyfetch, gb
 	db_free_result();
 	g_string_free(q,TRUE);
 
-	s = g_tree_lookup(self->headers, &(self->msg_idnr));
-	_send_headers(self, bodyfetch, not, s);
-
+	_send_headers(self, bodyfetch, not);
 
 	return;
 }
