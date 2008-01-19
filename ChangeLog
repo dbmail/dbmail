@@ -1,3 +1,8 @@
+2008-01-19  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	call register_header from dbmail_message_set_header (aaron)
+
 2008-01-10  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c:

@@ -529,6 +529,11 @@ gchar * dbmail_message_get_envelope_recipient(const struct DbmailMessage *self)
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
+
+	// Since dbmail_message_set_header is called after message_init,
+	// we need to manually insert this header into the in-memory tree.
+	_register_header(header, value, (gpointer)self);
+
 }
 
 const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header)
@@ -994,6 +999,8 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	else if (g_ascii_strcasecmp(header,"Cc")==0)
 		isaddr=1;
 	else if (g_ascii_strcasecmp(header,"Bcc")==0)
+		isaddr=1;
+	else if (g_ascii_strcasecmp(header,"Return-path")==0)
 		isaddr=1;
 
 	q = g_string_new("");
