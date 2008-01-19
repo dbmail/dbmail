@@ -282,7 +282,7 @@ static const char * find_boundary(const char *s)
 
 	memset(header,0,sizeof(header));
 
-	rest = g_strcasestr(s, "Content-type:");
+	rest = g_strcasestr(s, "\nContent-type:");
 	if (! rest)
 		return NULL;
 
@@ -359,6 +359,7 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 		got_boundary = FALSE;
 		if (is_header && ((boundary = find_boundary(str)) != NULL)) {
 			got_boundary = TRUE;
+			dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
 			blist[depth] = (char *)boundary;
 		}
 
