@@ -1,3 +1,8 @@
+2008-01-20  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	prevent possible segfault
+
 2008-01-19  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c:

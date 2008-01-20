@@ -530,9 +530,10 @@ void dbmail_message_set_header(struct DbmailMessage *self, const char *header, c
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
 
-	// Since dbmail_message_set_header is called after message_init,
+	// If dbmail_message_set_header is called after message_init,
 	// we need to manually insert this header into the in-memory tree.
-	_register_header(header, value, (gpointer)self);
+	if (self->headers)
+		_register_header(header, value, (gpointer)self);
 
 }
 
