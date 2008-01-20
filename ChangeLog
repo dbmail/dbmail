@@ -1,5 +1,7 @@
 2008-01-20  Paul J Stevens <paul@nfg.nl>
 
+	* VERSION, debian/changelog:
+	2.2.9rc1
 	* dbmail-message.c:
 	prevent possible segfault
 
