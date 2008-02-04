@@ -282,7 +282,11 @@ static const char * find_boundary(const char *s)
 
 	memset(header,0,sizeof(header));
 
-	rest = g_strcasestr(s, "\nContent-type:");
+	rest = g_strcasestr(s, "\nContent-type: ");
+	if (! rest) {
+		if ((g_strncasecmp(s, "Content-type: ", 14)) == 0)
+			rest = (char *)s;
+	}
 	if (! rest)
 		return NULL;
 
@@ -920,7 +924,7 @@ static void _register_header(const char *header, const char *value, gpointer use
 		hvalue = value;
 	}
 	
-	if (! g_relation_exists(m->headers, hname, hvalue))
+	if (m->headers && (! g_relation_exists(m->headers, hname, hvalue)))
 		g_relation_insert(m->headers, hname, hvalue);
 }
 

@@ -1,3 +1,31 @@
+2008-01-20  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-message.c:
+	fix a couple of regressions
+
+2008-01-19  Paul Stevens <paul@nfg.nl>
+
+	* src/dbmail-message.c:
+	call register_header from dbmail_message_set_header (aaron)
+	* src/dbmail-message.c:
+	ignore content-type headers hidden inside headervalues during message 
+	reconstruction
+
+2008-01-18  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, debian/changelog, test-scripts/testimap.py:
+	update test
+	* src/dbmail-imapsession.c:
+	remove faulty assertion
+	* src/server.c, src/serverpool.c:
+	startup the processpool properly
+	* src/dbmail-mailbox.c:
+	ignore purged messages
+	* ChangeLog, src/dbmail-mailbox.c:
+	fix opening empty mailboxes
+	* src/dbmail-imapsession.c:
+	fix _fetch_headers
+
 2008-01-18  Paul J Stevens <paul@nfg.nl>
 
 	* test-scripts/testimap.py:
