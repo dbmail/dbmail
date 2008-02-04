@@ -1,3 +1,8 @@
+2008-02-04  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION, debian/changelog:
+	v2.3.2
+
 2008-01-20  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-message.c:
