@@ -1543,12 +1543,14 @@ int db_icheck_physmessages(gboolean cleanup)
 
 	if (cleanup) {
 		snprintf(query, DEF_QUERYSIZE, 
-			"DELETE FROM %sphysmessage WHERE id NOT IN "
-			"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
+			"DELETE FROM %sphysmessage p "
+			"LEFT JOIN %smessages m ON p.id = m.physmessage_id "
+			"WHERE m.message_idnr IS NULL ", DBPFX, DBPFX);
 	} else {
 		snprintf(query, DEF_QUERYSIZE, 
-			"SELECT COUNT(*) FROM %sphysmessage WHERE id NOT IN "
-			"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
+			"SELECT COUNT(*) FROM %sphysmessage p "
+			"LEFT JOIN %smessages m ON p.id = m.physmessage_id "
+			"WHERE m.message_idnr IS NULL ", DBPFX, DBPFX);
 	}
 
 	if ((result = db_query(query)) < 0) {
