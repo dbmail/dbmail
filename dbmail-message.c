@@ -310,8 +310,8 @@ static int _set_content(struct DbmailMessage *self, const GString *content)
 		self->raw = NULL;
 	}
 
-	self->raw = g_byte_array_new();
-	self->raw = g_byte_array_append(self->raw,(guint8 *)content->str, content->len+1);
+	//self->raw = g_byte_array_new();
+	//self->raw = g_byte_array_append(self->raw,(guint8 *)content->str, content->len+1);
 	//stream = g_mime_stream_mem_new_with_byte_array(self->raw);
 	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
 	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
@@ -330,11 +330,11 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 	GMimeStream *fstream, *bstream, *mstream;
 	GMimeFilter *filter;
 	GMimeParser *parser;
-	gchar *buf, *from = NULL;
+	gchar buf[MESSAGE_MAX_LINE_SIZE], *from = NULL;
 	ssize_t getslen, putslen;
 	FILE *tmp;
 	int res = 0;
-	gboolean firstline=TRUE;
+	gboolean firstline;
 
 	/*
 	 * buildup the memory stream buffer
@@ -353,8 +353,6 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 		case DBMAIL_STREAM_LMTP:
 		case DBMAIL_STREAM_PIPE:
 
-			buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
-
 			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
 //			mstream = g_mime_stream_mem_new();
@@ -367,11 +365,18 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 
-			while ((getslen = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) > 0) {
-				if (firstline && strncmp(buf,"From ",5)==0) {
-					from = g_strdup(buf);
-					firstline=FALSE;
-					continue;
+			firstline = TRUE;
+			while (TRUE) {
+				memset(buf,0,sizeof(buf));
+				if ((getslen = g_mime_stream_buffer_gets(bstream, buf, sizeof(buf))) <= 0)
+					break;
+
+				if (firstline) {
+					firstline = FALSE;
+					if ( (strncmp(buf,"From ",5)==0) ) {
+						from = g_strdup(buf);
+						continue;
+					}
 				}
 
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
@@ -397,8 +402,6 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 				TRACE(TRACE_ERROR, "Read failed, did the client drop the connection?");
 				res = 1;
 			}
-
-			g_free(buf);
 
 			g_mime_stream_reset(mstream);
 			g_mime_parser_init_with_stream(parser, mstream);
