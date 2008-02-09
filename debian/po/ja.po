@@ -14,22 +14,21 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: dbmail 1.2.9-1\n"
+"Project-Id-Version: dbmail 2.2.7-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
 "POT-Creation-Date: 2007-02-25 08:21+0100\n"
-"PO-Revision-Date: 2004-11-03 01:43+0900\n"
-"Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
+"PO-Revision-Date: 2008-02-02 17:26+0900\n"
+"Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=EUC-JP\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:1001
-#, fuzzy
 msgid "Use debconf to manage dbmail configuration?"
-msgstr "dbmail ¤ÎÀßÄê¤Ë debconf ¤òÍøÍÑ¤·¤Ş¤¹¤«?"
+msgstr "DBMail ã®è¨­å®šã« debconf ã‚’åˆ©ç”¨ã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
@@ -40,16 +39,16 @@ msgid ""
 "will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
 "dbmail."
 msgstr ""
-"dbmail ÀßÄê¤Î°ìÉô¤ò debconf ¤ÇÀßÄê¤·¤¿¤¤¾ì¹ç¤Ï¡¢¤³¤³¤Ç¡Ö¤Ï¤¤¡×¤ÈÅú¤¨¤Æ¤¯¤À¤µ"
-"¤¤¡£dbmail.conf ¤ËÂĞ¤·¤Æ¼êÆ°¤ÇÊÑ¹¹¤ò¹Ô¤Ã¤¿ÉôÊ¬¤Ï¾å½ñ¤­¡Ö¤µ¤ì¤Ê¤¤¡×¤Î¤Ç¡¢¸å¤Û"
-"¤ÉºÆÅÙ dpkg-reconfigure dbmail ¤È¼Â¹Ô¤¹¤ë¤Î¤òÁª¤ÖÉ¬Í×¤¬¤¢¤ë¤Î¤ËÃí°Õ¤·¤Æ¤¯¤À¤µ"
-"¤¤¡£"
+"DBMail è¨­å®šã®ä¸€éƒ¨ã‚’ debconf ã§è¨­å®šã—ãŸã„å ´åˆã¯ã€ã“ã“ã§ã€Œã¯ã„ã€ã¨ç­”ãˆã¦ãã ã•"
+"ã„ã€‚dbmail.conf ã«å¯¾ã—ã¦æ‰‹å‹•ã§å¤‰æ›´ã‚’è¡Œã£ãŸéƒ¨åˆ†ã¯ä¸Šæ›¸ãã€Œã•ã‚Œãªã„ã€ã®ã§ã€å¾Œã»"
+"ã©å†åº¦ dpkg-reconfigure dbmail ã¨å®Ÿè¡Œã™ã‚‹ã®ã‚’é¸ã¶å¿…è¦ãŒã‚ã‚‹ã®ã«æ³¨æ„ã—ã¦ãã ã•"
+"ã„ã€‚"
 
 #. Type: select
 #. Description
 #: ../dbmail.templates:2001
 msgid "Authentication driver to activate:"
-msgstr ""
+msgstr "æœ‰åŠ¹ã«ã™ã‚‹èªè¨¼æ‰‹æ³•:"
 
 #. Type: select
 #. Description
@@ -58,149 +57,140 @@ msgid ""
 "Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
 "instead."
 msgstr ""
+"DBMail ã¯ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã§ SQL ãƒ™ãƒ¼ã‚¹ã®èªè¨¼ã‚’ä½¿ã„ã¾ã™ã€‚ã—ã‹ã—ã€ä»£ã‚ã‚Šã« LDAP ã‚’ä½¿ã†"
+"ã®ã‚‚å¯èƒ½ã§ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:3001
-#, fuzzy
 msgid "Postmaster's email address:"
-msgstr "postmaster ¤Î¥á¡¼¥ë¥¢¥É¥ì¥¹"
+msgstr "postmaster ã®ãƒ¡ãƒ¼ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:3001
-#, fuzzy
 msgid ""
 "Please choose a valid email address read by the person responsible for this "
 "email server."
 msgstr ""
-"¤³¤ì¤Ï¡¢¤³¤Î¥á¡¼¥ë¥µ¡¼¥Ğ¤ÎÀÕÇ¤¼Ô¤¬³Î¼Â¤ËÆÉ¤à¥á¡¼¥ë¥¢¥É¥ì¥¹¤Ç¤¢¤ëÉ¬Í×¤¬¤¢¤ê¤Ş"
-"¤¹¡£"
+"ã“ã®ãƒ¡ãƒ¼ãƒ«ã‚µãƒ¼ãƒã®è²¬ä»»è€…ãŒèª­ã‚€æ­£ã—ã„ãƒ¡ãƒ¼ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’é¸ã‚“ã§ãã ã•ã„ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:3001
 msgid "Example: postmaster@yourdomain.tld"
-msgstr "Îã: postmaster@yourdomain.tld"
+msgstr "ä¾‹: postmaster@yourdomain.tld"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:4001
-#, fuzzy
 msgid "Hostname of the SQL database server:"
-msgstr "(my/pg)sql ¥Ç¡¼¥¿¥Ù¡¼¥¹¥µ¡¼¥Ğ¤Î¥Û¥¹¥ÈÌ¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "SQL ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ã‚µãƒ¼ãƒã®ãƒ›ã‚¹ãƒˆå:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:4001
-#, fuzzy
 msgid ""
 "Please mention the server where a database to hold dbmail's tables will be "
 "created. You should grant full read/write permissions on this database to "
 "the dbmail user."
 msgstr ""
-"¤³¤Î¥µ¡¼¥Ğ¤Ç dbmail ¤Î¥Æ¡¼¥Ö¥ë¤ò»ı¤Ä¥Ç¡¼¥¿¥Ù¡¼¥¹¤òºîÀ®¤·¤Ê¤±¤ì¤Ğ¤Ê¤ê¤Ş¤»¤ó¡£"
-"¤³¤Î¥Ç¡¼¥¿¥Ù¡¼¥¹¤Ç¡¢dbmail ¥æ¡¼¥¶¤ËÂĞ¤·¤ÆÆÉ¤ß½ñ¤­¤ÎÁ´¸¢¸Â¤òµö²Ä¤¹¤ëÉ¬Í×¤¬¤¢¤ê"
-"¤Ş¤¹¡£"
+"DBMail ã®ãƒ†ãƒ¼ãƒ–ãƒ«ã‚’æŒã¤ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ãŒä½œã‚‰ã‚Œã‚‹ã‚µãƒ¼ãƒã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚"
+"ã“ã®ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ã§ã€dbmail ãƒ¦ãƒ¼ã‚¶ã«å¯¾ã—ã¦èª­ã¿æ›¸ãã®å…¨æ¨©é™ã‚’è¨±å¯ã™ã‚‹å¿…è¦ãŒã‚ã‚Š"
+"ã¾ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:5001
-#, fuzzy
 msgid "The name of the database:"
-msgstr "ÍøÍÑ¤¹¤ë¥Ç¡¼¥¿¥Ù¡¼¥¹Ì¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹å:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:5001
-#, fuzzy
 msgid "Please mention the name of the database that holds the dbmail tables."
-msgstr "¤³¤ì¤Ï dbmail ¤Î¥Æ¡¼¥Ö¥ë¤òÊİ»ı¤¹¤ë¥Ç¡¼¥¿¥Ù¡¼¥¹Ì¾¤Ç¤¹¡£"
+msgstr "DBMail ã®ãƒ†ãƒ¼ãƒ–ãƒ«ã‚’ä¿æŒã™ã‚‹ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹åã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:5001
 msgid "If you're using sqlite, this should be the path to the database file."
-msgstr ""
+msgstr "sqlite ã‚’ä½¿ã£ã¦ã„ã‚‹å ´åˆã¯ã€ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ãƒ•ã‚¡ã‚¤ãƒ«ã¸ã®ãƒ‘ã‚¹ã«ãªã‚Šã¾ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:6001
 msgid "Database user:"
-msgstr ""
+msgstr "ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ãƒ¦ãƒ¼ã‚¶:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:6001
-#, fuzzy
 msgid ""
 "Please mention the username dbmail will use to connect to the database "
 "server."
-msgstr "¤³¤ì¤Ï dbmail ¤¬¥Ç¡¼¥¿¥Ù¡¼¥¹¥µ¡¼¥Ğ¤ËÀÜÂ³¤¹¤ë¤Î¤Ë»È¤¦¥æ¡¼¥¶Ì¾¤Ç¤¹¡£"
+msgstr ""
+"DBMail ãŒãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ã‚µãƒ¼ãƒã«æ¥ç¶šã™ã‚‹ã®ã«ä½¿ã†ãƒ¦ãƒ¼ã‚¶åã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚"
 
 #. Type: password
 #. Description
 #: ../dbmail.templates:7001
-#, fuzzy
 msgid "Password for the database connection:"
-msgstr "¥Ç¡¼¥¿¥Ù¡¼¥¹ÀÜÂ³¤ËÍøÍÑ¤¹¤ë¥Ñ¥¹¥ï¡¼¥É¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹æ¥ç¶šã®ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰:"
 
 #. Type: password
 #. Description
 #: ../dbmail.templates:7001
-#, fuzzy
 msgid ""
 "Please mention the password dbmail will use to connect to the database "
 "server."
-msgstr "¤³¤ì¤Ï¡¢dbmail ¤¬¥Ç¡¼¥¿¥Ù¡¼¥¹¥µ¡¼¥Ğ¤ËÀÜÂ³¤¹¤ë¤Î¤Ë»È¤¦¥Ñ¥¹¥ï¡¼¥É¤Ç¤¹¡£"
+msgstr "DBMail ãŒãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ã‚µãƒ¼ãƒã«æ¥ç¶šã™ã‚‹ã®ã«ä½¿ã†ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:8001
 msgid "Start the IMAP server after reboot?"
-msgstr "ºÆµ¯Æ°¸å¤Ë IMAP ¥µ¡¼¥Ğ¤òµ¯Æ°¤·¤Ş¤¹¤«?"
+msgstr "å†èµ·å‹•å¾Œã« IMAP ã‚µãƒ¼ãƒã‚’èµ·å‹•ã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:8001 ../dbmail.templates:10001
-#, fuzzy
 msgid ""
 "Dbmail supports both IMAP and POP3 services. You can choose to run either "
 "one or both services."
 msgstr ""
-"dbmail ¤Ï IMAP ¤È POP3 ¤ÎÎ¾Êı¤Î¥µ¡¼¥Ó¥¹¤ò¥µ¥İ¡¼¥È¤·¤Æ¤¤¤Ş¤¹¡£¤É¤Á¤é¤«¡¢¤â¤·¤¯"
-"¤ÏÎ¾Êı¤Î¥µ¡¼¥Ó¥¹¤Îµ¯Æ°¤òÁªÂò¤Ç¤­¤Ş¤¹¡£"
+"DBMail ã¯ IMAP ã¨ POP3 ã®ä¸¡æ–¹ã®ã‚µãƒ¼ãƒ“ã‚¹ã‚’ã‚µãƒãƒ¼ãƒˆã—ã¦ã„ã¾ã™ã€‚ã©ã¡ã‚‰ã‹ã€ã‚‚ã—ã"
+"ã¯ä¸¡æ–¹ã®ã‚µãƒ¼ãƒ“ã‚¹ã®èµ·å‹•ã‚’é¸æŠã§ãã¾ã™ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:9001
-#, fuzzy
 msgid "Start the LMTP server after reboot?"
-msgstr "ºÆµ¯Æ°¸å¤Ë IMAP ¥µ¡¼¥Ğ¤òµ¯Æ°¤·¤Ş¤¹¤«?"
+msgstr "å†èµ·å‹•å¾Œã« LMAP ã‚µãƒ¼ãƒã‚’èµ·å‹•ã—ã¾ã™ã‹?"
 
-#. Type: boolean
+#. Type: booleand
 #. Description
 #: ../dbmail.templates:9001
 msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
 "This is only needed when you like to feed the email to Dbmail by LMTP."
 msgstr ""
+"å†èµ·å‹•å¾Œã« LMTP ã‚µãƒ¼ãƒã‚’èµ·å‹•ã™ã‚‹ã‹ã©ã†ã‹ã‚’é¸ã‚“ã§ãã ã•ã„ã€‚ã“ã‚Œã¯ã€LMTP ã‚’ä½¿ã£ã¦"
+"ãƒ¡ãƒ¼ãƒ«ã‚’é…é€ã—ãŸã„å ´åˆã«ã®ã¿å¿…è¦ã«ãªã‚Šã¾ã™ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:10001
-#, fuzzy
 msgid "Start the POP3 server after reboot?"
-msgstr "ºÆµ¯Æ°¸å¤Ë IMAP ¥µ¡¼¥Ğ¤òµ¯Æ°¤·¤Ş¤¹¤«?"
+msgstr "å†èµ·å‹•å¾Œã« POP3 ã‚µãƒ¼ãƒã‚’èµ·å‹•ã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
-#, fuzzy
 msgid "Start the timsieve server after reboot?"
-msgstr "ºÆµ¯Æ°¸å¤Ë POP3 ¥µ¡¼¥Ğ¤òµ¯Æ°¤·¤Ş¤¹¤«?"
+msgstr "å†èµ·å‹•å¾Œã« timsieve ã‚µãƒ¼ãƒã‚’èµ·å‹•ã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
@@ -211,41 +201,42 @@ msgid ""
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
 msgstr ""
+"timsieve ã‚µãƒ¼ãƒã‚’å†èµ·å‹•å¾Œã«é–‹å§‹ã™ã‚‹ã‹ã©ã†ã‹ã‚’é¸ã‚“ã§ãã ã•ã„ã€‚ã“ã‚Œã¯ãƒ¦ãƒ¼ã‚¶ã«å¯¾ã—ã¦ "
+"kmail ã‚„ horde/ingoã€squirrelmail/avelsieve ã®ã‚ˆã†ãªäº’æ›æ€§ã®ã‚ã‚‹ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã‚’"
+"ä½¿ã£ã¦ã€è‡ªåˆ†ã® sieve ã‚¹ã‚¯ãƒªãƒ—ãƒˆã‚’ç®¡ç†ã•ã›ã¦ã‚‚æ§‹ã‚ãªã„å ´åˆã«ã®ã¿å¿…è¦ã¨ãªã‚Šã¾ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:12001
 msgid "Port used by the LDAP server:"
-msgstr ""
+msgstr "LDAP ã‚µãƒ¼ãƒã®ãƒãƒ¼ãƒˆç•ªå·:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:12001
-#, fuzzy
 msgid ""
 "Please enter the port which your LDAP server is listening on. The default "
 "port is 389."
-msgstr "ÍøÍÑ¤·¤¿¤¤¥Ç¡¼¥¿¥Ù¡¼¥¹¥æ¡¼¥¶Ì¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "LDAP ã‚µãƒ¼ãƒãŒ listen ã™ã‚‹ãƒãƒ¼ãƒˆç•ªå·ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®ãƒãƒ¼ãƒˆ"
+"ç•ªå·ã¯ 389 ã§ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:13001
-#, fuzzy
 msgid "Hostname of the LDAP server:"
-msgstr "(my/pg)sql ¥Ç¡¼¥¿¥Ù¡¼¥¹¥µ¡¼¥Ğ¤Î¥Û¥¹¥ÈÌ¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "LDAP ã‚µãƒ¼ãƒã®ãƒ›ã‚¹ãƒˆå:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:13001
-#, fuzzy
 msgid "Please enter the name of the host your LDAP server is running at."
-msgstr "ÍøÍÑ¤·¤¿¤¤¥Ç¡¼¥¿¥Ù¡¼¥¹¥æ¡¼¥¶Ì¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "LDAP ã‚µãƒ¼ãƒãŒå‹•ä½œã—ã¦ã„ã‚‹ãƒ›ã‚¹ãƒˆåã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:14001
 msgid "LDAP base DN:"
-msgstr ""
+msgstr "LDAP ãƒ™ãƒ¼ã‚¹ DN:"
 
 #. Type: string
 #. Description
@@ -253,12 +244,13 @@ msgstr ""
 msgid ""
 "Please enter the DN where Dbmail should start searching for user accounts."
 msgstr ""
+"DBMail ãŒãƒ¦ãƒ¼ã‚¶ã‚¢ã‚«ã‚¦ãƒ³ãƒˆã®æ¤œç´¢ã‚’é–‹å§‹ã™ã‚‹ DN ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:15001
 msgid "Field which contains the user login name of the user:"
-msgstr ""
+msgstr "ãƒ¦ãƒ¼ã‚¶ã®ãƒ­ã‚°ã‚¤ãƒ³åã‚’å«ã‚“ã§ã„ã‚‹ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰:"
 
 #. Type: string
 #. Description
@@ -267,12 +259,14 @@ msgid ""
 "Please enter the LDAP attribute that will contain the username. The standard "
 "account uses uid."
 msgstr ""
+"ãƒ¦ãƒ¼ã‚¶åã‚’å«ã‚“ã§ã„ã‚‹ LDAP ã‚¢ãƒˆãƒªãƒ“ãƒ¥ãƒ¼ãƒˆã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚"
+"æ¨™æº–çš„ãªã‚¢ã‚«ã‚¦ãƒ³ãƒˆã§ã¯ uid ã‚’ä½¿ã„ã¾ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:16001
 msgid "Field which contains the group id number of the user:"
-msgstr ""
+msgstr "ãƒ¦ãƒ¼ã‚¶ã®ã‚°ãƒ«ãƒ¼ãƒ— ID ã‚’å«ã‚“ã§ã„ã‚‹ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰:"
 
 #. Type: string
 #. Description
@@ -281,12 +275,14 @@ msgid ""
 "Please enter the LDAP attribute that will contain the group id number. The "
 "standard account uses gidNumber."
 msgstr ""
+"ã‚°ãƒ«ãƒ¼ãƒ— ID ç•ªå·ã‚’å«ã‚“ã§ã„ã‚‹ LDAP ã‚¢ãƒˆãƒªãƒ“ãƒ¥ãƒ¼ãƒˆã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚"
+"æ¨™æº–çš„ãªã‚¢ã‚«ã‚¦ãƒ³ãƒˆã§ã¯ gidNumber ã‚’ä½¿ã„ã¾ã™ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:17001
 msgid "Use an anonymous connection to the LDAP server?"
-msgstr ""
+msgstr "LDAP ã‚µãƒ¼ãƒã¨ã®æ¥ç¶šã«åŒ¿åæ¥ç¶šã‚’ä½¿ã„ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
@@ -295,120 +291,33 @@ msgid ""
 "Please choose this option if the LDAP server does not require authentication "
 "to search the LDAP tree."
 msgstr ""
+"LDAP ãƒ„ãƒªãƒ¼ã‚’æ¤œç´¢ã™ã‚‹ã®ã«èªè¨¼ãŒå¿…è¦ãªã„ LDAP ã‚µãƒ¼ãƒã§ã‚ã‚‹å ´åˆã¯ã“ã®ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã‚’"
+"é¸ã‚“ã§ãã ã•ã„ã€‚"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:18001
-#, fuzzy
 msgid "DN used to bind to the LDAP server:"
-msgstr "(my/pg)sql ¥Ç¡¼¥¿¥Ù¡¼¥¹¥µ¡¼¥Ğ¤Î¥Û¥¹¥ÈÌ¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "LDAP ã‚µãƒ¼ãƒã¸ã®ãƒã‚¤ãƒ³ãƒ‰ã«ä½¿ã† DN:"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:18001
-#, fuzzy
 msgid "Please enter the DN which should be used to connect to the LDAP server."
-msgstr "¤³¤ì¤Ï¡¢dbmail ¤¬¥Ç¡¼¥¿¥Ù¡¼¥¹¥µ¡¼¥Ğ¤ËÀÜÂ³¤¹¤ë¤Î¤Ë»È¤¦¥Ñ¥¹¥ï¡¼¥É¤Ç¤¹¡£"
+msgstr ""
+"LDAP ã‚µãƒ¼ãƒã¨ã®æ¥ç¶šæ™‚ã«ä½¿ã† DN ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚"
 
 #. Type: password
 #. Description
 #: ../dbmail.templates:19001
-#, fuzzy
 msgid "Password to bind to the LDAP server:"
-msgstr "(my/pg)sql ¥Ç¡¼¥¿¥Ù¡¼¥¹¥µ¡¼¥Ğ¤Î¥Û¥¹¥ÈÌ¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "LDAP ã‚µãƒ¼ãƒã¨ã®æ¥ç¶šã«ä½¿ã†ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰:"
 
 #. Type: password
 #. Description
 #: ../dbmail.templates:19001
-#, fuzzy
 msgid ""
 "Please enter the password which should be used to connect to the LDAP server."
-msgstr "¤³¤ì¤Ï¡¢dbmail ¤¬¥Ç¡¼¥¿¥Ù¡¼¥¹¥µ¡¼¥Ğ¤ËÀÜÂ³¤¹¤ë¤Î¤Ë»È¤¦¥Ñ¥¹¥ï¡¼¥É¤Ç¤¹¡£"
+msgstr ""
+"LDAP ã‚µãƒ¼ãƒã¨ã®æ¥ç¶šã«ä½¿ã†ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚"
 
-#, fuzzy
-#~ msgid ""
-#~ "Dbmail support both imap and pop3 services. You can choose to run either "
-#~ "one or both services."
-#~ msgstr ""
-#~ "dbmail ¤Ï IMAP ¤È POP3 ¤ÎÎ¾Êı¤Î¥µ¡¼¥Ó¥¹¤ò¥µ¥İ¡¼¥È¤·¤Æ¤¤¤Ş¤¹¡£¤É¤Á¤é¤«¡¢¤â"
-#~ "¤·¤¯¤ÏÎ¾Êı¤Î¥µ¡¼¥Ó¥¹¤Îµ¯Æ°¤òÁªÂò¤Ç¤­¤Ş¤¹¡£"
-
-#, fuzzy
-#~ msgid "start the imap server after reboot?"
-#~ msgstr "ºÆµ¯Æ°¸å¤Ë POP3 ¥µ¡¼¥Ğ¤òµ¯Æ°¤·¤Ş¤¹¤«?"
-
-#, fuzzy
-#~ msgid "start the lmtp server after reboot?"
-#~ msgstr "ºÆµ¯Æ°¸å¤Ë POP3 ¥µ¡¼¥Ğ¤òµ¯Æ°¤·¤Ş¤¹¤«?"
-
-#, fuzzy
-#~ msgid "start the pop3 server after reboot?"
-#~ msgstr "ºÆµ¯Æ°¸å¤Ë POP3 ¥µ¡¼¥Ğ¤òµ¯Æ°¤·¤Ş¤¹¤«?"
-
-#, fuzzy
-#~ msgid "The email address where bounces come from:"
-#~ msgstr "¥Ğ¥¦¥ó¥¹Á÷¿®¤Îºİ¤Î¥á¡¼¥ë¥¢¥É¥ì¥¹"
-
-#~ msgid ""
-#~ "Here you must specify the address dbmail will use when sending bounce "
-#~ "messages."
-#~ msgstr ""
-#~ "¤³¤³¤Ç¡¢dbmail ¤¬¥Ğ¥¦¥ó¥¹¥á¥Ã¥»¡¼¥¸¤òÁ÷¿®¤¹¤ëºİ¤ËÍøÍÑ¤¹¤ë¥¢¥É¥ì¥¹¤ò»ØÄê¤¹"
-#~ "¤ëÉ¬Í×¤¬¤¢¤ê¤Ş¤¹¡£"
-
-#~ msgid "Example: MAILER-DAEMON@yourdomain.tld"
-#~ msgstr "Îã: MAILER-DAEMON@yourdomain.tld"
-
-#, fuzzy
-#~ msgid "Run the stunnel SSL wrapper from the init script?"
-#~ msgstr "µ¯Æ°¥¹¥¯¥ê¥×¥È¤Ç stunnel SSL ¥é¥Ã¥Ñ¡¼¤ò¸Æ¤Ó½Ğ¤·¤Ş¤¹¤«?"
-
-#, fuzzy
-#~ msgid ""
-#~ "The stunnel SSL wrapper allows you to provide secure imap and pop "
-#~ "services even though dbmail supports neither imaps nor pop3s (yet)."
-#~ msgstr ""
-#~ "stunnel SSL ¥é¥Ã¥Ñ¡¼¤Ï¡¢dbmail ¤¬ IMAPS ¤Ş¤¿¤Ï POP3S ¤ò (¤Ş¤À) Äó¶¡¤·¤Æ¤¤"
-#~ "¤Ê¤¯¤Æ¤â¡¢¥»¥­¥å¥¢¤Ê IMAP¡¦POP ¥µ¡¼¥Ó¥¹¤òÄó¶¡²ÄÇ½¤Ë¤·¤Æ¤¯¤ì¤Ş¤¹¡£"
-
-#~ msgid ""
-#~ "Make sure you have installed stunnel which is provided by a separate "
-#~ "package if you want to use this feature."
-#~ msgstr ""
-#~ "¤³¤Îµ¡Ç½¤ò»È¤¤¤¿¤¤¾ì¹ç¤Ï¡¢ÊÌ¤Î¥Ñ¥Ã¥±¡¼¥¸¤Ë´Ş¤Ş¤ì¤Æ¤¤¤ë stunnel ¤ò¤¹¤Ç¤Ë¥¤"
-#~ "¥ó¥¹¥È¡¼¥ë¤·¤Æ¤¤¤ë¤Î¤ò³ÎÇ§¤·¤Æ¤¯¤À¤µ¤¤¡£"
-
-#, fuzzy
-#~ msgid "The filename for the SSL pem file:"
-#~ msgstr "SSL pem ¥Õ¥¡¥¤¥ëÌ¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
-
-#~ msgid ""
-#~ "To be able to run the stunnel SSL wrapper you need to generate a pem file "
-#~ "that should reside in /etc/ssl/certs/. Specify the filename here without  "
-#~ "the directory name."
-#~ msgstr ""
-#~ "stunnel SSL ¥é¥Ã¥Ñ¡¼¤òµ¯Æ°¤¹¤ë¤Ë¤Ï¡¢/etc/ssl/certs/ ¤ËÇÛÃÖ¤¹¤ë pem ¥Õ¥¡¥¤"
-#~ "¥ë¤òÀ¸À®¤¹¤ëÉ¬Í×¤¬¤¢¤ê¤Ş¤¹¡£¤³¤³¤Ç¡¢¥Ç¥£¥ì¥¯¥È¥êÌ¾Ìµ¤·¤Î¥Õ¥¡¥¤¥ëÌ¾¤ò»ØÄê¤·"
-#~ "¤Æ¤¯¤À¤µ¤¤¡£"
-
-#~ msgid ""
-#~ "Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
-#~ msgstr ""
-#~ "¤³¤Î¥Õ¥¡¥¤¥ë¤Îºî¤êÊı¤Ë¤Ä¤¤¤Æ¤Ï /usr/share/doc/stunnel/README.Debian ¤ò»²¾È"
-#~ "¤·¤Æ¤¯¤À¤µ¤¤¡£"
-
-#, fuzzy
-#~ msgid "start the timesieved after reboot?"
-#~ msgstr "ºÆµ¯Æ°¸å¤Ë POP3 ¥µ¡¼¥Ğ¤òµ¯Æ°¤·¤Ş¤¹¤«?"
-
-#, fuzzy
-#~ msgid "Do you want to start the imap service after a reboot?"
-#~ msgstr "ºÆµ¯Æ°¸å¤Ë IMAP ¥µ¡¼¥Ó¥¹¤ò³«»Ï¤·¤Ş¤¹¤«?"
-
-#, fuzzy
-#~ msgid "Do you want to start the pop3 service after a reboot?"
-#~ msgstr "ºÆµ¯Æ°¸å¤Ë POP3 ¥µ¡¼¥Ó¥¹¤ò³«»Ï¤·¤Ş¤¹¤«?"
-
-#, fuzzy
-#~ msgid "Do you want to start the timsieved service after a reboot?"
-#~ msgstr "ºÆµ¯Æ°¸å¤Ë IMAP ¥µ¡¼¥Ó¥¹¤ò³«»Ï¤·¤Ş¤¹¤«?"
