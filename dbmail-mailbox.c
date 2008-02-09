@@ -230,7 +230,8 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 	GString *date;
 	InternetAddressList *ialist;
 	InternetAddress *ia;
-	
+	GMimeStream *fstream;
+	GMimeFilter *filter;
 	GString *t;
 	
 	g_return_val_if_fail(GMIME_IS_MESSAGE(message->content),0);
@@ -266,9 +267,15 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 		
 	}
 	
-	r += g_mime_stream_write_string(ostream,s);
-	r += g_mime_stream_write_string(ostream,"\n");
-	
+	fstream = g_mime_stream_filter_new_with_stream(ostream);
+	filter = g_mime_filter_from_new(GMIME_FILTER_FROM_MODE_DEFAULT);
+	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
+	g_object_unref(filter);
+
+	r += g_mime_stream_write_string(fstream,s);
+	r += g_mime_stream_write_string(fstream,"\n");
+
+	g_object_unref(fstream);
 	g_free(s);
 	return r;
 }
