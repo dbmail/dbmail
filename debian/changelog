@@ -1,8 +1,9 @@
-dbmail (2.2.8+2.2.9rc1-1) unstable; urgency=low
+dbmail (2.2.9-1) unstable; urgency=low
 
-  * rc release
+  * upstream release
+  * update japanese PO file (Closes: #463706)
 
- -- Paul J Stevens <paul@nfg.nl>  Sun, 20 Jan 2008 17:30:47 +0100
+ -- Paul J Stevens <paul@nfg.nl>  Sat,  9 Feb 2008 13:04:54 +0100
 
 dbmail (2.2.8-1) unstable; urgency=low
 

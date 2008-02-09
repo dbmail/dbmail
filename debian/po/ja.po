@@ -1,22 +1,22 @@
-#
+# 
 #    Translators, if you are not familiar with the PO format, gettext
 #    documentation is worth reading, especially sections dedicated to
 #    this format, e.g. by running:
 #         info -n '(gettext)PO Files'
 #         info -n '(gettext)Header Entry'
-#
+# 
 #    Some information specific to po-debconf are available at
 #            /usr/share/doc/po-debconf/README-trans
 #         or http://www.debian.org/intl/l10n/po-debconf/README-trans
-#
+# 
 #    Developers do not need to manually edit POT or PO files.
-#
-#
+# 
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 2.2.7-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-25 08:21+0100\n"
+"POT-Creation-Date: 2007-02-28 18:17+0100\n"
 "PO-Revision-Date: 2008-02-02 17:26+0900\n"
 "Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
@@ -57,8 +57,8 @@ msgid ""
 "Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
 "instead."
 msgstr ""
-"DBMail はデフォルトで SQL ベースの認証を使います。しかし、代わりに LDAP を使う"
-"のも可能です。"
+"DBMail はデフォルトで SQL ベースの認証を使います。しかし、代わりに LDAP を使"
+"うのも可能です。"
 
 #. Type: string
 #. Description
@@ -72,8 +72,7 @@ msgstr "postmaster のメールアドレス:"
 msgid ""
 "Please choose a valid email address read by the person responsible for this "
 "email server."
-msgstr ""
-"このメールサーバの責任者が読む正しいメールアドレスを選んでください。"
+msgstr "このメールサーバの責任者が読む正しいメールアドレスを選んでください。"
 
 #. Type: string
 #. Description
@@ -95,9 +94,9 @@ msgid ""
 "created. You should grant full read/write permissions on this database to "
 "the dbmail user."
 msgstr ""
-"DBMail のテーブルを持つデータベースが作られるサーバを確認してください。"
-"このデータベースで、dbmail ユーザに対して読み書きの全権限を許可する必要があり"
-"ます。"
+"DBMail のテーブルを持つデータベースが作られるサーバを確認してください。この"
+"データベースで、dbmail ユーザに対して読み書きの全権限を許可する必要がありま"
+"す。"
 
 #. Type: string
 #. Description
@@ -144,7 +143,8 @@ msgstr "データベース接続のパスワード:"
 msgid ""
 "Please mention the password dbmail will use to connect to the database "
 "server."
-msgstr "DBMail がデータベースサーバに接続するのに使うパスワードを確認してください。"
+msgstr ""
+"DBMail がデータベースサーバに接続するのに使うパスワードを確認してください。"
 
 #. Type: boolean
 #. Description
@@ -170,15 +170,15 @@ msgstr ""
 msgid "Start the LMTP server after reboot?"
 msgstr "再起動後に LMAP サーバを起動しますか?"
 
-#. Type: booleand
+#. Type: boolean
 #. Description
 #: ../dbmail.templates:9001
 msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
 "This is only needed when you like to feed the email to Dbmail by LMTP."
 msgstr ""
-"再起動後に LMTP サーバを起動するかどうかを選んでください。これは、LMTP を使って"
-"メールを配送したい場合にのみ必要になります。"
+"再起動後に LMTP サーバを起動するかどうかを選んでください。これは、LMTP を使っ"
+"てメールを配送したい場合にのみ必要になります。"
 
 #. Type: boolean
 #. Description
@@ -201,9 +201,10 @@ msgid ""
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
 msgstr ""
-"timsieve サーバを再起動後に開始するかどうかを選んでください。これはユーザに対して "
-"kmail や horde/ingo、squirrelmail/avelsieve のような互換性のあるクライアントを"
-"使って、自分の sieve スクリプトを管理させても構わない場合にのみ必要となります。"
+"timsieve サーバを再起動後に開始するかどうかを選んでください。これはユーザに対"
+"して kmail や horde/ingo、squirrelmail/avelsieve のような互換性のあるクライア"
+"ントを使って、自分の sieve スクリプトを管理させても構わない場合にのみ必要とな"
+"ります。"
 
 #. Type: string
 #. Description
@@ -217,8 +218,9 @@ msgstr "LDAP サーバのポート番号:"
 msgid ""
 "Please enter the port which your LDAP server is listening on. The default "
 "port is 389."
-msgstr "LDAP サーバが listen するポート番号を入力してください。デフォルトのポート"
-"番号は 389 です。"
+msgstr ""
+"LDAP サーバが listen するポート番号を入力してください。デフォルトのポート番号"
+"は 389 です。"
 
 #. Type: string
 #. Description
@@ -243,8 +245,7 @@ msgstr "LDAP ベース DN:"
 #: ../dbmail.templates:14001
 msgid ""
 "Please enter the DN where Dbmail should start searching for user accounts."
-msgstr ""
-"DBMail がユーザアカウントの検索を開始する DN を入力してください。"
+msgstr "DBMail がユーザアカウントの検索を開始する DN を入力してください。"
 
 #. Type: string
 #. Description
@@ -259,8 +260,8 @@ msgid ""
 "Please enter the LDAP attribute that will contain the username. The standard "
 "account uses uid."
 msgstr ""
-"ユーザ名を含んでいる LDAP アトリビュートを入力してください。"
-"標準的なアカウントでは uid を使います。"
+"ユーザ名を含んでいる LDAP アトリビュートを入力してください。標準的なアカウン"
+"トでは uid を使います。"
 
 #. Type: string
 #. Description
@@ -275,8 +276,8 @@ msgid ""
 "Please enter the LDAP attribute that will contain the group id number. The "
 "standard account uses gidNumber."
 msgstr ""
-"グループ ID 番号を含んでいる LDAP アトリビュートを入力してください。"
-"標準的なアカウントでは gidNumber を使います。"
+"グループ ID 番号を含んでいる LDAP アトリビュートを入力してください。標準的な"
+"アカウントでは gidNumber を使います。"
 
 #. Type: boolean
 #. Description
@@ -291,8 +292,8 @@ msgid ""
 "Please choose this option if the LDAP server does not require authentication "
 "to search the LDAP tree."
 msgstr ""
-"LDAP ツリーを検索するのに認証が必要ない LDAP サーバである場合はこのオプションを"
-"選んでください。"
+"LDAP ツリーを検索するのに認証が必要ない LDAP サーバである場合はこのオプション"
+"を選んでください。"
 
 #. Type: string
 #. Description
@@ -304,8 +305,7 @@ msgstr "LDAP サーバへのバインドに使う DN:"
 #. Description
 #: ../dbmail.templates:18001
 msgid "Please enter the DN which should be used to connect to the LDAP server."
-msgstr ""
-"LDAP サーバとの接続時に使う DN を入力してください。"
+msgstr "LDAP サーバとの接続時に使う DN を入力してください。"
 
 #. Type: password
 #. Description
@@ -318,6 +318,4 @@ msgstr "LDAP サーバとの接続に使うパスワード:"
 #: ../dbmail.templates:19001
 msgid ""
 "Please enter the password which should be used to connect to the LDAP server."
-msgstr ""
-"LDAP サーバとの接続に使うパスワードを入力してください。"
-
+msgstr "LDAP サーバとの接続に使うパスワードを入力してください。"

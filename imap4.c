@@ -104,7 +104,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 	} else {
 		if (dbmail_imap_session_printf(session,
 			     "* OK dbmail imap (protocol version 4r1) server %s "
-			     "ready to run\r\n", IMAP_SERVER_VERSION) < 0) {
+			     "ready to run\r\n", DBMAIL_VERSION) < 0) {
 			dbmail_imap_session_delete(session);
 			return EOF;
 		}

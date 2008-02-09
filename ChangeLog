@@ -1,3 +1,24 @@
+2008-02-09  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION, debian/changelog, debian/po/ja.po, imap4.c, timsieve.c:
+	version 2.2.9
+	* db.c:
+	prevent regression in icheck_physmessages
+	* debian/po/ja.po:
+	update japanese debian po file
+
+2008-01-21  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	use outer join instead of subselect during icheck_physmessages
+
+2008-01-20  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_message.c, dbmail-mailbox.c:
+	do from escaping during export
+	* dbmail-message.c:
+	allocate less and fix firstline logic
+
 2008-01-20  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION, debian/changelog:
