@@ -36,7 +36,7 @@
 
 extern char * multipart_message;
 extern char * configFile;
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 
 /* we need this one because we can't directly link imapd.o */
@@ -70,7 +70,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 	db_connect();
 	auth_connect();
 	g_mime_init(0);
@@ -100,12 +100,12 @@ void teardown(void)
  * supposed to be given. The rest of the message will be read from instream
  * \return 0
  */
-//int insert_messages(struct DbmailMessage *message, GList *dsnusers)
+//int insert_messages(DbmailMessage *message, GList *dsnusers)
 
 START_TEST(test_insert_messages)
 {
 	int result;
-	struct DbmailMessage *message;
+	DbmailMessage *message;
 	GList *dsnusers = NULL;
 	GString *tmp;
 	deliver_to_user_t *dsnuser = g_new0(deliver_to_user_t,1);

@@ -42,13 +42,6 @@
 #define BIT8 4
 #define BDAT 5
 
-/* allowed lmtp commands, from lmtp.c
-const char *commands [] =
-{
-	"LHLO", "QUIT", "RSET", "DATA", "MAIL",
-	"VRFY", "EXPN", "HELP", "NOOP", "RCPT"
-}; */
-
 #define LMTP_STRT 0		/* lower bound of array - 0 */
 #define LMTP_LHLO 0
 #define LMTP_QUIT 1
@@ -62,9 +55,7 @@ const char *commands [] =
 #define LMTP_RCPT 9
 #define LMTP_END 10		/* upper bound of array + 1 */
 
-int lmtp(void *stream, void *instream, char *buffer, char *client_ip,
-	 PopSession_t * session);
-int lmtp_handle_connection(clientinfo_t * ci);
+int lmtp(ClientSession_t *session);
 
 /* Help */
 static const char *const LMTP_HELP_TEXT[] = {

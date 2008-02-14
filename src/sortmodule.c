@@ -12,7 +12,7 @@
 
 static sort_func_t *sort = NULL;
 
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 /* Returns:
  *  1 on modules unsupported
@@ -93,7 +93,7 @@ int sort_load_driver(void)
 	return 0;
 }
 
-sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
+sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message)
 {
 	if (!sort)
 		sort_load_driver();

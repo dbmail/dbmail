@@ -210,7 +210,7 @@ class testImapServer(unittest.TestCase):
         getFreshbox('testexpungebox')
 
         p = getsock()
-        p.debug = DEBUG
+        p.debug = 4
         p.login('testuser1','test'),('OK',['LOGIN completed'])
 
         self.o.select('testexpungebox')
@@ -219,12 +219,12 @@ class testImapServer(unittest.TestCase):
         
         self.o.store('5:*', '+FLAGS', '\Deleted')
         msnlist = self.o.expunge()[1]
-        self.assertEquals(msnlist,['11','10','9','8','7','6','5'])
+        self.assertEquals(msnlist,['11', '10', '9', '8', '7', '6', '5'])
         self.assertEquals(self.o.fetch('4','(BODYSTRUCTURE FLAGS)')[0],'OK')
-        
         self.assertEquals(self.o.fetch('4','(BODYSTRUCTURE FLAGS)')[0],'OK')
         self.assertEquals(p.fetch('11','(Flags)')[0],'OK')
-        print p.noop()
+        p.noop()
+        print p.untagged_responses
         self.o.debug = 0
         p.debug = 0
 
@@ -347,6 +347,7 @@ class testImapServer(unittest.TestCase):
         except:
             traceback.print_exc()
             
+        dirlist.reverse()
         for d in dirlist: self.o.delete(d)
 
     def testLogin(self):
@@ -391,8 +392,8 @@ class testImapServer(unittest.TestCase):
             self.o.create(mailbox)
             self.o.subscribe(mailbox)
         result = self.o.lsub()[1]
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], result[6])
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][2])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], result[-1])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][-5])
         self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('"%s/"' % mailboxes[1],'"%"')[1][0])
 
     def testNoop(self):

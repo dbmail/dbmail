@@ -73,6 +73,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <mhash.h>
+#include <event.h>
 
 #ifdef AUTHLDAP
 #define LDAP_DEPRECATED 1
@@ -86,14 +87,11 @@
 #include "dm_dsn.h"
 #include "dm_acl.h"
 #include "dm_misc.h"
-#include "dm_pipe.h"
-#include "imap4.h"
-#include "imapcommands.h"
-#include "server.h"
-#include "serverparent.h"
-#include "serverpool.h"
-#include "pop3.h"
 #include "dm_quota.h"
+#include "imapcommands.h"
+#include "serverparent.h"
+#include "server.h"
+#include "clientsession.h"
 #include "lmtp.h"
 
 #include "dm_db.h"
@@ -116,7 +114,6 @@
 #include <sieve2_error.h>
 #endif
 
-#include "timsieve.h"
 
 #ifdef HAVE_CRYPT_H
 #include <crypt.h>
@@ -144,7 +141,7 @@
 #define COPYRIGHT \
 "Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl\n" \
 "Copyright (C) 2001-2007 Aaron Stone, aaron@serendipity.cx\n" \
-"Copyright (C) 2004-2007 NFG Net Facilities Group BV, support@nfg.nl\n" \
+"Copyright (C) 2004-2008 NFG Net Facilities Group BV, support@nfg.nl\n" \
 "\n" \
 "Please see the AUTHORS and THANKS files for additional contributors.\n" \
 "\n" \
@@ -184,6 +181,8 @@
 #define DEFAULT_LOG_FILE "@DM_LOGDIR@/dbmail.log"
 #define DEFAULT_ERROR_LOG "@DM_LOGDIR@/dbmail.err"
 
+#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE"
+#define IMAP_TIMEOUT_MSG "* BYE dbmail IMAP4 server signing off due to timeout\r\n"
 /** prefix for #Users namespace */
 #define NAMESPACE_USER "#Users"
 /** prefix for public namespace */
@@ -250,7 +249,7 @@ int config_get_value(const field_t name, const char *service_name,
  \brief get parameters for database connection
  \param db_params list of database parameters (db_param_t)
 */
-void GetDBParams(db_param_t * db_params);
+db_param_t * GetDBParams(void);
 /** 
  \brief set the overall trace level, using the value in cfg_items
  \param service_name name of service to get trace level for.

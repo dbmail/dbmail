@@ -77,16 +77,6 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 const char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username);
 
 /**
- * write to a client socket. does error checking.
- * \param fd socket to write to
- * \param msg formatstring of message to write
- * \param ... arguments for formatstring.
- * \return 
- *      - -1 on error
- *      -  0 on success
- */
-int ci_write(FILE * fd, char * msg, ...);
-/**
  * \brief converts an IMAP date to a number (strictly ascending in date)
  * valid IMAP dates:
  *     - d-mon-yyyy
@@ -97,7 +87,6 @@ int ci_write(FILE * fd, char * msg, ...);
 int num_from_imapdate(const char *date);
 
 
-int read_from_stream(FILE * instream, char **m_buf, int maxlen);
 int find_bounded(const char * const value, char left, char right,
 		char **retchar, size_t * retsize, size_t * retlast);
 int zap_between(const char * const instring, signed char left, signed char right,
@@ -146,7 +135,7 @@ int check_date(const char *date);
  *      - -1 on error
  *      -  0 on success
  */
-int discard_client_input(FILE * instream);
+int discard_client_input(clientinfo_t *ci);
 
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
@@ -173,5 +162,15 @@ char **base64_decodev(char *in);
 
 /* return an allocated string containing the cryptographic checksum for buf */
 char * dm_get_hash_for_string(const char *buf);
+
+
+// ClientInfo_t methods (move these to separate file)
+int ci_write(clientinfo_t *self, char * msg, ...);
+int ci_read(clientinfo_t *self, char *buffer, size_t n);
+int ci_readln(clientinfo_t *self, char * buffer);
+void ci_close(clientinfo_t *self);
+
+
+void strip_crlf(char *buffer);
 
 #endif

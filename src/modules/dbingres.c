@@ -80,7 +80,7 @@ static II_PTR		trn		= (II_PTR)NULL; // transaction handler
 static IIAPI_GETCOLPARM	cparm;
 static gboolean		_in_transaction = FALSE;
  
-db_param_t _db_params;
+extern db_param_t * _db_params;
 
 static IIAPI_STATUS _db_wait(IIAPI_GENPARM *gp){
 	IIAPI_WAITPARM wt;
@@ -237,7 +237,7 @@ int db_connect(void)
 	IIAPI_CONNPARM	co;
 	IIAPI_STATUS	status;
 
-	target = g_strdup_printf("%s::%s", _db_params.host, _db_params.db);
+	target = g_strdup_printf("%s::%s", _db_params->host, _db_params->db);
 
 	db_init(&envhandle);
 
@@ -246,8 +246,8 @@ int db_connect(void)
 	co.co_target = target;
 	co.co_connHandle = conn;
 	co.co_tranHandle = NULL;
-	co.co_username = _db_params.user;
-	co.co_password = _db_params.pass;
+	co.co_username = _db_params->user;
+	co.co_password = _db_params->pass;
 	co.co_timeout = -1;
 	
 	IIapi_connect ( &co );
@@ -499,7 +499,7 @@ u64_t db_sequence_currval(const char *seq_id)
 	char query[DEF_QUERYSIZE];
 	u64_t seq;
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT %s%s_seq.currval",_db_params.pfx, seq_id);
+	snprintf(query, DEF_QUERYSIZE, "SELECT %s%s_seq.currval",_db_params->pfx, seq_id);
 
 	db_query(query);
 	if (db_num_rows() == 0) {
@@ -519,7 +519,7 @@ u64_t db_sequence_nextval(const char *seq_id)
 	char query[DEF_QUERYSIZE];
 	u64_t seq;
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT %s%s_seq.nextval",_db_params.pfx, seq_id);
+	snprintf(query, DEF_QUERYSIZE, "SELECT %s%s_seq.nextval",_db_params->pfx, seq_id);
 
 	db_query(query);
 	if (db_num_rows() == 0) {

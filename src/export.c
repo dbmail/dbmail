@@ -33,7 +33,7 @@ int quiet = 0;
 int reallyquiet = 0;
 int verbose = 0;
 
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 void do_showhelp(void)
 {
@@ -74,8 +74,8 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 		const char *search, int delete_after_dump)
 {
 	FILE *ostream;
-	struct DbmailMailbox *mb = NULL;
-	struct ImapSession *s = NULL;
+	DbmailMailbox *mb = NULL;
+	ImapSession *s = NULL;
 	int result = 0;
 
 	/* 
@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
         }
                 
 	SetTraceLevel("DBMAIL");
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 
 	/* open database connection */
 	if (db_connect() != 0) {

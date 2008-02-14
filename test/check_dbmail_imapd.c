@@ -35,12 +35,11 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 #define DBPFX _db_params.pfx
 
 /* we need this one because we can't directly link imapd.o */
-int imap_before_smtp = 0;
 extern u64_t msgbuf_idx;
 extern u64_t msgbuf_buflen;
 
@@ -65,7 +64,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 	db_connect();
 	auth_connect();
 	init_testuser1();
@@ -143,14 +142,10 @@ END_TEST
 
 static clientinfo_t * ci_new(void)
 {
-	imap_userdata_t *ud = g_new0(imap_userdata_t,1);
 	clientinfo_t *ci = g_new0(clientinfo_t,1);
 	FILE *fd = fopen("/dev/null","w");
-	ud->state = IMAPCS_NON_AUTHENTICATED;
-	ci->userData = ud;
-	ci->rx = stdin;
-	ci->tx = fd;
-	//ci->tx = stderr;
+	ci->rx = fileno(stdin);
+	ci->tx = fileno(fd);
 	return ci;
 }
 
@@ -163,46 +158,45 @@ static clientinfo_t * ci_new_writable(void)
 	mkfifo(tempfile, 0600);
 
 	// Open r+ because we're controlling both sides.
-	ci->rx = fopen(tempfile, "r+");
-	ci->tx = fopen(tempfile, "r+");
+	ci->rx = fileno(fopen(tempfile, "r+"));
+	ci->tx = fileno(fopen(tempfile, "r+"));
 	return ci;
 }
 
 static void ci_free_writable(clientinfo_t *ci)
 {
-	fclose(ci->tx);
-	fclose(ci->rx);
+	close(ci->tx);
+	close(ci->rx);
 	unlink(tempfile);
 }
 
-//struct ImapSession * dbmail_imap_session_new(void);
+//ImapSession * dbmail_imap_session_new(void);
 START_TEST(test_imap_session_new)
 {
-	struct ImapSession *s;
+	ImapSession *s;
 	s = dbmail_imap_session_new();
 	fail_unless(s!=NULL, "Failed to initialize imapsession");
 	dbmail_imap_session_delete(s);
 }
 END_TEST
-//struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci);
-//struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag);
-//struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command);
-//struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args);
-//struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, MessageInfo * msginfo);
-//struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
-//void dbmail_imap_session_delete(struct ImapSession * self);
-//int dbmail_imap_session_readln(struct ImapSession * self, char * buffer);
-//int dbmail_imap_session_discard_to_eol(struct ImapSession *self);
-//int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...);
-//int dbmail_imap_session_set_state(struct ImapSession *self, int state);
-//int check_state_and_args(struct ImapSession * self, const char * command, int minargs, int maxargs, int state);
-//int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, char * password);
-//int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value);
-//u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, char * mailbox);
-//int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr, ACLRight_t right);
-//int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t idnr);
-//int dbmail_imap_session_mailbox_show_info(struct ImapSession * self);
-//int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox);
+//ImapSession * dbmail_imap_session_setTag(ImapSession * self, char * tag);
+//ImapSession * dbmail_imap_session_setCommand(ImapSession * self, char * command);
+//ImapSession * dbmail_imap_session_setArgs(ImapSession * self, char ** args);
+//ImapSession * dbmail_imap_session_setMsginfo(ImapSession * self, MessageInfo * msginfo);
+//ImapSession * dbmail_imap_session_resetFi(ImapSession * self);
+//void dbmail_imap_session_delete(ImapSession * self);
+//int dbmail_imap_session_readln(ImapSession * self, char * buffer);
+//int dbmail_imap_session_discard_to_eol(ImapSession *self);
+//int dbmail_imap_session_printf(ImapSession * self, char * message, ...);
+//int dbmail_imap_session_set_state(ImapSession *self, int state);
+//int check_state_and_args(ImapSession * self, const char * command, int minargs, int maxargs, int state);
+//int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password);
+//int dbmail_imap_session_prompt(ImapSession * self, char * prompt, char * value);
+//u64_t dbmail_imap_session_mailbox_get_idnr(ImapSession * self, char * mailbox);
+//int dbmail_imap_session_mailbox_check_acl(ImapSession * self, u64_t idnr, ACLRight_t right);
+//int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
+//int dbmail_imap_session_mailbox_show_info(ImapSession * self);
+//int dbmail_imap_session_mailbox_open(ImapSession * self, char * mailbox);
 
 
 //dbmail_imap_session_handle_auth(self, const char *username, const char *password);
@@ -211,14 +205,15 @@ START_TEST(test_imap_session_prompt)
 	int result;
 	gchar *tmp;
 	unsigned char tmpline[MAX_LINESIZE];
-	clientinfo_t *ci = ci_new_writable();
-	struct ImapSession *s = dbmail_imap_session_new();
-	s = dbmail_imap_session_setClientinfo(s,ci);
 	unsigned char *testuser = (unsigned char *)"testuser1";
+	clientinfo_t *ci = ci_new_writable();
+	ImapSession *s = dbmail_imap_session_new();
+
+	s->ci = ci;
 
 	tmp = (gchar *)g_base64_encode(testuser, strlen("testuser1"));
-	fprintf(ci->tx, "%s\r\n", tmp);
-	fflush(ci->tx);
+	write(ci->tx, tmp, strlen(tmp));
+	write(ci->tx, "\r\n", 2);
 	g_free(tmp);
 	memset(tmpline,0,sizeof(tmpline));
 	result = dbmail_imap_session_prompt(s, "username", (char *)tmpline);
@@ -226,11 +221,12 @@ START_TEST(test_imap_session_prompt)
 	fail_unless(strcmp((char *)tmpline,(char *)testuser)==0,"failed at the username prompt [%s] != [%s]", tmpline, testuser);
 
 	// Read back whatever the prompt was.
-	fgets((char *)tmpline, MAX_LINESIZE, ci->rx);
+	memset(tmpline,0,sizeof(tmpline));
+	read(ci->rx, tmpline, MAX_LINESIZE);
 
 	tmp = (gchar *)g_base64_encode((unsigned char *)"test", strlen("test"));
-	fprintf(ci->tx, "%s\r\n", tmp);
-	fflush(ci->tx);
+	write(ci->tx, tmp, strlen(tmp));
+	write(ci->tx, "\r\n", 2);
 	g_free(tmp);
 	memset(tmpline,0,sizeof(tmpline));
 	result = dbmail_imap_session_prompt(s, "password", (char *)tmpline);
@@ -238,7 +234,8 @@ START_TEST(test_imap_session_prompt)
 	fail_unless(strcmp((char *)tmpline,"test")==0,"failed at the password prompt");
 	
 	// Read back whatever the prompt was.
-	fgets((char *)tmpline, MAX_LINESIZE, ci->rx);
+	memset(tmpline,0,sizeof(tmpline));
+	read(ci->rx, tmpline, MAX_LINESIZE);
 
 	dbmail_imap_session_delete(s);
 	ci_free_writable(ci);
@@ -248,15 +245,13 @@ END_TEST
 START_TEST(test_imap_handle_auth)
 {
 	int result;
-	clientinfo_t *ci = ci_new();
-	struct ImapSession *s = dbmail_imap_session_new();
-	s = dbmail_imap_session_setClientinfo(s,ci);
+	ImapSession *s = dbmail_imap_session_new();
+	s->ci = ci_new();
 	
 	result = dbmail_imap_session_handle_auth(s,"testuser1","test");
 	fail_unless(result==0,"dbmail_imap_session_handle_auth failed");
 	
 	dbmail_imap_session_delete(s);
-	g_free(ci);
 }
 END_TEST
 START_TEST(test_imap_mailbox_open)
@@ -264,12 +259,11 @@ START_TEST(test_imap_mailbox_open)
 	int result;
 	
 	clientinfo_t *ci = ci_new();
-	imap_userdata_t *ud;
 	u64_t mailbox_idnr = 0;
 	const char *message;
 	
-	struct ImapSession *s = dbmail_imap_session_new();
-	s = dbmail_imap_session_setClientinfo(s,ci);
+	ImapSession *s = dbmail_imap_session_new();
+	s->ci = ci;
 	
 	dbmail_imap_session_handle_auth(s,"testuser1","test");
 	result = dbmail_imap_session_mailbox_open(s,"INBOX");
@@ -277,9 +271,8 @@ START_TEST(test_imap_mailbox_open)
 
 
 	// create and open a new and empty mailbox
-	ud = (imap_userdata_t *) ci->userData;
 	result = db_mailbox_create_with_parents("INBOX/Foo/Bar/Baz", BOX_COMMANDLINE,
-			ud->userid, &mailbox_idnr, &message);
+			s->userid, &mailbox_idnr, &message);
 	fail_unless(result == 0 && mailbox_idnr != 0,
 			"Failed at db_mailbox_create_with_parents: [%s]", message);
 
@@ -289,20 +282,18 @@ START_TEST(test_imap_mailbox_open)
 	db_delete_mailbox(mailbox_idnr,0,0);
 	
 	dbmail_imap_session_delete(s);
-	g_free(ci);
 }
 END_TEST
 	
-//int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
+//int dbmail_imap_session_fetch_get_items(ImapSession *self, u64_t row)
 START_TEST(test_dbmail_imap_session_fetch_get_items)
 {
 	int result;
 	char * mailbox = g_strdup("INBOX");
-	struct ImapSession *s = dbmail_imap_session_new();
+	ImapSession *s = dbmail_imap_session_new();
 	
 	clientinfo_t *ci = ci_new();
-	s = dbmail_imap_session_setClientinfo(s,ci);
-	g_free(ci);
+	s->ci = ci;
 	
 	result = dbmail_imap_session_handle_auth(s,"testuser1","test");
 	fail_unless(result==0, "handle_auth failed");
@@ -326,7 +317,7 @@ START_TEST(test_imap_bodyfetch)
 {
 	int result;
 	guint64 octet;
-	struct ImapSession *s = dbmail_imap_session_new();
+	ImapSession *s = dbmail_imap_session_new();
 
 	dbmail_imap_session_bodyfetch_new(s);
 	
@@ -354,7 +345,7 @@ END_TEST
 START_TEST(test_g_mime_object_get_body)
 {
 	char * result;
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
@@ -369,7 +360,7 @@ END_TEST
 
 START_TEST(test_imap_get_structure)
 {
-	struct DbmailMessage *message;
+	DbmailMessage *message;
 	char *result;
 	char *expect = g_new0(char,1024);
 
@@ -490,7 +481,7 @@ END_TEST
 
 START_TEST(test_imap_get_envelope)
 {
-	struct DbmailMessage *message;
+	DbmailMessage *message;
 	char *result, *expect;
 	GString *s;
 	
@@ -531,7 +522,7 @@ END_TEST
 
 START_TEST(test_imap_get_envelope_8bit_id)
 {
-	struct DbmailMessage *message;
+	DbmailMessage *message;
 	char *result, *expect;
 	
 	const char *msgid = "<000001c1f64e$c4a34180$0100007f@z=F0=B5=D241>";
@@ -563,7 +554,7 @@ START_TEST(test_imap_get_envelope_koi)
 	char *t;
 	const char *exp = "(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"test\" ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((\"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=\" NIL \"bad\" \"foo.ru\")) ((NIL NIL \"nobody\" \"foo.ru\")) NIL NIL NIL \"<1199706209l.3020l.5l@(none)>\")";
 
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	GString *s = g_string_new(encoded_message_koi);
 
 	m = dbmail_message_init_with_string(m, s);
@@ -615,7 +606,7 @@ START_TEST(test_imap_get_envelope_latin)
 {
 	char *t;
 	char *expect = g_new0(char,1024);
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 	GString *s;
 	
 
@@ -672,7 +663,7 @@ END_TEST
 
 START_TEST(test_imap_get_partspec)
 {
-	struct DbmailMessage *message;
+	DbmailMessage *message;
 	GMimeObject *object;
 	char *result, *expect;
 	

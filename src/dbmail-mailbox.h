@@ -33,60 +33,31 @@
 #define _DBMAIL_MAILBOX_H
 
 #include "dbmail.h"
+DbmailMailbox * dbmail_mailbox_new(u64_t id);
+int dbmail_mailbox_open(DbmailMailbox *self);
+int dbmail_mailbox_sort(DbmailMailbox *self);
+int dbmail_mailbox_search(DbmailMailbox *self);
 
-struct DbmailMailbox {
-	u64_t id;
-	u64_t rows;		// total number of messages in mailbox
-	u64_t recent;
-	u64_t unseen;
-	u64_t owner_id;
-	u64_t size;
+GTree * dbmail_mailbox_get_msginfo(DbmailMailbox *self);
 
-	gchar *name;
+void dbmail_mailbox_set_id(DbmailMailbox *self, u64_t id);
+u64_t dbmail_mailbox_get_id(DbmailMailbox *self);
 
-	GList *sorted;		// ordered list of UID values
+void dbmail_mailbox_set_uid(DbmailMailbox *self, gboolean uid);
+gboolean dbmail_mailbox_get_uid(DbmailMailbox *self);
 
-	GTree *msginfo; 	// cache MessageInfo
+int dbmail_mailbox_dump(DbmailMailbox *self, FILE *ostream);
 
-	GTree *ids; 		// key: uid, value: msn
-	GTree *msn; 		// key: msn, value: uid
+int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t id);
+int dbmail_mailbox_insert_uid(DbmailMailbox *self, u64_t id);
+void dbmail_mailbox_free(DbmailMailbox *self);
 
-	GNode *search;
-	gchar *charset;		// charset used during search/sort
+char * dbmail_mailbox_ids_as_string(DbmailMailbox *self);
+char * dbmail_mailbox_sorted_as_string(DbmailMailbox *self);
+char * dbmail_mailbox_orderedsubject(DbmailMailbox *self);
 
-	fetch_items_t *fi;	// imap fetch
+int dbmail_mailbox_build_imap_search(DbmailMailbox *self, char **search_keys, u64_t *idx, search_order_t order);
 
-	gboolean uid, no_select, no_inferiors, no_children;
-
-//	unsigned flags;
-};
-
-struct DbmailMailbox * dbmail_mailbox_new(u64_t id);
-int dbmail_mailbox_open(struct DbmailMailbox *self);
-int dbmail_mailbox_sort(struct DbmailMailbox *self);
-int dbmail_mailbox_search(struct DbmailMailbox *self);
-
-GTree * dbmail_mailbox_get_msginfo(struct DbmailMailbox *self);
-
-void dbmail_mailbox_set_id(struct DbmailMailbox *self, u64_t id);
-u64_t dbmail_mailbox_get_id(struct DbmailMailbox *self);
-
-void dbmail_mailbox_set_uid(struct DbmailMailbox *self, gboolean uid);
-gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self);
-
-int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *ostream);
-
-int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id);
-void dbmail_mailbox_map_uid_msn(struct DbmailMailbox *self);
-void dbmail_mailbox_free(struct DbmailMailbox *self);
-
-char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self);
-char * dbmail_mailbox_sorted_as_string(struct DbmailMailbox *self);
-char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
-
-int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, search_order_t order);
-
-GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboolean uid);
-
+GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean uid);
 
 #endif

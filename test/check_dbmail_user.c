@@ -35,7 +35,7 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 extern int quiet;
 extern int reallyquiet;
 
@@ -49,7 +49,7 @@ void setup(void)
 	reallyquiet = 1;
 	configure_debug(5,0);
 	config_read(configFile);
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 	db_connect();
 	auth_connect();
 	do_add("testfailuser","testpass","md5-hash",0,0,NULL,NULL);

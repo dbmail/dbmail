@@ -35,7 +35,7 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 
 extern u64_t msgbuf_idx;
@@ -56,7 +56,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 	db_connect();
 }
 
@@ -68,15 +68,13 @@ void teardown(void)
 
 START_TEST(test_read_config)
 {
-	GetDBParams(&_db_params);
-	fail_unless(_db_params.host != NULL, "db_host is NULL");
+	fail_unless(_db_params->host != NULL, "db_host is NULL");
 }
 END_TEST
 
 START_TEST(test_db_connect)
 {
 	int res;
-	GetDBParams(&_db_params);
 	db_disconnect();
 	res = db_connect();
 	fail_unless(res==0, "Unable to connect to db");

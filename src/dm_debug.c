@@ -86,7 +86,7 @@ void trace(trace_t level, const char * module,
 	const char *syslog_format = "%s:[%s] %s,%s(+%d): %s";
 	const char *stderr_format = "%s %s %s[%d]: %s:[%s] %s,%s(+%d): %s";
 	static int configured=0;
-	size_t l, maxlen=100;
+	size_t l, maxlen=120;
 
 	/* Return now if we're not logging anything. */
 	if (level > TRACE_STDERR && level > TRACE_SYSLOG)

@@ -41,7 +41,7 @@ int reallyquiet = 0;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 static int do_showhelp(void);
 static int do_list(u64_t user_idnr);
@@ -210,7 +210,7 @@ int main(int argc, char *argv[])
         }
                 
 	SetTraceLevel("DBMAIL");
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 
 	/* Open database connection */
 	if (db_connect() != 0) {
@@ -480,6 +480,52 @@ int do_cat(u64_t user_idnr, char *name, FILE *out)
 		g_free(scriptname);
 
 	return 0;
+}
+
+// FIXME: libevent this
+static int read_from_stream(FILE * instream, char **m_buf, int maxlen)
+{
+        size_t f_len = 0;
+        size_t f_pos = 0;
+        char *f_buf = NULL;
+        int c;
+
+        /* Allocate a zero length string on length 0. */
+        if (maxlen == 0) {
+                *m_buf = g_strdup("");
+                return 0;
+        }
+
+        /* Allocate enough space for everything we're going to read. */
+        if (maxlen > 0) {
+                f_len = maxlen + 1;
+        }
+
+        /* Start with a default size and keep reading until EOF. */
+        if (maxlen == -1) {
+                f_len = 1024;
+                maxlen = INT_MAX;
+        }
+
+        f_buf = g_new0(char, f_len);
+
+        while ((int)f_pos < maxlen) {
+                if (f_pos + 1 >= f_len) {
+                        f_buf = g_renew(char, f_buf, (f_len *= 2));
+                }
+
+                c = fgetc(instream);
+                if (c == EOF)
+                        break;
+                f_buf[f_pos++] = (char)c;
+        }
+
+        if (f_pos)
+                f_buf[f_pos] = '\0';
+
+        *m_buf = f_buf;
+
+        return 0;
 }
 
 int do_insert(u64_t user_idnr, char *name, char *source)

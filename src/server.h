@@ -29,11 +29,22 @@
 
 #include "dbmail.h"
  
+#define UNBLOCK(a) \
+        { \
+                int flags; \
+                if ( (flags = fcntl(a, F_GETFL, 0)) < 0) \
+                        perror("F_GETFL"); \
+                flags |= O_NONBLOCK; \
+                if (fcntl(a, F_SETFL, flags) < 0) \
+                        perror("F_SETFL"); \
+        }
 
-void CreateSocket(serverConfig_t *conf);
-int StartServer(serverConfig_t * conf);
+
+
 int StartCliServer(serverConfig_t * conf);
 int server_run(serverConfig_t *conf);
+
+void disconnect_all(void);
 
 pid_t server_daemonize(serverConfig_t *conf);
 

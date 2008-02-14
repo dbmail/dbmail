@@ -48,7 +48,7 @@ int has_errors = 0;
 int serious_errors = 0;
 
 /* set up database login data */
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 static int find_time(const char *timespec, timestring_t *timestring);
 
@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
 
 	config_read(configFile);
 	SetTraceLevel("DBMAIL");
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 
 	qverbosef("Opening connection to database... \n");
 	if (db_connect() != 0) {

@@ -5,9 +5,9 @@
 ## DP: No description.
 
 @DPATCH@
-diff -urNad dbmail-2.2.5~/dbmail.conf dbmail-2.2.5/dbmail.conf
---- dbmail-2.2.5~/dbmail.conf	2007-04-27 09:52:11.000000000 +0200
-+++ dbmail-2.2.5/dbmail.conf	2007-05-15 21:53:25.000000000 +0200
+diff -urNad dbmail~/dbmail.conf dbmail/dbmail.conf
+--- dbmail~/dbmail.conf	2008-02-07 10:20:35.000000000 +0100
++++ dbmail/dbmail.conf	2008-02-07 10:21:09.000000000 +0100
 @@ -100,8 +100,8 @@
  # Root privs are used to open a port, then privs
  # are dropped down to the user/group specified here.
@@ -19,7 +19,7 @@ diff -urNad dbmail-2.2.5~/dbmail.conf dbmail-2.2.5/dbmail.conf
  
  # 
  # The IP addresses the services will bind to.
-@@ -154,22 +154,22 @@
+@@ -134,17 +134,17 @@
  # 
  # logfile for stdout messages
  #
@@ -37,12 +37,6 @@ diff -urNad dbmail-2.2.5~/dbmail.conf dbmail-2.2.5/dbmail.conf
  #
 -pid_directory         = /var/run
 +pid_directory         = /var/run/dbmail
- 
- #
- # directory for storing the daemon statefiles
- #
--state_directory       = /var/run
-+state_directory       = /var/run/dbmail
  
  #
  # directory for locating libraries (normally has a sane default compiled-in)

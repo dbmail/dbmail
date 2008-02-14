@@ -258,74 +258,6 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	
 	return fq_name;
 }
-
-int ci_write(FILE * fd, char * msg, ...)
-{
-	va_list ap;
-	va_start(ap, msg);
-	
-	if (feof(fd) || vfprintf(fd,msg,ap) < 0 || fflush(fd) < 0) {
-		va_end(ap);
-		return -1;
-	}
-	va_end(ap);
-	return 0;
-}
-
-
-/* Return 0 is all's well. Returns something else if not... */
-/* Reads up to 'maxlen' bytes from instream and places a pointer to an
- * allocated array in m_buf.
- *
- * If maxlen is 0, allocates and returns "" (zero length string).
- * If maxlen is -1, reads until EOF.
- */
-
-int read_from_stream(FILE * instream, char **m_buf, int maxlen)
-{
-	size_t f_len = 0;
-	size_t f_pos = 0;
-	char *f_buf = NULL;
-	int c;
-
-	/* Allocate a zero length string on length 0. */
-	if (maxlen == 0) {
-		*m_buf = g_strdup("");
-		return 0;
-	}
-
-	/* Allocate enough space for everything we're going to read. */
-	if (maxlen > 0) {
-		f_len = maxlen + 1;
-	}
-
-	/* Start with a default size and keep reading until EOF. */
-	if (maxlen == -1) {
-		f_len = 1024;
-		maxlen = INT_MAX;
-	}
-
-	f_buf = g_new0(char, f_len);
-
-	while ((int)f_pos < maxlen) {
-		if (f_pos + 1 >= f_len) {
-			f_buf = g_renew(char, f_buf, (f_len *= 2));
-		}
-
-		c = fgetc(instream);
-		if (c == EOF)
-			break;
-		f_buf[f_pos++] = (char)c;
-	}
-
-	if (f_pos)
-		f_buf[f_pos] = '\0';
-
-	*m_buf = f_buf;
-
-	return 0;
-}
-
 /* Finds what lurks between two bounding symbols.
  * Allocates and fills retchar with the string.
  *
@@ -747,7 +679,7 @@ sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr)
 	socklen_t len;
 	len = maxsocklen;
 
-	if (getsockname(fileno(ci->tx), (struct sockaddr *)un.data, &len) < 0)
+	if (getsockname(ci->tx, (struct sockaddr *)un.data, &len) < 0)
 		return (sa_family_t) -1;
 
 	memcpy(saddr, &un.sa, sizeof(un.sa));
@@ -1249,45 +1181,24 @@ gint ucmp(const u64_t *a, const u64_t *b)
 	return -1;
 }
 /* Read from instream until ".\r\n", discarding what is read. */
-int discard_client_input(FILE * instream)
+int discard_client_input(clientinfo_t *ci)
 {
-	int ch, ns;
-	socklen_t l;
+	int c = 0, n = 0;
 
-	clearerr(instream);
-	for (ns = 0; (ch = fgetc(instream)) != EOF;) {
-		if (ch == '\r') {
-			if (ns == 4) {
-				/* \r\n.\r */
-				ns = 5;
-			} else {
-				/* \r */
-				ns = 1;
-			}
-		} else if (ch == '\n') {
-			if (ns == 1) {
-				/* \r\n */
-				ns = 2;
-			} else if (ns == 5) {
-				/* complete: \r\n.\r\n */
-				return 0;
-			} else {
-				/* .\n ? */
+	while ((bufferevent_read(ci->rev, (void *)&c, 1)) == 1) {
+		if (c == '\r') {
+			if (n == 4) n = 5;	 /*  \r\n.\r    */
+			else n = 1; 		 /*  \r         */
+		} else if (c == '\n') {
+			if (n == 1) n = 2;	 /*  \r\n       */
+			else if (n == 5)	 /*  \r\n.\r\n  DONE */
+				break;
+			else 			 /*  .\n ?      */
 				TRACE(TRACE_ERROR, "bare LF.");
-			} 
-		} else if (ch == '.' && ns == 3) {
-			/* \r\n. */
-			ns = 4;
-		}
-		if ((ch = fileno(instream)) != -1) {
-			/* okay, look for error slippage */
-			l = 0;
-			if (getpeername(ns, (struct sockaddr *)"", &l) == -1 && errno != ENOTSOCK) {
-				TRACE(TRACE_ERROR, "unexpected failure from socket layer (client hangup?)");
-			}
-		}
+		} else if (c == '.' && n == 3)   /*  \r\n.      */
+			n = 4;
+		
 	}
-	TRACE(TRACE_ERROR, "unexpected EOF from stdio (client hangup?)");
 	return 0;
 }
 
@@ -1930,6 +1841,8 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	GMimeObject *part;
 	char *s, *t;
 	
+	assert(GMIME_IS_MESSAGE(message));
+
 	part = g_mime_message_get_mime_part(message);
 	type = (GMimeContentType *)g_mime_object_get_content_type(part);
 	if (! type) {
@@ -2426,5 +2339,98 @@ char * dm_get_hash_for_string(const char *buf)
 	return g_strdup(digest);
 }
 
+int ci_write(clientinfo_t *self, char * msg, ...)
+{
+	char *s;
+	va_list ap;
 
+	va_start(ap, msg);
+	s = g_strdup_vprintf(msg, ap);
+	va_end(ap);
+
+	TRACE(TRACE_DEBUG,"[%s]", s);
+	bufferevent_write(self->wev, s, strlen(s));
+	g_free(s);
+	return 0;
+}
+
+int ci_read(clientinfo_t *self, char *buffer, size_t n)
+{
+	size_t i = 0;
+	char c;
+
+	assert(self->rev);
+	assert(buffer);
+	memset(buffer, 0, sizeof(buffer));
+
+	self->len = 0;
+	while (self->len < n) {
+		if ((bufferevent_read(self->rev, (void *)&c, 1)) != 1)
+			break;
+		self->len++;
+		if (c == '\r') continue;
+		buffer[i++] = c;
+	}
+	return self->len;
+}	
+
+int ci_readln(clientinfo_t *self, char * buffer)
+{
+	size_t i = 0;
+	char c=0;
+
+	assert(self->rev);
+	assert(buffer);
+	memset(buffer, 0, MAX_LINESIZE);
+
+	self->len = 0;
+	while (i < MAX_LINESIZE) {
+		if ((bufferevent_read(self->rev, (void *)&c, 1)) != 1)
+			break;
+		self->len++;
+		if (c=='\r') continue;
+		buffer[i++] = c;
+		if (c=='\n') break;
+	}
+	return self->len;
+}
+
+
+void ci_close(clientinfo_t *self)
+{
+	assert(self);
+
+	bufferevent_disable(self->rev, EV_READ);
+	bufferevent_disable(self->wev, EV_WRITE);
+	bufferevent_free(self->rev);
+	bufferevent_free(self->wev);
+	self->rev = NULL;
+	self->wev = NULL;
+
+	if (self->tx > 0) {
+		shutdown(self->tx, SHUT_RDWR);
+		close(self->tx);
+		self->tx = -1;
+	}
+	if (self->rx >= 0) {
+		close(self->rx);
+		self->rx = -1;
+	}
+
+	g_free(self);
+	self = NULL;
+}
+
+
+void strip_crlf(char *buffer)
+{
+	if (! (buffer && buffer[0])) return;
+	size_t l = strlen(buffer);
+	while (--l > 0) {
+		if (buffer[l] == '\r' || buffer[l] == '\n')
+			buffer[l] = '\0';
+		else
+			break;
+	}
+}
 

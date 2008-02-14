@@ -1,8 +1,5 @@
-user testuser1
-pass test
-quit
-AUTH
 CAPA
+AUTH
 USER testuser1
 PASS test
 STAT

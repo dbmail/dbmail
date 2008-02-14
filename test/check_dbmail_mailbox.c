@@ -36,8 +36,8 @@
 
 extern char * multipart_message;
 extern char * configFile;
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern db_param_t *_db_params;
+#define DBPFX _db_params->pfx
 
 
 
@@ -105,7 +105,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 	db_connect();
 	auth_connect();
 	g_mime_init(0);
@@ -131,7 +131,7 @@ void teardown(void)
 
 START_TEST(test_dbmail_mailbox_new)
 {
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	fail_unless(mb!=NULL, "dbmail_mailbox_new failed");
 	dbmail_mailbox_free(mb);
 }
@@ -139,7 +139,7 @@ END_TEST
 
 START_TEST(test_dbmail_mailbox_free)
 {
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	dbmail_mailbox_free(mb);
 }
 END_TEST
@@ -147,7 +147,7 @@ END_TEST
 START_TEST(test_dbmail_mailbox_open)
 {
 	int result;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	result = dbmail_mailbox_open(mb);
 	fail_unless(result == 0, "dbmail_mailbox_open failed");
 	dbmail_mailbox_free(mb);
@@ -158,7 +158,7 @@ START_TEST(test_dbmail_mailbox_dump)
 {
 	int c = 0;
 	FILE *o = fopen("/dev/null","w");
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	c = dbmail_mailbox_dump(mb,o);
 	fail_unless(c>=0,"dbmail_mailbox_dump failed");
 	dbmail_mailbox_free(mb);
@@ -173,7 +173,7 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	u64_t idx = 0;
 	gboolean sorted = 1;
 
-	struct DbmailMailbox *mb, *mc, *md;
+	DbmailMailbox *mb, *mc, *md;
 	
 	// first case
 	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
@@ -241,7 +241,7 @@ START_TEST(test_dbmail_mailbox_sort)
 	u64_t idx = 0;
 	gboolean sorted = 1;
 
-	struct DbmailMailbox *mb;
+	DbmailMailbox *mb;
 	
 	// first case
 	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
@@ -264,7 +264,7 @@ START_TEST(test_dbmail_mailbox_search)
 	u64_t idx = 0;
 	gboolean sorted = 1;
 	int all, found, notfound;
-	struct DbmailMailbox *mb;
+	DbmailMailbox *mb;
 	
 	// first case
 	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
@@ -380,7 +380,7 @@ START_TEST(test_dbmail_mailbox_search_parsed_1)
 {
 	u64_t idx=0;
 	gboolean sorted = 0;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	char *args = g_strdup("UID 1 BODY unlikelyaddress@nfg.nl");
 	char **array = g_strsplit(args," ",0);
 	g_free(args);
@@ -395,7 +395,7 @@ START_TEST(test_dbmail_mailbox_search_parsed_2)
 {
 	u64_t idx=0;
 	gboolean sorted = 0;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	char *args = g_strdup("UID 1,* BODY the");
 	char **array = g_strsplit(args," ",0);
 	g_free(args);
@@ -412,7 +412,7 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	char *args;
 	char **array;
 	u64_t idx = 0;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	
 	dbmail_mailbox_open(mb);
 
@@ -442,7 +442,7 @@ START_TEST(test_dbmail_mailbox_get_set)
 {
 	guint c, d;
 	GTree *set;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	dbmail_mailbox_set_uid(mb,TRUE);
 
 	// basic tests;
@@ -523,7 +523,7 @@ START_TEST(test_dbmail_mailbox_remove_uid)
 	GTree *set;
 	u64_t *id, msn;
 	gint c, i, j;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	dbmail_mailbox_set_uid(mb,TRUE);
 	
 	msn = 1;
@@ -544,7 +544,7 @@ START_TEST(test_dbmail_mailbox_remove_uid)
 END_TEST
 
 #define DEF_FRAGSIZE 64
-static int dbmail_mailbox_get_mtime(struct DbmailMailbox *self)
+static int dbmail_mailbox_get_mtime(DbmailMailbox *self)
 {
 	int res;
 	char q[DEF_QUERYSIZE];
@@ -574,7 +574,7 @@ static int dbmail_mailbox_get_mtime(struct DbmailMailbox *self)
 START_TEST(test_dbmail_mailbox_get_mtime)
 {
 	int mtime;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	mtime = dbmail_mailbox_get_mtime(mb);
 	fail_unless(mtime > 0,"dbmail_mailbox_get_mtime failed [%d]", mtime);
 }

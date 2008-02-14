@@ -9,37 +9,14 @@
 
 #include "dbmail.h"
 
-/* ImapSession definition */
-struct ImapSession {
-	clientinfo_t *ci;
-	u64_t msg_idnr;  // replace this with a GList
-	GMimeStream *fstream; // gmime filter wrapper around the TX handler in clientinfo_t
-	GString *buff; // use buffered writes
-	gboolean use_uid;
-	char *tag;
-	char *command;
-	int command_type;
-	int timeout;
-	char **args;
-	u64_t args_idx;
-	fetch_items_t *fi;
-	struct DbmailMailbox *mailbox;
-	struct DbmailMessage *message;
-	GTree *ids;
-	GTree *headers;
-	GTree *envelopes;
-	GTree *mbxinfo; // cache MailboxInfo
-	GList *recent;
-	GList *ids_list;
-	gpointer cmd; // command structure
-	gboolean error; // command result
-};
+#define ERROR -1
+#define DONE 1
 
 /*
  * cached raw message data
  */
 typedef struct {
-	struct DbmailMessage *dmsg;
+	DbmailMessage *dmsg;
 	MEM *memdump;
 	MEM *tmpdump;
 	u64_t num;
@@ -48,6 +25,49 @@ typedef struct {
 	int msg_parsed;
 } cache_t;
 
+
+/* ImapSession definition */
+typedef struct {
+	clientinfo_t *ci;
+	u64_t msg_idnr;  // replace this with a GList
+
+	GString *buff; // output buffer
+
+	int parser_state;
+	int command_state;
+	char *rbuff; // input buffer
+	int rbuff_size;
+
+	gboolean use_uid;
+	char *tag;
+	char *command;
+	int command_type;
+	int timeout;
+	char **args;
+	u64_t args_idx;
+	fetch_items_t *fi;
+
+	DbmailMailbox *mailbox;	/* currently selected mailbox */
+
+	// FIXME: there is too much redundancy here
+	DbmailMessage *message;
+	cache_t *cached_msg;
+
+	u64_t userid;		/* userID of client in dbase */
+
+	GTree *ids;
+	GTree *envelopes;
+	GTree *mbxinfo; // cache MailboxInfo
+	GList *recent;
+	GList *ids_list;
+	gpointer cmd; // command structure
+	gboolean error; // command result
+	int state; // session status 
+	int error_count;
+	void (*cb_read)(void *);
+	void (*cb_time)(void *);
+	
+} ImapSession;
 
 typedef struct {
 	gboolean silent;
@@ -60,84 +80,81 @@ typedef struct {
 	u64_t mailbox_id;
 } cmd_copy_t;
 
-typedef int (*IMAP_COMMAND_HANDLER) (struct ImapSession *);
 
-struct ImapSession * dbmail_imap_session_new(void);
-struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci);
-struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag);
-struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command);
-struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args);
-struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
+typedef int (*IMAP_COMMAND_HANDLER) (ImapSession *);
 
+ImapSession * dbmail_imap_session_new(void);
+ImapSession * dbmail_imap_session_setTag(ImapSession * self, char * tag);
+ImapSession * dbmail_imap_session_setCommand(ImapSession * self, char * command);
+ImapSession * dbmail_imap_session_setArgs(ImapSession * self, char ** args);
+ImapSession * dbmail_imap_session_resetFi(ImapSession * self);
 
+void dbmail_imap_session_set_callbacks(ImapSession *self, void *cb_r, void *cb_t, int timeout);
+void dbmail_imap_session_reset_callbacks(ImapSession *self);
 
-void dbmail_imap_session_args_free(struct ImapSession *self, gboolean all);
+void dbmail_imap_session_args_free(ImapSession *self, gboolean all);
+void dbmail_imap_session_fetch_free(ImapSession *self);
+void dbmail_imap_session_delete(ImapSession * self);
 
-void dbmail_imap_session_fetch_free(struct ImapSession *self);
-void dbmail_imap_session_delete(struct ImapSession * self);
+int dbmail_imap_session_readln(ImapSession * self, char * buffer);
+int dbmail_imap_session_discard_to_eol(ImapSession *self);
 
-int dbmail_imap_session_readln(struct ImapSession * self, char * buffer);
-int dbmail_imap_session_discard_to_eol(struct ImapSession *self);
+void dbmail_imap_session_buff_clear(ImapSession *self);
+void dbmail_imap_session_buff_append(ImapSession *self, char *message, ...);
+void dbmail_imap_session_buff_flush(ImapSession *self);
+int dbmail_imap_session_printf(ImapSession * self, char * message, ...);
 
-/* \return
- *   -1 on possibly recoverable errors
- *   -2 on serious unrecoverable errors
- */
-void dbmail_imap_session_buff_clear(struct ImapSession *self);
-void dbmail_imap_session_buff_append(struct ImapSession *self, char *message, ...);
-void dbmail_imap_session_buff_flush(struct ImapSession *self);
-int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...);
-
-int dbmail_imap_session_set_state(struct ImapSession *self, int state);
-int client_is_authenticated(struct ImapSession * self);
-int check_state_and_args(struct ImapSession * self, const char * command, int minargs, int maxargs, int state);
-int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, char * password);
-int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value);
+int dbmail_imap_session_set_state(ImapSession *self, int state);
+int client_is_authenticated(ImapSession * self);
+int check_state_and_args(ImapSession * self, const char * command, int minargs, int maxargs, int state);
+int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password);
+int dbmail_imap_session_prompt(ImapSession * self, char * prompt, char * value);
 
 
-void dbmail_imap_session_get_mbxinfo(struct ImapSession *self);
-MailboxInfo * dbmail_imap_session_mbxinfo_lookup(struct ImapSession *self, u64_t mailbox_idnr);
+void dbmail_imap_session_get_mbxinfo(ImapSession *self);
+MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr);
 
-u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, const char * mailbox);
-int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr, ACLRight_t right);
-int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t idnr);
+u64_t dbmail_imap_session_mailbox_get_idnr(ImapSession * self, const char * mailbox);
+int dbmail_imap_session_mailbox_check_acl(ImapSession * self, u64_t idnr, ACLRight_t right);
+int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
 
-int dbmail_imap_session_mailbox_status(struct ImapSession * self, gboolean update);
-int dbmail_imap_session_idle(struct ImapSession *self);
-int dbmail_imap_session_mailbox_show_info(struct ImapSession * self);
-int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mailbox);
-int dbmail_imap_session_mailbox_close(struct ImapSession *self);
+int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
+int dbmail_imap_session_idle(ImapSession *self);
+int dbmail_imap_session_mailbox_show_info(ImapSession * self);
+int dbmail_imap_session_mailbox_open(ImapSession * self, const char * mailbox);
+int dbmail_imap_session_mailbox_close(ImapSession *self);
 
-int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self);
-int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self);
+int dbmail_imap_session_mailbox_expunge(ImapSession *self);
+int dbmail_imap_session_mailbox_select_recent(ImapSession *self);
+int dbmail_imap_session_mailbox_update_recent(ImapSession *self);
 
-int dbmail_imap_session_fetch_parse_args(struct ImapSession * self);
-int dbmail_imap_session_fetch_get_items(struct ImapSession *self);
+int dbmail_imap_session_fetch_parse_args(ImapSession * self);
+int dbmail_imap_session_fetch_get_items(ImapSession *self);
 
-void dbmail_imap_session_bodyfetch_new(struct ImapSession *self);
-void dbmail_imap_session_bodyfetch_free(struct ImapSession *self);
-body_fetch_t * dbmail_imap_session_bodyfetch_get_last(struct ImapSession *self);
-void dbmail_imap_session_bodyfetch_rewind(struct ImapSession *self);
+void dbmail_imap_session_bodyfetch_new(ImapSession *self);
+void dbmail_imap_session_bodyfetch_free(ImapSession *self);
+body_fetch_t * dbmail_imap_session_bodyfetch_get_last(ImapSession *self);
+void dbmail_imap_session_bodyfetch_rewind(ImapSession *self);
 
-int dbmail_imap_session_bodyfetch_set_partspec(struct ImapSession *self, char *partspec, int length);
-char *dbmail_imap_session_bodyfetch_get_last_partspec(struct ImapSession *self);
+int dbmail_imap_session_bodyfetch_set_partspec(ImapSession *self, char *partspec, int length);
+char *dbmail_imap_session_bodyfetch_get_last_partspec(ImapSession *self);
 
-int dbmail_imap_session_bodyfetch_set_itemtype(struct ImapSession *self, int itemtype);
-int dbmail_imap_session_bodyfetch_get_last_itemtype(struct ImapSession *self);
+int dbmail_imap_session_bodyfetch_set_itemtype(ImapSession *self, int itemtype);
+int dbmail_imap_session_bodyfetch_get_last_itemtype(ImapSession *self);
 
-int dbmail_imap_session_bodyfetch_set_argstart(struct ImapSession *self);
-int dbmail_imap_session_bodyfetch_get_last_argstart(struct ImapSession *self);
+int dbmail_imap_session_bodyfetch_set_argstart(ImapSession *self);
+int dbmail_imap_session_bodyfetch_get_last_argstart(ImapSession *self);
 
-int dbmail_imap_session_bodyfetch_set_argcnt(struct ImapSession *self);
-int dbmail_imap_session_bodyfetch_get_last_argcnt(struct ImapSession *self);
+int dbmail_imap_session_bodyfetch_set_argcnt(ImapSession *self);
+int dbmail_imap_session_bodyfetch_get_last_argcnt(ImapSession *self);
 
-int dbmail_imap_session_bodyfetch_set_octetstart(struct ImapSession *self, guint64 octet);
-guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(struct ImapSession *self);
+int dbmail_imap_session_bodyfetch_set_octetstart(ImapSession *self, guint64 octet);
+guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(ImapSession *self);
 
-int dbmail_imap_session_bodyfetch_set_octetcnt(struct ImapSession *self, guint64 octet);
-guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(struct ImapSession *self);
+int dbmail_imap_session_bodyfetch_set_octetcnt(ImapSession *self, guint64 octet);
+guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self);
 
-char **build_args_array_ext(struct ImapSession *self, const char *originalString);
+int build_args_array_ext(ImapSession *self, const char *originalString);
 
 #endif
 

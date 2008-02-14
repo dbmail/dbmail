@@ -1,3 +1,41 @@
+2008-02-14  Paul J Stevens <paul@nfg.nl>
+
+	* acinclude.m4, configure.in, dbmail.conf, 
+	debian/patches/00-dbmail_conf.dpatch, src/Makefile.am, 
+	src/authmodule.c, src/clientsession.c, src/clientsession.h, 
+	src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmail-mailbox.c, src/dbmail-mailbox.h, src/dbmail-message.c, 
+	src/dbmail-message.h, src/dbmail-user.c, src/dbmail.h.in, 
+	src/dbmailtypes.h, src/dbmodule.c, src/dm_config.c, src/dm_db.c, 
+	src/dm_db.h, src/dm_debug.c, src/dm_misc.c, src/dm_misc.h, 
+	src/dm_pidfile.c, src/dm_pipe.c, src/dm_pipe.h, src/export.c, 
+	src/imap4.c, src/imap4.h, src/imapcommands.c, src/imapcommands.h, 
+	src/imapd.c, src/lmtp.c, src/lmtp.h, src/lmtpd.c, src/main.c, 
+	src/maintenance.c, src/modules/authsql.c, src/modules/dbingres.c, 
+	src/modules/dbmysql.c, src/modules/dbpgsql.c, src/modules/dbsqlite.c, 
+	src/modules/sortnull.c, src/modules/sortsieve.c, src/pop3.c, 
+	src/pop3.h, src/pop3d.c, src/server.c, src/server.h, 
+	src/serverparent.c, src/serverpool.c, src/serverpool.h, 
+	src/serversession.c, src/serversession.h, src/sievecmd.c, src/sort.c, 
+	src/sort.h, src/sortmodule.c, src/sortmodule.h, src/timsieve.c, 
+	src/timsieve.h, src/user.c, test-scripts/lmtp2.txt, 
+	test-scripts/lmtp3.txt, test-scripts/testfetch.txt, 
+	test-scripts/testimap.py, test-scripts/testlmtp.sh, 
+	test-scripts/testpop.py, test-scripts/testpop.txt, 
+	test-scripts/testsieve.txt, test/check_dbmail_auth.c, 
+	test/check_dbmail_common.c, test/check_dbmail_db.c, 
+	test/check_dbmail_deliver.c, test/check_dbmail_dsn.c, 
+	test/check_dbmail_imapd.c, test/check_dbmail_list.c, 
+	test/check_dbmail_mailbox.c, test/check_dbmail_message.c, 
+	test/check_dbmail_misc.c, test/check_dbmail_server.c, 
+	test/check_dbmail_user.c, test/check_dbmail_util.c:
+	merge events branch
+
+2008-02-04  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, VERSION, debian/changelog:
+	v2.3.2
+
 2008-02-04  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION, debian/changelog:

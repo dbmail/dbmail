@@ -30,7 +30,6 @@ endif
 sbin_PROGRAMS = dbmail-deliver \
 	dbmail-pop3d \
 	dbmail-imapd \
-	dbmail-top \
 	dbmail-util \
 	dbmail-users \
 	dbmail-export \
@@ -48,16 +47,13 @@ COMMON = dbmail-user.c \
 	dm_pidfile.c \
 	dm_digest.c \
 	dm_match.c \
-	dm_iconv.c $(DM_GETOPT)
+	dm_iconv.c \
+	dm_dsn.c $(DM_GETOPT)
 	
 SERVER = server.c \
 	serverparent.c \
-	serverpool.c \
+	clientsession.c \
 	dm_cidr.c
-	
-DELIVER = dm_pipe.c \
-	dm_dsn.c \
-	sort.c
 
 MODULES = dbmodule.c \
 	authmodule.c \
@@ -83,8 +79,8 @@ dbmail_pop3d_LDADD = libdbmail.la
 dbmail_imapd_SOURCES = $(IMAPD) imapd.c 
 dbmail_imapd_LDADD = libdbmail.la
 
-dbmail_top_SOURCES = top.c
-dbmail_top_LDADD = libdbmail.la -lncurses
+#dbmail_top_SOURCES = top.c
+#dbmail_top_LDADD = libdbmail.la -lncurses
 
 dbmail_util_SOURCES = maintenance.c
 dbmail_util_LDADD = libdbmail.la
@@ -92,7 +88,7 @@ dbmail_util_LDADD = libdbmail.la
 dbmail_users_SOURCES = user.c
 dbmail_users_LDADD = libdbmail.la
 
-dbmail_export_SOURCES = export.c dm_memblock.c dbmail-imapsession.c
+dbmail_export_SOURCES = $(IMAPD) export.c
 dbmail_export_LDADD = libdbmail.la
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
@@ -112,9 +108,9 @@ pkglib_LTLIBRARIES = libdbmail.la
 
 if SHARED
 AM_LDFLAGS = -export-dynamic @CRYPTLIB@
-libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
+libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(MODULES)
 else
-libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
+libdbmail_la_SOURCES = $(COMMON) $(SERVER)
 libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @INGRESLTLIB@ @SORTLTLIB@ @AUTHLTLIB@
 endif
 

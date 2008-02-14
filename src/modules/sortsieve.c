@@ -34,7 +34,7 @@ struct sort_context {
 	char *s_buf;
 	char *script;
 	u64_t user_idnr;
-	struct DbmailMessage *message;
+	DbmailMessage *message;
 	struct sort_result *result;
 	GList *freelist;
 };
@@ -81,6 +81,103 @@ static void sort_sieve_get_config(struct sort_sieve_config *sieve_config)
 	if (strcasecmp(val, "yes") == 0) {
 		sieve_config->debug = 1;
 	}
+}
+
+/*
+ * Send a vacation message. FIXME: this should provide
+ * MIME support, to comply with the Sieve-Vacation spec.
+ */
+static int send_vacation(DbmailMessage *message,
+		const char *to, const char *from,
+		const char *subject, const char *body, const char *handle)
+{
+	int result;
+	const char *x_dbmail_vacation = dbmail_message_get_header(message, "X-Dbmail-Vacation");
+
+	if (x_dbmail_vacation) {
+		TRACE(TRACE_MESSAGE, "vacation loop detected [%s]", x_dbmail_vacation);
+		return 0;
+	}
+
+	DbmailMessage *new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, to, from, subject, body);
+	dbmail_message_set_header(new_message, "X-DBMail-Vacation", handle);
+
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
+
+	dbmail_message_free(new_message);
+
+	return result;
+}
+
+static int send_redirect(DbmailMessage *message, const char *to, const char *from)
+{
+	if (!to || !from) {
+		TRACE(TRACE_ERROR, "both To and From addresses must be specified");
+		return -1;
+	}
+
+	return send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+}
+
+int send_alert(u64_t user_idnr, char *subject, char *body)
+{
+	DbmailMessage *new_message;
+	field_t postmaster;
+	char *from;
+	int msgflags[IMAP_NFLAGS];
+
+	// Only send each unique alert once a day.
+	char *tmp = g_strconcat(subject, body, NULL);
+	char *handle = dm_md5(tmp);
+	char *userchar = g_strdup_printf("%llu", user_idnr);
+	if (db_replycache_validate(userchar, "send_alert", handle, 1) != DM_SUCCESS) {
+		TRACE(TRACE_INFO, "Already sent alert [%s] to user [%llu] today", subject, user_idnr);
+		g_free(userchar);
+		g_free(handle);
+		g_free(tmp);
+		return 0;
+	} else {
+		TRACE(TRACE_INFO, "Sending alert [%s] to user [%llu]", subject, user_idnr);
+		db_replycache_register(userchar, "send_alert", handle);
+		g_free(userchar);
+		g_free(handle);
+		g_free(tmp);
+	}
+
+	// From the Postmaster.
+	if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
+		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+	}
+	if (strlen(postmaster))
+		from = postmaster;
+	else
+		from = DEFAULT_POSTMASTER;
+
+	// Set the \Flagged flag.
+	memset(msgflags, 0, sizeof(int) * IMAP_NFLAGS);
+	msgflags[IMAP_FLAG_FLAGGED] = 1;
+
+	// Get the user's login name.
+	char *to = auth_get_userid(user_idnr);
+
+	new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, to, from, subject, body);
+
+	// Pre-insert the message and get a new_message->id
+	dbmail_message_store(new_message);
+	u64_t tmpid = new_message->id;
+
+	if (sort_deliver_to_mailbox(new_message, user_idnr,
+			"INBOX", BOX_BRUTEFORCE, msgflags) != DSN_CLASS_OK) {
+		TRACE(TRACE_ERROR, "Unable to deliver alert [%s] to user [%llu]", subject, user_idnr);
+	}
+
+	g_free(to);
+	db_delete_message(tmpid);
+	dbmail_message_free(new_message);
+
+	return 0;
 }
 
 
@@ -771,7 +868,7 @@ freesieve:
  * such as dbmail-lmtpd, the daemon should
  * finish storing the message and restart.
  * */
-sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
+sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message)
 {
 	int res, exitnull = 0;
 	struct sort_result *result = NULL;

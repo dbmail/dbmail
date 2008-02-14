@@ -28,9 +28,9 @@
 #include <sqlite3.h>
 #define THIS_MODULE "sql"
 
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
-#define DBPFX _db_params.pfx
+#define DBPFX _db_params->pfx
 
 static sqlite3 *conn;
 
@@ -252,7 +252,7 @@ static int create_tables(void)
 int db_connect()
 {
 	int result;
-	if ((result = sqlite3_open(_db_params.db, &conn)) != SQLITE_OK) {
+	if ((result = sqlite3_open(_db_params->db, &conn)) != SQLITE_OK) {
 		TRACE(TRACE_FATAL, "sqlite3_open failed: %s", sqlite3_errmsg(conn));
 		sqlite3_close(conn);
 		return -1;

@@ -108,53 +108,6 @@ typedef struct {
 	field_t name;		/**< name of configuration item */
 	field_t value;		/**< value of configuration item */
 } item_t;
-
-typedef struct {
-	FILE *tx, *rx;
-	char ip_src[IPNUM_LEN];	/* client IP-number */
-	field_t clientname;	/* resolved client ip */
-	int timeout;		/* server timeout (seconds) */
-	int login_timeout;	/* login timeout (seconds) */
-	void *userData;
-} clientinfo_t;
-
-typedef struct {
-	int maxConnect;
-	int *listenSockets;
-	int numSockets;
-	int resolveIP;
-	int timeout;
-	int login_timeout;
-	int (*ClientHandler) (clientinfo_t *);
-} ChildInfo_t;
-
-typedef struct {
-	int no_daemonize;
-	int log_verbose;
-	char *pidFile;
-	char *stateFile;
-	int startChildren;
-	int minSpareChildren;
-	int maxSpareChildren;
-	int maxChildren;
-	int childMaxConnect;
-	int timeout;
-	int login_timeout;
-	char **iplist; // Allocated memory.
-	int ipcount;
-	int *listenSockets; // Allocated memory.
-	int service_before_smtp;
-	int port;
-	int backlog;
-	int resolveIP;
-	field_t serverUser, serverGroup;
-	field_t socket;
-	field_t log, error_log;
-	field_t pid_dir;
-	field_t state_dir;
-	int (*ClientHandler) (clientinfo_t *);
-} serverConfig_t;
-
 /* dbmail-message */
 
 enum DBMAIL_MESSAGE_CLASS {
@@ -174,14 +127,13 @@ typedef enum DBMAIL_STREAM_TYPE {
 	DBMAIL_STREAM_RAW
 } dbmail_stream_t;
 
-struct DbmailMessage {
+typedef struct {
 	u64_t id;
 	u64_t physid;
 	time_t internal_date;
 	int *internal_date_gmtoff;
 	GString *envelope_recipient;
 	enum DBMAIL_MESSAGE_CLASS klass;
-	GByteArray *raw;
 	GMimeObject *content;
 	GRelation *headers;
 	GHashTable *header_dict;
@@ -191,35 +143,40 @@ struct DbmailMessage {
 	int part_key;
 	int part_depth;
 	int part_order;
-};
-
-
+} DbmailMessage;
 
 /**********************************************************************
  *                              POP3
 **********************************************************************/
+/** 
+ * all POP3 commands */
+typedef enum {
+	POP3_QUIT,
+	POP3_USER,
+	POP3_PASS,
+	POP3_STAT,
+	POP3_LIST,
+	POP3_RETR,
+	POP3_DELE,
+	POP3_NOOP,
+	POP3_LAST,
+	POP3_RSET,
+	POP3_UIDL,
+	POP3_APOP,
+	POP3_AUTH,
+	POP3_TOP,
+	POP3_CAPA,
+} Pop3Cmd_t;
+
 
 /** all virtual_ definitions are session specific
  *  when a RSET occurs all will be set to the real values */
 struct message {
 	u64_t msize;	  /**< message size */
 	u64_t messageid;  /**< messageid (from database) */
-	u64_t realmessageid;
-			  /**< ? */
-	char uidl[UID_SIZE];
-			  /**< unique id */
-	/* message status :
-	 * 000 message is new, never touched 
-	 * 001 message is read
-	 * 002 message is deleted by user 
-	 * ----------------------------------
-	 * The server additionally uses:
-	 * 003 message is deleted by sysop
-	 * 004 message is ready for final deletion */
-
-	/** message status */
+	u64_t realmessageid; /**< ? */
+	char uidl[UID_SIZE]; /**< unique id */
 	MessageStatus_t messagestatus;
-	/** virtual message status */
 	MessageStatus_t virtual_messagestatus;
 };
 
@@ -234,15 +191,42 @@ typedef enum {
 /**
  * struct for a POP3 session. Also used for LMTP session.
  */
+
 typedef struct {
-	Pop3State_t state;		/**< current POP state */
+	int rx, tx;			/* read and write filehandles */
+	struct bufferevent *rev, *wev;  /* read bufferevent, write bufferevent */
+	void (*cb_read) (void *);	// pointers to event callbacks
+	void (*cb_time) (void *);
+	void (*cb_write) (void *);
+
+	char ip_src[IPNUM_LEN];		/* client IP-number */
+	field_t clientname;		/* resolved client hostname */
+	int timeout;			/* server timeout (seconds) */
+	int login_timeout;		/* login timeout (seconds) */
+	int service_before_smtp;
+	size_t len;			/* octets read during last ci_read/ci_readln */
+} clientinfo_t;
+
+typedef struct {
+	clientinfo_t *ci;
+	int state;			/**< session state */
 
 	int error_count;		/**< number of errors that have occured */
 	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */
 	int SessionResult;		/**< what happened during the session */
+	int timeout;			/**< timeout on socket */
+
+	int parser_state;
+	int command_state;
+	int command_type;		/* command type */
+	GList *args;			/* command args (allocated char *) */
+
+	GString *rbuff;			/* input buffer */
+	size_t rbuff_size;		/* required number of octets (for string literal) */
 
 	char *username;
 	char *password;
+	char hostname[64];
 	char *apop_stamp;		/**< timestamp for APOP */
 
 	u64_t useridnr;			/**< Used by timsieved */
@@ -254,7 +238,29 @@ typedef struct {
 	GList *messagelst;		/** list of messages */
 	GList *from;			// lmtp senders
 	GList *rcpt;			// lmtp recipients
-} PopSession_t;
+} ClientSession_t;
+
+typedef struct {
+	int no_daemonize;
+	int log_verbose;
+	char *pidFile;
+	int timeout;
+	int login_timeout;
+	char **iplist; // Allocated memory.
+	int ipcount;
+	int *listenSockets; // Allocated memory.
+	int service_before_smtp;
+	int port;
+	int backlog;
+	int resolveIP;
+	field_t service_name;
+	field_t serverUser, serverGroup;
+	field_t socket;
+	field_t log, error_log;
+	field_t pid_dir;
+	int (*ClientHandler) (clientinfo_t *);
+} serverConfig_t;
+
 
 
 /**********************************************************************
@@ -313,7 +319,9 @@ enum IMAP4_CLIENT_STATES {
 	IMAPCS_NON_AUTHENTICATED,
 	IMAPCS_AUTHENTICATED, 
 	IMAPCS_SELECTED, 
-	IMAPCS_LOGOUT
+	IMAPCS_LOGOUT,
+	IMAPCS_DONE,
+	IMAPCS_ERROR
 };
 
 enum IMAP4_FLAGS { 
@@ -419,6 +427,46 @@ typedef struct {
 
 
 
+typedef struct {
+	int itemtype;		/* the item to be fetched */
+	int argstart;		/* start index in the arg array */
+	int argcnt;		/* number of args belonging to this bodyfetch */
+	guint64 octetstart, octetcnt;	/* number of octets to be retrieved */
+
+	char partspec[IMAP_MAX_PARTSPEC_LEN];	/* part specifier (i.e. '2.1.3' */
+
+	gchar *hdrnames;
+	gchar *hdrplist;
+	GTree *headers;
+} body_fetch_t;
+
+
+typedef struct {
+	GList *bodyfetch;
+
+	gboolean noseen;		/* set the seen flag ? */
+	gboolean msgparse_needed;
+	gboolean hdrparse_needed;
+
+	/* helpers */
+	gboolean setseen;
+	gboolean isfirstfetchout;
+
+	/* fetch elements */
+	gboolean getUID;
+	gboolean getSize;
+	gboolean getFlags;
+	gboolean getInternalDate;
+	gboolean getEnvelope;
+	gboolean getMIME_IMB;
+	gboolean getMIME_IMB_noextension;
+	gboolean getRFC822Header;
+	gboolean getRFC822Text;
+	gboolean getRFC822Peek;
+	gboolean getRFC822;
+	gboolean getBodyTotal;
+	gboolean getBodyTotalPeek;
+} fetch_items_t;
 
 /************************************************************************ 
  *                      simple cache mechanism
@@ -463,6 +511,34 @@ typedef struct {
 	// reference dbmail_keywords
 	GList *keywords;
 } MessageInfo;
+
+
+typedef struct {
+	u64_t id;
+	u64_t rows;		// total number of messages in mailbox
+	u64_t recent;
+	u64_t unseen;
+	u64_t owner_id;
+	u64_t size;
+
+	gchar *name;
+
+	GList *sorted;		// ordered list of UID values
+
+	MailboxInfo *info;	// cache mailbox metadata;
+	GTree *msginfo; 	// cache MessageInfo
+
+	GTree *ids; 		// key: uid, value: msn
+	GTree *msn; 		// key: msn, value: uid
+
+	GNode *search;
+	gchar *charset;		// charset used during search/sort
+
+	fetch_items_t *fi;	// imap fetch
+
+	gboolean uid, no_select, no_inferiors, no_children;
+
+} DbmailMailbox;
 
 
 /*************************************************************************

@@ -40,7 +40,7 @@ sort_result_t *sort_validate(u64_t user_idnr UNUSED, char *scriptname UNUSED)
 	return NULL;
 }
 
-sort_result_t *sort_process(u64_t user_idnr UNUSED, struct DbmailMessage *message UNUSED)
+sort_result_t *sort_process(u64_t user_idnr UNUSED, DbmailMessage *message UNUSED)
 {
 	TRACE(TRACE_WARNING, "SIEVE sorting enabled in DELIVERY section of dbmail.conf,"
 			" but this build of DBMail was statically configured without Sieve.");

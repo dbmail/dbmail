@@ -28,8 +28,8 @@
 #include "dbmail.h"
 
 
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern db_param_t * _db_params;
+#define DBPFX _db_params->pfx
 
 #define MESSAGE_MAX_LINE_SIZE 1024
 
@@ -51,11 +51,11 @@ extern db_param_t _db_params;
 static void _register_header(const char *header, const char *value, gpointer user_data);
 static gboolean _header_cache(const char *header, const char *value, gpointer user_data);
 
-static struct DbmailMessage * _retrieve(struct DbmailMessage *self, const char *query_template);
-static void _map_headers(struct DbmailMessage *self);
-static int _set_content(struct DbmailMessage *self, const GString *content);
-static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
-static int _message_insert(struct DbmailMessage *self, 
+static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template);
+static void _map_headers(DbmailMessage *self);
+static int _set_content(DbmailMessage *self, const GString *content);
+static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
+static int _message_insert(DbmailMessage *self, 
 		u64_t user_idnr, 
 		const char *mailbox, 
 		const char *unique_id); 
@@ -207,7 +207,7 @@ static u64_t blob_insert(const char *buf, const char *hash)
 	return id;
 }
 
-static int register_blob(struct DbmailMessage *m, u64_t id, gboolean is_header)
+static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 {
 	GString *q;
 
@@ -248,7 +248,7 @@ static u64_t blob_store(const char *buf)
 	return 0;
 }
 
-static int store_blob(struct DbmailMessage *m, const char *buf, gboolean is_header)
+static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 {
 	u64_t id;
 
@@ -307,7 +307,7 @@ static const char * find_boundary(const char *s)
 }
 
 
-static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
+static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
 	char *str;
 	const char *boundary = NULL;
@@ -349,7 +349,7 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 		prevdepth = depth;
 		prev_header = is_header;
 
-		str = (char *)db_get_result(row,0);
+		str = g_strdup_printf("%s",((char *)db_get_result(row,0)));
 		key = db_get_result_int(row,1);
 		depth = db_get_result_int(row,2);
 		order = db_get_result_int(row,3);
@@ -382,12 +382,15 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 			g_string_append_printf(m, "\n--%s\n", boundary);
 		}
 
-		g_string_append_printf(m, "%s", str);
+		g_string_append(m, str);
 		dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 
 			is_header, depth, key, order, str);
 
 		if (is_header)
 			g_string_append_printf(m,"\n");
+		
+		g_free(str);
+		
 	}
 	if (rows > 1 && boundary && !finalized) {
 		dprint("\n--%s-- final\n", boundary);
@@ -413,16 +416,16 @@ static struct DbmailMessage * _mime_retrieve(struct DbmailMessage *self)
 	return self;
 }
 
-static gboolean store_mime_object(GMimeObject *object, struct DbmailMessage *m);
+static gboolean store_mime_object(GMimeObject *object, DbmailMessage *m);
 
-static void store_head(GMimeObject *object, struct DbmailMessage *m)
+static void store_head(GMimeObject *object, DbmailMessage *m)
 {
 	char *head = g_mime_object_get_headers(object);
 	store_blob(m, head, 1);
 	g_free(head);
 }
 
-static void store_body(GMimeObject *object, struct DbmailMessage *m)
+static void store_body(GMimeObject *object, DbmailMessage *m)
 {
 	char *text = g_mime_object_get_body(object);
 	if (! text)
@@ -433,7 +436,7 @@ static void store_body(GMimeObject *object, struct DbmailMessage *m)
 }
 
 
-static gboolean store_mime_text(GMimeObject *object, struct DbmailMessage *m, gboolean skiphead)
+static gboolean store_mime_text(GMimeObject *object, DbmailMessage *m, gboolean skiphead)
 {
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
@@ -443,7 +446,7 @@ static gboolean store_mime_text(GMimeObject *object, struct DbmailMessage *m, gb
 	return FALSE;
 }
 
-static gboolean store_mime_multipart(GMimeObject *object, struct DbmailMessage *m, const GMimeContentType *content_type, gboolean skiphead)
+static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, const GMimeContentType *content_type, gboolean skiphead)
 {
 	const char *boundary;
 	int n;
@@ -477,7 +480,7 @@ static gboolean store_mime_multipart(GMimeObject *object, struct DbmailMessage *
 	return FALSE;
 }
 
-static gboolean store_mime_message(GMimeObject * object, struct DbmailMessage *m, gboolean skiphead)
+static gboolean store_mime_message(GMimeObject * object, DbmailMessage *m, gboolean skiphead)
 {
 	GMimeMessage *m2;
 
@@ -495,7 +498,7 @@ static gboolean store_mime_message(GMimeObject * object, struct DbmailMessage *m
 	
 }
 
-gboolean store_mime_object(GMimeObject *object, struct DbmailMessage *m)
+gboolean store_mime_object(GMimeObject *object, DbmailMessage *m)
 {
 	const GMimeContentType *content_type;
 	GMimeObject *mime_part;
@@ -544,7 +547,7 @@ gboolean store_mime_object(GMimeObject *object, struct DbmailMessage *m)
 }
 
 
-static gboolean _dm_message_store(struct DbmailMessage *m)
+static gboolean _dm_message_store(DbmailMessage *m)
 {
 	gboolean r;
 	r = store_mime_object((GMimeObject *)m->content, m);
@@ -575,9 +578,9 @@ static void dump_to_file(const char *filename, const char *buf)
  *  \return the DbmailMessage
  */
 
-struct DbmailMessage * dbmail_message_new(void)
+DbmailMessage * dbmail_message_new(void)
 {
-	struct DbmailMessage *self = g_new0(struct DbmailMessage,1);
+	DbmailMessage *self = g_new0(DbmailMessage,1);
 	
 	self->envelope_recipient = g_string_new("");
 
@@ -596,25 +599,24 @@ struct DbmailMessage * dbmail_message_new(void)
 	return self;
 }
 
-void dbmail_message_free(struct DbmailMessage *self)
+void dbmail_message_free(DbmailMessage *self)
 {
 	if (! self)
 		return;
 
-	if (self->headers)
+	if (self->headers) {
 		g_relation_destroy(self->headers);
-	if (self->content)
+		self->headers = NULL;
+	}
+	if (self->content) {
 		g_object_unref(self->content);
-	if (self->raw)
-		g_byte_array_free(self->raw,TRUE);
-	if (self->charset)
+		self->content = NULL;
+	}
+	if (self->charset) {
 		g_free(self->charset);
+		self->charset = NULL;
+	}
 
-	self->headers=NULL;
-	self->content=NULL;
-	self->raw=NULL;
-	self->charset=NULL;
-	
 	g_string_free(self->envelope_recipient,TRUE);
 	g_hash_table_destroy(self->header_dict);
 	g_tree_destroy(self->header_name);
@@ -622,6 +624,7 @@ void dbmail_message_free(struct DbmailMessage *self)
 	
 	self->id=0;
 	g_free(self);
+	self = NULL;
 }
 
 
@@ -630,11 +633,11 @@ void dbmail_message_free(struct DbmailMessage *self)
  * \param int streamtype is DBMAIL_STREAM_PIPE or DBMAIL_STREAM_LMTP
  * \return the new DbmailMessage
  */
-struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype) 
+DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype) 
 {
 	
 	GMimeStream *stream;
-	struct DbmailMessage *message, *retmessage;
+	DbmailMessage *message, *retmessage;
 	
 	assert(instream);
 	message = dbmail_message_new();
@@ -654,7 +657,7 @@ struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int stream
  * \param type flag is either DBMAIL_MESSAGE or DBMAIL_MESSAGE_PART
  * \return non-zero in case of error
  */
-int dbmail_message_set_class(struct DbmailMessage *self, int klass)
+int dbmail_message_set_class(DbmailMessage *self, int klass)
 {
 	switch (klass) {
 		case DBMAIL_MESSAGE:
@@ -672,7 +675,7 @@ int dbmail_message_set_class(struct DbmailMessage *self, int klass)
 /* \brief accessor for the type flag
  * \return the flag
  */
-int dbmail_message_get_class(const struct DbmailMessage *self)
+int dbmail_message_get_class(const DbmailMessage *self)
 {
 	return self->klass;
 }
@@ -682,7 +685,7 @@ int dbmail_message_get_class(const struct DbmailMessage *self)
  * \param GString *content contains the raw message
  * \return the filled DbmailMessage
  */
-struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content)
+DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GString *content)
 {
 
 	_set_content(self,content);
@@ -699,7 +702,7 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 	return self;
 }
 
-struct DbmailMessage * dbmail_message_init_from_gmime_message(struct DbmailMessage *self, GMimeMessage *message)
+DbmailMessage * dbmail_message_init_from_gmime_message(DbmailMessage *self, GMimeMessage *message)
 {
 	g_return_val_if_fail(GMIME_IS_MESSAGE(message), NULL);
 
@@ -716,7 +719,7 @@ struct DbmailMessage * dbmail_message_init_from_gmime_message(struct DbmailMessa
  * \param type which indicates either pipe/network style streaming
  * \return the filled DbmailMessage
  */
-struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
+DbmailMessage * dbmail_message_init_with_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
 	{
 	int res;
 
@@ -728,19 +731,11 @@ struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *sel
 	return self;
 }
 
-static int _set_content(struct DbmailMessage *self, const GString *content)
+static int _set_content(DbmailMessage *self, const GString *content)
 {
 	int res;
 	GMimeStream *stream;
 
-	if (self->raw) {
-		g_byte_array_free(self->raw,TRUE);
-		self->raw = NULL;
-	}
-	
-	self->raw = g_byte_array_new();
-	self->raw = g_byte_array_append(self->raw,(guint8 *)content->str, content->len+1);
-	//stream = g_mime_stream_mem_new_with_byte_array(self->raw);
 	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
 	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_mime_stream_close(stream);
@@ -748,7 +743,7 @@ static int _set_content(struct DbmailMessage *self, const GString *content)
 	return res;
 }
 
-static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
+static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
 {
 	/* 
 	 * We convert all messages to crlf->lf for internal usage and
@@ -868,7 +863,7 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 	return res;
 }
 
-static void _map_headers(struct DbmailMessage *self) 
+static void _map_headers(DbmailMessage *self) 
 {
 	GMimeObject *part;
 	assert(self->content);
@@ -914,7 +909,7 @@ static void _map_headers(struct DbmailMessage *self)
 static void _register_header(const char *header, const char *value, gpointer user_data)
 {
 	const char *hname, *hvalue;
-	struct DbmailMessage *m = (struct DbmailMessage *)user_data;
+	DbmailMessage *m = (DbmailMessage *)user_data;
 	if (! (hname = g_tree_lookup(m->header_name,header))) {
 		g_tree_insert(m->header_name,(gpointer)header,(gpointer)header);
 		hname = header;
@@ -928,24 +923,24 @@ static void _register_header(const char *header, const char *value, gpointer use
 		g_relation_insert(m->headers, hname, hvalue);
 }
 
-void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid)
+void dbmail_message_set_physid(DbmailMessage *self, u64_t physid)
 {
 	self->physid = physid;
 }
 
-u64_t dbmail_message_get_physid(const struct DbmailMessage *self)
+u64_t dbmail_message_get_physid(const DbmailMessage *self)
 {
 	return self->physid;
 }
 
-void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date)
+void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
 {
 	if (internal_date)
 		self->internal_date = g_mime_utils_header_decode_date(internal_date, self->internal_date_gmtoff);
 }
 
 /* thisyear is a workaround for some broken gmime version. */
-gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self, int thisyear)
+gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear)
 {
 	char *res;
 	struct tm gmt;
@@ -965,31 +960,31 @@ gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self, int t
 	return res;
 }
 
-void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, const char *envelope_recipient)
+void dbmail_message_set_envelope_recipient(DbmailMessage *self, const char *envelope_recipient)
 {
 	if (envelope_recipient)
 		g_string_printf(self->envelope_recipient,"%s", envelope_recipient);
 }
 
-gchar * dbmail_message_get_envelope_recipient(const struct DbmailMessage *self)
+gchar * dbmail_message_get_envelope_recipient(const DbmailMessage *self)
 {
 	if (self->envelope_recipient->len > 0)
 		return self->envelope_recipient->str;
 	return NULL;
 }
 
-void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
+void dbmail_message_set_header(DbmailMessage *self, const char *header, const char *value)
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
 	_register_header(header, value, (gpointer)self);
 }
 
-const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header)
+const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *header)
 {
 	return g_mime_message_get_header(GMIME_MESSAGE(self->content), header);
 }
 
-GTuples * dbmail_message_get_header_repeated(const struct DbmailMessage *self, const char *header)
+GTuples * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header)
 {
 	const char *hname;
 	if (! (hname = g_tree_lookup(self->header_name,header)))
@@ -997,7 +992,7 @@ GTuples * dbmail_message_get_header_repeated(const struct DbmailMessage *self, c
 	return g_relation_select(self->headers, hname, 0);
 }
 
-GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const char *field_name)
+GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field_name)
 {
 	InternetAddressList *ialisthead, *ialist;
 	InternetAddress *ia;
@@ -1032,7 +1027,7 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 
 	return result;
 }
-char * dbmail_message_get_charset(struct DbmailMessage *self)
+char * dbmail_message_get_charset(DbmailMessage *self)
 {
 	if (! self->charset)
 		self->charset = message_get_charset((GMimeMessage *)self->content);
@@ -1040,26 +1035,23 @@ char * dbmail_message_get_charset(struct DbmailMessage *self)
 }
 
 /* dump message(parts) to char ptrs */
-gchar * dbmail_message_to_string(const struct DbmailMessage *self) 
+gchar * dbmail_message_to_string(const DbmailMessage *self) 
 {
 	return g_mime_object_to_string(GMIME_OBJECT(self->content));
 }
-gchar * dbmail_message_body_to_string(const struct DbmailMessage *self)
+gchar * dbmail_message_body_to_string(const DbmailMessage *self)
 {
 	return g_mime_object_get_body(GMIME_OBJECT(self->content));
 }
-gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self)
+gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
 {
 	gchar *h;
 	unsigned i = 0;
 
-//	i = find_end_of_header((const char *)self->raw->data);
-//	h = g_strndup((const char *)self->raw->data, i);
-
 	h = dbmail_message_to_string(self);
 	i = find_end_of_header(h);
 	h[i] = '\0';
-	h = g_realloc(h, strlen(h)+1);
+	h = g_realloc(h, i+1);
 
 	return h;
 }
@@ -1071,7 +1063,7 @@ gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self)
  * Don't cache these values to allow changes in message content!!
  * 
  */
-size_t dbmail_message_get_size(const struct DbmailMessage *self, gboolean crlf)
+size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
 {
 	char *s, *t; size_t r;
 	s = dbmail_message_to_string(self);
@@ -1087,7 +1079,7 @@ size_t dbmail_message_get_size(const struct DbmailMessage *self, gboolean crlf)
 	g_free(s);
 	return r;
 }
-size_t dbmail_message_get_hdrs_size(const struct DbmailMessage *self, gboolean crlf)
+size_t dbmail_message_get_hdrs_size(const DbmailMessage *self, gboolean crlf)
 {
 	char *s, *t; size_t r;
 	s = dbmail_message_hdrs_to_string(self);
@@ -1103,7 +1095,7 @@ size_t dbmail_message_get_hdrs_size(const struct DbmailMessage *self, gboolean c
 	g_free(s);
 	return r;
 }
-size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean crlf)
+size_t dbmail_message_get_body_size(const DbmailMessage *self, gboolean crlf)
 {
 	char *s, *t; size_t r;
 	s = dbmail_message_body_to_string(self);
@@ -1123,14 +1115,14 @@ size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean c
 }
 
 
-static struct DbmailMessage * _retrieve(struct DbmailMessage *self, const char *query_template)
+static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template)
 {
 	
 	int row = 0, rows = 0;
 	GString *m;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
-	struct DbmailMessage *store;
+	DbmailMessage *store;
 	const char *internal_date;
 	
 	assert(dbmail_message_get_physid(self));
@@ -1184,7 +1176,7 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, const char *
  * forward compatibility's sake.
  *
  */
-static struct DbmailMessage * _fetch_head(struct DbmailMessage *self)
+static DbmailMessage * _fetch_head(DbmailMessage *self)
 {
 	const char *query_template = 	"SELECT b.messageblk, b.is_header, %s "
 		"FROM %smessageblks b "
@@ -1200,7 +1192,7 @@ static struct DbmailMessage * _fetch_head(struct DbmailMessage *self)
  * retrieve the full message
  *
  */
-static struct DbmailMessage * _fetch_full(struct DbmailMessage *self) 
+static DbmailMessage * _fetch_full(DbmailMessage *self) 
 {
 	const char *query_template = "SELECT b.messageblk, b.is_header, %s "
 		"FROM %smessageblks b "
@@ -1216,7 +1208,7 @@ static struct DbmailMessage * _fetch_full(struct DbmailMessage *self)
  * \param filter (header-only or full message)
  * \return filled DbmailMessage
  */
-struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter)
+DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int filter)
 {
 	assert(physid);
 	
@@ -1249,10 +1241,9 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
  *     - -1 on error
  *     -  1 on success
  */
-int dbmail_message_store(struct DbmailMessage *self)
+int dbmail_message_store(DbmailMessage *self)
 {
 	u64_t user_idnr;
-	u64_t messageblk_idnr;
 	char unique_id[UID_SIZE];
 	char *hdrs, *body;
 	u64_t hdrs_size, body_size, rfcsize;
@@ -1285,30 +1276,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 			TRACE(TRACE_FATAL,"Failed to store mimeparts");
 			db_rollback_transaction();
 			usleep(delay*i);
-
-// deprecated code. Just here to apeace the linker (??)
-
-			/* store body in several blocks (if needed */
-			if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0) {
-				g_free(hdrs);
-				g_free(body);
-				return -1;
-			}
-
-			if (store_message_in_blocks(body, body_size, self->id) < 0) {
-				g_free(hdrs);
-				g_free(body);
-				return -1;
-			}
-
-			g_free(hdrs);
-			g_free(body);
-// deprecated--/>
-
-			db_rollback_transaction();
-			usleep(delay*i);
 			continue;
-
 		}
 
 		rfcsize = (u64_t)dbmail_message_get_size(self,TRUE);
@@ -1332,7 +1300,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 	return db_commit_transaction();
 }
 
-int _message_insert(struct DbmailMessage *self, 
+int _message_insert(DbmailMessage *self, 
 		u64_t user_idnr, 
 		const char *mailbox, 
 		const char *unique_id)
@@ -1393,7 +1361,7 @@ int _message_insert(struct DbmailMessage *self,
 	return result;
 }
 
-int dbmail_message_cache_headers(const struct DbmailMessage *self)
+int dbmail_message_cache_headers(const DbmailMessage *self)
 {
 	assert(self);
 	assert(self->physid);
@@ -1422,7 +1390,7 @@ int dbmail_message_cache_headers(const struct DbmailMessage *self)
 #define CACHE_WIDTH_NAME 100
 
 
-static int _header_get_id(const struct DbmailMessage *self, const char *header, u64_t *id)
+static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *id)
 {
 	u64_t tmp;
 	gpointer cacheid;
@@ -1486,7 +1454,7 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {
 	u64_t id;
-	struct DbmailMessage *self = (struct DbmailMessage *)user_data;
+	DbmailMessage *self = (DbmailMessage *)user_data;
 	gchar *safe_value;
 	GString *q;
 	GTuples *values;
@@ -1548,7 +1516,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	return FALSE;
 }
 
-static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist, const struct DbmailMessage *self)
+static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist, const DbmailMessage *self)
 {
 	InternetAddress *ia;
 	
@@ -1557,7 +1525,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 	GString *q = g_string_new("");
 	gchar *name, *rname;
 	gchar *addr;
-	char *charset = dbmail_message_get_charset((struct DbmailMessage *)self);
+	char *charset = dbmail_message_get_charset((DbmailMessage *)self);
 
 	for (; ialist != NULL && ialist->address; ialist = ialist->next) {
 		
@@ -1613,7 +1581,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 #define DM_ADDRESS_TYPE_FROM "From"
 #define DM_ADDRESS_TYPE_REPL "Reply-to"
 
-static InternetAddressList * dm_message_get_addresslist(const struct DbmailMessage *self, const char * type)
+static InternetAddressList * dm_message_get_addresslist(const DbmailMessage *self, const char * type)
 {
 	const char *addr = NULL;
 	char *charset = NULL;
@@ -1623,7 +1591,7 @@ static InternetAddressList * dm_message_get_addresslist(const struct DbmailMessa
 	if (! (addr = (char *)dbmail_message_get_header(self, type)))
 		return NULL;
 
-	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
+	charset = dbmail_message_get_charset((DbmailMessage *)self);
 	value = dbmail_iconv_decode_field(addr, charset, TRUE);
 	list = internet_address_parse_string(value);
 
@@ -1632,7 +1600,7 @@ static InternetAddressList * dm_message_get_addresslist(const struct DbmailMessa
 	return list;
 }
 
-void dbmail_message_cache_tofield(const struct DbmailMessage *self)
+void dbmail_message_cache_tofield(const DbmailMessage *self)
 {
 	InternetAddressList *list;
 
@@ -1642,7 +1610,7 @@ void dbmail_message_cache_tofield(const struct DbmailMessage *self)
 	internet_address_list_destroy(list);
 }
 
-void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
+void dbmail_message_cache_ccfield(const DbmailMessage *self)
 {
 	InternetAddressList *list;
 
@@ -1653,7 +1621,7 @@ void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
 
 }
 
-void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
+void dbmail_message_cache_fromfield(const DbmailMessage *self)
 {
 	InternetAddressList *list;
 
@@ -1663,7 +1631,7 @@ void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 	internet_address_list_destroy(list);
 }
 
-void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
+void dbmail_message_cache_replytofield(const DbmailMessage *self)
 {
 	InternetAddressList *list;
 
@@ -1674,7 +1642,7 @@ void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
 }
 
 
-void dbmail_message_cache_datefield(const struct DbmailMessage *self)
+void dbmail_message_cache_datefield(const DbmailMessage *self)
 {
 	char *value;
 	time_t date;
@@ -1695,12 +1663,12 @@ void dbmail_message_cache_datefield(const struct DbmailMessage *self)
 	g_free(value);
 }
 
-void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
+void dbmail_message_cache_subjectfield(const DbmailMessage *self)
 {
 	char *value, *raw, *s, *tmp;
 	char *charset;
 	
-	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
+	charset = dbmail_message_get_charset((DbmailMessage *)self);
 
 	// g_mime_message_get_subject fails to get 8-bit header, so we use dbmail_message_get_header
 	raw = (char *)dbmail_message_get_header(self, "Subject");
@@ -1723,7 +1691,7 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 	g_free(value);
 }
 
-void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
+void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 {
 	GMimeReferences *refs, *head;
 	GTree *tree;
@@ -1760,7 +1728,7 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 	g_mime_references_clear(&head);
 }
 	
-void dbmail_message_cache_envelope(const struct DbmailMessage *self)
+void dbmail_message_cache_envelope(const DbmailMessage *self)
 {
 	char *q, *envelope, *clean;
 
@@ -1787,7 +1755,7 @@ void dbmail_message_cache_envelope(const struct DbmailMessage *self)
 //
 // TODO: support text/html
 
-struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
+DbmailMessage * dbmail_message_construct(DbmailMessage *self, 
 		const gchar *to, const gchar *from, 
 		const gchar *subject, const gchar *body)
 {
@@ -1883,9 +1851,9 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 
 /* old stuff moved here from dbmsgbuf.c */
 
-struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
+DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
 {
-	struct DbmailMessage *msg;
+	DbmailMessage *msg;
 
 	int result;
 	u64_t physid = 0;
@@ -1897,3 +1865,742 @@ struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
 
 	return msg;
 }
+
+/* moved here from sort.c */
+
+/* Figure out where to deliver the message, then deliver it.
+ * */
+dsn_class_t sort_and_deliver(DbmailMessage *message,
+		const char *destination, u64_t useridnr,
+		const char *mailbox, mailbox_source_t source)
+{
+	int cancelkeep = 0;
+	int reject = 0;
+	dsn_class_t ret;
+	field_t val;
+	char *subaddress = NULL;
+
+	/* Catch the brute force delivery right away.
+	 * We skip the Sieve scripts, and down the call
+	 * chain we don't check permissions on the mailbox. */
+	if (source == BOX_BRUTEFORCE) {
+		TRACE(TRACE_MESSAGE, "Beginning brute force delivery for user [%llu] to mailbox [%s].",
+				useridnr, mailbox);
+		return sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
+	}
+
+	TRACE(TRACE_INFO, "Destination [%s] useridnr [%llu], mailbox [%s], source [%d]",
+			destination, useridnr, mailbox, source);
+	
+	/* This is the only condition when called from pipe.c, actually. */
+	if (! mailbox) {
+		mailbox = "INBOX";
+		source = BOX_DEFAULT;
+	}
+
+	/* Subaddress. */
+	config_get_value("SUBADDRESS", "DELIVERY", val);
+	if (strcasecmp(val, "yes") == 0) {
+		int res;
+		size_t sublen, subpos;
+		res = find_bounded((char *)destination, '+', '@', &subaddress, &sublen, &subpos);
+		if (res == 0 && sublen > 0) {
+			/* We'll free this towards the end of the function. */
+			mailbox = subaddress;
+			source = BOX_ADDRESSPART;
+			TRACE(TRACE_INFO, "Setting BOX_ADDRESSPART mailbox to [%s]", mailbox);
+		}
+	}
+
+	/* Give Sieve access to the envelope recipient. */
+	dbmail_message_set_envelope_recipient(message, destination);
+
+	/* Sieve. */
+	config_get_value("SIEVE", "DELIVERY", val);
+	if (strcasecmp(val, "yes") == 0
+	&& db_check_sievescript_active(useridnr) == 0) {
+		TRACE(TRACE_INFO, "Calling for a Sieve sort");
+		sort_result_t *sort_result;
+		sort_result = sort_process(useridnr, message);
+		if (sort_result) {
+			cancelkeep = sort_get_cancelkeep(sort_result);
+			reject = sort_get_reject(sort_result);
+			sort_free_result(sort_result);
+		}
+	}
+
+	/* Sieve actions:
+	 * (m = must implement, s = should implement, e = extension)
+	 * m Keep - implicit default action.
+	 * m Discard - requires us to skip the default action.
+	 * m Redirect - add to the forwarding list.
+	 * s Fileinto - change the destination mailbox.
+	 * s Reject - nope, sorry. we killed bounce().
+	 * e Vacation - share with the auto reply code.
+	 */
+
+	if (cancelkeep) {
+		// The implicit keep has been cancelled.
+		// This may necessarily imply that the message
+		// is being discarded -- dropped flat on the floor.
+		ret = DSN_CLASS_OK;
+		TRACE(TRACE_INFO, "Keep was cancelled. Message may be discarded.");
+	} else {
+		ret = sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
+		TRACE(TRACE_INFO, "Keep was not cancelled. Message will be delivered by default.");
+	}
+
+	/* Might have been allocated by the subaddress calculation. NULL otherwise. */
+	g_free(subaddress);
+
+	/* Reject probably implies cancelkeep,
+	 * but we'll not assume that and instead
+	 * just test this as a separate block. */
+	if (reject) {
+		TRACE(TRACE_INFO, "Message will be rejected.");
+		ret = DSN_CLASS_FAIL;
+	}
+
+	return ret;
+}
+
+dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
+		u64_t useridnr, const char *mailbox, mailbox_source_t source,
+		int *msgflags)
+{
+	u64_t mboxidnr, newmsgidnr;
+	field_t val;
+	size_t msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
+
+	TRACE(TRACE_INFO,"useridnr [%llu] mailbox [%s]", useridnr, mailbox);
+
+	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
+		TRACE(TRACE_ERROR, "mailbox [%s] not found", mailbox);
+		return DSN_CLASS_FAIL;
+	}
+
+	if (source == BOX_BRUTEFORCE) {
+		TRACE(TRACE_INFO, "Brute force delivery; skipping ACL checks on mailbox.");
+	} else {
+		// Check ACL's on the mailbox. It must be read-write,
+		// it must not be no_select, and it may require an ACL for
+		// the user whose Sieve script this is, since it's possible that
+		// we've looked up a #Public or a #Users mailbox.
+		TRACE(TRACE_DEBUG, "Checking if we have the right to post incoming messages");
+        
+		MailboxInfo mbox;
+		memset(&mbox, '\0', sizeof(mbox));
+		mbox.uid = mboxidnr;
+		
+		switch (acl_has_right(&mbox, useridnr, ACL_RIGHT_POST)) {
+		case -1:
+			TRACE(TRACE_MESSAGE, "error retrieving right for [%llu] to deliver mail to [%s]",
+					useridnr, mailbox);
+			return DSN_CLASS_TEMP;
+		case 0:
+			// No right.
+			TRACE(TRACE_MESSAGE, "user [%llu] does not have right to deliver mail to [%s]",
+					useridnr, mailbox);
+			// Switch to INBOX.
+			if (strcmp(mailbox, "INBOX") == 0) {
+				// Except if we've already been down this path.
+				TRACE(TRACE_MESSAGE, "already tried to deliver to INBOX");
+				return DSN_CLASS_FAIL;
+			}
+			return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags);
+		case 1:
+			// Has right.
+			TRACE(TRACE_INFO, "user [%llu] has right to deliver mail to [%s]",
+					useridnr, mailbox);
+			break;
+		default:
+			TRACE(TRACE_ERROR, "invalid return value from acl_has_right");
+			return DSN_CLASS_FAIL;
+		}
+	}
+
+	// if the mailbox already holds this message we're done
+	GETCONFIGVALUE("suppress_duplicates", "DELIVERY", val);
+	if (strcasecmp(val,"yes")==0) {
+		const char *messageid = dbmail_message_get_header(message, "message-id");
+		if ( messageid && ((db_mailbox_has_message_id(mboxidnr, messageid)) > 0) ) {
+			TRACE(TRACE_INFO, "suppress_duplicate: [%s]", messageid);
+			return DSN_CLASS_OK;
+		}
+	}
+
+	// Ok, we have the ACL right, time to deliver the message.
+	switch (db_copymsg(message->id, mboxidnr, useridnr, &newmsgidnr)) {
+	case -2:
+		TRACE(TRACE_DEBUG, "error copying message to user [%llu],"
+				"maxmail exceeded", useridnr);
+		return DSN_CLASS_QUOTA;
+	case -1:
+		TRACE(TRACE_ERROR, "error copying message to user [%llu]", 
+				useridnr);
+		return DSN_CLASS_TEMP;
+	default:
+		TRACE(TRACE_MESSAGE, "message id=%llu, size=%zd is inserted", 
+				newmsgidnr, msgsize);
+		if (msgflags) {
+			TRACE(TRACE_MESSAGE, "message id=%llu, setting imap flags", 
+				newmsgidnr);
+			db_set_msgflag(newmsgidnr, mboxidnr, msgflags, NULL, IMAPFA_ADD, NULL);
+		}
+		message->id = newmsgidnr;
+		return DSN_CLASS_OK;
+	}
+}
+// from dm_pipe.c
+
+static int valid_sender(const char *addr) 
+{
+	int ret = 1;
+	char *testaddr;
+	testaddr = g_ascii_strdown(addr, -1);
+	if (strstr(testaddr, "mailer-daemon@"))
+		ret = 0;
+	if (strstr(testaddr, "daemon@"))
+		ret = 0;
+	if (strstr(testaddr, "postmaster@"))
+		ret = 0;
+	g_free(testaddr);
+	return ret;
+}
+
+static int parse_and_escape(const char *in, char **out)
+{
+	InternetAddressList *ialist;
+	InternetAddress *ia;
+
+	TRACE(TRACE_DEBUG, "parsing address [%s]", in);
+	ialist = internet_address_parse_string(in);
+	if (!ialist) {
+                TRACE(TRACE_MESSAGE, "unable to parse email address [%s]", in);
+                return -1;
+	}
+
+        ia = ialist->address;
+        if (!ia || ia->type != INTERNET_ADDRESS_NAME) {
+		TRACE(TRACE_MESSAGE, "unable to parse email address [%s]", in);
+		internet_address_list_destroy(ialist);
+		return -1;
+	}
+
+	if (! (*out = dm_shellesc(ia->value.addr))) {
+		TRACE(TRACE_ERROR, "out of memory calling dm_shellesc");
+		internet_address_list_destroy(ialist);
+		return -1;
+	}
+
+	internet_address_list_destroy(ialist);
+
+	return 0;
+}
+/* Sends a message. */
+int send_mail(DbmailMessage *message,
+		const char *to, const char *from,
+		const char *preoutput,
+		enum sendwhat sendwhat, char *sendmail_external)
+{
+	FILE *mailpipe = NULL;
+	char *escaped_to = NULL;
+	char *escaped_from = NULL;
+	char *message_string = NULL;
+	char *sendmail_command = NULL;
+	field_t sendmail, postmaster;
+	int result;
+
+	if (!from || strlen(from) < 1) {
+		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
+			TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+		}
+		if (strlen(postmaster))
+			from = postmaster;
+		else
+			from = DEFAULT_POSTMASTER;
+	}
+
+	if (config_get_value("SENDMAIL", "DBMAIL", sendmail) < 0) {
+		TRACE(TRACE_ERROR, "error getting value for SENDMAIL in DBMAIL section of dbmail.conf.");
+		return -1;
+	}
+
+	if (strlen(sendmail) < 1) {
+		TRACE(TRACE_ERROR, "SENDMAIL not set in DBMAIL section of dbmail.conf.");
+		return -1;
+	}
+
+	if (!sendmail_external) {
+		if (parse_and_escape(to, &escaped_to) < 0) {
+			TRACE(TRACE_MESSAGE, "could not prepare 'to' address.");
+			return 1;
+		}
+		if (parse_and_escape(from, &escaped_from) < 0) {
+			g_free(escaped_to);
+			TRACE(TRACE_MESSAGE, "could not prepare 'from' address.");
+			return 1;
+		}
+		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
+		g_free(escaped_to);
+		g_free(escaped_from);
+		if (!sendmail_command) {
+			TRACE(TRACE_ERROR, "out of memory calling g_strconcat");
+			return -1;
+		}
+	} else {
+		sendmail_command = sendmail_external;
+	}
+
+	TRACE(TRACE_INFO, "opening pipe to [%s]", sendmail_command);
+
+	if (!(mailpipe = popen(sendmail_command, "w"))) {
+		TRACE(TRACE_ERROR, "could not open pipe to sendmail");
+		g_free(sendmail_command);
+		return 1;
+	}
+
+	TRACE(TRACE_DEBUG, "pipe opened");
+
+	switch (sendwhat) {
+	case SENDRAW:
+		// This is a hack so forwards can give a From line.
+		if (preoutput)
+			fprintf(mailpipe, "%s\n", preoutput);
+		// This function will dot-stuff the message.
+		db_send_message_lines(mailpipe, message->id, -2, 1);
+		break;
+	case SENDMESSAGE:
+		message_string = dbmail_message_to_string(message);
+		fprintf(mailpipe, "%s", message_string);
+		g_free(message_string);
+		break;
+	default:
+		TRACE(TRACE_ERROR, "invalid sendwhat in call to send_mail: [%d]", sendwhat);
+		break;
+	}
+
+	result = pclose(mailpipe);
+	TRACE(TRACE_DEBUG, "pipe closed");
+
+	/* Adapted from the Linux waitpid 2 man page. */
+	if (WIFEXITED(result)) {
+		result = WEXITSTATUS(result);
+		TRACE(TRACE_INFO, "sendmail exited normally");
+	} else if (WIFSIGNALED(result)) {
+		result = WTERMSIG(result);
+		TRACE(TRACE_INFO, "sendmail was terminated by signal");
+	} else if (WIFSTOPPED(result)) {
+		result = WSTOPSIG(result);
+		TRACE(TRACE_INFO, "sendmail was stopped by signal");
+	}
+
+	if (result != 0) {
+		TRACE(TRACE_ERROR, "sendmail error return value was [%d]", result);
+
+		if (!sendmail_external)
+			g_free(sendmail_command);
+		return 1;
+	}
+
+	if (!sendmail_external)
+		g_free(sendmail_command);
+	return 0;
+} 
+int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
+{
+	int result = 0;
+	field_t postmaster;
+
+	if (!from) {
+		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0)
+			TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+		if (strlen(postmaster))
+			from = postmaster;
+		else
+			from = DEFAULT_POSTMASTER;
+	}
+	targets = g_list_first(targets);
+	TRACE(TRACE_INFO, "delivering to [%u] external addresses", g_list_length(targets));
+	while (targets) {
+		char *to = (char *)targets->data;
+
+		if (!to || strlen(to) < 1) {
+			TRACE(TRACE_ERROR, "forwarding address is zero length, message not forwarded.");
+		} else {
+			if (to[0] == '!') {
+				// The forward is a command to execute.
+				// Prepend an mbox From line.
+				char timestr[50];
+				time_t td;
+				struct tm tm;
+				char *fromline;
+                        
+				time(&td);		/* get time */
+				tm = *localtime(&td);	/* get components */
+				strftime(timestr, sizeof(timestr), "%a %b %e %H:%M:%S %Y", &tm);
+                        
+				TRACE(TRACE_DEBUG, "prepending mbox style From header to pipe returnpath: %s", from);
+                        
+				/* Format: From<space>address<space><space>Date */
+				fromline = g_strconcat("From ", from, "  ", timestr, NULL);
+
+				result |= send_mail(message, "", "", fromline, SENDRAW, to+1);
+				g_free(fromline);
+			} else if (to[0] == '|') {
+				// The forward is a command to execute.
+				result |= send_mail(message, "", "", NULL, SENDRAW, to+1);
+
+			} else {
+				// The forward is an email address.
+				result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+			}
+		}
+		if (! g_list_next(targets))
+			break;
+		targets = g_list_next(targets);
+
+	}
+
+	return result;
+}
+
+/* 
+ * Send an automatic notification.
+ */
+static int send_notification(DbmailMessage *message UNUSED, const char *to)
+{
+	field_t from = "";
+	field_t subject = "";
+	int result;
+
+	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
+		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+	}
+
+	if (config_get_value("AUTO_NOTIFY_SENDER", "DELIVERY", from) < 0) {
+		TRACE(TRACE_MESSAGE, "no config value for AUTO_NOTIFY_SENDER");
+	}
+
+	if (config_get_value("AUTO_NOTIFY_SUBJECT", "DELIVERY", subject) < 0) {
+		TRACE(TRACE_MESSAGE, "no config value for AUTO_NOTIFY_SUBJECT");
+	}
+
+	if (strlen(from) < 1)
+		g_strlcpy(from, AUTO_NOTIFY_SENDER, FIELDSIZE);
+
+	if (strlen(subject) < 1)
+		g_strlcpy(subject, AUTO_NOTIFY_SUBJECT, FIELDSIZE);
+
+	DbmailMessage *new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, to, from, subject, "");
+
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
+
+	dbmail_message_free(new_message);
+
+	return result;
+}
+
+
+	
+/*
+ * Send an automatic reply.
+ */
+#define REPLY_DAYS 7
+static int send_reply(DbmailMessage *message, const char *body)
+{
+	const char *from, *to, *subject;
+	const char *x_dbmail_reply;
+	int result;
+
+	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
+	if (x_dbmail_reply) {
+		TRACE(TRACE_MESSAGE, "reply loop detected [%s]", x_dbmail_reply);
+		return 0;
+	}
+	
+	subject = dbmail_message_get_header(message, "Subject");
+
+	from = dbmail_message_get_header(message, "Delivered-To");
+	if (!from)
+		from = message->envelope_recipient->str;
+	if (!from)
+		from = ""; // send_mail will change this to DEFAULT_POSTMASTER
+
+	to = dbmail_message_get_header(message, "Reply-To");
+	if (!to)
+		to = dbmail_message_get_header(message, "Return-Path");
+	if (!to) {
+		TRACE(TRACE_ERROR, "no address to send to");
+		return 0;
+	}
+	if (!valid_sender(to)) {
+		TRACE(TRACE_DEBUG, "sender invalid. skip auto-reply.");
+		return 0;
+	}
+
+	if (db_replycache_validate(to, from, "replycache", REPLY_DAYS) != DM_SUCCESS) {
+		TRACE(TRACE_DEBUG, "skip auto-reply");
+		return 0;
+	}
+
+	char *newsubject = g_strconcat("Re: ", subject, NULL);
+
+	DbmailMessage *new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, from, to, newsubject, body);
+	dbmail_message_set_header(new_message, "X-DBMail-Reply", from);
+
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
+
+	if (result == 0) {
+		db_replycache_register(to, from, "replycache");
+	}
+
+	g_free(newsubject);
+	dbmail_message_free(new_message);
+
+	return result;
+}
+
+
+/* Yeah, RAN. That's Reply And Notify ;-) */
+static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
+{
+	field_t val;
+	int do_auto_notify = 0, do_auto_reply = 0;
+	char *reply_body = NULL;
+	char *notify_address = NULL;
+
+	/* message has been succesfully inserted, perform auto-notification & auto-reply */
+	if (config_get_value("AUTO_NOTIFY", "DELIVERY", val) < 0) {
+		TRACE(TRACE_ERROR, "error getting config value for AUTO_NOTIFY");
+		return -1;
+	}
+
+	if (strcasecmp(val, "yes") == 0)
+		do_auto_notify = 1;
+
+	if (config_get_value("AUTO_REPLY", "DELIVERY", val) < 0) {
+		TRACE(TRACE_ERROR, "error getting config value for AUTO_REPLY");
+		return -1;
+	}
+
+	if (strcasecmp(val, "yes") == 0)
+		do_auto_reply = 1;
+
+	if (do_auto_notify != 0) {
+		TRACE(TRACE_DEBUG, "starting auto-notification procedure");
+
+		if (db_get_notify_address(useridnr, &notify_address) != 0)
+			TRACE(TRACE_ERROR, "error fetching notification address");
+		else {
+			if (notify_address == NULL)
+				TRACE(TRACE_DEBUG, "no notification address specified, skipping");
+			else {
+				TRACE(TRACE_DEBUG, "sending notifcation to [%s]", notify_address);
+				if (send_notification(message, notify_address) < 0) {
+					TRACE(TRACE_ERROR, "error in call to send_notification.");
+					g_free(notify_address);
+					return -1;
+				}
+				g_free(notify_address);
+			}
+		}
+	}
+
+	if (do_auto_reply != 0) {
+		TRACE(TRACE_DEBUG, "starting auto-reply procedure");
+
+		if (db_get_reply_body(useridnr, &reply_body) != 0)
+			TRACE(TRACE_ERROR, "error fetching reply body");
+		else {
+			if (reply_body == NULL || reply_body[0] == '\0')
+				TRACE(TRACE_DEBUG, "no reply body specified, skipping");
+			else {
+				if (send_reply(message, reply_body) < 0) {
+					TRACE(TRACE_ERROR, "error in call to send_reply");
+					g_free(reply_body);
+					return -1;
+				}
+				g_free(reply_body);
+				
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+/* Here's the real *meat* of this source file!
+ *
+ * Function: insert_messages()
+ * What we get:
+ *   - A pointer to the incoming message stream
+ *   - The header of the message 
+ *   - A list of destination addresses / useridnr's
+ *   - The default mailbox to delivery to
+ *
+ * What we do:
+ *   - Read in the rest of the message
+ *   - Store the message to the DBMAIL user
+ *   - Process the destination addresses into lists:
+ *     - Local useridnr's
+ *     - External forwards
+ *     - No such user bounces
+ *   - Store the local useridnr's
+ *     - Run the message through each user's sorting rules
+ *     - Potentially alter the delivery:
+ *       - Different mailbox
+ *       - Bounce
+ *       - Reply with vacation message
+ *       - Forward to another address
+ *     - Check the user's quota before delivering
+ *       - Do this *after* their sorting rules, since the
+ *         sorting rules might not store the message anyways
+ *   - Send out the no such user bounces
+ *   - Send out the external forwards
+ *   - Delete the temporary message from the database
+ * What we return:
+ *   - 0 on success
+ *   - -1 on full failure
+ */
+int insert_messages(DbmailMessage *message, GList *dsnusers)
+{
+	u64_t bodysize, rfcsize;
+	u64_t tmpid;
+	u64_t msgsize;
+	int result=0;
+
+ 	delivery_status_t final_dsn;
+
+	/* first start a new database transaction */
+
+	if ((result = dbmail_message_store(message)) == DM_EQUERY) {
+		TRACE(TRACE_ERROR,"storing message failed");
+		return result;
+	} 
+
+	TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
+
+	tmpid = message->id; // for later removal
+
+	bodysize = (u64_t)dbmail_message_get_body_size(message, FALSE);
+	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);
+	msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
+
+	// TODO: Run a Sieve script associated with the internal delivery user.
+	// Code would go here, after we've inserted the message blocks but
+	// before we've started delivering the message.
+
+	/* Loop through the users list. */
+	dsnusers = g_list_first(dsnusers);
+	while (dsnusers) {
+		
+		GList *userids;
+
+		int has_2 = 0, has_4 = 0, has_5 = 0, has_5_2 = 0;
+		
+		deliver_to_user_t *delivery = (deliver_to_user_t *) dsnusers->data;
+		
+		/* Each user may have a list of user_idnr's for local
+		 * delivery. */
+		userids = g_list_first(delivery->userids);
+		while (userids) {
+			u64_t *useridnr = (u64_t *) userids->data;
+			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%llu]", *useridnr);
+
+			switch (sort_and_deliver(message, delivery->address, *useridnr, delivery->mailbox, delivery->source)) {
+			case DSN_CLASS_OK:
+				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%llu]", *useridnr);
+				has_2 = 1;
+				break;
+			case DSN_CLASS_FAIL:
+				TRACE(TRACE_ERROR, "permanent failure sort_and_deliver for useridnr [%llu]", *useridnr);
+				has_5 = 1;
+				break;
+			case DSN_CLASS_QUOTA:
+				TRACE(TRACE_MESSAGE, "mailbox over quota, message rejected for useridnr [%llu]", *useridnr);
+				has_5_2 = 1;
+				break;
+			case DSN_CLASS_TEMP:
+			default:
+				TRACE(TRACE_ERROR, "unknown temporary failure in sort_and_deliver for useridnr [%llu]", *useridnr);
+				has_4 = 1;
+				break;
+			}
+
+			/* Automatic reply and notification */
+			if (execute_auto_ran(message, *useridnr) < 0)
+				TRACE(TRACE_ERROR, "error in execute_auto_ran(), but continuing delivery normally.");
+
+			if (! g_list_next(userids))
+				break;
+			userids = g_list_next(userids);
+
+		}
+
+		final_dsn.class = dsnuser_worstcase_int(has_2, has_4, has_5, has_5_2);
+		switch (final_dsn.class) {
+		case DSN_CLASS_OK:
+			/* Success. Address related. Valid. */
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
+			break;
+		case DSN_CLASS_TEMP:
+			/* sort_and_deliver returns TEMP is useridnr is 0, aka,
+			 * if nothing was delivered at all, or for any other failures. */	
+
+			/* If there's a problem with the delivery address, but
+			 * there are proper forwarding addresses, we're OK. */
+			if (g_list_length(delivery->forwards) > 0) {
+				/* Success. Address related. Valid. */
+				set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
+				break;
+			}
+			/* Fall through to FAIL. */
+		case DSN_CLASS_FAIL:
+			/* Permanent failure. Address related. Does not exist. */
+			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 1, 1);
+			break;
+		case DSN_CLASS_QUOTA:
+			/* Permanent failure. Mailbox related. Over quota limit. */
+			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 2, 2);
+			break;
+		case DSN_CLASS_NONE:
+			/* Leave the DSN status at whatever dsnuser_resolve set it at. */
+			break;
+		}
+
+		TRACE(TRACE_DEBUG, "deliver [%u] messages to external addresses", g_list_length(delivery->forwards));
+
+		/* Each user may also have a list of external forwarding addresses. */
+		if (g_list_length(delivery->forwards) > 0) {
+
+			TRACE(TRACE_DEBUG, "delivering to external addresses");
+			const char *from = dbmail_message_get_header(message, "Return-Path");
+
+			/* Forward using the temporary stored message. */
+			if (send_forward_list(message, delivery->forwards, from) < 0) {
+				/* If forward fails, tell the sender that we're
+				 * having a transient error. They'll resend. */
+				TRACE(TRACE_MESSAGE, "forwaring failed, reporting transient error.");
+				set_dsn(&delivery->dsn, DSN_CLASS_TEMP, 1, 1);
+			}
+		}
+		if (! g_list_next(dsnusers))
+			break;
+		dsnusers = g_list_next(dsnusers);
+
+	}
+
+	/* Always delete the temporary message, even if the delivery failed.
+	 * It is the MTA's job to requeue or bounce the message,
+	 * and our job to keep a tidy database ;-) */
+	if (db_delete_message(tmpid) < 0) 
+		TRACE(TRACE_ERROR, "failed to delete temporary message [%llu]", message->id);
+	TRACE(TRACE_DEBUG, "temporary message deleted from database. Done.");
+
+	return 0;
+}
+

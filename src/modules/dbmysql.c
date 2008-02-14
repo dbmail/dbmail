@@ -85,7 +85,7 @@ static unsigned last_row_number = 0; /* the number of the row in last_row */
 
 
 /* database parameters */
-extern db_param_t _db_params;
+extern db_param_t * _db_params->
 
 /* static functions, only used locally */
 
@@ -98,8 +98,8 @@ static int db_mysql_check_collations(void)
 	int collations_match = 0;
 	int i, j;
 
-	if (strlen(_db_params.encoding) > 0) {
-		snprintf(the_query, DEF_QUERYSIZE, "SET NAMES %s", _db_params.encoding);
+	if (strlen(_db_params->>encoding) > 0) {
+		snprintf(the_query, DEF_QUERYSIZE, "SET NAMES %s", _db_params->>encoding);
 		if (db_query(the_query) == DM_EQUERY) {
 			TRACE(TRACE_ERROR, "error setting collation");
 			return DM_EQUERY;
@@ -159,26 +159,26 @@ int db_connect()
 	conn.reconnect = 1;
 
 	/* use the standard MySQL port by default */
-	if (_db_params.port == 0)
-		_db_params.port = DB_MYSQL_STANDARD_PORT;
+	if (_db_params->port == 0)
+		_db_params->port = DB_MYSQL_STANDARD_PORT;
 	/* issue an error if a connection to a MySQL instance 
 	 * on the localhost is requested, but no sqlsocket is given */
-	if (strncmp(_db_params.host, "localhost", FIELDSIZE) == 0 ||
-	    _db_params.host == NULL) {
-		if (strlen(_db_params.sock) == 0) {
+	if (strncmp(_db_params->host, "localhost", FIELDSIZE) == 0 ||
+	    _db_params->host == NULL) {
+		if (strlen(_db_params->sock) == 0) {
 			TRACE(TRACE_WARNING, "MySQL host is set to "
 			      "localhost, but no mysql_socket has been set. "
 			      "Use sqlsocket=... in dbmail.conf. Connecting "
 			      "will be attempted using the default socket.");
 			sock = NULL;
 		} else
-			sock = _db_params.sock;
+			sock = _db_params->sock;
 	}
 
 
-	if (mysql_real_connect(&conn, _db_params.host, _db_params.user,
-			       _db_params.pass, _db_params.db,
-			       _db_params.port, sock, 0) == NULL) {
+	if (mysql_real_connect(&conn, _db_params->host, _db_params->user,
+			       _db_params->pass, _db_params->db,
+			       _db_params->port, sock, 0) == NULL) {
 		TRACE(TRACE_ERROR, "mysql_real_connect failed: %s", mysql_error(&conn));
 		return DM_EQUERY;
 	}
@@ -343,11 +343,11 @@ int db_do_cleanup(const char **tables, int num)
 
 	for (i = 0; i < num; i++) {
 		snprintf(query, DEF_QUERYSIZE, "ANALYZE TABLE %s%s",
-			 _db_params.pfx,tables[i]);
+			 _db_params->pfx,tables[i]);
 
 		if (db_query(query) == DM_EQUERY) {
 			TRACE(TRACE_ERROR, "error analyzing table [%s%s]",
-			      _db_params.pfx,tables[i]);
+			      _db_params->pfx,tables[i]);
 			result = DM_EQUERY;
 		}
 		db_free_result();

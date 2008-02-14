@@ -36,7 +36,7 @@ from email.MIMEMultipart import MIMEMultipart
 unimplementedError = 'Dbmail testcase unimplemented'
 
 # for network testing
-HOST,PORT = "localhost", 110
+HOST,PORT = "localhost", 10110
 
 # for stdin/stdout testing
 DAEMONBIN = "./dbmail-pop3d -n -f /etc/dbmail/dbmail-test.conf"
@@ -90,6 +90,7 @@ class testPopServer(unittest.TestCase):
         `getwelcome()'
              Returns the greeting string sent by the POP3 server.
         """
+        self.assertEquals(self.o.getwelcome()[:4],'+OK ')
 
     def test_user(self):
         """
@@ -166,7 +167,6 @@ class testPopServer(unittest.TestCase):
         message = string.join(result[1],"\n")
         self.assertEquals(int(r[1]),len(message))
         
-
     def test_dele(self):
         """
         `dele(which)'
@@ -176,18 +176,23 @@ class testPopServer(unittest.TestCase):
              deletes on any disconnect).
 
         """
+        self.assertEquals(self.o.dele(1),'+OK message 1 deleted')
+        self.o.rset()
 
     def test_rset(self):
         """
         `rset()'
              Remove any deletion marks for the mailbox.
         """
+        result = self.o.rset()
+        self.assertEquals(result[:4],'+OK ')
 
     def test_noop(self):
         """
         `noop()'
              Do nothing.  Might be used as a keep-alive.
         """
+        self.assertEquals(self.o.noop()[:3],'+OK')
 
     def test_quit(self):
         """
@@ -208,6 +213,8 @@ class testPopServer(unittest.TestCase):
              servers.  Test this method by hand against the POP3 servers you
              will use before trusting it.
         """
+        result = self.o.top(1,10)
+        self.assertEquals(result[0],'+OK 10 lines of message 1')
 
     def test_uidl(self):
         """
@@ -217,6 +224,10 @@ class testPopServer(unittest.TestCase):
              `'RESPONSE MESGNUM UID', otherwise result is list `(RESPONSE,
              ['mesgnum uid', ...], OCTETS)'.
         """
+        all = self.o.uidl()
+        self.assertEquals(all[0][:4],'+OK ')
+        one = self.o.uidl(1)
+        self.assertEquals(one[4:], all[1][0])
 
 
     def tearDown(self):

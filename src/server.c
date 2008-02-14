@@ -28,7 +28,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "server"
 
-
 volatile sig_atomic_t GeneralStopRequested = 0;
 volatile sig_atomic_t Restart = 0;
 volatile sig_atomic_t mainStop = 0;
@@ -36,37 +35,37 @@ volatile sig_atomic_t mainRestart = 0;
 volatile sig_atomic_t mainStatus = 0;
 volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
-volatile sig_atomic_t alarm_occured = 0;
+volatile sig_atomic_t alarm_occurred = 0;
+volatile sig_atomic_t childSig = 0;
+volatile sig_atomic_t ChildStopRequested = 0;
 
-int isChildProcess = 0;
-int isGrandChildProcess = 0;
-pid_t ParentPID = 0;
-ChildInfo_t childinfo;
+extern volatile sig_atomic_t event_gotsig;
+extern int (*event_sigcb)(void);
 
-extern volatile sig_atomic_t connected;
-extern volatile clientinfo_t client;
+static serverConfig_t *server_conf;
 
-static void sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+static int selfPipe[2];
+
+static void worker_run(serverConfig_t *conf);
+
+static void server_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	int saved_errno = errno;
 	Restart = 0;
 	
+	event_gotsig = 1;
+
 	switch (sig) {
 
 	case SIGCHLD:
-		/* ignore, wait for child in main loop */
-		/* but we need to catch zombie */
 		get_sigchld = 1;
 		break;		
 
-	case SIGSEGV:
-		sleep(60);
-		_exit(1);
-		break;
-
 	case SIGHUP:
-		Restart = 1;
-		GeneralStopRequested = 1;
+		mainRestart = 1;
+		break;
+	
+	case SIGSEGV:
+		_exit(1);
 		break;
 
 	case SIGUSR1:
@@ -74,19 +73,23 @@ static void sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 		break;
 
 	case SIGALRM:
-		alarm_occured = 1;
+		alarm_occurred = 1;
 		break;
 		
 	default:
 		GeneralStopRequested = 1;
 		break;
 	}
-
-	errno = saved_errno;
 }
 
+int server_sig_cb(void)
+{
+	if (GeneralStopRequested || mainStatus || alarm_occurred | get_sigchld)
+		(void)event_loopexit(NULL);
+	return (0);
+}
 
-static int set_sighandler(void)
+static int server_set_sighandler(void)
 {
 	struct sigaction act;
 	struct sigaction sact;
@@ -95,11 +98,11 @@ static int set_sighandler(void)
 	memset(&act, 0, sizeof(act));
 	memset(&sact, 0, sizeof(sact));
 
-	act.sa_sigaction = sighandler;
+	act.sa_sigaction = server_sighandler;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 
-	sact.sa_sigaction = sighandler;
+	sact.sa_sigaction = server_sighandler;
 	sigemptyset(&sact.sa_mask);
 	sact.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
 
@@ -113,36 +116,26 @@ static int set_sighandler(void)
 	sigaction(SIGTERM,	&sact, 0);
 	sigaction(SIGHUP, 	&sact, 0);
 	sigaction(SIGUSR1,	&sact, 0);
-	sigaction(SIGALRM, 	&act, 0);
+
+	event_sigcb = server_sig_cb;
 
 	return 0;
 }
 
-static int server_setup(serverConfig_t *conf)
+static int server_setup(void)
 {
-	ParentPID = getpid();
 	Restart = 0;
 	GeneralStopRequested = 0;
 	get_sigchld = 0;
-	set_sighandler();
 
-	childinfo.maxConnect	= conf->childMaxConnect;
-	childinfo.listenSockets	= g_memdup(conf->listenSockets, conf->ipcount * sizeof(int));
-	childinfo.numSockets   	= conf->ipcount;
-	childinfo.timeout 	= conf->timeout;
-	childinfo.login_timeout = conf->login_timeout;
-	childinfo.ClientHandler	= conf->ClientHandler;
-	childinfo.resolveIP	= conf->resolveIP;
+	server_set_sighandler();
 
 	return 0;
 }
 	
-static int manage_start_cli_server(ChildInfo_t * info)
+static int manage_start_cli_server(serverConfig_t *conf)
 {
-	if (!info) {
-		TRACE(TRACE_ERROR, "NULL info supplied");
-		return -1;
-	}
+	clientinfo_t *client;
 
 	if (db_connect() != 0) {
 		TRACE(TRACE_ERROR, "could not connect to database");
@@ -155,36 +148,23 @@ static int manage_start_cli_server(ChildInfo_t * info)
 	}
 
 	srand((int) ((int) time(NULL) + (int) getpid()));
-	connected = 1;
 
-	if (db_check_connection()) {
-		TRACE(TRACE_ERROR, "database has gone away");
-		return -1;
-	}
-
-		
-	memset((void *)&client, 0, sizeof(client));	/* zero-init */
-
-	client.timeout = info->timeout;
-	client.login_timeout = info->login_timeout;
+	client 			= g_new0(clientinfo_t, 1);
+	client->timeout		= conf->timeout;
+	client->login_timeout	= conf->login_timeout;
 
 	/* make streams */
-	client.rx = stdin;
-	client.tx = stdout;
-
-	setvbuf(client.tx, (char *) NULL, _IOLBF, 0);
-	setvbuf(client.rx, (char *) NULL, _IOLBF, 0);
-
-	TRACE(TRACE_DEBUG, "client info init complete, calling client handler");
+	client->rx		= STDIN_FILENO;
+	client->tx		= STDOUT_FILENO;
 
 	/* streams are ready, perform handling */
-	info->ClientHandler((clientinfo_t *)&client);
+	event_init();
+	conf->ClientHandler(client);
+	event_dispatch();
 
-	TRACE(TRACE_DEBUG, "client handling complete, closing streams");
-	client_close();
-	TRACE(TRACE_INFO, "connection closed"); 
 	disconnect_all();
-	
+
+	TRACE(TRACE_INFO, "connections closed"); 
 	return 0;
 }
 
@@ -194,35 +174,12 @@ int StartCliServer(serverConfig_t * conf)
 	if (!conf)
 		TRACE(TRACE_FATAL, "NULL configuration");
 	
-	if (server_setup(conf))
+	if (server_setup())
 		return -1;
 	
-	manage_start_cli_server(&childinfo);
+	manage_start_cli_server(conf);
 	
 	return 0;
-}
-
-int StartServer(serverConfig_t * conf)
-{
-
-	if (!conf)
-		TRACE(TRACE_FATAL, "NULL configuration");
-
-	if (server_setup(conf))
-		return -1;
- 	
-
-	if (db_connect() != DM_SUCCESS) 
-		TRACE(TRACE_FATAL, "Unable to connect to database.");
-	
-	if (db_check_version() != 0) {
-		db_disconnect();
-		TRACE(TRACE_FATAL, "Unsupported database version.");
-	}
-	
-	pool_run(conf);
-
-	return Restart;
 }
 
 /* Should be called after a HUP to allow for log rotation,
@@ -234,18 +191,17 @@ static void reopen_logs(serverConfig_t *conf)
 
 	if (! (freopen(conf->log, "a", stdout))) {
 		serr = errno;
-		TRACE(TRACE_ERROR, "freopen failed on [%s] [%s]", 
-				conf->log, strerror(serr));
+		TRACE(TRACE_ERROR, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
 	}
+
 	if (! (freopen(conf->error_log, "a", stderr))) {
 		serr = errno;
-		TRACE(TRACE_ERROR, "freopen failed on [%s] [%s]", 
-				conf->error_log, strerror(serr));
+		TRACE(TRACE_ERROR, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
 	}
+
 	if (! (freopen("/dev/null", "r", stdin))) {
 		serr = errno;
-		TRACE(TRACE_ERROR, "freopen failed on stdin [%s]",
-				strerror(serr));
+		TRACE(TRACE_ERROR, "freopen failed on stdin [%s]", strerror(serr));
 	}
 }
 	
@@ -257,18 +213,15 @@ static void reopen_logs_fatal(serverConfig_t *conf)
 
 	if (! (freopen(conf->log, "a", stdout))) {
 		serr = errno;
-		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", 
-				conf->log, strerror(serr));
+		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
 	}
 	if (! (freopen(conf->error_log, "a", stderr))) {
 		serr = errno;
-		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", 
-				conf->error_log, strerror(serr));
+		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
 	}
 	if (! (freopen("/dev/null", "r", stdin))) {
 		serr = errno;
-		TRACE(TRACE_FATAL, "freopen failed on stdin [%s]",
-				strerror(serr));
+		TRACE(TRACE_FATAL, "freopen failed on stdin [%s]", strerror(serr));
 	}
 }
 
@@ -276,11 +229,10 @@ pid_t server_daemonize(serverConfig_t *conf)
 {
 	assert(conf);
 	
-	if (fork())
-		exit(0);
+	// double-fork
+	if (fork()) exit(0);
 	setsid();
-	if (fork())
-		exit(0);
+	if (fork()) exit(0);
 
 	chdir("/");
 	umask(0077);
@@ -292,95 +244,6 @@ pid_t server_daemonize(serverConfig_t *conf)
 	return getsid(0);
 }
 
-static void close_all_sockets(serverConfig_t *conf)
-{
-	int i;
-
-	for (i = 0; i < conf->ipcount; i++) {
-		close(conf->listenSockets[i]);
-	}
-}
-
-int server_run(serverConfig_t *conf)
-{
-	mainStop = 0;
-	mainRestart = 0;
-	mainStatus = 0;
-	mainSig = 0;
-	int serrno, status, result = 0;
-	pid_t pid = -1;
-
-	reopen_logs(conf);
-
-	CreateSocket(conf);
-
-	switch ((pid = fork())) {
-	case -1:
-		serrno = errno;
-		close_all_sockets(conf);
-		TRACE(TRACE_FATAL, "fork failed [%s]", strerror(serrno));
-		errno = serrno;
-		break;
-
-	case 0:
-		/* child process */
-		isChildProcess = 1;
-		if (drop_privileges(conf->serverUser, conf->serverGroup) < 0) {
-			mainStop = 1;
-			TRACE(TRACE_ERROR,"unable to drop privileges");
-			return 0;
-		}
-
-		result = StartServer(conf);
-		TRACE(TRACE_INFO, "server done, restart = [%d]",
-				result);
-		exit(result);		
-		break;
-	default:
-		/* parent process, wait for child to exit */
-		while (waitpid(pid, &status, WNOHANG | WUNTRACED) == 0) {
-			if (mainStop || mainRestart || mainStatus){
-				TRACE(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", mainSig);
-				if(mainStop) kill(pid, SIGTERM);
-				if(mainRestart) kill(pid, SIGHUP);
-				if(mainStatus) {
-					mainStatus = 0;
-					kill(pid, SIGUSR1);
-				}
-			}
-			sleep(2);
-		}
-
-		if (WIFEXITED(status)) {
-			/* child process terminated neatly */
-			result = WEXITSTATUS(status);
-			TRACE(TRACE_DEBUG, "server has exited, exit status [%d]",
-			      result);
-		} else {
-			/* child stopped or signaled so make sure it is dead */
-			TRACE(TRACE_DEBUG, "server has not exited normally. Killing...");
-
-			kill(pid, SIGKILL);
-			result = 0;
-		}
-
-		if (strlen(conf->socket) > 0) {
-			if (unlink(conf->socket)) {
-				serrno = errno;
-				TRACE(TRACE_ERROR, "unlinking unix socket failed [%s]",
-						strerror(serrno));
-				errno = serrno;
-			}
-		}
-
-		break;
-	}
-	
-	close_all_sockets(conf);
-	
-	return result;
-}
-
 static int dm_socket(int domain)
 {
 	int sock, err;
@@ -388,7 +251,6 @@ static int dm_socket(int domain)
 		err = errno;
 		TRACE(TRACE_FATAL, "%s", strerror(err));
 	}
-	TRACE(TRACE_DEBUG, "done");
 	return sock;
 }
 
@@ -398,14 +260,12 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
 		err = errno;
-		TRACE(TRACE_DEBUG, "failed");
-		return err;
+		TRACE(TRACE_FATAL, "%s", strerror(err));
 	}
 
 	if ((listen(sock, backlog)) == -1) {
 		err = errno;
-		TRACE(TRACE_DEBUG, "failed");
-		return err;
+		TRACE(TRACE_FATAL, "%s", strerror(err));
 	}
 	
 	TRACE(TRACE_DEBUG, "done");
@@ -415,7 +275,7 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 
 static int create_unix_socket(serverConfig_t * conf)
 {
-	int sock, err;
+	int sock;
 	struct sockaddr_un saServer;
 
 	conf->resolveIP=0;
@@ -427,15 +287,11 @@ static int create_unix_socket(serverConfig_t * conf)
 	saServer.sun_family = AF_UNIX;
 	strncpy(saServer.sun_path,conf->socket, sizeof(saServer.sun_path));
 
-	TRACE(TRACE_DEBUG, "creating socket on [%s] with backlog [%d]",
+	TRACE(TRACE_DEBUG, "create socket on [%s] with backlog [%d]",
 			conf->socket, conf->backlog);
 
-	err = dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), conf->backlog);
-	if (err != 0) {
-		close(sock);
-		TRACE(TRACE_FATAL, "Fatal error, could not bind to [%s] %s",
-			conf->socket, strerror(err));
-	}
+	// any error in dm_bind_and_listen is fatal
+	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), conf->backlog);
 	
 	chmod(conf->socket, 02777);
 
@@ -444,7 +300,7 @@ static int create_unix_socket(serverConfig_t * conf)
 
 static int create_inet_socket(const char * const ip, int port, int backlog)
 {
-	int sock, err, flags;
+	int sock;
 	struct sockaddr_in saServer;
 	int so_reuseaddress = 1;
 
@@ -457,35 +313,32 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 	saServer.sin_family	= AF_INET;
 	saServer.sin_port	= htons(port);
 
-	TRACE(TRACE_DEBUG, "creating socket on [%s:%d] with backlog [%d]",
+	TRACE(TRACE_DEBUG, "create socket on [%s:%d] with backlog [%d]",
 			ip, port, backlog);
 	
 	if (ip[0] == '*') {
-		
 		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
-		
 	} else if (! (inet_aton(ip, &saServer.sin_addr))) {
-		
 		close(sock);
 		TRACE(TRACE_FATAL, "IP invalid [%s]", ip);
 	}
 
-	err = dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), backlog);
-	if (err != 0) {
-		close(sock);
-		TRACE(TRACE_FATAL, "Fatal error, could not bind to [%s:%d] %s",
-			ip, port, strerror(err));
-	}
+	// any error in dm_bind_and_listen is fatal
+	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), backlog);
 
-	// man 2 accept says that if the connection disappears during the accept call 
-	// accept will block forever unless it is set non-blocking with fcntl
-	flags = fcntl(sock, F_GETFL);
-	fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+	UNBLOCK(sock);
 
 	return sock;	
 }
 
-void CreateSocket(serverConfig_t * conf)
+static void server_close_sockets(serverConfig_t *conf)
+{
+	int i;
+	for (i = 0; i < conf->ipcount; i++)
+		close(conf->listenSockets[i]);
+}
+
+static void server_create_sockets(serverConfig_t * conf)
 {
 	int i;
 
@@ -494,9 +347,268 @@ void CreateSocket(serverConfig_t * conf)
 	if (strlen(conf->socket) > 0) {
 		conf->listenSockets[0] = create_unix_socket(conf);
 	} else {
-		for (i = 0; i < conf->ipcount; i++) {
+		for (i = 0; i < conf->ipcount; i++)
 			conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
-		}
 	}
+}
+
+static clientinfo_t * client_init(int socket, struct sockaddr_in caddr)
+{
+	int err;
+	clientinfo_t *client = g_new0(clientinfo_t, 1);
+
+	client->timeout = server_conf->timeout;
+	client->login_timeout = server_conf->login_timeout;
+	strncpy((char *)client->ip_src, inet_ntoa(caddr.sin_addr), sizeof(client->ip_src));
+
+	if (server_conf->resolveIP) {
+		struct hostent *clientHost;
+		clientHost = gethostbyaddr((char *) &caddr.sin_addr, sizeof(caddr.sin_addr), caddr.sin_family);
+
+		if (clientHost && clientHost->h_name)
+			strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
+
+		TRACE(TRACE_MESSAGE, "incoming connection from [%s (%s)] by pid [%d]",
+				client->ip_src,
+				client->clientname[0] ? client->clientname : "Lookup failed", getpid());
+	} else {
+		TRACE(TRACE_MESSAGE, "incoming connection from [%s] by pid [%d]",
+				client->ip_src, getpid());
+	}
+
+	/* make streams */
+	if (!(client->rx = dup(socket))) {
+		err = errno;
+		TRACE(TRACE_ERROR, "%s", strerror(err));
+		close(socket);
+		g_free(client);
+		return NULL;
+	}
+
+	if (!(client->tx = socket)) {
+		err = errno;
+		TRACE(TRACE_ERROR, "%s", strerror(err));
+		close(socket);
+		g_free(client);
+		return NULL;
+	}
+
+	return client;
+}
+
+static void worker_pipe_cb(int sock, short event UNUSED, void *arg UNUSED)
+{
+	// Clear the self-pipe; we received a signal
+	// and we need to loop again upstream to handle it.
+	// See http://cr.yp.to/docs/selfpipe.html
+	char buf[1];
+	while (read(sock, buf, 1) > 0)
+		;
+}
+
+static void worker_sock_cb(int sock, short event, void *arg)
+{
+	int clientsock;
+	struct sockaddr_in caddr;
+	struct event *ev = (struct event *)arg;
+	clientinfo_t *client;
+
+	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
+	if (db_check_connection()) {
+		TRACE(TRACE_ERROR, "database has gone away");
+		ChildStopRequested=1;
+		return;
+	}
+
+	/* reschedule */
+	event_add(ev, NULL);
+
+	/* accept the active fd */
+	int len = sizeof(struct sockaddr_in);
+
+	if ((clientsock = accept(sock, (struct sockaddr_in *) &caddr, (socklen_t *)&len)) < 0) {
+                int serr=errno;
+                switch(serr) {
+                        case ECONNABORTED:
+                        case EPROTO:
+                        case EINTR:
+                                TRACE(TRACE_DEBUG, "%s", strerror(serr));
+                                break;
+                        default:
+                                TRACE(TRACE_ERROR, "%s", strerror(serr));
+                                break;
+                }
+                return;
+        }
+
+	client = client_init(clientsock, caddr);
+
+	TRACE(TRACE_INFO, "connection accepted");
+
+	/* streams are ready, perform handling */
+	server_conf->ClientHandler((clientinfo_t *)client);
+}
+
+static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+{
+	event_gotsig = 1;
+
+	if (selfPipe[1] > -1)
+		write(selfPipe[1], "S", 1);
+
+	switch (sig) {
+
+	case SIGHUP:
+		mainRestart = 1;
+		break;
+	case SIGCHLD:
+		break;
+	case SIGALRM:
+		alarm_occurred = 1;
+		break;
+	case SIGPIPE:
+		break;
+	default:
+		childSig = sig;
+		break;
+	}
+}
+
+static int worker_sig_cb(void)
+{
+	if (ChildStopRequested | alarm_occurred)
+		(void)event_loopexit(NULL);
+
+	if (mainRestart) {
+		//field_t service_name = server_conf->service_name;
+		TRACE(TRACE_DEBUG,"restart...");
+		//server_close_sockets();
+		//disconnect_all();
+		// 
+		// ClearConf(server_conf);
+		// DoConfig(server_conf, service_name);
+		// LoadServerConfig(server_conf, service_name);
+		//server_run(server_conf);
+	}
+	return (0);
+}
+
+static int worker_set_sighandler(void)
+{
+	struct sigaction act;
+	struct sigaction rstact;
+
+	memset(&act, 0, sizeof(act));
+	memset(&rstact, 0, sizeof(rstact));
+
+	act.sa_sigaction = worker_sighandler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_SIGINFO;
+
+	rstact.sa_sigaction = worker_sighandler;
+	sigemptyset(&rstact.sa_mask);
+	rstact.sa_flags = SA_SIGINFO | SA_RESETHAND;
+
+	sigaddset(&act.sa_mask, SIGINT);
+	sigaddset(&act.sa_mask, SIGQUIT);
+	sigaddset(&act.sa_mask, SIGILL);
+	sigaddset(&act.sa_mask, SIGBUS);
+	sigaddset(&act.sa_mask, SIGFPE);
+	sigaddset(&act.sa_mask, SIGSEGV);
+	sigaddset(&act.sa_mask, SIGTERM);
+	sigaddset(&act.sa_mask, SIGHUP);
+
+	sigaction(SIGINT,	&rstact, 0);
+	sigaction(SIGQUIT,	&rstact, 0);
+	sigaction(SIGILL,	&rstact, 0);
+	sigaction(SIGBUS,	&rstact, 0);
+	sigaction(SIGFPE,	&rstact, 0);
+	sigaction(SIGSEGV,	&rstact, 0);
+	sigaction(SIGTERM,	&rstact, 0);
+	sigaction(SIGHUP,	&rstact, 0);
+	sigaction(SIGPIPE,	&rstact, 0);
+	sigaction(SIGALRM,	&act, 0);
+	sigaction(SIGCHLD,	&act, 0);
+
+	event_sigcb = worker_sig_cb;
+
+	TRACE(TRACE_INFO, "signal handler placed");
+
+	return 0;
+}
+
+// 
+// Public methods
+//
+
+void disconnect_all(void)
+{
+	db_disconnect();
+	auth_disconnect();
+}
+
+int server_run(serverConfig_t *conf)
+{
+	mainStop = 0;
+	mainRestart = 0;
+	mainStatus = 0;
+	mainSig = 0;
+	int result = 0;
+
+	assert(conf);
+
+	reopen_logs(conf);
+
+	server_create_sockets(conf);
+
+	if (server_setup())
+		return -1;
+
+	worker_run(conf);
+
+	server_close_sockets(conf);
+	
+	return result;
+}
+
+void worker_run(serverConfig_t *conf)
+{
+	int ip;
+	struct event *evsock;
+ 	TRACE(TRACE_MESSAGE, "starting main service loop");
+
+	server_conf = conf;
+	if (db_connect() != 0) {
+		TRACE(TRACE_ERROR, "could not connect to database");
+		return;
+	}
+
+	if (auth_connect() != 0) {
+		TRACE(TRACE_ERROR, "could not connect to authentication");
+		return;
+	}
+
+	srand((int) ((int) time(NULL) + (int) getpid()));
+
+	TRACE(TRACE_DEBUG,"setup event loop");
+	event_init();
+
+	evsock = g_new0(struct event, server_conf->ipcount+1);
+
+	for (ip = 0; ip < server_conf->ipcount; ip++) {
+		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, worker_sock_cb, &evsock[ip]);
+		event_add(&evsock[ip], NULL);
+	}
+
+	event_set(&evsock[ip], selfPipe[0], EV_READ, worker_pipe_cb, &evsock[ip]);
+	event_add(&evsock[ip], NULL);
+
+	worker_set_sighandler();
+
+	TRACE(TRACE_DEBUG,"dispatch event loop");
+
+	event_dispatch();
+
+	disconnect_all();
 }
 

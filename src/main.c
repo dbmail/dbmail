@@ -39,7 +39,7 @@
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
-extern db_param_t _db_params;	/* set up database login data */
+extern db_param_t * _db_params;	/* set up database login data */
 
 int brute_force = 0;
 char *deliver_to_header = NULL;
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 {
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
-	struct DbmailMessage *msg = NULL;
+	DbmailMessage *msg = NULL;
 	char *returnpath = NULL;
 	GList *userlist = NULL;
 	GList *dsnusers = NULL;
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 
 	}
 	SetTraceLevel("SMTP");
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 
 	if (db_connect() != 0) {
 		TRACE(TRACE_ERROR, "database connection failed");

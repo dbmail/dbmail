@@ -46,12 +46,12 @@
  * initializers
  */
 
-struct DbmailMessage * dbmail_message_new(void);
-struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype);
-struct DbmailMessage * dbmail_message_init_from_gmime_message(struct DbmailMessage *self, GMimeMessage *message);
-struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
-struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
-struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
+DbmailMessage * dbmail_message_new(void);
+DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype);
+DbmailMessage * dbmail_message_init_from_gmime_message(DbmailMessage *self, GMimeMessage *message);
+DbmailMessage * dbmail_message_init_with_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
+DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GString *content);
+DbmailMessage * dbmail_message_construct(DbmailMessage *self, 
 		const gchar *sender, const gchar *recipient, 
 		const gchar *subject, const gchar *body);
 
@@ -59,40 +59,40 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
  * database facilities
  */
 
-int dbmail_message_store(struct DbmailMessage *message);
-int dbmail_message_cache_headers(const struct DbmailMessage *message);
+int dbmail_message_store(DbmailMessage *message);
+int dbmail_message_cache_headers(const DbmailMessage *message);
 
-struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
+DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int filter);
 
 /*
  * attribute accessors
  */
-void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid);
-u64_t dbmail_message_get_physid(const struct DbmailMessage *self);
+void dbmail_message_set_physid(DbmailMessage *self, u64_t physid);
+u64_t dbmail_message_get_physid(const DbmailMessage *self);
 
-void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, const char *envelope);
-gchar * dbmail_message_get_envelope_recipient(const struct DbmailMessage *self);
+void dbmail_message_set_envelope_recipient(DbmailMessage *self, const char *envelope);
+gchar * dbmail_message_get_envelope_recipient(const DbmailMessage *self);
 	
-void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date);
-gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self, int thisyear);
+void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date);
+gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear);
 	
-int dbmail_message_set_class(struct DbmailMessage *self, int klass);
-int dbmail_message_get_class(const struct DbmailMessage *self);
+int dbmail_message_set_class(DbmailMessage *self, int klass);
+int dbmail_message_get_class(const DbmailMessage *self);
 
-gchar * dbmail_message_to_string(const struct DbmailMessage *self);
-gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self);
-gchar * dbmail_message_body_to_string(const struct DbmailMessage *self);
+gchar * dbmail_message_to_string(const DbmailMessage *self);
+gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self);
+gchar * dbmail_message_body_to_string(const DbmailMessage *self);
 
-char * dbmail_message_get_charset(struct DbmailMessage *self);
+char * dbmail_message_get_charset(DbmailMessage *self);
 
-size_t dbmail_message_get_size(const struct DbmailMessage *self, gboolean crlf);
+size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf);
 
 #define dbmail_message_get_rfcsize(x) dbmail_message_get_size(x, TRUE)
 
-size_t dbmail_message_get_hdrs_size(const struct DbmailMessage *self, gboolean crlf);
-size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean crlf);
+size_t dbmail_message_get_hdrs_size(const DbmailMessage *self, gboolean crlf);
+size_t dbmail_message_get_body_size(const DbmailMessage *self, gboolean crlf);
 
-GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const char *field);
+GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field);
 
 #define get_crlf_encoded(string) get_crlf_encoded_opt(string, 0)
 #define get_crlf_encoded_dots(string) get_crlf_encoded_opt(string, 1)
@@ -102,26 +102,26 @@ gchar * get_crlf_encoded_opt(const gchar *string, int dots);
  * manipulate the actual message content
  */
 
-void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value);
-const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header);
+void dbmail_message_set_header(DbmailMessage *self, const char *header, const char *value);
+const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *header);
 
 /* Get all instances of a header. */
-GTuples * dbmail_message_get_header_repeated(const struct DbmailMessage *self, const char *header);
+GTuples * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header);
 
-void dbmail_message_cache_tofield(const struct DbmailMessage *self);
-void dbmail_message_cache_ccfield(const struct DbmailMessage *self);
-void dbmail_message_cache_fromfield(const struct DbmailMessage *self);
-void dbmail_message_cache_replytofield(const struct DbmailMessage *self);
-void dbmail_message_cache_datefield(const struct DbmailMessage *self);
-void dbmail_message_cache_subjectfield(const struct DbmailMessage *self);
-void dbmail_message_cache_referencesfield(const struct DbmailMessage *self);
-void dbmail_message_cache_envelope(const struct DbmailMessage *self);
+void dbmail_message_cache_tofield(const DbmailMessage *self);
+void dbmail_message_cache_ccfield(const DbmailMessage *self);
+void dbmail_message_cache_fromfield(const DbmailMessage *self);
+void dbmail_message_cache_replytofield(const DbmailMessage *self);
+void dbmail_message_cache_datefield(const DbmailMessage *self);
+void dbmail_message_cache_subjectfield(const DbmailMessage *self);
+void dbmail_message_cache_referencesfield(const DbmailMessage *self);
+void dbmail_message_cache_envelope(const DbmailMessage *self);
 
 /*
  * destructor
  */
 
-void dbmail_message_free(struct DbmailMessage *self);
+void dbmail_message_free(DbmailMessage *self);
 
 
 /* move these elsewhere: */
@@ -140,9 +140,45 @@ char * g_mime_object_get_body(const GMimeObject *object);
  *     -  1 on success
  */
 
-struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter);
+DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter);
 
 #define db_init_fetch_headers(x) db_init_fetch(x,DBMAIL_MESSAGE_FILTER_HEAD)
 #define db_init_fetch_message(x) db_init_fetch(x,DBMAIL_MESSAGE_FILTER_FULL)
+
+
+// from sort.h
+dsn_class_t sort_and_deliver(DbmailMessage *self,
+		const char *destination, u64_t useridnr,
+		const char *mailbox, mailbox_source_t source);
+
+dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
+		u64_t useridnr, const char *mailbox, mailbox_source_t source,
+		int *msgflags);
+
+// from dm_pipe.h
+//
+// Either convert the message struct to a
+// string, or send the database rows raw.
+enum sendwhat {
+	SENDMESSAGE     = 0,
+	SENDRAW         = 1
+};
+
+// Use the system sendmail binary.
+#define SENDMAIL        NULL
+
+
+/**
+ * \brief Inserts a message in the database.
+ * \return 0
+ */
+int insert_messages(DbmailMessage *message, GList *dsnusers);
+int send_mail(DbmailMessage *message,
+		const char *to, const char *from,
+		const char *preoutput,
+		enum sendwhat sendwhat, char *sendmail_external);
+
+int send_forward_list(DbmailMessage *message, GList *targets, const char *from);
+
 
 #endif

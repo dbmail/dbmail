@@ -312,6 +312,9 @@ int db_rollback_savepoint_transaction(const char*);
  */
 int db_get_physmessage_id(u64_t message_idnr, /*@out@*/ u64_t * physmessage_id);
 
+
+int db_user_quotum_inc(u64_t user_idnr, u64_t size);
+int db_user_quotum_dec(u64_t user_idnr, u64_t size);
 /**
  * \brief return number of bytes used by user identified by userid
  * \param user_idnr id of the user (from users table)
@@ -626,6 +629,17 @@ int db_do_cleanup(const char **tables, int num_tables);
 int db_empty_mailbox(u64_t user_idnr);
 
 /**
+ * \brief fetch the size of a mailbox
+ * \param mailbox_idnr
+ * \param only_deleted get only the size of all messages flagged for deletion
+ * \param mailbox_size pointer to result value
+ * \return
+ * 	- -1 on database failure
+ * 	- 0 on success
+ */
+int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_size);
+
+/**
 * \brief check for all message blocks  that are not connected to
 *        a physmessage. This can only occur when in use with a 
 *        database that does not check for foreign key constraints.
@@ -785,19 +799,21 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
  * 		- 0 on failure
  * 		- 1 on success
  */
-int db_send_message_lines(void *fstream, u64_t message_idnr,
-			  long lines, int no_end_dot);
+int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_end_dot);
+
+char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot);
+
 /**
  * \brief create a new POP3 session. (was createsession() in dbmysql.c)
  * \param user_idnr user idnr 
  * \param session_ptr pointer to POP3 session 
  */
-int db_createsession(u64_t user_idnr, PopSession_t * session_ptr);
+int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr);
 /** 
  * \brief Clean up a POP3 Session
  * \param session_ptr pointer to POP3 session
  */
-void db_session_cleanup(PopSession_t * session_ptr);
+void db_session_cleanup(ClientSession_t * session_ptr);
 /**
  * \brief update POP3 session
  * \param session_ptr pointer to POP3 session
@@ -808,7 +824,7 @@ void db_session_cleanup(PopSession_t * session_ptr);
  * not be nessecary, because the shared mailboxes are not 
  * touched by POP3
  */
-int db_update_pop(PopSession_t * session_ptr);
+int db_update_pop(ClientSession_t * session_ptr);
 /**
  * \brief set deleted status (=3) for all messages that are marked for
  *        delete (=2)
@@ -919,10 +935,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
  *     - -1 on failure
  *     - 0 on success
  */
-int db_getmailbox_flags(MailboxInfo * mb);
-int db_getmailbox_count(MailboxInfo * mb);
-int db_getmailbox_mtime(MailboxInfo * mb);
-int db_getmailbox(MailboxInfo * mb);
+int db_getmailbox(MailboxInfo * mb, u64_t userid);
 
 /**
  * \brief find owner of a mailbox
@@ -1111,22 +1124,15 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name);
  */
 int db_setmailboxname(u64_t mailbox_idnr, const char *name);
 /**
- * \brief remove all messages from a mailbox that have the delete flag
- *        set. Remove is done by setting status to 2. A list holding
- *        messages_idnrs of all removed messages is made in msg_idnrs.
- *        nmsgs will hold the number of deleted messages.
- * \param mailbox_idnr
- * \param msg_idnrs pointer to a list of msg_idnrs. If NULL, or nmsg
- *        is NULL, no list will be made.
- * \param nmsgs will hold the number of memebers in the list. If NULL,
- *        or msg_idnrs is NULL, no list will be made.
+ * \brief remove message that has the delete flag
+ *        set. Remove is done by setting status to 2.
+ * \param message_id id of the message to expunge
  * \return 
  * 		- -1 on failure
  * 		- 0 on success
- * \attention caller should free msg_idnrs and nmsg
  */
-int db_expunge(u64_t mailbox_idnr,
-	       u64_t user_idnr, u64_t ** msg_idnrs, u64_t * nmsgs);
+int db_msg_expunge(u64_t message_id);
+
 /**
  * \brief get first unseen message in a mailbox
  * \param mailbox_idnr
@@ -1254,8 +1260,6 @@ int db_acl_get_identifier(u64_t mboxid, /*@out@*/ GList  **identifier_list);
  */
 char *date2char_str(const char *column);
 
-
-int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, MailboxInfo * mb);
 
 /* 
  * db-user accessors

@@ -37,7 +37,7 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 extern int quiet;
 extern int reallyquiet;
 
@@ -57,14 +57,13 @@ char *alias_mailbox = "testfailalias+foomailbox@nonexistantdomain";
 char *userpart_catchall = "testfailcatchall@";
 char *domain_catchall = "@nonexistantdomain";
 
-static u64_t get_mailbox_id(const char *name)
+static u64_t get_mailbox_id(const char *name, u64_t *userid)
 {
-	u64_t id, owner;
-	auth_user_exists("testuser1",&owner);
-	db_find_create_mailbox(name, BOX_COMMANDLINE, owner, &id);
+	u64_t id;
+	auth_user_exists("testuser1",userid);
+	db_find_create_mailbox(name, BOX_COMMANDLINE, *userid, &id);
 	return id;
 }
-
 
 /*
  *
@@ -78,7 +77,7 @@ void setup(void)
 		printf( "Config file not found: %s\n", configFile );
 		exit(1);
 	}
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 	db_connect();
 	auth_connect();
 
@@ -896,16 +895,14 @@ END_TEST
 START_TEST(test_db_getmailbox)
 {
 	int res;
+	u64_t userid;
 	MailboxInfo mb;
 	memset(&mb,0,sizeof(MailboxInfo));
 	
-	mb.uid = get_mailbox_id("INBOX");
+	mb.uid = get_mailbox_id("INBOX", &userid);
 	
-	res = db_getmailbox(&mb);
-	res = db_getmailbox(&mb);
-	res = db_getmailbox(&mb);
-
-
+	res = db_getmailbox(&mb, userid);
+	fail_unless(res == DM_SUCCESS);
 }
 END_TEST
 

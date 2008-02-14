@@ -30,32 +30,33 @@
 #define THIS_MODULE "imapd"
 #define PNAME "dbmail/imap4d"
 
-int imap_before_smtp = 0;
+extern int imap_before_smtp;
+
+
 
 int main(int argc, char *argv[])
 {
 	serverConfig_t config;
 	int result;
-		
+
 	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-       //fixes valgrind Conditional jump or move depends on uninitialised value(s)
-       memset(&config, 0, sizeof(serverConfig_t));
-
+	memset(&config, 0, sizeof(serverConfig_t));
 	result = serverparent_getopt(&config, "IMAP", argc, argv);
 	if (result == -1)
 		goto shutdown;
 
 	if (result == 1) {
 		serverparent_showhelp("dbmail-imapd",
-			"This daemon provides Internet Message Access Protocol 4.1 services.");
+				"This daemon provides Internet "
+				"Message Access Protocol 4.1 "
+				"services.");
 		goto shutdown;
 	}
 
-	/* These are in imap4.h */
-	config.ClientHandler = IMAPClientHandler;
 
+	config.ClientHandler = imap_handle_connection;
 	imap_before_smtp = config.service_before_smtp;
 
 	result = serverparent_mainloop(&config, "IMAP", "dbmail-imapd");
@@ -64,7 +65,7 @@ shutdown:
 	g_mime_shutdown();
 	config_free();
 
-	TRACE(TRACE_INFO, "exit");
+	TRACE(TRACE_INFO, "return [%d]", result);
 	return result;
 }
 

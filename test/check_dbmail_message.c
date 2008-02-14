@@ -35,7 +35,7 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t _db_params;
+extern db_param_t *_db_params;
 
 extern char *multipart_message;
 extern char *multipart_message_part;
@@ -53,7 +53,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 	db_connect();
 	auth_connect();
 }
@@ -65,19 +65,19 @@ void teardown(void)
 	config_free();
 }
 
-//struct DbmailMessage * dbmail_message_new(void);
+//DbmailMessage * dbmail_message_new(void);
 START_TEST(test_dbmail_message_new)
 {
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	fail_unless(m->id==0,"dbmail_message_new failed");
 	dbmail_message_free(m);
 }
 END_TEST
-//void dbmail_message_set_class(struct DbmailMessage *self, int klass);
+//void dbmail_message_set_class(DbmailMessage *self, int klass);
 START_TEST(test_dbmail_message_set_class)
 {
 	int result;
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	result = dbmail_message_set_class(m,DBMAIL_MESSAGE);
 	fail_unless(result==0,"dbmail_message_set_class failed");
 	result = dbmail_message_set_class(m,DBMAIL_MESSAGE_PART);
@@ -88,11 +88,11 @@ START_TEST(test_dbmail_message_set_class)
 	dbmail_message_free(m);
 }
 END_TEST
-//int dbmail_message_get_class(struct DbmailMessage *self);
+//int dbmail_message_get_class(DbmailMessage *self);
 START_TEST(test_dbmail_message_get_class)
 {
 	int klass;
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	
 	/* default */
 	klass = dbmail_message_get_class(m);
@@ -125,7 +125,7 @@ FILE *i;
 
 START_TEST(test_dbmail_message_store)
 {
-	struct DbmailMessage *m, *n;
+	DbmailMessage *m, *n;
 	u64_t physid;
 	GString *s;
 	char *t;
@@ -268,7 +268,7 @@ END_TEST
 
 START_TEST(test_dbmail_message_store2)
 {
-	struct DbmailMessage *m, *n;
+	DbmailMessage *m, *n;
 	u64_t physid;
 	char *t;
 	char *expect;
@@ -306,10 +306,10 @@ START_TEST(test_dbmail_message_store2)
 END_TEST
 
 
-//struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
+//DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int filter);
 START_TEST(test_dbmail_message_retrieve)
 {
-	struct DbmailMessage *m, *n;
+	DbmailMessage *m, *n;
 	GString *s;
 	char *expect, *t;
 	u64_t physid;
@@ -364,10 +364,10 @@ START_TEST(test_dbmail_message_retrieve)
 	g_free(expect);
 }
 END_TEST
-//struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
+//DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GString *content);
 START_TEST(test_dbmail_message_init_with_string)
 {
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 	GTuples *t;
 	GString *s;
 	
@@ -394,7 +394,7 @@ END_TEST
 
 START_TEST(test_dbmail_message_get_internal_date)
 {
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 	GString *s;
 
 	s = g_string_new(rfc822);
@@ -442,7 +442,7 @@ START_TEST(test_dbmail_message_to_string)
 {
         char *result;
 	GString *s;
-	struct DbmailMessage *m;
+	DbmailMessage *m;
         
 	s = g_string_new(multipart_message);
 	
@@ -469,20 +469,20 @@ START_TEST(test_dbmail_message_to_string)
 }
 END_TEST
     
-//struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
+//DbmailMessage * dbmail_message_init_with_stream(DbmailMessage *self, GMimeStream *stream, int type);
 /*
 START_TEST(test_dbmail_message_init_with_stream)
 {
 }
 END_TEST
 */
-//gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self);
+//gchar * dbmail_message_hdrs_to_string(DbmailMessage *self);
 
 START_TEST(test_dbmail_message_hdrs_to_string)
 {
 	char *result;
 	GString *s;
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 	
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
@@ -497,13 +497,13 @@ START_TEST(test_dbmail_message_hdrs_to_string)
 }
 END_TEST
 
-//gchar * dbmail_message_body_to_string(struct DbmailMessage *self);
+//gchar * dbmail_message_body_to_string(DbmailMessage *self);
 
 START_TEST(test_dbmail_message_body_to_string)
 {
 	char *result;
 	GString *s;
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 	
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
@@ -530,13 +530,13 @@ START_TEST(test_dbmail_message_body_to_string)
 }
 END_TEST
 
-//size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
+//size_t dbmail_message_get_rfcsize(DbmailMessage *self);
 
 START_TEST(test_dbmail_message_get_rfcsize)
 {
 	unsigned result;
 	GString *s;
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 	
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
@@ -550,10 +550,10 @@ START_TEST(test_dbmail_message_get_rfcsize)
 }
 END_TEST
 
-//void dbmail_message_free(struct DbmailMessage *self);
+//void dbmail_message_free(DbmailMessage *self);
 START_TEST(test_dbmail_message_free)
 {
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	dbmail_message_free(m);
 }
 END_TEST
@@ -561,7 +561,7 @@ END_TEST
 START_TEST(test_dbmail_message_new_from_stream)
 {
 	FILE *fd;
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 	char *t;
 	u64_t whole_message_size = 0;
 	fd = tmpfile();
@@ -594,7 +594,7 @@ END_TEST
 
 START_TEST(test_dbmail_message_set_header)
 {
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 	GString *s;
 	s =  g_string_new(multipart_message);
 	m = dbmail_message_new();
@@ -609,8 +609,8 @@ END_TEST
 START_TEST(test_dbmail_message_get_header)
 {
 	char *t;
-	struct DbmailMessage *h = dbmail_message_new();
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *h = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	GString *s, *j;
 	
 	s = g_string_new(multipart_message);
@@ -636,7 +636,7 @@ END_TEST
 
 START_TEST(test_dbmail_message_encoded)
 {
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	GString *s = g_string_new(encoded_message_koi);
 	//const char *exp = ":: [ Arrty ] :: [ Roy (L) Stèphanie ]  <over.there@hotmail.com>";
 	u64_t id = 0;
@@ -666,7 +666,7 @@ START_TEST(test_dbmail_message_encoded)
 END_TEST
 START_TEST(test_dbmail_message_8bit)
 {
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	GString *s = g_string_new(raw_message_koi);
 
 	m = dbmail_message_init_with_string(m, s);
@@ -688,7 +688,7 @@ END_TEST
 
 START_TEST(test_dbmail_message_cache_headers)
 {
-	struct DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new();
 	char *s = g_new0(char,20);
 	GString *j =  g_string_new(multipart_message);
 	m = dbmail_message_init_with_string(m,j);
@@ -709,7 +709,7 @@ START_TEST(test_dbmail_message_get_header_addresses)
 {
 	GList * result;
 	GString *s;
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
@@ -732,7 +732,7 @@ START_TEST(test_dbmail_message_get_header_repeated)
 {
 	GTuples *headers;
 	GString *s;
-	struct DbmailMessage *m;
+	DbmailMessage *m;
 
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
@@ -774,7 +774,7 @@ START_TEST(test_dbmail_message_construct)
 	"CnRlc3RpbmcKCuHh4eHk");
 	gchar *result;
 
-	struct DbmailMessage *message = dbmail_message_new();
+	DbmailMessage *message = dbmail_message_new();
 	message = dbmail_message_construct(message,recipient,sender,subject,body);
 	result = dbmail_message_to_string(message);
 	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n%s\n%s", expect, result);

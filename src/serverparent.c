@@ -30,7 +30,7 @@
 #define THIS_MODULE "serverparent"
 
 /* set up database login data */
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 static char *configFile = DEFAULT_CONFIG_FILE;
 
@@ -38,8 +38,8 @@ extern volatile sig_atomic_t mainRestart;
 extern volatile sig_atomic_t mainStatus;
 extern volatile sig_atomic_t mainStop;
 extern volatile sig_atomic_t mainSig;
-
-extern FILE *scoreFD;
+extern volatile sig_atomic_t event_gotsig;
+extern int (*event_sigcb)(void);
 
 /* Not used, but required to link with libdbmail.so */
 int verbose = 0;
@@ -48,8 +48,6 @@ int yes_to_all = 0;
 int reallyquiet = 0;
 int quiet = 0;
 
-static int SetMainSigHandler(void);
-static void MainSigHandler(int sig, siginfo_t * info, void *data);
 static void ClearConfig(serverConfig_t * conf);
 static void DoConfig(serverConfig_t * conf, const char * const service);
 static void LoadServerConfig(serverConfig_t * config, const char * const service);
@@ -68,8 +66,8 @@ void serverparent_showhelp(const char *name, const char *greeting) {
         printf("\nCommon options for all DBMail daemons:\n");
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -p file   specify an alternative runtime pidfile\n");
-	printf("     -s file   specify an alternative runtime statefile\n");
 	printf("     -n        do not daemonize (no children are forked)\n");
+	printf("     -D        foreground mode\n");
 	printf("     -v        verbose logging to syslog and stderr\n");
 	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
@@ -91,7 +89,7 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 
 	/* get command-line options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "vVhqnf:p:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "vVhqnDf:p:s:")) != -1) {
 		switch (opt) {
 		case 'v':
 			config->log_verbose = 1;
@@ -102,6 +100,9 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 		case 'n':
 			config->no_daemonize = 1;
 			break;
+		case 'D':
+			config->no_daemonize = 2;
+			break;
 		case 'h':
 			return 1;
 		case 'p':
@@ -109,14 +110,6 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 				config->pidFile = g_strdup(optarg);
 			else {
 				fprintf(stderr, "%s: -p requires a filename argument\n\n", argv[0]);
-				return 1;
-			}
-			break;
-		case 's':
-			if (optarg && strlen(optarg) > 0)
-				config->stateFile = g_strdup(optarg);
-			else {
-				fprintf(stderr, "%s: -s requires a filename argument\n\n", argv[0]);
 				return 1;
 			}
 			break;
@@ -149,75 +142,71 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 	return 0;
 }
 
-static FILE *statefile_to_close;
-static char *statefile_to_remove;
 
-static void statefile_remove(void)
+static void sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	int res;
-	extern int isChildProcess;
+	event_gotsig = 1;
 
-	if (isChildProcess)
-		return;
+	mainSig = sig;
 
-	if (statefile_to_close) {
-		res = fclose(statefile_to_close);
-		if (res) TRACE(TRACE_ERROR, "Error closing statefile: [%s].",
-			strerror(errno));
-		statefile_to_close = NULL;
-	}
-
-	if (statefile_to_remove) {
-		res = unlink(statefile_to_remove);
-		if (res) TRACE(TRACE_ERROR, "Error unlinking statefile [%s]: [%s].",
-			statefile_to_remove, strerror(errno));
-		g_free(statefile_to_remove);
-		statefile_to_remove = NULL;
-	}
-
+	if (sig == SIGHUP)
+		mainRestart = 1;
+	else if (sig == SIGUSR1)
+		mainStatus = 1;
+	else
+		mainStop = 1;
 }
 
-static void statefile_create(char *scoreFile)
+static int parent_sig_cb(void)
 {
-	TRACE(TRACE_DEBUG, "Creating scoreboard at [%s].", scoreFile);
-	if (!(scoreFD = fopen(scoreFile, "w"))) {
-		TRACE(TRACE_ERROR, "Cannot open scorefile [%s], error was [%s]",
-			scoreFile, strerror(errno));
-	}
-	chmod(scoreFile, 0644);
-	if (scoreFD == NULL) {
-		TRACE(TRACE_ERROR, "Could not create scoreboard [%s].", scoreFile );
-	}
-
-	atexit(statefile_remove);
-
-	statefile_to_close = scoreFD;
-	statefile_to_remove = g_strdup(scoreFile);
+	if (mainStatus | mainStop)
+		(void)event_loopexit(NULL);
+	else if (mainRestart)
+		TRACE(TRACE_DEBUG,"restart...");
+	return (0);
 }
 
+static int set_sighandler(void)
+{
+	struct sigaction act;
 
+	/* init & install signal handlers */
+	memset(&act, 0, sizeof(act));
+
+	act.sa_sigaction = sighandler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_SIGINFO;
+
+	sigaction(SIGINT, &act, 0);
+	sigaction(SIGQUIT, &act, 0);
+	sigaction(SIGTERM, &act, 0);
+	sigaction(SIGHUP, &act, 0);
+	sigaction(SIGUSR1, &act, 0);
+
+	event_sigcb = parent_sig_cb;
+
+	return 0;
+}
 
 int serverparent_mainloop(serverConfig_t *config, const char *service, const char *servicename)
 {
-	SetMainSigHandler();
+	set_sighandler();
 
-	if (config->no_daemonize) {
+	if (config->no_daemonize == 1) {
 		StartCliServer(config);
 		TRACE(TRACE_INFO, "exiting cli server");
 		return 0;
 	}
 	
-	server_daemonize(config);
+	if (! config->no_daemonize)
+		server_daemonize(config);
 
 	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
 	if (! config->pidFile)
 		config->pidFile = config_get_pidfile(config, servicename);
-	pidfile_create(config->pidFile, getpid());
 
-	if (! config->stateFile)
-		config->stateFile = config_get_statefile(config, servicename);
-	statefile_create(config->stateFile);
+	pidfile_create(config->pidFile, getpid());
 
 	/* This is the actual main loop. */
 	while (!mainStop && server_run(config)) {
@@ -229,38 +218,6 @@ int serverparent_mainloop(serverConfig_t *config, const char *service, const cha
 
 	ClearConfig(config);
 	TRACE(TRACE_INFO, "leaving main loop");
-	return 0;
-}
-
-void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
-{
-	mainSig = sig;
-
-	if (sig == SIGHUP)
-		mainRestart = 1;
-	else if (sig == SIGUSR1)
-		mainStatus = 1;
-	else
-		mainStop = 1;
-}
-
-int SetMainSigHandler()
-{
-	struct sigaction act;
-
-	/* init & install signal handlers */
-	memset(&act, 0, sizeof(act));
-
-	act.sa_sigaction = MainSigHandler;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO;
-
-	sigaction(SIGINT, &act, 0);
-	sigaction(SIGQUIT, &act, 0);
-	sigaction(SIGTERM, &act, 0);
-	sigaction(SIGHUP, &act, 0);
-	sigaction(SIGUSR1, &act, 0);
-
 	return 0;
 }
 
@@ -290,7 +247,7 @@ void DoConfig(serverConfig_t * config, const char * const service)
 	}
 	
 	LoadServerConfig(config, service);
-	GetDBParams(&_db_params);
+	_db_params = GetDBParams();
 }
 
 void LoadServerConfig(serverConfig_t * config, const char * const service)
@@ -298,32 +255,6 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 	field_t val;
 
 	config_get_logfiles(config);
-
-	/* read items: NCHILDREN */
-	config_get_value("NCHILDREN", service, val);
-	if (strlen(val) == 0)
-		TRACE(TRACE_FATAL, "no value for NCHILDREN in config file");
-
-	if ((config->startChildren = atoi(val)) <= 0)
-		TRACE(TRACE_FATAL, "value for NCHILDREN is invalid: [%d]",
-		      config->startChildren);
-
-	TRACE(TRACE_DEBUG, "server will create  [%d] children",
-	      config->startChildren);
-
-
-	/* read items: MAXCONNECTS */
-	config_get_value("MAXCONNECTS", service, val);
-	if (strlen(val) == 0)
-		TRACE(TRACE_FATAL, "no value for MAXCONNECTS in config file");
-
-	if ((config->childMaxConnect = atoi(val)) <= 0)
-		TRACE(TRACE_FATAL, "value for MAXCONNECTS is invalid: [%d]",
-		      config->childMaxConnect);
-
-	TRACE(TRACE_DEBUG, "children will make max. [%d] connections",
-	      config->childMaxConnect);
-
 
 	/* read items: TIMEOUT */
 	config_get_value("TIMEOUT", service, val);
@@ -448,42 +379,5 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 
 	TRACE(TRACE_DEBUG, "effective group shall be [%s]",
 	      config->serverGroup);
-
-
-       /* read items: MINSPARECHILDREN */
-       config_get_value("MINSPARECHILDREN", service, val);
-       if (strlen(val) == 0)
-               TRACE(TRACE_FATAL, "no value for MINSPARECHILDREN in config file");
-       if ( (config->minSpareChildren = atoi(val)) < 0)
-               TRACE(TRACE_FATAL, "value for MINSPARECHILDREN is invalid: [%d]",
-                       config->minSpareChildren);
-
-       TRACE(TRACE_DEBUG, "will maintain minimum of [%d] spare children in reserve",
-               config->minSpareChildren);
-
-
-       /* read items: MAXSPARECHILDREN */
-       config_get_value("MAXSPARECHILDREN", service, val);
-       if (strlen(val) == 0)
-               TRACE(TRACE_FATAL, "no value for MAXSPARECHILDREN in config file");
-       if ( (config->maxSpareChildren = atoi(val)) <= 0)
-               TRACE(TRACE_FATAL, "value for MAXSPARECHILDREN is invalid: [%d]",
-                       config->maxSpareChildren);
-
-       TRACE(TRACE_DEBUG, "will maintain maximum of [%d] spare children in reserve",
-               config->maxSpareChildren);
-
-
-       /* read items: MAXCHILDREN */
-       config_get_value("MAXCHILDREN", service, val);
-       if (strlen(val) == 0)
-               TRACE(TRACE_FATAL, "no value for MAXCHILDREN in config file");
-       if ( (config->maxChildren = atoi(val)) <= 0)
-               TRACE(TRACE_FATAL, "value for MAXCHILDREN is invalid: [%d]",
-                       config->maxSpareChildren);
-
-       TRACE(TRACE_DEBUG, "will allow maximum of [%d] children",
-               config->maxChildren);
-
 }
 

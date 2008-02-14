@@ -1,5 +1,6 @@
 /*
  Copyright (C) 2004 IC & S dbmail@ic-s.nl
+ Copyright (C) 2008 NFG Net Facilities Group BV, support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -45,581 +46,385 @@ static const char *const commands[] = {
 	"VRFY", "EXPN", "HELP", "NOOP", "RCPT"
 };
 
-static char myhostname[64];
+static int lmtp_tokenizer(ClientSession_t *session, char *buffer);
 
-/**
- * \function lmtp_error
- *
- * report an LMTP error
- * \param session current LMTP session
- * \param stream stream to right to
- * \param formatstring format string
- * \param ... values to fill up formatstring
- */
-int lmtp_error(PopSession_t * session, void *stream,
-	       const char *formatstring, ...) PRINTF_ARGS(3, 4);
-
-/**
- * initialize a new session. Sets all relevant variables in session
- * \param[in,out] session to initialize
- */
-void lmtp_init(PopSession_t *session) 
+void send_greeting(ClientSession_t *session)
 {
-	/* setting Session variables */
-	session->state = STRT;
-	session->error_count = 0;
-
-	session->username = NULL;
-	session->password = NULL;
-
-	session->SessionResult = 0;
-
-	/* reset counters */
-	session->totalsize = 0;
-	session->virtual_totalsize = 0;
-	session->totalmessages = 0;
-	session->virtual_totalmessages = 0;
-
-	/* set the lists to zero length */
-	session->rcpt = NULL;
-	session->from = NULL;
-
+	field_t banner;
+	GETCONFIGVALUE("banner", "LMTP", banner);
+	if (strlen(banner) > 0)
+		ci_write(session->ci, "220 %s %s\r\n", session->hostname, banner);
+	else
+		ci_write(session->ci, "220 %s LMTP\r\n", session->hostname);
 }
 
-int lmtp_reset(PopSession_t * session)
+static void lmtp_cb_time(void *arg)
 {
-	dsnuser_free_list(session->rcpt);
-	session->rcpt = NULL;
-
-	g_list_destroy(session->from);
-	session->from = NULL;
-
-	session->state = LHLO;
-
-	return 1;
+	ClientSession_t *session = (ClientSession_t *)arg;
+	ci_write(session->ci, "221 Connection timeout BYE\r\n");
+	client_session_bailout(session);
 }
 
-
-int lmtp_handle_connection(clientinfo_t * ci)
+static void lmtp_cb_read(void *arg)
 {
-	/*
-	   Handles connection and calls
-	   lmtp command handler
-	 */
+	char buffer[MAX_LINESIZE];	/* connection buffer */
+	ClientSession_t *session = (ClientSession_t *)arg;
 
-	int done = 1;		/* loop state */
-	char *buffer = NULL;	/* connection buffer */
-	int cnt;		/* counter */
-
-	PopSession_t session;	/* current connection session */
-	
-	lmtp_init(&session);
-
-	/* getting hostname */
-	gethostname(myhostname, 64);
-	myhostname[63] = 0;	/* make sure string is terminated */
-
-	buffer = g_new0(char, INCOMING_BUFFER_SIZE);
-
-	if (!buffer) {
-		TRACE(TRACE_MESSAGE, "Could not allocate buffer");
-		return 0;
-	}
-
-	if (ci->tx) {
-		/* sending greeting */
-		field_t banner;
-		GETCONFIGVALUE("banner", "LMTP", banner);
-		if (strlen(banner) > 0) {
-			ci_write(ci->tx, "220 %s %s\r\n", myhostname, banner);
-		} else {
-			ci_write(ci->tx, "220 %s DBMail LMTP service ready to rock\r\n", myhostname);
+	while (ci_readln(session->ci, buffer)) {
+		if (lmtp_tokenizer(session, buffer)) {
+			lmtp(session);
+			client_session_reset_parser(session);
 		}
-		fflush(ci->tx);
-	} else {
-		TRACE(TRACE_MESSAGE, "TX stream is null!");
-		g_free(buffer);
-		return 0;
 	}
+	TRACE(TRACE_DEBUG,"[%p] done", session);
+}
 
-	lmtp_reset(&session);
-	while (done > 0) {
+static void reset_callbacks(ClientSession_t *session)
+{
+        session->ci->cb_time = lmtp_cb_time;
+        session->ci->cb_read = lmtp_cb_read;
 
-		if (db_check_connection()) {
-			TRACE(TRACE_DEBUG,"database has gone away");
-			done=-1;
-			break;
-		}
+        bufferevent_settimeout(session->ci->rev, session->timeout, 0);
 
-		/* set the timeout counter */
-		if (session.state == LHLO)
-			alarm(ci->login_timeout);
-		else
-			alarm(ci->timeout);
+        UNBLOCK(session->ci->rx);
+        UNBLOCK(session->ci->tx);
 
-		/* clear the buffer */
-		memset(buffer, 0, INCOMING_BUFFER_SIZE);
+        bufferevent_enable(session->ci->rev, EV_READ );
+        bufferevent_enable(session->ci->wev, EV_WRITE);
+}
 
-		for (cnt = 0; cnt < INCOMING_BUFFER_SIZE - 1; cnt++) {
-			do {
-				clearerr(ci->rx);
-				fread(&buffer[cnt], 1, 1, ci->rx);
+// socket callbacks.
 
-				/* leave, an alarm has occured during fread */
-				if (alarm_occured) {
-					alarm_occured = 0;
-					done = -2;
-					break;
-				}
-			} while (ferror(ci->rx) && errno == EINTR);
-
-			if (done < 0 || buffer[cnt] == '\n' || feof(ci->rx)
-			    || ferror(ci->rx)) {
-				buffer[cnt + 1] = '\0';
-				break;
-			}
-		}
-
-		if (done < 0) {
-			break;
-		} else if (feof(ci->rx) || ferror(ci->rx)) {
-			/* check client eof  */
-			done = -1;
-		} else {
-			/* reset function handle timeout */
-			alarm(0);
-			/* handle lmtp commands */
-			done = lmtp(ci->tx, ci->rx, buffer, ci->ip_src, &session);
-		}
-		fflush(ci->tx);
-	}
-
-	if (done==-2) {
-		ci_write(ci->tx, "221 Connection timeout BYE\r\n");
-		TRACE(TRACE_ERROR, "client timed, connection closed");
-	}
-
-	/* memory cleanup */
-	lmtp_reset(&session);
-	g_free(buffer);
-	buffer = NULL;
-
-	/* reset timers */
-	alarm(0);
-
+int lmtp_handle_connection(clientinfo_t *ci)
+{
+	ClientSession_t *session = client_session_new(ci);
+	reset_callbacks(session);
+        send_greeting(session);
 	return 0;
 }
 
-int lmtp_error(PopSession_t * session, void *stream,
-	       const char *formatstring, ...)
+int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
 {
 	va_list argp;
+	char *s;
 
 	if (session->error_count >= MAX_ERRORS) {
-		TRACE(TRACE_MESSAGE, "too many errors (MAX_ERRORS is %d)", MAX_ERRORS);
-		ci_write((FILE *) stream, "500 Too many errors, closing connection.\r\n");
+		ci_write(session->ci, "500 Too many errors, closing connection.\r\n");
 		session->SessionResult = 2;	/* possible flood */
-		lmtp_reset(session);
+		client_session_bailout(session);
 		return -3;
-	} else {
-		va_start(argp, formatstring);
-		if (vfprintf((FILE *) stream, formatstring, argp) < 0) {
-			va_end(argp);
-			TRACE(TRACE_ERROR, "error writing to stream");
-			return -1;
-		}
-		va_end(argp);
 	}
 
-	TRACE(TRACE_DEBUG, "an invalid command was issued");
+	va_start(argp, formatstring);
+	s = g_strdup_vprintf(formatstring, argp);
+	va_end(argp);
+	ci_write(session->ci, s);
+	g_free(s);
+
 	session->error_count++;
 	return 1;
 }
 
-
-int lmtp(void *stream, void *instream, char *buffer,
-	 char *client_ip UNUSED, PopSession_t * session)
+int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 {
-	/* returns values:
-	 *  0 to quit
-	 * -1 on failure
-	 *  1 on success */
-	char *command, *value;
-	int cmdtype;
-	int indx = 0;
+	char *command = NULL, *value;
+	int command_type = 0;
 
-	/* buffer overflow attempt */
-	if (strlen(buffer) > MAX_IN_BUFFER) {
-		TRACE(TRACE_DEBUG, "buffer overflow attempt");
-		return -3;
-	}
+	if (! session->command_type) {
+		session->parser_state = FALSE;
 
-	/* check for command issued */
-	while (strchr(ValidNetworkChars, buffer[indx]))
-		indx++;
+		command = buffer;
+		strip_crlf(command);
 
-	/* end buffer */
-	buffer[indx] = '\0';
+		value = strstr(command, " ");	/* look for the separator */
 
-	TRACE(TRACE_DEBUG, "incoming buffer: [%s]", buffer);
+		if (value) {
+			*value++ = '\0';	/* set a \0 on the command end */
 
-	command = buffer;
-
-	value = strstr(command, " ");	/* look for the separator */
-
-	if (value != NULL) {
-		*value = '\0';	/* set a \0 on the command end */
-		value++;	/* skip space */
-
-		if (strlen(value) == 0) {
-			value = NULL;	/* no value specified */
-		} else {
-			TRACE(TRACE_DEBUG, "command issued :cmd [%s], value [%s]\n",
-			      command, value);
+			if (strlen(value) == 0)
+				value = NULL;	/* no value specified */
 		}
+
+		for (command_type = LMTP_STRT; command_type < LMTP_END; command_type++)
+			if (strcasecmp(command, commands[command_type]) == 0)
+				break;
+
+		/* Invalid command */
+		if (command_type == LMTP_END)
+			return lmtp_error(session, "500 Invalid command.\r\n");
+
+		/* Commands that are allowed to have no arguments */
+		if ((value == NULL) &&
+		    !((command_type == LMTP_LHLO) || (command_type == LMTP_DATA) ||
+		      (command_type == LMTP_RSET) || (command_type == LMTP_QUIT) ||
+		      (command_type == LMTP_NOOP) || (command_type == LMTP_HELP) )) {
+			return lmtp_error(session, "500 This command requires an argument.\r\n");
+		}
+		session->command_type = command_type;
+
+		if (value) session->args = g_list_append(session->args, g_strdup(value));
+
 	}
 
-	for (cmdtype = LMTP_STRT; cmdtype < LMTP_END; cmdtype++)
-		if (strcasecmp(command, commands[cmdtype]) == 0)
-			break;
+	if (session->command_type == LMTP_DATA) {
+		if (command) {
+			if (session->state != LHLO) {
+				ci_write(session->ci, "550 Command out of sequence\r\n");
+				return TRUE;
+			}
+			if (g_list_length(session->rcpt) < 1) {
+				ci_write(session->ci, "503 No valid recipients\r\n");
+				return TRUE;
+			}
+			if (g_list_length(session->from) < 1) {
+				ci_write(session->ci, "554 No valid sender.\r\n");
+				return TRUE;
+			}
+			ci_write(session->ci, "354 Start mail input; end with <CRLF>.<CRLF>\r\n");
+			return FALSE;
+		}
 
-	TRACE(TRACE_DEBUG, "command looked up as commandtype %d", cmdtype);
+		if (strncmp(buffer,".\n",2)==0)
+			session->parser_state = TRUE;
+		else
+			g_string_append(session->rbuff, buffer);
+	} else
+		session->parser_state = TRUE;
 
-	/* Invalid command */
-	if (cmdtype == LMTP_END) {
-		TRACE(TRACE_INFO, "Client gave an invalid command [%s], protocol error", command);
-		return lmtp_error(session, stream, "500 Invalid command.\r\n");
-	}
+	TRACE(TRACE_DEBUG, "[%p] cmd [%d], state [%d] [%s]", session, session->command_type, session->parser_state, buffer);
 
-	/* Commands that are allowed to have no arguments */
-	if ((value == NULL) &&
-	    !((cmdtype == LMTP_LHLO) || (cmdtype == LMTP_DATA) ||
-	      (cmdtype == LMTP_RSET) || (cmdtype == LMTP_QUIT) ||
-	      (cmdtype == LMTP_NOOP) || (cmdtype == LMTP_HELP) )) {
-		TRACE(TRACE_INFO, "Client gave command [%s] without any arguments, protocol error", command);
-		return lmtp_error(session, stream, "500 This command requires an argument.\r\n");
-	}
+	return session->parser_state;
+}
 
-	switch (cmdtype) {
+int lmtp(ClientSession_t * session)
+{
+	DbmailMessage *msg;
+	clientinfo_t *ci = session->ci;
+	int helpcmd;
+	const char *class, *subject, *detail;
+	size_t tmplen = 0, tmppos = 0;
+	char *tmpaddr = NULL, *tmpbody = NULL, *arg;
+
+	switch (session->command_type) {
+
 	case LMTP_QUIT:
-		{
-			ci_write((FILE *) stream, "221 %s BYE\r\n", myhostname);
-			lmtp_reset(session);
-			return 0;	/* return 0 to cause the connection to close */
-		}
+		ci_write(ci, "221 %s BYE\r\n", session->hostname);
+		session->state = IMAPCS_LOGOUT;
+		return 1;
+
 	case LMTP_NOOP:
-		{
-			ci_write((FILE *) stream, "250 OK\r\n");
-			return 1;
-		}
+		ci_write(ci, "250 OK\r\n");
+		return 1;
+
 	case LMTP_RSET:
-		{
-			ci_write((FILE *) stream, "250 OK\r\n");
-			lmtp_reset(session);
-			return 1;
-		}
+		ci_write(ci, "250 OK\r\n");
+		client_session_reset(session);
+		return 1;
+
 	case LMTP_LHLO:
-		{
-			/* Reply wth our hostname and a list of features.
-			 * The RFC requires a couple of SMTP extensions
-			 * with a MUST statement, so just hardcode them.
-			 * */
-			ci_write((FILE *) stream,
-				 "250-%s\r\n"
-				 "250-PIPELINING\r\n"
-				 "250-ENHANCEDSTATUSCODES\r\n"
-				 /* This is a SHOULD implement:
-				  * "250-8BITMIME\r\n"
-				  * Might as well do these, too:
-				  * "250-CHUNKING\r\n"
-				  * "250-BINARYMIME\r\n"
-				  * */
-				 "250 SIZE\r\n", myhostname);
-			lmtp_reset(session);
-			return 1;
-		}
+		/* Reply wth our hostname and a list of features.
+		 * The RFC requires a couple of SMTP extensions
+		 * with a MUST statement, so just hardcode them.
+		 * */
+		ci_write(ci, "250-%s\r\n250-PIPELINING\r\n"
+			"250-ENHANCEDSTATUSCODES\r\n250 SIZE\r\n", 
+			session->hostname);
+				/* This is a SHOULD implement:
+				 * "250-8BITMIME\r\n"
+				 * Might as well do these, too:
+				 * "250-CHUNKING\r\n"
+				 * "250-BINARYMIME\r\n"
+				 * */
+		client_session_reset(session);
+		return 1;
+
 	case LMTP_HELP:
-		{
-			int helpcmd;
+	
+		session->args = g_list_first(session->args);
+		if (session->args && session->args->data)
+			arg = (char *)session->args->data;
+		else
+			arg = NULL;
 
-			if (value == NULL)
-				helpcmd = LMTP_END;
-			else
-				for (helpcmd = LMTP_STRT;
-				     helpcmd < LMTP_END; helpcmd++)
-					if (strcasecmp
-					    (value,
-					     commands[helpcmd]) == 0)
-						break;
+		if (arg == NULL)
+			helpcmd = LMTP_END;
+		else
+			for (helpcmd = LMTP_STRT; helpcmd < LMTP_END; helpcmd++)
+				if (strcasecmp (arg, commands[helpcmd]) == 0)
+					break;
 
-			TRACE(TRACE_DEBUG, "LMTP_HELP requested for commandtype %d", helpcmd);
+		TRACE(TRACE_DEBUG, "LMTP_HELP requested for commandtype %d", helpcmd);
 
-			if ((helpcmd == LMTP_LHLO)
-			    || (helpcmd == LMTP_DATA)
-			    || (helpcmd == LMTP_RSET)
-			    || (helpcmd == LMTP_QUIT)
-			    || (helpcmd == LMTP_NOOP)
-			    || (helpcmd == LMTP_HELP)) {
-				ci_write((FILE *) stream, "%s",
-					 LMTP_HELP_TEXT[helpcmd]);
-			} else {
-				ci_write((FILE *) stream, "%s",
-					LMTP_HELP_TEXT[LMTP_END]);
-			}
+		if ((helpcmd == LMTP_LHLO) || (helpcmd == LMTP_DATA) || 
+			(helpcmd == LMTP_RSET) || (helpcmd == LMTP_QUIT) || 
+			(helpcmd == LMTP_NOOP) || (helpcmd == LMTP_HELP)) {
+			ci_write(ci, "%s", LMTP_HELP_TEXT[helpcmd]);
+		} else
+			ci_write(ci, "%s", LMTP_HELP_TEXT[LMTP_END]);
+		return 1;
 
-			return 1;
-		}
 	case LMTP_VRFY:
-		{
-			/* RFC 2821 says this SHOULD be implemented...
-			 * and the goal is to say if the given address
-			 * is a valid delivery address at this server. */
-			ci_write((FILE *) stream, "502 Command not implemented\r\n");
-			return 1;
-		}
+		/* RFC 2821 says this SHOULD be implemented...
+		 * and the goal is to say if the given address
+		 * is a valid delivery address at this server. */
+		ci_write(ci, "502 Command not implemented\r\n");
+		return 1;
+
 	case LMTP_EXPN:
-		{
-			/* RFC 2821 says this SHOULD be implemented...
-			 * and the goal is to return the membership
-			 * of the specified mailing list. */
-			ci_write((FILE *) stream, "502 Command not implemented\r\n");
-			return 1;
-		}
+		/* RFC 2821 says this SHOULD be implemented...
+		 * and the goal is to return the membership
+		 * of the specified mailing list. */
+		ci_write(ci, "502 Command not implemented\r\n");
+		return 1;
+
 	case LMTP_MAIL:
-		{
-			/* We need to LHLO first because the client
-			 * needs to know what extensions we support.
-			 * */
-			if (session->state != LHLO) {
-				ci_write((FILE *) stream, "550 Command out of sequence.\r\n");
-			} else if (g_list_length(session->from) > 0) {
-				ci_write((FILE *) stream, "500 Sender already received. Use RSET to clear.\r\n");
-				TRACE(TRACE_ERROR, "Sender already received: %s", (char *)(g_list_first(session->from)->data));
-			} else {
-				/* First look for an email address.
-				 * Don't bother verifying or whatever,
-				 * just find something between angle brackets!
-				 * */
-				int goodtogo = 1;
-				size_t tmplen = 0, tmppos = 0;
-				char *tmpaddr = NULL, *tmpbody = NULL;
-
-				find_bounded(value, '<', '>', &tmpaddr,
-					     &tmplen, &tmppos);
-
-				/* Second look for a BODY keyword.
-				 * See if it has an argument, and if we
-				 * support that feature. Don't give an OK
-				 * if we can't handle it yet, like 8BIT!
-				 * */
-
-				/* Find the '=' following the address
-				 * then advance one character past it
-				 * (but only if there's more string!)
-				 * */
-				tmpbody = strstr(value + tmppos, "=");
-				if (tmpbody != NULL)
-					if (strlen(tmpbody))
-						tmpbody++;
-
-				/* This is all a bit nested now... */
-				if (tmplen < 1 && tmpaddr == NULL) {
-					ci_write((FILE *) stream, "500 No address found.\r\n");
-					goodtogo = 0;
-				} else if (tmpbody != NULL) {
-					/* See RFC 3030 for the best
-					 * description of this stuff.
-					 * */
-					if (strlen(tmpbody) < 4) {
-						/* Caught */
-					} else if (0 == strcasecmp(tmpbody, "7BIT")) {
-						/* Sure fine go ahead. */
-						goodtogo = 1;	// Not that it wasn't 1 already ;-)
-					}
-					/* 8BITMIME corresponds to RFC 1652,
-					 * BINARYMIME corresponds to RFC 3030.
-					 * */
-					else if (strlen(tmpbody) < 8) {
-						/* Caught */
-					} else if (0 == strcasecmp(tmpbody, "8BITMIME"))
-					{
-						/* We can't do this yet. */
-						/* session->state = BIT8;
-						 * */
-						ci_write((FILE *) stream,
-							"500 Please use 7BIT MIME only.\r\n");
-						goodtogo = 0;
-					} else if (strlen(tmpbody) < 10) {
-						/* Caught */
-					} else if (0 ==
-						   strcasecmp(tmpbody,
-							      "BINARYMIME"))
-					{
-						/* We can't do this yet. */
-						/* session->state = BDAT;
-						 * */
-						ci_write((FILE *) stream,
-							"500 Please use 7BIT MIME only.\r\n");
-						goodtogo = 0;
-					}
-				}
-
-				if (goodtogo) {
-					/* Sure fine go ahead. */
-					session->from = g_list_prepend(session->from, g_strdup(tmpaddr));
-					ci_write((FILE *) stream, "250 Sender <%s> OK\r\n", (char *)(session->from->data));
-					child_reg_connected_user(tmpaddr);
-				}
-				if (tmpaddr != NULL)
-					g_free(tmpaddr);
-			}
+		/* We need to LHLO first because the client
+		 * needs to know what extensions we support.
+		 * */
+		if (session->state != LHLO) {
+			ci_write(ci, "550 Command out of sequence.\r\n");
+			return 1;
+		} 
+		if (g_list_length(session->from) > 0) {
+			ci_write(ci, "500 Sender already received. Use RSET to clear.\r\n");
 			return 1;
 		}
+		/* First look for an email address.
+		 * Don't bother verifying or whatever,
+		 * just find something between angle brackets!
+		 * */
+
+		session->args = g_list_first(session->args);
+		if (! (session->args && session->args->data))
+			return 1;
+		arg = (char *)session->args->data;
+
+		find_bounded(arg, '<', '>', &tmpaddr, &tmplen, &tmppos);
+
+		/* Second look for a BODY keyword.
+		 * See if it has an argument, and if we
+		 * support that feature. Don't give an OK
+		 * if we can't handle it yet, like 8BIT!
+		 * */
+
+		/* Find the '=' following the address
+		 * then advance one character past it
+		 * (but only if there's more string!)
+		 * */
+		if ((tmpbody = strstr(arg + tmppos, "=")) != NULL)
+			if (strlen(tmpbody))
+				tmpbody++;
+
+		/* This is all a bit nested now... */
+		if (! (tmplen && tmpaddr)) {
+			ci_write(ci, "500 No address found.\r\n");
+			return 1;
+		}
+		if (tmpbody) {
+			if (MATCH(tmpbody, "8BITMIME")) {   // RFC1652
+				ci_write(ci, "500 Please use 7BIT MIME only.\r\n");
+				return 1;
+			}
+			if (MATCH(tmpbody, "BINARYMIME")) { // RFC3030
+				ci_write(ci, "500 Please use 7BIT MIME only.\r\n");
+				return 1;
+			}
+		}
+
+		session->from = g_list_prepend(session->from, g_strdup(tmpaddr));
+		ci_write(ci, "250 Sender <%s> OK\r\n", (char *)(session->from->data));
+
+		g_free(tmpaddr);
+
+		return 1;
+
 	case LMTP_RCPT:
-		{
-			if (session->state != LHLO) {
-				ci_write((FILE *) stream,
-					"550 Command out of sequence.\r\n");
-			} else {
-				size_t tmplen = 0, tmppos = 0;
-				char *tmpaddr = NULL;
+		if (session->state != LHLO) {
+			ci_write(ci, "550 Command out of sequence.\r\n");
+			return 1;
+		} 
 
-				find_bounded(value, '<', '>', &tmpaddr,
-					     &tmplen, &tmppos);
+		session->args = g_list_first(session->args);
+		if (! (session->args && session->args->data))
+			return 1;
+		arg = (char *)session->args->data;
 
-				if (tmplen < 1) {
-					ci_write((FILE *) stream,
-						"500 No address found.\r\n");
-				} else {
-					deliver_to_user_t *dsnuser = g_new0(deliver_to_user_t,1);
+		find_bounded(arg, '<', '>', &tmpaddr, &tmplen, &tmppos);
 
-					dsnuser_init(dsnuser);
-
-					/* find_bounded() allocated tmpaddr for us, and that's ok
-					 * since dsnuser_free() will free it for us later on. */
-					dsnuser->address = tmpaddr;
-
-					if (dsnuser_resolve(dsnuser) != 0) {
-						TRACE(TRACE_ERROR, "dsnuser_resolve_list failed");
-						ci_write((FILE *) stream, "430 Temporary failure in recipient lookup\r\n");
-						dsnuser_free(dsnuser);
-						return 1;
-					}
-
-					/* Class 2 means the address was deliverable in some way. */
-					switch (dsnuser->dsn.class) {
-					case DSN_CLASS_OK:
-						ci_write((FILE *) stream, "250 Recipient <%s> OK\r\n", dsnuser->address);
-						/* A successfully found recipient goes onto the list.
-						 * The struct will be free'd from lmtp_reset(). */
-						session->rcpt = g_list_prepend(session->rcpt, dsnuser);
-						break;
-					default:
-						ci_write((FILE *) stream, "550 Recipient <%s> FAIL\r\n", dsnuser->address);
-						/* If the user wasn't added, free the non-entry. */
-						dsnuser_free(dsnuser);
-						break;
-					}
-				}
-			}
+		if (tmplen < 1) {
+			ci_write(ci, "500 No address found.\r\n");
 			return 1;
 		}
-		/* Here's where it gets really exciting! */
+		deliver_to_user_t *dsnuser = g_new0(deliver_to_user_t,1);
+
+		dsnuser_init(dsnuser);
+
+		/* find_bounded() allocated tmpaddr for us, and that's ok
+		 * since dsnuser_free() will free it for us later on. */
+		dsnuser->address = tmpaddr;
+
+		if (dsnuser_resolve(dsnuser) != 0) {
+			TRACE(TRACE_ERROR, "dsnuser_resolve_list failed");
+			ci_write(ci, "430 Temporary failure in recipient lookup\r\n");
+			dsnuser_free(dsnuser);
+			return 1;
+		}
+
+		/* Class 2 means the address was deliverable in some way. */
+		switch (dsnuser->dsn.class) {
+			case DSN_CLASS_OK:
+				ci_write(ci, "250 Recipient <%s> OK\r\n", dsnuser->address);
+				session->rcpt = g_list_prepend(session->rcpt, dsnuser);
+				break;
+			default:
+				ci_write(ci, "550 Recipient <%s> FAIL\r\n", dsnuser->address);
+				dsnuser_free(dsnuser);
+				break;
+		}
+		return 1;
+
+	/* Here's where it gets really exciting! */
 	case LMTP_DATA:
-		{
-			// if (session->state != DATA || session->state != BIT8)
-			if (session->state != LHLO) {
-				ci_write((FILE *) stream,
-					"550 Command out of sequence\r\n");
-			} else if (g_list_length(session->rcpt) < 1) {
-				ci_write((FILE *) stream, "503 No valid recipients\r\n");
-			} else {
-				if (g_list_length(session->rcpt) > 0 && g_list_length(session->from) > 0) {
-					TRACE(TRACE_DEBUG, "requesting sender to begin message.");
-					ci_write((FILE *) stream, "354 Start mail input; end with <CRLF>.<CRLF>\r\n");
-				} else {
-					if (g_list_length(session->rcpt) < 1) {
-						TRACE(TRACE_DEBUG, "no valid recipients found, cancel message.");
-						ci_write((FILE *) stream, "503 No valid recipients\r\n");
-					}
-					if (g_list_length(session->from) < 1) {
-						TRACE(TRACE_DEBUG, "no sender provided, session cancelled.");
-						ci_write((FILE *) stream, "554 No valid sender.\r\n");
-					}
-					return 1;
-				}
+		msg = dbmail_message_new();
+		dbmail_message_init_with_string(msg, session->rbuff);
+		dbmail_message_set_header(msg, "Return-Path", (char *)session->from->data);
+		g_string_printf(session->rbuff,"%s","");
 
-				/* Anonymous Block */
-				{
-					struct DbmailMessage *msg;
-					char *s;
-
-					if (! (msg = dbmail_message_new_from_stream((FILE *)instream, DBMAIL_STREAM_LMTP))) {
-						TRACE(TRACE_ERROR, "dbmail_message_new_from_stream() failed");
-						discard_client_input((FILE *) instream);
-						ci_write((FILE *) stream, "500 Error reading message");
-						return 1;
-					}
-					
-					s = dbmail_message_to_string(msg);
-					TRACE(TRACE_DEBUG, "whole message = %s", s);
-					g_free(s);
-
-					if (dbmail_message_get_hdrs_size(msg, FALSE) > READ_BLOCK_SIZE) {
-						TRACE(TRACE_ERROR, "header is too big");
-						discard_client_input((FILE *) instream);
-						ci_write((FILE *)stream, "500 Error reading header, "
-							"header too big.\r\n");
-						return 1;
-					}
-
-					dbmail_message_set_header(msg, "Return-Path", (char *)session->from->data);
-					if (insert_messages(msg, session->rcpt) == -1) {
-						ci_write((FILE *) stream, "430 Message not received\r\n");
-					} else {
-						/* The DATA command itself it not given a reply except
-						 * that of the status of each of the remaining recipients. */
-						const char *class, *subject, *detail;
-
-						/* The replies MUST be in the order received */
-						session->rcpt = g_list_reverse(session->rcpt);
-
-						while (session->rcpt) {
-							deliver_to_user_t * dsnuser = (deliver_to_user_t *)session->rcpt->data;
-							dsn_tostring(dsnuser->dsn, &class, &subject, &detail);
-
-							/* Give a simple OK, otherwise a detailed message. */
-							switch (dsnuser->dsn.class) {
-								case DSN_CLASS_OK:
-									ci_write((FILE *)stream, "%d%d%d Recipient <%s> OK\r\n",
-									        dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
-									        dsnuser->address);
-									break;
-								default:
-									ci_write((FILE *)stream, "%d%d%d Recipient <%s> %s %s %s\r\n",
-									        dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
-									        dsnuser->address, class, subject, detail);
-							}
-							if (! g_list_next(session->rcpt))
-								break;
-							session->rcpt = g_list_next(session->rcpt);
-						}
-					}
-					dbmail_message_free(msg);
-					
-				}
-				/* Reset the session after a successful delivery;
-				 * MTA's like Exim prefer to immediately begin the
-				 * next delivery without an RSET or a reconnect. */
-				lmtp_reset(session);
-			}
+		if (insert_messages(msg, session->rcpt) == -1) {
+			ci_write(ci, "430 Message not received\r\n");
+			dbmail_message_free(msg);
 			return 1;
 		}
-	default:
-		{
-			return lmtp_error(session, stream,
-					  "500 What are you trying to say here?\r\n");
+		/* The DATA command itself it not given a reply except
+		 * that of the status of each of the remaining recipients. */
+
+		/* The replies MUST be in the order received */
+		session->rcpt = g_list_reverse(session->rcpt);
+		while (session->rcpt) {
+			deliver_to_user_t * dsnuser = (deliver_to_user_t *)session->rcpt->data;
+			dsn_tostring(dsnuser->dsn, &class, &subject, &detail);
+
+			/* Give a simple OK, otherwise a detailed message. */
+			switch (dsnuser->dsn.class) {
+				case DSN_CLASS_OK:
+					ci_write(ci, "%d%d%d Recipient <%s> OK\r\n",
+							dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
+							dsnuser->address);
+					break;
+				default:
+					ci_write(ci, "%d%d%d Recipient <%s> %s %s %s\r\n",
+							dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
+							dsnuser->address, class, subject, detail);
+			}
+			if (! g_list_next(session->rcpt)) break;
+			session->rcpt = g_list_next(session->rcpt);
 		}
+		dbmail_message_free(msg);
+		return 1;
+
+	default:
+		return lmtp_error(session, "500 What are you trying to say here?\r\n");
+
 	}
 	return 1;
 }

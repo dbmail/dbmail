@@ -31,6 +31,7 @@ AC_MSG_RESULT([
  CHECK:                     $with_check
  SOCKETS:                   $SOCKETLIB
  MHASH:                     $MHASHLIB
+ LIBEVENT:                  $EVENTLIB
 
 ])
 ])
@@ -287,56 +288,52 @@ if test [ "x$lookforsieve" != "xno" ]; then
 fi
 ])
 
-
-AC_DEFUN([DM_LDAP_INC],[
-    AC_COMPILE_IFELSE(
-    AC_LANG_PROGRAM([[
-        #define NULL 0
-        #include <ldap.h>]]),
-    [$1],
-    [$2])
-])
-dnl Check for LDAP library.
-AC_DEFUN([DM_LDAP_LIB],[
-    AC_LINK_IFELSE(
-    AC_LANG_PROGRAM([[
-        #define NULL 0
-        #include <ldap.h>]]),
-    [$1],
-    [$2])
-])
-
 AC_DEFUN([DM_LDAP_CONF], [dnl
 WARN=0
+
+dnl --with-auth-ldap is deprecated as of DBMail 2.2.2
+AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  deprecated, use --with-ldap],
+	[lookforauthldap="$withval"],[lookforauthldap="no"])
 
 AC_ARG_WITH(ldap,[  --with-ldap=PATH	  path to LDAP base directory (e.g. /usr/local or /usr)],
 	[lookforldap="$withval"],[lookforldap="no"])
 
+dnl Set the default auth modules to sql, as
+dnl the user may not have asked for LDAP at all.
 AUTHALIB="modules/.libs/libauth_sql.a"
 AUTHLTLIB="modules/libauth_sql.la"
 
-if ( test [ "x$lookforldap" != "xno" ] ); then
+dnl Go looking for the LDAP headers and libraries.
+if ( test [ "x$lookforldap" != "xno" ] || test [ "x$lookforauthldap" != "xno" ] ); then
 
+    dnl Support the deprecated --with-auth-ldap per comment above.
+    if ( test [ "x$lookforauthldap" != "xyes" ] && test [ "x$lookforauthldap" != "xno" ] ); then
+        lookforldap=$lookforauthldap
+    fi
+
+    dnl We were given a specific path. Only look there.
     if ( test [ "x$lookforldap" != "xyes" ] && test [ "x$lookforldap" != "xno" ] ); then
         ldapprefixes=$lookforldap
     fi
 
-    AC_MSG_CHECKING([for LDAP headers])
     STOP_LOOKING_FOR_LDAP=""
     while test [ -z $STOP_LOOKING_FOR_LDAP ]; do 
 
+        dnl See if we already have the paths we need in the environment.
+	dnl ...but only if --with-ldap was given without a specific path.
 	if ( test [ "x$lookforldap" = "xyes" ] || test [ "x$lookforauthldap" = "xyes" ] ); then
-            DM_LDAP_INC([LDAPINC=""], [LDAPINC="failed"])
+            AC_CHECK_HEADERS([ldap.h],[LDAPINC=""], [LDAPINC="failed"])
             if test [ "x$LDAPINC" != "xfailed" ]; then
                 break
             fi
         fi
  
+        dnl Explicitly test paths from --with-ldap or configure.in
         for TEST_PATH in $ldapprefixes; do
 	    TEST_PATH="$TEST_PATH/include"
             SAVE_CFLAGS=$CFLAGS
             CFLAGS="$CFLAGS -I$TEST_PATH"
-            DM_LDAP_INC([LDAPINC="-I$TEST_PATH"], [LDAPINC="failed"])
+            AC_CHECK_HEADERS([ldap.h],[LDAPINC="-I$TEST_PATH"], [LDAPINC="failed"])
             CFLAGS=$SAVE_CFLAGS
             if test [ "x$LDAPINC" != "xfailed" ]; then
                 break 2
@@ -348,26 +345,27 @@ if ( test [ "x$lookforldap" != "xno" ] ); then
 
     if test [ "x$LDAPINC" = "xfailed" ]; then
         AC_MSG_ERROR([Could not find LDAP headers.])
-    else
-        AC_MSG_RESULT($LDAPINC)
     fi
 
-    AC_MSG_CHECKING([for LDAP libraries])
     STOP_LOOKING_FOR_LDAP=""
     while test [ -z $STOP_LOOKING_FOR_LDAP ]; do 
 
-        if ( test [ "x$lookforldap" = "xyes" ] ); then
-            DM_LDAP_LIB([LDAPLIB="-lldap"], [LDAPLIB="failed"])
+        dnl See if we already have the paths we need in the environment.
+	dnl ...but only if --with-ldap was given without a specific path.
+        if ( test [ "x$lookforldap" = "xyes" ] || test [ "x$lookforauthldap" = "xyes" ] ); then
+            AC_CHECK_HEADERS([ldap.h],[LDAPLIB="-lldap"], [LDAPLIB="failed"])
             if test [ "x$LDAPLIB" != "xfailed" ]; then
                 break
             fi
         fi
  
+        dnl Explicitly test paths from --with-ldap or configure.in
         for TEST_PATH in $ldapprefixes; do
 	    TEST_PATH="$TEST_PATH/lib"
             SAVE_CFLAGS=$CFLAGS
+	    dnl The headers might be in a funny place, so we need to use -Ipath
             CFLAGS="$CFLAGS -L$TEST_PATH $LDAPINC"
-            DM_LDAP_LIB([LDAPLIB="-L$TEST_PATH -lldap"], [LDAPLIB="failed"])
+            AC_CHECK_HEADERS([ldap.h],[LDAPLIB="-L$TEST_PATH -lldap"], [LDAPLIB="failed"])
             CFLAGS=$SAVE_CFLAGS
             if test [ "x$LDAPLIB" != "xfailed" ]; then
                 break 2
@@ -380,7 +378,6 @@ if ( test [ "x$lookforldap" != "xno" ] ); then
     if test [ "x$LDAPLIB" = "xfailed" ]; then
         AC_MSG_ERROR([Could not find LDAP library.])
     else
-        AC_MSG_RESULT($LDAPLIB)
         AC_DEFINE([AUTHLDAP], 1, [Define if LDAP will be used.])
         AC_SEARCH_LIBS(ldap_initialize, ldap, AC_DEFINE([HAVE_LDAP_INITIALIZE], 1, [ldap_initialize() can be used instead of ldap_init()]))
         AC_SUBST(LDAPLIB)
@@ -391,104 +388,25 @@ if ( test [ "x$lookforldap" != "xno" ] ); then
 fi
 ])
 
-AC_DEFUN([DM_MHASH_INC],[
-    AC_COMPILE_IFELSE(
-    AC_LANG_PROGRAM([[
-        #define NULL 0
-        #include <mhash.h>]]),
-    [$1],
-    [$2])
-])
-dnl Check for MHASH library.
-AC_DEFUN([DM_MHASH_LIB],[
-    AC_LINK_IFELSE(
-    AC_LANG_PROGRAM([[
-        #define NULL 0
-        #include <mhash.h>]]),
-    [$1],
-    [$2])
-])
+
 
 AC_DEFUN([DM_CHECK_MHASH], [dnl
-WARN=0
-
-AC_ARG_WITH(mhash,[  --with-mhash=PATH	  path to MHASH base directory (e.g. /usr/local or /usr)],
-	[lookformhash="$withval"],[lookformhash="yes"])
-
-if ( test [ "x$lookformhash" != "xno" ] ); then
-
-    if ( test [ "x$lookformhash" != "xyes" ] && test [ "x$lookformhash" != "xno" ] ); then
-        mhashprefixes=$lookformhash
-    fi
-
-    AC_MSG_CHECKING([for MHASH headers])
-    STOP_LOOKING_FOR_MHASH=""
-    while test [ -z $STOP_LOOKING_FOR_MHASH ]; do 
-
-	if ( test [ "x$lookformhash" = "xyes" ] ); then
-            DM_MHASH_INC([MHASHINC=""], [MHASHINC="failed"])
-            if test [ "x$MHASHINC" != "xfailed" ]; then
-                break
-            fi
-        fi
- 
-        for TEST_PATH in $mhashprefixes; do
-	    TEST_PATH="$TEST_PATH/include"
-            SAVE_CFLAGS=$CFLAGS
-            CFLAGS="$CFLAGS -I$TEST_PATH"
-            DM_MHASH_INC([MHASHINC="-I$TEST_PATH"], [MHASHINC="failed"])
-            CFLAGS=$SAVE_CFLAGS
-            if test [ "x$MHASHINC" != "xfailed" ]; then
-                break 2
-            fi
-        done
-
-        STOP_LOOKING_FOR_MHASH="done"
-    done
-
-    if test [ "x$MHASHINC" = "xfailed" ]; then
-        AC_MSG_ERROR([Could not find MHASH headers.])
-    else
-	CFLAGS="$CFLAGS $MHASHINC"
-        AC_MSG_RESULT($MHASHINC)
-    fi
-
-    AC_MSG_CHECKING([for MHASH libraries])
-    STOP_LOOKING_FOR_MHASH=""
-    while test [ -z $STOP_LOOKING_FOR_MHASH ]; do 
-
-        if ( test [ "x$lookformhash" = "xyes" ] ); then
-            DM_MHASH_LIB([MHASHLIB="-lmhash"], [MHASHLIB="failed"])
-            if test [ "x$MHASHLIB" != "xfailed" ]; then
-                break
-            fi
-        fi
- 
-        for TEST_PATH in $mhashprefixes; do
-	    TEST_PATH="$TEST_PATH/lib"
-            SAVE_CFLAGS=$CFLAGS
-            CFLAGS="$CFLAGS -L$TEST_PATH $MHASHINC"
-            DM_MHASH_LIB([MHASHLIB="-L$TEST_PATH -lmhash"], [MHASHLIB="failed"])
-            CFLAGS=$SAVE_CFLAGS
-            if test [ "x$MHASHLIB" != "xfailed" ]; then
-                break 2
-            fi
-        done
-
-        STOP_LOOKING_FOR_MHASH="done"
-    done
-
-    if test [ "x$MHASHLIB" = "xfailed" ]; then
-        AC_MSG_ERROR([Could not find MHASH library.])
-    else
-	LDFLAGS="$LDFLAGS $MHASHLIB"
-        AC_MSG_RESULT($MHASHLIB)
-        AC_SUBST(MHASHLIB)
-        AC_SUBST(MHASHINC)
-    fi
-fi
+	AC_CHECK_HEADERS([mhash.h],[MHASHLIB="-lmhash"], [MHASHLIB="failed"])
+	if test [ "x$MHASHLIB" = "xfailed" ]; then
+		AC_MSG_ERROR([Could not find MHASH library.])
+	else
+		LDFLAGS="$LDFLAGS $MHASHLIB"
+	fi
 ])
 
+AC_DEFUN([DM_CHECK_EVENT], [
+	AC_CHECK_HEADERS([event.h], [EVENTLIB="-levent"],[EVENTLIB="failed"], [#include <sys/types.h>])
+	if test [ "x$EVENTLIB" = "xfailed" ]; then
+		AC_MSG_ERROR([Could not find EVENT library.])
+	else
+		LDFLAGS="$LDFLAGS $EVENTLIB"
+	fi
+])
 
 AC_DEFUN([AC_COMPILE_WARNINGS],
 [AC_MSG_CHECKING(maximum warning verbosity option)
@@ -571,62 +489,6 @@ else
 	fi
 fi
 ])
-
-AC_DEFUN([DM_CHECK_GC],
-[AC_MSG_CHECKING(for --with-gc)
-AC_ARG_WITH(gc,
- [  --with-gc[=PREFIX]        libgc PREFIX],
- [test x"$with_gc" = xno && with_gc="no"],
- [with_gc="no"])
- AC_MSG_RESULT($with_gc)
- if test x"$with_gc" = xyes; then
-	test x"$with_gc" = xyes && with_gc="/usr /usr/local ${HOME}"
-	unset ac_cv_header_gc_h
-	AC_CHECK_HEADER(gc/gc.h)
-	if test x"$ac_cv_header_gc_h" = xno; then
-		AC_MSG_CHECKING(GC header location)
-		AC_MSG_RESULT($with_gc)
-		gcincludedir=no
-		for dir in $with_gc; do
-			for inc in include include/gc; do
-				cflags="$CFLAGS"
-				CFLAGS="$CFLAGS -I$dir/$inc -DUSE_GC=1"
-				AC_MSG_CHECKING($dir/$inc)
-				unset ac_cv_header_gc_h
-				AC_CHECK_HEADER(gc/gc.h, [gcincludedir="$dir/$inc"; CFLAGS="$CFLAGS -I$dir/$inc -DUSE_GC=1"; break])
-				CFLAGS="$cflags"
-			done
-			if test x"$gcincludedir" != xno; then
-				break;
-			fi
-		done
-		if test x"$gcincludedir" = xno; then
-			AC_MSG_ERROR([gc/gc.h not found])
-		fi
-	else
-		cflags="$CFLAGS -DUSE_GC=1"
-		CFLAGS="$cflags"
-	fi
-	unset ac_cv_lib_gc_GC_init
-	AC_CHECK_LIB(gc, GC_init, [LIBS="$LIBS -lgc"])
-
-	if test x"$ac_cv_lib_gc_GC_init" = xno; then
-		AC_MSG_CHECKING(GC library location)
-		AC_MSG_RESULT($with_gc)
-		gclibdir=no
-		for dir in $with_gc; do
-			ldflags="$LDFLAGS"
-			LDFLAGS="$LDFLAGS -L$dir/lib"
-			AC_MSG_CHECKING($dir)
-			unset ac_cv_lib_gc_GC_init
-			AC_CHECK_LIB(gc, GC_init, [gclibdir="$dir/lib"; LIBS="$LIBS -L$dir/lib -lgc"; break])
-			LDFLAGS="$ldflags"
-		done
-		if test x"$gclibdir" = xno; then
-			AC_MSG_ERROR([libgc not found])
-		fi
-	fi
-fi])
 
 AC_DEFUN([DM_PATH_CHECK],
 [

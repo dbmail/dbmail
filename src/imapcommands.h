@@ -31,69 +31,69 @@
 #include "dbmail-imapsession.h"
 
 /* any-state commands */
-int _ic_capability(struct ImapSession *self);
-int _ic_noop(struct ImapSession *self);
-int _ic_logout(struct ImapSession *self);
+int _ic_capability(ImapSession *self);
+int _ic_noop(ImapSession *self);
+int _ic_logout(ImapSession *self);
 
 /* non-auth state commands */
-int _ic_login(struct ImapSession *self);
-int _ic_authenticate(struct ImapSession *self);
+int _ic_login(ImapSession *self);
+int _ic_authenticate(ImapSession *self);
 
 /* auth state commands */
-int _ic_select(struct ImapSession *self);
-int _ic_examine(struct ImapSession *self);
-int _ic_create(struct ImapSession *self);
-int _ic_delete(struct ImapSession *self);
-int _ic_rename(struct ImapSession *self);
-int _ic_subscribe(struct ImapSession *self);
-int _ic_unsubscribe(struct ImapSession *self);
-int _ic_list(struct ImapSession *self);
-int _ic_lsub(struct ImapSession *self);
-int _ic_status(struct ImapSession *self);
-int _ic_append(struct ImapSession *self);
+int _ic_select(ImapSession *self);
+int _ic_examine(ImapSession *self);
+int _ic_create(ImapSession *self);
+int _ic_delete(ImapSession *self);
+int _ic_rename(ImapSession *self);
+int _ic_subscribe(ImapSession *self);
+int _ic_unsubscribe(ImapSession *self);
+int _ic_list(ImapSession *self);
+int _ic_lsub(ImapSession *self);
+int _ic_status(ImapSession *self);
+int _ic_append(ImapSession *self);
 
 /* selected-state commands */
-int _ic_sort(struct ImapSession *self);
-int _ic_check(struct ImapSession *self);
-int _ic_close(struct ImapSession *self);
-int _ic_idle(struct ImapSession *self);
-int _ic_unselect(struct ImapSession *self);
-int _ic_expunge(struct ImapSession *self);
-int _ic_search(struct ImapSession *self);
-int _ic_fetch(struct ImapSession *self);
-int _ic_store(struct ImapSession *self);
-int _ic_copy(struct ImapSession *self);
-int _ic_uid(struct ImapSession *self);
-int _ic_thread(struct ImapSession *self);
+int _ic_sort(ImapSession *self);
+int _ic_check(ImapSession *self);
+int _ic_close(ImapSession *self);
+int _ic_idle(ImapSession *self);
+int _ic_unselect(ImapSession *self);
+int _ic_expunge(ImapSession *self);
+int _ic_search(ImapSession *self);
+int _ic_fetch(ImapSession *self);
+int _ic_store(ImapSession *self);
+int _ic_copy(ImapSession *self);
+int _ic_uid(ImapSession *self);
+int _ic_thread(ImapSession *self);
 
 /* quota commands */
-int _ic_getquotaroot(struct ImapSession *self);
-int _ic_getquota(struct ImapSession *self);
+int _ic_getquotaroot(ImapSession *self);
+int _ic_getquota(ImapSession *self);
 
 /* acl commands */
 
 /**
  * \brief SETACL command 
  */
-int _ic_setacl(struct ImapSession *self);
+int _ic_setacl(ImapSession *self);
 /**
  * DELETEACL command
  */
-int _ic_deleteacl(struct ImapSession *self);
+int _ic_deleteacl(ImapSession *self);
 /**
  * GETACL command
  */
-int _ic_getacl(struct ImapSession *self);
+int _ic_getacl(ImapSession *self);
 /**
  * LISTRIGHTS command
  */
-int _ic_listrights(struct ImapSession *self);
+int _ic_listrights(ImapSession *self);
 /**
  * MYRIGHTS command
  */
-int _ic_myrights(struct ImapSession *self);
+int _ic_myrights(ImapSession *self);
 /**
  * NAMESPACE command
  */
-int _ic_namespace(struct ImapSession *self);
+int _ic_namespace(ImapSession *self);
 #endif

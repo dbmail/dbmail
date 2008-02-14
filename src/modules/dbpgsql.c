@@ -84,7 +84,7 @@ static void _create_binary_table(void);
 static void _free_binary_table(void);
 static void _set_binary_table(unsigned row, unsigned field);
 static char*** bintbl = NULL;
-extern db_param_t _db_params;
+extern db_param_t * _db_params;
 
 int db_connect()
 {
@@ -92,26 +92,26 @@ int db_connect()
 
 	/* Warn if both the host= and sqlsocket= parameters are defined.
 	 * Prefer just the socket if given. */
-	if (strlen(_db_params.sock) && strlen(_db_params.host)
-	 && strncmp(_db_params.host, "localhost", FIELDSIZE != 0)) {
+	if (strlen(_db_params->sock) && strlen(_db_params->host)
+	 && strncmp(_db_params->host, "localhost", FIELDSIZE != 0)) {
 		TRACE(TRACE_WARNING, "PostgreSQL socket and a hostname other "
 		      "than localhost have both been defined. The socket "
 		      "will be used and the hostname will be ignored.");
-		g_string_append_printf(cs, "host='%s'", _db_params.sock);
-	} else if (strlen(_db_params.sock)) {
-		g_string_append_printf(cs, "host='%s'", _db_params.sock);
+		g_string_append_printf(cs, "host='%s'", _db_params->sock);
+	} else if (strlen(_db_params->sock)) {
+		g_string_append_printf(cs, "host='%s'", _db_params->sock);
 	} else {
-		g_string_append_printf(cs, "host='%s'", _db_params.host);
+		g_string_append_printf(cs, "host='%s'", _db_params->host);
 	}
 
 	/* Add the username and password. */
 	g_string_append_printf(cs,
 		" user='%s' password='%s' dbname='%s'",
-		_db_params.user, _db_params.pass, _db_params.db);
+		_db_params->user, _db_params->pass, _db_params->db);
 
 	/* Finally the port, if given. */
-	if (_db_params.port != 0)
-		g_string_append_printf(cs, " port='%d'", _db_params.port);
+	if (_db_params->port != 0)
+		g_string_append_printf(cs, " port='%d'", _db_params->port);
 
 	conn = PQconnectdb(cs->str);
 
@@ -258,7 +258,7 @@ u64_t db_insert_result(const char *sequence_identifier)
 	/* postgres uses the currval call on a sequence to determine
 	 * the result value of an insert query */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT currval('%s%s_seq')",_db_params.pfx, sequence_identifier);
+		 "SELECT currval('%s%s_seq')",_db_params->pfx, sequence_identifier);
 
 	db_query(query);
 	if (db_num_rows() == 0) {
@@ -289,7 +289,8 @@ int db_query(const char *q)
 	PQresultStatusVar = PQresultStatus(res);
 
 	if (PQresultStatusVar != PGRES_COMMAND_OK && PQresultStatusVar != PGRES_TUPLES_OK) {
-		TRACE(TRACE_ERROR, "query failed [%s] : [%s]\n", q, PQresultErrorMessage(res));
+		TRACE(TRACE_ERROR, "failed [%s]", q);
+		TRACE(TRACE_ERROR, "message [%s]", PQresultErrorMessage(res));
 		db_free_result();
 		return DM_EQUERY;
 	}
@@ -332,10 +333,10 @@ int db_do_cleanup(const char **tables, int num_tables)
 	char the_query[DEF_QUERYSIZE];
 
 	for (i = 0; i < num_tables; i++) {
-		snprintf(the_query, DEF_QUERYSIZE, "VACUUM %s%s", _db_params.pfx,tables[i]);
+		snprintf(the_query, DEF_QUERYSIZE, "VACUUM %s%s", _db_params->pfx,tables[i]);
 		if (db_query(the_query) == -1) {
 			TRACE(TRACE_ERROR, "error vacuuming table [%s%s]", 
-				_db_params.pfx,tables[i]);
+				_db_params->pfx,tables[i]);
 			result = -1;
 		}
 	}
