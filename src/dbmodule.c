@@ -35,20 +35,20 @@ int db_load_driver(void)
 
 	db = g_new0(db_func_t,1);
 
-	if (strcasecmp(_db_params.driver, "PGSQL") == 0)
+	if (strcasecmp(_db_params->driver, "PGSQL") == 0)
 		driver = "pgsql";
-	else if (strcasecmp(_db_params.driver, "POSTGRESQL") == 0)
+	else if (strcasecmp(_db_params->driver, "POSTGRESQL") == 0)
 		driver = "pgsql";
-	else if (strcasecmp(_db_params.driver, "MYSQL") == 0)
+	else if (strcasecmp(_db_params->driver, "MYSQL") == 0)
 		driver = "mysql";
-	else if (strcasecmp(_db_params.driver, "SQLITE") == 0)
+	else if (strcasecmp(_db_params->driver, "SQLITE") == 0)
 		driver = "sqlite";
-	else if (strcasecmp(_db_params.driver, "INGRES") == 0)
+	else if (strcasecmp(_db_params->driver, "INGRES") == 0)
 		driver = "mod_ingres";
 
 	else
 		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from MySQL, PGSQL, SQLite, Ingres",
-				_db_params.driver);
+				_db_params->driver);
 
 	field_t library_dir;
 	config_get_value("library_directory", "DBMAIL", library_dir);
@@ -152,11 +152,11 @@ int db_query(const char *the_query)
 		 * so it might look like it went back in time. */
 		int elapsed = (int)((time_t) (after - before));
 		TRACE(TRACE_DEBUG, "last query took [%d] seconds", elapsed);
-		if (elapsed > (int)_db_params.query_time_info)
+		if (elapsed > (int)_db_params->query_time_info)
 			TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", the_query, elapsed);
-		if (elapsed > (int)_db_params.query_time_message)
+		if (elapsed > (int)_db_params->query_time_message)
 			TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", the_query, elapsed);
-		if (elapsed > (int)_db_params.query_time_warning)
+		if (elapsed > (int)_db_params->query_time_warning)
 			TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", the_query, elapsed);
 	}
 

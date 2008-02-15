@@ -34,13 +34,13 @@ int auth_load_driver(void)
 
 	auth = g_new0(auth_func_t,1);
 
-	if (strcasecmp(_db_params.authdriver, "SQL") == 0)
+	if (strcasecmp(_db_params->authdriver, "SQL") == 0)
 		driver = "auth_sql";
-	else if (strcasecmp(_db_params.authdriver, "LDAP") == 0)
+	else if (strcasecmp(_db_params->authdriver, "LDAP") == 0)
 		driver = "auth_ldap";
 	else
 		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from SQL or LDAP",
-				_db_params.authdriver);
+				_db_params->authdriver);
 
 	field_t library_dir;
 	config_get_value("library_directory", "DBMAIL", library_dir);
