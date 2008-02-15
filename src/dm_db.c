@@ -99,14 +99,14 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 	"partlists", 
 };
 
-static GTree * global_cache = NULL;
+GTree * global_cache = NULL;
 
-static void global_cache_init(void)
+void global_cache_init(void)
 {
 	global_cache = g_tree_new_full((GCompareDataFunc)strcmp, NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 }
 
-static gpointer global_cache_lookup(gpointer key)
+gpointer global_cache_lookup(gpointer key)
 {
 	if (! global_cache) {
 		global_cache_init();
@@ -115,7 +115,7 @@ static gpointer global_cache_lookup(gpointer key)
 	return g_tree_lookup(global_cache, key);
 }
 
-static void global_cache_insert(gpointer key, gpointer value)
+void global_cache_insert(gpointer key, gpointer value)
 {
 	g_tree_insert(global_cache, g_strdup(key), value);
 }
@@ -2474,7 +2474,7 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 
 	if ((idnr = (u64_t *)global_cache_lookup((gpointer)query))) {
 		*mailbox_idnr = *idnr;
-		return DM_SUCCESS;
+		return DM_EGENERAL;
 	}
 
 	if (db_query(query) == -1) {
@@ -2792,16 +2792,18 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 
 static int db_getmailbox_flags(MailboxInfo *mb)
 {
+	int *permission;
 	INITQUERY;
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
 	
-	mb->flags = 0;
-
 	/* select mailbox */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT permission,seen_flag,answered_flag,deleted_flag,"
-		 "flagged_flag,recent_flag,draft_flag "
-		 "FROM %smailboxes WHERE mailbox_idnr = %llu",DBPFX, mb->uid);
+		 "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %llu",DBPFX, mb->uid);
+
+	if ((permission = global_cache_lookup(query))) {
+		mb->permission = *permission;
+		return DM_SUCCESS;
+	}
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select mailbox");
@@ -2815,21 +2817,11 @@ static int db_getmailbox_flags(MailboxInfo *mb)
 	}
 
 	mb->permission = db_get_result_int(0, 0);
-
-	if (db_get_result(0, 1))
-		mb->flags |= IMAPFLAG_SEEN;
-	if (db_get_result(0, 2))
-		mb->flags |= IMAPFLAG_ANSWERED;
-	if (db_get_result(0, 3))
-		mb->flags |= IMAPFLAG_DELETED;
-	if (db_get_result(0, 4))
-		mb->flags |= IMAPFLAG_FLAGGED;
-	if (db_get_result(0, 5))
-		mb->flags |= IMAPFLAG_RECENT;
-	if (db_get_result(0, 6))
-		mb->flags |= IMAPFLAG_DRAFT;
-
 	db_free_result();
+
+	permission = g_new0(int,1);
+	*permission = mb->permission;
+	global_cache_insert(g_strdup(query),permission);
 
 	return DM_SUCCESS;
 }
@@ -2997,13 +2989,13 @@ static int db_getmailbox_keywords(MailboxInfo *mb)
 
 static int db_getmailbox_mtime(MailboxInfo * mb)
 {
-	static time_t lastrun = (time_t)0;
+//	static time_t lastrun = (time_t)0;
 	char t[DEF_FRAGSIZE];
 	memset(t,0,DEF_FRAGSIZE);
 	INITQUERY;
 
-	if (lastrun && lastrun == time(NULL))
-		return DM_SUCCESS;
+//	if (lastrun && lastrun == time(NULL))
+//		return DM_SUCCESS;
 
 	snprintf(t,DEF_FRAGSIZE,db_get_sql(SQL_TO_UNIXEPOCH), "mtime");
 	snprintf(query, DEF_QUERYSIZE, "SELECT name,%s FROM %smailboxes WHERE mailbox_idnr=%llu",
@@ -3026,7 +3018,7 @@ static int db_getmailbox_mtime(MailboxInfo * mb)
 
 	db_free_result();
 
-	lastrun = time(NULL);
+//	lastrun = time(NULL);
 
 	return DM_SUCCESS;
 }
@@ -3043,7 +3035,7 @@ int db_getmailbox(MailboxInfo * mb, u64_t userid)
 	if ((res = db_getmailbox_mtime(mb)) != DM_SUCCESS)
 		return res;
 
-	if ( mb->msguidnext && mb->flags && (mb->mtime == oldmtime) )
+	if ( mb->msguidnext && (mb->mtime == oldmtime) )
 		return DM_SUCCESS;
 
 	if ((res = db_getmailbox_flags(mb)) != DM_SUCCESS)

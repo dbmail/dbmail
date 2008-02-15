@@ -85,7 +85,7 @@ static unsigned last_row_number = 0; /* the number of the row in last_row */
 
 
 /* database parameters */
-extern db_param_t * _db_params->
+extern db_param_t * _db_params;
 
 /* static functions, only used locally */
 
@@ -98,8 +98,8 @@ static int db_mysql_check_collations(void)
 	int collations_match = 0;
 	int i, j;
 
-	if (strlen(_db_params->>encoding) > 0) {
-		snprintf(the_query, DEF_QUERYSIZE, "SET NAMES %s", _db_params->>encoding);
+	if (strlen(_db_params->encoding) > 0) {
+		snprintf(the_query, DEF_QUERYSIZE, "SET NAMES %s", _db_params->encoding);
 		if (db_query(the_query) == DM_EQUERY) {
 			TRACE(TRACE_ERROR, "error setting collation");
 			return DM_EQUERY;

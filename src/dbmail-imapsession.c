@@ -1779,6 +1779,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			// client session until it has been announced with EXISTS
 			mailbox = dbmail_mailbox_new(self->mailbox->id);
 			mailbox->info = info;
+			mailbox->info->exists = g_tree_nnodes(mailbox->ids);
 
 			// show updates conditionally
 			//
@@ -1934,6 +1935,9 @@ int dbmail_imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 
 	/* fetch mailbox metadata */
 	self->mailbox->info = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
+
+	/* keep these in sync */
+	self->mailbox->info->exists = g_tree_nnodes(self->mailbox->ids);
 
 	return 0;
 }

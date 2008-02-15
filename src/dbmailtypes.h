@@ -487,7 +487,6 @@ typedef struct {
 	unsigned exists;
 	unsigned recent;
 	unsigned unseen;
-	unsigned flags;
 	int permission;
 	// 
 	gboolean is_public;

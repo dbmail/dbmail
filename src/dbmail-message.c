@@ -28,6 +28,8 @@
 #include "dbmail.h"
 
 
+extern GTree * global_cache;
+
 extern db_param_t * _db_params;
 #define DBPFX _db_params->pfx
 
@@ -1393,6 +1395,7 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *id)
 {
 	u64_t tmp;
+	u64_t *cid;
 	gpointer cacheid;
 	gchar *case_header;
 	gchar *safe_header;
@@ -1421,6 +1424,11 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 		g_string_printf(q, "SELECT id FROM %sheadername WHERE %s='%s'", DBPFX, case_header, safe_header);
 		g_free(case_header);
 
+		if ((cid = global_cache_lookup(q->str))) {
+			tmp = *cid;
+			break;
+		}
+
 		if (db_query(q->str) == -1) {
 			db_savepoint_rollback("header_id");
 			g_string_free(q,TRUE);
@@ -1440,7 +1448,12 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 			tmp = db_get_result_u64(0,0);
 			db_free_result();
 		}
-		if (tmp) break;
+		if (tmp) {
+			cid = g_new0(u64_t,1);
+			*cid = tmp;
+			global_cache_insert(g_strdup(q->str),cid);
+			break;
+		}
 		usleep(200);
 	}
 

@@ -1503,6 +1503,9 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	if (! uid) {
 		lo = 1;
 		hi = self->info->exists;
+		if (hi != (u64_t)g_tree_nnodes(self->ids))
+			TRACE(TRACE_WARNING, "mailbox info out of sync: exists [%llu] ids [%u]", 
+				hi, g_tree_nnodes(self->ids));
 	}
 	
 	TRACE(TRACE_DEBUG,"[%s] uid [%d] lo [%llu] hi [%llu]", set, uid, lo, hi);

@@ -1,3 +1,10 @@
+2008-02-15  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-mailbox.c, 
+	src/dbmail-message.c, src/dbmailtypes.h, src/dm_db.c, src/dm_db.h, 
+	src/modules/dbmysql.c:
+	fix some typos in dbmysql and expand global_cache usage
+
 2008-02-14  Paul J Stevens <paul@nfg.nl>
 
 	* acinclude.m4, configure.in, dbmail.conf, 
