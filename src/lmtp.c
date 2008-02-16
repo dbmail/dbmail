@@ -62,7 +62,7 @@ static void lmtp_cb_time(void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
 	ci_write(session->ci, "221 Connection timeout BYE\r\n");
-	client_session_bailout(session);
+	session->state = IMAPCS_LOGOUT;
 }
 
 static void lmtp_cb_read(void *arg)
@@ -168,7 +168,7 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 
 	if (session->command_type == LMTP_DATA) {
 		if (command) {
-			if (session->state != LHLO) {
+			if (session->state != IMAPCS_AUTHENTICATED) {
 				ci_write(session->ci, "550 Command out of sequence\r\n");
 				return TRUE;
 			}
@@ -236,6 +236,7 @@ int lmtp(ClientSession_t * session)
 				 * "250-BINARYMIME\r\n"
 				 * */
 		client_session_reset(session);
+		session->state = IMAPCS_AUTHENTICATED;
 		return 1;
 
 	case LMTP_HELP:
@@ -281,7 +282,7 @@ int lmtp(ClientSession_t * session)
 		/* We need to LHLO first because the client
 		 * needs to know what extensions we support.
 		 * */
-		if (session->state != LHLO) {
+		if (session->state != IMAPCS_AUTHENTICATED) {
 			ci_write(ci, "550 Command out of sequence.\r\n");
 			return 1;
 		} 
@@ -339,7 +340,7 @@ int lmtp(ClientSession_t * session)
 		return 1;
 
 	case LMTP_RCPT:
-		if (session->state != LHLO) {
+		if (session->state != IMAPCS_AUTHENTICATED) {
 			ci_write(ci, "550 Command out of sequence.\r\n");
 			return 1;
 		} 

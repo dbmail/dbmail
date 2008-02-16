@@ -33,7 +33,7 @@ ClientSession_t * client_session_new(clientinfo_t *ci)
 	char unique_id[UID_SIZE];
 
 	ClientSession_t * session = g_new0(ClientSession_t,1);
-	session->state = STRT;
+	session->state = IMAPCS_INITIAL_CONNECT;
 
 	gethostname(session->hostname, sizeof(session->hostname));
 
@@ -75,7 +75,7 @@ int client_session_reset(ClientSession_t * session)
 		session->password = NULL;
 	}
 
-	session->state = LHLO;
+	session->state = IMAPCS_INITIAL_CONNECT;
 
 	client_session_reset_parser(session);
 
@@ -107,6 +107,7 @@ void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
 
+	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
 	if (db_check_connection()) {
 		TRACE(TRACE_ERROR, "database connection error");
 		client_session_bailout(session);
@@ -120,8 +121,13 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 {
 
 	ClientSession_t *session = (ClientSession_t *)arg;
-
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
+
+	if (session->ci->cb_write) {
+		session->ci->cb_write(session);
+		return;
+	}
+
 	switch(session->state) {
 
 		case IMAPCS_LOGOUT:
@@ -129,8 +135,14 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 			client_session_bailout(session);
 			break;
 
+		case IMAPCS_INITIAL_CONNECT:
+		case IMAPCS_NON_AUTHENTICATED:
+			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->login_timeout);
+			session->timeout = session->ci->login_timeout;
+			break;
+
 		default:
-			TRACE(TRACE_DEBUG,"reset timeout");
+			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->timeout);
 			session->timeout = session->ci->timeout;
 			break;
 	}
@@ -140,9 +152,14 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
-
+	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
+	int serr = errno;
 	if (what & EVBUFFER_EOF)
-		client_session_bailout(session);
+		TRACE(TRACE_INFO, "client disconnected. %s", strerror(serr));
+		// defer the actual disconnetion to socket_write_cb so the server
+		// will disconnect only when the write buffer is depleted and we're
+		// done writing
+
 	else if (what & EVBUFFER_TIMEOUT)
 		session->ci->cb_time(session);
 	else

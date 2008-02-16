@@ -200,47 +200,6 @@ END_TEST
 
 
 //dbmail_imap_session_handle_auth(self, const char *username, const char *password);
-START_TEST(test_imap_session_prompt)
-{
-	int result;
-	gchar *tmp;
-	unsigned char tmpline[MAX_LINESIZE];
-	unsigned char *testuser = (unsigned char *)"testuser1";
-	clientinfo_t *ci = ci_new_writable();
-	ImapSession *s = dbmail_imap_session_new();
-
-	s->ci = ci;
-
-	tmp = (gchar *)g_base64_encode(testuser, strlen("testuser1"));
-	write(ci->tx, tmp, strlen(tmp));
-	write(ci->tx, "\r\n", 2);
-	g_free(tmp);
-	memset(tmpline,0,sizeof(tmpline));
-	result = dbmail_imap_session_prompt(s, "username", (char *)tmpline);
-	fail_unless(result==0,"dbmail_imap_session_prompt failed");
-	fail_unless(strcmp((char *)tmpline,(char *)testuser)==0,"failed at the username prompt [%s] != [%s]", tmpline, testuser);
-
-	// Read back whatever the prompt was.
-	memset(tmpline,0,sizeof(tmpline));
-	read(ci->rx, tmpline, MAX_LINESIZE);
-
-	tmp = (gchar *)g_base64_encode((unsigned char *)"test", strlen("test"));
-	write(ci->tx, tmp, strlen(tmp));
-	write(ci->tx, "\r\n", 2);
-	g_free(tmp);
-	memset(tmpline,0,sizeof(tmpline));
-	result = dbmail_imap_session_prompt(s, "password", (char *)tmpline);
-	fail_unless(result==0,"dbmail_imap_session_prompt failed");
-	fail_unless(strcmp((char *)tmpline,"test")==0,"failed at the password prompt");
-	
-	// Read back whatever the prompt was.
-	memset(tmpline,0,sizeof(tmpline));
-	read(ci->rx, tmpline, MAX_LINESIZE);
-
-	dbmail_imap_session_delete(s);
-	ci_free_writable(ci);
-}
-END_TEST
 
 START_TEST(test_imap_handle_auth)
 {
@@ -986,7 +945,6 @@ Suite *dbmail_suite(void)
 	tcase_add_checked_fixture(tc_session, setup, teardown);
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_handle_auth);
-	tcase_add_test(tc_session, test_imap_session_prompt);
 	tcase_add_test(tc_session, test_imap_mailbox_open);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);

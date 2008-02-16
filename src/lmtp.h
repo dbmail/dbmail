@@ -36,12 +36,6 @@
 
 /* connection */
 
-#define STRT 1
-#define LHLO 2
-#define DATA 3
-#define BIT8 4
-#define BDAT 5
-
 #define LMTP_STRT 0		/* lower bound of array - 0 */
 #define LMTP_LHLO 0
 #define LMTP_QUIT 1

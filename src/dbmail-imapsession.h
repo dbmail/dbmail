@@ -108,7 +108,7 @@ int dbmail_imap_session_set_state(ImapSession *self, int state);
 int client_is_authenticated(ImapSession * self);
 int check_state_and_args(ImapSession * self, const char * command, int minargs, int maxargs, int state);
 int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password);
-int dbmail_imap_session_prompt(ImapSession * self, char * prompt, char * value);
+int dbmail_imap_session_prompt(ImapSession * self, char * prompt);
 
 
 void dbmail_imap_session_get_mbxinfo(ImapSession *self);

@@ -1476,44 +1476,17 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 
 }
 
-
-/* Value must be preallocated to MAX_LINESIZE length. */
-int dbmail_imap_session_prompt(ImapSession * self, char * prompt, char * value )
+int dbmail_imap_session_prompt(ImapSession * self, char * prompt)
 {
-	char *buf, *prompt64, *promptcat;
-	guchar * tmp;
-	size_t buflen;
+	char *prompt64, *promptcat;
 	
 	g_return_val_if_fail(prompt != NULL, -1);
 	
-	buf = g_new0(char, MAX_LINESIZE);
-			
 	/* base64 encoding increases string length by about 40%. */
-
 	promptcat = g_strdup_printf("%s\r\n", prompt);
 	prompt64 = (char *)g_base64_encode((const guchar *)promptcat, strlen(promptcat));
-
 	dbmail_imap_session_printf(self, "+ %s\r\n", prompt64);
 	
-	if ( (dbmail_imap_session_readln(self, buf) <= 0) )  {
-		g_free(buf);
-		g_free(prompt64);
-		g_free(promptcat);
-		return -1;
-	}
-
-	tmp = g_base64_decode((const gchar *)buf, &buflen);
-	strncpy(value,(const char *)tmp,strlen((char *)tmp));
-	g_free(tmp);
-	
-	/* Double check in case the algorithm went nuts. */
-	if (buflen >= (MAX_LINESIZE - 1)) {
-		/* Oh shit. */
-		TRACE(TRACE_FATAL, "[%p] possible memory corruption", self);
-		return -1;
-	}
-
-	g_free(buf);
 	g_free(prompt64);
 	g_free(promptcat);
 	
@@ -2342,6 +2315,7 @@ u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t dumpsize)
  * The returned array will be NULL-terminated.
  * Will return NULL upon errors.
  */
+
 int build_args_array_ext(ImapSession *self, const char *originalString)
 {
 	int inquote = 0, quotestart = 0;
@@ -2371,6 +2345,22 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 
 	if (self->rbuff_size <= 0)
 		g_strchomp(s); // unless we're fetch string-literals it's safe to strip NL
+
+	if (self->args[0] && MATCH(self->args[0],"LOGIN")) {
+		if (self->args_idx == 2) {
+			/* decode and store the password */
+			size_t len;
+			self->args[self->args_idx++] = (char *)g_base64_decode((const gchar *)s, &len);
+			goto finalize; // done
+		} else if (self->args_idx == 1) {
+			/* decode and store the username */
+			size_t len;
+			self->args[self->args_idx++] = (char *)g_base64_decode((const gchar *)s, &len);
+			/* ask for password */
+			dbmail_imap_session_prompt(self,"password");
+			return 0;
+		}
+	}
 
 	for (i = 0; i < max && s[i] && self->args_idx < MAX_ARGS - 1; i++) {
 		/* get bytes of string-literal */	
@@ -2499,7 +2489,6 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 		self->args[self->args_idx] = g_new0(char,(i - argstart + 1));
 		memcpy((void *) self->args[self->args_idx], (void *) &s[argstart], i - argstart);
 		self->args[self->args_idx][i - argstart] = '\0';
-
 		self->args_idx++;
 		i--;		/* walked one too far */
 	}
@@ -2512,6 +2501,13 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 finalize:
 	if (self->rbuff_size > 0) {
 		TRACE(TRACE_DEBUG, "[%p] need more: [%d]", self, self->rbuff_size);
+		return 0;
+	}
+	if ((self->args_idx == 1) && MATCH(self->args[0],"LOGIN") ) {
+		TRACE(TRACE_DEBUG, "[%p] prompt for authenticate tokens", self);
+
+		/* ask for username */
+		dbmail_imap_session_prompt(self,"username");
 		return 0;
 	}
 

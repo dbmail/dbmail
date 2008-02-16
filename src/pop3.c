@@ -76,11 +76,13 @@ static void send_greeting(ClientSession_t *session)
 	}
 }
 
-static void pop3_close(ClientSession_t *session, int done)
+static void pop3_close(ClientSession_t *session)
 {
 	clientinfo_t *ci = session->ci;
-	session->state = POP3_UPDATE_STATE;
+	TRACE(TRACE_DEBUG,"[%p] sessionResult [%d]", session, session->SessionResult);
+
 	if (session->username != NULL && (session->was_apop || session->password != NULL)) {
+
 		switch (session->SessionResult) {
 		case 0:
 			TRACE(TRACE_MESSAGE, "user %s logging out [messages=%llu, octets=%llu]", 
@@ -111,44 +113,34 @@ static void pop3_close(ClientSession_t *session, int done)
 			TRACE(TRACE_ERROR, "storage layer failure");
 			break;
 		}
-	} else if (done==0) { // QUIT issued before AUTH phase completed
-		ci_write(ci, "+OK see ya later\r\n");
-	} else if (done==-2) {
-		ci_write(ci, "-ERR I'm leaving, you're too slow\r\n");
-		TRACE(TRACE_ERROR, "client timed out before AUTH, connection closed");
 	} else {
-		TRACE(TRACE_ERROR, "error, incomplete session");
+		ci_write(ci, "+OK see ya later\r\n");
 	}
 	
-	session->state = IMAPCS_LOGOUT;
+	session->state = POP3_QUIT_STATE;
 }
 
 
 /* the default pop3 read handler */
 void pop3_cb_read(void *arg)
 {
-	int done = 1;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
-
 	ClientSession_t *session = (ClientSession_t *)arg;
-
-	while (done > 0) {
-		if (! (ci_readln(session->ci, buffer))) {
-			return;
-		}
-		done = pop3(session, buffer);
-		TRACE(TRACE_DEBUG,"command returned [%d]", done);
-	}
-	pop3_close(session, done);
+	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
+	while ((ci_readln(session->ci, buffer)))
+		pop3(session, buffer);
 }
 
 void pop3_cb_write(void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
+	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
-	TRACE(TRACE_DEBUG, "state: [%d]", session->state);
 	switch (session->state) {
-		case IMAPCS_LOGOUT:
+		case POP3_UPDATE_STATE:
+			pop3_close(session);
+			break;
+		case POP3_QUIT_STATE:
 			db_session_cleanup(session);
 			client_session_bailout(session);
 			break;
@@ -159,9 +151,9 @@ void pop3_cb_time(void * arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
 
+	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 	ci_write(session->ci, "-ERR I'm leaving, you're too slow\r\n");
-	TRACE(TRACE_ERROR, "client timed out, connection closed");
-	client_session_bailout(session);
+	session->state = POP3_QUIT_STATE;
 }
 
 static void reset_callbacks(ClientSession_t *session)
@@ -195,9 +187,7 @@ int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 	clientinfo_t *ci = session->ci;
 
 	if (session->error_count >= MAX_ERRORS) {
-		TRACE(TRACE_MESSAGE, "too many errors (MAX_ERRORS is %d)", 
-				MAX_ERRORS);
-		ci_write(ci, "-ERR loser, go play somewhere else\r\n");
+		ci_write(ci, "-ERR too many errors\r\n");
 		session->SessionResult = 2;	/* possible flood */
 		return -3;
 	} else {
@@ -235,11 +225,14 @@ int pop3(ClientSession_t *session, char *buffer)
 	char *client_ip = ci->ip_src;
 
 	strip_crlf(buffer);
+	g_strstrip(buffer);
+
 	/* check for command issued */
 	while (strchr(ValidNetworkChars, buffer[indx++]))
 		;
 
 	TRACE(TRACE_DEBUG, "incoming buffer: [%s]", buffer);
+	if (! strlen(buffer)) return 1;
 
 	command = buffer;
 
@@ -292,6 +285,7 @@ int pop3(ClientSession_t *session, char *buffer)
 		/* We return 0 here, and then pop3_handle_connection cleans up
 		 * the connection, commits all changes, and sends the final
 		 * "OK" message indicating that QUIT has completed. */
+		session->state = POP3_UPDATE_STATE;
 		return 0;
 		
 	case POP3_USER:

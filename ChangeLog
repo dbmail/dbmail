@@ -1,3 +1,11 @@
+2008-02-16  Paul J Stevens <paul@nfg.nl>
+
+	* src/clientsession.c, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmailtypes.h, src/imapcommands.c, 
+	src/lmtp.c, src/lmtp.h, src/pop3.c, src/timsieve.c, 
+	test/check_dbmail_imapd.c:
+	fix IMAP AUTH=LOGIN and cleanup timeout and disconnection handling
+
 2008-02-15  Paul J Stevens <paul@nfg.nl>
 
 	* src/authmodule.c, src/dbmodule.c:

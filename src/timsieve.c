@@ -88,7 +88,7 @@ void tims_cb_time(void * arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
 	ci_write(session->ci, "BYE \"Connection timed out.\"\r\n");
-	client_session_bailout(session);
+	session->state = IMAPCS_LOGOUT;
 }
 
 

@@ -168,12 +168,10 @@ int _ic_login(ImapSession *self)
 int _ic_authenticate(ImapSession *self)
 {
 	int result;
-	char *username;
-	char *password;
 
 	timestring_t timestring;
 	
-	if (!check_state_and_args(self, "AUTHENTICATE", 1, 1, IMAPCS_NON_AUTHENTICATED))
+	if (!check_state_and_args(self, "AUTHENTICATE", 3, 3, IMAPCS_NON_AUTHENTICATED))
 		return 1;
 
 	create_current_timestring(&timestring);
@@ -186,26 +184,8 @@ int _ic_authenticate(ImapSession *self)
 		return 1;
 	}
 
-	/* ask for username (base64 encoded) */
-	username = g_new0(char,MAX_LINESIZE);
-	if (dbmail_imap_session_prompt(self,"username", username)) {
-		dbmail_imap_session_printf(self, "* BYE error reading username\r\n");
-		g_free(username);
-		return -1;
-	}
-	/* ask for password */
-	password = g_new0(char,MAX_LINESIZE);
-	if (dbmail_imap_session_prompt(self,"password", password)) {
-		dbmail_imap_session_printf(self, "* BYE error reading password\r\n");
-		g_free(username);
-		g_free(password);
-		return -1;
-	}
-
 	/* try to validate user */
-	if ((result = dbmail_imap_session_handle_auth(self,username,password))) {
-		g_free(username);
-		g_free(password);
+	if ((result = dbmail_imap_session_handle_auth(self,self->args[self->args_idx+1],self->args[self->args_idx+2]))) {
 		return result;
 	}
 
@@ -217,8 +197,6 @@ int _ic_authenticate(ImapSession *self)
 	if (! self->mbxinfo)
 		dbmail_imap_session_get_mbxinfo(self);
 
-	g_free(username);
-	g_free(password);
 	return 0;
 }
 
