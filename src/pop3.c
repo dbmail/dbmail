@@ -162,8 +162,6 @@ static void reset_callbacks(ClientSession_t *session)
         session->ci->cb_read = pop3_cb_read;
         session->ci->cb_write = pop3_cb_write;
 
-        bufferevent_settimeout(session->ci->rev, session->timeout, 0);
-
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
@@ -175,6 +173,7 @@ int pop3_handle_connection(clientinfo_t *ci)
 {
 	ClientSession_t *session = client_session_new(ci);
 	session->state = POP3_AUTHORIZATION_STATE;
+	client_session_set_timeout(session, ci->login_timeout);
         reset_callbacks(session);
         send_greeting(session);
 	return 0;
@@ -347,6 +346,8 @@ int pop3(ClientSession_t *session, char *buffer)
 		default:
 			/* user logged in OK */
 			session->state = POP3_TRANSACTION_STATE;
+
+			client_session_set_timeout(session, session->ci->timeout);
 
 			/* now we're going to build up a session for this user */
 			TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]",
@@ -644,6 +645,8 @@ int pop3(ClientSession_t *session, char *buffer)
 		default:
 			/* user logged in OK */
 			session->state = POP3_TRANSACTION_STATE;
+
+			client_session_set_timeout(session, session->ci->timeout);
 
 			/* user seems to be valid, let's build a session */
 			TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]", 

@@ -84,8 +84,6 @@ static void reset_callbacks(ClientSession_t *session)
         session->ci->cb_time = lmtp_cb_time;
         session->ci->cb_read = lmtp_cb_read;
 
-        bufferevent_settimeout(session->ci->rev, session->timeout, 0);
-
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
@@ -98,6 +96,7 @@ static void reset_callbacks(ClientSession_t *session)
 int lmtp_handle_connection(clientinfo_t *ci)
 {
 	ClientSession_t *session = client_session_new(ci);
+	client_session_set_timeout(session,ci->login_timeout);
 	reset_callbacks(session);
         send_greeting(session);
 	return 0;
@@ -237,6 +236,8 @@ int lmtp(ClientSession_t * session)
 				 * */
 		client_session_reset(session);
 		session->state = IMAPCS_AUTHENTICATED;
+		client_session_set_timeout(session, session->ci->timeout);
+
 		return 1;
 
 	case LMTP_HELP:

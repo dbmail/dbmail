@@ -95,6 +95,12 @@ void client_session_reset_parser(ClientSession_t *session)
 	}
 }
 
+void client_session_set_timeout(ClientSession_t *session, int timeout)
+{
+	session->timeout = timeout;
+        bufferevent_settimeout(session->ci->rev, session->timeout, 0);
+}
+
 void client_session_bailout(ClientSession_t *session)
 {
 	if (! session) return;

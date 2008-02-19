@@ -22,6 +22,7 @@ ClientSession_t * client_session_new(clientinfo_t *ci);
 int client_session_reset(ClientSession_t * session);
 void client_session_reset_parser(ClientSession_t *session);
 void client_session_bailout(ClientSession_t *session);
+void client_session_set_timeout(ClientSession_t *session, int timeout);
 
 void socket_read_cb(struct bufferevent *ev, void *arg);
 void socket_write_cb(struct bufferevent *ev, void *arg);

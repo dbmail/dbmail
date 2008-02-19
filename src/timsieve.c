@@ -97,8 +97,6 @@ static void reset_callbacks(ClientSession_t *session)
         session->ci->cb_time = tims_cb_time;
         session->ci->cb_read = tims_cb_read;
 
-        bufferevent_settimeout(session->ci->rev, session->timeout, 0);
-
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
@@ -110,6 +108,7 @@ int tims_handle_connection(clientinfo_t * ci)
 {
 	ClientSession_t *session = client_session_new(ci);
 	session->state = STRT;
+	client_session_set_timeout(session, ci->login_timeout);
 	reset_callbacks(session);
 	send_greeting(session);
 	return 0;
@@ -305,6 +304,9 @@ int tims(ClientSession_t *session)
 				session->useridnr = useridnr;
 				session->username = g_strdup(tmp64[1]);
 				session->password = g_strdup(tmp64[2]);
+
+				client_session_set_timeout(session, session->ci->timeout);
+
 			} else
 				return tims_error(session, "NO \"Username or password incorrect.\"\r\n");
 			g_strfreev(tmp64);

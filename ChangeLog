@@ -1,3 +1,9 @@
+2008-02-19  Paul J Stevens <paul@nfg.nl>
+
+	* src/clientsession.c, src/clientsession.h, src/lmtp.c, src/pop3.c, 
+	src/timsieve.c:
+	cleanup timeouts
+
 2008-02-18  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmailtypes.h, src/dm_misc.c, src/imap4.c, src/server.c:
