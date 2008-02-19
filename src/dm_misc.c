@@ -2378,21 +2378,32 @@ int ci_readln(clientinfo_t *self, char * buffer)
 {
 	size_t i = 0;
 	char c=0;
+	int result = 0;
 
 	assert(self->rev);
-	assert(buffer);
-	memset(buffer, 0, MAX_LINESIZE);
+	assert(self->line_buffer);
 
 	self->len = 0;
+
+	if (self->line_buffer->len == 0) {
+		assert(buffer);
+		memset(buffer, 0, MAX_LINESIZE);
+	}
+
 	while (i < MAX_LINESIZE) {
 		if ((bufferevent_read(self->rev, (void *)&c, 1)) != 1)
 			break;
 		self->len++;
 		if (c=='\r') continue;
-		buffer[i++] = c;
-		if (c=='\n') break;
+		g_string_append_c(self->line_buffer,c);
+		if (c=='\n') {
+			strncpy(buffer, self->line_buffer->str, MAX_LINESIZE);
+			g_string_truncate(self->line_buffer,0);
+			result = self->len;
+			break;
+		}
 	}
-	return self->len;
+	return result;
 }
 
 
@@ -2417,7 +2428,9 @@ void ci_close(clientinfo_t *self)
 		self->rx = -1;
 	}
 
+	g_string_free(self->line_buffer,TRUE);
 	g_free(self);
+	
 	self = NULL;
 }
 

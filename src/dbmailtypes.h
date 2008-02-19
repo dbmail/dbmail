@@ -205,7 +205,9 @@ typedef struct {
 	int timeout;			/* server timeout (seconds) */
 	int login_timeout;		/* login timeout (seconds) */
 	int service_before_smtp;
+
 	size_t len;			/* octets read during last ci_read/ci_readln */
+	GString *line_buffer;		/* buffer for ci_readln */
 } clientinfo_t;
 
 typedef struct {

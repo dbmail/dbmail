@@ -1,3 +1,8 @@
+2008-02-18  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmailtypes.h, src/dm_misc.c, src/imap4.c, src/server.c:
+	ci_readln returns 0 until a full line is read
+
 2008-02-16  Paul J Stevens <paul@nfg.nl>
 
 	* src/clientsession.c, src/dbmail-imapsession.c, 

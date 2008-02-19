@@ -157,6 +157,7 @@ static int manage_start_cli_server(serverConfig_t *conf)
 	client->rx		= STDIN_FILENO;
 	client->tx		= STDOUT_FILENO;
 
+	client->line_buffer	= g_string_new("");
 	/* streams are ready, perform handling */
 	event_init();
 	conf->ClientHandler(client);
@@ -355,10 +356,12 @@ static void server_create_sockets(serverConfig_t * conf)
 static clientinfo_t * client_init(int socket, struct sockaddr_in caddr)
 {
 	int err;
-	clientinfo_t *client = g_new0(clientinfo_t, 1);
+	clientinfo_t *client	= g_new0(clientinfo_t, 1);
 
-	client->timeout = server_conf->timeout;
-	client->login_timeout = server_conf->login_timeout;
+	client->timeout		= server_conf->timeout;
+	client->login_timeout	= server_conf->login_timeout;
+	client->line_buffer	= g_string_new("");
+
 	strncpy((char *)client->ip_src, inet_ntoa(caddr.sin_addr), sizeof(client->ip_src));
 
 	if (server_conf->resolveIP) {

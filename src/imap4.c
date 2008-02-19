@@ -192,6 +192,7 @@ void imap_cb_read(void *arg)
 {
 	ImapSession *session = (ImapSession *) arg;
 	char buffer[MAX_LINESIZE];
+
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
 		if (imap4_tokenizer(session, buffer)) {
 			imap4(session);
@@ -199,7 +200,6 @@ void imap_cb_read(void *arg)
 			dbmail_imap_session_reset(session);
 		}
 	}
-	TRACE(TRACE_DEBUG,"done");
 }
 
 void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, int timeout)
