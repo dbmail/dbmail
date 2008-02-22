@@ -1,3 +1,8 @@
+2008-02-22  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-message.c, src/pop3.c:
+	fix pop3 hangup
+
 2008-02-19  Paul J Stevens <paul@nfg.nl>
 
 	* src/clientsession.c, src/clientsession.h, src/lmtp.c, src/pop3.c, 

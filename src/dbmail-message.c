@@ -937,8 +937,10 @@ u64_t dbmail_message_get_physid(const DbmailMessage *self)
 
 void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
 {
-	if (internal_date)
+	if (internal_date && strlen(internal_date)) {
+		TRACE(TRACE_DEBUG,"[%p] [%s]", self, internal_date);
 		self->internal_date = g_mime_utils_header_decode_date(internal_date, self->internal_date_gmtoff);
+	}
 }
 
 /* thisyear is a workaround for some broken gmime version. */

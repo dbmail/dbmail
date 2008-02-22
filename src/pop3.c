@@ -137,9 +137,6 @@ void pop3_cb_write(void *arg)
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
 	switch (session->state) {
-		case POP3_UPDATE_STATE:
-			pop3_close(session);
-			break;
 		case POP3_QUIT_STATE:
 			db_session_cleanup(session);
 			client_session_bailout(session);
@@ -285,6 +282,8 @@ int pop3(ClientSession_t *session, char *buffer)
 		 * the connection, commits all changes, and sends the final
 		 * "OK" message indicating that QUIT has completed. */
 		session->state = POP3_UPDATE_STATE;
+		session->SessionResult = 0;
+		pop3_close(session);
 		return 0;
 		
 	case POP3_USER:
