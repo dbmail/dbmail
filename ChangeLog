@@ -1,3 +1,8 @@
+2008-02-29  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-message.c:
+	fix stack smash
+
 2008-02-22  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-message.c, src/pop3.c:

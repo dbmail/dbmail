@@ -277,12 +277,10 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 static const char * find_boundary(const char *s)
 {
 	GMimeContentType *type;
-	char header[128];
+	GString *header;
 	const char *boundary;
-	char *rest;
-	int i=0, j=0;
-
-	memset(header,0,sizeof(header));
+	char *rest, *h;
+	int i=0;
 
 	rest = g_strcasestr(s, "\nContent-type: ");
 	if (! rest) {
@@ -292,18 +290,20 @@ static const char * find_boundary(const char *s)
 	if (! rest)
 		return NULL;
 
+	header = g_string_new("");
 	i = 13;
 	while (rest[i]) {
 		if (((rest[i] == '\n') || (rest[i] == '\r')) && (!isspace(rest[i+1]))) {
 			break;
 		}
-		header[j++]=rest[i++];
+		g_string_append_c(header,rest[i++]);
 	}
-	header[j]='\0';
-	g_strstrip(header);
-	type = g_mime_content_type_new_from_string(header);
+	h = header->str;
+	g_strstrip(h);
+	type = g_mime_content_type_new_from_string(h);
 	boundary = g_mime_content_type_get_parameter(type,"boundary");
         g_free(type);
+	g_string_free(header,TRUE);
 	
 	return boundary;
 }
