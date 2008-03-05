@@ -441,13 +441,18 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 	return res;
 }
 
+static gboolean g_str_case_equal(gconstpointer a, gconstpointer b)
+{
+	return MATCH((const char *)a,(const char *)b) == 0;
+}
+
 static void _map_headers(struct DbmailMessage *self)
 {
 	GMimeObject *part;
 	assert(self->content);
 	self->headers = g_relation_new(2);
-	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
-	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
+	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
+	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
 
 	 // gmime doesn't consider the content-type header to be a message-header so extract
 	 // and register it separately
