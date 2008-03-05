@@ -1,3 +1,17 @@
+2008-03-05  Paul J Stevens <paul@nfg.nl>
+
+	* README.usermap:
+	update README for usermap
+	* db.c, misc.c:
+	fix the usermap logic
+	* dbmail-message.c:
+	rebuild grelation headercache
+
+2008-03-04  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	make internal grelation table of headers case insensitive
+
 2008-02-09  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION, debian/changelog, debian/po/ja.po, imap4.c, timsieve.c:
