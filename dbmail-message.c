@@ -443,13 +443,15 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 
 static gboolean g_str_case_equal(gconstpointer a, gconstpointer b)
 {
-	return MATCH((const char *)a,(const char *)b) == 0;
+	return MATCH((const char *)a,(const char *)b);
 }
 
 static void _map_headers(struct DbmailMessage *self)
 {
 	GMimeObject *part;
 	assert(self->content);
+	if (self->headers) g_relation_destroy(self->headers);
+
 	self->headers = g_relation_new(2);
 	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
 	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
@@ -539,10 +541,8 @@ void dbmail_message_set_header(struct DbmailMessage *self, const char *header, c
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
 
 	// If dbmail_message_set_header is called after message_init,
-	// we need to manually insert this header into the in-memory tree.
-	if (self->headers)
-		_register_header(header, value, (gpointer)self);
-
+	// we need to rebuild the internal grelation table
+	if (self->headers) _map_headers(self);
 }
 
 const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header)
