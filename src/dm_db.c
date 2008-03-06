@@ -4616,10 +4616,10 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 		userid = db_get_result(row, 3);
 		result = dm_sock_compare(clientsock, "", sockno);
 		/* any match on sockno will be fatal */
-		if (result) {
+		if (! result) {
 			TRACE(TRACE_DEBUG,"access denied");
 			db_free_result();
-			return result;
+			return DM_EGENERAL;
 		}
 		score = dm_sock_score(clientsock, sockok);
 		if (score > bestscore) {

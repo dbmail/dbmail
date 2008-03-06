@@ -1,5 +1,8 @@
-2008-02-29  Paul J Stevens <paul@nfg.nl>
+2008-03-06  Paul J Stevens <paul@nfg.nl>
+	* src/dbmail-message.c, src/dm_db.c, src/dm_misc.c:
+	forward port 2.2.10 changes
 
+2008-02-29  Paul J Stevens <paul@nfg.nl>
 	* src/dbmail-message.c:
 	fix stack smash
 

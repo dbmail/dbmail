@@ -727,21 +727,21 @@ int dm_sock_score(const char *base, const char *test)
 
 static int socket_match(const char *base, const char *test)
 {
-	return (dm_sock_score(base,test) ? 0 : 1);
+	return (dm_sock_score(base,test) ? TRUE : FALSE);
 
 }
 
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny) 
 {
-	int result = DM_EGENERAL;
+	int result = TRUE;
 	assert(clientsock);
 	
 	if ( (strlen(sock_allow) == 0) && (strlen(sock_deny) == 0) ) {
-		result = DM_SUCCESS;
-	} else if (strlen(sock_deny) > 0 && socket_match(sock_deny, clientsock)==0) {
-		result = DM_EGENERAL;
-	} else if (strlen(sock_allow) > 0  && socket_match(sock_allow, clientsock)==0) {
-		result = DM_SUCCESS;
+		result = TRUE;
+	} else if (strlen(sock_deny) && socket_match(sock_deny, clientsock)) {
+		result = FALSE;
+	} else if (strlen(sock_allow) && socket_match(sock_allow, clientsock)) {
+		result = TRUE;
 	}
 
 	TRACE(TRACE_DEBUG, "clientsock [%s] sock_allow[%s], sock_deny [%s] => [%d]", clientsock, sock_allow, sock_deny, result);

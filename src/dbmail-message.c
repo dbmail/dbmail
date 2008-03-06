@@ -865,17 +865,21 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 	return res;
 }
 
+static gboolean g_str_case_equal(gconstpointer a, gconstpointer b)
+{
+       return MATCH((const char *)a,(const char *)b);
+}
+
 static void _map_headers(DbmailMessage *self) 
 {
 	GMimeObject *part;
 	assert(self->content);
+	if (self->headers) g_relation_destroy(self->headers);
+
 	self->headers = g_relation_new(2);
 
-//	g_mime_message_set_header(GMIME_MESSAGE(self->content), "X-DBMail", "transient header");
-//	g_mime_object_remove_header(GMIME_OBJECT(self->content), "X-DBMail");
-
-	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
-	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
+	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
+	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
 
 	if (GMIME_IS_MESSAGE(self->content)) {
 		char *message_id = NULL;
@@ -980,7 +984,7 @@ gchar * dbmail_message_get_envelope_recipient(const DbmailMessage *self)
 void dbmail_message_set_header(DbmailMessage *self, const char *header, const char *value)
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
-	_register_header(header, value, (gpointer)self);
+	if (self->headers) _map_headers(self);
 }
 
 const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *header)
