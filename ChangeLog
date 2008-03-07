@@ -1,3 +1,8 @@
+2008-03-07  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	v2.2.10-rc1
+
 2008-03-05  Paul J Stevens <paul@nfg.nl>
 
 	* man/dbmail-imapd.txt:
