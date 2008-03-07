@@ -1,5 +1,7 @@
 2008-03-05  Paul J Stevens <paul@nfg.nl>
 
+	* man/dbmail-imapd.txt:
+	adjust manpage dbmail-imapd after asciidoc update
 	* README.usermap:
 	update README for usermap
 	* db.c, misc.c:
