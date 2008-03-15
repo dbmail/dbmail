@@ -29,10 +29,10 @@ SET FOREIGN_KEY_CHECKS=0;
 
 DROP TABLE IF EXISTS dbmail_aliases;
 CREATE TABLE dbmail_aliases (
-	alias_idnr bigint(21) NOT NULL auto_increment,
-	alias varchar(100) NOT NULL default '',
-	deliver_to varchar(250) NOT NULL default '',
-	client_idnr bigint(21) NOT NULL default '0',
+	alias_idnr BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	alias VARCHAR(100) NOT NULL DEFAULT '',
+	deliver_to VARCHAR(250) NOT NULL DEFAULT '',
+	client_idnr BIGINT UNSIGNED NOT NULL DEFAULT '0',
 	PRIMARY KEY (alias_idnr),
 	INDEX alias_index (alias),
 	INDEX client_idnr_index (client_idnr)	
@@ -40,16 +40,16 @@ CREATE TABLE dbmail_aliases (
 
 DROP TABLE IF EXISTS dbmail_users;
 CREATE TABLE dbmail_users (
-	user_idnr bigint(21) NOT NULL auto_increment,
-	userid varchar(100) NOT NULL default '',
-	passwd varchar(34) NOT NULL default '',
-	client_idnr bigint(21) NOT NULL default '0',
-	maxmail_size bigint(21) NOT NULL default '0',
-	curmail_size bigint(21) NOT NULL default '0',
-	maxsieve_size BIGINT DEFAULT '0' NOT NULL,
-	cursieve_size BIGINT DEFAULT '0' NOT NULL,
-	encryption_type varchar(20) NOT NULL default '',
-	last_login datetime NOT NULL default '1979-11-03 22:05:58',
+	user_idnr BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	userid VARCHAR(100) NOT NULL DEFAULT '',
+	passwd VARCHAR(34) NOT NULL DEFAULT '',
+	client_idnr BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	maxmail_size BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	curmail_size BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	maxsieve_size BIGINT UNSIGNED DEFAULT '0' NOT NULL,
+	cursieve_size BIGINT UNSIGNED DEFAULT '0' NOT NULL,
+	encryption_type VARCHAR(20) NOT NULL DEFAULT '',
+	last_login DATETIME NOT NULL DEFAULT '1979-11-03 22:05:58',
 	PRIMARY KEY  (user_idnr),
 	UNIQUE INDEX userid_index (userid)
 ) ENGINE InnoDB DEFAULT CHARSET=utf8;
@@ -57,26 +57,26 @@ CREATE TABLE dbmail_users (
 DROP TABLE IF EXISTS dbmail_usermap;
 CREATE TABLE dbmail_usermap (
   login VARCHAR(100) NOT NULL,
-  sock_allow varchar(100) NOT NULL,
-  sock_deny varchar(100) NOT NULL,
-  userid varchar(100) NOT NULL
+  sock_allow VARCHAR(100) NOT NULL,
+  sock_deny VARCHAR(100) NOT NULL,
+  userid VARCHAR(100) NOT NULL
 ) ENGINE InnoDB DEFAULT CHARSET=utf8;
 CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
 DROP TABLE IF EXISTS dbmail_mailboxes;
 CREATE TABLE dbmail_mailboxes (
-	mailbox_idnr bigint(21) NOT NULL auto_increment,
-	owner_idnr bigint(21) NOT NULL default '0',
-	name varchar(100) NOT NULL default '',
-	seen_flag tinyint(1) NOT NULL default '0',
-	answered_flag tinyint(1) NOT NULL default '0',
-	deleted_flag tinyint(1) NOT NULL default '0',
-	flagged_flag tinyint(1) NOT NULL default '0',
-	recent_flag tinyint(1) NOT NULL default '0',
-	draft_flag tinyint(1) NOT NULL default '0',
-	no_inferiors tinyint(1) NOT NULL default '0',
-	no_select tinyint(1) NOT NULL default '0',
-	permission tinyint(1) default '2',
+	mailbox_idnr BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	owner_idnr BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	name VARCHAR(100) NOT NULL DEFAULT '',
+	seen_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	answered_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	deleted_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	flagged_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	recent_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	draft_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	no_inferiors TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	no_select TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	permission TINYINT UNSIGNED DEFAULT '2',
 	PRIMARY KEY  (mailbox_idnr),
 	INDEX name_index (name),
 	INDEX owner_idnr_index (owner_idnr),
@@ -87,8 +87,8 @@ CREATE TABLE dbmail_mailboxes (
 
 DROP TABLE IF EXISTS dbmail_subscription;
 CREATE TABLE dbmail_subscription (
-	user_id bigint(21) not null default '0',
-	mailbox_id bigint(21) not null,
+	user_id BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	mailbox_id BIGINT UNSIGNED NOT NULL,
 	primary key (user_id, mailbox_id),
 	index user_id_index (user_id),
 	index mailbox_id_index (mailbox_id),
@@ -100,17 +100,17 @@ CREATE TABLE dbmail_subscription (
 
 DROP TABLE IF EXISTS dbmail_acl;
 CREATE TABLE dbmail_acl (
-	user_id bigint(21) NOT NULL,
-	mailbox_id bigint(21) NOT NULL,
-	lookup_flag tinyint(1) default '0' not null,
-	read_flag tinyint(1) default '0' not null,
-	seen_flag tinyint(1) default '0' not null,
-	write_flag tinyint(1) default '0' not null,
-	insert_flag tinyint(1) default '0' not null,	
-	post_flag tinyint(1) default '0' not null,
-	create_flag tinyint(1) default '0' not null,	
-	delete_flag tinyint(1) default '0' not null,	
-	administer_flag tinyint(1) default '0' not null,	
+	user_id BIGINT UNSIGNED NOT NULL,
+	mailbox_id BIGINT UNSIGNED NOT NULL,
+	lookup_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,
+	read_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,
+	seen_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,
+	write_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,
+	insert_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,	
+	post_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,
+	create_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,	
+	delete_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,	
+	administer_flag TINYINT UNSIGNED DEFAULT '0' NOT NULL,	
 	PRIMARY KEY(user_id, mailbox_id),
 	INDEX user_id_index (user_id),
 	INDEX mailbox_id_index (mailbox_id),
@@ -122,26 +122,26 @@ CREATE TABLE dbmail_acl (
 	
 DROP TABLE IF EXISTS dbmail_physmessage;
 CREATE TABLE dbmail_physmessage (
-	id bigint(21) NOT NULL auto_increment,
-	messagesize bigint(21) NOT NULL default '0',
-	rfcsize bigint(21) NOT NULL default '0',
-	internal_date datetime NOT NULL default '0000-00-00 00:00:00',
+	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	messagesize BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	rfcsize BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	internal_date DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
 	PRIMARY KEY (id)
 ) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_messages;
 CREATE TABLE dbmail_messages (
-	message_idnr bigint(21) NOT NULL auto_increment,
-	mailbox_idnr bigint(21) NOT NULL default '0',
-	physmessage_id bigint(21) NOT NULL default '0',
-	seen_flag tinyint(1) NOT NULL default '0',
-	answered_flag tinyint(1) NOT NULL default '0',
-	deleted_flag tinyint(1) NOT NULL default '0',
-	flagged_flag tinyint(1) NOT NULL default '0',
-	recent_flag tinyint(1) NOT NULL default '0',
-	draft_flag tinyint(1) NOT NULL default '0',
-	unique_id varchar(70) NOT NULL default '',
-	status tinyint(3) unsigned NOT NULL default '0',
+	message_idnr BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	mailbox_idnr BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	physmessage_id BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	seen_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	answered_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	deleted_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	flagged_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	recent_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	draft_flag TINYINT UNSIGNED NOT NULL DEFAULT '0',
+	unique_id VARCHAR(70) NOT NULL DEFAULT '',
+	status TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
 	PRIMARY KEY  (message_idnr),
 	INDEX physmessage_id_index (physmessage_id),		
 	INDEX mailbox_idnr_index (mailbox_idnr),
@@ -157,11 +157,11 @@ CREATE TABLE dbmail_messages (
 
 DROP TABLE IF EXISTS dbmail_messageblks;
 CREATE TABLE dbmail_messageblks (
-	messageblk_idnr bigint(21) NOT NULL auto_increment,
-	physmessage_id bigint(21) NOT NULL default '0',
+	messageblk_idnr BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	physmessage_id BIGINT UNSIGNED NOT NULL DEFAULT '0',
 	messageblk longblob NOT NULL,
-	blocksize bigint(21) NOT NULL default '0',
-	is_header tinyint(1) NOT NULL default '0',
+	blocksize BIGINT UNSIGNED NOT NULL DEFAULT '0',
+	is_header TINYINT UNSIGNED NOT NULL DEFAULT '0',
 	PRIMARY KEY (messageblk_idnr),
 	INDEX physmessage_id_index (physmessage_id),
 	INDEX physmessage_id_is_header_index (physmessage_id, is_header),
@@ -171,7 +171,7 @@ CREATE TABLE dbmail_messageblks (
 
 DROP TABLE IF EXISTS dbmail_auto_notifications;
 CREATE TABLE dbmail_auto_notifications (
- 	user_idnr bigint(21) NOT NULL,
+ 	user_idnr BIGINT UNSIGNED NOT NULL,
 	notify_address VARCHAR(100) NOT NULL,
 	INDEX user_idnr_index (user_idnr),
 	FOREIGN KEY user_idnr_fk (user_idnr) 
@@ -180,10 +180,10 @@ CREATE TABLE dbmail_auto_notifications (
 
 DROP TABLE IF EXISTS dbmail_auto_replies;
 CREATE TABLE dbmail_auto_replies (
-   	user_idnr bigint(21) DEFAULT '0' NOT NULL,
-	start_date datetime not null,
-	stop_date datetime not null,
-   	reply_body mediumtext,
+   	user_idnr BIGINT UNSIGNED DEFAULT '0' NOT NULL,
+	start_date DATETIME NOT NULL,
+	stop_date DATETIME NOT NULL,
+   	reply_body MEDIUMTEXT,
 	INDEX user_idnr_index (user_idnr),
 	FOREIGN KEY user_idnr_fk (user_idnr) 
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
@@ -191,9 +191,9 @@ CREATE TABLE dbmail_auto_replies (
 
 DROP TABLE IF EXISTS dbmail_pbsp;
 CREATE TABLE dbmail_pbsp (
-   idnr bigint(21) NOT NULL auto_increment,
-   since datetime default '0000-00-00 00:00:00' not null,
-   ipnumber varchar(40) NOT NULL,
+   idnr BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+   since DATETIME DEFAULT '0000-00-00 00:00:00' NOT NULL,
+   ipnumber VARCHAR(40) NOT NULL,
    PRIMARY KEY (idnr),
    UNIQUE INDEX ipnumber_index (ipnumber),
    INDEX since_index (since)
@@ -201,10 +201,10 @@ CREATE TABLE dbmail_pbsp (
 
 DROP TABLE IF EXISTS dbmail_sievescripts;
 CREATE TABLE dbmail_sievescripts (
-  owner_idnr bigint(21) DEFAULT '0' NOT NULL,
-  name varchar(100) NOT NULL,
-  script text,
-  active tinyint(1) default '0' not null,
+  owner_idnr BIGINT UNSIGNED DEFAULT '0' NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  script TEXT,
+  active TINYINT UNSIGNED DEFAULT '0' NOT NULL,
   INDEX (name),
   INDEX (owner_idnr),
   INDEX (owner_idnr, name),
@@ -220,7 +220,7 @@ CREATE TABLE dbmail_sievescripts (
 
 DROP TABLE IF EXISTS dbmail_headername;
 CREATE TABLE dbmail_headername (
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	headername	VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
 	UNIQUE (headername)
@@ -228,9 +228,9 @@ CREATE TABLE dbmail_headername (
 
 DROP TABLE IF EXISTS dbmail_headervalue;
 CREATE TABLE dbmail_headervalue (
-	headername_id	BIGINT NOT NULL,
-        physmessage_id	BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+	headername_id	BIGINT UNSIGNED NOT NULL,
+        physmessage_id	BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	headervalue	TEXT NOT NULL,
 	PRIMARY KEY (id),
 	UNIQUE (physmessage_id, id),
@@ -258,8 +258,8 @@ CREATE TABLE dbmail_headervalue (
 
 DROP TABLE IF EXISTS dbmail_subjectfield;
 CREATE TABLE dbmail_subjectfield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+        physmessage_id  BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	subjectfield	VARCHAR(255) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
 	UNIQUE (physmessage_id, subjectfield),
@@ -270,8 +270,8 @@ CREATE TABLE dbmail_subjectfield (
 
 DROP TABLE IF EXISTS dbmail_datefield;
 CREATE TABLE dbmail_datefield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+        physmessage_id  BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	datefield	DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00',
 	PRIMARY KEY (id),
 	UNIQUE (physmessage_id, datefield),
@@ -282,8 +282,8 @@ CREATE TABLE dbmail_datefield (
 
 DROP TABLE IF EXISTS dbmail_referencesfield;
 CREATE TABLE dbmail_referencesfield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+        physmessage_id  BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	referencesfield	VARCHAR(255) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
 	UNIQUE (physmessage_id, referencesfield),
@@ -299,8 +299,8 @@ CREATE TABLE dbmail_referencesfield (
 
 DROP TABLE IF EXISTS dbmail_fromfield;
 CREATE TABLE dbmail_fromfield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+        physmessage_id  BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	fromname	VARCHAR(100) NOT NULL DEFAULT '',
 	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
@@ -314,8 +314,8 @@ CREATE INDEX dbmail_fromfield_2 ON dbmail_fromfield(fromaddr);
 
 DROP TABLE IF EXISTS dbmail_tofield;
 CREATE TABLE dbmail_tofield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+        physmessage_id  BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	toname		VARCHAR(100) NOT NULL DEFAULT '',
 	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
@@ -329,8 +329,8 @@ CREATE INDEX dbmail_fromfield_2 ON dbmail_tofield(toaddr);
 
 DROP TABLE IF EXISTS dbmail_replytofield;
 CREATE TABLE dbmail_replytofield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+        physmessage_id  BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
 	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
@@ -344,8 +344,8 @@ CREATE INDEX dbmail_replytofield_2 ON dbmail_replytofield(replytoaddr);
 
 DROP TABLE IF EXISTS dbmail_ccfield;
 CREATE TABLE dbmail_ccfield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+        physmessage_id  BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	ccname		VARCHAR(100) NOT NULL DEFAULT '',
 	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
@@ -363,27 +363,27 @@ COMMIT;
 
 DROP TABLE IF EXISTS dbmail_replycache;
 CREATE TABLE dbmail_replycache (
-  to_addr varchar(100) NOT NULL default '',
-  from_addr varchar(100) NOT NULL default '',
-  handle varchar(100) NOT NULL default '',
-  lastseen datetime NOT NULL default '0000-00-00 00:00:00',
+  to_addr VARCHAR(100) NOT NULL DEFAULT '',
+  from_addr VARCHAR(100) NOT NULL DEFAULT '',
+  handle VARCHAR(100) NOT NULL DEFAULT '',
+  lastseen DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
   UNIQUE KEY replycache_1 (to_addr,from_addr, handle)
 ) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS dbmail_usermap;
 CREATE TABLE dbmail_usermap (
   login VARCHAR(100) NOT NULL,
-  sock_allow varchar(100) NOT NULL,
-  sock_deny varchar(100) NOT NULL,
-  userid varchar(100) NOT NULL
+  sock_allow VARCHAR(100) NOT NULL,
+  sock_deny VARCHAR(100) NOT NULL,
+  userid VARCHAR(100) NOT NULL
 ) ENGINE InnoDB DEFAULT CHARSET=utf8;
 
 CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
 DROP TABLE IF EXISTS dbmail_envelope;
 CREATE TABLE dbmail_envelope (
-	physmessage_id	BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
+	physmessage_id	BIGINT UNSIGNED NOT NULL,
+	id		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	envelope	TEXT NOT NULL,
 	PRIMARY KEY (id),
 	UNIQUE (physmessage_id, id),
