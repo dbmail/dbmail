@@ -1,3 +1,10 @@
+2008-03-15  Paul J Stevens <paul@nfg.nl>
+
+	* modules/authsql.c:
+	always treat deliver_to as string type in queries (bug: #676)
+	* sql/mysql/create_tables.mysql:
+	cleanup the mysql schema
+
 2008-03-07  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION:

@@ -634,7 +634,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 	/* check if this alias already exists */
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "SELECT alias_idnr FROM %saliases "
-		 "WHERE lower(alias) = lower('%s') AND deliver_to = %llu "
+		 "WHERE lower(alias) = lower('%s') AND deliver_to = '%llu' "
 		 "AND client_idnr = %llu",DBPFX, escaped_alias, user_idnr, clientid);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -655,7 +655,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 	db_free_result();
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
-		 "VALUES ('%s',%llu,%llu)",DBPFX, escaped_alias, user_idnr,
+		 "VALUES ('%s','%llu',%llu)",DBPFX, escaped_alias, user_idnr,
 		 clientid);
 	g_free(escaped_alias);
 
@@ -747,7 +747,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	db_escape_string(escaped_alias, alias, strlen(alias));
 
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "DELETE FROM %saliases WHERE deliver_to=%llu "
+		 "DELETE FROM %saliases WHERE deliver_to='%llu' "
 		 "AND lower(alias) = lower('%s')",DBPFX, user_idnr, escaped_alias);
 	g_free(escaped_alias);
 
@@ -800,7 +800,7 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 	/* do a inverted (DESC) query because adding the names to the 
 	 * final list inverts again */
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "SELECT alias FROM %saliases WHERE deliver_to = %llu "
+		 "SELECT alias FROM %saliases WHERE deliver_to = '%llu' "
 		 "ORDER BY alias DESC",DBPFX, user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
