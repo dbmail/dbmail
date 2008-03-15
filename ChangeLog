@@ -1,5 +1,7 @@
 2008-03-15  Paul J Stevens <paul@nfg.nl>
 
+	* VERSION:
+	v2.2.10-rc2
 	* modules/authsql.c:
 	always treat deliver_to as string type in queries (bug: #676)
 	* sql/mysql/create_tables.mysql:
