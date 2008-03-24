@@ -1,3 +1,8 @@
+2008-03-24  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION, debian/changelog, debian/control, debian/dbmail.postrm:
+	v2.2.10
+
 2008-03-15  Paul J Stevens <paul@nfg.nl>
 
 	* VERSION:

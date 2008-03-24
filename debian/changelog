@@ -1,3 +1,12 @@
+dbmail (2.2.10-1) unstable; urgency=low
+
+  * new upstream release (Closes: #471255).
+  * accept Ubuntu changes:
+    - move adduser from Depends to Pre-Depends. Closes: #470182
+    - remove user dbmail after package removal
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon, 24 Mar 2008 15:45:41 +0100
+
 dbmail (2.2.9-1) unstable; urgency=low
 
   * upstream release
