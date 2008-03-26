@@ -41,6 +41,7 @@ volatile sig_atomic_t ChildStopRequested = 0;
 
 extern volatile sig_atomic_t event_gotsig;
 extern int (*event_sigcb)(void);
+struct event_base *base;
 
 static serverConfig_t *server_conf;
 
@@ -85,7 +86,7 @@ static void server_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 int server_sig_cb(void)
 {
 	if (GeneralStopRequested || mainStatus || alarm_occurred | get_sigchld)
-		(void)event_loopexit(NULL);
+		(void)event_base_loopexit(base,NULL);
 	return (0);
 }
 
@@ -159,9 +160,9 @@ static int manage_start_cli_server(serverConfig_t *conf)
 
 	client->line_buffer	= g_string_new("");
 	/* streams are ready, perform handling */
-	event_init();
+	client->base = event_init();
 	conf->ClientHandler(client);
-	event_dispatch();
+	event_base_dispatch(client->base);
 
 	disconnect_all();
 
@@ -409,6 +410,12 @@ static void worker_pipe_cb(int sock, short event UNUSED, void *arg UNUSED)
 		;
 }
 
+static void worker_thread_create(clientinfo_t *client)
+{
+	if (!g_thread_supported ()) g_thread_init (NULL);
+	g_thread_create((GThreadFunc)server_conf->ClientHandler, (gpointer)client, FALSE, NULL);
+}
+
 static void worker_sock_cb(int sock, short event, void *arg)
 {
 	int clientsock;
@@ -453,7 +460,8 @@ static void worker_sock_cb(int sock, short event, void *arg)
 	TRACE(TRACE_INFO, "connection accepted");
 
 	/* streams are ready, perform handling */
-	server_conf->ClientHandler((clientinfo_t *)client);
+	worker_thread_create(client);
+//	server_conf->ClientHandler((clientinfo_t *)client);
 }
 
 static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
@@ -484,7 +492,7 @@ static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 static int worker_sig_cb(void)
 {
 	if (ChildStopRequested | alarm_occurred)
-		(void)event_loopexit(NULL);
+		(void)event_base_loopexit(base, NULL);
 
 	if (mainRestart) {
 		//field_t service_name = server_conf->service_name;
@@ -598,7 +606,7 @@ void worker_run(serverConfig_t *conf)
 	srand((int) ((int) time(NULL) + (int) getpid()));
 
 	TRACE(TRACE_DEBUG,"setup event loop");
-	event_init();
+	base = event_init();
 
 	evsock = g_new0(struct event, server_conf->ipcount+1);
 
@@ -614,7 +622,7 @@ void worker_run(serverConfig_t *conf)
 
 	TRACE(TRACE_DEBUG,"dispatch event loop");
 
-	event_dispatch();
+	event_base_dispatch(base);
 
 	disconnect_all();
 }

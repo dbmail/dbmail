@@ -245,6 +245,9 @@ int imap_handle_connection(clientinfo_t * ci)
 {
 	ImapSession *session;
 
+	if (ci->rx != STDIN_FILENO)
+		ci->base = event_init();
+
 	session = dbmail_imap_session_new();
 	session->timeout = ci->login_timeout;
 
@@ -253,11 +256,17 @@ int imap_handle_connection(clientinfo_t * ci)
 	ci->rev = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
 	ci->wev = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
 
+	bufferevent_base_set(ci->base, ci->rev);
+	bufferevent_base_set(ci->base, ci->wev);
+
 	session->ci = ci;
 
 	dbmail_imap_session_reset_callbacks(session);
 
 	send_greeting(session);
+	
+	if (ci->rx != STDIN_FILENO)
+		event_base_dispatch(ci->base);
 	
 	return EOF;
 }

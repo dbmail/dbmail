@@ -378,6 +378,7 @@ u64_t db_insert_result(C c, R r)
 
 int db_begin_transaction(C c)
 {
+	TRACE(TRACE_DEBUG,"BEGIN");
 	if (! Connection_beginTransaction(c))
 		return DM_EQUERY;
 	return DM_SUCCESS;
@@ -385,6 +386,7 @@ int db_begin_transaction(C c)
 
 int db_commit_transaction(C c)
 {
+	TRACE(TRACE_DEBUG,"COMMIT");
 	if (! Connection_commit(c)) {
 		db_rollback_transaction(c);
 		return DM_EQUERY;
@@ -395,6 +397,7 @@ int db_commit_transaction(C c)
 
 int db_rollback_transaction(C c)
 {
+	TRACE(TRACE_DEBUG,"ROLLBACK");
 	if (! Connection_rollback(c))
 		return DM_EQUERY;
 	return DM_SUCCESS;

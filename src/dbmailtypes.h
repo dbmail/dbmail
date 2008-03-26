@@ -195,6 +195,7 @@ typedef enum {
 
 typedef struct {
 	int rx, tx;			/* read and write filehandles */
+	struct event_base *base;	/* event base */
 	struct bufferevent *rev, *wev;  /* read bufferevent, write bufferevent */
 	void (*cb_read) (void *);	// pointers to event callbacks
 	void (*cb_time) (void *);

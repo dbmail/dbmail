@@ -147,6 +147,17 @@ END_TEST
 
 START_TEST(test_db_stmt_set_str)
 {
+	C c; S s; R r;
+	c = db_con_get();
+	s = db_stmt_prepare(c, "select user_idnr from dbmail_users where userid=?");
+	fail_unless(s != NULL, "db_stmt_prepare failed");
+	fail_unless(db_stmt_set_str(s, 1, "testuser1"), "db_stmt_set_str failed");
+	
+	r = db_stmt_query(s);
+	fail_unless(r != NULL, "db_stmt_query failed");
+	fail_unless(db_result_next(r), "db_result_next failed");
+	printf("[%llu]\n", db_result_get_u64(r, 0));
+	db_con_close(c);
 
 }
 END_TEST
@@ -1217,7 +1228,7 @@ Suite *dbmail_db_suite(void)
 	tcase_add_test(tc_db, test_db_stmt_prepare);
 //	tcase_add_test(tc_db, test_db_stmt_set_int);
 //	tcase_add_test(tc_db, test_db_stmt_set_u64);
-//	tcase_add_test(tc_db, test_db_stmt_set_str);
+	tcase_add_test(tc_db, test_db_stmt_set_str);
 //	tcase_add_test(tc_db, test_db_stmt_set_blob);
 	tcase_add_test(tc_db, test_db_stmt_exec);
 
