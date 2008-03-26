@@ -28,8 +28,8 @@
 
 extern GTree * global_cache;
 
-extern volatile db_param_t * _db_params;
-#define DBPFX _db_params->pfx
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 #define MESSAGE_MAX_LINE_SIZE 1024
 
@@ -320,7 +320,6 @@ static const char * find_boundary(const char *s)
 
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
-	INIT_QUERY;
 	C c; R r; int t = FALSE;
 	char *str = NULL;
 	const char *boundary = NULL;
@@ -332,20 +331,20 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	gboolean is_header = TRUE, prev_header;
 	GString *m = NULL;
 	const void *blob;
+	field_t frag;
 	gboolean finalized=FALSE;
 
 	assert(dbmail_message_get_physid(self));
-
-	snprintf(query, DEF_QUERYSIZE, "SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,data "
-		"FROM %smimeparts p "
-		"JOIN %spartlists l ON p.id = l.part_id "
-		"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
-		"WHERE l.physmessage_id = %llu ORDER BY l.part_key,l.part_order ASC", 
-		date2char_str("ph.internal_date"), DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
+	date2char_str("ph.internal_date", &frag);
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,data "
+			"FROM %smimeparts p "
+			"JOIN %spartlists l ON p.id = l.part_id "
+			"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
+			"WHERE l.physmessage_id = %llu ORDER BY l.part_key,l.part_order ASC", 
+			frag, DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
 		
 		m = g_string_new("");
 
@@ -1149,6 +1148,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	INIT_QUERY;
 	C c; R r;
 	DbmailMessage *store;
+	field_t frag;
 	char *internal_date = NULL;
 	
 	assert(dbmail_message_get_physid(self));
@@ -1160,7 +1160,8 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 
 	self = store;
 
-	snprintf(query, DEF_QUERYSIZE, query_template, date2char_str("p.internal_date"), DBPFX, DBPFX, dbmail_message_get_physid(self));
+	date2char_str("p.internal_date", &frag);
+	snprintf(query, DEF_QUERYSIZE, query_template, frag, DBPFX, DBPFX, dbmail_message_get_physid(self));
 
 	c = db_con_get();
 	if (! (r = db_query(c, query))) {
@@ -1415,14 +1416,18 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *id)
 {
 	u64_t *tmp = g_new0(u64_t,1);
-	//u64_t *cid;
-	//gpointer cacheid;
+	gpointer cacheid;
 	gchar *case_header, *safe_header, *frag;
 	C c; R r; S s;
 	int try=3, t = FALSE;
 
 	// rfc822 headernames are case-insensitive
 	safe_header = g_ascii_strdown(header,-1);
+	if ((cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)safe_header)) != NULL) {
+		*id = *(u64_t *)cacheid;
+		return 1;
+	}
+
 	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
 	frag = db_returning("id");
 

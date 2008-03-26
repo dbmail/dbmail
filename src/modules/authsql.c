@@ -27,8 +27,8 @@
 #include "dbmail.h"
 #define THIS_MODULE "auth"
 
-extern db_param_t * _db_params;
-#define DBPFX _db_params->pfx
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 /* string to be returned by auth_getencryption() */
 #define _DESCSTRLEN 50

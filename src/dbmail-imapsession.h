@@ -125,6 +125,7 @@ int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
 int dbmail_imap_session_idle(ImapSession *self);
 int dbmail_imap_session_mailbox_show_info(ImapSession * self);
+int dbmail_imap_session_mailbox_flags(ImapSession * self);
 int dbmail_imap_session_mailbox_open(ImapSession * self, const char * mailbox);
 int dbmail_imap_session_mailbox_close(ImapSession *self);
 

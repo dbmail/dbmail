@@ -255,9 +255,8 @@ int config_get_value(const field_t name, const char *service_name,
 /* some common used functions reading config options */
 /**
  \brief get parameters for database connection
- \param db_params list of database parameters (db_param_t)
 */
-db_param_t * GetDBParams(void);
+void GetDBParams(void);
 /** 
  \brief set the overall trace level, using the value in cfg_items
  \param service_name name of service to get trace level for.

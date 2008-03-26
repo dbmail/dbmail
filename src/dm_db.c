@@ -36,9 +36,7 @@ const char *imap_flag_desc[] = {
 const char *imap_flag_desc_escaped[] = {
 	"\\Seen", "\\Answered", "\\Deleted", "\\Flagged", "\\Draft", "\\Recent" };
 
-
-/* write-once global variable */
-volatile db_param_t * _db_params;
+extern db_param_t _db_params;
 
 /*
  * builds query values for matching mailbox names case insensitivity
@@ -111,7 +109,7 @@ void mailbox_match_free(struct mailbox_match *m)
 
 
 
-#define DBPFX _db_params->pfx
+#define DBPFX _db_params.pfx
 /** list of tables used in dbmail */
 #define DB_NTABLES 24
 const char *DB_TABLENAMES[DB_NTABLES] = {
@@ -154,17 +152,17 @@ int db_connect(void)
 	int sweepInterval = 120;
 	C c;
 	GString *dsn = g_string_new("");
-	g_string_append_printf(dsn,"%s://",_db_params->driver);
-	if (_db_params->host)
-		g_string_append_printf(dsn,"%s", _db_params->host);
-	if (_db_params->port)
-		g_string_append_printf(dsn,":%u", _db_params->port);
-	if (_db_params->db)
-		g_string_append_printf(dsn,"/%s", _db_params->db);
-	if (_db_params->user && strlen((const char *)_db_params->user)) {
-		g_string_append_printf(dsn,"?user=%s", _db_params->user);
-		if (_db_params->pass && strlen((const char *)_db_params->pass)) 
-			g_string_append_printf(dsn,"&password=%s", _db_params->pass);
+	g_string_append_printf(dsn,"%s://",_db_params.driver);
+	if (_db_params.host)
+		g_string_append_printf(dsn,"%s", _db_params.host);
+	if (_db_params.port)
+		g_string_append_printf(dsn,":%u", _db_params.port);
+	if (_db_params.db)
+		g_string_append_printf(dsn,"/%s", _db_params.db);
+	if (_db_params.user && strlen((const char *)_db_params.user)) {
+		g_string_append_printf(dsn,"?user=%s", _db_params.user);
+		if (_db_params.pass && strlen((const char *)_db_params.pass)) 
+			g_string_append_printf(dsn,"&password=%s", _db_params.pass);
 	}
 	TRACE(TRACE_DEBUG, "db at url: [%s]", dsn->str);
 	url = URL_new(dsn->str);
@@ -207,7 +205,7 @@ int db_check_connection(C c)
 C db_con_get(void)
 {
 	C c = ConnectionPool_getConnection(pool);
-//	if (MATCH(_db_params->driver,"postgresql"))
+//	if (MATCH(_db_params.driver,"postgresql"))
 //		Connection_executeQuery(c, "select 1=1"); // work around for bug in zdb
 	return c;
 }
@@ -281,13 +279,15 @@ R db_query(C c, const char *q, ...)
 		/* This is signed on the chance that ntpd ran during the query
 		 * so it might look like it went back in time. */
 		int elapsed = (int)((time_t) (after - before));
-		TRACE(TRACE_DEBUG, "last query took [%d] seconds", elapsed);
-		if (elapsed > (int)_db_params->query_time_warning)
-			TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", query, elapsed);
-		else if (elapsed > (int)_db_params->query_time_message)
-			TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", query, elapsed);
-		else if (elapsed > (int)_db_params->query_time_info)
-			TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", query, elapsed);
+		if (elapsed) {
+			TRACE(TRACE_DEBUG, "last query took [%d] seconds", elapsed);
+			if (elapsed > (int)_db_params.query_time_warning)
+				TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", query, elapsed);
+			else if (elapsed > (int)_db_params.query_time_message)
+				TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", query, elapsed);
+			else if (elapsed > (int)_db_params.query_time_info)
+				TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", query, elapsed);
+		}
 	}
 
 	return r;
@@ -553,18 +553,7 @@ static const char * db_get_pgsql_sql(sql_fragment_t frag)
 
 const char * db_get_sql(sql_fragment_t frag)
 {
-	static dm_driver_t driver = 0;
-
-	if (! driver) {
-		if (MATCH((const char *)_db_params->driver,"sqlite"))
-			driver = DM_DRIVER_SQLITE;
-		else if (MATCH((const char *)_db_params->driver,"mysql"))
-			driver = DM_DRIVER_MYSQL;
-		else if (MATCH((const char *)_db_params->driver,"postgresql"))
-			driver = DM_DRIVER_POSTGRESQL;
-	}
-
-	switch(driver) {
+	switch(_db_params.db_driver) {
 		case DM_DRIVER_SQLITE:
 			return db_get_sqlite_sql(frag);
 		case DM_DRIVER_MYSQL:
@@ -997,7 +986,8 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t *
 	
 	frag = db_returning("id");
 	if (internal_date != NULL) {
-		char *to_date_str = char2date_str(internal_date);
+		field_t to_date_str;
+		char2date_str(internal_date, &to_date_str);
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
 			 "VALUES (0, %s) %s", DBPFX,to_date_str, frag);
@@ -1652,7 +1642,7 @@ static int mailbox_empty(u64_t mailbox_idnr)
 /** get the total size of messages in a mailbox. Does not work recursively! */
 int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_size)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r = NULL; int t = DM_SUCCESS;
 	INIT_QUERY;
 	assert(mailbox_size != NULL);
 
@@ -2492,13 +2482,12 @@ static int db_getmailbox_mtime(MailboxInfo * mb)
 			t = DM_EQUERY;
 		}
 	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
+		mb->mtime = (time_t)0;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY) return t;
+	if (! mb->name) return DM_EQUERY;
 
 	TRACE(TRACE_DEBUG,"mtime [%lu]", mb->mtime);
 
@@ -3783,32 +3772,26 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid)
 	return t;
 }
 
-char *date2char_str(const char *column)
+int date2char_str(const char *column, field_t *frag)
 {
-	static int bufno;
-	static char buflist[4][DEF_FRAGSIZE];
-	char *buffer = buflist[3 * ++bufno], *buf = buffer;
-
-	memset(buf, 0, DEF_FRAGSIZE);
-	snprintf(buf, DEF_FRAGSIZE, db_get_sql(SQL_TO_CHAR), column);
-
-	return buffer;
+	assert(frag);
+	memset(frag, 0, sizeof(field_t));
+	snprintf((char *)frag, sizeof(field_t), db_get_sql(SQL_TO_CHAR), column);
+	return 0;
 }
 
-char *char2date_str(const char *date)
+int char2date_str(const char *date, field_t *frag)
 {
-	static int bufno;
-	static char buflist[4][DEF_FRAGSIZE];
-	char *buffer = buflist[3 * ++bufno], *buf = buffer;
 	char *qs;
 
-	memset(buf, 0, DEF_FRAGSIZE);
+	assert(frag);
+	memset(frag, 0, sizeof(field_t));
 
 	qs = g_strdup_printf("'%s'", date);
-	snprintf(buf, DEF_FRAGSIZE, db_get_sql(SQL_TO_DATETIME), qs);
+	snprintf((char *)frag, sizeof(field_t), db_get_sql(SQL_TO_DATETIME), qs);
 	g_free(qs);
 
-	return buffer;
+	return 0;
 }
 
 int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_username)

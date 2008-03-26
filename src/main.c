@@ -39,8 +39,6 @@
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
-extern volatile db_param_t * _db_params;	/* set up database login data */
-
 int brute_force = 0;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
@@ -225,7 +223,7 @@ int main(int argc, char *argv[])
 
 	}
 	SetTraceLevel("SMTP");
-	_db_params = GetDBParams();
+	GetDBParams();
 
 	if (db_connect() != 0) {
 		TRACE(TRACE_ERROR, "database connection failed");

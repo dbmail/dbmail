@@ -12,8 +12,6 @@
 
 static sort_func_t *sort = NULL;
 
-extern volatile db_param_t * _db_params;
-
 /* Returns:
  *  1 on modules unsupported
  *  0 on success

@@ -36,8 +36,6 @@
 
 extern char * multipart_message;
 extern char * configFile;
-extern volatile db_param_t * _db_params;
-
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
@@ -70,7 +68,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	_db_params = GetDBParams();
+	GetDBParams();
 	db_connect();
 	auth_connect();
 	g_mime_init(0);

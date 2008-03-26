@@ -940,8 +940,8 @@ int db_acl_get_identifier(u64_t mboxid, /*@out@*/ GList  **identifier_list);
  * database function for the query (TO_CHAR(date,format) for Postgres, 
  * DATE_FORMAT(date, format) for MySQL).
  */
-char *date2char_str(const char *column);
-char *char2date_str(const char *date);
+int date2char_str(const char *column, field_t *frag);
+int char2date_str(const char *date, field_t *frag);
 
 
 /* 

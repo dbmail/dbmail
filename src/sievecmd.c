@@ -40,9 +40,6 @@ int reallyquiet = 0;
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
-/* set up database login data */
-extern volatile db_param_t * _db_params;
-
 static int do_showhelp(void);
 static int do_list(u64_t user_idnr);
 static int do_activate(u64_t user_idnr, char *name);
@@ -210,7 +207,7 @@ int main(int argc, char *argv[])
         }
                 
 	SetTraceLevel("DBMAIL");
-	_db_params = GetDBParams();
+	GetDBParams();
 
 	/* Open database connection */
 	if (db_connect() != 0) {

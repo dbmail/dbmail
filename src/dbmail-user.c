@@ -25,9 +25,6 @@
 
 extern char *configFile;
 
-/* database login data */
-extern volatile db_param_t * _db_params;
-
 #define SHADOWFILE "/etc/shadow"
 #define THIS_MODULE "user"
 

@@ -35,8 +35,6 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern volatile db_param_t *_db_params;
-
 extern char *multipart_message;
 extern char *multipart_message_part;
 extern char *raw_lmtp_data;
@@ -53,7 +51,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	_db_params = GetDBParams();
+	GetDBParams();
 	db_connect();
 	auth_connect();
 }

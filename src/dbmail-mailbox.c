@@ -25,8 +25,8 @@
 
 #include "dbmail.h"
 #define THIS_MODULE "mailbox"
-extern volatile db_param_t * _db_params;
-#define DBPFX _db_params->pfx
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 /* internal utilities */
 
@@ -186,9 +186,11 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 	u64_t *uid, *msn;
 	u64_t id;
 	C c; R r; int t = FALSE;
+	field_t frag;
 	INIT_QUERY;
 	
 	k = 0;
+	date2char_str("internal_date", &frag);
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
 		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
@@ -196,7 +198,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 		 "WHERE pm.id = msg.physmessage_id "
 		 "AND mailbox_idnr = %llu AND status IN (%d,%d) "
 		 "ORDER BY message_idnr ASC",
-		 date2char_str("internal_date"),DBPFX,DBPFX, self->id,
+		 frag ,DBPFX,DBPFX, self->id,
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	mailbox_uid_msn_new(self);

@@ -32,8 +32,6 @@ char *configFile = DEFAULT_CONFIG_FILE;
 #define SHADOWFILE "/etc/shadow"
 #define PNAME "dbmail/user"
 
-extern volatile db_param_t * _db_params;
-
 /* UI policy */
 int yes_to_all = 0;
 int no_to_all = 0;
@@ -307,7 +305,7 @@ int main(int argc, char *argv[])
         }
                 
 	SetTraceLevel("DBMAIL");
-	_db_params = GetDBParams();
+	GetDBParams();
 
 	/* open database connection */
 	if (db_connect() != 0) {

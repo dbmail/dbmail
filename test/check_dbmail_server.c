@@ -35,7 +35,6 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern volatile db_param_t *_db_params;
 
 
 /* we need this one because we can't directly link imapd.o */
@@ -51,7 +50,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	_db_params = GetDBParams();
+	GetDBParams();
 	db_connect();
 	g_mime_init(0);
 }

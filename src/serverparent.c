@@ -30,7 +30,6 @@
 #define THIS_MODULE "serverparent"
 
 /* set up database login data */
-extern volatile db_param_t * _db_params;
 
 static char *configFile = DEFAULT_CONFIG_FILE;
 
@@ -247,7 +246,7 @@ void DoConfig(serverConfig_t * config, const char * const service)
 	}
 	
 	LoadServerConfig(config, service);
-	_db_params = GetDBParams();
+	GetDBParams();
 }
 
 void LoadServerConfig(serverConfig_t * config, const char * const service)

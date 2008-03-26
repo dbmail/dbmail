@@ -92,6 +92,7 @@ typedef char timestring_t[TIMESTRING_SIZE];
 
 /** parameters for the database connection */
 typedef struct {
+	dm_driver_t	db_driver; // 
 	field_t driver;         /**< database driver: mysql, pgsql, sqlite */
 	field_t authdriver;     /**< authentication driver: sql, ldap */
 	field_t sortdriver;     /**< sort driver: sieve or nothing at all */

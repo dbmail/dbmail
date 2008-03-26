@@ -29,8 +29,8 @@
 #define THIS_MODULE "maintenance"
 #define PNAME "dbmail/maintenance"
 
-extern volatile db_param_t * _db_params;
-#define DBPFX _db_params->pfx
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 /* Loudness and assumptions. */
 int yes_to_all = 0;
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 
 	config_read(configFile);
 	SetTraceLevel("DBMAIL");
-	_db_params = GetDBParams();
+	GetDBParams();
 
 	qverbosef("Opening connection to database... \n");
 	if (db_connect() != 0) {
@@ -315,11 +315,11 @@ int main(int argc, char *argv[])
 static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
 {
 	C c; R r;
-	char *to_date_str;
+	field_t to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
 
-	to_date_str = char2date_str(lasttokeep);
+	char2date_str(lasttokeep, &to_date_str);
 
 	c = db_con_get();
 	if (! (r = db_query(c, "SELECT COUNT(*) FROM %spbsp WHERE since < %s", DBPFX, to_date_str))) {
@@ -336,19 +336,19 @@ static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
 
 static int db_cleanup_iplog(timestring_t lasttokeep)
 {
-	char *to_date_str;
-	to_date_str = char2date_str(lasttokeep);
+	field_t to_date_str;
+	char2date_str(lasttokeep, &to_date_str);
 	return db_update("DELETE FROM %spbsp WHERE since < %s", DBPFX, to_date_str);
 }
 
 static int db_count_replycache(timestring_t lasttokeep, u64_t *rows)
 {
 	C c; R r; int t = FALSE;
-	char *to_date_str;
+	field_t to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
 
-	to_date_str = char2date_str(lasttokeep);
+	char2date_str(lasttokeep, &to_date_str);
 
 	c = db_con_get();
 	TRY
@@ -367,7 +367,8 @@ static int db_count_replycache(timestring_t lasttokeep, u64_t *rows)
 
 static int db_cleanup_replycache(timestring_t lasttokeep)
 {
-	char *to_date_str = char2date_str(lasttokeep);
+	field_t to_date_str;
+	char2date_str(lasttokeep, &to_date_str);
 	return db_update("DELETE FROM %sreplycache WHERE lastseen < %s", DBPFX, to_date_str);
 }
 

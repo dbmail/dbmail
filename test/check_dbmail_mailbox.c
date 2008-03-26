@@ -36,8 +36,8 @@
 
 extern char * multipart_message;
 extern char * configFile;
-extern volatile db_param_t *_db_params;
-#define DBPFX _db_params->pfx
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 
 
@@ -105,7 +105,7 @@ void setup(void)
 {
 	configure_debug(5,0);
 	config_read(configFile);
-	_db_params = GetDBParams();
+	GetDBParams();
 	db_connect();
 	auth_connect();
 	g_mime_init(0);

@@ -37,7 +37,6 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern volatile db_param_t * _db_params;
 extern int quiet;
 extern int reallyquiet;
 
@@ -77,7 +76,7 @@ void setup(void)
 		printf( "Config file not found: %s\n", configFile );
 		exit(1);
 	}
-	_db_params = GetDBParams();
+	GetDBParams();
 	db_connect();
 	auth_connect();
 

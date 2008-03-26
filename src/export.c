@@ -33,8 +33,6 @@ int quiet = 0;
 int reallyquiet = 0;
 int verbose = 0;
 
-extern volatile db_param_t * _db_params;
-
 void do_showhelp(void)
 {
 	printf(
@@ -378,7 +376,7 @@ int main(int argc, char *argv[])
         }
                 
 	SetTraceLevel("DBMAIL");
-	_db_params = GetDBParams();
+	GetDBParams();
 
 	/* open database connection */
 	if (db_connect() != 0) {

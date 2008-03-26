@@ -33,8 +33,8 @@
 #define MAX_ARGS 512
 #define IDLE_TIMEOUT 30
 
-extern volatile db_param_t * _db_params;
-#define DBPFX _db_params->pfx
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 gboolean imap_feature_idle_status = FALSE;
 
@@ -1341,9 +1341,7 @@ int check_state_and_args(ImapSession * self, const char *command, int minargs, i
 	if (state != -1) {
 		if (self->state != state) {
 			if (!  (state == IMAPCS_AUTHENTICATED && self->state == IMAPCS_SELECTED)) {
-				dbmail_imap_session_printf(self,
-					"%s BAD %s command received in invalid state\r\n",
-					self->tag, command);
+				dbmail_imap_session_printf(self, "%s BAD %s command received in invalid state\r\n", self->tag, self->command);
 				return 0;
 			}
 		}
@@ -1353,9 +1351,7 @@ int check_state_and_args(ImapSession * self, const char *command, int minargs, i
 	for (i = 0; i < minargs; i++) {
 		if (!self->args[self->args_idx+i]) {
 			/* error: need more args */
-			dbmail_imap_session_printf(self,
-				"%s BAD missing argument%s to %s\r\n", self->tag,
-				(minargs == 1) ? "" : "(s)", command);
+			dbmail_imap_session_printf(self, "%s BAD missing argument%s to %s\r\n", self->tag, (minargs == 1) ? "" : "(s)", self->command);
 			return 0;
 		}
 	}
@@ -1364,8 +1360,7 @@ int check_state_and_args(ImapSession * self, const char *command, int minargs, i
 
 	if (maxargs && (i > maxargs)) {
 		/* error: too many args */
-		dbmail_imap_session_printf(self, "%s BAD too many arguments to %s\r\n", self->tag,
-			command);
+		dbmail_imap_session_printf(self, "%s BAD too many arguments to %s\r\n", self->tag, self->command);
 		return 0;
 	}
 
@@ -1818,15 +1813,12 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	}
 	return 0;
 }
-int dbmail_imap_session_mailbox_show_info(ImapSession * self) 
+
+int dbmail_imap_session_mailbox_flags(ImapSession * self)
 {
-	GString *keywords;
 	GString *string = g_string_new("\\Seen \\Answered \\Deleted \\Flagged \\Draft");
-
-	dbmail_imap_session_mailbox_status(self, TRUE);
-
 	if (self->mailbox->info->keywords) {
-		keywords = g_list_join(self->mailbox->info->keywords," ");
+		GString *keywords = g_list_join(self->mailbox->info->keywords," ");
 		g_string_append_printf(string, " %s", keywords->str);
 		g_string_free(keywords,TRUE);
 	}
@@ -1836,7 +1828,15 @@ int dbmail_imap_session_mailbox_show_info(ImapSession * self)
 
 	/* permanent flags */
 	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", string->str);
+	g_string_free(string,TRUE);
 
+	return 0;
+}
+
+int dbmail_imap_session_mailbox_show_info(ImapSession * self) 
+{
+	dbmail_imap_session_mailbox_status(self, TRUE);
+	dbmail_imap_session_mailbox_flags(self);
 	/* UIDNEXT */
 	dbmail_imap_session_printf(self, "* OK [UIDNEXT %llu] Predicted next UID\r\n",
 		self->mailbox->info->msguidnext);
@@ -1845,7 +1845,6 @@ int dbmail_imap_session_mailbox_show_info(ImapSession * self)
 	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
 		self->mailbox->info->uid);
 
-	g_string_free(string,TRUE);
 	return 0;
 }
 	

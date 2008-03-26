@@ -32,8 +32,8 @@
 #define _GNU_SOURCE
 #endif
 
-extern volatile db_param_t * _db_params;
-#define DBPFX _db_params->pfx
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 #ifndef MAX_RETRIES
 #define MAX_RETRIES 12
@@ -825,8 +825,15 @@ int _ic_status(ImapSession *self)
 
 	/* check if mailbox exists */
 	if (! db_findmailbox(self->args[0], self->userid, &id)) {
-		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
-		return 1;
+		/* create missing INBOX for this authenticated user */
+		if ((! id ) && (strcasecmp(self->args[0], "INBOX")==0)) {
+			TRACE(TRACE_INFO, "[%p] Auto-creating INBOX for user id [%llu]", self, self->userid);
+			db_createmailbox("INBOX", self->userid, &id);
+		}
+		if (! id) {
+			dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
+			return 1;
+		}
 	}
 
 	mb = dbmail_imap_session_mbxinfo_lookup(self, id);
@@ -1638,6 +1645,14 @@ int _ic_store(ImapSession *self)
  		if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS)
  			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
   	}	
+
+	if (cmd->action == IMAPFA_ADD) {
+		guint l = g_list_length(self->mailbox->info->keywords);
+		g_list_merge(&self->mailbox->info->keywords, cmd->keywords, cmd->action, (GCompareFunc)g_ascii_strcasecmp);
+		if ( l < g_list_length(self->mailbox->info->keywords) )
+			dbmail_imap_session_mailbox_flags(self);
+		
+	}
 
 	if (result == DM_SUCCESS)
 		dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag, self->use_uid ? "UID " : "");
