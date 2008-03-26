@@ -141,7 +141,7 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 			// Set deleted status on each message
 			// Following this, dbmail-util -p sets purge status
 			if (delete_after_dump & 2) {
-				if (db_set_message_status(*(u64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
+				if (! db_set_message_status(*(u64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
 					qerrorf("Error setting status for message [%llu]\n", *(u64_t *)ids->data);
 					result = -1;
 				}
@@ -168,8 +168,7 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 {
 	u64_t user_idnr = 0, owner_idnr = 0, mailbox_idnr = 0;
 	char *dumpfile = NULL, *mailbox = NULL, *search_mailbox = NULL, *dir = NULL;
-	u64_t *children;
-	unsigned nchildren, i;
+	GList *children = NULL;
 	int result = 0;
 
 	/* Verify the existence of this user */
@@ -198,7 +197,7 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 	}
 
 	/* FIXME: What are the possible error conditions here? */
-	db_findmailbox_by_regex(user_idnr, search_mailbox, &children, &nchildren, 0);
+	db_findmailbox_by_regex(user_idnr, search_mailbox, &children, 0);
 
 	/* Decision process for basedir vs. outfile:
 	 *   If we're dumping one mailbox for one user, it goes to
@@ -214,42 +213,47 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 		dumpfile = outfile;
 	}
 
-	qerrorf("Exporting [%u] mailboxes for [%s]\n", nchildren, user);
-	for (i = 0; i < nchildren; i++) {
-		mailbox_idnr = children[i];
-		db_getmailboxname(children[i], user_idnr, mailbox);			
+	children = g_list_first(children);
+
+	qerrorf("Exporting [%u] mailboxes for [%s]\n", g_list_length(children), user);
+
+	while (children) {
+		mailbox_idnr = *(u64_t *)children->data;
+		db_getmailboxname(mailbox_idnr, user_idnr, mailbox);			
 		if (! db_get_mailbox_owner(mailbox_idnr, &owner_idnr)) {
 			qerrorf("Error checking mailbox ownership");
 			goto cleanup;
 		}
-		if (owner_idnr != user_idnr)
-			continue;
+		if (owner_idnr == user_idnr) {
+			if (basedir) {
+				/* Prepare the directory */
+				dumpfile = g_strdup_printf("%s/%s/%s.mbox", basedir, user, mailbox);
 
-		if (basedir) {
-			/* Prepare the directory */
-			dumpfile = g_strdup_printf("%s/%s/%s.mbox", basedir, user, mailbox);
+				dir = g_path_get_dirname(dumpfile);
+				if (g_mkdir_with_parents(dir, 0700)) {
+					qerrorf("can't create directory [%s]\n", dir);
+					result = -1;
+					goto cleanup;
+				}
+			}
 
-			dir = g_path_get_dirname(dumpfile);
-			if (g_mkdir_with_parents(dir, 0700)) {
-				qerrorf("can't create directory [%s]\n", dir);
-				result = -1;
+			qerrorf(" export mailbox %s -> %s\n", mailbox, dumpfile);
+			if ((result = mailbox_dump(mailbox_idnr, dumpfile, search, delete_after_dump)) != 0) {
+				qerrorf("error exporting mailbox %s -> %s\n", mailbox, dumpfile);
 				goto cleanup;
 			}
+			
+			if (basedir) {
+				g_free(dir);
+				g_free(dumpfile);
+			}
 		}
-
-		qerrorf(" export mailbox %s -> %s\n", mailbox, dumpfile);
-		if ((result = mailbox_dump(mailbox_idnr, dumpfile, search, delete_after_dump)) != 0) {
-			qerrorf("error exporting mailbox %s -> %s\n", mailbox, dumpfile);
-			goto cleanup;
-		}
-		
-		if (basedir) {
-			g_free(dir);
-			g_free(dumpfile);
-		}
+		if (! g_list_next(children)) break;
+		children = g_list_next(children);
 	}
 
 cleanup:
+	g_list_destroy(children);
 	g_free(search_mailbox);
 	g_free(mailbox);
 

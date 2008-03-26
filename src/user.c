@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
 
 		case 'p':
 			if (!passwdtype)
-				passwdtype = optarg;
+				passwdtype = g_strdup(optarg);
 			// else
 				// Complain about only one type allowed.
 			break;
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
 				passwdfile = optarg;
 			else
 				passwdfile = SHADOWFILE;
-			passwdtype = "shadow";
+			passwdtype = g_strdup("shadow");
 			break;
 
 		case 'g':
@@ -381,8 +381,7 @@ int main(int argc, char *argv[])
 			passwdtype = auth_getencryption(useridnr);
 		/* Convert the password and password type into a 
 		 * fully coded format, ready for the database. */
-		if (mkpassword(user, passwd, passwdtype, passwdfile,
-		               &password, &enctype)) {
+		if (mkpassword(user, passwd, passwdtype, passwdfile, &password, &enctype)) {
 			qerrorf("Error: unable to create a password.\n");
 			result = -1;
 			goto freeall;
@@ -432,18 +431,11 @@ int main(int argc, char *argv[])
 freeall:
 
 	/* Free the lists. */
-	if (alias_del) {
-		g_list_destroy(alias_del);
-	}
-	if (alias_add) {
-		g_list_destroy(alias_add);
-	}
-	if (fwds_del) {
-		g_list_destroy(fwds_del);
-	}
-	if (fwds_add) {
-		g_list_destroy(fwds_add);
-	}
+	if (alias_del) g_list_destroy(alias_del);
+	if (alias_add) g_list_destroy(alias_add);
+	if (fwds_del) g_list_destroy(fwds_del);
+	if (fwds_add) g_list_destroy(fwds_add);
+	if (passwdtype) g_free(passwdtype);
 
 	db_disconnect();
 	auth_disconnect();

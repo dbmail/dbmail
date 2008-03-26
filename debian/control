@@ -2,8 +2,8 @@ Source: dbmail
 Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
-Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libncurses5-dev, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev | libgmime2.1-dev, libldap2-dev, libsqlite3-dev, libpq-dev, libmysqlclient15-dev | libmysqlclient14-dev, libmhash-dev, pkg-config, libtool, asciidoc, xmlto, chrpath, po-debconf
-Standards-Version: 3.7.2
+Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libncurses5-dev, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev, libldap2-dev, libzdb-dev, libmhash-dev, pkg-config, libtool, asciidoc, xmlto, chrpath, po-debconf
+Standards-Version: 3.7.3
 
 Package: dbmail
 Architecture: any
@@ -23,7 +23,7 @@ Description: base package for the dbmail email solution
 
 Package: dbmail-pgsql
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
 Description: Postgresql module for Dbmail
  This package provides a module for adding Postgresql database 
  support to DBMAIL.
@@ -33,7 +33,7 @@ Description: Postgresql module for Dbmail
 
 Package: dbmail-mysql
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
 Description: MySQL module for Dbmail
  This package provides a module for adding MySQL database 
  support to DBMAIL.

@@ -415,13 +415,17 @@ static void worker_sock_cb(int sock, short event, void *arg)
 	struct sockaddr_in caddr;
 	struct event *ev = (struct event *)arg;
 	clientinfo_t *client;
+	C c;
 
 	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
-	if (db_check_connection()) {
+	c = db_con_get();
+	if (!db_check_connection(c)) {
+		db_con_close(c);
 		TRACE(TRACE_ERROR, "database has gone away");
 		ChildStopRequested=1;
 		return;
 	}
+	db_con_close(c);
 
 	/* reschedule */
 	event_add(ev, NULL);

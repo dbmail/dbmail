@@ -643,7 +643,7 @@ static void show_user(u64_t useridnr, int concise UNUSED)
 
 	auth_getclientid(useridnr, &cid);
 	auth_getmaxmailsize(useridnr, &quotum);
-	db_get_quotum_used(useridnr, &quotumused);
+	dm_quota_user_get(useridnr, &quotumused);
         
 	GList *out = NULL;
 	GString *s = g_string_new("");
@@ -681,33 +681,38 @@ static void show_user(u64_t useridnr, int concise UNUSED)
  */
 int do_empty(u64_t useridnr)
 {
-	int result;
+	int result = 0;
 
 	if (no_to_all) {
-		u64_t *children;
+		GList *children = NULL;
 		u64_t owner_idnr;
-		unsigned nchildren, i;
 		char mailbox[IMAP_MAX_MAILBOX_NAMELEN];
 
 		qprintf("You've requested to delete all mailboxes owned by user number [%llu]:\n", useridnr);
 
-		db_findmailbox_by_regex(useridnr, "*", &children, &nchildren, 0);
-		for (i = 0; i < nchildren; i++) {
+		db_findmailbox_by_regex(useridnr, "*", &children, 0);
+		children = g_list_first(children);
+
+		while (children) {
+			u64_t *mailbox_id = (u64_t *)children->data;
 			/* Given a list of mailbox id numbers, check if the
 			 * user actually owns the mailbox (because that means
 			 * it is on the hit list for deletion) and then look up
 			 * and print out the name of the mailbox. */
-			db_get_mailbox_owner(children[i], &owner_idnr);
+			db_get_mailbox_owner(*mailbox_id, &owner_idnr);
 			if (owner_idnr == useridnr) {
-				db_getmailboxname(children[i], useridnr, mailbox);			
+				db_getmailboxname(*mailbox_id, useridnr, mailbox);			
 				qprintf("%s\n", mailbox);
 			}
+			if (! g_list_next(children))
+				break;
+			children = g_list_next(children);
 		}
 
 		qprintf("please run again with -y to actually perform this action.\n");
 		return 1;
 	}
-//	if (yes_to_all) { // TODO: Require -y before taking such drastic action.
+	if (yes_to_all) {
 		qprintf("Emptying mailbox... ");
 		fflush(stdout);
         
@@ -716,7 +721,7 @@ int do_empty(u64_t useridnr)
 			qerrorf("Error. Please check the log.\n");
 		else
 			qprintf("Ok.\n");
-//	}
+	}
 
 	return result;
 }

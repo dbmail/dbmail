@@ -23,10 +23,9 @@
 
 static char * dm_digest(const unsigned char * hash, hashid type)
 {
-	static int bufno;
-	static char hexbuffer[8][128];
 	static const char hex[] = "0123456789abcdef";
-	char *buffer = hexbuffer[7 & ++bufno], *buf = buffer;
+	char *buffer = g_new0(char,256);
+	char *buf = buffer;
 	size_t i, j;
 
 	for (i = 0; i < mhash_get_block_size(type); i++) {

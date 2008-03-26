@@ -29,6 +29,9 @@
 #define THIS_MODULE "maintenance"
 #define PNAME "dbmail/maintenance"
 
+extern db_param_t * _db_params;
+#define DBPFX _db_params->pfx
+
 /* Loudness and assumptions. */
 int yes_to_all = 0;
 int no_to_all = 0;
@@ -313,30 +316,137 @@ int main(int argc, char *argv[])
 	return has_errors;
 }
 
+static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
+{
+	C c; R r;
+	char *to_date_str;
+	assert(rows != NULL);
+	*rows = 0;
+
+	to_date_str = char2date_str(lasttokeep);
+
+	c = db_con_get();
+	if (! (r = db_query(c, "SELECT COUNT(*) FROM %spbsp WHERE since < %s", DBPFX, to_date_str))) {
+		db_con_close(c);
+		return DM_EQUERY;
+	}
+
+	if (db_result_next(r))
+		*rows = db_result_get_u64(r,0);
+	db_con_close(c);
+
+	return DM_SUCCESS;
+}
+
+static int db_cleanup_iplog(timestring_t lasttokeep)
+{
+	char *to_date_str;
+	to_date_str = char2date_str(lasttokeep);
+	return db_update("DELETE FROM %spbsp WHERE since < %s", DBPFX, to_date_str);
+}
+
+static int db_count_replycache(timestring_t lasttokeep, u64_t *rows)
+{
+	C c; R r; int t = FALSE;
+	char *to_date_str;
+	assert(rows != NULL);
+	*rows = 0;
+
+	to_date_str = char2date_str(lasttokeep);
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT COUNT(*) FROM %sreplycache WHERE lastseen < %s", DBPFX, to_date_str);
+		if (db_result_next(r))
+			*rows = db_result_get_u64(r,0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+}
+
+static int db_cleanup_replycache(timestring_t lasttokeep)
+{
+	char *to_date_str = char2date_str(lasttokeep);
+	return db_update("DELETE FROM %sreplycache WHERE lastseen < %s", DBPFX, to_date_str);
+}
+
+static int db_count_deleted(u64_t * rows)
+{
+	C c; R r; int t = TRUE;
+	assert(rows != NULL); *rows = 0;
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT COUNT(*) FROM %smessages WHERE status = %d", DBPFX, MESSAGE_STATUS_DELETE);
+		if (db_result_next(r))
+			*rows = db_result_get_int(r,0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+}
+
+static int db_set_deleted(void)
+{
+	return db_update("UPDATE %smessages SET status = %d WHERE status = %d", DBPFX, MESSAGE_STATUS_PURGE, MESSAGE_STATUS_DELETE);
+}
+
+static int db_deleted_purge(void)
+{
+	return db_update("DELETE FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
+}
+
+static int db_deleted_count(u64_t * rows)
+{
+	C c; R r; int t = FALSE;
+	assert(rows); *rows = 0;
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT COUNT(*) FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
+		if (db_result_next(r))
+			*rows = db_result_get_int(r,0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+}
+
+
 int do_purge_deleted(void)
 {
 	u64_t deleted_messages;
 
 	if (no_to_all) {
 		qprintf("\nCounting messages with DELETE status...\n");
-		if (db_deleted_count(&deleted_messages) < 0) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
+		if (! db_deleted_count(&deleted_messages)) {
+			qerrorf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%llu] messages have DELETE status.\n",
-		    deleted_messages);
+		qprintf("Ok. [%llu] messages have DELETE status.\n", deleted_messages);
 	}
 	if (yes_to_all) {
 		qprintf("\nDeleting messages with DELETE status...\n");
-		if (db_deleted_purge(&deleted_messages) < 0) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
+		if (! db_deleted_purge()) {
+			qerrorf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%llu] messages deleted.\n", deleted_messages);
+		qprintf("Ok. Messages deleted.\n");
 	}
 	return 0;
 }
@@ -348,29 +458,24 @@ int do_set_deleted(void)
 	if (no_to_all) {
 		// TODO: Count messages to delete.
 		qprintf("\nCounting deleted messages that need the DELETE status set...\n");
-		if (db_count_deleted(&messages_set_to_delete) == -1) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
+		if (! db_count_deleted(&messages_set_to_delete)) {
+			qerrorf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%llu] messages need to be set for deletion.\n",
-		       messages_set_to_delete);
+		qprintf("Ok. [%llu] messages need to be set for deletion.\n", messages_set_to_delete);
 	}
 	if (yes_to_all) {
 		qprintf("\nSetting DELETE status for deleted messages...\n");
-		if (db_set_deleted(&messages_set_to_delete) == -1) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
+		if (! db_set_deleted()) {
+			qerrorf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%llu] messages set for deletion.\n",
-		       messages_set_to_delete);
+		qprintf("Ok. Messages set for deletion.\n");
 		qprintf("Re-calculating used quota for all users...\n");
-		if (db_calculate_quotum_all() < 0) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
+		if (dm_quota_rebuild() < 0) {
+			qerrorf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
@@ -499,7 +604,7 @@ int do_null_messages(void)
 			lost = g_list_first(lost);
 			while (lost) {
 				id = (u64_t *)lost->data;
-				if (db_set_message_status(*id, MESSAGE_STATUS_ERROR) < 0)
+				if (! db_set_message_status(*id, MESSAGE_STATUS_ERROR))
 					qerrorf("Warning: could not set status on message [%llu]. Check log.\n", *id);
 				else
 					qverbosef("[%llu] set to MESSAGE_STATUS_ERROR)\n", *id);
@@ -516,50 +621,13 @@ int do_null_messages(void)
 
 	time(&stop);
 	qverbosef("--- checking NULL messages took %g seconds\n", difftime(stop, start));
-#if 0
-	// 
-	//
-	// disabled in 2.3+
-	//
-	//
-	qprintf("\nChecking DBMAIL for NULL physmessages...\n");
-	time(&start);
-	if (db_icheck_null_physmessages(&lost) < 0) {
-		qerrorf("Failed, an error occured. Please check log.\n");
-		serious_errors = 1;
-		return -1;
-	}
-
-	count = g_list_length(lost);
-
-	if (count > 0) {
-		qerrorf("Ok. Found [%ld] physmessages without messageblocks.\n", count);
-
-		lost = g_list_first(lost);
-		while (lost) {
-			id = (u64_t *) lost->data;
-
-			if (db_delete_physmessage(*id) < 0)
-				qerrorf("Warning: could not delete physmessage [%llu]. Check log.\n", *id);
-			else
-				qverbosef("[%llu] deleted.\n", *id);
-
-			if (! g_list_next(lost))
-				break;
-			lost = g_list_next(lost);
-		}
-
-	} else {
-		qprintf("Ok. Found [%ld] physmessages without messageblocks.\n", count);
-	}
-
-	g_list_destroy(lost);
-
-	time(&stop);
-	qverbosef("--- checking NULL physmessages took %g seconds\n", difftime(stop, start));
-#endif
 	
 	return 0;
+}
+
+static int db_delete_messageblk(u64_t messageblk_idnr)
+{
+	return db_update("DELETE FROM %smessageblks WHERE messageblk_idnr = %llu", DBPFX, messageblk_idnr);
 }
 
 int do_check_integrity(void)
@@ -605,7 +673,7 @@ int do_check_integrity(void)
 			if (no_to_all) {
 				qerrorf("%llu ", *id);
 			} else if (yes_to_all) {
-				if (db_delete_messageblk(*id) < 0)
+				if (! db_delete_messageblk(*id))
 					qerrorf ("Warning: could not delete messageblock #%llu. Check log.\n", *id);
 				else
 					qerrorf ("%llu (removed from dbase)\n", *id);
@@ -640,7 +708,7 @@ int do_check_integrity(void)
 	if (count > 0) {
 		qerrorf("Ok. Found [%ld] unconnected physmessages", count);
 		if (yes_to_all) {
-			if (db_icheck_physmessages(TRUE) < 0)
+			if (! db_icheck_physmessages(TRUE))
 				qerrorf("Warning: could not delete orphaned physmessages. Check log.\n");
 			else
 				qerrorf("Ok. Orphaned physmessages deleted.\n");
@@ -682,7 +750,7 @@ int do_check_integrity(void)
 				if (no_to_all) {
 					qerrorf("%llu ", *id);
 				} else if (yes_to_all) {
-					if (db_delete_message(*id) < 0)
+					if (! db_delete_message(*id))
 						qerrorf ("Warning: could not delete message #%llu. Check log.\n", *id);
 					else
 						qerrorf ("%llu (removed from dbase)\n", *id);
@@ -962,14 +1030,14 @@ int do_check_iplog(const char *timespec)
 	}
 	if (yes_to_all) {
 		qprintf("\nRemoving IP entries older than [%s]...\n", timestring);
-		if (db_cleanup_iplog(timestring, &log_count) < 0) {
+		if (! db_cleanup_iplog(timestring)) {
 			qerrorf("Failed. Please check the log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 
-		qprintf("Ok. [%llu] IP entries were older than [%s].\n",
-		       log_count, timestring);
+		qprintf("Ok. IP entries older than [%s] removed.\n",
+		       timestring);
 	}
 	return 0;
 }
@@ -998,14 +1066,13 @@ int do_check_replycache(const char *timespec)
 	}
 	if (yes_to_all) {
 		qprintf("\nRemoving RC entries older than [%s]...\n", timestring);
-		if (db_cleanup_replycache(timestring, &log_count) < 0) {
+		if (! db_cleanup_replycache(timestring)) {
 			qerrorf("Failed. Please check the log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 
-		qprintf("Ok. [%llu] RC entries were older than [%s].\n",
-		       log_count, timestring);
+		qprintf("Ok. RC entries were older than [%s] cleaned.\n", timestring);
 	}
 	return 0;
 }

@@ -43,11 +43,15 @@ typedef struct {
 	char *command;
 	int command_type;
 	int timeout;
+	int loop; // idle loop counter
 	char **args;
 	u64_t args_idx;
 	fetch_items_t *fi;
 
 	DbmailMailbox *mailbox;	/* currently selected mailbox */
+	u64_t lo; // lower boundary for message ids
+	u64_t hi; // upper boundary for message ids
+	u64_t ceiling; // upper boundary during prefetching
 
 	// FIXME: there is too much redundancy here
 	DbmailMessage *message;

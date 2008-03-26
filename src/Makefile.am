@@ -42,6 +42,7 @@ COMMON = dbmail-user.c \
 	dm_debug.c \
 	dm_list.c \
 	dm_db.c \
+	dm_sievescript.c \
 	dm_acl.c \
 	dm_misc.c \
 	dm_pidfile.c \
@@ -55,9 +56,7 @@ SERVER = server.c \
 	clientsession.c \
 	dm_cidr.c
 
-MODULES = dbmodule.c \
-	authmodule.c \
-	sortmodule.c
+MODULES = authmodule.c sortmodule.c
 
 IMAPD = dm_quota.c \
 	dm_memblock.c \
@@ -111,7 +110,7 @@ AM_LDFLAGS = -export-dynamic @CRYPTLIB@
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(MODULES)
 else
 libdbmail_la_SOURCES = $(COMMON) $(SERVER)
-libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @INGRESLTLIB@ @SORTLTLIB@ @AUTHLTLIB@
+libdbmail_la_LIBADD = @SORTLTLIB@ @AUTHLTLIB@
 endif
 
 libdbmail_la_LDFLAGS = $(AM_LDFLAGS) @SOCKETLIB@

@@ -111,14 +111,18 @@ void client_session_bailout(ClientSession_t *session)
 
 void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
 {
+	C c;
 	ClientSession_t *session = (ClientSession_t *)arg;
 
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
-	if (db_check_connection()) {
+	c = db_con_get();
+	if (!db_check_connection(c)) {
+		db_con_close(c);
 		TRACE(TRACE_ERROR, "database connection error");
 		client_session_bailout(session);
 		return;
 	}
+	db_con_close(c);
 
 	session->ci->cb_read(session);
 }

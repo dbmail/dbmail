@@ -1,8 +1,6 @@
 /*
-  
-
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2005-2008 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -21,7 +19,7 @@
 */
 
 #include "dbmail.h"
-#define THIS_MODULE "imap"
+#define THIS_MODULE "quota"
 
 /* Allocate a quota structure for `n_resources' resources. 
  * Returns NULL on failure.
@@ -98,7 +96,7 @@ char *quota_get_quotaroot(u64_t useridnr, const char *mailbox,
 {
 	u64_t mailbox_idnr;
 
-	if (db_findmailbox(mailbox, useridnr, &mailbox_idnr) <= 0) {
+	if (! db_findmailbox(mailbox, useridnr, &mailbox_idnr)) {
 		*errormsg = "mailbox not found";
 		return NULL;
 	}
@@ -133,8 +131,8 @@ quota_t *quota_get_quota(u64_t useridnr, char *quotaroot, char **errormsg)
 		return NULL;
 	}
 
-	if (db_get_quotum_used(useridnr, &usage) == -1) {
-		TRACE(TRACE_ERROR, "db_get_quotum_used() failed\n");
+	if (dm_quota_user_get(useridnr, &usage) == -1) {
+		TRACE(TRACE_ERROR, "dm_quota_user_get() failed\n");
 		*errormsg = "internal error";
 		return NULL;
 	}

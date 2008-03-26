@@ -20,10 +20,6 @@ AC_MSG_RESULT([
  CFLAGS:                    $CFLAGS
  GLIB:                      $ac_glib_libs
  GMIME:                     $ac_gmime_libs
- MYSQL:                     $MYSQLLIB
- PGSQL:                     $PGSQLLIB
- SQLITE:                    $SQLITELIB
- INGRES:	            $INGRESLIB
  SIEVE:                     $SIEVEINC$SIEVELIB
  LDAP:                      $LDAPINC$LDAPLIB
  SHARED:                    $enable_shared
@@ -32,6 +28,7 @@ AC_MSG_RESULT([
  SOCKETS:                   $SOCKETLIB
  MHASH:                     $MHASHLIB
  LIBEVENT:                  $EVENTLIB
+ ZDB:                       $ZDBLIB
 
 ])
 ])
@@ -73,118 +70,6 @@ fi
 if test [ "$enable_shared" = "no" -a "$enable_static" = "no" ]; then
 	enable_shared="yes"
 fi
-
-])
-
-AC_DEFUN([DM_SQL_CHECK], [dnl
-
-usemysql="no"
-usepgsql="no"
-usesqlite="no"
-useingres="no"
-
-AC_ARG_WITH(mysql,
-            [  --with-mysql            use MySQL as database. 
-		Uses mysql_config for finding includes and libraries],
-            usemysql="$withval")
-AC_ARG_WITH(pgsql,
-	    [  --with-pgsql            use PostgreSQL as database. 
-		Uses pg_config for finding includes and libraries],
-            usepgsql="$withval")
-AC_ARG_WITH(sqlite,
-	    [  --with-sqlite           use SQLite3 as database. 
-	    Uses pkg-config for finding includes and libraries],
-            usesqlite="$withval")
-AC_ARG_WITH(ingres,
-	    [  --with-ingres           use Ingres as database. 
-	    Specify the II_SYSTEM location],
-            useingres="$withval")
-
-
-if test [ ! "$usemysql" = "yes" -a ! "$usepgsql" = "yes" -a ! "$usesqlite" = "yes" -a ! -d "$useingres" ]; then
-     AC_MSG_ERROR([You have to specify --with-mysql, --with-pgsql, --with-sqlite or --with-ingres to build.])
-fi
-
-])
-
-AC_DEFUN([DM_SQL_LIBS], [dnl
-if test [ "$usemysql" = "yes" ]; then
-    AC_PATH_PROG(mysqlconfig,mysql_config)
-    if test [ -z "$mysqlconfig" ]; then
-        AC_MSG_ERROR([mysql_config executable not found. Make sure mysql_config is in your path])
-    else
-	AC_MSG_CHECKING([MySQL headers])
-	MYSQLINC=`${mysqlconfig} --cflags`
-	AC_MSG_RESULT([$MYSQLINC])	
-        AC_MSG_CHECKING([MySQL libraries])
-        MYSQLLIB=`${mysqlconfig} --libs`
-        MYSQLALIB="modules/.libs/libmysql.a"
-	MYSQLLTLIB="modules/libmysql.la"
-        AC_MSG_RESULT([$MYSQLLIB])
-    fi
-fi   
-
-if test [ "$usepgsql" = "yes" ]; then
-    AC_PATH_PROG(pgsqlconfig,pg_config)
-    if test [ -z "$pgsqlconfig" ]; then
-        AC_MSG_ERROR([pg_config executable not found. Make sure pg_config is in your path])
-    else
-	AC_MSG_CHECKING([PostgreSQL headers])
-	PGINCDIR=`${pgsqlconfig} --includedir`
-	PGSQLINC="-I$PGINCDIR"
-	AC_MSG_RESULT([$PGSQLINC])
-        AC_MSG_CHECKING([PostgreSQL libraries])
-        PGLIBDIR=`${pgsqlconfig} --libdir`
-        PGSQLLIB="-L$PGLIBDIR -lpq"
-        PGSQLALIB="modules/.libs/libpgsql.a"
-	PGSQLLTLIB="modules/libpgsql.la"
-        AC_MSG_RESULT([$PGSQLLIB])
-    fi
-fi
-
-if test [ "$usesqlite" = "yes" ]; then
-    AC_PATH_PROG(sqliteconfig,pkg-config)
-    if test [ -z "$sqliteconfig" ]; then
-        AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
-    else
-	AC_MSG_CHECKING([SQLite3 headers])
-	SQLITEINC=`${sqliteconfig} --cflags sqlite3 --errors-to-stdout`
-	if test [ $? != 0 ]; then
-        	AC_MSG_ERROR([$SQLITEINC])
-	fi
-	AC_MSG_RESULT([$SQLITEINC])
-        AC_MSG_CHECKING([SQLite libraries])
-        SQLITELIB=`${sqliteconfig} --libs sqlite3 --errors-to-stdout`
-	if test [ $? != 0 ]; then
-        	AC_MSG_ERROR([$SQLITEINC])
-	fi
-        SQLITEALIB="modules/.libs/libsqlite.a"
-	SQLITELTLIB="modules/libsqlite.la"
-        AC_MSG_RESULT([$SQLITELIB])
-    	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\" \\\\/'  sql/sqlite/create_tables.sqlite`
-    fi
-else
-	SQLITECREATE="\"\" \\"
-fi
-
-if test [ -d "$useingres" ]; then
-	AC_MSG_CHECKING([Ingres headers])
-	INGRESINC="-I $useingres/ingres/files"
-	if test [ ! -d "$useingres/ingres/files" ]; then
-		AC_MSG_ERROR([$INGRESINC])
-	fi
-	AC_MSG_RESULT([$INGRESINC])
-	AC_MSG_CHECKING([Ingres libraries])
-	INGRESLIB="-L$useingres/ingres/lib -lingres -lpthread -lm -lc -lgcc_s"
-	if test [ ! -d "$useingres/ingres/lib" ]; then
-		AC_MSG_ERROR([$INGRESINC])
-	fi
-	INGRESALIB="modules/.libs/libmod_ingres.a"
-	INGRESLTLIB="modules/libmod_ingres.la"
-	AC_MSG_RESULT([$INGRESLIB])
-fi
-
-
 
 ])
 
@@ -388,7 +273,28 @@ if ( test [ "x$lookforldap" != "xno" ] || test [ "x$lookforauthldap" != "xno" ] 
 fi
 ])
 
+AC_DEFUN([DM_CHECK_ZDB], [dnl
+	AC_CHECK_HEADERS([URL.h ResultSet.h PreparedStatement.h Connection.h ConnectionPool.h SQLException.h],
+		[ZDBLIB="-lzdb"], 
+		[ZDBLIB="failed"],
+	[[
+#include <URL.h>
+#include <ResultSet.h>
+#include <PreparedStatement.h>
+#include <Connection.h>
+#include <ConnectionPool.h>
+#include <SQLException.h>	
+	]])
+	if test [ "x$ZDBLIB" = "xfailed" ]; then
+		AC_MSG_ERROR([Could not find ZDB library.])
+	else
+		LDFLAGS="$LDFLAGS $ZDBLIB"
+	fi
+])
 
+AC_DEFUN([DM_SET_SQLITECREATE], [dnl
+	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\" \\\\/'  sql/sqlite/create_tables.sqlite`
+])
 
 AC_DEFUN([DM_CHECK_MHASH], [dnl
 	AC_CHECK_HEADERS([mhash.h],[MHASHLIB="-lmhash"], [MHASHLIB="failed"])

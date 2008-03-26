@@ -465,19 +465,19 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 	
 	if (! user_idnr) {
 		TRACE(TRACE_ERROR, "no user_idnr specified");
-		return -1;
+		return FALSE;
 	}
 	if (! fieldname) {
 		TRACE(TRACE_ERROR, "no fieldname specified");
-		return -1;
+		return FALSE;
 	}
 	if (! newvalue) {
 		TRACE(TRACE_ERROR, "no new value specified");
-		return -1;
+		return FALSE;
 	}
 		
 	if (! (_ldap_dn = dm_ldap_user_getdn(user_idnr)))
-		return -1;
+		return FALSE;
 
 	newvalues[0] = (char *)newvalue;
 	newvalues[1] = NULL;
@@ -493,11 +493,11 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 	if (_ldap_err) {
 		TRACE(TRACE_ERROR,"dn: %s, %s: %s [%s]", _ldap_dn, fieldname, newvalue, ldap_err2string(_ldap_err));
 		ldap_memfree(_ldap_dn);
-		return -1;
+		return FALSE;
 	}
 	TRACE(TRACE_DEBUG,"dn: %s, %s: %s", _ldap_dn, fieldname, newvalue);
 	ldap_memfree(_ldap_dn);
-	return 0;
+	return TRUE;
 }
 
 
@@ -671,7 +671,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 
 	if (!username) {
 		TRACE(TRACE_ERROR, "got NULL as username");
-		return 0;
+		return FALSE;
 	}
 
 	/* fall back to db-user for DBMAIL_DELIVERY_USERNAME */
@@ -689,9 +689,9 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	TRACE(TRACE_DEBUG, "returned value is [%llu]", *user_idnr);
 
 	if (*user_idnr != 0)
-		return 1;
+		return TRUE;
 
-	return 0;
+	return FALSE;
 }
 
 /* Given a useridnr, find the account/login name
@@ -717,22 +717,18 @@ int auth_check_userid(u64_t user_idnr)
 	char *returnid = NULL;
 	char query[AUTH_QUERY_SIZE];
 	char *fields[] = { _ldap_cfg.field_nid, NULL };
-	int ret;
 	
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid, user_idnr);
 	returnid = __auth_get_first_match(query, fields);
 
 	if (returnid) {
-		ret = 0;
+		g_free(returnid);
 		TRACE(TRACE_DEBUG, "found user_idnr [%llu]", user_idnr);
-	} else {
-		ret = 1;
-		TRACE(TRACE_DEBUG, "didn't find user_idnr [%llu]", user_idnr);
-	}
+		return TRUE;
+	} 
+	TRACE(TRACE_DEBUG, "didn't find user_idnr [%llu]", user_idnr);
 
-	g_free(returnid);
-
-	return ret;
+	return FALSE;
 }
 
 
@@ -752,7 +748,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 
 	if (!user_idnr) {
 		TRACE(TRACE_ERROR, "got NULL as useridnr");
-		return -1;
+		return FALSE;
 	}
 
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid,
@@ -764,7 +760,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 
 	TRACE(TRACE_DEBUG, "found client_idnr [%llu]", *client_idnr);
 
-	return 1;
+	return TRUE;
 }
 
 
@@ -779,7 +775,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 
 	if (!user_idnr) {
 		TRACE(TRACE_ERROR, "got NULL as useridnr");
-		return 0;
+		return FALSE;
 	}
 
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid,
@@ -792,25 +788,22 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 
 	TRACE(TRACE_DEBUG, "returned value is [%llu]", *maxmail_size);
 
-	return 1;
+	return TRUE;
 }
 
 
 /*
  * auth_getencryption()
  *
- * returns a string describing the encryption used for the passwd storage
+ * returns an allocated string describing the encryption used for the passwd storage
  * for this user.
- * The string is valid until the next function call; in absence of any 
- * encryption the string will be empty (not null).
  *
- * If the specified user does not exist an empty string will be returned.
  */
 char *auth_getencryption(u64_t user_idnr UNUSED)
 {
 	/* ldap does not support fancy passwords, but return 
 	 * something valid for the sql shadow */
-	return "md5";
+	return g_strdup("md5");
 }
 		
 
@@ -1135,6 +1128,7 @@ static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name)
 int auth_change_username(u64_t user_idnr, const char *new_name)
 {
 	GString *newrdn;
+	C c; 
 	
 	if (!user_idnr) {
 		TRACE(TRACE_ERROR, "got NULL as useridnr");
@@ -1151,9 +1145,9 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	
 	TRACE(TRACE_DEBUG, "got DN [%s]", _ldap_dn);
 
-	
-	db_begin_transaction();
-	dm_ldap_user_shadow_rename(user_idnr, new_name);
+	// FIXME: atomically rename both the ldap RDN and the shadow record
+	if (dm_ldap_user_shadow_rename(user_idnr, new_name))
+		return -1;
 	
 	/* perhaps we have to rename the dn */
 	if (strcmp(_ldap_cfg.field_uid,_ldap_cfg.cn_string)==0) {
@@ -1167,21 +1161,16 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 		
 		if (_ldap_err) {
 			TRACE(TRACE_ERROR, "error calling ldap_modrdn_s [%s]", ldap_err2string(_ldap_err));
-			db_rollback_transaction();
 			return -1;
 		}
-		db_commit_transaction();
 		return 0;
 	}
 	/* else we need to modify an attribute */
 	
 	ldap_memfree(_ldap_dn);
 	
-	if (dm_ldap_mod_field(user_idnr, _ldap_cfg.field_uid, new_name)) {
-		db_rollback_transaction();
+	if (dm_ldap_mod_field(user_idnr, _ldap_cfg.field_uid, new_name))
 		return -1;
-	}
-	db_commit_transaction();
 	
 	return 0;
 	
@@ -1399,9 +1388,8 @@ GList * auth_get_aliases_ext(const char *alias)
  * \param alias new alias
  * \param clientid client id
  * \return 
- *        - -1 on failure
- *        -  0 on success
- *        -  1 if alias already exists for given user
+ *        - FALSE on failure
+ *        - TRUE on success or if alias already exists for given user
  */
 int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 {
@@ -1411,27 +1399,24 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 	GList *aliases;
 
 	if (! (userid = auth_get_userid(user_idnr)))
-		return -1;
+		return FALSE;
 	
 	/* check the alias newval against the known aliases for this user */
 	aliases = auth_get_user_aliases(user_idnr);
 	aliases = g_list_first(aliases);
 	while (aliases) {
 		if (strcmp(alias,(char *)aliases->data)==0) {
-			g_list_foreach(aliases,(GFunc)g_free,NULL);
-			g_list_free(aliases);
-			return 1;
+			g_list_destroy(aliases);
+			return TRUE;
 		}
-		if (! g_list_next(aliases))
-			break;
+		if (! g_list_next(aliases)) break;
 		aliases = g_list_next(aliases);
 	}
-	g_list_foreach(aliases,(GFunc)g_free,NULL);
-	g_list_free(aliases);
+	g_list_destroy(aliases);
 
 	/* get the DN for this user */
 	if (! (_ldap_dn = dm_ldap_user_getdn(user_idnr)))
-		return -1;
+		return FALSE;
 
 	/* construct and apply the changes */
 	mailValues = g_strsplit(alias,",",1);
@@ -1442,7 +1427,6 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 	
 	modify[0] = &addMail;
 	modify[1] = NULL;
-			
 	
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
 	
@@ -1451,10 +1435,10 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 	
 	if (_ldap_err) {
 		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(_ldap_err));
-		return -1;
+		return FALSE;
 	}
 	
-	return 0;
+	return TRUE;
 }
 
 
@@ -1480,7 +1464,7 @@ static int forward_exists(const char *alias, const char *deliver_to)
 {
 	char *objectfilter, *dn;
 	char *fields[] = { "dn", _ldap_cfg.field_fwdtarget, NULL };
-	int result = 0;
+	int result = FALSE;
 	
 	GString *t = g_string_new(_ldap_cfg.forw_objectclass);
 	GList *l = g_string_split(t,",");
@@ -1492,19 +1476,17 @@ static int forward_exists(const char *alias, const char *deliver_to)
 	
 	if (! dn) {
 		result = -1; // assume total failure;
-		
 		g_string_printf(t,"(&%s(%s=%s))", objectfilter, _ldap_cfg.cn_string, alias);
 		dn = __auth_get_first_match(t->str, fields);
-		if (dn)
-			result = 1; // dn does exist, just this forward is missing
-		
+		if (dn) result = FALSE; // dn does exist, just this forward is missing
+	} else {
+		result = TRUE;
 	}
-		
 	
 	g_free(objectfilter);
 	g_free(dn);
 	g_string_free(t,TRUE);
-	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_list_destroy(l);
 	
 	TRACE(TRACE_DEBUG, "result [%d]", result);
 
@@ -1551,19 +1533,16 @@ static int forward_create(const char *alias, const char *deliver_to)
 	mods[4] = NULL;
 	
 	TRACE(TRACE_DEBUG, "creating new forward [%s] -> [%s]", alias, deliver_to);
-	
 	_ldap_err = ldap_add_s(_ldap_conn, _ldap_dn, mods);
-
 	g_strfreev(obj_values);
 	ldap_memfree(_ldap_dn);
 
 	if (_ldap_err) {
 		TRACE(TRACE_ERROR, "could not add forwardingAddress: %s", ldap_err2string(_ldap_err));
-		return -1;
+		return FALSE;
 	}
 
-	return 0;
-
+	return TRUE;
 }
 
 static int forward_add(const char *alias,const char *deliver_to) 
@@ -1595,15 +1574,16 @@ static int forward_add(const char *alias,const char *deliver_to)
 	
 	if (_ldap_err) {
 		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(_ldap_err));
-		return -1;
+		return FALSE;
 	}
 	
-	return 0;
+	return TRUE;
 }	
 
 static int forward_delete(const char *alias, const char *deliver_to)
 {
 	char **mailValues = NULL;
+	int result;
 	LDAPMod *modify[2], delForw;
 	GString *t=g_string_new("");
 
@@ -1627,14 +1607,17 @@ static int forward_delete(const char *alias, const char *deliver_to)
 	g_strfreev(mailValues);
 	
 	if (_ldap_err) {
+		result = FALSE;
 		TRACE(TRACE_DEBUG, "delete additional forward failed, removing dn [%s]", _ldap_dn);
 		_ldap_err = ldap_delete_s(_ldap_conn, _ldap_dn);
 		if (_ldap_err)
 			TRACE(TRACE_ERROR, "deletion failed [%s]", ldap_err2string(_ldap_err));
+	} else {
+		result = TRUE;
 	}
 	
 	ldap_memfree(_ldap_dn);
-	return 0;
+	return result;
 
 }
 int auth_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid UNUSED)
@@ -1642,10 +1625,10 @@ int auth_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid 
 	switch(forward_exists(alias,deliver_to)) {
 		case -1:
 			return forward_create(alias,deliver_to);
-		case 1:
+		case FALSE:
 			return forward_add(alias,deliver_to);
 	}
-	return 0;
+	return FALSE;
 }
 
 
@@ -1654,8 +1637,8 @@ int auth_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid 
  * \param user_idnr user id
  * \param alias the alias
  * \return
- *         - -1 on failure
- *         - 0 on success
+ *         - FALSE on failure
+ *         - TRUE on success
  */
 int auth_removealias(u64_t user_idnr, const char *alias)
 {
@@ -1663,36 +1646,33 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	char **mailValues = NULL;
 	LDAPMod *modify[2], delMail;
 	GList *aliases;
+	gboolean found=FALSE;
 
 	if (! (userid = auth_get_userid(user_idnr)))
-		return -1;
+		return FALSE;
 	
 	/* check the alias against the known aliases for this user */
 	aliases = auth_get_user_aliases(user_idnr);
 	aliases = g_list_first(aliases);
 	while (aliases) {
-		if (strcmp(alias,(char *)aliases->data)==0)
+		if (MATCH(alias,(char *)aliases->data)) {
+			found=TRUE;
 			break;
-		
-		if (! g_list_next(aliases))
-			break;
+		}
+		if (! g_list_next(aliases)) break;
 		aliases = g_list_next(aliases);
 		
 	}
-	if (!aliases) {
+	g_list_destroy(aliases);				
+
+	if (!found) {
 		TRACE(TRACE_DEBUG,"alias [%s] for user [%s] not found", alias, userid);
-				
-		g_list_foreach(aliases,(GFunc)g_free,NULL);
-		g_list_free(aliases);
-		return 1;
+		return FALSE;
 	}
-	
-	g_list_foreach(aliases,(GFunc)g_free,NULL);
-	g_list_free(aliases);
 
 	/* get the DN for this user */
 	if (! (_ldap_dn = dm_ldap_user_getdn(user_idnr)))
-		return -1;
+		return FALSE;
 
 	/* construct and apply the changes */
 	mailValues = g_strsplit(alias,",",1);
@@ -1710,12 +1690,12 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(_ldap_err));
 		g_strfreev(mailValues);
 		ldap_memfree(_ldap_dn);
-		return -1;
+		return FALSE;
 	}
 	g_strfreev(mailValues);
 	ldap_memfree(_ldap_dn);
 	
-	return 0;
+	return TRUE;
 }
 
 /**
@@ -1729,12 +1709,9 @@ int auth_removealias(u64_t user_idnr, const char *alias)
  */
 int auth_removealias_ext(const char *alias, const char *deliver_to)
 {
-	
-	int check;
-
-	check = forward_exists(alias,deliver_to);
-	if (check)
-		return 0;
+	int check = forward_exists(alias,deliver_to);
+	if (check != TRUE)
+		return FALSE;
 	
 	return forward_delete(alias,deliver_to);
 }

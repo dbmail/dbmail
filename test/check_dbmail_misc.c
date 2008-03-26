@@ -281,16 +281,6 @@ START_TEST(test_dm_strtoull)
 }
 END_TEST
 
-START_TEST(test_dm_strbinesc)
-{
-	char *from = "test\0d";
-	char *to = dm_strbinesc(from);
-
-	//printf("[%s]", to);
-	g_free(to);
-}
-END_TEST
-
 START_TEST(test_base64_decodev)
 {
 	int i;
@@ -384,7 +374,6 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_create_unique_id);
 	tcase_add_test(tc_misc, test_g_list_merge);
  	tcase_add_test(tc_misc, test_dm_strtoull);
-	tcase_add_test(tc_misc, test_dm_strbinesc);
 	tcase_add_test(tc_misc, test_base64_decodev);
 	tcase_add_test(tc_misc, test_sha1);
 	tcase_add_test(tc_misc, test_sha256);

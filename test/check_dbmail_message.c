@@ -155,6 +155,7 @@ START_TEST(test_dbmail_message_store)
 	g_string_free(s,TRUE);
 	g_free(t);
 
+	return;
 	//
 	//-----------------------------------------
 	//
@@ -840,7 +841,6 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_get_header_repeated);
 	tcase_add_test(tc_message, test_dbmail_message_construct);
 	tcase_add_test(tc_message, test_encoding);
-
 	return s;
 }
 

@@ -399,40 +399,6 @@ char * g_strcasestr(const char *haystack, const char *needle)
 }
 
 /* 
- * return newly allocated escaped strings
- */
-
-char * dm_stresc(const char * from)
-{
-	return dm_strnesc(from, strlen(from));
-}
-
-/*
- * return newly allocated sql-escaped string with 
- * a maximum length of len
- */
-char * dm_strnesc(const char * from, size_t len)
-{
-	char *to;
-	assert(from);
-	len = min(strlen(from),len);
-	to = g_new0(char, (len + 1) * 2 + 1);
-	db_escape_string(to, from, len);
-	return to;
-}
-	
-char * dm_strbinesc(const char * from)
-{
-	return dm_strnbinesc(from, strlen(from));
-}
-
-char * dm_strnbinesc(const char * from, size_t len)
-{
-	assert(from);
-	len = min(strlen(from),len);
-	return db_escape_binary(from, len);
-}
-/* 
  * replace all multi-spaces with single spaces 
  */
 void pack_char(char *in, char c)
@@ -441,11 +407,10 @@ void pack_char(char *in, char c)
 	char *tmp = g_strdup(in);
 	saved = tmp;
 	while(*tmp) {
-		if ((*tmp == c) && (*(tmp+1) == c)) {
+		if ((*tmp == c) && (*(tmp+1) == c))
 			tmp++;
-		} else {
+		else
 			*in++=*tmp++;
-		}
 	}
 	g_free(saved);
 	*in='\0';
@@ -2336,7 +2301,7 @@ char * dm_get_hash_for_string(const char *buf)
 		break;
 	}
 
-	return g_strdup(digest);
+	return digest;
 }
 
 int ci_write(clientinfo_t *self, char * msg, ...)
@@ -2376,33 +2341,32 @@ int ci_read(clientinfo_t *self, char *buffer, size_t n)
 
 int ci_readln(clientinfo_t *self, char * buffer)
 {
-	size_t i = 0;
 	char c=0;
 	int result = 0;
 
 	assert(self->rev);
 	assert(self->line_buffer);
+	memset(buffer, 0, MAX_LINESIZE);
 
-	self->len = 0;
+	if (self->line_buffer->len == 0)
+		self->len = 0;
 
-	if (self->line_buffer->len == 0) {
-		assert(buffer);
-		memset(buffer, 0, MAX_LINESIZE);
-	}
-
-	while (i < MAX_LINESIZE) {
+	while (self->len < MAX_LINESIZE) {
 		if ((bufferevent_read(self->rev, (void *)&c, 1)) != 1)
 			break;
+
+		result++;
 		self->len++;
+
 		if (c=='\r') continue;
 		g_string_append_c(self->line_buffer,c);
 		if (c=='\n') {
 			strncpy(buffer, self->line_buffer->str, MAX_LINESIZE);
 			g_string_truncate(self->line_buffer,0);
-			result = self->len;
 			break;
 		}
 	}
+
 	return result;
 }
 

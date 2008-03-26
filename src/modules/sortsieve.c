@@ -483,7 +483,7 @@ int sort_getscript(sieve2_context_t *s, void *my)
 	if (!strlen(path) && !strlen(name)) {
 		/* Read the script file given as an argument. */
 		TRACE(TRACE_INFO, "Getting default script named [%s]", m->script);
-		res = db_get_sievescript_byname(m->user_idnr, m->script, &m->s_buf);
+		res = dm_sievescript_getbyname(m->user_idnr, m->script, &m->s_buf);
 		if (res != SIEVE2_OK) {
 			TRACE(TRACE_ERROR, "sort_getscript: read_file() returns %d\n", res);
 			return SIEVE2_ERROR_FAIL;
@@ -893,7 +893,7 @@ sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message)
 	}
 	sort_context->result->errormsg = g_string_new("");
 
-	res = db_get_sievescript_active(user_idnr, &sort_context->script);
+	res = dm_sievescript_get(user_idnr, &sort_context->script);
 	if (res != 0) {
 		TRACE(TRACE_ERROR, "Error [%d] when calling db_getactive_sievescript", res);
 		exitnull = 1;

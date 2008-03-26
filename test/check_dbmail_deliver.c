@@ -318,6 +318,7 @@ START_TEST(test_auth_getencryption)
 	u64_t user_idnr = get_first_user_idnr();
 	result = auth_getencryption(user_idnr);
 	fail_unless(result!=NULL,"auth_getencryption failed");
+	g_free(result);
 }
 END_TEST
 
@@ -382,7 +383,7 @@ START_TEST(test_auth_delete_user)
 {
 	int result;
 	result = auth_delete_user("sometestfoouser");
-	fail_unless(result==0,"auth_delete_user failed");
+	fail_unless(result==TRUE,"auth_delete_user failed");
 }
 END_TEST
 
@@ -406,7 +407,7 @@ START_TEST(test_auth_change_username)
 	result = auth_change_username(user_idnr, new);
 	auth_user_exists(new,&new_idnr);
 	auth_delete_user(new);
-	fail_unless(result==0,"auth_change_username failed");
+	fail_unless(result==TRUE,"auth_change_username failed");
 	fail_unless(user_idnr==new_idnr,"auth_change_username: user_idnr mismatch");
 }
 END_TEST
@@ -430,7 +431,7 @@ START_TEST(test_auth_change_password)
 	auth_adduser(userid,"sometestpass","md5", 101, 1002400, &user_idnr);
 	auth_user_exists(userid, &user_idnr);
 	result = auth_change_password(user_idnr, "newtestpass", "md5");
-	fail_unless(result==0,"auth_change_password failed");
+	fail_unless(result==TRUE,"auth_change_password failed");
 	auth_delete_user(userid);
 }
 END_TEST
@@ -451,7 +452,7 @@ START_TEST(test_auth_change_clientid)
 	auth_adduser(userid, "testpass", "md5", 101, 1000, &user_idnr);
 	auth_user_exists(userid, &user_idnr);
 	result = auth_change_clientid(user_idnr, 102);
-	fail_unless(result==0, "auth_change_clientid failed");
+	fail_unless(result=TRUE, "auth_change_clientid failed");
 	auth_delete_user(userid);
 }
 END_TEST
@@ -472,7 +473,7 @@ START_TEST(test_auth_change_mailboxsize)
 	auth_adduser(userid, "testpass", "md5", 101, 1000, &user_idnr);
 	auth_user_exists(userid, &user_idnr);
 	result = auth_change_mailboxsize(user_idnr, 2000);
-	fail_unless(result==0, "auth_change_mailboxsize failed");
+	fail_unless(result==TRUE, "auth_change_mailboxsize failed");
 	auth_delete_user(userid);
 }
 END_TEST
@@ -498,12 +499,12 @@ START_TEST(test_auth_validate)
 
 	u64_t user_idnr = 0;
 	result = auth_validate(ci,"testuser1","test",&user_idnr);
-	fail_unless(result==1,"auth_validate positive failure");
+	fail_unless(result==TRUE,"auth_validate positive failure");
 	fail_unless(user_idnr > 0,"auth_validate couldn't find user_idnr");
 	
 	user_idnr = 0;
 	result = auth_validate(ci,"testuser1","wqer",&user_idnr);
-	fail_unless(result==0,"auth_validate negative failure");
+	fail_unless(result==FALSE,"auth_validate negative failure");
 	fail_unless(user_idnr == 0,"auth_validate shouldn't find user_idnr");
 }
 END_TEST
@@ -590,7 +591,7 @@ START_TEST(test_auth_addalias)
 	char *username="testuser1";
 	result = auth_user_exists(username,&user_idnr);
 	result = auth_addalias(user_idnr,"addalias@foobar.org",0);
-	fail_unless(result==0,"auth_addalias failed");
+	fail_unless(result==TRUE,"auth_addalias failed");
 }
 END_TEST
 /**
@@ -609,7 +610,7 @@ START_TEST(test_auth_addalias_ext)
 {
 	int result;
 	result = auth_addalias_ext("foobar@foo.org","foobar@bar.org",0);
-	fail_unless(result==0,"auth_addalias_ext failed");
+	fail_unless(result==TRUE,"auth_addalias_ext failed");
 }
 END_TEST
 /**
@@ -628,7 +629,7 @@ START_TEST(test_auth_removealias)
 	char *username="testuser1";
 	result = auth_user_exists(username,&user_idnr);
 	result = auth_removealias(user_idnr,"addalias@foobar.org");
-	fail_unless(result==0,"auth_removealias failed");
+	fail_unless(result==TRUE,"auth_removealias failed");
 }
 END_TEST
 
@@ -646,46 +647,7 @@ START_TEST(test_auth_removealias_ext)
 {
 	int result;
 	result = auth_removealias_ext("foobar@foo.org","foobar@bar.org");
-	fail_unless(result==0,"auth_removealias_ext failed");
-}
-END_TEST
-
-START_TEST(test_dm_stresc)
-{
-	char *to;
-	to = dm_stresc("test");
-	fail_unless(strcmp(to,"test")==0,"dm_stresc failed 1");
-	g_free(to);
-	to = NULL;
-	
-	to = dm_stresc("test's");
-	fail_unless((strcmp(to,"test''s")==0)||(strcmp(to,"test\\'s")==0),"dm_stresc failed 2");
-	g_free(to);
-}
-END_TEST
-
-START_TEST(test_dm_strnesc)
-{
-	char *to;
-	to = dm_strnesc("testtest",8);
-	fail_unless(strcmp(to,"testtest")==0,"dm_strnesc failed 1");
-	g_free(to);
-	to = NULL;
-
-	to = dm_strnesc("test",4);
-	fail_unless(strcmp(to,"test")==0,"dm_strnesc failed 2");
-	g_free(to);
-	to = NULL;
-
-	to = dm_strnesc("test's",5);
-	fail_unless((strcmp(to,"test\\'")==0 || strcmp(to,"test''")==0),"dm_strnesc failed 3");
-	g_free(to);
-	to = NULL;
-
-	to = dm_strnesc("\n's's's",20);
-	fail_unless((strcmp(to,"\\n\\'s\\'s\\'s")==0 || strcmp(to,"\n''s''s''s")==0) ,"dm_strnesc failed 4");
-	g_free(to);
-	to = NULL;
+	fail_unless(result==TRUE,"auth_removealias_ext failed");
 }
 END_TEST
 
@@ -1005,6 +967,7 @@ Suite *dbmail_deliver_suite(void)
 	TCase *tc_auth = tcase_create("Auth");
 	suite_add_tcase(s, tc_auth);
 	tcase_add_checked_fixture(tc_auth, setup, teardown);
+
 	tcase_add_test(tc_auth, test_auth_connect);
 	tcase_add_test(tc_auth, test_auth_disconnect);
 	tcase_add_test(tc_auth, test_auth_user_exists);
@@ -1037,8 +1000,6 @@ Suite *dbmail_deliver_suite(void)
 	TCase *tc_misc = tcase_create("Misc");
 	suite_add_tcase(s, tc_misc);
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
-	tcase_add_test(tc_misc, test_dm_stresc);
-	tcase_add_test(tc_misc, test_dm_strnesc);
 	tcase_add_test(tc_misc, test_dm_valid_format);
 	tcase_add_test(tc_misc, test_g_list_join);
 	tcase_add_test(tc_misc, test_g_string_split);

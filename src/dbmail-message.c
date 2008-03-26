@@ -1,7 +1,5 @@
 /*
-  
-
-  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
+  Copyright (c) 2004-2008 NFG Net Facilities Group BV support@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -39,10 +37,8 @@ extern db_param_t * _db_params;
 
 #define THIS_MODULE "message"
 
-
 //#define dprint(fmt, args...) printf(fmt, ##args)
 #define dprint(fmt, args...) 0
-
 
 /*
  * _register_header
@@ -155,86 +151,91 @@ gchar * get_crlf_encoded_opt(const gchar *string, int dots)
 
 static u64_t blob_exists(const char *buf, const char *hash)
 {
-	int i, rows;
-	u64_t id = 0;
+	u64_t id = 0, i = 0;
+	size_t buflen;
 	const char *data;
-	char query[DEF_QUERYSIZE];
-	size_t len;
 	assert(buf);
+	C c; R r;
 
-	memset(query,0,DEF_QUERYSIZE);
-	snprintf(query, DEF_QUERYSIZE, "SELECT id,data FROM %smimeparts WHERE hash='%s'", DBPFX, hash);
-	if (db_query(query) == DM_EQUERY)
-		TRACE(TRACE_FATAL,"Unable to select from mimeparts table");
-	
-	len = strlen(buf);
-	rows = db_num_rows();
-	if (rows > 1)
-		TRACE(TRACE_INFO,"possible collision for hash [%s]", hash);
+	c = db_con_get();
+	if (! (r = db_query(c,"SELECT id,data FROM %smimeparts WHERE hash='%s'", DBPFX, hash))) {
+		db_con_close(c);
+		return 0;
+	}
 
-	for (i=0; i< rows; i++) {
-		data = db_get_result(i,1);
-		if (memcmp(buf, data, len)==0) {
-			id = db_get_result_u64(i,0);
+	buflen = strlen(buf);
+
+	while (db_result_next(r)) {
+		u64_t id = db_result_get_u64(r,0);
+		data = db_result_get(r,1);
+		assert(data);
+		if (memcmp(buf, data, buflen)==0) {
+			id = i;
 			break;
 		}
 	}
+	db_con_close(c);
 
 	return id;
 }
 
 static u64_t blob_insert(const char *buf, const char *hash)
 {
-	GString *q;
-	char *safe = NULL;
+	C c; R r; S s;
+	size_t l;
 	u64_t id = 0;
+	char *frag = db_returning("id");
 
 	assert(buf);
-	q = g_string_new("");
-	safe = dm_strbinesc(buf);
-	g_string_printf(q, "INSERT INTO %smimeparts (hash, data, size) VALUES ("
-			"'%s', '%s', %zd)", DBPFX, hash, safe, strlen(buf));
-	g_free(safe);
+	l = strlen(buf);
 
-	if (db_query(q->str) == DM_EQUERY) {
-		g_string_free(q,TRUE);
-		return 0;
-	}
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "INSERT INTO %smimeparts (hash, data, size) VALUES (?, ?, ?) %s", DBPFX, frag);
+		db_stmt_set_str(s, 1, hash);
+		db_stmt_set_blob(s, 2, buf, l);
+		db_stmt_set_int(s, 3, l);
+		r = db_stmt_query(s);
+		id = db_insert_result(c,r);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	id = db_insert_result("mimeparts_id");
-
-	db_free_result();
-	g_string_free(q,TRUE);
+	g_free(frag);
 
 	return id;
 }
 
 static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 {
-	GString *q;
+	INIT_QUERY;
+	C c; S s; gboolean t;
 
-	q = g_string_new("");
-	g_string_printf(q, "INSERT INTO %spartlists "
+	snprintf(query,DEF_QUERYSIZE, "INSERT INTO %spartlists "
 		"(physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
-		"VALUES (%llu,%u,%u,%u,%u,%llu)", 
-		DBPFX, dbmail_message_get_physid(m), is_header, 
-		m->part_key, m->part_depth, m->part_order, id);
+		"VALUES (?,?,?,?,?,?)", DBPFX);
+	
+	c = db_con_get();
+	s = db_stmt_prepare(c, query);
+	db_stmt_set_u64(s, 1, dbmail_message_get_physid(m));
+	db_stmt_set_int(s, 2, is_header);
+	db_stmt_set_int(s, 3, m->part_key);
+	db_stmt_set_int(s, 4, m->part_depth);
+	db_stmt_set_int(s, 5, m->part_order);
+	db_stmt_set_u64(s, 6, id);	
 
-	if (db_query(q->str) == DM_EQUERY) {
-		g_string_free(q,TRUE);
-		return DM_EQUERY;
-	}
+	t = db_stmt_exec(s);
+	db_con_close(c);
 
-	db_free_result();
-	g_string_free(q,TRUE);
-
-	return DM_SUCCESS;
+	return t;
 }
+
 static u64_t blob_store(const char *buf)
 {
 	u64_t id;
 	char *hash = dm_get_hash_for_string(buf);
-
 
 	// store this message fragment
 	if ((id = blob_exists(buf, (const char *)hash)) != 0) {
@@ -266,7 +267,7 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 		return DM_EQUERY;
 
 	// register this message fragment
-	if (register_blob(m, id, is_header) == DM_EQUERY)
+	if (! register_blob(m, id, is_header))
 		return DM_EQUERY;
 
 	m->part_order++;
@@ -311,58 +312,57 @@ static const char * find_boundary(const char *s)
 
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
-	char *str;
+	INIT_QUERY;
+	C c; R r; 
+	char *str = NULL;
 	const char *boundary = NULL;
 	const char *internal_date = NULL;
 	char **blist = g_new0(char *,32);
-	int prevdepth, depth = 0, order, row, rows;
+	int prevdepth, depth = 0, order, row;
 	int key = 1;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE;
 	gboolean is_header = TRUE, prev_header;
-	char query[DEF_QUERYSIZE];
-	memset(query,0,DEF_QUERYSIZE);
 	GString *m;
+	const void *blob;
 	gboolean finalized=FALSE;
 
 	assert(dbmail_message_get_physid(self));
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT data,l.part_key,l.part_depth,l.part_order,l.is_header,%s "
+	snprintf(query, DEF_QUERYSIZE, "SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,data "
 		"FROM %smimeparts p "
 		"JOIN %spartlists l ON p.id = l.part_id "
 		"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
 		"WHERE l.physmessage_id = %llu ORDER BY l.part_key,l.part_order ASC", 
 		date2char_str("ph.internal_date"), DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
 
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "sql error");
+	c = db_con_get();
+	if (! (r = db_query(c, query))) {
+		db_con_close(c);
 		return NULL;
 	}
 	
-	rows = db_num_rows();
-	if (rows < 1) {
-		db_free_result();
-		return NULL;	/* msg should have 1 block at least */
-	}
-
 	m = g_string_new("");
 
-	for (row=0; row < rows; row++) {
+	row = 0;
+	while (db_result_next(r)) {
+		int l;
 
-		prevdepth = depth;
-		prev_header = is_header;
+		prevdepth	= depth;
+		prev_header	= is_header;
+		key		= db_result_get_int(r,0);
+		depth		= db_result_get_int(r,1);
+		order		= db_result_get_int(r,2);
+		is_header	= db_result_get_bool(r,3);
+		if (row == 0) 	internal_date = db_result_get(r,4);
+		blob		= db_result_get_blob(r,5,&l);
 
-		str = g_strdup_printf("%s",((char *)db_get_result(row,0)));
-		key = db_get_result_int(row,1);
-		depth = db_get_result_int(row,2);
-		order = db_get_result_int(row,3);
-		is_header = db_get_result_bool(row,4);
-		if (row == 0)
-			internal_date = db_get_result(row,5);
+		str 		= g_new0(char,l+1);
+		str		= strncpy(str,blob,l);
 
-		if (is_header)
-			prev_boundary = got_boundary;
+		if (is_header) prev_boundary = got_boundary;
 
 		got_boundary = FALSE;
+
 		if (is_header && ((boundary = find_boundary(str)) != NULL)) {
 			got_boundary = TRUE;
 			dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
@@ -392,14 +392,18 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			g_string_append_printf(m,"\n");
 		
 		g_free(str);
-		
-	}
-	if (rows > 1 && boundary && !finalized) {
-		dprint("\n--%s-- final\n", boundary);
-		g_string_append_printf(m, "\n--%s--\n", boundary);
+		row++;
 	}
 
-	if (rows > 1 && depth > 0 && blist[0] && !finalized) {
+	db_con_close(c);
+
+	if (row > 2 && boundary && !finalized) {
+		dprint("\n--%s-- final\n", boundary);
+		g_string_append_printf(m, "\n--%s--\n", boundary);
+		finalized=1;
+	}
+
+	if (row > 2 && depth > 0 && blist[0] && !finalized) {
 		if (strcmp(blist[0],boundary)!=0) {
 			dprint("\n--%s-- final\n", blist[0]);
 			g_string_append_printf(m, "\n--%s--\n\n", blist[0]);
@@ -407,10 +411,8 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			g_string_append_printf(m, "\n");
 	}
 
-	db_free_result();
-
 	self = dbmail_message_init_with_string(self,m);
-	if (strlen(internal_date))
+	if (internal_date && strlen(internal_date))
 		dbmail_message_set_internal_date(self, (char *)internal_date);
 	g_string_free(m,TRUE);
 	g_free(blist);
@@ -737,8 +739,12 @@ static int _set_content(DbmailMessage *self, const GString *content)
 {
 	int res;
 	GMimeStream *stream;
+	static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
+	g_static_mutex_lock(&mutex);
 	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
+	g_static_mutex_unlock(&mutex);
+
 	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_mime_stream_close(stream);
 	g_object_unref(stream);
@@ -1126,12 +1132,12 @@ size_t dbmail_message_get_body_size(const DbmailMessage *self, gboolean crlf)
 static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template)
 {
 	
-	int row = 0, rows = 0;
+	int row = 0;
 	GString *m;
-	char query[DEF_QUERYSIZE];
-	memset(query,0,DEF_QUERYSIZE);
+	INIT_QUERY;
+	C c; R r;
 	DbmailMessage *store;
-	const char *internal_date;
+	char *internal_date = NULL;
 	
 	assert(dbmail_message_get_physid(self));
 	
@@ -1142,34 +1148,30 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 
 	self = store;
 
-	snprintf(query, DEF_QUERYSIZE, query_template, date2char_str("p.internal_date"), 
-		DBPFX, DBPFX, dbmail_message_get_physid(self));
+	snprintf(query, DEF_QUERYSIZE, query_template, date2char_str("p.internal_date"), DBPFX, DBPFX, dbmail_message_get_physid(self));
 
-	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "sql error");
+	c = db_con_get();
+	if (! (r = db_query(c, query))) {
+		db_con_close(c);
 		return NULL;
 	}
 	
-	rows = db_num_rows();
-	if (rows < 1) {
-		TRACE(TRACE_ERROR, "blk error");
-		db_free_result();
-		return NULL;	/* msg should have 1 block at least */
-	}
-
+	row = 0;
 	m = g_string_new("");
-	for (row=0; row < rows; row++) {
-		char *str = (char *)db_get_result(row,0);
-		if (row == 0)
-			internal_date = db_get_result(row,2);
+	while (row++ && db_result_next(r)) {
+		char *str = (char *)db_result_get(r,0);
+		if (row == 0) internal_date = g_strdup(db_result_get(r,2));
 
 		g_string_append_printf(m, "%s", str);
 	}
-	db_free_result();
+	db_con_close(c);
 	
 	self = dbmail_message_init_with_string(self,m);
-	if (strlen(internal_date))
-		dbmail_message_set_internal_date(self, (char *)internal_date);
+	if (internal_date && strlen(internal_date))
+		dbmail_message_set_internal_date(self, internal_date);
+
+	if (internal_date)
+		g_free(internal_date);
 
 	g_string_free(m,TRUE);
 
@@ -1254,6 +1256,7 @@ int dbmail_message_store(DbmailMessage *self)
 	u64_t user_idnr;
 	char unique_id[UID_SIZE];
 	char *hdrs, *body;
+	int res = 0;
 	u64_t hdrs_size, body_size, rfcsize;
 	int i=1, retry=10, delay=200;
 	
@@ -1265,11 +1268,8 @@ int dbmail_message_store(DbmailMessage *self)
 	create_unique_id(unique_id, user_idnr);
 
 	while (i++ < retry) {
-		db_begin_transaction();
-
 		/* create a message record */
 		if(_message_insert(self, user_idnr, DBMAIL_TEMPMBOX, unique_id) < 0) {
-			db_rollback_transaction();
 			usleep(delay*i);
 			continue;
 		}
@@ -1280,32 +1280,29 @@ int dbmail_message_store(DbmailMessage *self)
 		hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
 		body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
 
-		if (_dm_message_store(self)) {
+		if ((res = _dm_message_store(self))) {
 			TRACE(TRACE_FATAL,"Failed to store mimeparts");
-			db_rollback_transaction();
 			usleep(delay*i);
 			continue;
 		}
 
 		rfcsize = (u64_t)dbmail_message_get_size(self,TRUE);
-		if (db_update_message(self->id, unique_id, (hdrs_size + body_size), rfcsize) < 0) {
-			db_rollback_transaction();
+		if (( res = db_update_message(self->id, unique_id, (hdrs_size + body_size), rfcsize)) < 0) {
 			usleep(delay*i);
 			continue;
 		}
 
 		/* store message headers */
-		if (dbmail_message_cache_headers(self) < 0) {
-			db_rollback_transaction();
+		if ((res = dbmail_message_cache_headers(self)) < 0) {
 			usleep(delay*i);
 			continue;
 			}
 		
-		/* ready for commit */
+		/* ready */
 		break;
 	}
 
-	return db_commit_transaction();
+	return res;
 }
 
 int _message_insert(DbmailMessage *self, 
@@ -1315,9 +1312,9 @@ int _message_insert(DbmailMessage *self,
 {
 	u64_t mailboxid;
 	u64_t physmessage_id;
-	char *internal_date = NULL;
-	char query[DEF_QUERYSIZE];
-	memset(query,0,DEF_QUERYSIZE);
+	char *internal_date = NULL, *frag = NULL;
+	INIT_QUERY;
+	C c; R r;
 
 	assert(unique_id);
 	assert(mailbox);
@@ -1348,23 +1345,28 @@ int _message_insert(DbmailMessage *self,
 	g_free(internal_date);
 
 	dbmail_message_set_physid(self, physmessage_id);
+	frag = db_returning("message_idnr");
 
 	/* now insert an entry into the messages table */
 	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
 			"%smessages(mailbox_idnr, physmessage_id, unique_id,"
 			"recent_flag, status) "
-			"VALUES (%llu, %llu, '%s', 1, %d)",
+			"VALUES (%llu, %llu, '%s', 1, %d) %s",
 			DBPFX, mailboxid, physmessage_id, unique_id,
-			MESSAGE_STATUS_INSERT);
+			MESSAGE_STATUS_INSERT, frag);
+	g_free(frag);
 
-	if ((result = db_query(query)) == DM_EQUERY) {
-		TRACE(TRACE_ERROR,"inserting message failed");
-		return result;
-	}
+	c = db_con_get();
+	TRY
+		r = db_query(c, query);
+		self->id = db_insert_result(c, r);
+		TRACE(TRACE_DEBUG,"new message_idnr [%llu]", self->id);
 
-	self->id = db_insert_result("message_idnr");
-	TRACE(TRACE_DEBUG,"new message_idnr [%llu]", self->id);
-	db_free_result();
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
 	return result;
 }
@@ -1400,73 +1402,63 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 
 static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *id)
 {
-	u64_t tmp;
-	u64_t *cid;
-	gpointer cacheid;
-	gchar *case_header;
-	gchar *safe_header;
-	gchar *tmpheader;
-	int try=3;
+	u64_t tmp = 0;
+	//u64_t *cid;
+	//gpointer cacheid;
+	gchar *case_header, *safe_header, *frag;
+	C c; R r; S s;
+	int try=3, t = FALSE;
 
 	// rfc822 headernames are case-insensitive
-	if (! (tmpheader = dm_strnesc(header,CACHE_WIDTH_NAME)))
-		return -1;
-	safe_header = g_ascii_strdown(tmpheader,-1);
-	g_free(tmpheader);
-
-	cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)safe_header);
-	if (cacheid) {
-		*id = GPOINTER_TO_UINT(cacheid);
-		g_free(safe_header);
-		return 1;
-	}
-		
-	GString *q = g_string_new("");
-
+	safe_header = g_ascii_strdown(header,-1);
 	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
+	frag = db_returning("id");
+
+	c = db_con_get();
 
 	while (try-- > 0) { // deal with race conditions from other process inserting the same headername
-		db_savepoint("header_id");	
-		g_string_printf(q, "SELECT id FROM %sheadername WHERE %s='%s'", DBPFX, case_header, safe_header);
-		g_free(case_header);
+		TRY
+			Connection_clear(c);
 
-		if ((cid = global_cache_lookup(q->str))) {
-			tmp = *cid;
-			break;
-		}
+			db_savepoint(c, "header_id");	
 
-		if (db_query(q->str) == -1) {
-			db_savepoint_rollback("header_id");
-			g_string_free(q,TRUE);
-			g_free(safe_header);
-			return -1;
-		}
-		if (db_num_rows() < 1) {
-			db_free_result();
-			g_string_printf(q, "INSERT %s INTO %sheadername (headername) VALUES ('%s')", 
-				db_get_sql(SQL_IGNORE), DBPFX, safe_header);
-			if (db_query(q->str) == -1) {
-				db_savepoint_rollback("header_id");
+			s = db_stmt_prepare(c, "SELECT id FROM %sheadername WHERE %s=?", DBPFX, case_header);
+			db_stmt_set_str(s,1,safe_header);
+			r = db_stmt_query(s);
+
+			if (db_result_next(r)) {
+				tmp = db_result_get_u64(r,0);
 			} else {
-				tmp = db_insert_result("headername_idnr");
+				Connection_clear(c);
+
+				s = db_stmt_prepare(c, "INSERT %s INTO %sheadername (headername) VALUES (?) %s", 
+						db_get_sql(SQL_IGNORE), DBPFX, frag);
+				db_stmt_set_str(s,2,safe_header);
+				r = db_stmt_query(s);
+				tmp = db_insert_result(c, r);
 			}
-		} else {
-			tmp = db_get_result_u64(0,0);
-			db_free_result();
-		}
-		if (tmp) {
-			cid = g_new0(u64_t,1);
-			*cid = tmp;
-			global_cache_insert(g_strdup(q->str),cid);
-			break;
-		}
+			t = TRUE;
+
+		CATCH(SQLException)
+			LOG_SQLERROR;
+			db_savepoint_rollback(c, "header_id");
+			t = DM_EQUERY;
+		END_TRY;
+
 		usleep(200);
+	}
+	db_con_close(c);
+
+	g_free(frag);
+	g_free(case_header);
+
+	if (t == DM_EQUERY) {
+		g_free(safe_header);
+		return t;
 	}
 
 	*id = tmp;
-	g_hash_table_insert(self->header_dict, (gpointer)(g_strdup(safe_header)), GUINT_TO_POINTER((unsigned)tmp));
-	g_free(safe_header);
-	g_string_free(q,TRUE);
+	g_hash_table_insert(self->header_dict, (gpointer)(safe_header), GUINT_TO_POINTER((unsigned)tmp));
 	return 1;
 }
 
@@ -1474,12 +1466,12 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 {
 	u64_t id;
 	DbmailMessage *self = (DbmailMessage *)user_data;
-	gchar *safe_value;
-	GString *q;
 	GTuples *values;
 	unsigned char *raw;
 	unsigned i;
 	gboolean isaddr = 0;
+	C c; S s; gboolean t = FALSE;
+	const char *charset = dbmail_message_get_charset(self);
 
 	/* skip headernames with spaces like From_ */
 	if (strchr(header, ' '))
@@ -1501,100 +1493,114 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	else if (g_ascii_strcasecmp(header,"Return-path")==0)
 		isaddr=1;
 
-	q = g_string_new("");
 	values = g_relation_select(self->headers,header,0);
-	for (i=0; i<values->len;i++) {
-		raw = (unsigned char *)g_tuples_index(values,i,1);
-		TRACE(TRACE_DEBUG,"raw header value [%s]", raw);
-		
- 		char *value = NULL;
-  		const char *charset = dbmail_message_get_charset(self);
-  
- 		value = dbmail_iconv_decode_field((const char *)raw, charset, isaddr);
- 
- 		if ((! value) || (strlen(value) == 0))
- 			continue;
- 
- 		safe_value = dm_stresc(value);
- 		g_free(value);
 
-		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
-				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
-		g_free(safe_value);
-		safe_value = NULL;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) VALUES (?,?,?)", DBPFX);
+		db_stmt_set_u64(s, 1, id);
+		db_stmt_set_u64(s, 2, self->physid);
 
-		if (db_query(q->str)) {
-			TRACE(TRACE_ERROR,"insert headervalue failed");
-			g_string_free(q,TRUE);
-			g_tuples_destroy(values);
-			return TRUE;
+		for (i=0; i<values->len;i++) {
+			char *value = NULL;
+			raw = (unsigned char *)g_tuples_index(values,i,1);
+			TRACE(TRACE_DEBUG,"raw header value [%s]", raw);
+	  
+			value = dbmail_iconv_decode_field((const char *)raw, charset, isaddr);
+	 
+			if ((! value) || (strlen(value) == 0)) {
+				if (value) g_free(value);
+				continue;
+			}
+	 
+			db_stmt_set_blob(s, 3, value, strlen(value));
+			db_stmt_exec(s);
+			g_free(value);
+
 		}
-	}
-	g_string_free(q,TRUE);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = TRUE;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
 	g_tuples_destroy(values);
-	return FALSE;
+	return t;
 }
 
 static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist, const DbmailMessage *self)
 {
 	InternetAddress *ia;
+	C c; S s;
 	
 	g_return_if_fail(ialist != NULL);
 
-	GString *q = g_string_new("");
 	gchar *name, *rname;
 	gchar *addr;
 	char *charset = dbmail_message_get_charset((DbmailMessage *)self);
 
-	for (; ialist != NULL && ialist->address; ialist = ialist->next) {
-		
-		ia = ialist->address;
-		g_return_if_fail(ia != NULL);
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		s = db_stmt_prepare(c, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) VALUES (?,?,?)", DBPFX, field, field, field);
+		db_stmt_set_u64(s, 1, physid);
 
-		rname=dbmail_iconv_str_to_db(ia->name ? ia->name: "", charset);
-		/* address fields are truncated to column width */
-		name = dm_strnesc(rname, CACHE_WIDTH_ADDR);
-		addr = dm_strnesc(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
+		for (; ialist != NULL && ialist->address; ialist = ialist->next) {
+			
+			ia = ialist->address;
+			g_return_if_fail(ia != NULL);
 
-		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
-				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
-				physid, name, addr);
-		
-		g_free(name);
-		g_free(addr);
-		g_free(rname);
-		
-		if (db_query(q->str)) {
-			TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, q->str);
+			rname=dbmail_iconv_str_to_db(ia->name ? ia->name: "", charset);
+			/* address fields are truncated to column width */
+			name = g_strndup(rname, CACHE_WIDTH_ADDR);
+			addr = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
+			
+			db_stmt_set_str(s, 2, name);
+			db_stmt_set_str(s, 3, addr);
+			
+			db_stmt_exec(s);
+
+			g_free(rname);
+			g_free(name);
+			g_free(addr);
 		}
-
-	}
-	
-	g_string_free(q,TRUE);
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		db_rollback_transaction(c);
+		TRACE(TRACE_ERROR, "insert %sfield failed [%s] [%s]", field, name, addr);
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 }
 
 static void insert_field_cache(u64_t physid, const char *field, const char *value)
 {
-	GString *q;
 	gchar *clean_value;
+	C c; S s;
 
 	g_return_if_fail(value != NULL);
 
 	/* field values are truncated to 255 bytes */
-	clean_value = dm_strnesc(value,CACHE_WIDTH_FIELD);
+	clean_value = g_strndup(value,CACHE_WIDTH_FIELD);
 
-	q = g_string_new("");
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c,"INSERT INTO %s%sfield (physmessage_id, %sfield) VALUES (?,?)", DBPFX, field, field);
+		db_stmt_set_u64(s, 1, physid);
+		db_stmt_set_str(s, 2, clean_value);
+		db_stmt_exec(s);
 
-	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sfield) "
-			"VALUES (%llu,'%s')", DBPFX, field, field, physid, clean_value);
-
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, value);
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 	g_free(clean_value);
-
-	if (db_query(q->str)) {
-		TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, q->str);
-	}
-	g_string_free(q,TRUE);
 }
+
 #define DM_ADDRESS_TYPE_TO "To"
 #define DM_ADDRESS_TYPE_CC "Cc"
 #define DM_ADDRESS_TYPE_FROM "From"
@@ -1622,7 +1628,6 @@ static InternetAddressList * dm_message_get_addresslist(const DbmailMessage *sel
 void dbmail_message_cache_tofield(const DbmailMessage *self)
 {
 	InternetAddressList *list;
-
 	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_TO)))
 		return;
 	insert_address_cache(self->physid, "to", list,self);
@@ -1632,7 +1637,6 @@ void dbmail_message_cache_tofield(const DbmailMessage *self)
 void dbmail_message_cache_ccfield(const DbmailMessage *self)
 {
 	InternetAddressList *list;
-
 	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_CC)))
 		return;
 	insert_address_cache(self->physid, "cc", list,self);
@@ -1643,7 +1647,6 @@ void dbmail_message_cache_ccfield(const DbmailMessage *self)
 void dbmail_message_cache_fromfield(const DbmailMessage *self)
 {
 	InternetAddressList *list;
-
 	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_FROM)))
 		return;
 	insert_address_cache(self->physid, "from", list,self);
@@ -1653,7 +1656,6 @@ void dbmail_message_cache_fromfield(const DbmailMessage *self)
 void dbmail_message_cache_replytofield(const DbmailMessage *self)
 {
 	InternetAddressList *list;
-
 	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_REPL)))
 		return;
 	insert_address_cache(self->physid, "replyto", list,self);
@@ -1676,9 +1678,7 @@ void dbmail_message_cache_datefield(const DbmailMessage *self)
 
 	value = g_new0(char,20);
 	strftime(value,20,"%Y-%m-%d %H:%M:%S",gmtime(&date));
-
 	insert_field_cache(self->physid, "date", value);
-	
 	g_free(value);
 }
 
@@ -1732,12 +1732,10 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	tree = g_tree_new_full((GCompareDataFunc)strcmp, NULL, NULL, NULL);
 	
 	while (refs->msgid) {
-		
 		if (! g_tree_lookup(tree,refs->msgid)) {
 			insert_field_cache(self->physid, "references", refs->msgid);
 			g_tree_insert(tree,refs->msgid,refs->msgid);
 		}
-
 		if (refs->next == NULL)
 			break;
 		refs = refs->next;
@@ -1749,22 +1747,25 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	
 void dbmail_message_cache_envelope(const DbmailMessage *self)
 {
-	char *q, *envelope, *clean;
+	char *envelope;
+	C c; S s;
 
 	envelope = imap_get_envelope(GMIME_MESSAGE(self->content));
-	clean = dm_stresc(envelope);
 
-	q = g_strdup_printf("INSERT INTO %senvelope (physmessage_id, envelope) "
-			"VALUES (%llu,'%s')", DBPFX, self->physid, clean);
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "INSERT INTO %senvelope (physmessage_id, envelope) VALUES (?,?)", DBPFX);
+		db_stmt_set_u64(s, 1, self->physid);
+		db_stmt_set_str(s, 2, envelope);
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		TRACE(TRACE_ERROR, "insert envelope failed [%s]", envelope);
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	g_free(clean);
 	g_free(envelope);
-
-	if (db_query(q)) {
-		TRACE(TRACE_ERROR, "insert envelope failed [%s]", q);
-	}
-	g_free(q);
-
 }
 
 // 
@@ -1937,7 +1938,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 	/* Sieve. */
 	config_get_value("SIEVE", "DELIVERY", val);
 	if (strcasecmp(val, "yes") == 0
-	&& db_check_sievescript_active(useridnr) == 0) {
+	&& dm_sievescript_isactive(useridnr) == 0) {
 		TRACE(TRACE_INFO, "Calling for a Sieve sort");
 		sort_result_t *sort_result;
 		sort_result = sort_process(useridnr, message);
@@ -2079,9 +2080,9 @@ static int valid_sender(const char *addr)
 	testaddr = g_ascii_strdown(addr, -1);
 	if (strstr(testaddr, "mailer-daemon@"))
 		ret = 0;
-	if (strstr(testaddr, "daemon@"))
+	else if (strstr(testaddr, "daemon@"))
 		ret = 0;
-	if (strstr(testaddr, "postmaster@"))
+	else if (strstr(testaddr, "postmaster@"))
 		ret = 0;
 	g_free(testaddr);
 	return ret;
@@ -2456,14 +2457,11 @@ static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
  *
  * Function: insert_messages()
  * What we get:
- *   - A pointer to the incoming message stream
- *   - The header of the message 
- *   - A list of destination addresses / useridnr's
- *   - The default mailbox to delivery to
+ *   - The message 
+ *   - A list of destinations
  *
  * What we do:
- *   - Read in the rest of the message
- *   - Store the message to the DBMAIL user
+ *   - Store the message
  *   - Process the destination addresses into lists:
  *     - Local useridnr's
  *     - External forwards
@@ -2510,8 +2508,8 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 	msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 
 	// TODO: Run a Sieve script associated with the internal delivery user.
-	// Code would go here, after we've inserted the message blocks but
-	// before we've started delivering the message.
+	// Code would go here, after we've stored the message 
+	// before we've started delivering it
 
 	/* Loop through the users list. */
 	dsnusers = g_list_first(dsnusers);
@@ -2616,7 +2614,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 	/* Always delete the temporary message, even if the delivery failed.
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
-	if (db_delete_message(tmpid) < 0) 
+	if (! db_delete_message(tmpid)) 
 		TRACE(TRACE_ERROR, "failed to delete temporary message [%llu]", message->id);
 	TRACE(TRACE_DEBUG, "temporary message deleted from database. Done.");
 

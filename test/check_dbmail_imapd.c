@@ -201,77 +201,6 @@ END_TEST
 
 //dbmail_imap_session_handle_auth(self, const char *username, const char *password);
 
-START_TEST(test_imap_handle_auth)
-{
-	int result;
-	ImapSession *s = dbmail_imap_session_new();
-	s->ci = ci_new();
-	
-	result = dbmail_imap_session_handle_auth(s,"testuser1","test");
-	fail_unless(result==0,"dbmail_imap_session_handle_auth failed");
-	
-	dbmail_imap_session_delete(s);
-}
-END_TEST
-START_TEST(test_imap_mailbox_open)
-{
-	int result;
-	
-	clientinfo_t *ci = ci_new();
-	u64_t mailbox_idnr = 0;
-	const char *message;
-	
-	ImapSession *s = dbmail_imap_session_new();
-	s->ci = ci;
-	
-	dbmail_imap_session_handle_auth(s,"testuser1","test");
-	result = dbmail_imap_session_mailbox_open(s,"INBOX");
-	fail_unless(result==0,"dbmail_imap_session_mailbox_open failed");
-
-
-	// create and open a new and empty mailbox
-	result = db_mailbox_create_with_parents("INBOX/Foo/Bar/Baz", BOX_COMMANDLINE,
-			s->userid, &mailbox_idnr, &message);
-	fail_unless(result == 0 && mailbox_idnr != 0,
-			"Failed at db_mailbox_create_with_parents: [%s]", message);
-
-	result = dbmail_imap_session_mailbox_open(s,"INBOX/Foo/Bar/Baz");
-	fail_unless(result==0,"dbmail_imap_session_mailbox_open failed");
-
-	db_delete_mailbox(mailbox_idnr,0,0);
-	
-	dbmail_imap_session_delete(s);
-}
-END_TEST
-	
-//int dbmail_imap_session_fetch_get_items(ImapSession *self, u64_t row)
-START_TEST(test_dbmail_imap_session_fetch_get_items)
-{
-	int result;
-	char * mailbox = g_strdup("INBOX");
-	ImapSession *s = dbmail_imap_session_new();
-	
-	clientinfo_t *ci = ci_new();
-	s->ci = ci;
-	
-	result = dbmail_imap_session_handle_auth(s,"testuser1","test");
-	fail_unless(result==0, "handle_auth failed");
-	result = dbmail_imap_session_mailbox_open(s,mailbox);
-	fail_unless(result==0, "mailbox_open failed");
-
-	dbmail_mailbox_set_uid(s->mailbox, TRUE);
-	s->ids = dbmail_mailbox_get_set(s->mailbox, "1:*", TRUE);
-	
-	fail_unless(s->ids!=NULL, "get_set failed");
-
-	result = dbmail_imap_session_fetch_get_items(s);
-	fail_unless(result==0, "fetch_get_items failed");
-	
-	dbmail_imap_session_delete(s);
-	g_free(mailbox);
-}
-END_TEST
-
 START_TEST(test_imap_bodyfetch)
 {
 	int result;
@@ -723,7 +652,6 @@ static u64_t get_physid(void)
 	db_query(q->str);
 	g_string_free(q,TRUE);
 	id = db_get_result_u64(0,0);
-	db_free_result();
 	return id;
 }
 static u64_t get_msgsid(void)
@@ -734,7 +662,6 @@ static u64_t get_msgsid(void)
 	db_query(q->str);
 	g_string_free(q,TRUE);
 	id = db_get_result_u64(0,0);
-	db_free_result();
 	return id;
 }
 #endif
@@ -944,8 +871,6 @@ Suite *dbmail_suite(void)
 	
 	tcase_add_checked_fixture(tc_session, setup, teardown);
 	tcase_add_test(tc_session, test_imap_session_new);
-	tcase_add_test(tc_session, test_imap_handle_auth);
-	tcase_add_test(tc_session, test_imap_mailbox_open);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_cleanup_address);
@@ -955,8 +880,6 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_envelope_latin);
 	tcase_add_test(tc_session, test_imap_get_partspec);
-//	tcase_add_test(tc_session, test_imap_message_fetch_headers);
-	tcase_add_test(tc_session, test_dbmail_imap_session_fetch_get_items); // FIXME: This segfaults for me...
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_g_mime_object_get_body);

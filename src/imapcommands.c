@@ -32,6 +32,8 @@
 #define _GNU_SOURCE
 #endif
 
+extern db_param_t * _db_params;
+#define DBPFX _db_params->pfx
 
 #ifndef MAX_RETRIES
 #define MAX_RETRIES 12
@@ -336,9 +338,11 @@ int _ic_create(ImapSession *self)
  */
 int _ic_delete(ImapSession *self)
 {
-	int result, nchildren = 0;
-	u64_t *children = NULL, mboxid;
+	int result;
+	u64_t mboxid;
+	GList *children = NULL;
 	char *mailbox = self->args[0];
+	unsigned nchildren = 0;
 
 	if (!check_state_and_args(self, "DELETE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
@@ -361,7 +365,7 @@ int _ic_delete(ImapSession *self)
 	}
 
 	/* check for children of this mailbox */
-	result = db_listmailboxchildren(mboxid, self->userid, &children, &nchildren);
+	result = db_listmailboxchildren(mboxid, self->userid, &children);
 	if (result == -1) {
 		/* error */
 		TRACE(TRACE_ERROR, "[%p] cannot retrieve list of mailbox children", self);
@@ -369,28 +373,30 @@ int _ic_delete(ImapSession *self)
 		return -1;
 	}
 
-	if (nchildren != 0) {
+	children = g_list_first(children);
+	nchildren = g_list_length(children);
+	g_list_destroy(children);
+
+	if (nchildren > 0) {
 		/* mailbox has inferior names; error if \noselect specified */
 		result = db_isselectable(mboxid);
-		if (result == 0) {
+		if (result == FALSE) {
 			dbmail_imap_session_printf(self, "%s NO mailbox is non-selectable\r\n", self->tag);
-			g_free(children);
 			return 0;
 		}
-		if (result == -1) {
+		if (result == DM_EQUERY) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			g_free(children);
 			return -1;	/* fatal */
 		}
 
 		/* mailbox has inferior names; remove all msgs and set noselect flag */
-		result = db_removemsg(self->userid, mboxid);
-		if (result != -1)
-			result = db_setselectable(mboxid, 0);	/* set non-selectable flag */
-
-		if (result == -1) {
+		if (db_removemsg(self->userid, mboxid) == DM_EQUERY) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			g_free(children);
+			return -1;	/* fatal */
+		}
+
+		if (! db_setselectable(mboxid, 0)) {
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			return -1;	/* fatal */
 		}
 
@@ -400,7 +406,6 @@ int _ic_delete(ImapSession *self)
 
 		/* ok done */
 		dbmail_imap_session_printf(self, "%s OK DELETE completed\r\n", self->tag);
-		g_free(children);
 		return 0;
 	}
 
@@ -440,10 +445,11 @@ static int dbmail_imap_session_mailbox_rename(ImapSession *self, u64_t mailbox_i
 
 int _ic_rename(ImapSession *self)
 {
-	u64_t mboxid, newmboxid, *children;
+	GList *children = NULL;
+	u64_t mboxid, newmboxid;
 	u64_t parentmboxid = 0;
 	size_t oldnamelen;
-	int nchildren, i, result;
+	int i, result;
 	char newname[IMAP_MAX_MAILBOX_NAMELEN];
 	MailboxInfo *mb;
 
@@ -487,15 +493,9 @@ int _ic_rename(ImapSession *self)
 	if (i >= 0) {
 		self->args[1][i] = '\0';	/* note: original char was '/' */
 
-		if (db_findmailbox(self->args[1], self->userid, &parentmboxid) == -1) {
-			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			return -1;	/* fatal */
-		}
-		if (parentmboxid == 0) {
+		if (! db_findmailbox(self->args[1], self->userid, &parentmboxid)) {
 			/* parent mailbox does not exist */
-			dbmail_imap_session_printf(self,
-				"%s NO new mailbox would invade mailbox structure\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s NO new mailbox would invade mailbox structure\r\n", self->tag);
 			return 1;
 		}
 
@@ -544,26 +544,31 @@ int _ic_rename(ImapSession *self)
 	}
 
 	/* check for inferior names */
-	result = db_listmailboxchildren(mboxid, self->userid, &children, &nchildren);
+	result = db_listmailboxchildren(mboxid, self->userid, &children);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 
 	/* replace name for each child */
-	for (i = 0; i < nchildren; i++) {
-		mb = dbmail_imap_session_mbxinfo_lookup(self, children[i]);
+	children = g_list_first(children);
+
+	while (children) {
+		u64_t childid = *(u64_t *)children->data;
+		mb = dbmail_imap_session_mbxinfo_lookup(self, childid);
 
 		g_snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s", self->args[1], &mb->name[oldnamelen]);
-		if ((dbmail_imap_session_mailbox_rename(self, children[i], newname)) != DM_SUCCESS) {
+		if ((dbmail_imap_session_mailbox_rename(self, childid, newname)) != DM_SUCCESS) {
 			dbmail_imap_session_printf(self, "* BYE error renaming mailbox\r\n");
-			g_free(children);
+			g_list_destroy(children);
 			return DM_EGENERAL;
 		}
+		if (! g_list_next(children)) break;
+		children = g_list_next(children);
 	}
 
 	if (children)
-		g_free(children);
+		g_list_destroy(children);
 
 	/* now replace name */
 	if ((dbmail_imap_session_mailbox_rename(self, mboxid, self->args[1])) != DM_SUCCESS) {
@@ -649,11 +654,10 @@ int _ic_unsubscribe(ImapSession *self)
  */
 int _ic_list(ImapSession *self)
 {
-	u64_t *children = NULL;
+	GList *children = NULL;
 	int result;
 	size_t slen;
 	unsigned i;
-	unsigned nchildren;
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
 	
@@ -688,24 +692,26 @@ int _ic_list(ImapSession *self)
 
 	TRACE(TRACE_INFO, "[%p] search with pattern: [%s]", self, pattern);
 	
-	result = db_findmailbox_by_regex(self->userid, pattern, &children, &nchildren, list_is_lsub);
+	result = db_findmailbox_by_regex(self->userid, pattern, &children, list_is_lsub);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		g_free(children);
+		g_list_destroy(children);
 		g_free(pattern);
 		return -1;
 	}
 
 	if (result == 1) {
-		dbmail_imap_session_printf(self, "%s BAD invalid pattern specified\r\n",
-			self->tag);
-		g_free(children);
+		dbmail_imap_session_printf(self, "%s BAD invalid pattern specified\r\n", self->tag);
+		g_list_destroy(children);
 		g_free(pattern);
 		return 1;
 	}
 
-	for (i = 0; i < nchildren; i++) {
-		mb = dbmail_imap_session_mbxinfo_lookup(self, children[i]);
+	children = g_list_first(children);
+
+	while (children) {
+		u64_t mailbox_id = *(u64_t *)children->data;
+		mb = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id);
 		
 		plist = NULL;
 		if (mb->no_select)
@@ -724,11 +730,14 @@ int _ic_list(ImapSession *self)
 		
 		g_list_destroy(plist);
 		g_free(pstring);
+
+		if (! g_list_next(children)) break;
+		children = g_list_next(children);
 	}
 
 
 	if (children)
-		g_free(children);
+		g_list_destroy(children);
 
 	g_free(pattern);
 
@@ -798,9 +807,9 @@ int _ic_status(ImapSession *self)
 	}
 
 	/* check if mailbox exists */
-	if (db_findmailbox(self->args[0], self->userid, &id) == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
+	if (! db_findmailbox(self->args[0], self->userid, &id)) {
+		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
+		return 1;
 	}
 
 	mb = dbmail_imap_session_mbxinfo_lookup(self, id);
@@ -904,19 +913,12 @@ int _ic_append(ImapSession *self)
 	}
 
 	/* find the mailbox to place the message */
-	if (db_findmailbox(self->args[0], self->userid, &mboxid) == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error");
-		return -1;
-	}
-
-	if (mboxid)
-		mbx = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
-
-	if (! mbx ) {
-		dbmail_imap_session_printf(self, "%s NO [TRYCREATE] could not find specified mailbox\r\n",
-			self->tag);
+	if (! db_findmailbox(self->args[0], self->userid, &mboxid)) {
+		dbmail_imap_session_printf(self, "%s NO [TRYCREATE] could not find specified mailbox\r\n", self->tag);
 		return 1;
 	}
+
+	mbx = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 
 	/* check if user has right to append to  mailbox */
 	result = acl_has_right(mbx, self->userid, ACL_RIGHT_INSERT);
@@ -1044,22 +1046,22 @@ int _ic_append(ImapSession *self)
 		dbmail_imap_session_printf(self, "* BYE internal dbase error storing message\r\n");
 		break;
 
-	case 1:
-		TRACE(TRACE_ERROR, "[%p] faulty msg", self);
-		dbmail_imap_session_printf(self, "%s NO invalid message specified\r\n", self->tag);
-		break;
-
-	case 2:
+	case -2:
 		TRACE(TRACE_INFO, "[%p] quotum would exceed", self);
 		dbmail_imap_session_printf(self, "%s NO not enough quotum left\r\n", self->tag);
 		break;
 
-	case 0:
+	case FALSE:
+		TRACE(TRACE_ERROR, "[%p] faulty msg", self);
+		dbmail_imap_session_printf(self, "%s NO invalid message specified\r\n", self->tag);
+		break;
+
+	case TRUE:
 		dbmail_imap_session_printf(self, "%s OK APPEND completed\r\n", self->tag);
 		break;
 	}
 
-	if (result == 0 && flagcount > 0) {
+	if (result == TRUE && flagcount > 0) {
 		if (db_set_msgflag(msg_idnr, mboxid, flaglist, keywords, IMAPFA_ADD, NULL) < 0) {
 			TRACE(TRACE_ERROR, "[%p] error setting flags for message [%llu]", self, msg_idnr);
 			g_list_destroy(keywords);
@@ -1108,7 +1110,7 @@ int _ic_append(ImapSession *self)
 
 	}
 
-	return result;
+	return 0;
 }
 
 
@@ -1642,12 +1644,10 @@ static gboolean _do_copy(u64_t *id, gpointer UNUSED value, ImapSession *self)
 	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		db_rollback_transaction();
 		return TRUE;
 	}
 	if (result == -2) {
 		dbmail_imap_session_printf(self, "%s NO quotum would exceed\r\n", self->tag);
-		db_rollback_transaction();
 		return TRUE;
 	}
 	return FALSE;
@@ -1665,11 +1665,7 @@ int _ic_copy(ImapSession *self)
 		return 1;	/* error, return */
 
 	/* check if destination mailbox exists */
-	if (db_findmailbox(self->args[self->args_idx+1], self->userid, &destmboxid) == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal */
-	}
-	if (destmboxid == 0) {
+	if (! db_findmailbox(self->args[self->args_idx+1], self->userid, &destmboxid)) {
 		dbmail_imap_session_printf(self, "%s NO [TRYCREATE] specified mailbox does not exist\r\n",
 			self->tag);
 		return 1;
@@ -1702,22 +1698,12 @@ int _ic_copy(ImapSession *self)
 	cmd.mailbox_id = destmboxid;
 	self->cmd = &cmd;
 
-	if (db_begin_transaction() < 0)
-		return -1;
-
 	if (g_tree_nnodes(self->mailbox->ids) > 0) {
-  
- 		if ((_dm_imapsession_get_ids(self, self->args[self->args_idx]) == DM_SUCCESS)) {
+ 		if ((_dm_imapsession_get_ids(self, self->args[self->args_idx]) == DM_SUCCESS))
  			g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
- 		} else {
- 			db_rollback_transaction();
+ 		else
   			return DM_EGENERAL;
-  		}
   	}	
-
-	if (db_commit_transaction() < 0)
-		return -1;
-
 	db_mailbox_mtime_update(destmboxid);
 
 	dbmail_imap_session_printf(self, "%s OK %sCOPY completed\r\n", self->tag,
@@ -1874,9 +1860,8 @@ static int imap_acl_pre_administer(const char *mailboxname,
 				   u64_t * mboxid, u64_t * target_userid)
 {
 	int result;
-	result = db_findmailbox(mailboxname, executing_userid, mboxid);
-	if (result < 1)
-		return result;
+	if (! db_findmailbox(mailboxname, executing_userid, mboxid))
+		return FALSE;
 
 	result = auth_user_exists(username, target_userid);
 	if (result < 1)
@@ -1962,18 +1947,13 @@ int _ic_deleteacl(ImapSession *self)
 int _ic_getacl(ImapSession *self)
 {
 	/* GETACL mailboxname */
-	int result;
 	u64_t mboxid;
 	char *acl_string;
 
 	if (!check_state_and_args(self, "GETACL", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	result = db_findmailbox(self->args[self->args_idx], self->userid, &mboxid);
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	} else if (result == 0) {
+	if (! db_findmailbox(self->args[self->args_idx], self->userid, &mboxid)) {
 		dbmail_imap_session_printf(self, "%s NO GETACL failure: can't get acl\r\n",
 			self->tag);
 		return 1;
@@ -2038,21 +2018,14 @@ int _ic_listrights(ImapSession *self)
 int _ic_myrights(ImapSession *self)
 {
 	/* MYRIGHTS mailboxname */
-	int result;
 	u64_t mboxid;
 	char *myrights_string;
 
 	if (!check_state_and_args(self, "LISTRIGHTS", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	result = db_findmailbox(self->args[self->args_idx], self->userid, &mboxid);
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	} else if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO MYRIGHTS failure: unknown mailbox\r\n",
-			self->tag);
+	if (! db_findmailbox(self->args[self->args_idx], self->userid, &mboxid)) {
+		dbmail_imap_session_printf(self, "%s NO MYRIGHTS failure: unknown mailbox\r\n", self->tag);
 		return 1;
 	}
 

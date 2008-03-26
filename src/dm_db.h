@@ -36,31 +36,22 @@
 
 #define MAX_EMAIL_SIZE 250
 
-/* size of the messageblk's */
-#define READ_BLOCK_SIZE (512ul*1024ul)	/* be carefull, MYSQL has a limit */
-
 /* config types */
 #define CONFIG_MANDATORY 1
 #define CONFIG_EMPTY 0
 
-/* 
- * PROTOTYPES 
- */
+#define INIT_QUERY \
+       static int bufno; \
+       static char qbuffer[8][DEF_QUERYSIZE]; \
+       char *query = qbuffer[7 & ++bufno]; \
+       memset(query,0,DEF_QUERYSIZE)
 
-/**
- * \brief load the database driver module
- * \return
- *   - 1 on modules unsupported
- *   - 0 on success
- *   - -1 on failure to load module
- *   - -2 on missing symbols
- *   - -3 on memory error
- * \file dbmodule.c FIXME: Is \file the right doc convention?
- * \side-effects: calls TRACE_FATAL for errors, so no real return values anyways.
- */
-int db_load_driver(void);
+#define P ConnectionPool_T
+#define S PreparedStatement_T
+#define R ResultSet_T
+#define C Connection_T
+#define U URL_T
 
-/* Implemented differently for MySQL and PostgreSQL: */
 /**
  * \brief connect to the database
  * \return 
@@ -72,9 +63,7 @@ int db_connect(void);
 /*
  * make sure we're running against a current database layout 
  */
-
 int db_check_version(void);
-
 
 /**
  * \brief check database connection. If it is dead, reconnect
@@ -82,7 +71,144 @@ int db_check_version(void);
  *    - -1 on failure (no connection to db possible)
  *    -  0 on success
  */
-int db_check_connection(void);
+int db_check_connection(C c);
+
+
+/* get a connection from the pool */
+C db_con_get(void);
+
+/* return the connection to the pool */
+void db_con_close(C c);
+
+/**
+ * \brief disconnect from database server
+ * \return 0
+ */
+int db_disconnect(void);
+
+S db_stmt_prepare(C c,const char *query, ...);
+int db_stmt_set_str(S stmt, int index, const char *x);
+int db_stmt_set_int(S stmt, int index, int x);
+int db_stmt_set_u64(S stmt, int index, u64_t x);
+int db_stmt_set_blob(S stmt, int index, const void *x, int size);
+gboolean db_stmt_exec(S stmt);
+R db_stmt_query(S stmt);
+
+/**
+ * \brief execute a database query
+ * \param the_query the SQL query to execute
+ * \return 
+ *         - 0 on success
+ *         - 1 on failure
+ */
+gboolean db_update(const char *q, ...);
+gboolean db_exec(C c, const char *the_query, ...);
+R db_query(C c, const char *the_query, ...);
+
+int db_result_next(R r);
+/**
+ * \brief get number of fields in result set.
+ * \return
+ *      - 0 on failure or no fields
+ *      - number of fields otherwise
+ */
+unsigned db_num_fields(R r);
+
+/** \defgroup db_result_get_group Variations of db_result_get()
+ * \brief get a single result field row from the result set
+ * \param row result row to get it from
+ * \param field field (=column) to get result from
+ * \return
+ *     - pointer to string holding result. 
+ *     - NULL if no such result
+ */
+const char *db_result_get(R r, unsigned field);
+
+/** \ingroup db_result_get_group
+ * \brief Returns the result as an Integer
+ */
+int db_result_get_int(R r, unsigned field);
+
+/** \ingroup db_result_get_group
+ * \brief Returns the result as an Integer from 0 to 1
+ */
+int db_result_get_bool(R r, unsigned field);
+
+/** \ingroup db_result_get_group
+ * \brief Returns the result as an Unsigned 64 bit Integer
+ */
+u64_t db_result_get_u64(R r, unsigned field);
+
+const void * db_result_get_blob(R r, unsigned field, int *size);
+
+/**
+ * \brief return the ID generated for an AUTO_INCREMENT column
+ *        by the previous INSERT query.
+ * \return 
+ *       - 0 if no such id (if for instance no AUTO_INCREMENT
+ *          value was generated).
+ *       - the id otherwise
+ */
+u64_t db_insert_result(C c, R r);
+
+/**
+ * begin transaction
+ * \return 
+ *     - -1 on error
+ *     -  0 otherwise
+ */
+int db_begin_transaction(C c);
+
+/**
+ * commit transaction
+ * \return
+ *      - -1 on error
+ *      -  0 otherwise
+ */
+int db_commit_transaction(C c);
+
+/**
+ * rollback transaction
+ * \return 
+ *     - -1 on error
+ *     -  0 otherwise
+ */
+int db_rollback_transaction(C c);
+
+/*
+ *
+ * savepoint setup
+ *
+ */
+// public calls
+int db_savepoint(C c, const char * id);
+int db_savepoint_rollback(C c, const char *id);
+
+// private calls
+int db_savepoint_transaction(C c, const char*);
+int db_rollback_savepoint_transaction(C c, const char*);
+
+
+
+/*
+ * helpers 
+ *
+ */
+int mailbox_is_writable(u64_t mailbox_idnr);
+
+struct mailbox_match {
+	char * sensitive;
+	char * insensitive;
+};
+
+struct mailbox_match * mailbox_match_new(const char *s);
+void mailbox_match_free(struct mailbox_match *m);
+
+
+/*
+ * accessors
+ *
+ */
 
 /**
  * \brief check database for existence of usermap table
@@ -104,200 +230,7 @@ int db_use_usermap(void);
  */
 int db_usermap_resolve(clientinfo_t *ci, const char *userid, char * real_username);
 
-/**
- * \brief disconnect from database server
- * \return 0
- */
-int db_disconnect(void);
 
-/**
- * \brief execute a database query
- * \param the_query the SQL query to execute
- * \return 
- *         - 0 on success
- *         - 1 on failure
- */
-int db_query(const char *the_query);
-
-int db_retry_query(char *query, int tries, int sleeptime);
-/**
- * \brief get number of rows in result set.
- * \return 
- *     - 0 on failure or no rows
- *     - number of rows otherwise
- */
-unsigned db_num_rows(void);
-
-/**
- * \brief get number of fields in result set.
- * \return
- *      - 0 on failure or no fields
- *      - number of fields otherwise
- */
-unsigned db_num_fields(void);
-
-/**
- * \brief clear the result set of a query
- */
-void db_free_result(void);
-
-/** \defgroup db_get_result_group Variations of db_get_result()
- * \brief get a single result field row from the result set
- * \param row result row to get it from
- * \param field field (=column) to get result from
- * \return
- *     - pointer to string holding result. 
- *     - NULL if no such result
- */
-/*@dependent@*/ const char *db_get_result(unsigned row, unsigned field);
-
-/** \ingroup db_get_result_group
- * \brief Returns the result as an Integer
- */
-int db_get_result_int(unsigned row, unsigned field);
-
-/** \ingroup db_get_result_group
- * \brief Returns the result as an Integer from 0 to 1
- */
-int db_get_result_bool(unsigned row, unsigned field);
-
-/** \ingroup db_get_result_group
- * \brief Returns the result as an Unsigned 64 bit Integer
- */
-u64_t db_get_result_u64(unsigned row, unsigned field);
-
-/**
- * \brief return the ID generated for an AUTO_INCREMENT column
- *        by the previous column.
- * \param sequence_identifier sequence identifier
- * \return 
- *       - 0 if no such id (if for instance no AUTO_INCREMENT
- *          value was generated).
- *       - the id otherwise
- */
-u64_t db_insert_result(const char *sequence_identifier);
-
-/**
- * \brief escape a string for use in query
- * \param to string to copy escaped string to. Must be allocated by caller
- * \param from original string
- * \param length of orginal string
- * \return length of escaped string
- * \attention behaviour is undefined if to and from overlap
- */
-unsigned long db_escape_string(char *to,
-			       const char *from, unsigned long length);
-
-/**
- * \brief escape a binary data for use in query
- * \param to string to copy escaped string to. Must be allocated by caller
- * \param from original string
- * \param length of orginal string
- * \return length of escaped string
- * \attention behaviour is undefined if to and from overlap
- */
-char * db_escape_binary(const char *from, unsigned long length);
-
-
-/**
- * \brief get length in bytes of a result field in a result set.
- * \param row row of field
- * \param field field number (0..nfields)
- * \return 
- *      - -1 if invalid field
- *      - length otherwise
- */
-u64_t db_get_length(unsigned row, unsigned field);
-
-/**
- * \brief get number of rows affected by a query
- * \return
- *    -  -1 on error (e.g. no result set)
- *    -  number of affected rows otherwise
- */
-u64_t db_get_affected_rows(void);
-
-/**
- * \brief switch from the normal result set to the msgbuf
- * result set from hereon. A call to db_store_msgbuf_result()
- * will reverse this situation again 
- */
-void db_use_msgbuf_result(void);
-
-/**
- * \brief switch from msgbuf result set to the normal result
- * set for all following database operations. This function
- * should be called after db_use_msgbuf_result() when the
- * msgbuf result has to be used later on.
- */
-void db_store_msgbuf_result(void);
-
-/**
- * \brief switch from normal result set to the authentication result
- * set
- */
-void db_use_auth_result(void);
-
-/**
- * \brief switch from authentication result set to normal result set
- */
-void db_store_auth_result(void);
-
-/**
- * \brief get void pointer to result set.
- * \return a pointer to a result set
- * \bug this is really ugly and should be dealt with differently!
- */
-void *db_get_result_set(void);
-
-/**
- * \brief set the new result set 
- * \param res the new result set
- * \bug this is really ugly and should be dealt with differently!
- */
-void db_set_result_set(void *res);
-
-/**
- * begin transaction
- * \return 
- *     - -1 on error
- *     -  0 otherwise
- */
-int db_begin_transaction(void);
-
-/**
- * commit transaction
- * \return
- *      - -1 on error
- *      -  0 otherwise
- */
-int db_commit_transaction(void);
-
-/**
- * rollback transaction
- * \return 
- *     - -1 on error
- *     -  0 otherwise
- */
-int db_rollback_transaction(void);
-
-int mailbox_is_writable(u64_t mailbox_idnr);
-
-
-/*
- *
- * savepoint setup
- *
- */
-// public calls
-int db_savepoint(const char * id);
-int db_savepoint_rollback(const char *id);
-
-// private calls
-int db_savepoint_transaction(const char*);
-int db_rollback_savepoint_transaction(const char*);
-
-/* shared implementattion from hereon */
 /**
  * \brief get the physmessage_id from a message_idnr
  * \param message_idnr
@@ -313,8 +246,6 @@ int db_rollback_savepoint_transaction(const char*);
 int db_get_physmessage_id(u64_t message_idnr, /*@out@*/ u64_t * physmessage_id);
 
 
-int db_user_quotum_inc(u64_t user_idnr, u64_t size);
-int db_user_quotum_dec(u64_t user_idnr, u64_t size);
 /**
  * \brief return number of bytes used by user identified by userid
  * \param user_idnr id of the user (from users table)
@@ -324,7 +255,10 @@ int db_user_quotum_dec(u64_t user_idnr, u64_t size);
  *          - -1 on failure<BR>
  *          -  1 otherwise
  */
-int db_get_quotum_used(u64_t user_idnr, u64_t * curmail_size);
+int dm_quota_user_set(u64_t user_idnr, u64_t size);
+int dm_quota_user_get(u64_t user_idnr, u64_t *size);
+int dm_quota_user_dec(u64_t user_idnr, u64_t size);
+int dm_quota_user_inc(u64_t user_idnr, u64_t size);
 
 /**
  * \brief finds all users which need to have their curmail_size (amount
@@ -335,7 +269,7 @@ int db_get_quotum_used(u64_t user_idnr, u64_t * curmail_size);
  *     - -1 on database error
  *     -  0 on success
  */
-int db_calculate_quotum_all(void);
+int dm_quota_rebuild(void);
 
 /**
  * \brief performs a recalculation of used quotum of a user and puts
@@ -345,137 +279,8 @@ int db_calculate_quotum_all(void);
  *   - -1 on db_failure
  *   -  0 on success
  */
-int db_calculate_quotum_used(u64_t user_idnr);
-/**
- * \brief get a specific sieve script for a user
- * \param user_idnr user id
- * \param scriptname string with name of the script to get
- * \param script pointer to string that will hold the script itself
- * \return
- *        - -2 on failure of allocating memory for string
- *        - -1 on database failure
- *        - 0 on success
- * \attention caller should free the returned script
- */
-int db_get_sievescript_byname(u64_t user_idnr, char *scriptname,
-			      char **script);
-/**
- * \brief Check if the user has an active sieve script.
- * \param user_idnr user id
- * \return
- *        - -1 on error
- *        - 0 when user has an active script
- *        - 1 when user doesn't have an active script
- */
-int db_check_sievescript_active(u64_t user_idnr);
-int db_check_sievescript_active_byname(u64_t user_idnr, const char *scriptname);
-/**
- * \brief get the name of the active sieve script for a user
- * \param user_idnr user id
- * \param scriptname pointer to string that will hold the script name
- * \return
- *        - -3 on failure to find a matching row in database
- *        - -2 on failure of allocating memory for string
- *        - -1 on database failure
- *        - 0 on success
- * \attention caller should free the returned script name
- */
-int db_get_sievescript_active(u64_t user_idnr, char **scriptname);
-/**
- * \brief get a list of sieve scripts for a user
- * \param user_idnr user id
- * \param scriptlist pointer to GList ** that will hold script names
- * \return
- *        - -2 on failure of allocating memory for string
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_get_sievescript_listall(u64_t user_idnr, GList **scriptlist);
-/**
- * \brief rename a sieve script for a user
- * \param user_idnr user id
- * \param scriptname is the current name of the script
- * \param newname is the new name the script will be changed to
- * \return
- *        - -3 on non-existent script name
- *        - -2 on NULL scriptname or script
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_rename_sievescript(u64_t user_idnr, char *scriptname,
-			   char *newname);
-/**
- * \brief add a sieve script for a user
- * \param user_idnr user id
- * \param scriptname is the name of the script to be added
- * \param scriptname is the script itself to be added
- * \return
- *        - -3 on non-existent script name
- *        - -2 on NULL scriptname or script
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script);
-/**
- * \brief deactivate a sieve script for a user
- * \param user_idnr user id
- * \param scriptname is the name of the script to be activated
- * \return
- *        - -3 on non-existent script name
- *        - -2 on bad or wrong script name
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_deactivate_sievescript(u64_t user_idnr, char *scriptname);
-/**
- * \brief activate a sieve script for a user
- * \param user_idnr user id
- * \param scriptname is the name of the script to be activated
- * \return
- *        - -3 on non-existent script name
- *        - -2 on bad or wrong script name
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_activate_sievescript(u64_t user_idnr, char *scriptname);
-/**
- * \brief delete a sieve script for a user
- * \param user_idnr user id
- * \param scriptname is the name of the script to be deleted
- * \return
- *        - -3 on non-existent script name
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_delete_sievescript(u64_t user_idnr, char *scriptname);
-/**
- * \brief checks to see if the user has space for a script
- * \param user_idnr user id
- * \param scriptlen is the size of the script we might insert
- * \return
- *        - -3 if there is not enough space
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen);
-/**
- * \brief sets the sieve script quota for a user
- * \param user_idnr user id
- * \param quotasize is the desired new quota size
- * \return
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize);
-/**
- * \brief gets the current sieve script quota for a user
- * \param user_idnr user id
- * \param quotasize will be filled with the current quota size
- * \return
- *        - -1 on database failure
- *        - 0 on success
- */
-int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize);
+int dm_quota_rebuild_user(u64_t user_idnr);
+
 /**
  * \brief get auto-notification address for a user
  * \param user_idnr user id
@@ -518,7 +323,7 @@ u64_t db_get_useridnr(u64_t message_idnr);
  *     - -1 on failure
  *     -  1 on success
  */
-int db_insert_physmessage(/*@out@*/ u64_t * physmessage_id);
+int db_insert_physmessage(u64_t * physmessage_id);
 
 /**
  * \brief insert a physmessage with an internal date.
@@ -529,8 +334,7 @@ int db_insert_physmessage(/*@out@*/ u64_t * physmessage_id);
  *    - -1 on failure
  *    -  1 on success
  */
-int db_insert_physmessage_with_internal_date(timestring_t internal_date,
-					     u64_t * physmessage_id);
+int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t * physmessage_id);
 
 /**
  * \brief update unique_id, message_size and rfc_size of
@@ -543,40 +347,8 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
  *      - -1 on database error
  *      - 0 on success
  */
-int db_update_message(u64_t message_idnr, const char *unique_id,
-		      u64_t message_size, u64_t rfc_size);
+int db_update_message(u64_t message_idnr, const char *unique_id, u64_t message_size, u64_t rfc_size);
 
-/**
- * \brief insert a messageblock for a specific physmessage
- * \param block the block
- * \param block_size size of block
- * \param physmessage_id id of physmessage to which the block belongs.
- * \param messageblock_idnr will hold id of messageblock after call. Should
- * hold a valid pointer on call.
- * \return
- *      - -1 on failure
- *      -  0 on success
- */
-int db_insert_message_block_physmessage(const char *block,
-					u64_t block_size,
-					u64_t physmessage_id,
-					u64_t * messageblock_idnr,
-					unsigned is_header);
-/**
-* \brief insert a message block into the message block table
-* \param block the message block (which is a string)
-* \param block_size length of the block
-* \param message_idnr id of the message the block belongs to
-* \param messageblock_idnr will hold id of messageblock after call. Should
-* be a valid pointer on call.
-* \return 
-*        - -1 on failure
-*        - 0 otherwise
-*/
-int db_insert_message_block(const char *block, u64_t block_size,
-			    u64_t message_idnr, 
-			    /*@out@*/ u64_t * messageblock_idnr,
-			    unsigned is_header);
 /**
  * \brief log IP-address for POP/IMAP_BEFORE_SMTP. If the IP-address
  *        is already logged, it's timestamp is renewed.
@@ -587,17 +359,6 @@ int db_insert_message_block(const char *block, u64_t block_size,
  * \bug timestamp!
  */
 int db_log_ip(const char *ip);
-
-/**
-* \brief clean up ip log
-* \param lasttokeep all ip log entries before this timestamp will
-*                     be deleted
-* \return 
-*       - -1 on database failure
-*       - 0 on success
-*/
-int db_cleanup_iplog(timestring_t lasttokeep, u64_t *affected_rows);
-int db_count_iplog(timestring_t lasttokeep, u64_t *affected_rows);
 
 /**
  * \brief cleanup database tables
@@ -738,6 +499,10 @@ int db_update_rfcsize(GList *lost);
 
 int db_icheck_envelope(GList **lost);
 int db_set_envelope(GList *lost);
+
+
+
+int db_setselectable(u64_t mailbox_idnr, int select_value);
 /**
  * \brief set status of a message
  * \param message_idnr
@@ -745,21 +510,6 @@ int db_set_envelope(GList *lost);
  * \return result of db_query()
  */
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status);
-
-/**
-* \brief delete a message block
-* \param messageblk_idnr
-* \return result of db_query()
-*/
-int db_delete_messageblk(u64_t messageblk_idnr);
-/**
- * \brief delete a physmessage
- * \param physmessage_id
- * \return
- *      - -1 on error
- *      -  1 on success
- */
-int db_delete_physmessage(u64_t physmessage_id);
 
 /**
  * \brief delete a message 
@@ -825,49 +575,7 @@ void db_session_cleanup(ClientSession_t * session_ptr);
  * touched by POP3
  */
 int db_update_pop(ClientSession_t * session_ptr);
-/**
- * \brief set deleted status (=3) for all messages that are marked for
- *        delete (=2)
- * \param affected_rows will hold the number of affected messages on return. 
- * must hold a valid pointer on call.
- * \return
- *    - -1 on database failure;
- *    - 1 otherwise
- */
-int db_set_deleted(u64_t * affected_rows);
-int db_count_deleted(u64_t * affected_rows);
-/**
- * \brief purge all messages from the database with a "delete"-status 
- * (status = 3)
- * \param affected_rows will hold the number of affected rows on return. Must
- * hold a valid pointer on call
- * \return 
- *     - -2 on memory failure
- *     - -1 on database failure
- *     - 0 if no messages deleted (affected_rows will also hold '0')
- *     - 1 if a number of messages deleted (affected_rows will hold the number
- *       of deleted messages.
- */
-int db_deleted_purge(u64_t * affected_rows);
-int db_deleted_count(u64_t * affected_rows);
-/**
- * \brief check if a block of a certain size can be inserted.
- * \param addblocksize size of added blocks (UNUSED)
- * \param message_idnr 
- * \param *user_idnr pointer to user_idnr. This will be set to the
- *        idnr of the user associated with the message
- * \return
- *      - -2 on database failure after a limit overrun (if this
- *           occurs the DB might be inconsistent and dbmail-util
- *           needs to be run)
- *      - -1 on database failure
- *      - 0 on success
- *      - 1 on limit overrun.
- * \attention when inserting a block would cause a limit run-overrun.
- *            the message insert is automagically rolled back
- */
-u64_t db_check_sizelimit(u64_t addblocksize, u64_t message_idnr,
-			 u64_t * user_idnr);
+
 /**
  * \brief insert a message into the database
  * \param msgdata the message
@@ -884,16 +592,6 @@ u64_t db_check_sizelimit(u64_t addblocksize, u64_t message_idnr,
 int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		       u64_t mailbox_idnr, u64_t user_idnr,
 		       timestring_t internal_date, u64_t * msg_idnr);
-
-/**
- * Produces a regexp that will case-insensitively match the mailbox name
- * according to the modified UTF-7 rules given in section 5.1.3 of IMAP.
- * \param column name of the name column.
- * \param mailbox name of the mailbox.
- * \param filter use /% for children or "" for just the box.
- * \return pointer to a newly allocated string.
- */
-char *db_imap_utf7_like(const char *column, const char *mailbox, const char *filter);
 
 /* mailbox functionality */
 /** 
@@ -917,15 +615,12 @@ int db_findmailbox(const char *name, u64_t user_idnr,
  * \param children pointer to a list of mailboxes conforming to
  *        pattern. This will be filled when the function
  *        returns and needs to be free-d by caller
- * \param nchildren number of mailboxes in children
  * \param only_subscribed only search in subscribed mailboxes.
  * \return 
  *      - -1 on failure
  *      - 0 on success
  */
-int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
-			    u64_t ** children, unsigned *nchildren,
-			    int only_subscribed);
+int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern, GList ** children, int only_subscribed);
 /**
  * \brief get info on a mailbox. Info is filled in in the
  *        MailboxInfo struct.
@@ -1024,14 +719,12 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
  * \param mailbox_idnr id of parent mailbox
  * \param user_idnr
  * \param children will hold list of children
- * \param nchildren length of list of children
  * \param filter search filter
  * \return 
  *    - -1 on failure
  *    -  0 on success
  */
-int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
-			   u64_t ** children, int *nchildren);
+int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, GList ** children);
 
 /**
  * \brief check if mailbox is selectable
@@ -1052,17 +745,6 @@ int db_isselectable(u64_t mailbox_idnr);
  */
 int db_noinferiors(u64_t mailbox_idnr);
 
-/**
- * \brief set selectable flag of a mailbox on/of
- * \param mailbox_idnr
- * \param select_value 
- *            - 0 for not select
- *            - 1 for select
- * \return
- *     - -1 on failure
- *     - 0 on success
- */
-int db_setselectable(u64_t mailbox_idnr, int select_value);
 /** 
  * \brief remove all messages from a mailbox
  * \param mailbox_idnr
@@ -1259,6 +941,7 @@ int db_acl_get_identifier(u64_t mboxid, /*@out@*/ GList  **identifier_list);
  * DATE_FORMAT(date, format) for MySQL).
  */
 char *date2char_str(const char *column);
+char *char2date_str(const char *date);
 
 
 /* 
@@ -1281,19 +964,9 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 int db_replycache_validate(const char *to, const char *from, const char *handle, int days);
 int db_replycache_unregister(const char *to, const char *from, const char *handle);
 
-/**
-* \brief clean up replycache
-* \param lasttokeep all replycache entries before this timestamp will
-*                     be deleted
-* \return 
-*       - -1 on database failure
-*       - 0 on success
-*/
-int db_cleanup_replycache(timestring_t lasttokeep, u64_t *affected_rows);
-int db_count_replycache(timestring_t lasttokeep, u64_t *affected_rows);
-
 /* get driver specific SQL snippets */
 const char * db_get_sql(sql_fragment_t frag);
+char * db_returning(const char *s);
 
 int db_mailbox_mtime_update(u64_t mailbox_id);
 int db_message_mailbox_mtime_update(u64_t message_id);

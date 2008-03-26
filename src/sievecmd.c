@@ -271,25 +271,19 @@ int main(int argc, char *argv[])
 
 int do_activate(u64_t user_idnr, char *name)
 {
-	int res = 0;
-
 	if (!name) {
 		qerrorf("Must give the name of a script to activate.\n");
 		return -1;
 	}
 
-	res = db_activate_sievescript(user_idnr, name);
-	if (res == -3) {
-		qerrorf("Script [%s] does not exist.\n", name);
-		return -1;
-	} else if (res != 0) {
+	if (! dm_sievescript_activate(user_idnr, name)) {
 		qerrorf("Error activating script [%s].\n"
 		       "It is possible that no script is currently active!\n",
 		       name);
 		return -1;
 	}
-	qprintf("Script [%s] is now active. All others are inactive.\n",
-	       name);
+
+	qprintf("Script [%s] is now active. All others are inactive.\n", name);
 
 	return 0;
 }
@@ -297,11 +291,10 @@ int do_activate(u64_t user_idnr, char *name)
 
 int do_deactivate(u64_t user_idnr, char *name)
 {
-	int res = 0;
 	char *scriptname = NULL;
 
 	if (!name) {
-		if (db_get_sievescript_active(user_idnr, &scriptname)) {
+		if (dm_sievescript_get(user_idnr, &scriptname)) {
 			qerrorf("Database error when fetching active script.\n");
 			return -1;
 		}
@@ -314,11 +307,7 @@ int do_deactivate(u64_t user_idnr, char *name)
 		name = scriptname;
 	}
 
-	res = db_deactivate_sievescript(user_idnr, name);
-	if (res == -3) {
-		qerrorf("Script [%s] does not exist.\n", name);
-		return -1;
-	} else if (res != 0) {
+	if (! dm_sievescript_deactivate(user_idnr, name)) {
 		qerrorf("Error deactivating script [%s].\n", name);
 		return -1;
 	}
@@ -342,7 +331,7 @@ int do_edit(u64_t user_idnr, char *name)
 	struct stat stat_before, stat_after;
 
 	if (!name) {
-		if (db_get_sievescript_active(user_idnr, &scriptname)) {
+		if (dm_sievescript_get(user_idnr, &scriptname)) {
 			qerrorf("Database error when fetching active script!\n");
 			ret = 1;
 			goto cleanup;
@@ -449,7 +438,7 @@ int do_cat(u64_t user_idnr, char *name, FILE *out)
 	if (name)
 		scriptname = name;
 	else
-		res = db_get_sievescript_active(user_idnr, &scriptname);
+		res = dm_sievescript_get(user_idnr, &scriptname);
 
 	if (res != 0) {
 		qerrorf("Database error when fetching active script!\n");
@@ -461,7 +450,7 @@ int do_cat(u64_t user_idnr, char *name, FILE *out)
 		return -1;
 	}
 
-	res = db_get_sievescript_byname(user_idnr, scriptname, &buf);
+	res = dm_sievescript_getbyname(user_idnr, scriptname, &buf);
 
 	if (res != 0) {
 		qerrorf("Database error when fetching script!\n");
@@ -535,7 +524,7 @@ int do_insert(u64_t user_idnr, char *name, char *source)
 	FILE *file = NULL;
 	sort_result_t *sort_result;
 
-	res = db_get_sievescript_byname(user_idnr, name, &buf);
+	res = dm_sievescript_getbyname(user_idnr, name, &buf);
 	if (buf) {
 		g_free(buf);
 		was_found = 1;
@@ -570,7 +559,7 @@ int do_insert(u64_t user_idnr, char *name, char *source)
 	}
 
 	/* Check if the script is valid */
-	res = db_add_sievescript(user_idnr, "@!temp-script!@", buf);
+	res = dm_sievescript_add(user_idnr, "@!temp-script!@", buf);
 	g_free(buf);
 	if (res != 0) {
 		qerrorf("Error inserting temporary script into the database!\n");
@@ -580,32 +569,32 @@ int do_insert(u64_t user_idnr, char *name, char *source)
 	sort_result = sort_validate(user_idnr, "@!temp-script!@");
 	if (sort_result == NULL) {
 		qprintf("Script could not be validated.\n");
-		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		dm_sievescript_delete(user_idnr, "@!temp-script!@");
 		return -1;
 	}
 	if (sort_get_error(sort_result) != 0) {
 		qprintf("Script [%s] has errors: %s.\n",
 			name, sort_get_errormsg(sort_result));
-		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		dm_sievescript_delete(user_idnr, "@!temp-script!@");
 		sort_free_result(sort_result);
 		return -1;
 	}
 	sort_free_result(sort_result);
 
-	res = db_rename_sievescript(user_idnr, "@!temp-script!@", name);
+	res = dm_sievescript_rename(user_idnr, "@!temp-script!@", name);
 	if (res == -3) {
 		qprintf("Script [%s] already exists.\n", name);
-		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		dm_sievescript_delete(user_idnr, "@!temp-script!@");
 		return -1;
 	} else if (res != 0) {
 		qerrorf("Error inserting script [%s] into the database!\n",
 		       name);
-		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		dm_sievescript_delete(user_idnr, "@!temp-script!@");
 		return -1;
 	}
 
 	if (was_found) {
-		if (db_check_sievescript_active_byname(user_idnr, name) == 0) {
+		if (dm_sievescript_isactive_byname(user_idnr, name)) {
 			qprintf("Script [%s] successfully updated and remains active!\n", name);
 		} else {
 			qprintf("Script [%s] successfully updated and remains inactive!\n", name);
@@ -619,13 +608,7 @@ int do_insert(u64_t user_idnr, char *name, char *source)
 
 int do_remove(u64_t user_idnr, char *name)
 {
-	int res;
-
-	res = db_delete_sievescript(user_idnr, name);
-	if (res == -3) {
-		qerrorf("Script [%s] does not exist.\n", name);
-		return -1;
-	} else if (res != 0) {
+	if (! dm_sievescript_delete(user_idnr, name)) {
 		qerrorf("Error deleting script [%s].\n", name);
 		return -1;
 	}
@@ -640,7 +623,7 @@ int do_list(u64_t user_idnr)
 {
 	GList *scriptlist = NULL;
 
-	if (db_get_sievescript_listall(user_idnr, &scriptlist) < 0) {
+	if (dm_sievescript_list(user_idnr, &scriptlist) < 0) {
 		qerrorf("Error retrieving Sieve script list.\n");
 		return -1;
 	}

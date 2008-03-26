@@ -80,6 +80,13 @@
 #include <ldap.h>
 #endif
 
+#include <URL.h>
+#include <ResultSet.h>
+#include <PreparedStatement.h>
+#include <Connection.h>
+#include <ConnectionPool.h>
+#include <SQLException.h>
+
 #include "dbmailtypes.h"
 #include "dm_list.h"
 #include "dm_memblock.h"
@@ -95,7 +102,7 @@
 #include "lmtp.h"
 
 #include "dm_db.h"
-#include "dbmodule.h"
+#include "dm_sievescript.h"
 
 #include "auth.h"
 #include "authmodule.h"
@@ -217,6 +224,7 @@
 #define min(x,y) ((x)<=(y)?(x):(y))
 #define max(x,y) ((x)>=(y)?(x):(y))
 
+#define LOG_SQLERROR TRACE(TRACE_ERROR,"SQLException: %s", Connection_getLastError(c))
 
 /**
  * \brief read configuration from filename

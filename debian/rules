@@ -5,11 +5,6 @@
 # Uncomment this to turn on verbose mode. 
 #export DH_VERBOSE=1
 
-#export WITH_GC="--with-gc"
-export WITH_SIEVE=--with-sieve
-export WITH_SQLITE=--with-sqlite 
-export WITH_MYSQL=--with-mysql
-export WITH_PGSQL=--with-pgsql
 export WITH_LDAP=--with-ldap
 export SHARED=--enable-shared=yes
 export SHARED=--enable-static=no
@@ -30,28 +25,12 @@ DBMAIL_VERSION	?= $(shell cat VERSION)
 
 ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
-	export WITH_MYSQL=
-	export WITH_PGSQL=
-	export WITH_SQLITE=
 	export WITH_LDAP=
 	export WITH_SIEVE=
-	export WITH_INGRES=
 	export MANPAGES=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes
 	CFLAGS += -g
-endif
-ifneq (,$(findstring mysql,$(DEB_BUILD_OPTIONS)))
-	export WITH_MYSQL=--with-mysql
-endif 
-ifneq (,$(findstring pgsql,$(DEB_BUILD_OPTIONS)))
-	export WITH_PGSQL=--with-pgsql
-endif	
-ifneq (,$(findstring sqlite,$(DEB_BUILD_OPTIONS)))
-	export WITH_SQLITE=--with-sqlite
-endif
-ifneq (,$(findstring ingres,$(DEB_BUILD_OPTIONS)))
-	export WITH_INGRES=--with-ingres=/opt/Ingres/IngresII
 endif
 ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
 	export WITH_LDAP=--with-ldap
@@ -72,8 +51,7 @@ include /usr/share/dpatch/dpatch.make
 
 CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
-	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(MANPAGES) \
-	$(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
+	$(WITH_CHECK) $(SHARED) $(STATIC) $(MANPAGES) $(WITH_SIEVE) $(WITH_LDAP)
 
 build: stamps/build
 stamps/build: stamps patch $(PACKAGES)

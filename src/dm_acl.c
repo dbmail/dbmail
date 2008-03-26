@@ -65,7 +65,7 @@ int acl_has_right(MailboxInfo *mailbox, u64_t userid, ACLRight_t right)
 		case ACL_RIGHT_CREATE:
 		case ACL_RIGHT_DELETE:
 		case ACL_RIGHT_ADMINISTER:
-			if (mailbox_is_writable(mailbox->uid))
+			if (! mailbox_is_writable(mailbox->uid))
 				return FALSE;
 		break;
 

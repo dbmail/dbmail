@@ -1,6 +1,14 @@
 /*
  (c) 2000-2004 IC&S, The Netherlands 
  (c) 2004-2007 NFG, The Netherlands
+
+
+FIXME: this information is somewhat outdated
+TODO:
+tell more about where to find what library
+add information about utf8 setups for mysql users
+add information about advanced setups with connection pools
+
 */
 
 DBMAIL Installation
@@ -22,6 +30,9 @@ What do you need?
 - Gmime (>= 2.1.18) development headers and libraries.
 - libSieve for Sieve support (libsieve.sf.net).
 - Any standard libldap for LDAP support (only tested with OpenLDAP, however).
+- mhash
+- libzdb
+- libevent
 
 
 1.	Setup a database

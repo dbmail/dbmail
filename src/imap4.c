@@ -130,13 +130,17 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
+	C c;
 
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
-	if (db_check_connection()) {
+	c = db_con_get();
+	if (!db_check_connection(c)) {
+		db_con_close(c);
 		TRACE(TRACE_DEBUG,"database has gone away");
 		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
 		return;
 	}
+	db_con_close(c);
 
 	if (session->error_count >= MAX_FAULTY_RESPONSES) {
 		/* we have had just about it with this user */

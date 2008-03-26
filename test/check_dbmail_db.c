@@ -98,6 +98,7 @@ void setup(void)
 		do_add(username_domain, "testpass", "md5-hash", 0, 0, NULL, NULL);
 		auth_user_exists(username_domain, &useridnr_domain);
 	}
+
 }
 
 void teardown(void)
@@ -109,6 +110,9 @@ void teardown(void)
 	if (db_findmailbox("testcreatebox",testidnr,&mailbox_id))
 		db_delete_mailbox(mailbox_id,0,0);
 
+	if (db_findmailbox("testdeletebox",testidnr,&mailbox_id))
+		db_delete_mailbox(mailbox_id,0,0);
+
 	if (db_findmailbox("testpermissionbox",testidnr,&mailbox_id)) {
 		db_mailbox_set_permission(mailbox_id, IMAPPERM_READWRITE);
 		db_delete_mailbox(mailbox_id,0,0);
@@ -118,70 +122,63 @@ void teardown(void)
 	auth_disconnect();
 }
 
-/*
- * make sure we're running against a current database layout 
- */
+START_TEST(test_db_stmt_prepare)
+{
+	C c; S s;
+	c = db_con_get();
+	s = db_stmt_prepare(c, "SELECT 1=1");
+	fail_unless(s != NULL, "db_stmt_prepare failed");
+	db_con_close(c);
 
-//int db_check_version(void);
+}
+END_TEST
 
+START_TEST(test_db_stmt_set_int)
+{
 
-/**
- * \brief check database connection. If it is dead, reconnect
- * \return
- *    - -1 on failure (no connection to db possible)
- *    -  0 on success
- */
-//int db_check_connection(void);
+}
+END_TEST
 
-/**
- * \brief check database for existence of usermap table
- * \return
- * -  0 on table not found
- * -  1 on table found
- */
-//int db_use_usermap(void);
+START_TEST(test_db_stmt_set_u64)
+{
 
-/**
- * \brief check if username exists in the usermap table
- * \param ci clientinfo_t of connected client
- * \param userid login to lookup
- * \param real_username contains userid after successful lookup
- * \return
- *  - -1 on db failure
- *  -  0 on success
- *  -  1 on not found
- */
-//int db_usermap_resolve(clientinfo_t *ci, const char *userid, char * real_username);
+}
+END_TEST
 
-/**
- * \brief disconnect from database server
- * \return 0
- */
-//int db_disconnect(void);
+START_TEST(test_db_stmt_set_str)
+{
 
-/**
- * \brief execute a database query
- * \param the_query the SQL query to execute
- * \return 
- *         - 0 on success
- *         - 1 on failure
- */
-//int db_query(const char *the_query);
+}
+END_TEST
+
+START_TEST(test_db_stmt_set_blob)
+{
+
+}
+END_TEST
+
+START_TEST(test_db_stmt_exec)
+{
+
+}
+END_TEST
+
 START_TEST(test_db_query)
 {
-	GString *q = g_string_new("");
-	int result;
+	C c; R r = NULL;
 
-	g_string_printf(q,"SELECT foo FROM bar");
-	result = db_query(q->str);
-	fail_unless(result==-1, "db_query should have failed");
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT foo FROM bar");
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	END_TRY;
+	fail_unless(r==NULL, "db_query should have failed");
 
-	g_string_printf(q,"SELECT 1=1");
-	result = db_query(q->str);
-	fail_unless(result==0, "db_query should have succeeded");
-
-	g_string_free(q,TRUE);
-	db_free_result();
+	r = db_query(c, "SELECT 1=1");
+	fail_unless(r!=NULL, "db_query should have succeeded");
+	fail_unless(db_result_next(r), "db_result_next failed");
+	fail_unless(strlen(db_result_get(r,0)), "db_result_get failed");
 }
 END_TEST
 START_TEST(test_db_mailbox_set_permission)
@@ -193,16 +190,16 @@ START_TEST(test_db_mailbox_set_permission)
 	fail_unless(mailbox_id, "db_find_create_mailbox [testpermissionbox] owned by [%llu] failed [%llu].", testidnr, mailbox_id);
 
 	result = db_mailbox_set_permission(mailbox_id, IMAPPERM_READ);
-	fail_unless(result==0,"db_mailbox_set_permission failed");
+	fail_unless(result==TRUE,"db_mailbox_set_permission failed");
 
 	result = db_delete_mailbox(mailbox_id,0,0);
-	fail_unless(result!=0,"db_delete_mailbox should have failed on readonly mailbox");
+	fail_unless(result != DM_SUCCESS,"db_delete_mailbox should have failed on readonly mailbox");
 
 	result = db_mailbox_set_permission(mailbox_id, IMAPPERM_READWRITE);
-	fail_unless(result==0,"db_mailbox_set_permission failed");
+	fail_unless(result==TRUE,"db_mailbox_set_permission failed");
 
 	result = db_delete_mailbox(mailbox_id,0,0);
-	fail_unless(result==0,"db_delete_mailbox should have succeeded on readwrite mailbox");
+	fail_unless(result == DM_SUCCESS,"db_delete_mailbox should have succeeded on readwrite mailbox");
 
 
 	return;
@@ -224,11 +221,6 @@ END_TEST
  */
 //unsigned db_num_fields(void);
 
-/**
- * \brief clear the result set of a query
- */
-//void db_free_result(void);
-
 /** 
  * \brief get a single result field row from the result set
  * \param row result row to get it from
@@ -237,22 +229,22 @@ END_TEST
  *     - pointer to string holding result. 
  *     - NULL if no such result
  */
-//const char *db_get_result(unsigned row, unsigned field);
+//const char *db_result_get(unsigned row, unsigned field);
 
-/** \ingroup db_get_result_group
+/** \ingroup db_result_get_group
  * \brief Returns the result as an Integer
  */
-//int db_get_result_int(unsigned row, unsigned field);
+//int db_result_get_int(unsigned row, unsigned field);
 
-/** \ingroup db_get_result_group
+/** \ingroup db_result_get_group
  * \brief Returns the result as an Integer from 0 to 1
  */
-//int db_get_result_bool(unsigned row, unsigned field);
+//int db_result_get_bool(unsigned row, unsigned field);
 
-/** \ingroup db_get_result_group
+/** \ingroup db_result_get_group
  * \brief Returns the result as an Unsigned 64 bit Integer
  */
-//u64_t db_get_result_u64(unsigned row, unsigned field);
+//u64_t db_result_get_u64(unsigned row, unsigned field);
 
 /**
  * \brief return the ID generated for an AUTO_INCREMENT column
@@ -265,38 +257,6 @@ END_TEST
  */
 //u64_t db_insert_result(const char *sequence_identifier);
 
-/**
- * \brief escape a string for use in query
- * \param to string to copy escaped string to. Must be allocated by caller
- * \param from original string
- * \param length of orginal string
- * \return length of escaped string
- * \attention behaviour is undefined if to and from overlap
- */
-//unsigned long db_escape_string(char *to,
-//			       const char *from, unsigned long length);
-
-/**
- * \brief escape a binary data for use in query
- * \param to string to copy escaped string to. Must be allocated by caller
- * \param from original string
- * \param length of orginal string
- * \return length of escaped string
- * \attention behaviour is undefined if to and from overlap
- */
-//char * db_escape_binary(const char *from, unsigned long length);
-START_TEST(test_db_escape_binary)
-{
-	const char *from = "test";
-	unsigned long olen = strlen(from);
-	char *to;
-
-	to = db_escape_binary(from, olen);
-
-	fail_unless(to!=NULL);
-	fail_unless(MATCH(to,from), "[%s] != \n[%s]\n", to, from);
-}
-END_TEST
 
 /**
  * \brief get length in bytes of a result field in a result set.
@@ -332,7 +292,7 @@ END_TEST
  * \return a pointer to a result set
  * \bug this is really ugly and should be dealt with differently!
  */
-//void *db_get_result_set(void);
+//void *db_result_get_set(void);
 
 /**
  * \brief set the new result set 
@@ -389,7 +349,7 @@ END_TEST
  *          - -1 on failure<BR>
  *          -  1 otherwise
  */
-//int db_get_quotum_used(u64_t user_idnr, u64_t * curmail_size);
+//int dm_quota_user_get(u64_t user_idnr, u64_t * curmail_size);
 
 /**
  * \brief finds all users which need to have their curmail_size (amount
@@ -400,7 +360,7 @@ END_TEST
  *     - -1 on database error
  *     -  0 on success
  */
-//int db_calculate_quotum_all(void);
+//int dm_quota_rebuild(void);
 
 /**
  * \brief performs a recalculation of used quotum of a user and puts
@@ -410,7 +370,7 @@ END_TEST
  *   - -1 on db_failure
  *   -  0 on success
  */
-//int db_calculate_quotum_used(u64_t user_idnr);
+//int dm_quota_rebuild_user(u64_t user_idnr);
 
 /**
  * \brief get auto-notification address for a user
@@ -812,7 +772,7 @@ END_TEST
  * \param filter use /% for children or "" for just the box.
  * \return pointer to a newly allocated string.
  */
-START_TEST(test_db_imap_utf7_like)
+START_TEST(test_mailbox_match_new)
 {
 	char *trythese[] = {
 		"Inbox",
@@ -821,19 +781,22 @@ START_TEST(test_db_imap_utf7_like)
 		"INBOX/&BekF3AXVBd0-",
 		NULL };
 	char *getthese[] = {
-		"name LIKE 'Inbox/%'",
-		"name LIKE 'Listen/F% %/Users/%'",
-		"name LIKE BINARY '___\\\\_&AOcA4w__/%' AND name LIKE 'xx1\\\\________-o/%'",
-		"name LIKE BINARY '______&BekF3AXVBd0_/%' AND name LIKE 'INBOX/____________-/%'",
-		NULL };
+		NULL, "Inbox",
+		NULL, "Listen/F% %/Users",
+		"___\\_&AOcA4w__", "xx1\\________-o",
+		"______&BekF3AXVBd0_", "INBOX/____________-",
+		NULL, NULL };
 	int i;
+	struct mailbox_match *result;
 
 	for (i = 0; trythese[i] != NULL; i++) {
-		char *result = db_imap_utf7_like("name", trythese[i], "/%");
+		result = mailbox_match_new(trythese[i]);
 
-		fail_unless(strcmp(result, getthese[i])==0, "Failed to make db_imap_utf7_like string for [%s]:\n[%s] !=\n[%s]", trythese[i], result, getthese[i]);
+		fail_unless (MATCH(result->insensitive, getthese[(i*2)+1]), "failed insensitive: [%s] [%s]\n", result->insensitive, getthese[(i*2)+1]);
+		if (getthese[i*2])
+			fail_unless (MATCH(result->sensitive, getthese[i*2]), "failed sensitive: [%s] [%s]\n", result->sensitive, getthese[i*2]);
 
-		g_free(result);
+		mailbox_match_free(result);
 	}
 }
 END_TEST
@@ -872,12 +835,11 @@ END_TEST
 START_TEST(test_db_findmailbox_by_regex)
 {
 	int result;
-	u64_t *children = NULL;
+	GList *children = NULL;
 	u64_t mailbox_id = 0;
-	unsigned nchildren = 0;
 
 	result = db_createmailbox("INBOX/Trash", testidnr, &mailbox_id);
-	result = db_findmailbox_by_regex(testidnr, "INBOX/Trash", &children, &nchildren, 0);
+	result = db_findmailbox_by_regex(testidnr, "INBOX/Trash", &children, 0);
 
 }
 END_TEST
@@ -902,7 +864,8 @@ START_TEST(test_db_getmailbox)
 	mb.uid = get_mailbox_id("INBOX", &userid);
 	
 	res = db_getmailbox(&mb, userid);
-	fail_unless(res == DM_SUCCESS);
+	fail_unless(res == DM_SUCCESS, "db_getmailbox failed");
+	fail_unless(MATCH("INBOX", mb.name), "db_getmailbox failed");
 }
 END_TEST
 
@@ -950,7 +913,8 @@ START_TEST(test_db_createmailbox)
 	fail_unless(result == -1, "db_createmailbox should have failed");
 
 	result = db_createmailbox("testcreatebox", testidnr, &mailbox_id);
-	fail_unless(result==0,"db_createmailbox failed");
+	fail_unless(result==DM_SUCCESS,"db_createmailbox failed");
+
 	
 }
 END_TEST
@@ -974,8 +938,7 @@ START_TEST(test_db_mailbox_create_with_parents)
 
 	result = db_mailbox_create_with_parents("INBOX/Foo/Bar/Baz", BOX_COMMANDLINE,
 			useridnr, &mailbox_idnr, &message);
-	fail_unless(result == 0 && mailbox_idnr != 0,
-			"Failed at db_mailbox_create_with_parents: [%s]", message);
+	fail_unless(result == 0 && mailbox_idnr != 0, "Failed at db_mailbox_create_with_parents: [%s]", message);
 
 	/* At this point, useridnr should have and be subscribed to several boxes... */
 	result = db_findmailbox("inbox/foo/BAR/baz", useridnr, &mailbox_idnr);
@@ -1041,10 +1004,10 @@ START_TEST(test_db_delete_mailbox)
 	fail_unless(result != DM_SUCCESS, "db_delete_mailbox should have failed");
 
 	result = db_createmailbox("testdeletebox",testidnr, &mailbox_id);
-	fail_unless(result == 0,"db_createmailbox failed");
+	fail_unless(result == DM_SUCCESS,"db_createmailbox failed");
 
 	result = db_delete_mailbox(mailbox_id,0,0);
-	fail_unless(result == 0,"db_delete_mailbox failed");
+	fail_unless(result == DM_SUCCESS,"db_delete_mailbox failed");
 	
 }
 END_TEST
@@ -1063,7 +1026,7 @@ START_TEST(test_db_replycache)
 	int result;
 
 	result = db_replycache_register("test_to", "test_from", "test_handle");
-	fail_unless(result == DM_SUCCESS, "failed to register");
+	fail_unless(result == TRUE, "failed to register");
 
 	/* Should always be DM_SUCCESS */
 	result = db_replycache_validate("test_to", "test_from", "test_handle", 0);
@@ -1082,7 +1045,7 @@ START_TEST(test_db_replycache)
 	fail_unless(result != DM_SUCCESS, "failed with days = 1100");
 
 	result = db_replycache_unregister("test_to", "test_from", "test_handle");
-	fail_unless(result == DM_SUCCESS, "failed to unregister");
+	fail_unless(result == TRUE, "failed to unregister");
 }
 END_TEST
 
@@ -1237,7 +1200,6 @@ END_TEST
 //int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr);
 
 
-
 Suite *dbmail_db_suite(void)
 {
 	Suite *s = suite_create("Dbmail Basic Database Functions");
@@ -1245,16 +1207,24 @@ Suite *dbmail_db_suite(void)
 	TCase *tc_db = tcase_create("DB");
 	suite_add_tcase(s, tc_db);
 	tcase_add_checked_fixture(tc_db, setup, teardown);
+	tcase_add_test(tc_db, test_db_stmt_prepare);
+//	tcase_add_test(tc_db, test_db_stmt_set_int);
+//	tcase_add_test(tc_db, test_db_stmt_set_u64);
+//	tcase_add_test(tc_db, test_db_stmt_set_str);
+//	tcase_add_test(tc_db, test_db_stmt_set_blob);
+	tcase_add_test(tc_db, test_db_stmt_exec);
+
 	tcase_add_test(tc_db, test_db_query);
 	tcase_add_test(tc_db, test_db_createmailbox);
-	tcase_add_test(tc_db, test_db_getmailbox);
-	tcase_add_test(tc_db, test_db_mailbox_create_with_parents);
 	tcase_add_test(tc_db, test_db_delete_mailbox);
-	tcase_add_test(tc_db, test_db_mailbox_set_permission);
-	tcase_add_test(tc_db, test_db_imap_utf7_like);
+	tcase_add_test(tc_db, test_db_getmailbox);
 	tcase_add_test(tc_db, test_db_replycache);
+	tcase_add_test(tc_db, test_db_mailbox_set_permission);
+	tcase_add_test(tc_db, test_db_mailbox_create_with_parents);
+	tcase_add_test(tc_db, test_mailbox_match_new);
 	tcase_add_test(tc_db, test_db_findmailbox_by_regex);
-	tcase_add_test(tc_db, test_db_escape_binary);
+
+
 	return s;
 }
 

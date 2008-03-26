@@ -1,5 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (C) 2005-2008 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -21,7 +22,6 @@
  * \file authsql.c
  * \brief implements SQL authentication. Prototypes of these functions
  * can be found in auth.h . 
- * \author IC&S (http://www.ic-s.nl)
  */
 
 #include "dbmail.h"
@@ -30,24 +30,9 @@
 extern db_param_t * _db_params;
 #define DBPFX _db_params->pfx
 
-/**
- * used for query strings
- */
-#define AUTH_QUERY_SIZE 1024
-static char __auth_query_data[AUTH_QUERY_SIZE];
 /* string to be returned by auth_getencryption() */
 #define _DESCSTRLEN 50
-static char __auth_encryption_desc_string[_DESCSTRLEN];
 
-
-/**
- * \brief perform a authentication query
- * \param thequery the query
- * \return
- *     - -1 on error
- *     -  0 otherwise
- */
-static int __auth_query(const char *thequery);
 
 int auth_connect()
 {
@@ -70,232 +55,188 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 
 GList * auth_get_known_users(void)
 {
-	u64_t i;
 	GList * users = NULL;
+	C c; R r; 
 
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT userid FROM %susers ORDER BY userid",DBPFX);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not retrieve user list");
-		return NULL;
-	}
-
-	for (i = 0; i < (unsigned) db_num_rows(); i++) 
-		users = g_list_append(users, g_strdup(db_get_result(i, 0)));
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT userid FROM %susers ORDER BY userid",DBPFX);
+		while (db_result_next(r)) 
+			users = g_list_append(users, g_strdup(db_result_get(r, 0)));
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 	
-	db_free_result();
 	return users;
 }
 
 GList * auth_get_known_aliases(void)
 {
-	u64_t i;
 	GList * aliases = NULL;
+	C c; R r;
 
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT alias FROM %saliases ORDER BY alias",DBPFX);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not retrieve user list");
-		return NULL;
-	}
-
-	for (i = 0; i < (unsigned) db_num_rows(); i++) 
-		aliases = g_list_append(aliases, g_strdup(db_get_result(i, 0)));
+	c = db_con_get();
+	TRY
+		r = db_query(c,"SELECT alias FROM %saliases ORDER BY alias",DBPFX);
+		while (db_result_next(r))
+			aliases = g_list_append(aliases, g_strdup(db_result_get(r,0)));
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 	
-	db_free_result();
 	return aliases;
 }
 
 int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 {
-	const char *query_result;
-
 	assert(client_idnr != NULL);
 	*client_idnr = 0;
+	C c; R r; int t = TRUE;
 
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT client_idnr FROM %susers WHERE user_idnr = %llu",DBPFX,
-		 user_idnr);
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT client_idnr FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		if (db_result_next(r))
+			*client_idnr = db_result_get_u64(r,0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not retrieve client id for user [%llu]\n", user_idnr);
-		return -1;
-	}
-
-	if (db_num_rows() == 0) {
-		db_free_result();
-		return 1;
-	}
-
-	query_result = db_get_result(0, 0);
-	*client_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
-
-	db_free_result();
-	return 1;
+	return t;
 }
 
 int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 {
-	const char *query_result;
-
 	assert(maxmail_size != NULL);
 	*maxmail_size = 0;
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT maxmail_size FROM %susers WHERE user_idnr = %llu",DBPFX,
-		 user_idnr);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not retrieve client id for user [%llu]", user_idnr);
-		return -1;
-	}
-
-	if (db_num_rows() == 0) {
-		db_free_result();
-		return 0;
-	}
-
-	query_result = db_get_result(0, 0);
-	if (query_result)
-		*maxmail_size = strtoull(query_result, NULL, 10);
-	else
-		return -1;
-
-	db_free_result();
-	return 1;
+	C c; R r; int t = TRUE;
+	
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT maxmail_size FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		if (db_result_next(r))
+			*maxmail_size = db_result_get_u64(r,0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	
+	return t;
 }
+
 
 char *auth_getencryption(u64_t user_idnr)
 {
-	const char *query_result;
-	__auth_encryption_desc_string[0] = '\0';
+	char *res = NULL;
+	C c; R r;
+	
+	assert(user_idnr > 0);
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT encryption_type FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		if (db_result_next(r))
+			res = g_strdup(db_result_get(r,0));
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (user_idnr == 0) {
-		/* assume another function returned an error code (-1) 
-		 * or this user does not exist (0)
-		 */
-		TRACE(TRACE_ERROR, "got (%lld) as userid", user_idnr);
-		return __auth_encryption_desc_string;	/* return empty */
-	}
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT encryption_type FROM %susers WHERE user_idnr = %llu",DBPFX,
-		 user_idnr);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not retrieve encryption type for user [%llu]", user_idnr);
-		return __auth_encryption_desc_string;	/* return empty */
-	}
-
-	if (db_num_rows() == 0) {
-		db_free_result();
-		return __auth_encryption_desc_string;	/* return empty */
-	}
-
-	query_result = db_get_result(0, 0);
-	strncpy(__auth_encryption_desc_string, query_result, _DESCSTRLEN);
-
-	db_free_result();
-	return __auth_encryption_desc_string;
+	return res;
 }
+
+
+static GList *user_get_deliver_to(const char *username)
+{
+	INIT_QUERY;
+	C c; R r; S s;
+	GList *d = NULL;
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT deliver_to FROM %saliases "
+		 "WHERE lower(alias) = lower(?) "
+		 "AND lower(alias) <> lower(deliver_to)",
+		 DBPFX);
+	
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, query);
+		db_stmt_set_str(s, 1, username);
+
+		r = db_stmt_query(s);
+		while (db_result_next(r))
+			d = g_list_prepend(d, g_strdup(db_result_get(r,0)));
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return d;
+}
+
 
 int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int checks)
 {
 	int occurences = 0;
-	void *saveres;
-	u64_t counter;
+	GList *d = NULL;
 	char *endptr;
 	u64_t id, *uid;
-	unsigned num_rows;
-	char *escaped_username;
 
 	if (checks > 20) {
 		TRACE(TRACE_ERROR,"too many checks. Possible loop detected.");
 		return 0;
 	}
 
-	saveres = db_get_result_set();
-	db_set_result_set(NULL);
+	TRACE(TRACE_DEBUG, "[%d] checking user [%s] in alias table", checks, username);
 
-	TRACE(TRACE_DEBUG, "checking user [%s] in alias table", username);
+	d = user_get_deliver_to(username);
 
-	if (!(escaped_username = g_new0(char, strlen(username) * 2 + 1))) {
-		TRACE(TRACE_ERROR, "out of memory allocating escaped username");
-		return -1;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT deliver_to FROM %saliases "
-		 "WHERE lower(alias) = lower('%s') "
-		 "AND lower(alias) <> lower(deliver_to)",
-		 DBPFX, escaped_username);
-	
-	g_free(escaped_username);
-
-	TRACE(TRACE_DEBUG, "checks [%d]", checks);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		db_set_result_set(saveres);
-		return 0;
-	}
-
-	num_rows = db_num_rows();
-	if (num_rows == 0) {
-		if (checks > 0) {
-			/* found the last one, this is the deliver to
-			 * but checks needs to be bigger then 0 because
-			 * else it could be the first query failure */
-			id = strtoull(username, &endptr, 10);
-
-			if (*endptr == 0) {
-				/* numeric deliver-to --> this is a userid */
-				uid = g_new0(u64_t,1);
-				*uid = id;
-				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
-
-			} else {
-				*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(username));
-			}
-			TRACE(TRACE_DEBUG, "adding [%s] to deliver_to address", username);
-			db_free_result();
-			db_set_result_set(saveres);
-			return 1;
-		} else {
+	if (! d) {
+		if (checks == 0) {
 			TRACE(TRACE_DEBUG, "user %s not in aliases table", username);
-			db_free_result();
-			db_set_result_set(saveres);
 			return 0;
 		}
-	}
+		/* found the last one, this is the deliver to
+		 * but checks needs to be bigger then 0 because
+		 * else it could be the first query failure */
+		id = strtoull(username, &endptr, 10);
+		if (*endptr == 0) {
+			/* numeric deliver-to --> this is a userid */
+			uid = g_new0(u64_t,1);
+			*uid = id;
+			*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
 
-	TRACE(TRACE_DEBUG, "into checking loop");
-
-	if (num_rows > 0) {
-		for (counter = 0; counter < num_rows; counter++) {
-			/* do a recursive search for deliver_to */
-			char *query_result = g_strdup(db_get_result(counter, 0));
-			TRACE(TRACE_DEBUG, "checking user %s to %s", username, query_result);
-			occurences += auth_check_user_ext(query_result, userids, fwds, checks+1 );
-			g_free(query_result);
+		} else {
+			*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(username));
 		}
-	}
-	db_free_result();
-	db_set_result_set(saveres);
-	return occurences;
-}
+		TRACE(TRACE_DEBUG, "adding [%s] to deliver_to address", username);
+		return 1;
+	} 
 
-int __auth_query(const char *thequery)
-{
-	/* start using authentication result */
-	if (db_query(thequery) < 0) {
-		TRACE(TRACE_ERROR, "error executing query");
-		return -1;
+	while (d) {
+		/* do a recursive search for deliver_to */
+		char *deliver_to = (char *)d->data;
+		TRACE(TRACE_DEBUG, "checking user %s to %s", username, deliver_to);
+
+		occurences += auth_check_user_ext(deliver_to, userids, fwds, checks+1);
+
+		if (! g_list_next(d)) break;
+		d = g_list_next(d);
 	}
-	return 0;
+
+	g_list_destroy(d);
+
+	return occurences;
 }
 
 int auth_adduser(const char *username, const char *password, const char *enctype,
@@ -317,45 +258,35 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	return db_user_rename(user_idnr, new_name);
 }
 
-int auth_change_password(u64_t user_idnr, const char *new_pass,
-			 const char *enctype)
+int auth_change_password(u64_t user_idnr, const char *new_pass, const char *enctype)
 {
-	char escapedpass[AUTH_QUERY_SIZE];
+	C c; S s; int t = FALSE;
 
-	if (strlen(new_pass) >= AUTH_QUERY_SIZE) {
+	if (strlen(new_pass) >= DEF_QUERYSIZE/2) {
 		TRACE(TRACE_ERROR, "new password length is insane");
 		return -1;
 	}
 
-	db_escape_string(escapedpass, new_pass, strlen(new_pass));
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "UPDATE %susers SET passwd = ?, encryption_type = ? WHERE user_idnr=?", DBPFX);
+		db_stmt_set_str(s, 1, new_pass);
+		db_stmt_set_str(s, 2, enctype?enctype:"");
+		db_stmt_set_u64(s, 3, user_idnr);
+		t = db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "UPDATE %susers SET passwd = '%s', encryption_type = '%s' "
-		 " WHERE user_idnr=%llu", DBPFX,
-		 escapedpass, enctype ? enctype : "", user_idnr);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not change passwd for user [%llu]", user_idnr);
-		return -1;
-	}
-
-	return 0;
+	return t;
 }
 
 int auth_change_clientid(u64_t user_idnr, u64_t new_cid)
 {
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "UPDATE %susers SET client_idnr = %llu "
-		 "WHERE user_idnr=%llu",
-		 DBPFX, new_cid, user_idnr);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not change client id for user [%llu]", user_idnr);
-		return -1;
-	}
-
-	return 0;
+	return db_update("UPDATE %susers SET client_idnr = %llu WHERE user_idnr=%llu", DBPFX, new_cid, user_idnr);
 }
 
 int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
@@ -371,7 +302,8 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	char cryptres[35];
 	char real_username[DM_USERNAME_LEN];
 	char *md5str;
-	int result;
+	int result, t = FALSE;
+	C c; R r;
 
 	memset(salt,0,sizeof(salt));
 	memset(cryptres,0,sizeof(cryptres));
@@ -402,69 +334,67 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	if (auth_user_exists(real_username, user_idnr) == DM_EQUERY)
 		return DM_EQUERY;
 
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT user_idnr, passwd, encryption_type FROM %susers "
-		 "WHERE user_idnr = %llu", DBPFX, *user_idnr);
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT user_idnr, passwd, encryption_type FROM %susers WHERE user_idnr = %llu", DBPFX, *user_idnr);
+		if (db_result_next(r)) {
+			/* get encryption type */
+			query_result = db_result_get(r,2);
 
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not select user information");
-		return -1;
-	}
-
-	if (db_num_rows() == 0) {
-		db_free_result();
-		return 0;
-	}
-
-	/* get encryption type */
-	query_result = db_get_result(0, 2);
-
-	if (!query_result || strcasecmp(query_result, "") == 0) {
-		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
-		/* get password from database */
-		query_result = db_get_result(0, 1);
-		is_validated = (strcmp(query_result, password) == 0) ? 1 : 0;
-	} else if (strcasecmp(query_result, "crypt") == 0) {
-		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
-		query_result = db_get_result(0, 1);
-		is_validated = (strcmp((const char *) crypt(password, query_result),	/* Flawfinder: ignore */
-				       query_result) == 0) ? 1 : 0;
-	} else if (strcasecmp(query_result, "md5") == 0) {
-		/* get password */
-		query_result = db_get_result(0, 1);
-		if (strncmp(query_result, "$1$", 3)) {
-			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-			/* redundant statement: query_result = db_get_result(0, 1); */
-			md5str = dm_md5(password);
-			is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-		} else {
-			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
-			strncpy(salt, query_result, 12);
-			strncpy(cryptres, (char *) crypt(password, query_result), 34);	/* Flawfinder: ignore */
-			TRACE(TRACE_DEBUG, "salt   : %s", salt);
-			TRACE(TRACE_DEBUG, "hash   : %s", query_result);
-			TRACE(TRACE_DEBUG, "crypt(): %s", cryptres);
-			is_validated = (strncmp(query_result, cryptres, 34) == 0) ? 1 : 0;
+			if (!query_result || strcasecmp(query_result, "") == 0) {
+				TRACE(TRACE_DEBUG, "validating using plaintext passwords");
+				/* get password from database */
+				query_result = db_result_get(r,1);
+				is_validated = (strcmp(query_result, password) == 0) ? 1 : 0;
+			} else if (strcasecmp(query_result, "crypt") == 0) {
+				TRACE(TRACE_DEBUG, "validating using crypt() encryption");
+				query_result = db_result_get(r,1);
+				is_validated = (strcmp((const char *) crypt(password, query_result),	/* Flawfinder: ignore */
+						       query_result) == 0) ? 1 : 0;
+			} else if (strcasecmp(query_result, "md5") == 0) {
+				/* get password */
+				query_result = db_result_get(r,1);
+				if (strncmp(query_result, "$1$", 3)) {
+					TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
+					/* redundant statement: query_result = db_result_get(0, 1); */
+					md5str = dm_md5(password);
+					is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
+				} else {
+					TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
+					strncpy(salt, query_result, 12);
+					strncpy(cryptres, (char *) crypt(password, query_result), 34);	/* Flawfinder: ignore */
+					TRACE(TRACE_DEBUG, "salt   : %s", salt);
+					TRACE(TRACE_DEBUG, "hash   : %s", query_result);
+					TRACE(TRACE_DEBUG, "crypt(): %s", cryptres);
+					is_validated = (strncmp(query_result, cryptres, 34) == 0) ? 1 : 0;
+				}
+			} else if (strcasecmp(query_result, "md5sum") == 0) {
+				TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
+				query_result = db_result_get(r,1);
+				md5str = dm_md5(password);
+				is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
+			} else if (strcasecmp(query_result, "md5base64") == 0) {
+				TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
+				query_result = db_result_get(r,1);
+				md5str = dm_md5_base64(password);
+				is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
+				g_free(md5str);
+			}
 		}
-	} else if (strcasecmp(query_result, "md5sum") == 0) {
-		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-		query_result = db_get_result(0, 1);
-		md5str = dm_md5(password);
-		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-	} else if (strcasecmp(query_result, "md5base64") == 0) {
-		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
-		query_result = db_get_result(0, 1);
-		md5str = dm_md5_base64(password);
-		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-		g_free(md5str);
-	}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (is_validated) {
+	if (t == DM_EQUERY) return t;
+
+	if (is_validated)
 		db_user_log_login(*user_idnr);
-	} else {
+	else
 		*user_idnr = 0;
-	}
-	db_free_result();
+	
 	return (is_validated ? 1 : 0);
 }
 
@@ -472,385 +402,288 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 		unsigned char *md5_apop_he, char *apop_stamp)
 {
 	/* returns useridnr on OK, 0 on validation failed, -1 on error */
-	char *checkstring;
+	char *checkstring = NULL;
 	char *md5_apop_we;
-	u64_t user_idnr;
+	u64_t user_idnr = 0;
 	const char *query_result;
+	C c; R r;
+	int t = FALSE;
 
 	/* lookup the user_idnr */
 	if (auth_user_exists(username, &user_idnr) == DM_EQUERY)
 		return DM_EQUERY;
-	
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT passwd,user_idnr FROM %susers WHERE "
-		 "user_idnr = %llu", DBPFX, user_idnr);
 
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "error calling __auth_query()");
-		return -1;
-	}
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT passwd,user_idnr FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		if (db_result_next(r)) { /* user found */
+			/* now authenticate using MD5 hash comparisation  */
+			query_result = db_result_get(r,0); /* value holds the password */
 
-	if (db_num_rows() < 1) {
-		/* no such user found */
-		db_free_result();
-		return 0;
-	}
+			TRACE(TRACE_DEBUG, "apop_stamp=[%s], userpw=[%s]", apop_stamp, query_result);
 
-	/* now authenticate using MD5 hash comparisation  */
-	query_result = db_get_result(0, 0); /* value holds the password */
+			checkstring = g_strdup_printf("%s%s", apop_stamp, query_result);
+			md5_apop_we = dm_md5(checkstring);
 
-	TRACE(TRACE_DEBUG, "apop_stamp=[%s], userpw=[%s]", apop_stamp, query_result);
+			TRACE(TRACE_DEBUG, "checkstring for md5 [%s] -> result [%s]", checkstring, md5_apop_we);
+			TRACE(TRACE_DEBUG, "validating md5_apop_we=[%s] md5_apop_he=[%s]", md5_apop_we, md5_apop_he);
 
-	checkstring = g_strdup_printf("%s%s", apop_stamp, query_result);
-	md5_apop_we = dm_md5(checkstring);
+			if (strcmp((char *)md5_apop_he, md5_apop_we)) {
+				TRACE(TRACE_MESSAGE, "user [%s] is validated using APOP", username);
+				/* get user idnr */
+				query_result = db_result_get(r,1);
+				user_idnr = (query_result) ? strtoull(query_result, NULL, 10) : 0;
+			}
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	TRACE(TRACE_DEBUG, "checkstring for md5 [%s] -> result [%s]", checkstring, md5_apop_we);
-	TRACE(TRACE_DEBUG, "validating md5_apop_we=[%s] md5_apop_he=[%s]", md5_apop_we, md5_apop_he);
+	if (t == DM_EQUERY) return t;
 
-	if (strcmp((char *)md5_apop_he, md5_apop_we) == 0) {
-		TRACE(TRACE_MESSAGE, "user [%s] is validated using APOP", username);
-		/* get user idnr */
-		query_result = db_get_result(0, 1);
-		user_idnr =
-		    (query_result) ? strtoull(query_result, NULL, 10) : 0;
-		db_free_result();
-		g_free(checkstring);
-
+	if (user_idnr == 0)
+		TRACE(TRACE_MESSAGE, "user [%s] could not be validated", username);
+	else
 		db_user_log_login(user_idnr);
-		return user_idnr;
-	}
 
-	TRACE(TRACE_MESSAGE, "user [%s] could not be validated", username);
+	if (checkstring) g_free(checkstring);
 
-	db_free_result();
-	g_free(checkstring);
-	return 0;
+	return user_idnr;
 }
 
 char *auth_get_userid(u64_t user_idnr)
 {
-	const char *query_result;
-	char *returnid = NULL;
+	C c; R r;
+	char *result = NULL;
+	c = db_con_get();
 
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT userid FROM %susers WHERE user_idnr = %llu",
-		 DBPFX, user_idnr);
+	TRY
+		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		if (db_result_next(r))
+			result = g_strdup(db_result_get(r,0));
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "query failed");
-		return 0;
-	}
-
-	if (db_num_rows() < 1) {
-		TRACE(TRACE_DEBUG, "user has no username?");
-		db_free_result();
-		return 0;
-	}
-
-	query_result = db_get_result(0, 0);
-	if (query_result) {
-		TRACE(TRACE_DEBUG, "query_result = %s", query_result);
-		if (!(returnid = g_new0(char, strlen(query_result) + 1))) {
-			TRACE(TRACE_ERROR, "out of memory");
-			db_free_result();
-			return NULL;
-		}
-		strncpy(returnid, query_result, strlen(query_result) + 1);
-	}
-
-	db_free_result();
-	TRACE(TRACE_DEBUG, "returning %s as returnid", returnid);
-	return returnid;
+	return result;
 }
 
 int auth_check_userid(u64_t user_idnr)
 {
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT userid FROM %susers WHERE user_idnr = %llu",
-		 DBPFX, user_idnr);
+	C c; R r; gboolean t = TRUE;
 
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "query failed");
-		return -1;
-	}
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		if (db_result_next(r))
+			t = FALSE;
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (db_num_rows() < 1) {
-		TRACE(TRACE_DEBUG, "didn't find user_idnr [%llu]", user_idnr);
-		db_free_result();
-		return 1;
-	}
-
-	TRACE(TRACE_DEBUG, "found user_idnr [%llu]", user_idnr);
-	db_free_result();
-	return 0;
-}
-
-int auth_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
-			       unsigned *num_users)
-{
-	unsigned i;
-
-	assert(user_ids != NULL);
-	assert(num_users != NULL);
-	
-	*user_ids = NULL;
-	*num_users = 0;
-
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "SELECT user_idnr FROM %susers WHERE client_idnr = %llu",
-		 DBPFX, client_id);
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "error gettings users for client_id [%llu]", client_id);
-		return -1;
-	}
-	*num_users = db_num_rows();
-	*user_ids = g_new0(u64_t, *num_users);
-	if (*user_ids == NULL) {
-		TRACE(TRACE_ERROR, "error allocating memory, probably out of memory");
-		db_free_result();
-		return -2;
-	}
-	memset(*user_ids, 0, *num_users * sizeof(u64_t));
-	for (i = 0; i < *num_users; i++) {
-		(*user_ids)[i] = db_get_result_u64(i, 0);
-	}
-	db_free_result();
-	return 1;
+	return t;
 }
 
 int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 {
-	char *escaped_alias;
-
-	if (!(escaped_alias = g_new0(char, strlen(alias) * 2 + 1))) {
-		TRACE(TRACE_ERROR, "out of memory allocating escaped alias");
-		return -1;
-	}
-
-	db_escape_string(escaped_alias, alias, strlen(alias));
+	C c; R r; S s; int t = FALSE;
+	INIT_QUERY;
 
 	/* check if this alias already exists */
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT alias_idnr FROM %saliases "
-		 "WHERE lower(alias) = lower('%s') AND deliver_to = '%llu' "
-		 "AND client_idnr = %llu",DBPFX, escaped_alias, user_idnr, clientid);
+		 "WHERE lower(alias) = lower(?) AND deliver_to = ? "
+		 "AND client_idnr = ?",DBPFX);
 
-	if (__auth_query(__auth_query_data) == -1) {
-		/* query failed */
-		TRACE(TRACE_ERROR, "query for searching alias failed");
-		g_free(escaped_alias);
-		return -1;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c,query);
+		db_stmt_set_str(s, 1, alias);
+		db_stmt_set_u64(s, 2, user_idnr);
+		db_stmt_set_u64(s, 3, clientid);
+
+		r = db_stmt_query(s);
+
+		if (db_result_next(r)) {
+			TRACE(TRACE_INFO, "alias [%s] for user [%llu] already exists", alias, user_idnr);
+			t = TRUE;
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	END_TRY;
+
+	if (t) {
+		db_con_close(c);
+		return t;
 	}
 
-	if (db_num_rows() > 0) {
-		TRACE(TRACE_INFO, "alias [%s] for user [%llu] already exists", escaped_alias, user_idnr);
+	Connection_clear(c);
 
-		g_free(escaped_alias);
-		db_free_result();
-		return 1;
-	}
+	TRY
+		s = db_stmt_prepare(c, "INSERT INTO %saliases (alias,deliver_to,client_idnr) VALUES (?,?,?)",DBPFX);
+		db_stmt_set_str(s, 1, alias);
+		db_stmt_set_u64(s, 2, user_idnr);
+		db_stmt_set_u64(s, 3, clientid);
 
-	db_free_result();
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
-		 "VALUES ('%s','%llu',%llu)",DBPFX, escaped_alias, user_idnr,
-		 clientid);
-	g_free(escaped_alias);
+		t = db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (db_query(__auth_query_data) == -1) {
-		/* query failed */
-		TRACE(TRACE_ERROR, "query for adding alias failed");
-		return -1;
-	}
-	return 0;
+	return t;
 }
 
 int auth_addalias_ext(const char *alias,
 		    const char *deliver_to, u64_t clientid)
 {
-	char *escaped_alias;
-	char *escaped_deliver_to;
+	C c; R r; S s; int t = FALSE;
+	INIT_QUERY;
 
-	if (!(escaped_alias = g_new0(char, strlen(alias) * 2 + 1))) {
-		TRACE(TRACE_ERROR, "out of memory allocating escaped alias");
-		return -1;
+	c = db_con_get();
+	TRY
+		/* check if this alias already exists */
+		if (clientid != 0) {
+			snprintf(query, DEF_QUERYSIZE,
+				 "SELECT alias_idnr FROM %saliases "
+				 "WHERE lower(alias) = lower(?) AND "
+				 "lower(deliver_to) = lower(?) "
+				 "AND client_idnr = ? ",DBPFX);
+
+			s = db_stmt_prepare(c, query);
+			db_stmt_set_str(s, 1, alias);
+			db_stmt_set_str(s, 2, deliver_to);
+			db_stmt_set_u64(s, 3, clientid);
+
+		} else {
+			snprintf(query, DEF_QUERYSIZE,
+				 "SELECT alias_idnr FROM %saliases "
+				 "WHERE lower(alias) = lower(?) "
+				 "AND lower(deliver_to) = lower(?) ",DBPFX);
+
+			s = db_stmt_prepare(c,query);
+			db_stmt_set_str(s, 1, alias);
+			db_stmt_set_str(s, 2, deliver_to);
+		}
+
+		r = db_stmt_query(s);
+		if (db_result_next(r)) {
+			TRACE(TRACE_INFO, "alias [%s] --> [%s] already exists", alias, deliver_to);
+			t = TRUE;
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	END_TRY;
+
+	if (t) {
+		db_con_close(c);
+		return t;
 	}
 
-	if (!(escaped_deliver_to = g_new0(char, strlen(deliver_to) * 2 + 1))) {
-		TRACE(TRACE_ERROR, "out of memory allocating escaped deliver_to");
-		return -1;
-	}
+	Connection_clear(c);
 
+	TRY
+		s = db_stmt_prepare(c, "INSERT INTO %saliases (alias,deliver_to,client_idnr) VALUES (?,?,?)",DBPFX);
+		db_stmt_set_str(s, 1, alias);
+		db_stmt_set_str(s, 2, deliver_to);
+		db_stmt_set_u64(s, 3, clientid);
 
-	db_escape_string(escaped_alias, alias, strlen(alias));
-	db_escape_string(escaped_deliver_to, deliver_to, strlen(deliver_to));
+		t = db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	/* check if this alias already exists */
-	if (clientid != 0) {
-		snprintf(__auth_query_data, DEF_QUERYSIZE,
-			 "SELECT alias_idnr FROM %saliases "
-			 "WHERE lower(alias) = lower('%s') AND "
-			 "lower(deliver_to) = lower('%s') "
-			 "AND client_idnr = %llu",DBPFX, escaped_alias, escaped_deliver_to,
-			 clientid);
-	} else {
-		snprintf(__auth_query_data, DEF_QUERYSIZE,
-			 "SELECT alias_idnr FROM %saliases "
-			 "WHERE lower(alias) = lower('%s') "
-			 "AND lower(deliver_to) = lower('%s') ",DBPFX,
-			 escaped_alias, escaped_deliver_to);
-	}
-
-	if (__auth_query(__auth_query_data) == -1) {
-		/* query failed */
-		TRACE(TRACE_ERROR, "query for searching alias failed");
-		g_free(escaped_alias);
-		g_free(escaped_deliver_to);
-		return -1;
-	}
-
-	if (db_num_rows() > 0) {
-		TRACE(TRACE_INFO, "alias [%s] --> [%s] already exists", alias, deliver_to);
-
-		g_free(escaped_alias);
-		g_free(escaped_deliver_to);
-		db_free_result();
-		return 1;
-	}
-	db_free_result();
-
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
-		 "VALUES ('%s','%s',%llu)",DBPFX, escaped_alias, escaped_deliver_to, clientid);
-	g_free(escaped_alias);
-	g_free(escaped_deliver_to);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		/* query failed */
-		TRACE(TRACE_ERROR, "query for adding alias failed");
-		return -1;
-	}
-	return 0;
+	return t;
 }
 
 int auth_removealias(u64_t user_idnr, const char *alias)
 {
-	char *escaped_alias;
+	C c; S s; gboolean t = FALSE;
+	
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "DELETE FROM %saliases WHERE deliver_to=? AND lower(alias) = lower(?)",DBPFX);
+		db_stmt_set_u64(s, 1, user_idnr);
+		db_stmt_set_str(s, 2, alias);
+		t = db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (!(escaped_alias = g_new0(char, strlen(alias) * 2 + 1))) {
-		TRACE(TRACE_ERROR, "out of memory allocating escaped alias");
-		return -1;
-	}
-
-	db_escape_string(escaped_alias, alias, strlen(alias));
-
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "DELETE FROM %saliases WHERE deliver_to='%llu' "
-		 "AND lower(alias) = lower('%s')",DBPFX, user_idnr, escaped_alias);
-	g_free(escaped_alias);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		/* query failed */
-		TRACE(TRACE_ERROR, "query failed");
-		return -1;
-	}
-	return 0;
+	return t;
 }
 
 int auth_removealias_ext(const char *alias, const char *deliver_to)
 {
-	char *escaped_alias;
-	char *escaped_deliver_to;
+	C c; S s; gboolean t = FALSE;
 
-	if (!(escaped_alias = g_new0(char, strlen(alias) * 2 + 1))) {
-		TRACE(TRACE_ERROR, "out of memory allocating escaped alias");
-		return -1;
-	}
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "DELETE FROM %saliases WHERE lower(deliver_to) = lower(?) AND lower(alias) = lower(?)", DBPFX);
+		db_stmt_set_str(s, 1, deliver_to);
+		db_stmt_set_str(s, 2, alias);
+		t = db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (!(escaped_deliver_to = g_new0(char, strlen(deliver_to) * 2 + 1))) {
-		TRACE(TRACE_ERROR, "out of memory allocating escaped deliver_to");
-		return -1;
-	}
-
-	db_escape_string(escaped_alias, alias, strlen(alias));
-	db_escape_string(escaped_deliver_to, deliver_to, strlen(deliver_to));
-
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "DELETE FROM %saliases WHERE lower(deliver_to) = lower('%s') "
-		 "AND lower(alias) = lower('%s')",DBPFX, deliver_to, alias);
-	g_free(escaped_alias);
-	g_free(escaped_deliver_to);
-
-	if (db_query(__auth_query_data) == -1) {
-		/* query failed */
-		TRACE(TRACE_ERROR, "query failed");
-		return -1;
-	}
-	return 0;
+	return t;
 }
 
 GList * auth_get_user_aliases(u64_t user_idnr)
 {
-	int i, n;
-	const char *query_result;
-	GList *aliases = NULL;
+	C c; R r;
+	GList *l = NULL;
 
-	/* do a inverted (DESC) query because adding the names to the 
-	 * final list inverts again */
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "SELECT alias FROM %saliases WHERE deliver_to = '%llu' "
-		 "ORDER BY alias DESC",DBPFX, user_idnr);
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT alias FROM %saliases WHERE deliver_to = '%llu' ORDER BY alias",DBPFX, user_idnr);
+		while (db_result_next(r))
+			l = g_list_prepend(l,g_strdup(db_result_get(r,0)));
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not retrieve  list");
-		return NULL;
-	}
-
-	n = db_num_rows();
-	for (i = 0; i < n; i++) {
-		query_result = db_get_result(i, 0);
-		if (!query_result || ! (aliases = g_list_append(aliases,g_strdup(query_result)))) {
-			g_list_foreach(aliases, (GFunc)g_free, NULL);
-			g_list_free(aliases);
-			db_free_result();
-			return NULL;
-		}
-	}
-
-	db_free_result();
-	return aliases;
+	return l;
 }
 
 GList * auth_get_aliases_ext(const char *alias)
 {
-	int i, n;
-	const char *query_result;
-	GList *aliases = NULL;
+	C c; R r;
+	GList *l = NULL;
 
-	/* do a inverted (DESC) query because adding the names to the 
-	 * final list inverts again */
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "SELECT deliver_to FROM %saliases WHERE alias = '%s' "
-		 "ORDER BY alias DESC",DBPFX, alias);
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT deliver_to FROM %saliases WHERE alias = '%s' ORDER BY alias DESC",DBPFX, alias);
+		while (db_result_next(r))
+			l = g_list_prepend(l,g_strdup(db_result_get(r,0)));
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if (__auth_query(__auth_query_data) == -1) {
-		TRACE(TRACE_ERROR, "could not retrieve  list");
-		return NULL;
-	}
-
-	n = db_num_rows();
-	for (i = 0; i < n; i++) {
-		query_result = db_get_result(i, 0);
-		if (!query_result || ! (aliases = g_list_append(aliases,g_strdup(query_result)))) {
-			g_list_foreach(aliases, (GFunc)g_free, NULL);
-			g_list_free(aliases);
-			db_free_result();
-			return NULL;
-		}
-	}
-
-	db_free_result();
-	return aliases;
+	return l;
 }
 
 gboolean auth_requires_shadow_user(void)

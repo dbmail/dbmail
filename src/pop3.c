@@ -205,16 +205,11 @@ int pop3(ClientSession_t *session, char *buffer)
 	 *           -1  on a failure
 	 *            1  on a success 
 	 */
-	char *command, *value;
+	char *command, *value, *searchptr, *enctype;
 	Pop3Cmd_t cmdtype;
-	int found = 0;
-	int indx = 0;
-	u64_t result;
-	int validate_result;
-	u64_t top_lines, top_messageid;
+	int found = 0, indx = 0, validate_result;
+	u64_t result, top_lines, top_messageid, user_idnr;
 	unsigned char *md5_apop_he;
-	char *searchptr;
-	u64_t user_idnr;
 	struct message *msg;
 	clientinfo_t *ci = session->ci;
 
@@ -610,8 +605,10 @@ int pop3(ClientSession_t *session, char *buffer)
 					session->username);
 			return -1;
 		}
-		if (strcasecmp(auth_getencryption(user_idnr), "") != 0) {
+		enctype = auth_getencryption(user_idnr);
+		if (strcasecmp(enctype, "") != 0) {
 			/* it should be clear text */
+			g_free(enctype);
 			g_free(md5_apop_he);
 			g_free(session->username);
 			session->username = NULL;

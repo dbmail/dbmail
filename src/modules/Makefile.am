@@ -17,7 +17,7 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 INCLUDES = -I$(top_srcdir)/src
-AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@
+AM_CFLAGS = @LDAPINC@ @SIEVEINC@
 
 #AM_LDFLAGS = -Wl,--export-dynamic
 if SHARED
@@ -27,30 +27,6 @@ AM_LDFLAGS =
 endif
 
 noinst_LTLIBRARIES = libsort_null.la
-
-
-if MYSQL
-libmysql_la_SOURCES = dbmysql.c
-libmysql_la_LIBADD = @MYSQLLIB@
-dbmail_mysql_la = libmysql.la
-endif
-
-if PGSQL
-libpgsql_la_SOURCES = dbpgsql.c
-libpgsql_la_LIBADD = @PGSQLLIB@
-dbmail_pgsql_la = libpgsql.la
-endif
-
-if SQLITE
-libsqlite_la_SOURCES = dbsqlite.c
-libsqlite_la_LIBADD = @SQLITELIB@
-dbmail_sqlite_la = libsqlite.la
-endif
-
-if INGRES
-libmod_ingres_la_SOURCES = dbingres.c
-libmod_ingres_la_LIBADD = @INGRESLIB@
-endif
 
 # This one is always built.
 libsort_null_la_SOURCES = sortnull.c
@@ -71,10 +47,7 @@ libauth_ldap_la_LIBADD = @CRYPTLIB@ @LDAPLIB@
 dbmail_ldap_la = libauth_ldap.la
 endif
 
-pkglib_LTLIBRARIES = $(dbmail_mysql_la) \
-	$(dbmail_pgsql_la) \
-	$(dbmail_sqlite_la) \
-	$(dbmail_sieve_la) \
+pkglib_LTLIBRARIES = $(dbmail_sieve_la) \
 	$(dbmail_ldap_la) \
 	libauth_sql.la
 	 

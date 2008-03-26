@@ -336,27 +336,27 @@ int tims(ClientSession_t *session)
 		if (scriptlen >= UINT_MAX)
 			return tims_error(session, "NO \"Invalid script length.\"\r\n");
 
-		if (db_check_sievescript_quota(session->useridnr, scriptlen))
+		if (dm_sievescript_quota_check(session->useridnr, scriptlen))
 			return tims_error(session, "NO \"Script exceeds available space.\"\r\n");
 
 		/* Store the script temporarily,
 		 * validate it, then rename it. */
-		if (db_add_sievescript(session->useridnr, "@!temp-script!@", script)) {
-			db_delete_sievescript(session->useridnr, "@!temp-script!@");
+		if (dm_sievescript_add(session->useridnr, "@!temp-script!@", script)) {
+			dm_sievescript_delete(session->useridnr, "@!temp-script!@");
 			return tims_error(session, "NO \"Error inserting script.\"\r\n");
 		}
 		
 		sort_result = sort_validate(session->useridnr, "@!temp-script!@");
 		if (sort_result == NULL) {
-			db_delete_sievescript(session->useridnr, "@!temp-script!@");
+			dm_sievescript_delete(session->useridnr, "@!temp-script!@");
 			return tims_error(session, "NO \"Error inserting script.\"\r\n");
 		} else if (sort_get_error(sort_result) > 0) {
-			db_delete_sievescript(session->useridnr, "@!temp-script!@");
+			dm_sievescript_delete(session->useridnr, "@!temp-script!@");
 			return tims_error(session, "NO \"Script error: %s.\"\r\n", sort_get_errormsg(sort_result));
 		} 
 		/* According to the draft RFC, a script with the same
 		 * name as an existing script should [atomically] replace it. */
-		if (db_rename_sievescript(session->useridnr, "@!temp-script!@", scriptname))
+		if (dm_sievescript_rename(session->useridnr, "@!temp-script!@", scriptname))
 			return tims_error(session, "NO \"Error inserting script.\"\r\n");
 
 		ci_write(ci, "OK \"Script successfully received.\"\r\n");
@@ -377,26 +377,20 @@ int tims(ClientSession_t *session)
 			scriptname = (char *)session->args->data;
 
 		if (strlen(scriptname)) {
-			ret = db_activate_sievescript(session->useridnr, scriptname);
-			if (ret == -3)
-				ci_write(ci, "NO \"Script does not exist.\"\r\n");
-			else if (ret != 0)
-				return tims_error(session, "NO \"Internal error.\"\r\n");
+			if (! dm_sievescript_activate(session->useridnr, scriptname))
+				ci_write(ci, "NO \"Error activating script.\"\r\n");
 			else
 				ci_write(ci, "OK \"Script activated.\"\r\n");
 		} else {
-			ret = db_get_sievescript_active(session->useridnr, &scriptname);
+			ret = dm_sievescript_get(session->useridnr, &scriptname);
 			if (scriptname == NULL) {
 				ci_write(ci, "OK \"No scripts are active at this time.\"\r\n");
 			} else {
-				ret = db_deactivate_sievescript(session->useridnr, scriptname);
-				g_free(scriptname);
-				if (ret == -3)
-					ci_write(ci, "NO \"Active script does not exist.\"\r\n");
-				else if (ret != 0)
-					ci_write(ci, "NO \"Internal error.\"\r\n");
+				if (! dm_sievescript_deactivate(session->useridnr, scriptname))
+					ci_write(ci, "NO \"Error deactivating script.\"\r\n");
 				else
 					ci_write(ci, "OK \"All scripts deactivated.\"\r\n");
+				g_free(scriptname);
 			}
 		}
 		return 1;
@@ -416,7 +410,7 @@ int tims(ClientSession_t *session)
 		if (! strlen(scriptname))
 			return tims_error(session, "NO \"Script name required.\"\r\n");
 
-		ret = db_get_sievescript_byname(session->useridnr, scriptname, &script);
+		ret = dm_sievescript_getbyname(session->useridnr, scriptname, &script);
 		if (ret == -3) {
 			return tims_error(session, "NO \"Script not found.\"\r\n");
 		} else if (ret != 0 || script == NULL) {
@@ -443,11 +437,8 @@ int tims(ClientSession_t *session)
 		if (! strlen(scriptname))
 			return tims_error(session, "NO \"Script name required.\"\r\n");
 
-		ret = db_delete_sievescript(session->useridnr, scriptname);
-		if (ret == -3)
-			return tims_error(session, "NO \"Script not found.\"\r\n");
-		else if (ret != 0)
-			return tims_error(session, "NO \"Internal error.\"\r\n");
+		if (! dm_sievescript_delete(session->useridnr, scriptname))
+			return tims_error(session, "NO \"Error deleting script.\"\r\n");
 		else
 			ci_write(ci, "OK \"Script deleted.\"\r\n", scriptname);
 
@@ -461,7 +452,7 @@ int tims(ClientSession_t *session)
 
 		// Command is in format: HAVESPACE "scriptname" 12345
 		// TODO: this is a fake
-		if (db_check_sievescript_quota(session->useridnr, 12345) == DM_SUCCESS)
+		if (dm_sievescript_quota_check(session->useridnr, 12345) == DM_SUCCESS)
 			ci_write(ci, "OK (QUOTA)\r\n");
 		else
 			ci_write(ci, "NO (QUOTA) \"Quota exceeded\"\r\n");
@@ -475,7 +466,7 @@ int tims(ClientSession_t *session)
 		
 		GList *scriptlist = NULL;
 
-		if (db_get_sievescript_listall (session->useridnr, &scriptlist) < 0) {
+		if (dm_sievescript_list (session->useridnr, &scriptlist) < 0) {
 			ci_write(ci, "NO \"Internal error.\"\r\n");
 		} else {
 			if (g_list_length(scriptlist) == 0) {
