@@ -38,7 +38,7 @@ const char *imap_flag_desc_escaped[] = {
 
 
 /* write-once global variable */
-db_param_t * _db_params;
+volatile db_param_t * _db_params;
 
 /*
  * builds query values for matching mailbox names case insensitivity
@@ -158,21 +158,19 @@ int db_connect(void)
 	if (_db_params->host)
 		g_string_append_printf(dsn,"%s", _db_params->host);
 	if (_db_params->port)
-		g_string_append_printf(dsn,":%u/", _db_params->port);
+		g_string_append_printf(dsn,":%u", _db_params->port);
 	if (_db_params->db)
-		g_string_append_printf(dsn,"%s", _db_params->db);
-	if (_db_params->user && strlen(_db_params->user)) {
+		g_string_append_printf(dsn,"/%s", _db_params->db);
+	if (_db_params->user && strlen((const char *)_db_params->user)) {
 		g_string_append_printf(dsn,"?user=%s", _db_params->user);
-		if (_db_params->pass && strlen(_db_params->pass)) 
+		if (_db_params->pass && strlen((const char *)_db_params->pass)) 
 			g_string_append_printf(dsn,"&password=%s", _db_params->pass);
 	}
 	TRACE(TRACE_DEBUG, "db at url: [%s]", dsn->str);
 	url = URL_new(dsn->str);
 	g_string_free(dsn,TRUE);
-	if (! (pool = ConnectionPool_new(url))) {
+	if (! (pool = ConnectionPool_new(url)))
 		TRACE(TRACE_FATAL,"error creating connection pool");
-		return -1;
-	}
 	
 	ConnectionPool_start(pool);
 	TRACE(TRACE_DEBUG, "connection pool started with [%d] connections", 
@@ -209,8 +207,8 @@ int db_check_connection(C c)
 C db_con_get(void)
 {
 	C c = ConnectionPool_getConnection(pool);
-	if (MATCH(_db_params->driver,"postgresql"))
-		Connection_executeQuery(c, "select 1=1"); // work around for bug in zdb
+//	if (MATCH(_db_params->driver,"postgresql"))
+//		Connection_executeQuery(c, "select 1=1"); // work around for bug in zdb
 	return c;
 }
 
@@ -555,12 +553,25 @@ static const char * db_get_pgsql_sql(sql_fragment_t frag)
 
 const char * db_get_sql(sql_fragment_t frag)
 {
-	if (MATCH(_db_params->driver,"sqlite"))
-		return db_get_sqlite_sql(frag);
-	else if (MATCH(_db_params->driver,"mysql"))
-		return db_get_mysql_sql(frag);
-	else if (MATCH(_db_params->driver,"postgresql"))
-		return db_get_pgsql_sql(frag);
+	static dm_driver_t driver = 0;
+
+	if (! driver) {
+		if (MATCH((const char *)_db_params->driver,"sqlite"))
+			driver = DM_DRIVER_SQLITE;
+		else if (MATCH((const char *)_db_params->driver,"mysql"))
+			driver = DM_DRIVER_MYSQL;
+		else if (MATCH((const char *)_db_params->driver,"postgresql"))
+			driver = DM_DRIVER_POSTGRESQL;
+	}
+
+	switch(driver) {
+		case DM_DRIVER_SQLITE:
+			return db_get_sqlite_sql(frag);
+		case DM_DRIVER_MYSQL:
+			return db_get_mysql_sql(frag);
+		case DM_DRIVER_POSTGRESQL:
+			return db_get_pgsql_sql(frag);
+	}
 
 	TRACE(TRACE_FATAL, "driver not in [sqlite|mysql|postgresql]");
 

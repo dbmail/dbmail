@@ -32,7 +32,7 @@
 #define _GNU_SOURCE
 #endif
 
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 #define DBPFX _db_params->pfx
 
 #ifndef MAX_RETRIES

@@ -33,7 +33,7 @@ int quiet = 0;
 int reallyquiet = 0;
 int verbose = 0;
 
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 
 void do_showhelp(void)
 {

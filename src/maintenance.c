@@ -29,7 +29,7 @@
 #define THIS_MODULE "maintenance"
 #define PNAME "dbmail/maintenance"
 
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 #define DBPFX _db_params->pfx
 
 /* Loudness and assumptions. */
@@ -50,11 +50,7 @@ char *configFile = DEFAULT_CONFIG_FILE;
 int has_errors = 0;
 int serious_errors = 0;
 
-/* set up database login data */
-extern db_param_t * _db_params;
-
 static int find_time(const char *timespec, timestring_t *timestring);
-
 static int do_check_integrity(void);
 static int do_null_messages(void);
 static int do_purge_deleted(void);

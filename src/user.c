@@ -32,7 +32,7 @@ char *configFile = DEFAULT_CONFIG_FILE;
 #define SHADOWFILE "/etc/shadow"
 #define PNAME "dbmail/user"
 
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 
 /* UI policy */
 int yes_to_all = 0;

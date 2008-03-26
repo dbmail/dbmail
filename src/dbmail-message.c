@@ -28,7 +28,7 @@
 
 extern GTree * global_cache;
 
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 #define DBPFX _db_params->pfx
 
 #define MESSAGE_MAX_LINE_SIZE 1024
@@ -2303,9 +2303,12 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
  */
 static int send_notification(DbmailMessage *message UNUSED, const char *to)
 {
-	field_t from = "";
-	field_t subject = "";
+	field_t from;
+	field_t subject;
 	int result;
+
+	memset(from,0,sizeof(from));
+	memset(subject,0,sizeof(subject));
 
 	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
 		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");

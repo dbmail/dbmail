@@ -45,7 +45,7 @@ typedef struct _ldap_cfg {
 _ldap_cfg_t _ldap_cfg;
 
 
-static GList * __auth_get_every_match(const char *q, char **retfields);
+static GList * __auth_get_every_match(const char *q, const char **retfields);
 
 static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name);
 static int authldap_connect(void);
@@ -369,7 +369,7 @@ static u64_t dm_ldap_get_freeid(const gchar *attribute)
 	u64_t id = 0, t;
 	GList *ids, *entlist;
 	u64_t min = 0, max = 0;
-	char *attrs[2] = { (char *)attribute, NULL };
+	const char *attrs[2] = { attribute, NULL };
 	GString *q = g_string_new("");
 	u64_t *key;
 	
@@ -558,7 +558,7 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 
 
 /* returns the number of matches found */
-static GList * __auth_get_every_match(const char *q, char **retfields)
+static GList * __auth_get_every_match(const char *q, const char **retfields)
 {
 	LDAPMessage *ldap_msg;
 	LDAPMessage *ldap_res;
@@ -627,7 +627,7 @@ static GList * __auth_get_every_match(const char *q, char **retfields)
 	return entlist;
 }
 
-static char *__auth_get_first_match(const char *q, char **retfields)
+static char *__auth_get_first_match(const char *q, const char **retfields)
 {
 	LDAPMessage *ldap_msg;
 	LDAPMessage *ldap_res;
@@ -683,7 +683,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 {
 	char *id_char;
 	char query[AUTH_QUERY_SIZE];
-	char *fields[] = { _ldap_cfg.field_nid, NULL };
+	const char *fields[] = { _ldap_cfg.field_nid, NULL };
 
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
@@ -720,7 +720,7 @@ char *auth_get_userid(u64_t user_idnr)
 {
 	char *returnid = NULL;
 	char query[AUTH_QUERY_SIZE];
-	char *fields[] = { _ldap_cfg.field_uid, NULL };
+	const char *fields[] = { _ldap_cfg.field_uid, NULL };
 	
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid, user_idnr);
 	returnid = __auth_get_first_match(query, fields);
@@ -735,7 +735,7 @@ int auth_check_userid(u64_t user_idnr)
 {
 	char *returnid = NULL;
 	char query[AUTH_QUERY_SIZE];
-	char *fields[] = { _ldap_cfg.field_nid, NULL };
+	const char *fields[] = { _ldap_cfg.field_nid, NULL };
 	
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid, user_idnr);
 	returnid = __auth_get_first_match(query, fields);
@@ -760,7 +760,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 {
 	char *cid_char = NULL;
 	char query[AUTH_QUERY_SIZE];
-	char *fields[] = { _ldap_cfg.field_cid, NULL };
+	const char *fields[] = { _ldap_cfg.field_cid, NULL };
 
 	assert(client_idnr != NULL);
 	*client_idnr = 0;
@@ -787,7 +787,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 {
 	char *max_char;
 	char query[AUTH_QUERY_SIZE];
-	char *fields[] = { _ldap_cfg.field_maxmail, NULL };
+	const char *fields[] = { _ldap_cfg.field_maxmail, NULL };
 
 	assert(maxmail_size != NULL);
 	*maxmail_size = 0;
@@ -832,7 +832,7 @@ char *auth_getencryption(u64_t user_idnr UNUSED)
 GList * auth_get_known_users(void)
 {
 	char *query;
-	char *fields[] = { _ldap_cfg.field_uid, NULL };
+	const char *fields[] = { _ldap_cfg.field_uid, NULL };
 	GList *users;
 	GList *entlist;
 	
@@ -857,7 +857,7 @@ GList * auth_get_known_users(void)
 GList * auth_get_known_aliases(void)
 {
 	char *query;
-	char *fields[] = { _ldap_cfg.field_uid, NULL };
+	const char *fields[] = { _ldap_cfg.field_uid, NULL };
 	GList *aliases;
 	GList *entlist;
 	
@@ -894,7 +894,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 	u64_t id, *uid;
 	char *endptr = NULL;
 	char query[AUTH_QUERY_SIZE];
-	char *fields[] = { 
+	const char *fields[] = { 
 		_ldap_cfg.field_nid, 
 		_ldap_cfg.field_fwdtarget[0] ? _ldap_cfg.field_fwdtarget : NULL, 
 		NULL 
@@ -997,8 +997,8 @@ int auth_adduser(const char *username, const char *password,
 	char *cid_values[] = { cid->str, NULL };
 	char *max_values[] = { maxm->str, NULL };
 	
-	field_t mail_type = "mail";
-	field_t obj_type = "objectClass";
+	char * mail_type = "mail";
+	char * obj_type = "objectClass";
 
 	GString *t=g_string_new("");
 	
@@ -1022,7 +1022,7 @@ int auth_adduser(const char *username, const char *password,
 	
 	if (strlen(_ldap_cfg.field_passwd) > 0) {
 		mod_field_passwd.mod_op = LDAP_MOD_ADD;
-		mod_field_passwd.mod_type = _ldap_cfg.field_passwd;
+		mod_field_passwd.mod_type = (char *)_ldap_cfg.field_passwd;
 		mod_field_passwd.mod_values = pw_values;
 		mods[i++] = &mod_field_passwd;
 	}
@@ -1033,22 +1033,22 @@ int auth_adduser(const char *username, const char *password,
 	mods[i++] = &mod_mail_type;
 
 	mod_field_uid.mod_op = LDAP_MOD_ADD;
-	mod_field_uid.mod_type = _ldap_cfg.field_uid;
+	mod_field_uid.mod_type = (char *)_ldap_cfg.field_uid;
 	mod_field_uid.mod_values = uid_values;
 	mods[i++] = &mod_field_uid;
 	
 	mod_field_cid.mod_op = LDAP_MOD_ADD;
-	mod_field_cid.mod_type = _ldap_cfg.field_cid;
+	mod_field_cid.mod_type = (char *)_ldap_cfg.field_cid;
 	mod_field_cid.mod_values = cid_values;
 	mods[i++] = &mod_field_cid;
 
 	mod_field_maxmail.mod_op = LDAP_MOD_ADD;
-	mod_field_maxmail.mod_type = _ldap_cfg.field_maxmail;
+	mod_field_maxmail.mod_type = (char *)_ldap_cfg.field_maxmail;
 	mod_field_maxmail.mod_values = max_values;
 	mods[i++] = &mod_field_maxmail;
 
 	mod_field_nid.mod_op = LDAP_MOD_ADD;
-	mod_field_nid.mod_type = _ldap_cfg.field_nid;
+	mod_field_nid.mod_type = (char *)_ldap_cfg.field_nid;
 	mod_field_nid.mod_values = nid_values;
 	mods[i++] = &mod_field_nid;
 
@@ -1363,7 +1363,7 @@ int auth_get_users_from_clientid(u64_t client_id UNUSED,
 
 GList * auth_get_user_aliases(u64_t user_idnr)
 {
-	char *fields[] = { _ldap_cfg.field_mail, NULL };
+	const char *fields[] = { _ldap_cfg.field_mail, NULL };
 	GString *t = g_string_new("");
 	GList *aliases = NULL;
 	GList *entlist, *fldlist, *attlist;
@@ -1399,7 +1399,7 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 
 GList * auth_get_aliases_ext(const char *alias)
 {
-	char *fields[] = { _ldap_cfg.field_fwdtarget, NULL };
+	const char *fields[] = { _ldap_cfg.field_fwdtarget, NULL };
 	GString *t = g_string_new("");
 	GList *aliases = NULL;
 	GList *entlist, *fldlist, *attlist;
@@ -1463,7 +1463,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 	mailValues = g_strsplit(alias,",",1);
 	
 	addMail.mod_op = LDAP_MOD_ADD;
-	addMail.mod_type = _ldap_cfg.field_mail;
+	addMail.mod_type = (char *)_ldap_cfg.field_mail;
 	addMail.mod_values = mailValues;
 	
 	modify[0] = &addMail;
@@ -1506,7 +1506,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 static int forward_exists(const char *alias, const char *deliver_to)
 {
 	char *objectfilter, *dn;
-	char *fields[] = { "dn", _ldap_cfg.field_fwdtarget, NULL };
+	const char *fields[] = { "dn", _ldap_cfg.field_fwdtarget, NULL };
 	int result = FALSE;
 	
 	GString *t = g_string_new(_ldap_cfg.forw_objectclass);
@@ -1560,15 +1560,15 @@ static int forward_create(const char *alias, const char *deliver_to)
 	objectClass.mod_values = obj_values;
 	
 	cnField.mod_op = LDAP_MOD_ADD;
-	cnField.mod_type = _ldap_cfg.cn_string;
+	cnField.mod_type = (char *)_ldap_cfg.cn_string;
 	cnField.mod_values = cn_values;
 	
 	mailField.mod_op = LDAP_MOD_ADD;
-	mailField.mod_type = _ldap_cfg.field_mail;
+	mailField.mod_type = (char *)_ldap_cfg.field_mail;
 	mailField.mod_values = mail_values;
 
 	forwField.mod_op = LDAP_MOD_ADD;
-	forwField.mod_type = _ldap_cfg.field_fwdtarget;
+	forwField.mod_type = (char *)_ldap_cfg.field_fwdtarget;
 	forwField.mod_values = forw_values;
 	
 	mods[0] = &objectClass;
@@ -1609,7 +1609,7 @@ static int forward_add(const char *alias,const char *deliver_to)
 	mailValues = g_strsplit(deliver_to,",",1);
 	
 	addForw.mod_op = LDAP_MOD_ADD;
-	addForw.mod_type = _ldap_cfg.field_fwdtarget;
+	addForw.mod_type = (char *)_ldap_cfg.field_fwdtarget;
 	addForw.mod_values = mailValues;
 	
 	modify[0] = &addForw;
@@ -1648,7 +1648,7 @@ static int forward_delete(const char *alias, const char *deliver_to)
 	mailValues = g_strsplit(deliver_to,",",1);
 	
 	delForw.mod_op = LDAP_MOD_DELETE;
-	delForw.mod_type = _ldap_cfg.field_fwdtarget;
+	delForw.mod_type = (char *)_ldap_cfg.field_fwdtarget;
 	delForw.mod_values = mailValues;
 	
 	modify[0] = &delForw;
@@ -1736,7 +1736,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	mailValues = g_strsplit(alias,",",1);
 	
 	delMail.mod_op = LDAP_MOD_DELETE;
-	delMail.mod_type = _ldap_cfg.field_mail;
+	delMail.mod_type = (char *)_ldap_cfg.field_mail;
 	delMail.mod_values = mailValues;
 	
 	modify[0] = &delMail;

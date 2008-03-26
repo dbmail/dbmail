@@ -35,7 +35,7 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t *_db_params;
+extern volatile db_param_t *_db_params;
 
 
 /* we need this one because we can't directly link imapd.o */
@@ -65,19 +65,19 @@ void teardown(void)
 #define Y(a,b,c) fail_unless(dm_sock_score((b),(c))==(a),"dm_sock_score failed")
 START_TEST(test_dm_sock_compare) 
 {
-	X(1,"inet:127.0.0.1:143","inet:127.0.0.1:143","inet:127.0.0.1:143");
-	X(1,"inet:127.0.0.1:110","inet:127.0.0.1:143","");
-	X(1,"inet:127.0.0.1:143","inet:127.0.0.2:143","");
-	X(1,"inet:127.0.0.1:143","","inet:0.0.0.0:0");
-	X(1,"inet:10.0.0.6:143","inet:10.0.0.6:110","");
-	X(0,"inet:127.0.0.1:143","inet:127.0.0.1:143","");
-	X(0,"inet:127.0.0.1:143","inet:127.0.0.1/8:143","");
-	X(0,"inet:127.0.0.1:143","inet:127.0.0.0/8:143","inet:10.0.0.0/8");
-	X(0,"inet:127.0.0.3:143","inet:127.0.0.0/8:143","inet:127.0.0.1/32");
+	X(0,"inet:127.0.0.1:143","inet:127.0.0.1:143","inet:127.0.0.1:143");
+	X(0,"inet:127.0.0.1:110","inet:127.0.0.1:143","");
+	X(0,"inet:127.0.0.1:143","inet:127.0.0.2:143","");
+	X(0,"inet:127.0.0.1:143","","inet:0.0.0.0:0/0");
+	X(0,"inet:10.0.0.6:143","inet:10.0.0.6:110","");
+	X(1,"inet:127.0.0.1:143","inet:127.0.0.1:143","");
+	X(1,"inet:127.0.0.1:143","inet:127.0.0.1/8:143","");
+	X(1,"inet:127.0.0.1:143","inet:127.0.0.0/8:143","inet:10.0.0.0/8");
+	X(1,"inet:127.0.0.3:143","inet:127.0.0.0/8:143","inet:127.0.0.1/32");
 
-	X(0,"unix:/var/run/dbmail-imapd.sock","unix:/var/run/dbmail-imapd.sock","");
-	X(0,"unix:/var/run/dbmail-imapd.sock","unix:/var/run/dbmail*","");
-	X(1,"unix:/var/run/dbmail-imapd.sock","unix:/var/lib/dbmail-imapd.sock","");
+	X(1,"unix:/var/run/dbmail-imapd.sock","unix:/var/run/dbmail-imapd.sock","");
+	X(1,"unix:/var/run/dbmail-imapd.sock","unix:/var/run/dbmail*","");
+	X(0,"unix:/var/run/dbmail-imapd.sock","unix:/var/lib/dbmail-imapd.sock","");
 
 	Y(32,"inet:10.1.1.1:110","");
 	Y(0,"inet:10.1.1.1/16:110","inet:11.1.1.1:110");

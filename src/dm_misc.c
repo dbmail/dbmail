@@ -686,7 +686,6 @@ int dm_sock_score(const char *base, const char *test)
 	cidr_free(basefilter);
 	cidr_free(testfilter);
 	
-	TRACE(TRACE_DEBUG, "base[%s] test[%s] => [%d]", base, test, result);
 	return result;
 }
 
@@ -701,13 +700,12 @@ int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *
 	int result = TRUE;
 	assert(clientsock);
 	
-	if ( (strlen(sock_allow) == 0) && (strlen(sock_deny) == 0) ) {
+	if ( (strlen(sock_allow) == 0) && (strlen(sock_deny) == 0) )
 		result = TRUE;
-	} else if (strlen(sock_deny) && socket_match(sock_deny, clientsock)) {
+	else if (strlen(sock_deny) && socket_match(sock_deny, clientsock))
 		result = FALSE;
-	} else if (strlen(sock_allow) && socket_match(sock_allow, clientsock)) {
-		result = TRUE;
-	}
+	else if (strlen(sock_allow))
+		result = socket_match(sock_allow, clientsock);
 
 	TRACE(TRACE_DEBUG, "clientsock [%s] sock_allow[%s], sock_deny [%s] => [%d]", clientsock, sock_allow, sock_deny, result);
 	return result;

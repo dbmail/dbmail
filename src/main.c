@@ -39,7 +39,7 @@
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
-extern db_param_t * _db_params;	/* set up database login data */
+extern volatile db_param_t * _db_params;	/* set up database login data */
 
 int brute_force = 0;
 char *deliver_to_header = NULL;

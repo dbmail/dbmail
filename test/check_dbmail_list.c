@@ -36,7 +36,7 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 extern int quiet;
 extern int reallyquiet;
 

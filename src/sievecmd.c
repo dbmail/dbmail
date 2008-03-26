@@ -41,7 +41,7 @@ int reallyquiet = 0;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 
 static int do_showhelp(void);
 static int do_list(u64_t user_idnr);

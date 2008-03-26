@@ -19,6 +19,8 @@
 
 #include "dbmail.h"
 
+#define THIS_MODULE "cidr"
+
 
 struct cidrfilter * cidr_new(const char *str)
 {
@@ -82,16 +84,20 @@ struct cidrfilter * cidr_new(const char *str)
 		cidr_free(self);
 		return NULL;
 	}
+
+	if (self->socket->sin_addr.s_addr == 0)
+		self->mask = 0;
 		
 	free(haddr);
 	free(hport);
 	
+	TRACE(TRACE_DEBUG,"%s", cidr_repr(self));
 	return self;
 }
 
-int cidr_repr(struct cidrfilter *self) 
+char * cidr_repr(struct cidrfilter *self) 
 {
-	return printf("struct cidrfilter {\n"
+	return g_strdup_printf("struct cidrfilter {\n"
 			"\tsock_str: %s;\n"
 			"\tsocket->sin_addr: %s;\n"
 			"\tsocket->sin_port: %d;\n"

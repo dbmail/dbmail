@@ -54,6 +54,12 @@
 typedef unsigned long long u64_t;
 
 typedef enum {
+	DM_DRIVER_SQLITE	= 1,
+	DM_DRIVER_MYSQL		= 2,
+	DM_DRIVER_POSTGRESQL	= 3
+} dm_driver_t;
+
+typedef enum {
 	DM_EQUERY 	= -1,
 	DM_SUCCESS 	= 0,
 	DM_EGENERAL 	= 1

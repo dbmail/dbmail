@@ -12,7 +12,7 @@
 
 static auth_func_t *auth = NULL;
 
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 
 /* Returns:
  *  1 on modules unsupported

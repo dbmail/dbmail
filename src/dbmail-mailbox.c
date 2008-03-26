@@ -25,7 +25,7 @@
 
 #include "dbmail.h"
 #define THIS_MODULE "mailbox"
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 #define DBPFX _db_params->pfx
 
 /* internal utilities */

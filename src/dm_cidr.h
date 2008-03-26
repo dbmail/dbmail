@@ -34,7 +34,7 @@ struct cidrfilter {
 };
 
 struct cidrfilter * cidr_new(const char *str);
-int cidr_repr(struct cidrfilter *self);
+char * cidr_repr(struct cidrfilter *self);
 int cidr_match(struct cidrfilter *base, struct cidrfilter *test);
 void cidr_free(struct cidrfilter *self);
 

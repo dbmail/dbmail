@@ -36,7 +36,7 @@
 
 extern char * multipart_message;
 extern char * configFile;
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 
 
 /* we need this one because we can't directly link imapd.o */

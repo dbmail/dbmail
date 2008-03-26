@@ -26,7 +26,7 @@
 #define THIS_MODULE "sievescript"
 #define DBPFX _db_params->pfx
 
-extern db_param_t * _db_params;
+extern volatile db_param_t * _db_params;
 
 int dm_sievescript_getbyname(u64_t user_idnr, char *scriptname, char **script)
 {
