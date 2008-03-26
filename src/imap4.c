@@ -118,11 +118,11 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 			break;
 
 		default:
-			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->timeout);
-			session->timeout = session->ci->timeout;
+			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->timeout);
 			bufferevent_settimeout(session->ci->rev, session->timeout, 0);
 			break;
 	}
+	bufferevent_enable(session->ci->rev, EV_READ);
 }
 
 void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
@@ -194,14 +194,15 @@ void imap_cb_read(void *arg)
 	ImapSession *session = (ImapSession *) arg;
 	char buffer[MAX_LINESIZE];
 
-	if (session->command_state) 
-		dbmail_imap_session_reset(session);
+	// we need to clear the session if the previous command was 
+	// finished; completed or aborted
+	if (session->command_state) dbmail_imap_session_reset(session);
 
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
 		if (imap4_tokenizer(session, buffer)) {
 			imap4(session);
 			TRACE(TRACE_DEBUG,"command state [%d]", session->command_state);
-			if (! session->command_state) return; // new read callback;
+			if (! session->command_state) return; // unfinished command, new read callback
 			dbmail_imap_session_reset(session);
 		}
 	}
@@ -209,17 +210,23 @@ void imap_cb_read(void *arg)
 
 void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, int timeout)
 {
-	TRACE(TRACE_DEBUG,"session [%p], cb_read [%p], cb_time [%p], timeout [%d]", session, r, t, timeout);
 	if (r) session->ci->cb_read = r;
 	if (t) session->ci->cb_time = t;
+	if (timeout>0) session->timeout = timeout;
 
-	if (timeout >= 0) bufferevent_settimeout(session->ci->rev, timeout, 0);
+	assert(session->ci->cb_read);
+	assert(session->ci->cb_time);
+	assert(session->timeout > 0);
+
+	TRACE(TRACE_DEBUG,"session [%p], cb_read [%p], cb_time [%p], timeout [%d]", 
+		session, session->ci->cb_read, session->ci->cb_time, session->timeout);
 
 	UNBLOCK(session->ci->rx);
 	UNBLOCK(session->ci->tx);
 
 	bufferevent_enable(session->ci->rev, EV_READ );
 	bufferevent_enable(session->ci->wev, EV_WRITE);
+	bufferevent_settimeout(session->ci->rev, session->timeout, 0);
 }
 
 void dbmail_imap_session_reset_callbacks(ImapSession *session)
@@ -291,6 +298,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 			else
 				dbmail_imap_session_printf(session, "* BAD Invalid tag specified\r\n");
 			session->error_count++;
+			session->command_state=TRUE;
 			return 0;
 		}
 
@@ -304,6 +312,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 		if (!checktag(session->tag)) {
 			dbmail_imap_session_printf(session, "* BAD Invalid tag specified\r\n");
 			session->error_count++;
+			session->command_state=TRUE;
 			return 0;
 		}
 
@@ -330,10 +339,19 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 
 void imap4(ImapSession *session)
 {
+	// 
+	// the parser/tokenizer is satisfied we're ready reading from the client
+	// so now it's time to act upon the read input
+	//
 	int result;
 	static int j = 0;
 	
-	/* the parser/tokenizer is satisfied we're ready */
+	if (session->command_state==TRUE) // did we receive a signal we're done already
+		return;
+
+	// whatever happens we're done with this command by default (IDLE being an exemption)
+	session->command_state=TRUE;
+
 	if (! (session->tag && session->command)) {
 		TRACE(TRACE_ERROR,"no tag or command");
 		return;
@@ -381,7 +399,5 @@ void imap4(ImapSession *session)
 
 
 	TRACE(TRACE_INFO, "Finished command %s [%d]\n", IMAP_COMMANDS[j], result);
-	session->command_state = TRUE;
-
 	return; //done
 }

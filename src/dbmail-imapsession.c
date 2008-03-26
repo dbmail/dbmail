@@ -1925,7 +1925,7 @@ void imap_cb_idle_time (void *arg)
 	if (! (loop++ % 10))
 		dbmail_imap_session_printf(self, "* OK\r\n");
 	dbmail_imap_session_mailbox_status(self,TRUE);
-	bufferevent_enable(self->ci->rev, EV_READ);
+	dbmail_imap_session_set_callbacks(self, NULL, NULL, 0);
 }
 
 #define IDLE_BUFFER 8
@@ -1956,25 +1956,26 @@ int dbmail_imap_session_idle(ImapSession *self)
 	int idle_timeout = IDLE_TIMEOUT;
 	field_t val;
 
+	bufferevent_disable(self->ci->rev, EV_READ);
+
 	GETCONFIGVALUE("idle_timeout", "IMAP", val);
 	if ( strlen(val) && (idle_timeout = atoi(val)) <= 0 ) {
 		TRACE(TRACE_ERROR, "[%p] illegal value for idle_timeout [%s]", self, val);
 		idle_timeout = IDLE_TIMEOUT;	
 	}
-
+#if 0
 	GETCONFIGVALUE("idle_status", "IMAP", val);
 	if (strlen(val) && (g_strncasecmp(val,"yes",3)==0))
 		imap_feature_idle_status = TRUE;
 	else
 		imap_feature_idle_status = FALSE;
+#endif
 
-	bufferevent_disable(self->ci->rev, EV_READ);
-
+	dbmail_imap_session_set_callbacks(self, imap_cb_idle_read, imap_cb_idle_time, idle_timeout);
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
 	dbmail_imap_session_printf(self, "+ idling\r\n");
 
-	dbmail_imap_session_set_callbacks(self, imap_cb_idle_read, imap_cb_idle_time, idle_timeout);
 	return 0;
 }
 
