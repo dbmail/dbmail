@@ -151,30 +151,33 @@ gchar * get_crlf_encoded_opt(const gchar *string, int dots)
 
 static u64_t blob_exists(const char *buf, const char *hash)
 {
-	u64_t id = 0, i = 0;
+	u64_t id = 0;
 	size_t buflen;
-	const char *data;
+	char *data;
 	assert(buf);
-	C c; R r;
-
-	c = db_con_get();
-	if (! (r = db_query(c,"SELECT id,data FROM %smimeparts WHERE hash='%s'", DBPFX, hash))) {
-		db_con_close(c);
-		return 0;
-	}
+	C c; S s; R r;
 
 	buflen = strlen(buf);
-
-	while (db_result_next(r)) {
-		u64_t id = db_result_get_u64(r,0);
-		data = db_result_get(r,1);
-		assert(data);
-		if (memcmp(buf, data, buflen)==0) {
-			id = i;
-			break;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c,"SELECT id,data FROM %smimeparts WHERE hash= ? ", DBPFX);
+		db_stmt_set_str(s,1,hash);
+		r = db_stmt_query(s);
+		while (db_result_next(r)) {
+			u64_t i = db_result_get_u64(r,0);
+			data = (char *)db_result_get(r,1);
+			assert(data);
+			TRACE(TRACE_DEBUG,"memcmp: [%s][%s]", buf, data);
+			if (memcmp((gconstpointer)buf, (gconstpointer)data, buflen)==0) {
+				id = i;
+				break;
+			}
 		}
-	}
-	db_con_close(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
 	return id;
 }
@@ -211,23 +214,28 @@ static u64_t blob_insert(const char *buf, const char *hash)
 static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 {
 	INIT_QUERY;
-	C c; S s; gboolean t;
+	C c; S s; gboolean t = FALSE;
 
 	snprintf(query,DEF_QUERYSIZE, "INSERT INTO %spartlists "
 		"(physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
 		"VALUES (?,?,?,?,?,?)", DBPFX);
 	
 	c = db_con_get();
-	s = db_stmt_prepare(c, query);
-	db_stmt_set_u64(s, 1, dbmail_message_get_physid(m));
-	db_stmt_set_int(s, 2, is_header);
-	db_stmt_set_int(s, 3, m->part_key);
-	db_stmt_set_int(s, 4, m->part_depth);
-	db_stmt_set_int(s, 5, m->part_order);
-	db_stmt_set_u64(s, 6, id);	
+	TRY
+		s = db_stmt_prepare(c, query);
+		db_stmt_set_u64(s, 1, dbmail_message_get_physid(m));
+		db_stmt_set_int(s, 2, is_header);
+		db_stmt_set_int(s, 3, m->part_key);
+		db_stmt_set_int(s, 4, m->part_depth);
+		db_stmt_set_int(s, 5, m->part_order);
+		db_stmt_set_u64(s, 6, id);	
 
-	t = db_stmt_exec(s);
-	db_con_close(c);
+		t = db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
 	return t;
 }

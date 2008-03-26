@@ -567,7 +567,13 @@ const char * db_get_sql(sql_fragment_t frag)
 
 char *db_returning(const char *s)
 {
-	return g_strdup_printf(db_get_sql(SQL_RETURNING),s);
+	char *r = NULL, *t = NULL;
+
+	if ((t = (char *)db_get_sql(SQL_RETURNING)))
+		r = g_strdup_printf(t,s);
+	else
+		r = g_strdup("");
+	return r;
 }
 
 /////////////////////////////////////////////////////////////////////////////

@@ -1199,6 +1199,13 @@ END_TEST
  */
 //int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr);
 
+START_TEST(test_db_get_sql)
+{
+	char *s = db_get_sql(SQL_CURRENT_TIMESTAMP);
+	fail_unless(s != NULL);
+}
+END_TEST
+
 
 Suite *dbmail_db_suite(void)
 {
@@ -1223,6 +1230,8 @@ Suite *dbmail_db_suite(void)
 	tcase_add_test(tc_db, test_db_mailbox_create_with_parents);
 	tcase_add_test(tc_db, test_mailbox_match_new);
 	tcase_add_test(tc_db, test_db_findmailbox_by_regex);
+	tcase_add_test(tc_db, test_db_get_sql);
+	
 
 
 	return s;
