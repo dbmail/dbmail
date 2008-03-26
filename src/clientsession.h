@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-ClientSession_t * client_session_new(clientinfo_t *ci);
+ClientSession_t * client_session_new(client_sock *c);
 int client_session_reset(ClientSession_t * session);
 void client_session_reset_parser(ClientSession_t *session);
 void client_session_bailout(ClientSession_t *session);
@@ -28,7 +28,7 @@ void socket_read_cb(struct bufferevent *ev, void *arg);
 void socket_write_cb(struct bufferevent *ev, void *arg);
 void socket_error_cb(struct bufferevent *ev, short what, void *arg);
  
-int pop3_handle_connection(clientinfo_t *ci);
-int imap_handle_connection(clientinfo_t *ci);
-int tims_handle_connection(clientinfo_t *ci);
-int lmtp_handle_connection(clientinfo_t *ci);
+int pop3_handle_connection(client_sock *c);
+int imap_handle_connection(client_sock *c);
+int tims_handle_connection(client_sock *c);
+int lmtp_handle_connection(client_sock *c);

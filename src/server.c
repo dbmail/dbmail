@@ -356,7 +356,7 @@ static void server_create_sockets(serverConfig_t * conf)
 	}
 }
 
-static clientinfo_t * client_init(int socket, struct sockaddr_in caddr)
+clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
 {
 	int err;
 	clientinfo_t *client	= g_new0(clientinfo_t, 1);
@@ -365,11 +365,11 @@ static clientinfo_t * client_init(int socket, struct sockaddr_in caddr)
 	client->login_timeout	= server_conf->login_timeout;
 	client->line_buffer	= g_string_new("");
 
-	strncpy((char *)client->ip_src, inet_ntoa(caddr.sin_addr), sizeof(client->ip_src));
+	strncpy((char *)client->ip_src, inet_ntoa(caddr->sin_addr), sizeof(client->ip_src));
 
 	if (server_conf->resolveIP) {
 		struct hostent *clientHost;
-		clientHost = gethostbyaddr((char *) &caddr.sin_addr, sizeof(caddr.sin_addr), caddr.sin_family);
+		clientHost = gethostbyaddr((gpointer) &(caddr->sin_addr), sizeof(caddr->sin_addr), caddr->sin_family);
 
 		if (clientHost && clientHost->h_name)
 			strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
@@ -412,13 +412,12 @@ static void worker_pipe_cb(int sock, short event UNUSED, void *arg UNUSED)
 		;
 }
 
-static void worker_thread_create(clientinfo_t *client)
+static void worker_thread_create(client_sock *c)
 {
-	GThread *id;
 	GError *err = NULL;
 
 	if (!g_thread_supported ()) g_thread_init (NULL);
-	if (! g_thread_create((GThreadFunc)server_conf->ClientHandler, (gpointer)client, FALSE, &err))
+	if (! g_thread_create((GThreadFunc)server_conf->ClientHandler, (gpointer)c, FALSE, &err))
 		TRACE(TRACE_DEBUG,"gthread creation failed [%s]", err->message);
 
 //	server_conf->ClientHandler((clientinfo_t *)client);
@@ -426,29 +425,16 @@ static void worker_thread_create(clientinfo_t *client)
 
 static void worker_sock_cb(int sock, short event, void *arg)
 {
-	int clientsock;
-	struct sockaddr_in caddr;
+	client_sock *c = g_new0(client_sock,1);
+	struct sockaddr_in *caddr = g_new0(struct sockaddr_in, 1);
 	struct event *ev = (struct event *)arg;
-	clientinfo_t *client;
-	C c;
 
 	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
-	c = db_con_get();
-	if (!db_check_connection(c)) {
-		db_con_close(c);
-		TRACE(TRACE_ERROR, "database has gone away");
-		ChildStopRequested=1;
-		return;
-	}
-	db_con_close(c);
-
-	/* reschedule */
-	event_add(ev, NULL);
 
 	/* accept the active fd */
 	int len = sizeof(struct sockaddr_in);
 
-	if ((clientsock = accept(sock, (struct sockaddr_in *) &caddr, (socklen_t *)&len)) < 0) {
+	if ((c->sock = accept(sock, caddr, (socklen_t *)&len)) < 0) {
                 int serr=errno;
                 switch(serr) {
                         case ECONNABORTED:
@@ -462,13 +448,15 @@ static void worker_sock_cb(int sock, short event, void *arg)
                 }
                 return;
         }
-
-	client = client_init(clientsock, caddr);
-
+	
+	c->caddr = caddr;
 	TRACE(TRACE_INFO, "connection accepted");
 
 	/* streams are ready, perform handling */
-	worker_thread_create(client);
+	worker_thread_create(c);
+
+	/* reschedule */
+	event_add(ev, NULL);
 }
 
 static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)

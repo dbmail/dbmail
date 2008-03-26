@@ -28,11 +28,13 @@
 
 #define THIS_MODULE "clientsession"
 
-ClientSession_t * client_session_new(clientinfo_t *ci)
+ClientSession_t * client_session_new(client_sock *c)
 {
 	char unique_id[UID_SIZE];
 
 	ClientSession_t * session = g_new0(ClientSession_t,1);
+	clientinfo_t *ci = client_init(c->sock, c->caddr);
+
 	session->state = IMAPCS_INITIAL_CONNECT;
 
 	gethostname(session->hostname, sizeof(session->hostname));

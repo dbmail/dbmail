@@ -241,9 +241,10 @@ void dbmail_imap_session_reset_callbacks(ImapSession *session)
 }
 
 
-int imap_handle_connection(clientinfo_t * ci)
+int imap_handle_connection(client_sock *c)
 {
 	ImapSession *session;
+	clientinfo_t *ci = client_init(c->sock, c->caddr);
 
 	if (ci->rx != STDIN_FILENO) ci->base = event_init();
 
@@ -269,6 +270,7 @@ int imap_handle_connection(clientinfo_t * ci)
 	if (ci->rx != STDIN_FILENO) event_base_dispatch(ci->base);
 	
 	TRACE(TRACE_DEBUG,"gthread done [%p]", g_thread_self());
+	g_free(c);
 
 	return EOF;
 }

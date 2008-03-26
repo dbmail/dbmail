@@ -104,11 +104,11 @@ static void reset_callbacks(ClientSession_t *session)
         bufferevent_enable(session->ci->wev, EV_WRITE);
 }
 
-int tims_handle_connection(clientinfo_t * ci)
+int tims_handle_connection(client_sock *c)
 {
-	ClientSession_t *session = client_session_new(ci);
+	ClientSession_t *session = client_session_new(c);
 	session->state = STRT;
-	client_session_set_timeout(session, ci->login_timeout);
+	client_session_set_timeout(session, session->ci->login_timeout);
 	reset_callbacks(session);
 	send_greeting(session);
 	return 0;

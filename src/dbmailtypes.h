@@ -200,6 +200,11 @@ typedef enum {
  * struct for a POP3 session. Also used for LMTP session.
  */
 
+typedef struct  {
+	int sock;
+	struct sockaddr_in *caddr;
+} client_sock;
+
 typedef struct {
 	int rx, tx;			/* read and write filehandles */
 	struct event_base *base;	/* event base */
