@@ -1934,15 +1934,16 @@ void imap_cb_idle_read (void *arg)
 	char buffer[IDLE_BUFFER];
 	ImapSession *self = (ImapSession *)arg;
 
-	TRACE(TRACE_DEBUG,"[%p]", self);
+	TRACE(TRACE_DEBUG,"[%p] [%s]", self, self->tag);
 
 	memset(buffer,0,sizeof(buffer));
 	if (! (ci_read(self->ci, buffer, IDLE_BUFFER)))
 		return;
 
-	if (strlen(buffer) > 4 && strncmp(buffer,"DONE",4)==0) {
-		dbmail_imap_session_reset_callbacks(self);
+	if (strlen(buffer) > 4 && strncasecmp(buffer,"DONE",4)==0) {
 		dbmail_imap_session_printf(self, "%s OK IDLE terminated\r\n", self->tag);
+		dbmail_imap_session_reset_callbacks(self);
+		self->command_state = TRUE; // done
 	} else if (strlen(buffer) > 0) {
 		dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
 		self->state = IMAPCS_ERROR;
@@ -1970,6 +1971,7 @@ int dbmail_imap_session_idle(ImapSession *self)
 	bufferevent_disable(self->ci->rev, EV_READ);
 
 	dbmail_imap_session_mailbox_status(self,TRUE);
+	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
 	dbmail_imap_session_printf(self, "+ idling\r\n");
 
 	dbmail_imap_session_set_callbacks(self, imap_cb_idle_read, imap_cb_idle_time, idle_timeout);

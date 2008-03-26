@@ -118,8 +118,9 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 			break;
 
 		default:
-			TRACE(TRACE_DEBUG,"reset timeout");
+			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->timeout);
 			session->timeout = session->ci->timeout;
+			bufferevent_settimeout(session->ci->rev, session->timeout, 0);
 			break;
 	}
 }
@@ -193,10 +194,14 @@ void imap_cb_read(void *arg)
 	ImapSession *session = (ImapSession *) arg;
 	char buffer[MAX_LINESIZE];
 
+	if (session->command_state) 
+		dbmail_imap_session_reset(session);
+
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
 		if (imap4_tokenizer(session, buffer)) {
 			imap4(session);
 			TRACE(TRACE_DEBUG,"command state [%d]", session->command_state);
+			if (! session->command_state) return; // new read callback;
 			dbmail_imap_session_reset(session);
 		}
 	}
@@ -362,8 +367,17 @@ void imap4(ImapSession *session)
 	if (result == 1)
 		session->error_count++;	/* server returned BAD or NO response */
 
-	if (result == 0 && j == IMAP_COMM_LOGOUT)
-		session->state=IMAPCS_LOGOUT;
+	if (result == 0) {
+		switch(j) {
+			case IMAP_COMM_LOGOUT:
+				session->state=IMAPCS_LOGOUT;
+			break;
+			case IMAP_COMM_IDLE:
+				session->command_state=FALSE;
+				return;
+			break;
+		}
+	}
 
 
 	TRACE(TRACE_INFO, "Finished command %s [%d]\n", IMAP_COMMANDS[j], result);
