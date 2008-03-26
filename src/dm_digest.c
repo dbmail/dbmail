@@ -21,9 +21,10 @@
 #define THIS_MODULE "digest"
 
 
+static const char hex[] = "0123456789abcdef";
+
 static char * dm_digest(const unsigned char * hash, hashid type)
 {
-	static const char hex[] = "0123456789abcdef";
 	char *buffer = g_new0(char,256);
 	char *buf = buffer;
 	size_t i, j;

@@ -206,6 +206,7 @@ void imap_cb_read(void *arg)
 
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
 		if (imap4_tokenizer(session, buffer)) {
+			bufferevent_disable(session->ci->rev, EV_READ);
 			imap4(session);
 			TRACE(TRACE_DEBUG,"command state [%d]", session->command_state);
 			if (! session->command_state) return; // unfinished command, new read callback
@@ -244,9 +245,14 @@ void dbmail_imap_session_reset_callbacks(ImapSession *session)
 int imap_handle_connection(client_sock *c)
 {
 	ImapSession *session;
-	clientinfo_t *ci = client_init(c->sock, c->caddr);
+	clientinfo_t *ci;
 
-	if (ci->rx != STDIN_FILENO) ci->base = event_init();
+	if (c)
+		ci = client_init(c->sock, c->caddr);
+	else
+		ci = client_init(0, NULL);
+
+	ci->base = event_init();
 
 	session = dbmail_imap_session_new();
 	session->timeout = ci->login_timeout;
@@ -256,10 +262,8 @@ int imap_handle_connection(client_sock *c)
 	ci->rev = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
 	ci->wev = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
 
-	if (ci->rx != STDIN_FILENO) {
-		bufferevent_base_set(ci->base, ci->rev);
-		bufferevent_base_set(ci->base, ci->wev);
-	}
+	bufferevent_base_set(ci->base, ci->rev);
+	bufferevent_base_set(ci->base, ci->wev);
 
 	session->ci = ci;
 
@@ -267,7 +271,7 @@ int imap_handle_connection(client_sock *c)
 
 	send_greeting(session);
 	
-	if (ci->rx != STDIN_FILENO) event_base_dispatch(ci->base);
+	event_base_dispatch(ci->base);
 	
 	TRACE(TRACE_DEBUG,"gthread done [%p]", g_thread_self());
 	g_free(c);
@@ -288,6 +292,7 @@ void dbmail_imap_session_reset(ImapSession *session)
 	session->command_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 	session->rbuff = NULL;
+	bufferevent_enable(session->ci->rev, EV_READ);
 }
 
 int imap4_tokenizer (ImapSession *session, char *buffer)
@@ -364,7 +369,7 @@ void imap4(ImapSession *session)
 	//
 	time_t before, after;
 	int result, elapsed = 0;
-	static int j = 0;
+	int j = 0;
 	
 	if (session->command_state==TRUE) // did we receive a signal we're done already
 		return;
@@ -395,22 +400,22 @@ void imap4(ImapSession *session)
 		return;
 	}
 	session->command_type = j;
-	TRACE(TRACE_INFO, "Executing command %s...\n", IMAP_COMMANDS[j]);
+	TRACE(TRACE_INFO, "Executing command %s...\n", IMAP_COMMANDS[session->command_type]);
 	before = time(NULL);
-	result = (*imap_handler_functions[j]) (session);
+	result = (*imap_handler_functions[session->command_type]) (session);
 	after = time(NULL);
 	
 	if (result == -1) {
-		TRACE(TRACE_ERROR,"command return with error [%s]", IMAP_COMMANDS[j]);
-		session->state=IMAPCS_ERROR;	/* fatal error occurred, kick this user */
+		TRACE(TRACE_ERROR,"command return with error [%s]", session->command);
+		dbmail_imap_session_set_state(session,IMAPCS_ERROR);	/* fatal error occurred, kick this user */
 	}
 	if (result == 1)
 		session->error_count++;	/* server returned BAD or NO response */
 
 	if (result == 0) {
-		switch(j) {
+		switch(session->command_type) {
 			case IMAP_COMM_LOGOUT:
-				session->state=IMAPCS_LOGOUT;
+				dbmail_imap_session_set_state(session,IMAPCS_LOGOUT);
 			break;
 			case IMAP_COMM_IDLE:
 				session->command_state=FALSE;
@@ -422,6 +427,6 @@ void imap4(ImapSession *session)
 	if (before != (time_t)-1 && after != (time_t)-1)
 		elapsed = (int)((time_t) (after - before));
 
-	TRACE(TRACE_INFO, "Finished command %s in [%d] seconds\n", IMAP_COMMANDS[j], elapsed);
+	TRACE(TRACE_INFO, "Finished %s in [%d] seconds [%d]\n", session->command, elapsed, result);
 	return; //done
 }

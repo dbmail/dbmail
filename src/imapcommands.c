@@ -71,7 +71,7 @@ int _ic_capability(ImapSession *self)
 	field_t val;
 	gboolean override = FALSE;
 
-	if (!check_state_and_args(self, "CAPABILITY", 0, 0, -1))
+	if (!check_state_and_args(self, 0, 0, -1))
 		return 1;	/* error, return */
 	
 	GETCONFIGVALUE("capability", "IMAP", val);
@@ -91,7 +91,7 @@ int _ic_capability(ImapSession *self)
  */
 int _ic_noop(ImapSession *self)
 {
-	if (!check_state_and_args(self, "NOOP", 0, 0, -1))
+	if (!check_state_and_args(self, 0, 0, -1))
 		return 1;	/* error, return */
 
 	if (self->state == IMAPCS_SELECTED)
@@ -111,7 +111,7 @@ int _ic_logout(ImapSession *self)
 {
 	dbmail_imap_session_mailbox_update_recent(self);
 
-	if (!check_state_and_args(self, "LOGOUT", 0, 0, -1))
+	if (!check_state_and_args(self, 0, 0, -1))
 		return 1;	/* error, return */
 
 	dbmail_imap_session_set_state(self,IMAPCS_LOGOUT);
@@ -135,7 +135,7 @@ int _ic_login(ImapSession *self)
 	int result;
 	timestring_t timestring;
 	
-	if (!check_state_and_args(self, "LOGIN", 2, 2, IMAPCS_NON_AUTHENTICATED))
+	if (!check_state_and_args(self, 2, 2, IMAPCS_NON_AUTHENTICATED))
 		return 1;
 	
 	create_current_timestring(&timestring);
@@ -166,7 +166,7 @@ int _ic_authenticate(ImapSession *self)
 
 	timestring_t timestring;
 	
-	if (!check_state_and_args(self, "AUTHENTICATE", 3, 3, IMAPCS_NON_AUTHENTICATED))
+	if (!check_state_and_args(self, 3, 3, IMAPCS_NON_AUTHENTICATED))
 		return 1;
 
 	create_current_timestring(&timestring);
@@ -216,7 +216,7 @@ int _ic_select(ImapSession *self)
 	char *mailbox;
 	char permstring[PERMSTRING_SIZE];
 
-	if (!check_state_and_args(self, "SELECT", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
 	mailbox = self->args[self->args_idx];
@@ -273,7 +273,7 @@ int _ic_examine(ImapSession *self)
 	int result;
 	char *mailbox;
 
-	if (!check_state_and_args(self, "EXAMINE", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	mailbox = self->args[self->args_idx];
@@ -305,7 +305,7 @@ int _ic_create(ImapSession *self)
 	const char *message;
 	u64_t mboxid;
 	
-	if (!check_state_and_args(self, "CREATE", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	/* Create the mailbox and its parents. */
@@ -338,7 +338,7 @@ int _ic_delete(ImapSession *self)
 	char *mailbox = self->args[0];
 	unsigned nchildren = 0;
 
-	if (!check_state_and_args(self, "DELETE", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
 	if (! (mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
@@ -470,7 +470,7 @@ int _ic_rename(ImapSession *self)
 	char newname[IMAP_MAX_MAILBOX_NAMELEN];
 	MailboxInfo *mb;
 
-	if (!check_state_and_args(self, "RENAME", 2, 2, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	if ((mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0])) == 0) {
@@ -607,7 +607,7 @@ int _ic_subscribe(ImapSession *self)
 {
 	u64_t mboxid;
 
-	if (!check_state_and_args(self, "SUBSCRIBE", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	if (! (mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0]))) {
@@ -640,7 +640,7 @@ int _ic_unsubscribe(ImapSession *self)
 {
 	u64_t mboxid;
 
-	if (!check_state_and_args(self, "UNSUBSCRIBE", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	if (! (mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0]))) {
@@ -683,7 +683,7 @@ int _ic_list(ImapSession *self)
 	gchar * pstring;
 
 
-	if (!check_state_and_args(self, thisname, 2, 2, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	/* check if self->args are both empty strings, i.e. A001 LIST "" "" 
@@ -795,7 +795,7 @@ int _ic_status(ImapSession *self)
 	gchar *pstring, *astring;
 	
 	
-	if (!check_state_and_args(self, "STATUS", 3, 0, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 3, 0, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	if (strcmp(self->args[1], "(") != 0) {
@@ -900,7 +900,7 @@ int _ic_status(ImapSession *self)
 int _ic_idle(ImapSession *self)
 {
 	int result;
-	if (!check_state_and_args(self, "IDLE", 0, 0, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
 	if ((result = dbmail_imap_session_idle(self)) != 0)
@@ -1154,7 +1154,7 @@ int _ic_check(ImapSession *self)
 {
 	int result;
 
-	if (!check_state_and_args(self, "CHECK", 0, 0, IMAPCS_SELECTED))
+	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ);
@@ -1185,7 +1185,7 @@ int _ic_close(ImapSession *self)
 {
 	int result;
 
-	if (!check_state_and_args(self, "CLOSE", 0, 0, IMAPCS_SELECTED))
+	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	/* check if the user has to right to expunge all messages from the
@@ -1216,7 +1216,7 @@ int _ic_close(ImapSession *self)
 
 int _ic_unselect(ImapSession *self)
 {
-	if (!check_state_and_args(self, "UNSELECT", 0, 0, IMAPCS_SELECTED))
+	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	dbmail_imap_session_mailbox_close(self);
@@ -1235,7 +1235,7 @@ int _ic_expunge(ImapSession *self)
 {
 	int result;
 
-	if (!check_state_and_args(self, "EXPUNGE", 0, 0, IMAPCS_SELECTED))
+	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED))
 		return 1; /* error, return */
 
 	if (self->mailbox->info->permission != IMAPPERM_READWRITE) {
@@ -1414,7 +1414,7 @@ int _ic_fetch(ImapSession *self)
 {
 	int result, state, setidx;
 
-	if (!check_state_and_args (self, "FETCH", 2, 0, IMAPCS_SELECTED))
+	if (!check_state_and_args (self, 2, 0, IMAPCS_SELECTED))
 		return 1;
 
 	/* check if the user has the right to fetch messages in this mailbox */
@@ -1540,7 +1540,7 @@ int _ic_store(ImapSession *self)
 
 	cmd = g_new0(cmd_store_t,1);
 
-	if (!check_state_and_args (self, "STORE", 2, 0, IMAPCS_SELECTED))
+	if (!check_state_and_args (self, 2, 0, IMAPCS_SELECTED))
 		return 1;
 
 	k = self->args_idx;
@@ -1693,7 +1693,7 @@ int _ic_copy(ImapSession *self)
 	MailboxInfo *destmbox;
 	cmd_copy_t cmd;
 	
-	if (!check_state_and_args(self, "COPY", 2, 2, IMAPCS_SELECTED))
+	if (!check_state_and_args(self, 2, 2, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	/* check if destination mailbox exists */
@@ -1835,7 +1835,7 @@ int _ic_getquotaroot(ImapSession *self)
 	quota_t *quota;
 	char *root, *errormsg;
 
-	if (!check_state_and_args(self, "GETQUOTAROOT", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
 	root = quota_get_quotaroot(self->userid, self->args[self->args_idx], &errormsg);
@@ -1869,7 +1869,7 @@ int _ic_getquota(ImapSession *self)
 	quota_t *quota;
 	char *errormsg;
 
-	if (!check_state_and_args(self, "GETQUOTA", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
 	quota = quota_get_quota(self->userid, self->args[self->args_idx], &errormsg);
@@ -1910,7 +1910,7 @@ int _ic_setacl(ImapSession *self)
 	u64_t targetuserid;
 	MailboxInfo *mailbox;
 
-	if (!check_state_and_args(self, "SETACL", 3, 3, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 3, 3, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	result = imap_acl_pre_administer(self->args[self->args_idx], self->args[self->args_idx+1], self->userid,
@@ -1949,7 +1949,7 @@ int _ic_deleteacl(ImapSession *self)
 	u64_t targetuserid;
 	MailboxInfo *mailbox;
 
-	if (!check_state_and_args(self, "DELETEACL", 2, 2, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	if (imap_acl_pre_administer(self->args[self->args_idx], self->args[self->args_idx+1], self->userid,
@@ -1982,7 +1982,7 @@ int _ic_getacl(ImapSession *self)
 	u64_t mboxid;
 	char *acl_string;
 
-	if (!check_state_and_args(self, "GETACL", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	if (! db_findmailbox(self->args[self->args_idx], self->userid, &mboxid)) {
@@ -2011,7 +2011,7 @@ int _ic_listrights(ImapSession *self)
 	char *listrights_string;
 	MailboxInfo *mailbox;
 
-	if (!check_state_and_args(self, "LISTRIGHTS", 2, 2, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	result = imap_acl_pre_administer(self->args[self->args_idx], self->args[self->args_idx+1], self->userid,
@@ -2053,7 +2053,7 @@ int _ic_myrights(ImapSession *self)
 	u64_t mboxid;
 	char *myrights_string;
 
-	if (!check_state_and_args(self, "LISTRIGHTS", 1, 1, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	if (! db_findmailbox(self->args[self->args_idx], self->userid, &mboxid)) {
@@ -2076,7 +2076,7 @@ int _ic_myrights(ImapSession *self)
 int _ic_namespace(ImapSession *self)
 {
 	/* NAMESPACE command */
-	if (!check_state_and_args(self, "NAMESPACE", 0, 0, IMAPCS_AUTHENTICATED))
+	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED))
 		return 1;
 
 	dbmail_imap_session_printf(self, "* NAMESPACE ((\"\" \"%s\")) ((\"%s\" \"%s\")) "

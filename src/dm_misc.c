@@ -170,14 +170,12 @@ const char *mailbox_remove_namespace(const char *fq_name,
 		char **namespace, char **username)
 {
 	const char *temp = NULL, *user = NULL, *mbox = NULL;
-	static size_t ns_user_len = 0;
-	static size_t ns_publ_len = 0;
+	size_t ns_user_len = 0;
+	size_t ns_publ_len = 0;
 	size_t fq_name_len;
 
- 	if(ns_user_len==0) {
- 		ns_user_len = strlen(NAMESPACE_USER);
- 		ns_publ_len = strlen(NAMESPACE_PUBLIC);
- 	}
+	ns_user_len = strlen(NAMESPACE_USER);
+	ns_publ_len = strlen(NAMESPACE_PUBLIC);
 
 	if (username) *username = NULL;
 	if (namespace) *namespace = NULL;
@@ -486,8 +484,6 @@ static void _strip_refwd(char *subject)
 	g_free(saved);
 }
 		
-
-
 static void _strip_sub_leader(char *subject)
 {
 	unsigned len;

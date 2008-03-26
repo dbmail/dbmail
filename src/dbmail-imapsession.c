@@ -960,10 +960,10 @@ int dbmail_imap_session_fetch_get_items(ImapSession *self)
 		TRACE(TRACE_INFO, "[%p] self->ids is NULL", self);
 	else {
 		dbmail_imap_session_buff_clear(self);
+		self->error = FALSE;
 		g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
 		dbmail_imap_session_buff_flush(self);
-		if (self->error)
-			return -1;
+		if (self->error) return -1;
 		dbmail_imap_session_mailbox_update_recent(self);
 	}
 	return 0;
@@ -1333,7 +1333,7 @@ int client_is_authenticated(ImapSession * self)
  *
  * returns 1 on succes, 0 on failure
  */
-int check_state_and_args(ImapSession * self, const char *command, int minargs, int maxargs, int state)
+int check_state_and_args(ImapSession * self, int minargs, int maxargs, int state)
 {
 	int i;
 
@@ -1341,7 +1341,8 @@ int check_state_and_args(ImapSession * self, const char *command, int minargs, i
 	if (state != -1) {
 		if (self->state != state) {
 			if (!  (state == IMAPCS_AUTHENTICATED && self->state == IMAPCS_SELECTED)) {
-				dbmail_imap_session_printf(self, "%s BAD %s command received in invalid state\r\n", self->tag, self->command);
+				dbmail_imap_session_printf(self, "%s BAD %s command received in invalid state [%d] != [%d]\r\n", 
+					self->tag, self->command, self->state, state);
 				return 0;
 			}
 		}
@@ -1351,7 +1352,8 @@ int check_state_and_args(ImapSession * self, const char *command, int minargs, i
 	for (i = 0; i < minargs; i++) {
 		if (!self->args[self->args_idx+i]) {
 			/* error: need more args */
-			dbmail_imap_session_printf(self, "%s BAD missing argument%s to %s\r\n", self->tag, (minargs == 1) ? "" : "(s)", self->command);
+			dbmail_imap_session_printf(self, "%s BAD missing argument%s to %s\r\n", self->tag, (minargs == 1) ? "" : "(s)", 
+					self->command);
 			return 0;
 		}
 	}
@@ -1360,7 +1362,8 @@ int check_state_and_args(ImapSession * self, const char *command, int minargs, i
 
 	if (maxargs && (i > maxargs)) {
 		/* error: too many args */
-		dbmail_imap_session_printf(self, "%s BAD too many arguments to %s\r\n", self->tag, self->command);
+		dbmail_imap_session_printf(self, "%s BAD too many arguments to %s\r\n", 
+				self->tag, self->command);
 		return 0;
 	}
 
@@ -1596,8 +1599,10 @@ static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 {
 	u64_t *uid;
 	DbmailMailbox *old;
-	GList *ids = g_tree_keys(self->mailbox->ids);
+	GList *ids;
+	if (! new) return;
 
+	ids  = g_tree_keys(self->mailbox->ids);
 	ids = g_list_reverse(ids);
 
 	while (ids) {
@@ -1808,8 +1813,14 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		if (unhandled)
 			TRACE(TRACE_ERROR, "[%p] EXISTS/RECENT changed but client "
 				"is not notified", self);
-		if (mailbox)
-			mailbox_notify_update(self, mailbox);
+		switch (self->command_type) {
+			case IMAP_COMM_SELECT:
+			case IMAP_COMM_EXAMINE:
+			break;
+			default:
+				mailbox_notify_update(self, mailbox);
+			break;
+		}
 	}
 	return 0;
 }
@@ -1943,7 +1954,7 @@ void imap_cb_idle_read (void *arg)
 		self->command_state = TRUE; // done
 	} else if (strlen(buffer) > 0) {
 		dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
-		self->state = IMAPCS_ERROR;
+		dbmail_imap_session_set_state(self,IMAPCS_ERROR);
 	}
 }
 
@@ -2071,20 +2082,24 @@ int dbmail_imap_session_set_state(ImapSession *self, int state)
 {
 	switch (state) {
 		case IMAPCS_AUTHENTICATED:
-			//memset(&self->mbx, 0, sizeof(self->mbx));
 			// change from login_timeout to main timeout
 			assert(self->ci);
 			self->timeout = self->ci->timeout; 
 			if (self->ci->rev)
 				bufferevent_settimeout(self->ci->rev, self->timeout, 0);
 		break;
+		case IMAPCS_LOGOUT:
+		case IMAPCS_ERROR:
+				bufferevent_disable(self->ci->rev, EV_READ);
+		break;
 		default:
 		break;
 	}
 
+	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, self->state, state);
+
 	self->state = state;
 
-	TRACE(TRACE_DEBUG,"[%p] state [%d]", self, self->state);
 	return 0;
 }
 

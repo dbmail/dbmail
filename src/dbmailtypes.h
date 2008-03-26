@@ -274,7 +274,7 @@ typedef struct {
 	field_t socket;
 	field_t log, error_log;
 	field_t pid_dir;
-	int (*ClientHandler) (clientinfo_t *);
+	int (*ClientHandler) (client_sock *);
 } serverConfig_t;
 
 

@@ -138,8 +138,7 @@ static int server_setup(void)
 	
 static int manage_start_cli_server(serverConfig_t *conf)
 {
-	clientinfo_t *client;
-
+	server_conf = conf;
 	if (db_connect() != 0) {
 		TRACE(TRACE_ERROR, "could not connect to database");
 		return -1;
@@ -152,19 +151,8 @@ static int manage_start_cli_server(serverConfig_t *conf)
 
 	srand((int) ((int) time(NULL) + (int) getpid()));
 
-	client 			= g_new0(clientinfo_t, 1);
-	client->timeout		= conf->timeout;
-	client->login_timeout	= conf->login_timeout;
-
-	/* make streams */
-	client->rx		= STDIN_FILENO;
-	client->tx		= STDOUT_FILENO;
-
-	client->line_buffer	= g_string_new("");
 	/* streams are ready, perform handling */
-	client->base = event_init();
-	conf->ClientHandler(client);
-	event_base_dispatch(client->base);
+	conf->ClientHandler(NULL);
 
 	disconnect_all();
 
@@ -175,11 +163,9 @@ static int manage_start_cli_server(serverConfig_t *conf)
 
 int StartCliServer(serverConfig_t * conf)
 {
-	if (!conf)
-		TRACE(TRACE_FATAL, "NULL configuration");
+	if (!conf) TRACE(TRACE_FATAL, "NULL configuration");
 	
-	if (server_setup())
-		return -1;
+	if (server_setup()) return -1;
 	
 	manage_start_cli_server(conf);
 	
@@ -365,38 +351,44 @@ clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
 	client->login_timeout	= server_conf->login_timeout;
 	client->line_buffer	= g_string_new("");
 
-	strncpy((char *)client->ip_src, inet_ntoa(caddr->sin_addr), sizeof(client->ip_src));
-
-	if (server_conf->resolveIP) {
-		struct hostent *clientHost;
-		clientHost = gethostbyaddr((gpointer) &(caddr->sin_addr), sizeof(caddr->sin_addr), caddr->sin_family);
-
-		if (clientHost && clientHost->h_name)
-			strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
-
-		TRACE(TRACE_MESSAGE, "incoming connection from [%s (%s)] by pid [%d]",
-				client->ip_src,
-				client->clientname[0] ? client->clientname : "Lookup failed", getpid());
-	} else {
-		TRACE(TRACE_MESSAGE, "incoming connection from [%s] by pid [%d]",
-				client->ip_src, getpid());
-	}
-
 	/* make streams */
-	if (!(client->rx = dup(socket))) {
-		err = errno;
-		TRACE(TRACE_ERROR, "%s", strerror(err));
-		close(socket);
-		g_free(client);
-		return NULL;
-	}
+	if (socket == 0 && caddr == NULL) {
+		client->rx		= STDIN_FILENO;
+		client->tx		= STDOUT_FILENO;
+	} else {
+		strncpy((char *)client->ip_src, inet_ntoa(caddr->sin_addr), sizeof(client->ip_src));
 
-	if (!(client->tx = socket)) {
-		err = errno;
-		TRACE(TRACE_ERROR, "%s", strerror(err));
-		close(socket);
-		g_free(client);
-		return NULL;
+		if (server_conf->resolveIP) {
+			struct hostent *clientHost;
+			clientHost = gethostbyaddr((gpointer) &(caddr->sin_addr), sizeof(caddr->sin_addr), caddr->sin_family);
+
+			if (clientHost && clientHost->h_name)
+				strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
+
+			TRACE(TRACE_MESSAGE, "incoming connection from [%s (%s)] by pid [%d]",
+					client->ip_src,
+					client->clientname[0] ? client->clientname : "Lookup failed", getpid());
+		} else {
+			TRACE(TRACE_MESSAGE, "incoming connection from [%s] by pid [%d]",
+					client->ip_src, getpid());
+		}
+
+		/* make streams */
+		if (!(client->rx = dup(socket))) {
+			err = errno;
+			TRACE(TRACE_ERROR, "%s", strerror(err));
+			close(socket);
+			g_free(client);
+			return NULL;
+		}
+
+		if (!(client->tx = socket)) {
+			err = errno;
+			TRACE(TRACE_ERROR, "%s", strerror(err));
+			close(socket);
+			g_free(client);
+			return NULL;
+		}
 	}
 
 	return client;
@@ -490,15 +482,7 @@ static int worker_sig_cb(void)
 		(void)event_base_loopexit(base, NULL);
 
 	if (mainRestart) {
-		//field_t service_name = server_conf->service_name;
-		TRACE(TRACE_DEBUG,"restart...");
-		//server_close_sockets();
-		//disconnect_all();
-		// 
-		// ClearConf(server_conf);
-		// DoConfig(server_conf, service_name);
-		// LoadServerConfig(server_conf, service_name);
-		//server_run(server_conf);
+		TRACE(TRACE_DEBUG,"restart... TBD");
 	}
 	return (0);
 }
