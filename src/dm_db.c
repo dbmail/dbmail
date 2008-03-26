@@ -161,9 +161,9 @@ int db_connect(void)
 		g_string_append_printf(dsn,":%u/", _db_params->port);
 	if (_db_params->db)
 		g_string_append_printf(dsn,"%s", _db_params->db);
-	if (_db_params->user) {
+	if (_db_params->user && strlen(_db_params->user)) {
 		g_string_append_printf(dsn,"?user=%s", _db_params->user);
-		if (_db_params->pass) 
+		if (_db_params->pass && strlen(_db_params->pass)) 
 			g_string_append_printf(dsn,"&password=%s", _db_params->pass);
 	}
 	TRACE(TRACE_DEBUG, "db at url: [%s]", dsn->str);
@@ -451,7 +451,6 @@ static const char * db_get_sqlite_sql(sql_fragment_t frag)
 		case SQL_INSENSITIVE_LIKE:
 			return "LIKE";
 		break;
-
 		case SQL_IGNORE:
 			return "OR IGNORE";
 		break;
@@ -1615,11 +1614,6 @@ int db_icheck_envelope(GList **lost)
 }
 
 
-int db_setselectable(u64_t mailbox_idnr, int select_value)
-{
-	return db_update("UPDATE %smailboxes SET no_select = %d WHERE mailbox_idnr = %llu", 
-			DBPFX, (!select_value), mailbox_idnr);
-}
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status)
 {
 	return db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %llu", 
@@ -2866,10 +2860,8 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 
 	frag = db_returning("mailbox_idnr");
 	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO %smailboxes (name, owner_idnr,"
-		 "seen_flag, answered_flag, deleted_flag, flagged_flag, "
-		 "recent_flag, draft_flag, permission)"
-		 " VALUES (?, ?, 1, 1, 1, 1, 1, 1, %d) %s", DBPFX,
+		 "INSERT INTO %smailboxes (name, owner_idnr,permission)"
+		 " VALUES (?, ?, %d) %s", DBPFX,
 		 IMAPPERM_READWRITE, frag);
 	g_free(frag);
 
@@ -2967,8 +2959,11 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, GList ** childre
 	TRY
 		r = db_query(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%llu AND owner_idnr=%llu",
 				DBPFX, mailbox_idnr, user_idnr);
-		if (db_result_next(r))
-			mailbox_like = mailbox_match_new(db_result_get(r,0));
+		if (db_result_next(r)) {
+			char *pattern = g_strdup_printf("%s/%%", db_result_get(r,0));
+			mailbox_like = mailbox_match_new(pattern);
+			g_free(pattern);
+		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -3060,40 +3055,6 @@ int db_noinferiors(u64_t mailbox_idnr)
 	END_TRY;
 
 	return t;
-}
-
-int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
-{
-	C c; int t = DM_SUCCESS;
-	u64_t mailbox_size;
-
-	if (! mailbox_is_writable(mailbox_idnr))
-		return DM_EQUERY;
-
-	if (db_get_mailbox_size(mailbox_idnr, 0, &mailbox_size) == DM_EQUERY)
-		return DM_EQUERY;
-
-	/* update messages in this mailbox: mark as deleted (status MESSAGE_STATUS_PURGE) */
-
-	c = db_con_get();
-	TRY
-		db_exec(c, "UPDATE %smessages SET status=%d WHERE mailbox_idnr = %llu", 
-				DBPFX, MESSAGE_STATUS_PURGE, mailbox_idnr);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) return t;
-
-	db_mailbox_mtime_update(mailbox_idnr);
-
-	if (! dm_quota_user_dec(user_idnr, mailbox_size))
-		return DM_EQUERY;
-
-	return DM_SUCCESS;		/* success */
 }
 
 int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
@@ -3486,7 +3447,7 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 					db_stmt_set_str(s, 2, (char *)keywords->data);
 					r = db_stmt_query(s);
 					if (! db_result_next(r)) {
-						Connection_clear(c);
+		//				Connection_clear(c);
 						s = db_stmt_prepare(c, "INSERT INTO %skeywords (message_idnr,keyword) VALUES (?, ?)", DBPFX);
 						db_stmt_set_u64(s, 1, msg_idnr);
 						db_stmt_set_str(s, 2, (char *)keywords->data);

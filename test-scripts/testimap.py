@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (C) 2004 Paul J Stevens paul at nfg dot nl
+# Copyright (C) 2004-2008 Paul J Stevens paul at nfg dot nl
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -23,10 +23,10 @@ DEBUG = 0
 # For a protocol trace set to 4
 #DEBUG = 4
 
-# select 'stream' for non-forking mode
+# select 'stream' for inetd mode
 TYPE = 'stream'
-# select 'network' for forking mode
-#TYPE = 'network'
+# select 'network' for networking mode
+TYPE = 'network'
 
 
 import unittest, imaplib, re, commands

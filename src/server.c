@@ -85,8 +85,10 @@ static void server_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 
 int server_sig_cb(void)
 {
-	if (GeneralStopRequested || mainStatus || alarm_occurred | get_sigchld)
+	if (GeneralStopRequested || mainStatus || alarm_occurred || get_sigchld) {
+		TRACE(TRACE_DEBUG,"event_base_loopexit [%p]", base);
 		(void)event_base_loopexit(base,NULL);
+	}
 	return (0);
 }
 
@@ -460,8 +462,8 @@ static void worker_sock_cb(int sock, short event, void *arg)
 	TRACE(TRACE_INFO, "connection accepted");
 
 	/* streams are ready, perform handling */
-	worker_thread_create(client);
-//	server_conf->ClientHandler((clientinfo_t *)client);
+//	worker_thread_create(client);
+	server_conf->ClientHandler((clientinfo_t *)client);
 }
 
 static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
@@ -491,7 +493,7 @@ static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 
 static int worker_sig_cb(void)
 {
-	if (ChildStopRequested | alarm_occurred)
+	if (ChildStopRequested || alarm_occurred)
 		(void)event_base_loopexit(base, NULL);
 
 	if (mainRestart) {
@@ -613,10 +615,12 @@ void worker_run(serverConfig_t *conf)
 	for (ip = 0; ip < server_conf->ipcount; ip++) {
 		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, worker_sock_cb, &evsock[ip]);
 		event_add(&evsock[ip], NULL);
+		event_base_set(base, &evsock[ip]);
 	}
 
 	event_set(&evsock[ip], selfPipe[0], EV_READ, worker_pipe_cb, &evsock[ip]);
 	event_add(&evsock[ip], NULL);
+	event_base_set(base, &evsock[ip]);
 
 	worker_set_sighandler();
 

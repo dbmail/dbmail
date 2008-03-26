@@ -82,8 +82,8 @@ void trace(trace_t level, const char * module,
 	va_list argp;
 
 	gchar *message;
-	const char *syslog_format = "%s:[%s] [%p] %s,%s(+%d): %s";
-	const char *stderr_format = "%s %s %s[%d]: %s:[%s] [%p] %s,%s(+%d): %s";
+	const char *syslog_format = "[%p] %s:[%s] %s,%s(+%d): %s";
+	const char *stderr_format = "%s %s %s[%d]: [%p] %s:[%s] %s,%s(+%d): %s";
 	static int configured=0;
 	size_t l, maxlen=120;
 
@@ -117,7 +117,7 @@ void trace(trace_t level, const char * module,
 		strftime(date,32,"%b %d %H:%M:%S", tmp);
 
  		fprintf(stderr, stderr_format, date, hostname, __progname?__progname:"", getpid(), 
-			trace_to_text(level), module, g_thread_self(), file, function, line, message);
+			g_thread_self(), trace_to_text(level), module, file, function, line, message);
  
 		if (message[l] != '\n')
 			fprintf(stderr, "\n");
@@ -129,9 +129,9 @@ void trace(trace_t level, const char * module,
 		message[w] = '\0';
 		/* set LOG_ALERT at warnings */
 		if (level <= TRACE_WARNING)
-			syslog(LOG_ALERT, syslog_format, trace_to_text(level), module, g_thread_self(), file, function, line, message);
+			syslog(LOG_ALERT, syslog_format, g_thread_self(), trace_to_text(level), module, file, function, line, message);
 		else
-			syslog(LOG_NOTICE, syslog_format, trace_to_text(level), module, g_thread_self(), file, function, line, message);
+			syslog(LOG_NOTICE, syslog_format, g_thread_self(), trace_to_text(level), module, file, function, line, message);
 	}
 	g_free(message);
 

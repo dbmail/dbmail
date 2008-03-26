@@ -73,11 +73,9 @@ int _ic_capability(ImapSession *self)
 
 	if (!check_state_and_args(self, "CAPABILITY", 0, 0, -1))
 		return 1;	/* error, return */
-
 	
 	GETCONFIGVALUE("capability", "IMAP", val);
-	if (strlen(val) > 0)
-		override = TRUE;
+	if (strlen(val) > 0) override = TRUE;
 
 	dbmail_imap_session_printf(self, "* CAPABILITY %s\r\n", override ? val : IMAP_CAPABILITY_STRING);
 	dbmail_imap_session_printf(self, "%s OK CAPABILITY completed\r\n", self->tag);
@@ -111,20 +109,15 @@ int _ic_noop(ImapSession *self)
  */
 int _ic_logout(ImapSession *self)
 {
-	timestring_t timestring;
-
-	// flush recent messages from previous select
 	dbmail_imap_session_mailbox_update_recent(self);
 
 	if (!check_state_and_args(self, "LOGOUT", 0, 0, -1))
 		return 1;	/* error, return */
 
-	create_current_timestring(&timestring);
 	dbmail_imap_session_set_state(self,IMAPCS_LOGOUT);
-	TRACE(TRACE_MESSAGE, "[%p] user (id:%llu) logging out @ [%s]", self, self->userid, timestring);
+	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
 
 	dbmail_imap_session_printf(self, "* BYE dbmail imap server kisses you goodbye\r\n");
-
 	return 0;
 }
 
@@ -336,10 +329,11 @@ int _ic_create(ImapSession *self)
  *
  * deletes a specified mailbox
  */
+
 int _ic_delete(ImapSession *self)
 {
 	int result;
-	u64_t mboxid;
+	u64_t mailbox_idnr;
 	GList *children = NULL;
 	char *mailbox = self->args[0];
 	unsigned nchildren = 0;
@@ -347,14 +341,14 @@ int _ic_delete(ImapSession *self)
 	if (!check_state_and_args(self, "DELETE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
-	if (! (mboxid = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
+	if (! (mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
 		dbmail_imap_session_printf(self, "%s NO mailbox doesn't exists\r\n", self->tag);
 		return 1;
 	}
 
 	/* Check if the user has ACL delete rights to this mailbox;
 	 * this also returns true is the user owns the mailbox. */
-	result = dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_DELETE);
+	result = dbmail_imap_session_mailbox_check_acl(self, mailbox_idnr, ACL_RIGHT_DELETE);
 	if (result != 0)
 		return result;
 	
@@ -365,7 +359,7 @@ int _ic_delete(ImapSession *self)
 	}
 
 	/* check for children of this mailbox */
-	result = db_listmailboxchildren(mboxid, self->userid, &children);
+	result = db_listmailboxchildren(mailbox_idnr, self->userid, &children);
 	if (result == -1) {
 		/* error */
 		TRACE(TRACE_ERROR, "[%p] cannot retrieve list of mailbox children", self);
@@ -378,8 +372,9 @@ int _ic_delete(ImapSession *self)
 	g_list_destroy(children);
 
 	if (nchildren > 0) {
+		TRACE(TRACE_DEBUG, "mailbox has children [%d]", nchildren);
 		/* mailbox has inferior names; error if \noselect specified */
-		result = db_isselectable(mboxid);
+		result = db_isselectable(mailbox_idnr);
 		if (result == FALSE) {
 			dbmail_imap_session_printf(self, "%s NO mailbox is non-selectable\r\n", self->tag);
 			return 0;
@@ -390,18 +385,40 @@ int _ic_delete(ImapSession *self)
 		}
 
 		/* mailbox has inferior names; remove all msgs and set noselect flag */
-		if (db_removemsg(self->userid, mboxid) == DM_EQUERY) {
-			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			return -1;	/* fatal */
-		}
+		{
+			C c; int t = DM_SUCCESS;
+			u64_t mailbox_size;
 
-		if (! db_setselectable(mboxid, 0)) {
-			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			return -1;	/* fatal */
+			if (! mailbox_is_writable(mailbox_idnr))
+				return DM_EQUERY;
+
+			if (db_get_mailbox_size(mailbox_idnr, 0, &mailbox_size) == DM_EQUERY)
+				return DM_EQUERY;
+
+			/* update messages in this mailbox: mark as deleted (status MESSAGE_STATUS_PURGE) */
+
+			c = db_con_get();
+			TRY
+				db_begin_transaction(c);
+				db_exec(c, "UPDATE %smessages SET status=%d WHERE mailbox_idnr = %llu", DBPFX, MESSAGE_STATUS_PURGE, mailbox_idnr);
+				db_exec(c, "UPDATE %smailboxes SET no_select = 1 WHERE mailbox_idnr = %llu", DBPFX, mailbox_idnr);
+				db_commit_transaction(c);
+			CATCH(SQLException)
+				LOG_SQLERROR;
+			t = DM_EQUERY;
+			FINALLY
+				db_con_close(c);
+			END_TRY;
+
+			if (t == DM_EQUERY) return t;
+
+			db_mailbox_mtime_update(mailbox_idnr);
+			if (! dm_quota_user_dec(self->userid, mailbox_size))
+				return DM_EQUERY;
 		}
 
 		/* check if this was the currently selected mailbox */
-		if (self->mailbox->info && (mboxid == self->mailbox->info->uid)) 
+		if (self->mailbox && self->mailbox->info && (mailbox_idnr == self->mailbox->info->uid)) 
 			dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 
 		/* ok done */
@@ -410,14 +427,14 @@ int _ic_delete(ImapSession *self)
 	}
 
 	/* ok remove mailbox */
-	if (db_delete_mailbox(mboxid, 0, 1)) {
+	if (db_delete_mailbox(mailbox_idnr, 0, 1)) {
 		TRACE(TRACE_DEBUG,"[%p] db_delete_mailbox failed", self);
 		dbmail_imap_session_printf(self,"%s NO DELETE failed\r\n", self->tag);
 		return DM_EGENERAL;
 	}
 
 	/* check if this was the currently selected mailbox */
-	if (self->mailbox && self->mailbox->info && (mboxid == self->mailbox->info->uid)) 
+	if (self->mailbox && self->mailbox->info && (mailbox_idnr == self->mailbox->info->uid)) 
 		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 
 	dbmail_imap_session_printf(self, "%s OK DELETE completed\r\n", self->tag);
