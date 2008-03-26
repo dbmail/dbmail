@@ -1428,7 +1428,7 @@ int _ic_fetch(ImapSession *self)
 		return 1;
 	}
 	
-	dbmail_imap_session_resetFi(self);
+	dbmail_imap_session_reset_fetchitems(self);
 
 	self->fi->getUID = self->use_uid;
 

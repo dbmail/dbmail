@@ -88,10 +88,9 @@ typedef struct {
 typedef int (*IMAP_COMMAND_HANDLER) (ImapSession *);
 
 ImapSession * dbmail_imap_session_new(void);
-ImapSession * dbmail_imap_session_setTag(ImapSession * self, char * tag);
-ImapSession * dbmail_imap_session_setCommand(ImapSession * self, char * command);
-ImapSession * dbmail_imap_session_setArgs(ImapSession * self, char ** args);
-ImapSession * dbmail_imap_session_resetFi(ImapSession * self);
+ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag);
+ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command);
+ImapSession * dbmail_imap_session_reset_fetchitems(ImapSession * self);
 
 void dbmail_imap_session_set_callbacks(ImapSession *self, void *cb_r, void *cb_t, int timeout);
 void dbmail_imap_session_reset_callbacks(ImapSession *self);

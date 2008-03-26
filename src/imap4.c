@@ -327,7 +327,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 		}
 
 		tag = g_strndup(cpy,i);	/* set tag */
-		dbmail_imap_session_setTag(session,tag);
+		dbmail_imap_session_set_tag(session,tag);
 		g_free(tag);
 
 		cpy[i] = '\0';
@@ -345,7 +345,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 
 		command = g_strndup(cpy,i);	/* set command */
 		if (command[i-1] == '\n') command[i-1] = '\0';
-		dbmail_imap_session_setCommand(session,command);
+		dbmail_imap_session_set_command(session,command);
 		g_free(command);
 
 		cpy = cpy + i;	/* cpy points to args now */

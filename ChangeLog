@@ -1,3 +1,22 @@
+2008-03-26  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c:
+	cleanups
+
+2008-03-25  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmailtypes.h, src/dm_digest.c, src/dm_misc.c, src/imap4.c, 
+	src/imapcommands.c, src/modules/authldap.c, src/server.c:
+	more threading fixes and cleanups
+	* src/clientsession.c, src/clientsession.h, src/dbmailtypes.h, 
+	src/imap4.c, src/lmtp.c, src/pop3.c, src/server.c, src/server.h, 
+	src/timsieve.c:
+	improving thread safety
+	* src/dm_debug.c, src/imap4.c, src/server.c:
+	re-enable threading
+
 2008-03-24  Paul J Stevens <paul@nfg.nl>
 
 	* debian/control, debian/dbmail.postrm:

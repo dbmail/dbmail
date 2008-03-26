@@ -124,9 +124,6 @@ static void close_cache(cache_t *cached_msg)
 	g_free(cached_msg);
 }
 
-
-
-
 static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize); 
 
 static void _imap_fetchitem_free(ImapSession * self)
@@ -138,23 +135,9 @@ static void _imap_fetchitem_free(ImapSession * self)
 	}
 }
 
-static void free_args(ImapSession *self)
-{
-	int i;
-	for (i = 0; i < MAX_ARGS && self->args[i]; i++) {
-		if (self->args[i]) g_free(self->args[i]);
-		self->args[i] = NULL;
-	}
-	self->args_idx = 0;
-}
-
-
 /* 
- *
  * initializer and accessors for ImapSession
- *
  */
-
 ImapSession * dbmail_imap_session_new(void)
 {
 	ImapSession * self;
@@ -169,25 +152,19 @@ ImapSession * dbmail_imap_session_new(void)
 	self->args = g_new0(char *, MAX_ARGS);
 	self->buff = g_string_new("");
 
-	dbmail_imap_session_resetFi(self);
+	dbmail_imap_session_reset_fetchitems(self);
 	
 	return self;
 }
 
-ImapSession * dbmail_imap_session_resetFi(ImapSession * self)
+ImapSession * dbmail_imap_session_reset_fetchitems(ImapSession * self)
 {
-	if (! self->fi) {
-		self->fi = g_new0(fetch_items_t,1);
-		return self;
-	}
-	
-	dbmail_imap_session_bodyfetch_free(self);
-	g_free(self->fi);
+	_imap_fetchitem_free(self);
 	self->fi = g_new0(fetch_items_t,1);
 	return self;
 }
      
-ImapSession * dbmail_imap_session_setTag(ImapSession * self, char * tag)
+ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag)
 {
 	if (self->tag) {
 		g_free(self->tag);
@@ -198,7 +175,7 @@ ImapSession * dbmail_imap_session_setTag(ImapSession * self, char * tag)
 	return self;
 }
 
-ImapSession * dbmail_imap_session_setCommand(ImapSession * self, char * command)
+ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command)
 {
 	if (self->command) {
 		g_free(self->command);
@@ -276,9 +253,14 @@ void dbmail_imap_session_fetch_free(ImapSession *self)
 
 void dbmail_imap_session_args_free(ImapSession *self, gboolean all)
 {
-	free_args(self);
-	if (all)
-		g_free(self->args);
+	int i;
+	for (i = 0; i < MAX_ARGS && self->args[i]; i++) {
+		if (self->args[i]) g_free(self->args[i]);
+		self->args[i] = NULL;
+	}
+	self->args_idx = 0;
+
+	if (all) g_free(self->args);
 }
 
 /*************************************************************************************
@@ -408,36 +390,27 @@ static int _imap_session_fetch_parse_partspec(ImapSession *self)
 			indigit = 1;
 			continue;
 		} else if (token[j] == '.') {
-			if (!indigit)
-				/* error, single dot specified */
-				return -2;
+			if (!indigit) return -2; /* error, single dot specified */
 			indigit = 0;
 			continue;
 		} else
 			break;	/* other char found */
 	}
 	
-	
 	if (j > 0) {
-		if (indigit && token[j])
-			return -2;	/* error DONE */
+		if (indigit && token[j]) return -2;		/* error DONE */
 		/* partspecifier present, save it */
-		if (j >= IMAP_MAX_PARTSPEC_LEN)
-			return -2;	/* error DONE */
+		if (j >= IMAP_MAX_PARTSPEC_LEN) return -2;	/* error DONE */
 		dbmail_imap_session_bodyfetch_set_partspec(self, token, j);
 	}
 
 	char *partspec = &token[j];
-
-
 	int shouldclose = 0;
 
 	if (MATCH(partspec, "header.fields")) {
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_HEADER_FIELDS);
 	} else if (MATCH(partspec, "header.fields.not")) {
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_HEADER_FIELDS_NOT);
-
-		
 	} else if (MATCH(partspec, "text")) {
 		self->fi->msgparse_needed=1;
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_TEXT);
@@ -448,9 +421,7 @@ static int _imap_session_fetch_parse_partspec(ImapSession *self)
 		shouldclose = 1;
 	} else if (MATCH(partspec, "mime")) {
 		self->fi->msgparse_needed=1;
-		if (j == 0)
-			return -2;	/* error DONE */
-
+		if (j == 0) return -2;				/* error DONE */
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_MIME);
 		shouldclose = 1;
 	} else if (token[j] == '\0') {
@@ -458,25 +429,21 @@ static int _imap_session_fetch_parse_partspec(ImapSession *self)
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_TEXT_SILENT);
 		shouldclose = 1;
 	} else {
-		return -2;	/* error DONE */
+		return -2;					/* error DONE */
 	}
 	if (shouldclose) {
-		if (! MATCH(nexttoken, "]"))
-			return -2;	/* error DONE */
+		if (! MATCH(nexttoken, "]")) return -2;		/* error DONE */
 	} else {
 		self->args_idx++;	/* should be at '(' now */
 		token = self->args[self->args_idx];
 		nexttoken = self->args[self->args_idx+1];
-		
-		if (! MATCH(token,"("))
-			return -2;	/* error DONE */
+
+		if (! MATCH(token,"(")) return -2;		/* error DONE */
 
 		self->args_idx++;	/* at first item of field list now, remember idx */
 		dbmail_imap_session_bodyfetch_set_argstart(self); 
-
 		/* walk on untill list terminates (and it does 'cause parentheses are matched) */
-		while (! MATCH(self->args[self->args_idx],")") )
-			self->args_idx++;
+		while (! MATCH(self->args[self->args_idx],")") ) self->args_idx++;
 
 		token = self->args[self->args_idx];
 		nexttoken = self->args[self->args_idx+1];
@@ -486,7 +453,7 @@ static int _imap_session_fetch_parse_partspec(ImapSession *self)
 		dbmail_imap_session_bodyfetch_set_argcnt(self);
 
 		if (dbmail_imap_session_bodyfetch_get_last_argcnt(self) == 0 || ! MATCH(nexttoken,"]") )
-			return -2;	/* error DONE */
+			return -2;				/* error DONE */
 	}
 
 	return 0;
@@ -500,18 +467,14 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 	
 	char *token = self->args[self->args_idx];
 	
-	if (! token)
-		return 0;
-//FIXME wrong return value?	return self->args_idx;
+	if (! token) return 0;
 	
 	TRACE(TRACE_DEBUG,"[%p] parse token [%s]", self, token);
 
 	if (token[0] == '<') {
 
 		/* check argument */
-		if (token[strlen(token) - 1] != '>')
-			return -2;	/* error DONE */
-
+		if (token[strlen(token) - 1] != '>') return -2;	/* error DONE */
 		delimpos = -1;
 		for (j = 1; j < strlen(token) - 1; j++) {
 			if (token[j] == '.') {
@@ -552,25 +515,14 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
  */
 int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 {
-	int invalidargs, ispeek = 0, i;
+	int invalidargs, ispeek = 0;
 	
 	invalidargs = 0;
 
-        /* dump args (debug) */
-        for (i = self->args_idx; self->args[i]; i++) {
-                TRACE(TRACE_DEBUG, "[%p] arg[%d]: '%s'\n", self, i, self->args[i]);
-        }
-
-
-	if (!self->args[self->args_idx])
-		return -1;	/* no more */
-
-	if (self->args[self->args_idx][0] == '(')
+	if (!self->args[self->args_idx]) return -1;	/* no more */
+	if (self->args[self->args_idx][0] == '(') 
 		self->args_idx++;
-
-	if (!self->args[self->args_idx])
-		return -2;	/* error */
-
+	if (!self->args[self->args_idx]) return -2;	/* error */
 	
 	char *token = NULL, *nexttoken = NULL;
 	
@@ -591,9 +543,6 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		self->fi->getInternalDate = 1;
 		self->fi->getFlags = 1;
 		self->fi->getSize = 1;
-		
-	/* from here on message parsing will be necessary */
-	
 	} else if (MATCH(token,"rfc822")) {
 		self->fi->msgparse_needed=1;
 		self->fi->getRFC822=1;
@@ -1210,16 +1159,27 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 	return;
 }
 
+static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch_t *bodyfetch, const char *type)
+{
+	if (!part) dbmail_imap_session_buff_append(self, "] NIL");
+	else {
+		char *tmp = imap_get_logical_part(part,type);
+		u64_t tmpdumpsize = _imap_cache_set_dump(self,tmp,IMAP_CACHE_TMPDUMP);
+		g_free(tmp);
+		if (!tmpdumpsize) 
+			dbmail_imap_session_buff_append(self, "] NIL");
+		else 
+			imap_cache_send_tmpdump(self,bodyfetch,tmpdumpsize);
+	}
+}
+
 static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) 
 {
-	u64_t tmpdumpsize;
 	GMimeObject *part = NULL;
-	char *tmp;
 	gboolean condition = FALSE;
 	ImapSession *self = (ImapSession *)data;
 	
-	if (bodyfetch->itemtype < 0)
-		return 0;
+	if (bodyfetch->itemtype < 0) return 0;
 	
 	TRACE(TRACE_DEBUG,"[%p] itemtype [%d] partspec [%s]", self, bodyfetch->itemtype, bodyfetch->partspec);
 	
@@ -1239,85 +1199,38 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 
 	SEND_SPACE;
 
-	if (! self->fi->noseen)
-		self->fi->setseen = 1;
+	if (! self->fi->noseen) self->fi->setseen = 1;
 	dbmail_imap_session_buff_append(self, "BODY[%s", bodyfetch->partspec);
 
 	switch (bodyfetch->itemtype) {
 
 	case BFIT_TEXT:
 		dbmail_imap_session_buff_append(self, "TEXT");
-		/* fall through */
-		
 	case BFIT_TEXT_SILENT:
-		if (!part)
-			dbmail_imap_session_buff_append(self, "] NIL");
-		else {
-			tmp = imap_get_logical_part(part,"TEXT");
-			tmpdumpsize = _imap_cache_set_dump(self,tmp,IMAP_CACHE_TMPDUMP);
-
-			g_free(tmp);
-			
-			if (!tmpdumpsize) 
-				dbmail_imap_session_buff_append(self, "] NIL");
-			else 
-				imap_cache_send_tmpdump(self,bodyfetch,tmpdumpsize);
-		}
+		_imap_send_part(self, part, bodyfetch, "TEXT");
 		break;
-
 	case BFIT_HEADER:
 		dbmail_imap_session_buff_append(self, "HEADER");
-		if (!part)
-			dbmail_imap_session_buff_append(self, "] NIL");
-		else {
-			tmp = imap_get_logical_part(part,"HEADER");
-			tmpdumpsize = _imap_cache_set_dump(self,tmp,IMAP_CACHE_TMPDUMP);
-			g_free(tmp);
-			
-			if (!tmpdumpsize) 
-				dbmail_imap_session_buff_append(self, "] NIL");
-			else 
-				imap_cache_send_tmpdump(self,bodyfetch,tmpdumpsize);
-		}
+		_imap_send_part(self, part, bodyfetch, "HEADER");
 		break;
-		
 	case BFIT_MIME:
 		dbmail_imap_session_buff_append(self, "MIME");
-
-		if (!part)
-			dbmail_imap_session_buff_append(self, "NIL");
-		else {
-			tmp = imap_get_logical_part(part,"MIME");
-			tmpdumpsize = _imap_cache_set_dump(self,tmp,IMAP_CACHE_TMPDUMP);
-			g_free(tmp);
-
-			if (!tmpdumpsize)
-				dbmail_imap_session_buff_append(self, "NIL");
-			else
-				imap_cache_send_tmpdump(self,bodyfetch,tmpdumpsize);
-		}
-
+		_imap_send_part(self, part, bodyfetch, "MIME");
 		break;
-
 	case BFIT_HEADER_FIELDS_NOT:
 		condition=TRUE;
-		
 	case BFIT_HEADER_FIELDS:
 		_fetch_headers(self, bodyfetch, condition);
 		break;
-
 	default:
 		dbmail_imap_session_buff_clear(self);
 		dbmail_imap_session_printf(self, "\r\n* BYE internal server error\r\n");
 		return -1;
-	}
 
+	}
 	dbmail_imap_session_buff_flush(self);
-	
 	return 0;
 }
-
-
 
 int client_is_authenticated(ImapSession * self)
 {
