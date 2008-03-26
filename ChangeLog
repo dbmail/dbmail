@@ -1,3 +1,100 @@
+2008-03-24  Paul J Stevens <paul@nfg.nl>
+
+	* debian/control, debian/dbmail.postrm:
+	debian updates
+	* src/authmodule.c, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmail-mailbox.c, src/dbmail-message.c, 
+	src/dbmail-user.c, src/dbmail.h.in, src/dbmailtypes.h, 
+	src/dm_config.c, src/dm_db.c, src/dm_db.h, src/dm_sievescript.c, 
+	src/export.c, src/imapcommands.c, src/main.c, src/maintenance.c, 
+	src/modules/authsql.c, src/serverparent.c, src/sievecmd.c, 
+	src/sortmodule.c, src/user.c, test/check_dbmail_auth.c, 
+	test/check_dbmail_common.c, test/check_dbmail_db.c, 
+	test/check_dbmail_deliver.c, test/check_dbmail_dsn.c, 
+	test/check_dbmail_imapd.c, test/check_dbmail_list.c, 
+	test/check_dbmail_mailbox.c, test/check_dbmail_message.c, 
+	test/check_dbmail_misc.c, test/check_dbmail_server.c, 
+	test/check_dbmail_user.c, test/check_dbmail_util.c:
+	sent flags+permananentflags respons after store, and fix a couple of 
+	reentrant problems
+
+2008-03-22  Paul J Stevens <paul@nfg.nl>
+
+	* src/dm_db.c:
+	fix a query returning NULL
+	* src/authmodule.c, src/dbmail-imapsession.c, src/dbmail-mailbox.c, 
+	src/dbmail-message.c, src/dbmail-user.c, src/dbmailtypes.h, 
+	src/dm_cidr.c, src/dm_cidr.h, src/dm_db.c, src/dm_misc.c, 
+	src/dm_sievescript.c, src/export.c, src/imap4.c, src/imapcommands.c, 
+	src/main.c, src/maintenance.c, src/modules/authldap.c, 
+	src/serverparent.c, src/sievecmd.c, src/sortmodule.c, src/user.c, 
+	test-scripts/testimap.py, test/check_dbmail_auth.c, 
+	test/check_dbmail_common.c, test/check_dbmail_db.c, 
+	test/check_dbmail_deliver.c, test/check_dbmail_dsn.c, 
+	test/check_dbmail_imapd.c, test/check_dbmail_list.c, 
+	test/check_dbmail_mailbox.c, test/check_dbmail_message.c, 
+	test/check_dbmail_misc.c, test/check_dbmail_server.c, 
+	test/check_dbmail_user.c, test/check_dbmail_util.c:
+	wip
+
+2008-03-20  Paul J Stevens <paul@nfg.nl>
+
+	* src/dm_db.c, src/dm_debug.c, src/imap4.c, src/imapcommands.c, 
+	src/server.c, test-scripts/testimap.py:
+	disable threading while fixing regressions after zdb rewrite
+	* src/dbmailtypes.h, src/dm_db.c, src/dm_debug.c, src/imap4.c, 
+	src/modules/authldap.c, src/server.c, test/check_dbmail_db.c:
+	lets go threaded
+
+2008-03-19  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-message.c, src/dm_db.c, test/check_dbmail_db.c:
+	more exception handling and a testcase on db_get_sql
+
+2008-03-17  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-message.c:
+	add a couple more exception handlers
+
+2008-03-16  Paul J Stevens <paul@nfg.nl>
+
+	* INSTALL, acinclude.m4, configure.in, debian/control, debian/rules, 
+	src/Makefile.am, src/clientsession.c, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmail-mailbox.c, src/dbmail-message.c, 
+	src/dbmail-user.c, src/dbmail.h.in, src/dbmailtypes.h, 
+	src/dbmodule.c, src/dbmodule.h, src/dm_acl.c, src/dm_db.c, 
+	src/dm_db.h, src/dm_digest.c, src/dm_misc.c, src/dm_misc.h, 
+	src/dm_quota.c, src/dm_sievescript.c, src/dm_sievescript.h, 
+	src/export.c, src/imap4.c, src/imapcommands.c, src/maintenance.c, 
+	src/modules/Makefile.am, src/modules/authldap.c, 
+	src/modules/authsql.c, src/modules/dbingres.c, src/modules/dbmysql.c, 
+	src/modules/dbpgsql.c, src/modules/dbsqlite.c, 
+	src/modules/sortsieve.c, src/pop3.c, src/server.c, src/sievecmd.c, 
+	src/timsieve.c, src/user.c, test/check_dbmail_db.c, 
+	test/check_dbmail_deliver.c, test/check_dbmail_imapd.c, 
+	test/check_dbmail_mailbox.c, test/check_dbmail_message.c, 
+	test/check_dbmail_misc.c:
+	merge zdb branch
+
+2008-03-15  Paul J Stevens <paul@nfg.nl>
+
+	* src/imap4.c:
+	prevent a segfault
+	* src/modules/authsql.c:
+	treat deliver_to as string to accomodate postgresql-8.3
+
+2008-03-09  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/imap4.c:
+	IDLE cleanup
+
+2008-03-06  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/imap4.c:
+	ugly IDLE fix
+	* ChangeLog, src/dbmail-message.c, src/dm_db.c, src/dm_misc.c:
+	forward port 2.2.10 changes
+
 2008-03-06  Paul J Stevens <paul@nfg.nl>
 	* src/dbmail-message.c, src/dm_db.c, src/dm_misc.c:
 	forward port 2.2.10 changes

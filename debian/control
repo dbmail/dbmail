@@ -7,9 +7,10 @@ Standards-Version: 3.7.3
 
 Package: dbmail
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, ucf (>= 0.30), adduser
+Pre-Depends: adduser
+Depends: ${misc:Depends}, ${shlibs:Depends}, ucf (>= 0.30)
 Provides: imap-server, pop3-server
-Suggests: dbmail-pgsql | dbmail-mysql, sqlite3
+Suggests: sqlite3
 Description: base package for the dbmail email solution
  DBMAIL is a collection of programs that allows email to be
  stored in and retrieved from a sql database.
@@ -19,25 +20,3 @@ Description: base package for the dbmail email solution
  .
  Supported client protocols are: POP3, IMAP4, LMTP.
  .
- This packages support Sqlite3 and LDAP authentication.
-
-Package: dbmail-pgsql
-Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
-Description: Postgresql module for Dbmail
- This package provides a module for adding Postgresql database 
- support to DBMAIL.
- .
- DBMAIL is a collection of programs that enables email to be
- stored in and retrieved from an sql database.
-
-Package: dbmail-mysql
-Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
-Description: MySQL module for Dbmail
- This package provides a module for adding MySQL database 
- support to DBMAIL.
- .
- DBMAIL is a collection of programs that enables email to be
- stored in and retrieved from an sql database.
-
