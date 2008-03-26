@@ -112,7 +112,6 @@ void trace(trace_t level, const char * module,
  			configured=1;
  		}
  
- 
 		memset(date,0,sizeof(date));
 		strftime(date,32,"%b %d %H:%M:%S", tmp);
 

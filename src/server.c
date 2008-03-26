@@ -414,8 +414,14 @@ static void worker_pipe_cb(int sock, short event UNUSED, void *arg UNUSED)
 
 static void worker_thread_create(clientinfo_t *client)
 {
+	GThread *id;
+	GError *err = NULL;
+
 	if (!g_thread_supported ()) g_thread_init (NULL);
-	g_thread_create((GThreadFunc)server_conf->ClientHandler, (gpointer)client, FALSE, NULL);
+	if (! g_thread_create((GThreadFunc)server_conf->ClientHandler, (gpointer)client, FALSE, &err))
+		TRACE(TRACE_DEBUG,"gthread creation failed [%s]", err->message);
+
+//	server_conf->ClientHandler((clientinfo_t *)client);
 }
 
 static void worker_sock_cb(int sock, short event, void *arg)
@@ -462,8 +468,7 @@ static void worker_sock_cb(int sock, short event, void *arg)
 	TRACE(TRACE_INFO, "connection accepted");
 
 	/* streams are ready, perform handling */
-//	worker_thread_create(client);
-	server_conf->ClientHandler((clientinfo_t *)client);
+	worker_thread_create(client);
 }
 
 static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)

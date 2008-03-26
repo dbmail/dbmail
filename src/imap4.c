@@ -245,7 +245,7 @@ int imap_handle_connection(clientinfo_t * ci)
 {
 	ImapSession *session;
 
-//	if (ci->rx != STDIN_FILENO) ci->base = event_init();
+	if (ci->rx != STDIN_FILENO) ci->base = event_init();
 
 	session = dbmail_imap_session_new();
 	session->timeout = ci->login_timeout;
@@ -255,10 +255,10 @@ int imap_handle_connection(clientinfo_t * ci)
 	ci->rev = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
 	ci->wev = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
 
-//	if (ci->rx != STDIN_FILENO) {
-//		bufferevent_base_set(ci->base, ci->rev);
-//		bufferevent_base_set(ci->base, ci->wev);
-//	}
+	if (ci->rx != STDIN_FILENO) {
+		bufferevent_base_set(ci->base, ci->rev);
+		bufferevent_base_set(ci->base, ci->wev);
+	}
 
 	session->ci = ci;
 
@@ -266,8 +266,10 @@ int imap_handle_connection(clientinfo_t * ci)
 
 	send_greeting(session);
 	
-//	if (ci->rx != STDIN_FILENO) event_base_dispatch(ci->base);
+	if (ci->rx != STDIN_FILENO) event_base_dispatch(ci->base);
 	
+	TRACE(TRACE_DEBUG,"gthread done [%p]", g_thread_self());
+
 	return EOF;
 }
 
@@ -358,7 +360,8 @@ void imap4(ImapSession *session)
 	// the parser/tokenizer is satisfied we're ready reading from the client
 	// so now it's time to act upon the read input
 	//
-	int result;
+	time_t before, after;
+	int result, elapsed = 0;
 	static int j = 0;
 	
 	if (session->command_state==TRUE) // did we receive a signal we're done already
@@ -391,7 +394,9 @@ void imap4(ImapSession *session)
 	}
 	session->command_type = j;
 	TRACE(TRACE_INFO, "Executing command %s...\n", IMAP_COMMANDS[j]);
+	before = time(NULL);
 	result = (*imap_handler_functions[j]) (session);
+	after = time(NULL);
 	
 	if (result == -1) {
 		TRACE(TRACE_ERROR,"command return with error [%s]", IMAP_COMMANDS[j]);
@@ -412,7 +417,9 @@ void imap4(ImapSession *session)
 		}
 	}
 
+	if (before != (time_t)-1 && after != (time_t)-1)
+		elapsed = (int)((time_t) (after - before));
 
-	TRACE(TRACE_INFO, "Finished command %s [%d]\n", IMAP_COMMANDS[j], result);
+	TRACE(TRACE_INFO, "Finished command %s in [%d] seconds\n", IMAP_COMMANDS[j], elapsed);
 	return; //done
 }
