@@ -119,10 +119,12 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 
 		default:
 			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->timeout);
-			bufferevent_settimeout(session->ci->rev, session->timeout, 0);
+			if (session->ci->rev) {
+				bufferevent_settimeout(session->ci->rev, session->timeout, 0);
+				bufferevent_enable(session->ci->rev, EV_READ);
+			}
 			break;
 	}
-	bufferevent_enable(session->ci->rev, EV_READ);
 }
 
 void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
