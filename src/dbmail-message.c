@@ -313,16 +313,16 @@ static const char * find_boundary(const char *s)
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
 	INIT_QUERY;
-	C c; R r; 
+	C c; R r; int t = FALSE;
 	char *str = NULL;
 	const char *boundary = NULL;
 	const char *internal_date = NULL;
 	char **blist = g_new0(char *,32);
-	int prevdepth, depth = 0, order, row;
+	int prevdepth, depth = 0, order, row = 0;
 	int key = 1;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE;
 	gboolean is_header = TRUE, prev_header;
-	GString *m;
+	GString *m = NULL;
 	const void *blob;
 	gboolean finalized=FALSE;
 
@@ -336,66 +336,70 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		date2char_str("ph.internal_date"), DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
 
 	c = db_con_get();
-	if (! (r = db_query(c, query))) {
-		db_con_close(c);
-		return NULL;
-	}
-	
-	m = g_string_new("");
-
-	row = 0;
-	while (db_result_next(r)) {
-		int l;
-
-		prevdepth	= depth;
-		prev_header	= is_header;
-		key		= db_result_get_int(r,0);
-		depth		= db_result_get_int(r,1);
-		order		= db_result_get_int(r,2);
-		is_header	= db_result_get_bool(r,3);
-		if (row == 0) 	internal_date = db_result_get(r,4);
-		blob		= db_result_get_blob(r,5,&l);
-
-		str 		= g_new0(char,l+1);
-		str		= strncpy(str,blob,l);
-
-		if (is_header) prev_boundary = got_boundary;
-
-		got_boundary = FALSE;
-
-		if (is_header && ((boundary = find_boundary(str)) != NULL)) {
-			got_boundary = TRUE;
-			dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
-			blist[depth] = (char *)boundary;
-		}
-
-		if (prevdepth > depth && blist[depth]) {
-			dprint("\n--%s at %d--\n", blist[depth], depth);
-			g_string_append_printf(m, "\n--%s--\n", blist[depth]);
-			blist[depth] = NULL;
-			finalized=TRUE;
-		}
-
-		if (depth>0 && blist[depth-1])
-			boundary = (const char *)blist[depth-1];
-
-		if (is_header && (!prev_header|| prev_boundary)) {
-			dprint("\n--%s\n", boundary);
-			g_string_append_printf(m, "\n--%s\n", boundary);
-		}
-
-		g_string_append(m, str);
-		dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 
-			is_header, depth, key, order, str);
-
-		if (is_header)
-			g_string_append_printf(m,"\n");
+	TRY
+		r = db_query(c, query);
 		
-		g_free(str);
-		row++;
-	}
+		m = g_string_new("");
 
-	db_con_close(c);
+		row = 0;
+		while (db_result_next(r)) {
+			int l;
+
+			prevdepth	= depth;
+			prev_header	= is_header;
+			key		= db_result_get_int(r,0);
+			depth		= db_result_get_int(r,1);
+			order		= db_result_get_int(r,2);
+			is_header	= db_result_get_bool(r,3);
+			if (row == 0) 	internal_date = db_result_get(r,4);
+			blob		= db_result_get_blob(r,5,&l);
+
+			str 		= g_new0(char,l+1);
+			str		= strncpy(str,blob,l);
+
+			if (is_header) prev_boundary = got_boundary;
+
+			got_boundary = FALSE;
+
+			if (is_header && ((boundary = find_boundary(str)) != NULL)) {
+				got_boundary = TRUE;
+				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
+				blist[depth] = (char *)boundary;
+			}
+
+			if (prevdepth > depth && blist[depth]) {
+				dprint("\n--%s at %d--\n", blist[depth], depth);
+				g_string_append_printf(m, "\n--%s--\n", blist[depth]);
+				blist[depth] = NULL;
+				finalized=TRUE;
+			}
+
+			if (depth>0 && blist[depth-1])
+				boundary = (const char *)blist[depth-1];
+
+			if (is_header && (!prev_header|| prev_boundary)) {
+				dprint("\n--%s\n", boundary);
+				g_string_append_printf(m, "\n--%s\n", boundary);
+			}
+
+			g_string_append(m, str);
+			dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 
+				is_header, depth, key, order, str);
+
+			if (is_header)
+				g_string_append_printf(m,"\n");
+			
+			g_free(str);
+			row++;
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (t == DM_EQUERY) return NULL;
 
 	if (row > 2 && boundary && !finalized) {
 		dprint("\n--%s-- final\n", boundary);
@@ -1402,7 +1406,7 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 
 static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *id)
 {
-	u64_t tmp = 0;
+	u64_t *tmp = g_new0(u64_t,1);
 	//u64_t *cid;
 	//gpointer cacheid;
 	gchar *case_header, *safe_header, *frag;
@@ -1418,6 +1422,7 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 
 	while (try-- > 0) { // deal with race conditions from other process inserting the same headername
 		TRY
+			*tmp = 0;
 			Connection_clear(c);
 
 			db_savepoint(c, "header_id");	
@@ -1427,7 +1432,7 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 			r = db_stmt_query(s);
 
 			if (db_result_next(r)) {
-				tmp = db_result_get_u64(r,0);
+				*tmp = db_result_get_u64(r,0);
 			} else {
 				Connection_clear(c);
 
@@ -1435,7 +1440,7 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 						db_get_sql(SQL_IGNORE), DBPFX, frag);
 				db_stmt_set_str(s,2,safe_header);
 				r = db_stmt_query(s);
-				tmp = db_insert_result(c, r);
+				*tmp = db_insert_result(c, r);
 			}
 			t = TRUE;
 
@@ -1457,8 +1462,8 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 		return t;
 	}
 
-	*id = tmp;
-	g_hash_table_insert(self->header_dict, (gpointer)(safe_header), GUINT_TO_POINTER((unsigned)tmp));
+	*id = *tmp;
+	g_hash_table_insert(self->header_dict, (gpointer)(safe_header), (gpointer)(tmp));
 	return 1;
 }
 
@@ -1536,8 +1541,8 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 	
 	g_return_if_fail(ialist != NULL);
 
-	gchar *name, *rname;
-	gchar *addr;
+	gchar *name = NULL, *rname;
+	gchar *addr = NULL;
 	char *charset = dbmail_message_get_charset((DbmailMessage *)self);
 
 	c = db_con_get();
