@@ -204,6 +204,7 @@ void imap_cb_read(void *arg)
 	// finished; completed or aborted
 	if (session->command_state) dbmail_imap_session_reset(session);
 
+	bufferevent_enable(session->ci->rev, EV_READ);
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
 		if (imap4_tokenizer(session, buffer)) {
 			bufferevent_disable(session->ci->rev, EV_READ);
@@ -252,7 +253,9 @@ int imap_handle_connection(client_sock *c)
 	else
 		ci = client_init(0, NULL);
 
+#ifdef DM_CLIENT_THREADS
 	ci->base = event_init();
+#endif
 
 	session = dbmail_imap_session_new();
 	session->timeout = ci->login_timeout;
@@ -262,8 +265,10 @@ int imap_handle_connection(client_sock *c)
 	ci->rev = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
 	ci->wev = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
 
+#ifdef DM_CLIENT_THREADS
 	bufferevent_base_set(ci->base, ci->rev);
 	bufferevent_base_set(ci->base, ci->wev);
+#endif
 
 	session->ci = ci;
 
@@ -271,10 +276,10 @@ int imap_handle_connection(client_sock *c)
 
 	send_greeting(session);
 	
+#ifdef DM_CLIENT_THREADS
 	event_base_dispatch(ci->base);
-	
-	TRACE(TRACE_DEBUG,"gthread done [%p]", g_thread_self());
-	g_free(c);
+	client_close(c);
+#endif
 
 	return EOF;
 }

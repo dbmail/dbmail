@@ -87,6 +87,19 @@ typedef struct {
 
 typedef int (*IMAP_COMMAND_HANDLER) (ImapSession *);
 
+/* thread data */
+typedef struct {
+	char *tag; char *command; char **args;	/* parsed command input 		*/
+	gpointer data;				/* payload				*/
+	gpointer (* cb_enter)(gpointer);	/* callback on thread entry		*/
+	gpointer (* cb_leave)(gpointer);	/* callback on thread exit		*/
+	char *result; 				/* allocated output string buffer	*/
+	struct bufferevent *wev;		/* bufferevent for sending output	*/
+} imap_cmd_t;
+	
+
+/* public methods */
+
 ImapSession * dbmail_imap_session_new(void);
 ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag);
 ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command);
@@ -159,6 +172,22 @@ int dbmail_imap_session_bodyfetch_set_octetcnt(ImapSession *self, guint64 octet)
 guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self);
 
 int build_args_array_ext(ImapSession *self, const char *originalString);
+
+
+/* threaded work queue */
+	
+/* 
+ * send the ic->result buffer to the client 
+ * default thread-exit callback
+ */
+gpointer ic_flush(gpointer data);
+
+/*
+ * thread launcher
+ *
+ */
+void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data);
+
 
 #endif
 

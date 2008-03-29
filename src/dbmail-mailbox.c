@@ -36,16 +36,13 @@ extern db_param_t _db_params;
 DbmailMailbox * dbmail_mailbox_new(u64_t id)
 {
 	DbmailMailbox *self = g_new0(DbmailMailbox, 1);
+	assert(id);
 	assert(self);
 	dbmail_mailbox_set_id(self,id);
 	dbmail_mailbox_set_uid(self, FALSE);
-	self->search = NULL;
-	self->fi = NULL;
 
 	if (dbmail_mailbox_open(self)) {
-		TRACE(TRACE_ERROR,"opening mailbox failed");
-		dbmail_mailbox_free(self);
-		return NULL;
+		TRACE(TRACE_ERROR,"mailbox open failed [%llu]", id);
 	}
 
 	return self;
@@ -54,35 +51,26 @@ DbmailMailbox * dbmail_mailbox_new(u64_t id)
 static gboolean _node_free(GNode *node, gpointer dummy UNUSED)
 {
 	search_key_t *s = (search_key_t *)node->data;
-	if (s->found)
-		g_tree_destroy(s->found);
+	if (s->found) g_tree_destroy(s->found);
 	g_free(s);
-
 	return FALSE;
 }
 
 void dbmail_mailbox_free(DbmailMailbox *self)
 {
-
-	if (self->sorted)
-		g_list_destroy(self->sorted);
-	if (self->ids)
-		g_tree_destroy(self->ids);		
-	if (self->msn)
-		g_tree_destroy(self->msn);
+	if (self->sorted) g_list_destroy(self->sorted);
+	if (self->ids) g_tree_destroy(self->ids);		
+	if (self->msn) g_tree_destroy(self->msn);
 	if (self->msginfo) {
 		g_tree_destroy(self->msginfo);
 		self->msginfo = NULL;
 	}
 	if (self->search) {
-		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, 
-			(GNodeTraverseFunc)_node_free, NULL);
+		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, (GNodeTraverseFunc)_node_free, NULL);
 		g_node_destroy(self->search);
 	}
 	if (self->fi) {
-		if (self->fi->bodyfetch)
-			// FIXME: Should we be using dbmail-imapsession.c: _body_fetch_free?
-			g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
+		if (self->fi->bodyfetch) g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
 		g_free(self->fi);
 		self->fi = NULL;
 	}
@@ -90,7 +78,6 @@ void dbmail_mailbox_free(DbmailMailbox *self)
 		g_free(self->charset);
 		self->charset = NULL;
 	}
-	
 	g_free(self);
 }
 
@@ -123,9 +110,7 @@ static void uid_msn_map(DbmailMailbox *self)
 
 	ids = g_tree_keys(self->ids);
 
-	if (self->msn)
-		g_tree_destroy(self->msn);
-
+	if (self->msn) g_tree_destroy(self->msn);
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
 	self->rows = 1;
 
@@ -137,16 +122,13 @@ static void uid_msn_map(DbmailMailbox *self)
 
 		g_tree_insert(self->msn, msn, id);
 
-		if (! g_list_next(ids))
-			break;
+		if (! g_list_next(ids)) break;
 		ids = g_list_next(ids);
-
 	}
 
 	g_list_free(g_list_first(ids));
 
-	if (self->info)
-		self->info->exists = g_tree_nnodes(self->ids);
+	if (self->info) self->info->exists = g_tree_nnodes(self->ids);
 
 	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->ids));
 	TRACE(TRACE_DEBUG,"total [%d] MSNs", g_tree_nnodes(self->msn));
@@ -154,11 +136,8 @@ static void uid_msn_map(DbmailMailbox *self)
 	
 void mailbox_uid_msn_new(DbmailMailbox *self)
 {
-	if (self->ids)
-		g_tree_destroy(self->ids);
-
-	if (self->msn)
-		g_tree_destroy(self->msn);
+	if (self->ids) g_tree_destroy(self->ids);
+	if (self->msn) g_tree_destroy(self->msn);
 
 	self->ids = NULL;
 	self->msn = NULL;
@@ -214,11 +193,8 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 
 			id = db_result_get_u64(r,IMAP_NFLAGS + 2);
 
-			uid = g_new0(u64_t,1);
-			*uid = id;
-
-			msn = g_new0(u64_t,1);
-			*msn = i;
+			uid = g_new0(u64_t,1); *uid = id;
+			msn = g_new0(u64_t,1); *msn = i;
 
 			g_tree_insert(self->ids,uid,msn);
 			g_tree_insert(self->msn,msn,uid);
@@ -296,14 +272,13 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 		return t;
 	}
 
-	if (! nrows)
-		TRACE(TRACE_DEBUG, "no keywords");
+	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");
 
 	mailbox_set_msginfo(self, msginfo);
 
 	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
 
-	return DM_SUCCESS;
+	return t;
 }
 
 int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t id)
@@ -1009,28 +984,36 @@ static int _handle_search_args(DbmailMailbox *self, char **search_keys, u64_t *i
 	 */
 
 	else if ( MATCH(key, "before") ) {
+		char *s;
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date < '%s'", date_imap2sql(search_keys[*idx]));
+		s = date_imap2sql(search_keys[*idx]);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date < '%s'", s);
+		g_free(s);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "on") ) {
+		char *s;
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date %s '%s%%'", 
-				db_get_sql(SQL_SENSITIVE_LIKE), date_imap2sql(search_keys[*idx]));
+		s = date_imap2sql(search_keys[*idx]);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date %s '%s%%'", db_get_sql(SQL_SENSITIVE_LIKE), s);
+		g_free(s);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "since") ) {
+		char *s;
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date > '%s'", date_imap2sql(search_keys[*idx]));
+		s = date_imap2sql(search_keys[*idx]);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date > '%s'", s);
+		g_free(s);
 		(*idx)++;
 	}
 
@@ -1321,7 +1304,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 }
 static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 {
-	char *qs, *date, *field;
+	char *qs, *date, *field, *d;
 	u64_t *k, *v, *w;
 	u64_t id;
 	char gt_lt = 0;
@@ -1345,7 +1328,9 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_HDRDATE_BEFORE:
 			
 			field = g_strdup_printf(db_get_sql(SQL_TO_DATE), s->hdrfld);
-			qs = g_strdup_printf("'%s'", date_imap2sql(s->search));
+			d = date_imap2sql(s->search);
+			qs = g_strdup_printf("'%s'", d);
+			g_free(d);
 			date = g_strdup_printf(db_get_sql(SQL_TO_DATE), qs);
 			g_free(qs);
 

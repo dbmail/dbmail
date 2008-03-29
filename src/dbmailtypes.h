@@ -32,6 +32,9 @@
 
 #include "dbmail.h"
 
+// start worker threads per client
+//#define DM_CLIENT_THREADS
+
 /** max length of search query */
 #define MAX_SEARCH_LEN 1024
 
@@ -42,7 +45,6 @@
 #define IPNUM_LEN 32
 #define IPLEN 32
 #define BACKLOG 16
-
 
 #define DM_SOCKADDR_LEN 108
 #define DM_USERNAME_LEN 100
@@ -196,14 +198,18 @@ typedef enum {
 	POP3_QUIT_STATE
 } Pop3State_t;
 
-/**
- * struct for a POP3 session. Also used for LMTP session.
- */
 
+// thread manager structures 
+//
+
+// client_thread
 typedef struct  {
 	int sock;
 	struct sockaddr_in *caddr;
+	void (*cb_close) (void *);	/* termination callback */
 } client_sock;
+
+//
 
 typedef struct {
 	int rx, tx;			/* read and write filehandles */

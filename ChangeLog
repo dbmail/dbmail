@@ -1,3 +1,11 @@
+2008-03-29  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmail-mailbox.c, src/dbmail-message.c, src/dbmailtypes.h, 
+	src/dm_db.c, src/dm_misc.c, src/imap4.c, src/imapcommands.c, 
+	src/server.c, src/server.h:
+	wip threading cleanups
+
 2008-03-26  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 

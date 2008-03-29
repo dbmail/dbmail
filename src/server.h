@@ -43,6 +43,7 @@ int StartCliServer(serverConfig_t * conf);
 int server_run(serverConfig_t *conf);
 
 clientinfo_t * client_init(int socket, struct sockaddr_in *caddr);
+void client_close(client_sock *c);
 
 void disconnect_all(void);
 

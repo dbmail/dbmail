@@ -42,11 +42,9 @@ const char *month_desc[] = {
 
 /* returned by date_sql2imap() */
 #define IMAP_STANDARD_DATE "03-Nov-1979 00:00:00 +0000"
-char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
 
 /* returned by date_imap2sql() */
 #define SQL_STANDARD_DATE "1979-11-03 00:00:00"
-char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;
 
 const int month_len[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
@@ -790,34 +788,27 @@ int check_date(const char *date)
 
 	l = strlen(date);
 
-	if (l != STRLEN_MINDATA && l != STRLEN_MINDATA-1)
-		return 0;
+	if (l != STRLEN_MINDATA && l != STRLEN_MINDATA-1) return 0;
 
 	j = (l==STRLEN_MINDATA) ? 0 : 1;
 
-	if (date[2 - j] != '-' || date[6 - j] != '-')
-		return 0;
+	if (date[2 - j] != '-' || date[6 - j] != '-') return 0;
 
 	days = strtoul(date, NULL, 10);
 	strncpy(sub, &date[3 - j], 3);
 	sub[3] = 0;
 
 	for (i = 0; i < 12; i++) {
-		if (strcasecmp(month_desc[i], sub) == 0)
-			break;
+		if (strcasecmp(month_desc[i], sub) == 0) break;
 	}
 
-	if (i >= 12 || days > month_len[i])
-		return 0;
+	if (i >= 12 || days > month_len[i]) return 0;
 
 	for (i = 7; i < 11; i++)
-		if (!isdigit(date[i - j]))
-			return 0;
+		if (!isdigit(date[i - j])) return 0;
 
 	return 1;
 }
-
-
 
 /*
  * check_msg_set()
@@ -828,13 +819,10 @@ int check_msg_set(const char *s)
 {
 	int i, indigit=0, result = 1;
 	
-
-	if (!s || (!isdigit(s[0]) && s[0]!= '*') )
-		return 0;
+	if (!s || (!isdigit(s[0]) && s[0]!= '*') ) return 0;
 
 	for (i = 0; s[i]; i++) {
-		if (isdigit(s[i]) || s[i]=='*')
-			indigit = 1;
+		if (isdigit(s[i]) || s[i]=='*') indigit = 1;
 		else if (s[i] == ',') {
 			if (!indigit) {
 				result = 0;
@@ -855,7 +843,6 @@ int check_msg_set(const char *s)
 		}
 	}
 	TRACE(TRACE_DEBUG, "[%s] [%s]", s, result ? "ok" : "fail" );
-
 	return result;
 }
 
@@ -871,6 +858,7 @@ char *date_sql2imap(const char *sqldate)
         struct tm tm_sql_date;
 	time_t ltime;
         char *last;
+	char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
 	char t[IMAP_INTERNALDATE_LEN];
 	char q[IMAP_INTERNALDATE_LEN];
 
@@ -880,7 +868,7 @@ char *date_sql2imap(const char *sqldate)
         last = strptime(sqldate,"%Y-%m-%d %H:%M:%S", &tm_sql_date);
         if ( (last == NULL) || (*last != '\0') ) {
                 strcpy(_imapdate, IMAP_STANDARD_DATE);
-                return _imapdate;
+                return g_strdup(_imapdate);
         }
 
         strftime(q, sizeof(q), "%d-%b-%Y %H:%M:%S", &tm_sql_date);
@@ -890,12 +878,12 @@ char *date_sql2imap(const char *sqldate)
 	strftime(t, sizeof(t), "%z", &tm_sql_date);
 	if (t[0] != '%') {
 		snprintf(_imapdate,IMAP_INTERNALDATE_LEN, "%s %s", q, t);
-		return _imapdate;
+		return g_strdup(_imapdate);
 	}
 	// oops, no %z on solaris (FIXME)
 	snprintf(_imapdate,IMAP_INTERNALDATE_LEN, "%s +0000", q);
 	
-        return _imapdate;
+        return g_strdup(_imapdate);
 }
 
 
@@ -911,20 +899,19 @@ char *date_sql2imap(const char *sqldate)
 char *date_imap2sql(const char *imapdate)
 {
 	struct tm tm;
+	char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;
 	char *last_char;
 
 	// bsd needs this:
 	memset(&tm, 0, sizeof(struct tm));
-
 	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
 	if (last_char == NULL || *last_char != '\0') {
 		TRACE(TRACE_DEBUG, "error parsing IMAP date %s", imapdate);
-		return NULL;
+		return g_strdup("");
 	}
-	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN,
-			"%Y-%m-%d 00:00:00", &tm);
+	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN, "%Y-%m-%d 00:00:00", &tm);
 
-	return _sqldate;
+	return g_strdup(_sqldate);
 }
 
 

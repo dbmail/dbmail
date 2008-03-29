@@ -1054,6 +1054,7 @@ GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *
 }
 char * dbmail_message_get_charset(DbmailMessage *self)
 {
+	assert(self && self->content);
 	if (! self->charset)
 		self->charset = message_get_charset((GMimeMessage *)self->content);
 	return self->charset;
@@ -1062,10 +1063,12 @@ char * dbmail_message_get_charset(DbmailMessage *self)
 /* dump message(parts) to char ptrs */
 gchar * dbmail_message_to_string(const DbmailMessage *self) 
 {
+	assert(self && self->content);
 	return g_mime_object_to_string(GMIME_OBJECT(self->content));
 }
 gchar * dbmail_message_body_to_string(const DbmailMessage *self)
 {
+	assert(self && self->content);
 	return g_mime_object_get_body(GMIME_OBJECT(self->content));
 }
 gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
@@ -1895,8 +1898,10 @@ DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
 
 	int result;
 	u64_t physid = 0;
-	if ((result = db_get_physmessage_id(msg_idnr, &physid)) != DM_SUCCESS)
+	if ((result = db_get_physmessage_id(msg_idnr, &physid)) != DM_SUCCESS) {
+		TRACE(TRACE_ERROR,"can't find physmessage_id for message_idnr [%llu]", msg_idnr);
 		return NULL;
+	}
 	msg = dbmail_message_new();
 	if (! (msg = dbmail_message_retrieve(msg, physid, filter)))
 		return NULL;

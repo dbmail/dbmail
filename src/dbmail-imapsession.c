@@ -39,13 +39,6 @@ extern db_param_t _db_params;
 gboolean imap_feature_idle_status = FALSE;
 
 extern const char *month_desc[];
-/* returned by date_sql2imap() */
-#define IMAP_STANDARD_DATE "03-Nov-1979 00:00:00 +0000"
-extern char _imapdate[IMAP_INTERNALDATE_LEN];
-
-/* returned by date_imap2sql() */
-#define SQL_STANDARD_DATE "1979-11-03 00:00:00"
-extern char _sqldate[SQL_INTERNALDATE_LEN + 1];
 extern const int month_len[];
 extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
@@ -59,6 +52,69 @@ static void _imap_show_body_sections(ImapSession *self);
 static void _fetch_envelopes(ImapSession *self);
 static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data);
 	
+/* 
+ *
+ * threaded command primitives 
+ *
+ * the goal is to make long running tasks (mainly database IO) non-blocking
+ *
+ *
+ */
+
+
+gpointer ic_flush(gpointer data)
+{
+	imap_cmd_t *ic = (imap_cmd_t *)data;
+	/* flush and cleanup thread data */
+	if (ic->result) {
+		bufferevent_write(ic->wev, (gpointer)ic->result, strlen(ic->result));
+		g_free(ic->result);
+	}
+	if (ic->tag) g_free(ic->tag);
+	if (ic->command) g_free(ic->command);
+	if (ic->args) g_strfreev(ic->args);
+	if (ic->data) g_free(ic->data);
+
+	g_free(ic);
+	TRACE(TRACE_DEBUG,"gthread finished");
+	return NULL;
+}
+
+void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
+{
+	GError *err = NULL;
+	assert(session);
+	assert(cb_enter);
+
+	imap_cmd_t *ic = g_new0(imap_cmd_t,1);
+
+	assert(cb_enter);
+
+	ic->tag		= g_strdup(session->tag);
+	ic->command	= g_strdup(session->command);
+	ic->args	= g_strdupv(session->args);
+	ic->wev		= session->ci->wev;
+	ic->data	= data; 	/* payload */
+
+	ic->cb_enter	= cb_enter;
+
+	if (cb_leave)
+		ic->cb_leave = cb_leave;
+	else
+		ic->cb_leave = ic_flush;
+
+	if (! g_thread_create((GThreadFunc)ic->cb_enter, (gpointer)ic, FALSE, &err) )
+		TRACE(TRACE_DEBUG,"gthread creation failed [%s]", err->message);
+}
+
+
+/*
+ *
+ * helpers 
+ *
+ *
+ */
+
 
 /*
  * send_data()
@@ -738,7 +794,9 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
-		dbmail_imap_session_buff_append(self, "INTERNALDATE \"%s\"", date_sql2imap(msginfo->internaldate));
+		char *s =date_sql2imap(msginfo->internaldate);
+		dbmail_imap_session_buff_append(self, "INTERNALDATE \"%s\"", s);
+		g_free(s);
 	}
 	if (self->fi->getSize) {
 		SEND_SPACE;
@@ -1613,50 +1671,40 @@ static int dbmail_imap_session_mbxinfo_notify(ImapSession *self)
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 {
 	/* 
-	   FIXME: this should be called more often?
-	 
 		C: a047 NOOP
 		S: * 22 EXPUNGE
 		S: * 23 EXISTS
 		S: * 3 RECENT
 		S: * 14 FETCH (FLAGS (\Seen \Deleted))
 
-	But beware! The dovecot team discovered some client bugs:
+	# timo wrote:
 	#     Send EXISTS/RECENT new mail notifications only when replying to NOOP
 	#     and CHECK commands. Some clients ignore them otherwise, for example OSX
 	#     Mail (<v2.1). Outlook Express breaks more badly though, without this it
 	#     may show user "Message no longer in server" errors. Note that OE6 still
 	#     breaks even with this workaround if synchronization is set to
 	#     "Headers Only".
-
 	*/
 
 	int res;
-	gboolean unhandled=FALSE;
-	time_t oldmtime;
-	unsigned oldexists, oldrecent, olduidnext;
         DbmailMailbox *mailbox = NULL;
-	MailboxInfo *info;
-	gboolean showexists = FALSE, showrecent = FALSE;
-	if (self->state != IMAPCS_SELECTED) {
-		TRACE(TRACE_DEBUG,"[%p] do nothing: state [%d]", self, self->state);
-		return 0;
-	}
+	gboolean showexists = FALSE, showrecent = FALSE, unhandled=FALSE;
 
-	info = self->mailbox->info;
-
-	oldmtime = info->mtime;
-	oldexists = info->exists;
-	oldrecent = info->recent;
-	olduidnext = info->msguidnext;
-
-	if (! self->mbxinfo)
-		dbmail_imap_session_get_mbxinfo(self);
+	if (self->state != IMAPCS_SELECTED) return FALSE;
 
 	if (update) {
+		MailboxInfo *info;
+		time_t oldmtime;
+		unsigned oldexists, oldrecent, olduidnext;
+
+		info = self->mailbox->info;
+		oldmtime = info->mtime;
+		oldexists = info->exists;
+		oldrecent = info->recent;
+		olduidnext = info->msguidnext;
+
                 // re-read flags and counters
-		if ((res = db_getmailbox(info, self->userid)) != DM_SUCCESS)
-			return res;
+		if ((res = db_getmailbox(info, self->userid)) != DM_SUCCESS) return res;
 
 		if (oldmtime != info->mtime) {
 			// rebuild uid/msn trees
@@ -1666,8 +1714,6 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			mailbox->info = info;
 			mailbox->info->exists = g_tree_nnodes(mailbox->ids);
 
-			// show updates conditionally
-			//
 			// EXISTS response may never decrease
 			if ((info->msguidnext > olduidnext) && (info->exists > oldexists))
 				showexists = TRUE;
@@ -1678,25 +1724,22 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		}
 	}
 
-
-	// command specific over-rides
+	// command specific overrides
 	switch (self->command_type) {
 		case IMAP_COMM_SELECT:
 		case IMAP_COMM_EXAMINE:
-			// always show them
 			showexists = showrecent = TRUE;
 		break;
 
 		case IMAP_COMM_IDLE:
 #if 0 // experimental: send '* STATUS' updates for all subscribed mailboxes if they have changed
+			if (! self->mbxinfo) dbmail_imap_session_get_mbxinfo(self);
 			dbmail_imap_session_mbxinfo_notify(self);
 #endif
 		break;
 
 		case IMAP_COMM_APPEND:
-
-			showrecent = FALSE;
-			showexists = FALSE;
+			showrecent = showexists = FALSE;
 /* 
  * the rfc says we SHOULD send new message status notifications after APPEND
  * but it doesn't work like it should :-( So lets fall back to letting the
@@ -1717,10 +1760,9 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		break;
 	}
 
-	if (showexists) // never decrease without first sending expunge !!
-		dbmail_imap_session_printf(self, "* %u EXISTS\r\n", self->mailbox->info->exists);
-	if (showrecent)
-		dbmail_imap_session_printf(self, "* %u RECENT\r\n", self->mailbox->info->recent);
+	// never decrease without first sending expunge !!
+	if (showexists) dbmail_imap_session_printf(self, "* %u EXISTS\r\n", self->mailbox->info->exists);
+	if (showrecent) dbmail_imap_session_printf(self, "* %u RECENT\r\n", self->mailbox->info->recent);
 
 	if (update) {
 		if (unhandled)
@@ -1913,27 +1955,22 @@ int dbmail_imap_session_mailbox_close(ImapSession *self)
 	return 0;
 }
 
-static int imap_session_update_recent(ImapSession *self) 
+gpointer db_update_recent(gpointer data)
 {
-	C c; int t = FALSE;
-	GList *slices, *topslices, *recent;
-	char query[DEF_QUERYSIZE];
-	memset(query,0,DEF_QUERYSIZE);
-	MessageInfo *msginfo = NULL;
-	gchar *uid = NULL;
-	u64_t id = 0;
+	INIT_QUERY;
+	C c;
+	int t = FALSE;
+	imap_cmd_t *ic = (imap_cmd_t *)data;
 
-	recent = self->recent;
+	assert(ic);
 
-	if (recent == NULL)
-		return t;
+	if (! ic->data) return NULL;
 
-	topslices = g_list_slices(recent,100);
-	slices = g_list_first(topslices);
-
+	GList *slices = (GList *)ic->data;
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
+		slices = g_list_first(slices);
 		while (slices) {
 			snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag = 0 "
 					"WHERE message_idnr IN (%s) AND recent_flag = 1", 
@@ -1950,11 +1987,27 @@ static int imap_session_update_recent(ImapSession *self)
 		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
+		g_list_destroy(slices);
 	END_TRY;
 
-        g_list_destroy(topslices);
+	return NULL;
+}
 
-	if (t == DM_EQUERY) return t;
+int dbmail_imap_session_mailbox_update_recent(ImapSession *self) 
+{
+	int t = FALSE;
+	GList *recent;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+	MessageInfo *msginfo = NULL;
+	gchar *uid = NULL;
+	u64_t id = 0;
+
+	recent = self->recent;
+
+	if (recent == NULL) return t;
+
+	ic_dispatch(self, db_update_recent, NULL, (gpointer)g_list_slices(recent,100));
 
 	// update cached values
 	recent = g_list_first(recent);
@@ -1971,20 +2024,13 @@ static int imap_session_update_recent(ImapSession *self)
 		} else {
 			TRACE(TRACE_WARNING,"[%p] can't find msginfo for [%llu]", self, id);
 		}
-		if (! g_list_next(recent))
-			break;
+		if (! g_list_next(recent)) break;
 		recent = g_list_next(recent);
 	}
 
 	if ( (self->mailbox->info) && (self->mailbox->info->uid) )
 		db_mailbox_mtime_update(self->mailbox->info->uid);
 
-	return 0;
-}
-
-int dbmail_imap_session_mailbox_update_recent(ImapSession *self) 
-{
-	imap_session_update_recent(self);
 	g_list_destroy(self->recent);
 	self->recent = NULL;
 
@@ -2003,6 +2049,8 @@ int dbmail_imap_session_set_state(ImapSession *self, int state)
 		break;
 		case IMAPCS_LOGOUT:
 		case IMAPCS_ERROR:
+			assert(self->ci);
+			if (self->ci->rev)
 				bufferevent_disable(self->ci->rev, EV_READ);
 		break;
 		default:
@@ -2091,12 +2139,9 @@ void dbmail_imap_session_bodyfetch_rewind(ImapSession *self)
 
 static void _body_fetch_free(body_fetch_t *bodyfetch, gpointer UNUSED data)
 {
-	if (! bodyfetch)
-		return;
-	if (bodyfetch->hdrnames) 
-		g_free(bodyfetch->hdrnames);
-	if (bodyfetch->hdrplist)
-		g_free(bodyfetch->hdrplist);
+	if (! bodyfetch) return;
+	if (bodyfetch->hdrnames) g_free(bodyfetch->hdrnames);
+	if (bodyfetch->hdrplist) g_free(bodyfetch->hdrplist);
 	if (bodyfetch->headers) {
 		g_tree_destroy(bodyfetch->headers);
 		bodyfetch->headers = NULL;
@@ -2108,8 +2153,7 @@ static void _body_fetch_free(body_fetch_t *bodyfetch, gpointer UNUSED data)
 void dbmail_imap_session_bodyfetch_free(ImapSession *self) 
 {
 	assert(self->fi);
-	if (! self->fi->bodyfetch)
-		return;
+	if (! self->fi->bodyfetch) return;
 	self->fi->bodyfetch = g_list_first(self->fi->bodyfetch);
 	g_list_foreach(self->fi->bodyfetch, (GFunc)_body_fetch_free, NULL);
 	g_list_free(g_list_first(self->fi->bodyfetch));
@@ -2120,8 +2164,7 @@ void dbmail_imap_session_bodyfetch_free(ImapSession *self)
 body_fetch_t * dbmail_imap_session_bodyfetch_get_last(ImapSession *self) 
 {
 	assert(self->fi);
-	if (self->fi->bodyfetch == NULL)
-		dbmail_imap_session_bodyfetch_new(self);
+	if (! self->fi->bodyfetch) dbmail_imap_session_bodyfetch_new(self);
 	
 	self->fi->bodyfetch = g_list_last(self->fi->bodyfetch);
 	return (body_fetch_t *)self->fi->bodyfetch->data;
@@ -2181,7 +2224,6 @@ int dbmail_imap_session_bodyfetch_get_last_argcnt(ImapSession *self)
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->argcnt;
 }
-
 int dbmail_imap_session_bodyfetch_set_octetstart(ImapSession *self, guint64 octet)
 {
 	assert(self->fi);
@@ -2195,8 +2237,6 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(ImapSession *self)
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->octetstart;
 }
-
-
 int dbmail_imap_session_bodyfetch_set_octetcnt(ImapSession *self, guint64 octet)
 {
 	assert(self->fi);
@@ -2210,7 +2250,6 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self)
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->octetcnt;
 }
-
 u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t dumpsize) 
 {
 	long long cnt = dumpsize - bodyfetch->octetstart;
@@ -2452,9 +2491,11 @@ finalize:
 
 	TRACE(TRACE_DEBUG, "[%p] tag: [%s], command: [%s], [%llu] args", self, self->tag, self->command, self->args_idx);
 	self->args[self->args_idx] = NULL;	/* terminate */
+#if 0
 	for (i = 0; i<=self->args_idx && self->args[i]; i++) { 
 		TRACE(TRACE_DEBUG, "[%p] arg[%d]: '%s'\n", self, i, self->args[i]); 
 	}
+#endif
 	self->args_idx = 0;
 	return 1;
 }

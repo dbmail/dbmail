@@ -131,6 +131,7 @@ static int server_setup(void)
 	GeneralStopRequested = 0;
 	get_sigchld = 0;
 
+	if (! g_thread_supported () ) g_thread_init (NULL);
 	server_set_sighandler();
 
 	return 0;
@@ -152,7 +153,13 @@ static int manage_start_cli_server(serverConfig_t *conf)
 	srand((int) ((int) time(NULL) + (int) getpid()));
 
 	/* streams are ready, perform handling */
+#ifdef DM_CLIENT_THREADS
 	conf->ClientHandler(NULL);
+#else
+	event_init();
+	conf->ClientHandler(NULL);
+	event_dispatch();
+#endif
 
 	disconnect_all();
 
@@ -394,6 +401,14 @@ clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
 	return client;
 }
 
+void client_close(client_sock *c)
+{
+	if (!c) return;
+	if (c->cb_close) c->cb_close(c);
+	g_free(c);
+}
+
+
 static void worker_pipe_cb(int sock, short event UNUSED, void *arg UNUSED)
 {
 	// Clear the self-pipe; we received a signal
@@ -406,13 +421,15 @@ static void worker_pipe_cb(int sock, short event UNUSED, void *arg UNUSED)
 
 static void worker_thread_create(client_sock *c)
 {
+#ifdef DM_CLIENT_THREADS
 	GError *err = NULL;
 
-	if (!g_thread_supported ()) g_thread_init (NULL);
-	if (! g_thread_create((GThreadFunc)server_conf->ClientHandler, (gpointer)c, FALSE, &err))
+	if (! g_thread_supported () ) g_thread_init (NULL);
+	if (! g_thread_create((GThreadFunc)server_conf->ClientHandler, (gpointer)c, FALSE, &err) )
 		TRACE(TRACE_DEBUG,"gthread creation failed [%s]", err->message);
-
-//	server_conf->ClientHandler((clientinfo_t *)client);
+#else
+	server_conf->ClientHandler((client_sock *)c);
+#endif
 }
 
 static void worker_sock_cb(int sock, short event, void *arg)

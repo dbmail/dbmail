@@ -2319,9 +2319,9 @@ static int db_getmailbox_metadata(MailboxInfo *mb, u64_t user_idnr)
 	qs = g_string_new("");
 	g_string_printf(qs, "SELECT COUNT(*) AS nr_children FROM %smailboxes WHERE owner_idnr = ? ", DBPFX);
 
-	if (mailbox_like->insensitive)
+	if (mailbox_like && mailbox_like->insensitive)
 		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
-	if (mailbox_like->sensitive)
+	if (mailbox_like && mailbox_like->sensitive)
 		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
 
 	t = DM_SUCCESS;
@@ -2330,9 +2330,9 @@ static int db_getmailbox_metadata(MailboxInfo *mb, u64_t user_idnr)
 		prml = 1;
 		db_stmt_set_u64(stmt, prml++, user_idnr);
 
-		if (mailbox_like->insensitive)
+		if (mailbox_like && mailbox_like->insensitive)
 			db_stmt_set_str(stmt, prml++, mailbox_like->insensitive);
-		if (mailbox_like->sensitive)
+		if (mailbox_like && mailbox_like->sensitive)
 			db_stmt_set_str(stmt, prml++, mailbox_like->sensitive);
 
 		r = db_stmt_query(stmt);
