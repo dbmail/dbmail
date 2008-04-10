@@ -25,8 +25,8 @@ Description: base package for the dbmail email solution
 Package: dbmail-pgsql
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
-Description: Postgresql module for Dbmail
- This package provides a module for adding Postgresql database 
+Description: PostgreSQL module for Dbmail
+ This package provides a module for adding PostgreSQL database 
  support to DBMAIL.
  .
  DBMAIL is a collection of programs that enables email to be
