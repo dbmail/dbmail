@@ -1017,16 +1017,16 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	for (i=0; i<values->len;i++) {
 		raw = (unsigned char *)g_tuples_index(values,i,1);
 
-		char *value = NULL;
+		char *value = NULL, *rvalue = NULL;
 		const char *charset = dbmail_message_get_charset(self);
 
 		value = dbmail_iconv_decode_field((const char *)raw, charset, isaddr);
 
-		if (! value)
-			continue;
+		if (! value) continue;
 
-		safe_value = dm_stresc(value);
-		g_free(value);
+		rvalue = dbmail_iconv_str_to_db(value, charset); g_free(value);
+
+		safe_value = dm_stresc(rvalue); g_free(rvalue);
 
 		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
 				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);

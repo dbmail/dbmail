@@ -1,5 +1,12 @@
+2008-04-10  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	force headervalues into the database charset
+
 2008-03-24  Paul J Stevens <paul@nfg.nl>
 
+	* debian/control, debian/dbmail.config, debian/rules:
+	debian updates
 	* VERSION, debian/changelog, debian/control, debian/dbmail.postrm:
 	v2.2.10
 
