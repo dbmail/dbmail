@@ -732,7 +732,7 @@ void dbmail_imap_session_get_mbxinfo(ImapSession *self)
 	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);
+		r = Connection_executeQuery(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
 			mb = g_new0(MailboxInfo,1);
@@ -745,7 +745,7 @@ void dbmail_imap_session_get_mbxinfo(ImapSession *self)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 		t = DM_EQUERY;
 	END_TRY;
 
@@ -1034,7 +1034,7 @@ static void _fetch_envelopes(ImapSession *self)
 			self->mailbox->id, range);
 	c = db_con_get();
 	TRY
-		r = db_query(c, q->str);
+		r = Connection_executeQuery(c, q->str);
 		while (db_result_next(r)) {
 			
 			id = db_result_get_u64(r, 0);
@@ -1054,7 +1054,7 @@ static void _fetch_envelopes(ImapSession *self)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 		g_string_free(q,TRUE);
 	END_TRY;
 
@@ -1181,7 +1181,7 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 
 	c = db_con_get();	
 	TRY
-		r = db_query(c, q->str);
+		r = Connection_executeQuery(c, q->str);
 		while (db_result_next(r)) {
 			
 			id = db_result_get_u64(r, 0);
@@ -1208,7 +1208,7 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 		g_string_free(q,TRUE);
 	END_TRY;
 
@@ -1980,7 +1980,7 @@ gpointer db_update_recent(gpointer data)
 			snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag = 0 "
 					"WHERE message_idnr IN (%s) AND recent_flag = 1", 
 					DBPFX, (gchar *)slices->data);
-			db_exec(c, query);
+			Connection_execute(c, query);
 
 			if (! g_list_next(slices)) break;
 			slices = g_list_next(slices);
@@ -1991,7 +1991,7 @@ gpointer db_update_recent(gpointer data)
 		t = DM_EQUERY;
 		db_rollback_transaction(c);
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 		g_list_destroy(slices);
 	END_TRY;
 

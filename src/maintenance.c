@@ -322,14 +322,14 @@ static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
 	char2date_str(lasttokeep, &to_date_str);
 
 	c = db_con_get();
-	if (! (r = db_query(c, "SELECT COUNT(*) FROM %spbsp WHERE since < %s", DBPFX, to_date_str))) {
-		db_con_close(c);
+	if (! (r = Connection_executeQuery(c, "SELECT COUNT(*) FROM %spbsp WHERE since < %s", DBPFX, to_date_str))) {
+		Connection_close(c);
 		return DM_EQUERY;
 	}
 
 	if (db_result_next(r))
 		*rows = db_result_get_u64(r,0);
-	db_con_close(c);
+	Connection_close(c);
 
 	return DM_SUCCESS;
 }
@@ -352,14 +352,14 @@ static int db_count_replycache(timestring_t lasttokeep, u64_t *rows)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT COUNT(*) FROM %sreplycache WHERE lastseen < %s", DBPFX, to_date_str);
+		r = Connection_executeQuery(c, "SELECT COUNT(*) FROM %sreplycache WHERE lastseen < %s", DBPFX, to_date_str);
 		if (db_result_next(r))
 			*rows = db_result_get_u64(r,0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -379,14 +379,14 @@ static int db_count_deleted(u64_t * rows)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT COUNT(*) FROM %smessages WHERE status = %d", DBPFX, MESSAGE_STATUS_DELETE);
+		r = Connection_executeQuery(c, "SELECT COUNT(*) FROM %smessages WHERE status = %d", DBPFX, MESSAGE_STATUS_DELETE);
 		if (db_result_next(r))
 			*rows = db_result_get_int(r,0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -409,14 +409,14 @@ static int db_deleted_count(u64_t * rows)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT COUNT(*) FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
+		r = Connection_executeQuery(c, "SELECT COUNT(*) FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
 		if (db_result_next(r))
 			*rows = db_result_get_int(r,0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;

@@ -185,7 +185,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c,query);
+		r = Connection_executeQuery(c,query);
 
 		i = 0;
 		while (db_result_next(r)) {
@@ -229,7 +229,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 	END_TRY;
 
 	if (t == DM_EQUERY) {
-		db_con_close(c);
+		Connection_close(c);
 		return t;
 	}
 
@@ -252,7 +252,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 
 	TRY
 		nrows = 0;
-		r = db_query(c,query);
+		r = Connection_executeQuery(c,query);
 		while (db_result_next(r)) {
 			nrows++;
 			id = db_result_get_u64(r,0);
@@ -264,7 +264,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) {
@@ -387,7 +387,7 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c,query);
+		r = Connection_executeQuery(c,query);
 		while (db_result_next(r)) {
 			physid = db_result_get_u64(r,0);
 			msgid = db_result_get_u64(r,1);
@@ -401,7 +401,7 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -506,7 +506,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 	c = db_con_get();
 	TRY
 		i=0;
-		r = db_query(c,query);
+		r = Connection_executeQuery(c,query);
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
@@ -522,7 +522,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 
 	if ( ( t == DM_EQUERY ) || ( ! i ) ) {
 		g_tree_destroy(tree);
-		db_con_close(c);
+		Connection_close(c);
 		return res;
 	}
 
@@ -543,7 +543,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		
 	TRY
 		i=0;
-		r = db_query(c,query);
+		r = Connection_executeQuery(c,query);
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
@@ -565,7 +565,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if ( ( t == DM_EQUERY ) || ( ! i ) ) {
@@ -1274,7 +1274,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 	c = db_con_get();
 	TRY
 		i = 0;
-		r = db_query(c,q->str);
+		r = Connection_executeQuery(c,q->str);
 		while (db_result_next(r)) {
 			tid = db_result_get_u64(r,0);
 			if (g_tree_lookup(self->ids,&tid) && (! g_tree_lookup(z, &tid))) {
@@ -1288,7 +1288,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 		g_tree_destroy(z);
 	END_TRY;
 
@@ -1497,7 +1497,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	g_string_free(q,TRUE);

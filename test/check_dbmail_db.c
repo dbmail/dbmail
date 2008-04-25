@@ -127,7 +127,7 @@ START_TEST(test_db_stmt_prepare)
 	c = db_con_get();
 	s = db_stmt_prepare(c, "SELECT 1=1");
 	fail_unless(s != NULL, "db_stmt_prepare failed");
-	db_con_close(c);
+	Connection_close(c);
 
 }
 END_TEST
@@ -156,7 +156,7 @@ START_TEST(test_db_stmt_set_str)
 	fail_unless(r != NULL, "db_stmt_query failed");
 	fail_unless(db_result_next(r), "db_result_next failed");
 	printf("[%llu]\n", db_result_get_u64(r, 0));
-	db_con_close(c);
+	Connection_close(c);
 
 }
 END_TEST
@@ -173,20 +173,20 @@ START_TEST(test_db_stmt_exec)
 }
 END_TEST
 
-START_TEST(test_db_query)
+START_TEST(test_Connection_executeQuery)
 {
 	C c; R r = NULL;
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT foo FROM bar");
+		r = Connection_executeQuery(c, "SELECT foo FROM bar");
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	END_TRY;
-	fail_unless(r==NULL, "db_query should have failed");
+	fail_unless(r==NULL, "Connection_executeQuery should have failed");
 
-	r = db_query(c, "SELECT 1=1");
-	fail_unless(r!=NULL, "db_query should have succeeded");
+	r = Connection_executeQuery(c, "SELECT 1=1");
+	fail_unless(r!=NULL, "Connection_executeQuery should have succeeded");
 	fail_unless(db_result_next(r), "db_result_next failed");
 	fail_unless(strlen(db_result_get(r,0)), "db_result_get failed");
 }
@@ -649,14 +649,14 @@ END_TEST
  * \brief set status of a message
  * \param message_idnr
  * \param status new status of message
- * \return result of db_query()
+ * \return result of Connection_executeQuery()
  */
 //int db_set_message_status(u64_t message_idnr, MessageStatus_t status);
 
 /**
 * \brief delete a message block
 * \param messageblk_idnr
-* \return result of db_query()
+* \return result of Connection_executeQuery()
 */
 //int db_delete_messageblk(u64_t messageblk_idnr);
 /**
@@ -1231,7 +1231,7 @@ Suite *dbmail_db_suite(void)
 //	tcase_add_test(tc_db, test_db_stmt_set_blob);
 	tcase_add_test(tc_db, test_db_stmt_exec);
 
-	tcase_add_test(tc_db, test_db_query);
+	tcase_add_test(tc_db, test_Connection_executeQuery);
 	tcase_add_test(tc_db, test_db_createmailbox);
 	tcase_add_test(tc_db, test_db_delete_mailbox);
 	tcase_add_test(tc_db, test_db_getmailbox);

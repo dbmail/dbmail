@@ -65,20 +65,8 @@ int db_connect(void);
  */
 int db_check_version(void);
 
-/**
- * \brief check database connection. If it is dead, reconnect
- * \return
- *    - -1 on failure (no connection to db possible)
- *    -  0 on success
- */
-int db_check_connection(C c);
-
-
 /* get a connection from the pool */
 C db_con_get(void);
-
-/* return the connection to the pool */
-void db_con_close(C c);
 
 /**
  * \brief disconnect from database server
@@ -509,7 +497,7 @@ int db_setselectable(u64_t mailbox_idnr, int select_value);
  * \brief set status of a message
  * \param message_idnr
  * \param status new status of message
- * \return result of db_query()
+ * \return result of Connection_executeQuery()
  */
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status);
 

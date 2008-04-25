@@ -178,11 +178,11 @@ int db_connect(void)
 	TRACE(TRACE_DEBUG, "run a reaper thread every [%d] seconds", sweepInterval);
 
 	if (! (c = ConnectionPool_getConnection(pool))) {
-		db_con_close(c);
+		Connection_close(c);
 		TRACE(TRACE_FATAL, "error getting connection from the pool");
 		return -1;
 	}
-	db_con_close(c);
+	Connection_close(c);
 
 	return 0;
 }
@@ -195,11 +195,6 @@ int db_disconnect(void)
 	ConnectionPool_free(&pool);
 	URL_free(&url);
 	return 0;
-}
-
-int db_check_connection(C c)
-{
-	return Connection_ping(c);
 }
 
 C db_con_get(void)
@@ -263,65 +258,10 @@ gboolean db_update(const char *q, ...)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return result;
-}
-
-
-gboolean db_exec(C c, const char *q, ...)
-{
-	gboolean result = FALSE;
-	va_list ap;
-	INIT_QUERY;
-
-	va_start(ap, q);
-        vsnprintf(query, DEF_QUERYSIZE, q, ap);
-        va_end(ap);
-
-	TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
-	result = Connection_execute(c, query);
-
-	return result;
-}
-
-R db_query(C c, const char *q, ...)
-{
-	time_t before, after;
-	va_list ap;
-	R r = NULL;
-	INIT_QUERY;
-
-	va_start(ap, q);
-        vsnprintf(query, DEF_QUERYSIZE, q, ap);
-        va_end(ap);
-
-	before = time(NULL);
-
-	TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
-	r = Connection_executeQuery(c, query);
-	if (! r) return NULL;
-
-	after = time(NULL);
-	if (before == (time_t)-1 || after == (time_t)-1) {
-		/* Can't log because time(2) failed. */
-	} else {
-		/* This is signed on the chance that ntpd ran during the query
-		 * so it might look like it went back in time. */
-		int elapsed = (int)((time_t) (after - before));
-		if (elapsed) {
-			TRACE(TRACE_DEBUG, "last query took [%d] seconds", elapsed);
-			if (elapsed > (int)_db_params.query_time_warning)
-				TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", query, elapsed);
-			else if (elapsed > (int)_db_params.query_time_message)
-				TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", query, elapsed);
-			else if (elapsed > (int)_db_params.query_time_info)
-				TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", query, elapsed);
-		}
-	}
-
-	return r;
 }
 
 S db_stmt_prepare(C c, const char *q, ...)
@@ -642,20 +582,20 @@ int db_check_version(void)
 	C c = db_con_get();
 
 	TRY
-		if (! db_query(c, "SELECT 1=1 FROM %sphysmessage LIMIT 1 OFFSET 0", DBPFX))
+		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %sphysmessage LIMIT 1 OFFSET 0", DBPFX))
 			TRACE(TRACE_FATAL, "pre-2.0 database incompatible. You need to run the conversion script");
-		if (! db_query(c, "SELECT 1=1 FROM %sheadervalue LIMIT 1 OFFSET 0", DBPFX))
+		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %sheadervalue LIMIT 1 OFFSET 0", DBPFX))
 			TRACE(TRACE_FATAL, "2.0 database incompatible. You need to add the header tables.");
-		if (! db_query(c, "SELECT 1=1 FROM %senvelope LIMIT 1 OFFSET 0", DBPFX))
+		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %senvelope LIMIT 1 OFFSET 0", DBPFX))
 			TRACE(TRACE_FATAL, "2.1 database incompatible. You need to add the envelopes table "
 					"and run dbmail-util -by");
-		if (! db_query(c, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX))
+		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX))
 			TRACE(TRACE_FATAL, "2.2 database incompatible.");
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return DM_SUCCESS;
@@ -667,12 +607,12 @@ int db_use_usermap(void)
 	int use_usermap = TRUE;
 	C c = db_con_get();
 	TRY
-		if (! db_query(c, "SELECT 1=1 FROM %susermap LIMIT 1 OFFSET 0", DBPFX))
+		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %susermap LIMIT 1 OFFSET 0", DBPFX))
 			use_usermap = FALSE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	TRACE(TRACE_DEBUG, "%s usermap lookups", use_usermap ? "enabling" : "disabling" );
@@ -687,7 +627,7 @@ int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT physmessage_id FROM %smessages WHERE message_idnr = %llu", 
+		r = Connection_executeQuery(c, "SELECT physmessage_id FROM %smessages WHERE message_idnr = %llu", 
 				DBPFX, message_idnr);
 		if (db_result_next(r))
 			*physmessage_id = db_result_get_u64(r, 0);
@@ -695,7 +635,7 @@ int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (! *physmessage_id) return DM_EGENERAL;
@@ -751,13 +691,13 @@ int dm_quota_user_get(u64_t user_idnr, u64_t *size)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT curmail_size FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		r = Connection_executeQuery(c, "SELECT curmail_size FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
 		if (db_result_next(r))
 			*size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY	
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return DM_EGENERAL;
@@ -788,7 +728,7 @@ static int dm_quota_user_validate(u64_t user_idnr, u64_t msg_size)
 	c = db_con_get();
 
 	TRY
-		r = db_query(c, "SELECT 1 FROM %susers WHERE user_idnr = %llu "
+		r = Connection_executeQuery(c, "SELECT 1 FROM %susers WHERE user_idnr = %llu "
 				"AND (maxmail_size > 0) "
 				"AND (curmail_size + %llu > maxmail_size)", 
 				DBPFX, user_idnr, msg_size);
@@ -799,10 +739,10 @@ static int dm_quota_user_validate(u64_t user_idnr, u64_t msg_size)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
-	db_con_close(c);
+	Connection_close(c);
 	return t;
 }
 
@@ -813,7 +753,7 @@ int dm_quota_rebuild_user(u64_t user_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT SUM(pm.messagesize) "
+		r = Connection_executeQuery(c, "SELECT SUM(pm.messagesize) "
 			 "FROM %sphysmessage pm, %smessages m, %smailboxes mb "
 			 "WHERE m.physmessage_id = pm.id "
 			 "AND m.mailbox_idnr = mb.mailbox_idnr "
@@ -829,7 +769,7 @@ int dm_quota_rebuild_user(u64_t user_idnr)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -879,7 +819,7 @@ int dm_quota_rebuild()
 	c = db_con_get();
 
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			i++;
 			q = g_new0(struct used_quota,1);
@@ -890,7 +830,7 @@ int dm_quota_rebuild()
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	result = i;
@@ -924,7 +864,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT notify_address FROM %sauto_notifications WHERE user_idnr = %llu", 
+		r = Connection_executeQuery(c, "SELECT notify_address FROM %sauto_notifications WHERE user_idnr = %llu", 
 				DBPFX,user_idnr);
 		if (db_result_next(r))
 			*notify_address = g_strdup(db_result_get(r, 0));
@@ -932,7 +872,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);	
+		Connection_close(c);	
 	END_TRY;
 
 	return t;
@@ -953,17 +893,17 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r))
 			*reply_body = g_strdup(db_result_get(r, 0));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
-	db_con_close(c);
+	Connection_close(c);
 
 	return t;
 }
@@ -974,14 +914,14 @@ u64_t db_get_mailbox_from_message(u64_t message_idnr)
 	u64_t mailbox_idnr = 0;
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT mailbox_idnr FROM %smessages WHERE message_idnr = %llu", 
+		r = Connection_executeQuery(c, "SELECT mailbox_idnr FROM %smessages WHERE message_idnr = %llu", 
 				DBPFX, message_idnr);
 		if (db_result_next(r))
 			mailbox_idnr = db_result_get_u64(r, 0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return mailbox_idnr;
@@ -993,7 +933,7 @@ u64_t db_get_useridnr(u64_t message_idnr)
 	u64_t user_idnr = 0;
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT %smailboxes.owner_idnr FROM %smailboxes, %smessages "
+		r = Connection_executeQuery(c, "SELECT %smailboxes.owner_idnr FROM %smailboxes, %smessages "
 				"WHERE %smailboxes.mailbox_idnr = %smessages.mailbox_idnr "
 				"AND %smessages.message_idnr = %llu", DBPFX,DBPFX,DBPFX,
 				DBPFX,DBPFX,DBPFX,message_idnr);
@@ -1002,7 +942,7 @@ u64_t db_get_useridnr(u64_t message_idnr)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 	return user_idnr;
 }
@@ -1032,12 +972,12 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t *
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		*physmessage_id = db_insert_result(c, r);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return 1;
@@ -1116,7 +1056,7 @@ int db_log_ip(const char *ip)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -1138,7 +1078,7 @@ int db_empty_mailbox(u64_t user_idnr)
 	c = db_con_get();
 
 	TRY
-		r = db_query(c, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr=%llu", 
+		r = Connection_executeQuery(c, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr=%llu", 
 				DBPFX, user_idnr);
 		while (db_result_next(r)) {
 			i++;
@@ -1151,7 +1091,7 @@ int db_empty_mailbox(u64_t user_idnr)
 		t = DM_EQUERY;
 		g_list_free(mboxids);
 	FINALLY;
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (i == 0) {
@@ -1197,7 +1137,7 @@ int db_icheck_messageblks(GList **lost)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			i++;
 			messageblk_idnr = db_result_get_u64(r, 0);
@@ -1209,7 +1149,7 @@ int db_icheck_messageblks(GList **lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -1238,15 +1178,15 @@ int db_icheck_physmessages(gboolean cleanup)
 
 	c = db_con_get();
 	TRY
-		if (cleanup) db_exec(c, query);
-		r = db_query(c, query);
+		if (cleanup) Connection_execute(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r))
 			result = db_result_get_int(r, 0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -1268,7 +1208,7 @@ int db_icheck_messages(GList ** lost)
 
 	c = db_con_get();
 	TRY
-		r =  db_query(c, query);
+		r =  Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			message_idnr = db_result_get_u64(r, 0);
 			idnr = g_new0(u64_t,1);
@@ -1279,7 +1219,7 @@ int db_icheck_messages(GList ** lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -1304,7 +1244,7 @@ int db_icheck_mailboxes(GList **lost)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			mailbox_idnr = db_result_get_u64(r, 0);
 			idnr = g_new0(u64_t,1);
@@ -1315,7 +1255,7 @@ int db_icheck_mailboxes(GList **lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -1340,7 +1280,7 @@ int db_icheck_null_physmessages(GList **lost)
 	i = 0;
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			physmessage_id = db_result_get_u64(r, 0);
 			idnr = g_new0(u64_t,1);
@@ -1351,7 +1291,7 @@ int db_icheck_null_physmessages(GList **lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (! i)
@@ -1374,7 +1314,7 @@ int db_icheck_null_messages(GList **lost)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			idnr = g_new0(u64_t,1);
 			*idnr = db_result_get_u64(r, 0);
@@ -1384,7 +1324,7 @@ int db_icheck_null_messages(GList **lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (! i)
@@ -1405,7 +1345,7 @@ int db_set_isheader(GList *lost)
 		slices = g_list_slices(lost,80);
 		slices = g_list_first(slices);
 		while(slices) {
-			db_exec(c, "UPDATE %smessageblks SET is_header = 1 WHERE messageblk_idnr IN (%s)", DBPFX, (gchar *)slices->data);
+			Connection_execute(c, "UPDATE %smessageblks SET is_header = 1 WHERE messageblk_idnr IN (%s)", DBPFX, (gchar *)slices->data);
 
 			if (! g_list_next(slices)) break;
 			slices = g_list_next(slices);
@@ -1414,7 +1354,7 @@ int db_set_isheader(GList *lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	g_list_destroy(slices);
@@ -1434,14 +1374,14 @@ int db_icheck_isheader(GList  **lost)
 	
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r))
 			*(GList **)lost = g_list_prepend(*(GList **)lost, g_strdup(db_result_get(r, 0)));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -1454,7 +1394,7 @@ int db_icheck_rfcsize(GList  **lost)
 	
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT id FROM %sphysmessage WHERE rfcsize=0", DBPFX);
+		r = Connection_executeQuery(c, "SELECT id FROM %sphysmessage WHERE rfcsize=0", DBPFX);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
 			*id = db_result_get_u64(r, 0);
@@ -1464,7 +1404,7 @@ int db_icheck_rfcsize(GList  **lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -1485,7 +1425,7 @@ int db_update_rfcsize(GList *lost)
 		pmsid = (u64_t *)lost->data;
 		
 		if (! (msg = dbmail_message_new())) {
-			db_con_close(c);
+			Connection_close(c);
 			return DM_EQUERY;
 		}
 
@@ -1495,7 +1435,7 @@ int db_update_rfcsize(GList *lost)
 		} else {
 			TRY
 				db_begin_transaction(c);
-				db_exec(c, "UPDATE %sphysmessage SET rfcsize = %llu " "WHERE id = %llu", 
+				Connection_execute(c, "UPDATE %sphysmessage SET rfcsize = %llu " "WHERE id = %llu", 
 					DBPFX, (u64_t)dbmail_message_get_size(msg,TRUE), *pmsid);
 				db_commit_transaction(c);
 				fprintf(stderr,".");
@@ -1509,7 +1449,7 @@ int db_update_rfcsize(GList *lost)
 		lost = g_list_next(lost);
 	}
 
-	db_con_close(c);
+	Connection_close(c);
 
 	return DM_SUCCESS;
 }
@@ -1565,7 +1505,7 @@ int db_icheck_headercache(GList **lost)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
 			*id = db_result_get_u64(r, 0);
@@ -1575,7 +1515,7 @@ int db_icheck_headercache(GList **lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -1629,7 +1569,7 @@ int db_icheck_envelope(GList **lost)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
 			*id = db_result_get_u64(r, 0);
@@ -1639,7 +1579,7 @@ int db_icheck_envelope(GList **lost)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -1699,14 +1639,14 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_si
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	END_TRY;
 	
 	if (t == DM_EQUERY) {
-		db_con_close(c);
+		Connection_close(c);
 		return t;
 	}
 
@@ -1716,7 +1656,7 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_si
 	CATCH(SQLException)
 		*mailbox_size = 0;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -1862,7 +1802,7 @@ int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 
 		session_ptr->totalmessages = 0;
 		session_ptr->totalsize = 0;
@@ -1899,7 +1839,7 @@ int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -1951,7 +1891,7 @@ int db_update_pop(ClientSession_t * session_ptr)
 				if (user_idnr == 0) user_idnr = db_get_useridnr(msg->realmessageid);
 
 				/* yes they need an update, do the query */
-				db_exec(c, "UPDATE %smessages set status=%d WHERE message_idnr=%llu AND status < %d",
+				Connection_execute(c, "UPDATE %smessages set status=%d WHERE message_idnr=%llu AND status < %d",
 						DBPFX, msg->virtual_messagestatus, msg->realmessageid, 
 						MESSAGE_STATUS_DELETE);
 			}
@@ -1963,7 +1903,7 @@ int db_update_pop(ClientSession_t * session_ptr)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -2071,7 +2011,7 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 		mailbox_match_free(mailbox_like);
 		g_string_free(qs, TRUE);
 	END_TRY;
@@ -2238,7 +2178,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (mailbox_like) mailbox_match_free(mailbox_like);
@@ -2278,7 +2218,7 @@ static int db_getmailbox_flags(MailboxInfo *mb)
 	
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %llu",
+		r = Connection_executeQuery(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %llu",
 				DBPFX, mb->uid);
 		if (db_result_next(r))
 			mb->permission = db_result_get_int(r, 0);
@@ -2286,7 +2226,7 @@ static int db_getmailbox_flags(MailboxInfo *mb)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -2310,7 +2250,7 @@ static int db_getmailbox_metadata(MailboxInfo *mb, u64_t user_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r)) {
 			/* owner_idnr */
 			mb->owner_idnr=db_result_get_u64(r, i++);
@@ -2341,7 +2281,7 @@ static int db_getmailbox_metadata(MailboxInfo *mb, u64_t user_idnr)
 	END_TRY;
 
 	if (t == DM_EQUERY) {
-		db_con_close(c);
+		Connection_close(c);
 		return t;
 	}
 
@@ -2377,7 +2317,7 @@ static int db_getmailbox_metadata(MailboxInfo *mb, u64_t user_idnr)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	mailbox_match_free(mailbox_like);
@@ -2408,7 +2348,7 @@ static int db_getmailbox_count(MailboxInfo *mb)
 	t = FALSE;
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r)) exists = (unsigned)db_result_get_int(r,1);
 		if (db_result_next(r)) seen   = (unsigned)db_result_get_int(r,1);
 		if (db_result_next(r)) recent = (unsigned)db_result_get_int(r,1);
@@ -2419,7 +2359,7 @@ static int db_getmailbox_count(MailboxInfo *mb)
 	END_TRY;
 
 	if (t == DM_EQUERY) {
-		db_con_close(c);
+		Connection_close(c);
 		return t;
 	}
 
@@ -2441,7 +2381,7 @@ static int db_getmailbox_count(MailboxInfo *mb)
 	Connection_clear(c);
 	t = FALSE;
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r))
 			mb->msguidnext = db_result_get_u64(r,0);
 		else
@@ -2450,7 +2390,7 @@ static int db_getmailbox_count(MailboxInfo *mb)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -2470,7 +2410,7 @@ static int db_getmailbox_keywords(MailboxInfo *mb)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r)) {
 			key = db_result_get(r,0);
 			keys = g_list_prepend(keys, g_strdup(key));
@@ -2480,7 +2420,7 @@ static int db_getmailbox_keywords(MailboxInfo *mb)
 		t = DM_EQUERY;
 		if (keys) g_list_destroy(keys);
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -2503,7 +2443,7 @@ static int db_getmailbox_mtime(MailboxInfo * mb)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT name,%s FROM %smailboxes WHERE mailbox_idnr=%llu", 
+		r = Connection_executeQuery(c, "SELECT name,%s FROM %smailboxes WHERE mailbox_idnr=%llu", 
 						f, DBPFX, mb->uid);
 		if (db_result_next(r)) {
 			if (! mb->name)
@@ -2515,7 +2455,7 @@ static int db_getmailbox_mtime(MailboxInfo * mb)
 	CATCH(SQLException)
 		mb->mtime = (time_t)0;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (! mb->name) return DM_EQUERY;
@@ -2919,7 +2859,7 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 		LOG_SQLERROR;
 		result = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return result;
@@ -2997,7 +2937,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, GList ** childre
 	/* retrieve the name of this mailbox */
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%llu AND owner_idnr=%llu",
+		r = Connection_executeQuery(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%llu AND owner_idnr=%llu",
 				DBPFX, mailbox_idnr, user_idnr);
 		if (db_result_next(r)) {
 			char *pattern = g_strdup_printf("%s/%%", db_result_get(r,0));
@@ -3014,7 +2954,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, GList ** childre
 	if (t == DM_EQUERY) {
 		if (mailbox_like) 
 			mailbox_match_free(mailbox_like);
-		db_con_close(c);
+		Connection_close(c);
 		return t;
 	}
 
@@ -3046,7 +2986,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, GList ** childre
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (mailbox_like) mailbox_match_free(mailbox_like);
@@ -3060,7 +3000,7 @@ int db_isselectable(u64_t mailbox_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT no_select FROM %smailboxes WHERE mailbox_idnr = %llu", 
+		r = Connection_executeQuery(c, "SELECT no_select FROM %smailboxes WHERE mailbox_idnr = %llu", 
 				DBPFX, mailbox_idnr);
 		if (db_result_next(r)) 
 			t = db_result_get_bool(r, 0);
@@ -3068,7 +3008,7 @@ int db_isselectable(u64_t mailbox_idnr)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -3083,7 +3023,7 @@ int db_noinferiors(u64_t mailbox_idnr)
 	c = db_con_get();
 	TRY
 
-		r = db_query(c, "SELECT no_inferiors FROM %smailboxes WHERE mailbox_idnr=%llu", 
+		r = Connection_executeQuery(c, "SELECT no_inferiors FROM %smailboxes WHERE mailbox_idnr=%llu", 
 				DBPFX, mailbox_idnr);
 		if (db_result_next(r))
 			t = db_result_get_bool(r, 0);
@@ -3091,7 +3031,7 @@ int db_noinferiors(u64_t mailbox_idnr)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -3102,13 +3042,13 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 	C c; int t = DM_SUCCESS;
 	c = db_con_get();
 	TRY
-		db_exec(c, "UPDATE %smessages SET mailbox_idnr=%llu WHERE mailbox_idnr=%llu", 
+		Connection_execute(c, "UPDATE %smessages SET mailbox_idnr=%llu WHERE mailbox_idnr=%llu", 
 				DBPFX, mailbox_to, mailbox_from);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -3157,7 +3097,7 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 		
 	return rows;
@@ -3176,13 +3116,13 @@ static u64_t message_get_size(u64_t message_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r))
 			size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return size;
@@ -3231,12 +3171,12 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		*newmsg_idnr = db_insert_result(c, r);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	/* update quotum */
@@ -3263,14 +3203,14 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%llu",
+		r = Connection_executeQuery(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%llu",
 				DBPFX, mailbox_idnr);
 		if (db_result_next(r))
 			tmp_name = g_strdup(db_result_get(r, 0));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	tmp_fq_name = mailbox_add_namespace(tmp_name, owner_idnr, user_idnr);
@@ -3303,7 +3243,7 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -3327,13 +3267,13 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 			DBPFX, mailbox_idnr, MESSAGE_STATUS_DELETE);
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r))
 			id = db_result_get_u64(r, 0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return id;
@@ -3350,7 +3290,7 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r))
 			subscribed = TRUE;
 	CATCH(SQLException)
@@ -3362,7 +3302,7 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 	if (subscribed) {
 		TRACE(TRACE_INFO, "mailbox [%llu] already subscribed to by user [%llu]",
 			mailbox_idnr, user_idnr);
-		db_con_close(c);
+		Connection_close(c);
 		return TRUE;
 	}
 
@@ -3373,11 +3313,11 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 
 	t = FALSE;
 	TRY
-		t = db_exec(c, query);
+		t = Connection_execute(c, query);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -3422,13 +3362,13 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r))
 			val = db_result_get_int(r, 0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return val;
@@ -3461,7 +3401,7 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 			db_rollback_transaction(c);
 			t = DM_EQUERY;
 		FINALLY
-			db_con_close(c);
+			Connection_close(c);
 		END_TRY;
 
 		return t;
@@ -3503,7 +3443,7 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 			t = DM_EQUERY;
 			db_rollback_transaction(c);
 		FINALLY
-			db_con_close(c);
+			Connection_close(c);
 		END_TRY;
 
 		if (t == DM_EQUERY) return DM_EQUERY;
@@ -3553,12 +3493,12 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 
 	c = db_con_get();
 	TRY
-		db_exec(c, query);
+		Connection_execute(c, query);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -3602,14 +3542,14 @@ int db_acl_has_right(MailboxInfo *mailbox, u64_t userid, const char *right_flag)
 	result = FALSE;
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		if (db_result_next(r))
 			result = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		result = DM_EQUERY;
 	FINALLY	
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return result;
@@ -3661,7 +3601,7 @@ int db_acl_get_acl_map(MailboxInfo *mailbox, u64_t userid, struct ACLMap *map)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -3673,14 +3613,14 @@ static int db_acl_has_acl(u64_t userid, u64_t mboxid)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT user_id, mailbox_id FROM %sacl WHERE user_id = %llu AND mailbox_id = %llu",DBPFX, userid, mboxid);
+		r = Connection_executeQuery(c, "SELECT user_id, mailbox_id FROM %sacl WHERE user_id = %llu AND mailbox_id = %llu",DBPFX, userid, mboxid);
 		if (db_result_next(r))
 			t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -3748,14 +3688,14 @@ int db_acl_get_identifier(u64_t mboxid, GList **identifier_list)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = Connection_executeQuery(c, query);
 		while (db_result_next(r))
 			*(GList **)identifier_list = g_list_prepend(*(GList **)identifier_list, g_strdup(db_result_get(r, 0)));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -3769,14 +3709,14 @@ int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT owner_idnr FROM %smailboxes WHERE mailbox_idnr = %llu", DBPFX, mboxid);
+		r = Connection_executeQuery(c, "SELECT owner_idnr FROM %smailboxes WHERE mailbox_idnr = %llu", DBPFX, mboxid);
 		if (db_result_next(r))
 			*owner_id = db_result_get_u64(r, 0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 	
 	if (t == DM_EQUERY) return t;
@@ -3791,13 +3731,13 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT mailbox_idnr FROM %smailboxes WHERE mailbox_idnr = %llu AND owner_idnr = %llu", DBPFX, mboxid, userid);
+		r = Connection_executeQuery(c, "SELECT mailbox_idnr FROM %smailboxes WHERE mailbox_idnr = %llu AND owner_idnr = %llu", DBPFX, mboxid, userid);
 		if (db_result_next(r)) t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -3893,7 +3833,7 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (! result) {
@@ -3954,7 +3894,7 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -3994,13 +3934,13 @@ int db_user_create(const char *username, const char *password, const char *encty
 	END_TRY;
 
 	if (t) {
-		db_con_close(c);
+		Connection_close(c);
 		g_free(encoding);
 		return t;
 	}
 
 	if (strlen(password) >= (DEF_QUERYSIZE/2)) {
-		db_con_close(c);
+		Connection_close(c);
 		g_free(encoding);
 		TRACE(TRACE_ERROR, "password length is insane");
 		return DM_EQUERY;
@@ -4049,7 +3989,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 		t = DM_EQUERY;
 	FINALLY
 		g_free(encoding);
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -4071,7 +4011,7 @@ int db_user_delete(const char * username)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 	return t;
 }
@@ -4089,7 +4029,7 @@ int db_user_rename(u64_t user_idnr, const char *new_name)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 	return t;
 }
@@ -4161,7 +4101,7 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	END_TRY;
 
 	if (t == DM_EQUERY) {
-		db_con_close(c);
+		Connection_close(c);
 		return t;
 	}
 	
@@ -4191,7 +4131,7 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -4219,7 +4159,7 @@ int db_replycache_unregister(const char *to, const char *from, const char *handl
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -4260,7 +4200,7 @@ int db_replycache_validate(const char *to, const char *from,
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	return t;
@@ -4297,7 +4237,7 @@ int db_rehash_store(void)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT id FROM %smimeparts", DBPFX);
+		r = Connection_executeQuery(c, "SELECT id FROM %smimeparts", DBPFX);
 		while (db_result_next(r)) {
 			u64_t *id = g_new0(u64_t,1);
 			*id = db_result_get_u64(r, 0);
@@ -4309,7 +4249,7 @@ int db_rehash_store(void)
 	END_TRY;
 
 	if (t == DM_EQUERY) {
-		db_con_close(c);
+		Connection_close(c);
 		return t;
 	}
 
@@ -4343,7 +4283,7 @@ int db_rehash_store(void)
 		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
-		db_con_close(c);
+		Connection_close(c);
 	END_TRY;
 
 	g_list_destroy(ids);

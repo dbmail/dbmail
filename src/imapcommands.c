@@ -399,14 +399,14 @@ int _ic_delete(ImapSession *self)
 			c = db_con_get();
 			TRY
 				db_begin_transaction(c);
-				db_exec(c, "UPDATE %smessages SET status=%d WHERE mailbox_idnr = %llu", DBPFX, MESSAGE_STATUS_PURGE, mailbox_idnr);
-				db_exec(c, "UPDATE %smailboxes SET no_select = 1 WHERE mailbox_idnr = %llu", DBPFX, mailbox_idnr);
+				Connection_execute(c, "UPDATE %smessages SET status=%d WHERE mailbox_idnr = %llu", DBPFX, MESSAGE_STATUS_PURGE, mailbox_idnr);
+				Connection_execute(c, "UPDATE %smailboxes SET no_select = 1 WHERE mailbox_idnr = %llu", DBPFX, mailbox_idnr);
 				db_commit_transaction(c);
 			CATCH(SQLException)
 				LOG_SQLERROR;
 			t = DM_EQUERY;
 			FINALLY
-				db_con_close(c);
+				Connection_close(c);
 			END_TRY;
 
 			if (t == DM_EQUERY) return t;

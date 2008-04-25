@@ -118,13 +118,13 @@ void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
 
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
 	c = db_con_get();
-	if (!db_check_connection(c)) {
-		db_con_close(c);
+	if (!Connection_ping(c)) {
+		Connection_close(c);
 		TRACE(TRACE_ERROR, "database connection error");
 		client_session_bailout(session);
 		return;
 	}
-	db_con_close(c);
+	Connection_close(c);
 
 	session->ci->cb_read(session);
 }
