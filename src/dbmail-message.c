@@ -423,8 +423,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	}
 
 	self = dbmail_message_init_with_string(self,m);
-	if (internal_date && strlen(internal_date))
-		dbmail_message_set_internal_date(self, (char *)internal_date);
+	dbmail_message_set_internal_date(self, (char *)internal_date);
 	g_string_free(m,TRUE);
 	g_free(blist);
 
@@ -597,13 +596,13 @@ DbmailMessage * dbmail_message_new(void)
 {
 	DbmailMessage *self = g_new0(DbmailMessage,1);
 	
+	self->internal_date = time(NULL);
 	self->envelope_recipient = g_string_new("");
 
 	/* provide quick case-insensitive header name searches */
 	self->header_name = g_tree_new((GCompareFunc)g_ascii_strcasecmp);
 	/* provide quick case-sensitive header value searches */
 	self->header_value = g_tree_new((GCompareFunc)strcmp);
-	
 	
 	/* internal cache: header_dict[headername.name] = headername.id */
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
@@ -958,10 +957,10 @@ u64_t dbmail_message_get_physid(const DbmailMessage *self)
 
 void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
 {
-	if (internal_date && strlen(internal_date)) {
-		TRACE(TRACE_DEBUG,"[%p] [%s]", self, internal_date);
+	if (internal_date && strlen(internal_date))
 		self->internal_date = g_mime_utils_header_decode_date(internal_date, self->internal_date_gmtoff);
-	}
+	else
+		self->internal_date = time(NULL);
 }
 
 /* thisyear is a workaround for some broken gmime version. */
@@ -969,8 +968,7 @@ gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear
 {
 	char *res;
 	struct tm gmt;
-	if (! self->internal_date)
-		return NULL;
+	assert(self->internal_date);
 	
 	res = g_new0(char, TIMESTRING_SIZE+1);
 	memset(&gmt,'\0', sizeof(struct tm));
@@ -1762,7 +1760,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	
 void dbmail_message_cache_envelope(const DbmailMessage *self)
 {
-	char *envelope;
+	char *envelope = NULL;
 	C c; S s;
 
 	envelope = imap_get_envelope(GMIME_MESSAGE(self->content));
@@ -1781,6 +1779,7 @@ void dbmail_message_cache_envelope(const DbmailMessage *self)
 	END_TRY;
 
 	g_free(envelope);
+	envelope = NULL;
 }
 
 // 

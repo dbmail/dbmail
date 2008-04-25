@@ -45,8 +45,6 @@ extern GAsyncQueue *queue;
 extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
 
-int list_is_lsub = 0;
-
 extern const char AcceptedMailboxnameChars[];
 
 int imap_before_smtp = 0;
@@ -445,14 +443,11 @@ int _ic_delete(ImapSession *self)
  * renames a specified mailbox
  */
 
-static int dbmail_imap_session_mailbox_rename(ImapSession *self, u64_t mailbox_id, const char *newname)
+static int mailbox_rename(MailboxInfo *mb, const char *newname)
 {
-	MailboxInfo *mb;
-	if (! (mb = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id)))
-		return DM_EGENERAL;
 	g_free(mb->name);
 	mb->name = g_strdup(newname);
-	if ( (db_setmailboxname(mailbox_id, newname)) == DM_EQUERY)
+	if ( (db_setmailboxname(mb->uid, newname)) == DM_EQUERY)
 		return DM_EQUERY;
 	return DM_SUCCESS;
 }
@@ -572,7 +567,7 @@ int _ic_rename(ImapSession *self)
 		mb = dbmail_imap_session_mbxinfo_lookup(self, childid);
 
 		g_snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s", self->args[1], &mb->name[oldnamelen]);
-		if ((dbmail_imap_session_mailbox_rename(self, childid, newname)) != DM_SUCCESS) {
+		if ((mailbox_rename(mb, newname)) != DM_SUCCESS) {
 			dbmail_imap_session_printf(self, "* BYE error renaming mailbox\r\n");
 			g_list_destroy(children);
 			return DM_EGENERAL;
@@ -585,7 +580,8 @@ int _ic_rename(ImapSession *self)
 		g_list_destroy(children);
 
 	/* now replace name */
-	if ((dbmail_imap_session_mailbox_rename(self, mboxid, self->args[1])) != DM_SUCCESS) {
+	mb = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	if ((mailbox_rename(mb, self->args[1])) != DM_SUCCESS) {
 		dbmail_imap_session_printf(self, "* BYE error renaming mailbox\r\n");
 		return DM_EGENERAL;
 	}
@@ -666,20 +662,86 @@ int _ic_unsubscribe(ImapSession *self)
  *
  * executes a list command
  */
-int _ic_list(ImapSession *self)
+typedef struct {
+	GList *children;
+	gchar *pattern;
+	int list_is_lsub;
+
+} imap_list_t;
+
+void _ic_list_enter(imap_cmd_t *ic)
 {
 	GList *children = NULL;
-	int result;
+	GString *s = g_string_new("");
+	imap_list_t *data = (imap_list_t *)ic->data;
+
+	ic->status = db_findmailbox_by_regex(ic->userid, data->pattern, &children, data->list_is_lsub);
+	if (ic->status == -1) {
+		g_string_append_printf(s, "* BYE internal dbase error\r\n");
+	} else if (ic->status == 1) {
+		g_string_append_printf(s, "%s BAD invalid pattern specified\r\n", ic->tag);
+	}
+	data->children = children;
+	ic->result = s->str;
+	g_string_free(s, FALSE);
+
+	NOTIFY_DONE(ic);
+}
+
+void _ic_list_leave(imap_cmd_t *ic)
+{
+	ImapSession *self = ic->session;
+	imap_list_t *data = (imap_list_t *)ic->data;
+	GList *plist = NULL, *children = g_list_first(data->children);
+	char *pstring, *thisname = data->list_is_lsub ? "LSUB" : "LIST";
+	MailboxInfo *mb = NULL;
+
+	while ((! ic->status) && children) {
+		u64_t mailbox_id = *(u64_t *)children->data;
+		mb = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id);
+		
+		plist = NULL;
+		if (mb->no_select)
+			plist = g_list_append(plist, g_strdup("\\noselect"));
+		if (mb->no_inferiors)
+			plist = g_list_append(plist, g_strdup("\\noinferiors"));
+		if (mb->no_children)
+			plist = g_list_append(plist, g_strdup("\\hasnochildren"));
+		else
+			plist = g_list_append(plist, g_strdup("\\haschildren"));
+		
+		/* show */
+		pstring = dbmail_imap_plist_as_string(plist);
+		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", thisname, 
+				pstring, MAILBOX_SEPARATOR, mb->name);
+		
+		g_list_destroy(plist);
+		g_free(pstring);
+
+		if (! g_list_next(children)) break;
+		children = g_list_next(children);
+	}
+
+	if (data->children)
+		g_list_destroy(data->children);
+	g_free(data->pattern);
+
+	if (! ic->status)
+		dbmail_imap_session_printf(self, "%s OK %s completed\r\n", ic->tag, thisname);
+
+	ic_flush(ic);
+
+	return;
+}
+
+
+static int _ic_list_real(ImapSession *self, int list_is_lsub)
+{
 	size_t slen;
 	unsigned i;
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
 	
-	MailboxInfo *mb = NULL;
-	GList * plist = NULL;
-	gchar * pstring;
-
-
 	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
@@ -706,60 +768,20 @@ int _ic_list(ImapSession *self)
 
 	TRACE(TRACE_INFO, "[%p] search with pattern: [%s]", self, pattern);
 	
-	result = db_findmailbox_by_regex(self->userid, pattern, &children, list_is_lsub);
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		g_list_destroy(children);
-		g_free(pattern);
-		return -1;
-	}
+	imap_list_t *data = g_new0(imap_list_t,1);
+	data->children = NULL;
+	data->pattern = pattern;
+	data->list_is_lsub = list_is_lsub;
 
-	if (result == 1) {
-		dbmail_imap_session_printf(self, "%s BAD invalid pattern specified\r\n", self->tag);
-		g_list_destroy(children);
-		g_free(pattern);
-		return 1;
-	}
-
-	children = g_list_first(children);
-
-	while (children) {
-		u64_t mailbox_id = *(u64_t *)children->data;
-		mb = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id);
-		
-		plist = NULL;
-		if (mb->no_select)
-			plist = g_list_append(plist, g_strdup("\\noselect"));
-		if (mb->no_inferiors)
-			plist = g_list_append(plist, g_strdup("\\noinferiors"));
-		if (mb->no_children)
-			plist = g_list_append(plist, g_strdup("\\hasnochildren"));
-		else
-			plist = g_list_append(plist, g_strdup("\\haschildren"));
-		
-		/* show */
-		pstring = dbmail_imap_plist_as_string(plist);
-		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", thisname, 
-				pstring, MAILBOX_SEPARATOR, mb->name);
-		
-		g_list_destroy(plist);
-		g_free(pstring);
-
-		if (! g_list_next(children)) break;
-		children = g_list_next(children);
-	}
-
-
-	if (children)
-		g_list_destroy(children);
-
-	g_free(pattern);
-
-	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
-
+	ic_dispatch(self, _ic_list_enter, _ic_list_leave, data);
+	
 	return 0;
 }
 
+int _ic_list(ImapSession *self)
+{
+	return _ic_list_real(self,0);
+}
 
 /*
  * _ic_lsub()
@@ -768,12 +790,7 @@ int _ic_list(ImapSession *self)
  */
 int _ic_lsub(ImapSession *self)
 {
-	int result;
-
-	list_is_lsub = 1;
-	result = _ic_list(self);
-	list_is_lsub = 0;
-	return result;
+	return _ic_list_real(self,1);
 }
 
 

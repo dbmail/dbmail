@@ -995,7 +995,7 @@ static void _fetch_envelopes(ImapSession *self)
 {
 	C c; R r; int t = FALSE;
 	GString *q;
-	gchar *env, *s;
+	gchar *s;
 	u64_t *mid;
 	u64_t id;
 	char range[DEF_FRAGSIZE];
@@ -1036,7 +1036,6 @@ static void _fetch_envelopes(ImapSession *self)
 	TRY
 		r = Connection_executeQuery(c, q->str);
 		while (db_result_next(r)) {
-			
 			id = db_result_get_u64(r, 0);
 			
 			if (! g_tree_lookup(self->ids,&id))
@@ -1045,10 +1044,7 @@ static void _fetch_envelopes(ImapSession *self)
 			mid = g_new0(u64_t,1);
 			*mid = id;
 			
-			env = g_strdup((char *)db_result_get(r, 1));
-			
-			g_tree_insert(self->envelopes,mid,env);
-
+			g_tree_insert(self->envelopes,mid,g_strdup(ResultSet_getString(r, 2)));
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;

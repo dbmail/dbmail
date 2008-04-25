@@ -157,8 +157,24 @@ int db_connect(void)
 		g_string_append_printf(dsn,"%s", _db_params.host);
 	if (_db_params.port)
 		g_string_append_printf(dsn,":%u", _db_params.port);
-	if (_db_params.db)
-		g_string_append_printf(dsn,"/%s", _db_params.db);
+	if (_db_params.db) {
+		if (MATCH(_db_params.driver,"sqlite")) {
+
+			/* expand ~ in db name to HOME env variable */
+			if ((strlen(_db_params.db) > 0 ) && (_db_params.db[0] == '~')) {
+				char *homedir;
+				field_t db;
+				if ((homedir = getenv ("HOME")) == NULL)
+					TRACE(TRACE_FATAL, "can't expand ~ in db name");
+				g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(_db_params.db[1]));
+				g_strlcpy(_db_params.db, db, FIELDSIZE);
+			}
+
+			g_string_append_printf(dsn,"%s", _db_params.db);
+		} else {
+			g_string_append_printf(dsn,"/%s", _db_params.db);
+		}
+	}
 	if (_db_params.user && strlen((const char *)_db_params.user)) {
 		g_string_append_printf(dsn,"?user=%s", _db_params.user);
 		if (_db_params.pass && strlen((const char *)_db_params.pass)) 
@@ -335,13 +351,12 @@ u64_t db_insert_result(C c, R r)
 	u64_t id = 0;
 
 	// lastRowId is always zero for pgsql tables without OIDs
-	if ((id = (u64_t )Connection_lastRowId(c)))
-		return id;
-	// but if we're using 'RETURNING id' clauses on inserts
-	// we can do this
-	if (r && db_result_next(r))
-		id = db_result_get_u64(r, 0);
-
+	if ((id = (u64_t )Connection_lastRowId(c)) == 0) {
+		// but if we're using 'RETURNING id' clauses on inserts
+		// we can do this
+		if (r && db_result_next(r))
+			id = db_result_get_u64(r, 0);
+	}
 	return id;
 }
 
@@ -406,7 +421,7 @@ static const char * db_get_sqlite_sql(sql_fragment_t frag)
 			return "STRFTIME('%%s',%s)";
 		break;
 		case SQL_CURRENT_TIMESTAMP:
-			return "STRFTIME('%Y-%m-%d %H:%M:%S','now','localtime')";
+			return "STRFTIME('%%Y-%%m-%%d %%H:%%M:%%S','now','localtime')";
 		break;
 		case SQL_EXPIRE:
 			return "DATETIME('now','-%d DAYS')";	
@@ -3913,40 +3928,21 @@ int db_user_create(const char *username, const char *password, const char *encty
 	INIT_QUERY;
 	C c; R r; S s; int t = FALSE;
 	char *encoding = NULL, *frag;
-	encoding = g_strdup(enctype ? enctype : "");
+	u64_t existing_user_idnr = 0;
 
 	assert(user_idnr != NULL);
 
-	c = db_con_get();
-	TRY
-		/* first check to see if this user already exists */
-		s = db_stmt_prepare(c, "SELECT * FROM %susers WHERE userid = ?",DBPFX);
-		db_stmt_set_str(s, 1, username);	
-
-		r = db_stmt_query(s);
-		if (db_result_next(r)) {
-			TRACE(TRACE_ERROR, "user already exists");
-			t = TRUE;
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	END_TRY;
-
-	if (t) {
-		Connection_close(c);
-		g_free(encoding);
-		return t;
-	}
+	if (db_user_exists(username, &existing_user_idnr))
+		return TRUE;
 
 	if (strlen(password) >= (DEF_QUERYSIZE/2)) {
-		Connection_close(c);
-		g_free(encoding);
 		TRACE(TRACE_ERROR, "password length is insane");
 		return DM_EQUERY;
 	}
 
-	Connection_clear(c);
+	encoding = g_strdup(enctype ? enctype : "");
+
+	c = db_con_get();
 
 	t = TRUE;
 	memset(query,0,DEF_QUERYSIZE);
@@ -3955,9 +3951,9 @@ int db_user_create(const char *username, const char *password, const char *encty
 		if (*user_idnr==0) {
 			snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 				"(userid,passwd,client_idnr,maxmail_size,"
-				"encryption_type, last_login) VALUES "
-				"(?,?,?,?,?, %s) %s",
-				DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
+				"encryption_type) VALUES "
+				"(?,?,?,?,?) %s",
+				DBPFX, frag);
 			s = db_stmt_prepare(c, query);
 			db_stmt_set_str(s, 1, username);
 			db_stmt_set_str(s, 2, password);
@@ -3967,9 +3963,9 @@ int db_user_create(const char *username, const char *password, const char *encty
 		} else {
 			snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 				"(userid,user_idnr,passwd,client_idnr,maxmail_size,"
-				"encryption_type, last_login) VALUES "
-				"(?,?,?,?,?,?, %s) %s",
-				DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
+				"encryption_type) VALUES "
+				"(?,?,?,?,?,?) %s",
+				DBPFX, frag);
 			s = db_stmt_prepare(c, query);
 			db_stmt_set_str(s, 1, username);
 			db_stmt_set_u64(s, 2, *user_idnr);
@@ -3977,7 +3973,6 @@ int db_user_create(const char *username, const char *password, const char *encty
 			db_stmt_set_u64(s, 4, clientid);
 			db_stmt_set_u64(s, 5, maxmail);
 			db_stmt_set_str(s, 6, encoding);
-
 		}
 		g_free(frag);
 
@@ -3988,9 +3983,12 @@ int db_user_create(const char *username, const char *password, const char *encty
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		g_free(encoding);
 		Connection_close(c);
 	END_TRY;
+
+	g_free(encoding);
+	if (t == TRUE)
+		TRACE(TRACE_DEBUG, "create shadow account userid [%s], user_idnr [%llu]", username, *user_idnr);
 
 	return t;
 }
