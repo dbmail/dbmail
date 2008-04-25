@@ -89,7 +89,8 @@ typedef int (*IMAP_COMMAND_HANDLER) (ImapSession *);
 
 /* thread data */
 typedef struct {
-	char *tag; char *command; char **args;	/* parsed command input 		*/
+	u64_t userid;
+	char *tag; char *command; char *arg, **args;	/* parsed command input 		*/
 	gpointer data;				/* payload				*/
 	void (* cb_enter)(gpointer);		/* callback on thread entry		*/
 	void (* cb_leave)(gpointer);		/* callback on thread exit		*/

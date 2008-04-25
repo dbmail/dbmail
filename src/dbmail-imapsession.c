@@ -65,6 +65,8 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data);
 void ic_flush(gpointer data)
 {
 	imap_cmd_t *ic = (imap_cmd_t *)data;
+
+	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, ic->session);
 	/* flush and cleanup thread data */
 	if (ic->result) {
 		dbmail_imap_session_printf(ic->session, "%s", ic->result);
@@ -85,12 +87,17 @@ void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpo
 	assert(cb_enter);
 
 	imap_cmd_t *ic = g_new0(imap_cmd_t,1);
+	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, session);
 
 	assert(cb_enter);
 
+	ic->userid	= session->userid;
 	ic->tag		= g_strdup(session->tag);
 	ic->command	= g_strdup(session->command);
-	ic->args	= g_strdupv(session->args);
+	if (session->args) {
+		ic->args	= g_strdupv(session->args);
+		ic->arg		= ic->args[session->args_idx];
+	}
 	ic->session	= session;	/* we need to pass this along */
 	ic->data	= data; 	/* payload */
 

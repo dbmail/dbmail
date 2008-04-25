@@ -297,26 +297,35 @@ int _ic_examine(ImapSession *self)
  *
  * create a mailbox
  */
+
+void _ic_create_enter(imap_cmd_t *ic)
+{
+	/* Create the mailbox and its parents. */
+	int result;
+	u64_t mboxid;
+	const char *message;
+	GString *s = g_string_new("");
+
+	result = db_mailbox_create_with_parents(ic->arg, BOX_COMMANDLINE, ic->userid, &mboxid, &message);
+
+	if (result > 0)
+		g_string_append_printf(s, "%s NO %s\r\n", ic->tag, message);
+	else if (result < 0)
+		g_string_append_printf(s, "* BYE internal dbase error\r\n");
+	else
+		g_string_append_printf(s, "%s OK CREATE completed\r\n", ic->tag);
+
+	ic->result = s->str;
+	g_string_free(s, FALSE);
+
+	NOTIFY_DONE(ic);
+}
+
+
 int _ic_create(ImapSession *self)
 {
-	int result;
-	const char *message;
-	u64_t mboxid;
-	
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-
-	/* Create the mailbox and its parents. */
-	result = db_mailbox_create_with_parents(self->args[self->args_idx], BOX_COMMANDLINE, self->userid, &mboxid, &message);
-
-	if (result > 0) {
-		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, message);
-		return DM_EGENERAL;
-	} else if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return DM_EQUERY;
-	}
-
-	dbmail_imap_session_printf(self, "%s OK CREATE completed\r\n", self->tag);
+	ic_dispatch(self, _ic_create_enter, NULL, NULL);
 	return DM_SUCCESS;
 }
 

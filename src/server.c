@@ -43,6 +43,7 @@ extern volatile sig_atomic_t event_gotsig;
 extern int (*event_sigcb)(void);
 
 int selfpipe[2];
+GAsyncQueue *queue;
 
 static serverConfig_t *server_conf;
 
@@ -132,6 +133,9 @@ static int server_setup(void)
 
 	if (! g_thread_supported () ) g_thread_init (NULL);
 	server_set_sighandler();
+
+	// Asynchronous message queue
+	queue = g_async_queue_new();
 
 	return 0;
 }
@@ -413,6 +417,7 @@ clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
 
 	pipe(selfpipe);
 	UNBLOCK(selfpipe[0]);
+	UNBLOCK(selfpipe[1]);
 	
 	client->pev = g_new0(struct event, 1);
 	event_set(client->pev, selfpipe[0], EV_READ, client_pipe_cb, client);

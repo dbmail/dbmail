@@ -44,9 +44,8 @@ const char *IMAP_COMMANDS[] = {
 	"***NOMORE***"
 };
 
-// async message queue for inter-thread communication
 extern int selfpipe[2];
-GAsyncQueue *queue;
+extern GAsyncQueue *queue;
 
 const char AcceptedTagChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -267,8 +266,6 @@ int imap_handle_connection(client_sock *c)
 		ci = client_init(c->sock, c->caddr);
 	else
 		ci = client_init(0, NULL);
-
-	queue = g_async_queue_new();
 
 	session = dbmail_imap_session_new();
 	session->timeout = ci->login_timeout;
