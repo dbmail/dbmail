@@ -4223,7 +4223,7 @@ int db_mailbox_mtime_update(u64_t mailbox_id)
 int db_message_mailbox_mtime_update(u64_t message_id)
 {
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	return db_update_deferred("UPDATE %s %smailboxes SET mtime=%s WHERE mailbox_idnr=("
+	return db_update("UPDATE %s %smailboxes SET mtime=%s WHERE mailbox_idnr=("
 			"SELECT mailbox_idnr FROM %smessages WHERE message_idnr=%llu)", 
 			db_get_sql(SQL_IGNORE), DBPFX, now, DBPFX, message_id);
 }

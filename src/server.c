@@ -357,13 +357,11 @@ static void client_pipe_cb(int sock, short event, void *arg)
 	while (read(sock, buf, 1) > 0)
 		;
 	client = (clientinfo_t *)arg;
-	if (client->cb_pipe) {
+	if (client->cb_pipe)
 		client->cb_pipe(client);
-	} else {
-		TRACE(TRACE_DEBUG,"no cb_pipe callback defined");
-	}
 	// reschedule
-	event_add(client->pev, NULL);
+	if (client->pev)
+		event_add(client->pev, NULL);
 }
 
 clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
