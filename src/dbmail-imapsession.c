@@ -62,12 +62,12 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data);
  */
 
 
-gpointer ic_flush(gpointer data)
+void ic_flush(gpointer data)
 {
 	imap_cmd_t *ic = (imap_cmd_t *)data;
 	/* flush and cleanup thread data */
 	if (ic->result) {
-		bufferevent_write(ic->wev, (gpointer)ic->result, strlen(ic->result));
+		dbmail_imap_session_printf(ic->session, "%s", ic->result);
 		g_free(ic->result);
 	}
 	if (ic->tag) g_free(ic->tag);
@@ -76,8 +76,6 @@ gpointer ic_flush(gpointer data)
 	if (ic->data) g_free(ic->data);
 
 	g_free(ic);
-	TRACE(TRACE_DEBUG,"gthread finished");
-	return NULL;
 }
 
 void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
@@ -93,7 +91,7 @@ void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpo
 	ic->tag		= g_strdup(session->tag);
 	ic->command	= g_strdup(session->command);
 	ic->args	= g_strdupv(session->args);
-	ic->wev		= session->ci->wev;
+	ic->session	= session;	/* we need to pass this along */
 	ic->data	= data; 	/* payload */
 
 	ic->cb_enter	= cb_enter;

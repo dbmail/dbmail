@@ -41,11 +41,10 @@ volatile sig_atomic_t ChildStopRequested = 0;
 
 extern volatile sig_atomic_t event_gotsig;
 extern int (*event_sigcb)(void);
-struct event_base *base;
+
+int selfpipe[2];
 
 static serverConfig_t *server_conf;
-
-static int selfPipe[2];
 
 static void worker_run(serverConfig_t *conf);
 
@@ -86,8 +85,8 @@ static void server_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 int server_sig_cb(void)
 {
 	if (GeneralStopRequested || mainStatus || alarm_occurred || get_sigchld) {
-		TRACE(TRACE_DEBUG,"event_base_loopexit [%p]", base);
-		(void)event_base_loopexit(base,NULL);
+		TRACE(TRACE_DEBUG,"event_loopexit");
+		(void)event_loopexit(NULL);
 	}
 	return (0);
 }
@@ -153,13 +152,9 @@ static int manage_start_cli_server(serverConfig_t *conf)
 	srand((int) ((int) time(NULL) + (int) getpid()));
 
 	/* streams are ready, perform handling */
-#ifdef DM_CLIENT_THREADS
-	conf->ClientHandler(NULL);
-#else
 	event_init();
 	conf->ClientHandler(NULL);
 	event_dispatch();
-#endif
 
 	disconnect_all();
 
@@ -349,6 +344,24 @@ static void server_create_sockets(serverConfig_t * conf)
 	}
 }
 
+static void client_pipe_cb(int sock, short event, void *arg)
+{
+	clientinfo_t *client;
+
+	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
+	char buf[1];
+	while (read(sock, buf, 1) > 0)
+		;
+	client = (clientinfo_t *)arg;
+	if (client->cb_pipe) {
+		client->cb_pipe(client);
+	} else {
+		TRACE(TRACE_DEBUG,"no cb_pipe callback defined");
+	}
+	// reschedule
+	event_add(client->pev, NULL);
+}
+
 clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
 {
 	int err;
@@ -398,6 +411,13 @@ clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
 		}
 	}
 
+	pipe(selfpipe);
+	UNBLOCK(selfpipe[0]);
+	
+	client->pev = g_new0(struct event, 1);
+	event_set(client->pev, selfpipe[0], EV_READ, client_pipe_cb, client);
+	event_add(client->pev, NULL);
+
 	return client;
 }
 
@@ -408,29 +428,6 @@ void client_close(client_sock *c)
 	g_free(c);
 }
 
-
-static void worker_pipe_cb(int sock, short event UNUSED, void *arg UNUSED)
-{
-	// Clear the self-pipe; we received a signal
-	// and we need to loop again upstream to handle it.
-	// See http://cr.yp.to/docs/selfpipe.html
-	char buf[1];
-	while (read(sock, buf, 1) > 0)
-		;
-}
-
-static void worker_thread_create(client_sock *c)
-{
-#ifdef DM_CLIENT_THREADS
-	GError *err = NULL;
-
-	if (! g_thread_supported () ) g_thread_init (NULL);
-	if (! g_thread_create((GThreadFunc)server_conf->ClientHandler, (gpointer)c, FALSE, &err) )
-		TRACE(TRACE_DEBUG,"gthread creation failed [%s]", err->message);
-#else
-	server_conf->ClientHandler((client_sock *)c);
-#endif
-}
 
 static void worker_sock_cb(int sock, short event, void *arg)
 {
@@ -462,7 +459,7 @@ static void worker_sock_cb(int sock, short event, void *arg)
 	TRACE(TRACE_INFO, "connection accepted");
 
 	/* streams are ready, perform handling */
-	worker_thread_create(c);
+	server_conf->ClientHandler((client_sock *)c);
 
 	/* reschedule */
 	event_add(ev, NULL);
@@ -471,9 +468,6 @@ static void worker_sock_cb(int sock, short event, void *arg)
 static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
 	event_gotsig = 1;
-
-	if (selfPipe[1] > -1)
-		write(selfPipe[1], "S", 1);
 
 	switch (sig) {
 
@@ -496,7 +490,7 @@ static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 static int worker_sig_cb(void)
 {
 	if (ChildStopRequested || alarm_occurred)
-		(void)event_base_loopexit(base, NULL);
+		(void)event_loopexit(NULL);
 
 	if (mainRestart) {
 		TRACE(TRACE_DEBUG,"restart... TBD");
@@ -602,25 +596,20 @@ void worker_run(serverConfig_t *conf)
 	srand((int) ((int) time(NULL) + (int) getpid()));
 
 	TRACE(TRACE_DEBUG,"setup event loop");
-	base = event_init();
+	event_init();
 
 	evsock = g_new0(struct event, server_conf->ipcount+1);
 
 	for (ip = 0; ip < server_conf->ipcount; ip++) {
 		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, worker_sock_cb, &evsock[ip]);
 		event_add(&evsock[ip], NULL);
-		event_base_set(base, &evsock[ip]);
 	}
-
-	event_set(&evsock[ip], selfPipe[0], EV_READ, worker_pipe_cb, &evsock[ip]);
-	event_add(&evsock[ip], NULL);
-	event_base_set(base, &evsock[ip]);
 
 	worker_set_sighandler();
 
 	TRACE(TRACE_DEBUG,"dispatch event loop");
 
-	event_base_dispatch(base);
+	event_dispatch();
 
 	disconnect_all();
 }

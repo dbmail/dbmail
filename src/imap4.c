@@ -31,7 +31,6 @@
 /* max number of BAD/NO responses */
 #define MAX_FAULTY_RESPONSES 5
 
-
 const char *IMAP_COMMANDS[] = {
 	"", "capability", "noop", "logout",
 	"authenticate", "login",
@@ -45,6 +44,9 @@ const char *IMAP_COMMANDS[] = {
 	"***NOMORE***"
 };
 
+// async message queue for inter-thread communication
+extern int selfpipe[2];
+GAsyncQueue *queue;
 
 const char AcceptedTagChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -103,6 +105,22 @@ void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
 		imap_session_bailout(session);
 	}
 }
+
+static void drain_queue(clientinfo_t *client UNUSED)
+{
+	gpointer data;
+	TRACE(TRACE_DEBUG,"...");
+	do {
+		data = g_async_queue_try_pop(queue);
+		if (data) {
+			imap_cmd_t *ic = (gpointer)data;
+			ic->cb_leave(data);
+		}
+	} while (data);
+
+	TRACE(TRACE_DEBUG,"done");
+}
+
 
 void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 {
@@ -193,8 +211,6 @@ static size_t stridx(const char *s, char c)
 	for (i = 0; s[i] && s[i] != c; i++);
 	return i;
 }
-
-
 void imap_cb_read(void *arg)
 {
 	ImapSession *session = (ImapSession *) arg;
@@ -207,7 +223,6 @@ void imap_cb_read(void *arg)
 	bufferevent_enable(session->ci->rev, EV_READ);
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
 		if (imap4_tokenizer(session, buffer)) {
-			bufferevent_disable(session->ci->rev, EV_READ);
 			imap4(session);
 			TRACE(TRACE_DEBUG,"command state [%d]", session->command_state);
 			if (! session->command_state) return; // unfinished command, new read callback
@@ -253,9 +268,7 @@ int imap_handle_connection(client_sock *c)
 	else
 		ci = client_init(0, NULL);
 
-#ifdef DM_CLIENT_THREADS
-	ci->base = event_init();
-#endif
+	queue = g_async_queue_new();
 
 	session = dbmail_imap_session_new();
 	session->timeout = ci->login_timeout;
@@ -264,23 +277,14 @@ int imap_handle_connection(client_sock *c)
 
 	ci->rev = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
 	ci->wev = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
-
-#ifdef DM_CLIENT_THREADS
-	bufferevent_base_set(ci->base, ci->rev);
-	bufferevent_base_set(ci->base, ci->wev);
-#endif
+	ci->cb_pipe = (void *)drain_queue;
 
 	session->ci = ci;
 
 	dbmail_imap_session_reset_callbacks(session);
-
+	
 	send_greeting(session);
 	
-#ifdef DM_CLIENT_THREADS
-	event_base_dispatch(ci->base);
-	client_close(c);
-#endif
-
 	return EOF;
 }
 

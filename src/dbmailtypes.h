@@ -213,7 +213,8 @@ typedef struct  {
 
 typedef struct {
 	int rx, tx;			/* read and write filehandles */
-	struct event_base *base;	/* event base */
+	struct event *pev;		/* self-pipe event */
+	void (*cb_pipe) (void *);	/* callback for self-pipe events */
 	struct bufferevent *rev, *wev;  /* read bufferevent, write bufferevent */
 	void (*cb_read) (void *);	// pointers to event callbacks
 	void (*cb_time) (void *);

@@ -91,10 +91,10 @@ typedef int (*IMAP_COMMAND_HANDLER) (ImapSession *);
 typedef struct {
 	char *tag; char *command; char **args;	/* parsed command input 		*/
 	gpointer data;				/* payload				*/
-	gpointer (* cb_enter)(gpointer);	/* callback on thread entry		*/
-	gpointer (* cb_leave)(gpointer);	/* callback on thread exit		*/
+	void (* cb_enter)(gpointer);		/* callback on thread entry		*/
+	void (* cb_leave)(gpointer);		/* callback on thread exit		*/
 	char *result; 				/* allocated output string buffer	*/
-	struct bufferevent *wev;		/* bufferevent for sending output	*/
+	ImapSession *session;
 } imap_cmd_t;
 	
 
@@ -180,7 +180,7 @@ int build_args_array_ext(ImapSession *self, const char *originalString);
  * send the ic->result buffer to the client 
  * default thread-exit callback
  */
-gpointer ic_flush(gpointer data);
+void ic_flush(gpointer data);
 
 /*
  * thread launcher

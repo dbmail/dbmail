@@ -39,6 +39,9 @@ extern db_param_t _db_params;
 #define MAX_RETRIES 12
 #endif
 
+
+extern int selfpipe[2];
+extern GAsyncQueue *queue;
 extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
 
@@ -68,9 +71,13 @@ int imap_before_smtp = 0;
  * returns a string to the client containing the server capabilities
  */
 
+#define NOTIFY_DONE(a) \
+	g_async_queue_push(queue, (gpointer)a); \
+	if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1)
+
 
 // a trivial silly thread example
-gpointer _ic_capability_enter(imap_cmd_t *ic)
+void _ic_capability_enter(imap_cmd_t *ic)
 {
 	field_t val;
 	gboolean override = FALSE;
@@ -83,7 +90,10 @@ gpointer _ic_capability_enter(imap_cmd_t *ic)
 	g_string_append_printf(s, "%s OK CAPABILITY completed\r\n", ic->tag);
 	ic->result = s->str;
 	g_string_free(s,FALSE);
-	return ic->cb_leave((gpointer)ic);
+
+	NOTIFY_DONE(ic);
+
+	return;
 }
 
 int _ic_capability(ImapSession *self)
