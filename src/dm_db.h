@@ -566,23 +566,6 @@ void db_session_cleanup(ClientSession_t * session_ptr);
  */
 int db_update_pop(ClientSession_t * session_ptr);
 
-/**
- * \brief insert a message into the database
- * \param msgdata the message
- * \param datalen length of message
- * \param mailbox_idnr mailbox to put it in
- * \param user_idnr
- * \param internal_date internal date of message. May be '\0'.
- * \return 
- *     - -1 on failure
- *     - 0 on success
- *     - 1 on invalid message
- *     - 2 on mail quotum exceeded
- */
-int db_imap_append_msg(const char *msgdata, u64_t datalen,
-		       u64_t mailbox_idnr, u64_t user_idnr,
-		       timestring_t internal_date, u64_t * msg_idnr);
-
 /* mailbox functionality */
 /** 
  * \brief find mailbox "name" for a user

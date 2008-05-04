@@ -12,7 +12,7 @@ export MANPAGES=--enable-manpages=yes
 export REAL_CLEAN=
 export RECONFIG=
 
-CFLAGS = -Wall -O1
+CFLAGS = -Wall -O1 -D G_ERRORCHECK_MUTEXES
 LDFLAGS = -lcrypt
 
 # These are used for cross-compiling and for saving the configure script

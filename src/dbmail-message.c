@@ -167,7 +167,6 @@ static u64_t blob_exists(const char *buf, const char *hash)
 			u64_t i = db_result_get_u64(r,0);
 			data = (char *)db_result_get(r,1);
 			assert(data);
-			TRACE(TRACE_DEBUG,"memcmp: [%s][%s]", buf, data);
 			if (memcmp((gconstpointer)buf, (gconstpointer)data, buflen)==0) {
 				id = i;
 				break;
@@ -801,6 +800,13 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 //			mstream = g_mime_stream_mem_new();
 
 			tmp = tmpfile(); 
+			if (! tmp) {
+				int serr = errno;
+				TRACE(TRACE_ERROR, "opening tmpfile failed: %s", strerror(serr));
+				res = 1;
+				break;
+			}
+
 			mstream = g_mime_stream_file_new(tmp);
 
 			assert(mstream);

@@ -931,12 +931,61 @@ int _ic_idle(ImapSession *self)
  * append a message to a mailbox
  */
 
+static int imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
+		       u64_t mailbox_idnr, u64_t user_idnr,
+		       timestring_t internal_date, u64_t * msg_idnr)
+{
+        DbmailMessage *message;
+	int result;
+	GString *msgdata_string;
+
+	if (! mailbox_is_writable(mailbox_idnr))
+		return DM_EQUERY;
+
+	msgdata_string = g_string_new("");
+	g_string_printf(msgdata_string, "%s", msgdata);
+
+        message = dbmail_message_new();
+        message = dbmail_message_init_with_string(message, msgdata_string);
+	dbmail_message_set_internal_date(message, (char *)internal_date);
+
+	g_string_free(msgdata_string, TRUE); 
+        
+	/* 
+         * according to the rfc, the recent flag has to be set to '1'.
+	 * this also means that the status will be set to '001'
+         */
+
+        if (dbmail_message_store(message) < 0) {
+		dbmail_message_free(message);
+		return DM_EQUERY;
+	}
+
+	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr);
+	db_delete_message(message->id);
+        dbmail_message_free(message);
+	
+        switch (result) {
+            case -2:
+                    TRACE(TRACE_DEBUG, "error copying message to user [%llu],"
+                            "maxmail exceeded", user_idnr);
+                    return -2;
+            case -1:
+                    TRACE(TRACE_ERROR, "error copying message to user [%llu]", 
+                            user_idnr);
+                    return -1;
+        }
+                
+        TRACE(TRACE_MESSAGE, "message id=%llu is inserted", *msg_idnr);
+        
+        return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
+}
+
 typedef struct {
-	char *sqldate;
-	char *message;
 	u64_t mboxid;
 	u64_t rfcsize;
 	u64_t message_id;
+	gchar *sqldate;
 	int flags[IMAP_NFLAGS];
 	int flagcount;
 	GList *keywords;
@@ -944,43 +993,13 @@ typedef struct {
 
 void _ic_append_enter(imap_cmd_t *ic)
 {
-	u64_t msg_idnr;
-	int result;
-	GString *s = g_string_new("");
 	imap_append_t *data = (imap_append_t *)ic->data;
 
-	result = db_imap_append_msg(data->message, data->rfcsize, data->mboxid, ic->userid, data->sqldate, &msg_idnr);
-
-	switch (result) {
-	case -1:
-		TRACE(TRACE_ERROR, "[%p] error appending msg", ic->session);
-		g_string_printf(s, "* BYE internal dbase error storing message\r\n");
-		break;
-
-	case -2:
-		TRACE(TRACE_INFO, "[%p] quotum would exceed", ic->session);
-		g_string_printf(s, "%s NO not enough quotum left\r\n", ic->tag);
-		break;
-
-	case FALSE:
-		TRACE(TRACE_ERROR, "[%p] faulty msg", ic->session);
-		g_string_printf(s, "%s NO invalid message specified\r\n", ic->tag);
-		break;
-
-	case TRUE:
-		g_string_printf(s, "%s OK APPEND completed\r\n", ic->tag);
-		data->message_id = msg_idnr;
-		break;
-	}
-
-	if (result == TRUE && data->flagcount > 0) {
-		if (db_set_msgflag(msg_idnr, data->mboxid, data->flags, data->keywords, IMAPFA_ADD, NULL) < 0) {
-			TRACE(TRACE_ERROR, "[%p] error setting flags for message [%llu]", ic->session, msg_idnr);
+	if (data->flagcount > 0) {
+		if (db_set_msgflag(data->message_id, data->mboxid, data->flags, data->keywords, IMAPFA_ADD, NULL) < 0) {
+			TRACE(TRACE_ERROR, "[%p] error setting flags for message [%llu]", ic->session, data->message_id);
 		}
 	}
-
-	ic->result = s->str;
-	g_string_free(s, FALSE);
 
 	db_mailbox_mtime_update(data->mboxid);
 
@@ -995,10 +1014,8 @@ void _ic_append_leave(imap_cmd_t *ic)
 	imap_append_t *data = (imap_append_t *)ic->data;
 	
 	if (data->message_id) {
-
 		if (self->state == IMAPCS_SELECTED) {
 			int j = 0;
-
 			u64_t *uid;
 			//insert new Messageinfo struct into self->mailbox->msginfo
 			
@@ -1041,29 +1058,24 @@ void _ic_append_leave(imap_cmd_t *ic)
 	return;
 }
 
-
 int _ic_append(ImapSession *self)
 {
-	u64_t mboxid;
+	u64_t msg_idnr, mboxid;
 	int i, j, result;
 	timestring_t sqldate;
 	imap_append_t *data;
-	int flaglist[IMAP_NFLAGS];
-	int flagcount = 0;
+	int flaglist[IMAP_NFLAGS], flagcount = 0;
 	GList *keywords = NULL;
 	MailboxInfo *mbx = NULL;
 
 	memset(flaglist,0,sizeof(flaglist));
 
-	if (!self->args[0] || !self->args[1]) {
-		dbmail_imap_session_printf(self, "%s BAD invalid arguments specified to APPEND\r\n",
-			self->tag);
-		return 1;
-	}
+	if (!check_state_and_args(self, 2, 0, IMAPCS_AUTHENTICATED))
+		return 1;	/* error, return */
 
 	/* find the mailbox to place the message */
 	if (! db_findmailbox(self->args[0], self->userid, &mboxid)) {
-		dbmail_imap_session_printf(self, "%s NO [TRYCREATE] could not find specified mailbox\r\n", self->tag);
+		dbmail_imap_session_printf(self, "%s NO [TRYCREATE]\r\n", self->tag);
 		return 1;
 	}
 
@@ -1076,8 +1088,7 @@ int _ic_append(ImapSession *self)
 		return -1;
 	}
 	if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to append to mailbox\r\n",
-				self->tag);
+		dbmail_imap_session_printf(self, "%s NO no permission to append to mailbox\r\n", self->tag);
 		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 		return 1;
 	}
@@ -1185,18 +1196,38 @@ int _ic_append(ImapSession *self)
 
 	/* ok literal msg should be in self->args[i] */
 	/* insert this msg */
+	result = imap_append_msg(self->args[i], strlen(self->args[i]), mboxid, self->userid, sqldate, &msg_idnr);
+
+	switch (result) {
+	case -1:
+		TRACE(TRACE_ERROR, "[%p] error appending msg", self);
+		dbmail_imap_session_printf(self, "* BYE internal dbase error storing message\r\n");
+		return result;
+
+	case -2:
+		TRACE(TRACE_INFO, "[%p] quotum would exceed", self);
+		dbmail_imap_session_printf(self, "%s NO not enough quotum left\r\n", self->tag);
+		return result;
+
+	case FALSE:
+		TRACE(TRACE_ERROR, "[%p] faulty msg", self);
+		dbmail_imap_session_printf(self, "%s NO invalid message specified\r\n", self->tag);
+		return result;
+
+	case TRUE:
+		dbmail_imap_session_printf(self, "%s OK APPEND completed\r\n", self->tag);
+		break;
+	}
 
 	data = g_new0(imap_append_t,1);
-	data->sqldate	= g_strdup(sqldate);
 	data->mboxid	= mboxid;
-	data->message	= self->args[i];
-	data->rfcsize	= strlen(data->message);
+	data->flagcount = flagcount;
+	data->keywords  = keywords;
+	data->message_id = msg_idnr;
+	data->sqldate   = g_strdup(sqldate);
 
 	for (j = 0; j < IMAP_NFLAGS; j++)
 		data->flags[j] = flaglist[j];
-	data->flagcount = flagcount;
-
-	data->keywords = keywords;
 
 	ic_dispatch(self, _ic_append_enter, _ic_append_leave, data);
 

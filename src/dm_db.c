@@ -1934,55 +1934,6 @@ int db_update_pop(ClientSession_t * session_ptr)
 	}
 	return DM_SUCCESS;
 }
-int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
-		       u64_t mailbox_idnr, u64_t user_idnr,
-		       timestring_t internal_date, u64_t * msg_idnr)
-{
-        DbmailMessage *message;
-	int result;
-	GString *msgdata_string;
-
-	if (! mailbox_is_writable(mailbox_idnr))
-		return DM_EQUERY;
-
-	msgdata_string = g_string_new("");
-	g_string_printf(msgdata_string, "%s", msgdata);
-
-        message = dbmail_message_new();
-        message = dbmail_message_init_with_string(message, msgdata_string);
-	dbmail_message_set_internal_date(message, (char *)internal_date);
-
-	g_string_free(msgdata_string, TRUE); 
-        
-	/* 
-         * according to the rfc, the recent flag has to be set to '1'.
-	 * this also means that the status will be set to '001'
-         */
-
-        if (dbmail_message_store(message) < 0) {
-		dbmail_message_free(message);
-		return DM_EQUERY;
-	}
-
-	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr);
-	db_delete_message(message->id);
-        dbmail_message_free(message);
-	
-        switch (result) {
-            case -2:
-                    TRACE(TRACE_DEBUG, "error copying message to user [%llu],"
-                            "maxmail exceeded", user_idnr);
-                    return -2;
-            case -1:
-                    TRACE(TRACE_ERROR, "error copying message to user [%llu]", 
-                            user_idnr);
-                    return -1;
-        }
-                
-        TRACE(TRACE_MESSAGE, "message id=%llu is inserted", *msg_idnr);
-        
-        return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
-}
 
 static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
@@ -3148,15 +3099,12 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 {
 	C c; R r;
 	u64_t msgsize;
-	char unique_id[UID_SIZE];
 	char *frag;
 	int valid=FALSE;
-	INIT_QUERY;
 
 	/* Get the size of the message to be copied. */
 	if (! (msgsize = message_get_size(msg_idnr))) {
-		TRACE(TRACE_ERROR, "error getting message size for "
-		      "message [%llu]", msg_idnr);
+		TRACE(TRACE_ERROR, "error getting size for message [%llu]", msg_idnr);
 		return DM_EQUERY;
 	}
 
@@ -3169,29 +3117,22 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		return -2;
 	}
 
-	create_unique_id(unique_id, msg_idnr);
-
 	/* Copy the message table entry of the message. */
-	frag = db_returning("message_idnr");
-	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO %smessages (mailbox_idnr,"
-		 "physmessage_id, seen_flag, answered_flag, deleted_flag, "
-		 "flagged_flag, recent_flag, draft_flag, unique_id, status) "
-		 "SELECT %llu, "
-		 "physmessage_id, seen_flag, answered_flag, deleted_flag, "
-		 "flagged_flag, recent_flag, draft_flag, '%s', status "
-		 "FROM %smessages WHERE message_idnr = %llu %s",DBPFX,
-		 mailbox_to, unique_id,DBPFX, msg_idnr, frag);
-	g_free(frag);
-
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, query);
+		char unique_id[UID_SIZE];
+		create_unique_id(unique_id, msg_idnr);
+		frag = db_returning("message_idnr");
+		r = Connection_executeQuery(c, "INSERT INTO %smessages ("
+			"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
+			" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,'%s',status"
+			" FROM %smessages WHERE message_idnr = %llu %s",DBPFX, mailbox_to, unique_id,DBPFX, msg_idnr, frag);
 		*newmsg_idnr = db_insert_result(c, r);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
 		Connection_close(c);
+		g_free(frag);
 	END_TRY;
 
 	/* update quotum */
