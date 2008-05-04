@@ -58,9 +58,10 @@ static gboolean _node_free(GNode *node, gpointer dummy UNUSED)
 
 void dbmail_mailbox_free(DbmailMailbox *self)
 {
-	if (self->sorted) g_list_destroy(self->sorted);
 	if (self->ids) g_tree_destroy(self->ids);		
 	if (self->msn) g_tree_destroy(self->msn);
+	if (self->found) g_tree_destroy(self->found);
+	if (self->sorted) g_list_destroy(self->sorted);
 	if (self->msginfo) {
 		g_tree_destroy(self->msginfo);
 		self->msginfo = NULL;
@@ -510,7 +511,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
-			if (! g_tree_lookup(self->ids,&idnr))
+			if (! g_tree_lookup(self->found,&idnr))
 				continue;
 			subj = (char *)db_result_get(r,1);
 			g_tree_insert(tree,g_strdup(subj), NULL);
@@ -547,7 +548,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
-			if (! (msn = g_tree_lookup(self->ids, &idnr)))
+			if (! (msn = g_tree_lookup(self->found, &idnr)))
 				continue;
 			subj = (char *)db_result_get(r,1);
 			
@@ -592,7 +593,7 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self)
 	gchar *s = NULL;
 	GList *l = NULL, *h = NULL;
 
-	if ((self->ids == NULL) || g_tree_nnodes(self->ids) <= 0) {
+	if ((self->found == NULL) || g_tree_nnodes(self->found) <= 0) {
 		TRACE(TRACE_DEBUG,"no ids found");
 		return s;
 	}
@@ -600,10 +601,10 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self)
 	t = g_string_new("");
 	switch (dbmail_mailbox_get_uid(self)) {
 		case TRUE:
-			l = g_tree_keys(self->ids);
+			l = g_tree_keys(self->found);
 		break;
 		case FALSE:
-			l = g_tree_values(self->ids);
+			l = g_tree_values(self->found);
 		break;
 	}
 
@@ -640,7 +641,7 @@ char * dbmail_mailbox_sorted_as_string(DbmailMailbox *self)
 	uid = dbmail_mailbox_get_uid(self);
 
 	while(l->data) {
-		msn = g_tree_lookup(self->ids, l->data);
+		msn = g_tree_lookup(self->found, l->data);
 		if (msn) {
 			if (uid)
 				g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
@@ -1251,11 +1252,9 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 	
 	TRACE(TRACE_DEBUG,"type [%d]", s->type);
 
-	if (s->type != IST_SORT)
-		return FALSE;
+	if (s->type != IST_SORT) return FALSE;
 	
-	if (s->searched)
-		return FALSE;
+	if (s->searched) return FALSE;
 
 	q = g_string_new("");
 	g_string_printf(q, "SELECT message_idnr FROM %smessages m "
@@ -1277,7 +1276,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 		r = Connection_executeQuery(c,q->str);
 		while (db_result_next(r)) {
 			tid = db_result_get_u64(r,0);
-			if (g_tree_lookup(self->ids,&tid) && (! g_tree_lookup(z, &tid))) {
+			if (g_tree_lookup(self->found,&tid) && (! g_tree_lookup(z, &tid))) {
 				id = g_new0(u64_t,1);
 				*id = tid;
 				g_tree_insert(z, id, id);
@@ -1655,12 +1654,18 @@ static gboolean _found_tree_copy(u64_t *key, u64_t *val, GTree *tree)
 	g_tree_insert(tree, a, b);
 	return FALSE;
 }
+
+static gboolean _shallow_tree_copy(u64_t *key, u64_t *val, GTree *tree)
+{
+	g_tree_insert(tree, key, val);
+	return FALSE;
+}
+
 static gboolean _do_search(GNode *node, DbmailMailbox *self)
 {
 	search_key_t *s = (search_key_t *)node->data;
 
-	if (s->searched)
-		return FALSE;
+	if (s->searched) return FALSE;
 	
 	switch (s->type) {
 		case IST_SORT:
@@ -1788,8 +1793,7 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	
 int dbmail_mailbox_sort(DbmailMailbox *self) 
 {
-	if (! self->search)
-		return 0;
+	if (! self->search) return 0;
 	
 	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_do_sort, (gpointer)self);
@@ -1800,20 +1804,23 @@ int dbmail_mailbox_sort(DbmailMailbox *self)
 
 int dbmail_mailbox_search(DbmailMailbox *self) 
 {
-	if (! self->search)
-		return 0;
+	if (! self->search) return 0;
 	
+	if (self->found) g_tree_destroy(self->found);
+	self->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
+
+	g_tree_foreach(self->ids, (GTraverseFunc)_shallow_tree_copy, self->found);
+
 	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_do_search, (gpointer)self);
 
 	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
-			(GNodeTraverseFunc)_merge_search, (gpointer)self->ids);
+			(GNodeTraverseFunc)_merge_search, (gpointer)self->found);
 
-
-	if (self->ids == NULL)
+	if (self->found == NULL)
 		TRACE(TRACE_DEBUG,"found no ids\n");
 	else
-		TRACE(TRACE_DEBUG,"found [%d] ids\n", self->ids ? g_tree_nnodes(self->ids): 0);
+		TRACE(TRACE_DEBUG,"found [%d] ids\n", self->found ? g_tree_nnodes(self->found): 0);
 	
 	return 0;
 }

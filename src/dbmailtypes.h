@@ -550,6 +550,7 @@ typedef struct {
 	MailboxInfo *info;	// cache mailbox metadata;
 	GTree *msginfo; 	// cache MessageInfo
 
+	GTree *found;		// search result (key: uid, value: msn)
 	GTree *ids; 		// key: uid, value: msn
 	GTree *msn; 		// key: msn, value: uid
 

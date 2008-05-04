@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2008 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -1346,21 +1346,9 @@ static int sorted_search(ImapSession *self, search_order_t order)
 	const gchar *cmd;
 	gboolean sorted;
 
-	if (order == SEARCH_SORTED)
-		sorted = 1;
-	
-	if (self->state != IMAPCS_SELECTED) {
-		dbmail_imap_session_printf(self,
-			"%s BAD %s command received in invalid state\r\n",
-			self->tag, self->command);
-		return 1;
-	}
-	
-	if (!self->args[0]) {
-		dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
-			self->tag, self->command);
-		return 1;
-	}
+	if (!check_state_and_args(self, 1, 0, IMAPCS_SELECTED)) return 1;	/* error, return */
+
+	if (order == SEARCH_SORTED) sorted = 1;
 	
 	/* check ACL */
 	if (! (result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ))) {
@@ -1413,7 +1401,6 @@ static int sorted_search(ImapSession *self, search_order_t order)
 				s = NULL; // TODO: unsupported
 			break;
 		}
-
 	}
 
 	if (s) {

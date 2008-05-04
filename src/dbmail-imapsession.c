@@ -2067,13 +2067,17 @@ int dbmail_imap_session_set_state(ImapSession *self, int state)
 
 static gboolean _do_expunge(u64_t *id, ImapSession *self)
 {
-	MessageInfo *msginfo = g_tree_lookup(self->mailbox->msginfo, id);
+	MessageInfo *msginfo;
 	u64_t *msn = g_tree_lookup(self->mailbox->ids, id);
 
 	if (! msn) {
-		TRACE(TRACE_WARNING,"can't find msn for [%llu]", *id);
+		TRACE(TRACE_ERROR,"can't find msn for [%llu]", *id);
 		return FALSE;
 	}
+
+	msginfo = g_tree_lookup(self->mailbox->msginfo, id);
+	
+	assert(msginfo);
 
 	if (! msginfo->flags[IMAP_FLAG_DELETED])
 		return FALSE;
