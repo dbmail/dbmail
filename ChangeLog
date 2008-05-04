@@ -1,3 +1,35 @@
+2008-05-04  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c:
+	cleanups
+
+2008-05-02  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-message.c, src/dbmailtypes.h, 
+	src/dm_config.c, src/dm_db.c, src/imapcommands.c:
+	small cleanups
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmail-mailbox.c, src/dbmail-message.c, src/dm_db.c, src/dm_db.h, 
+	src/imapcommands.c:
+	thread-safety inspired cleanups
+
+2008-04-29  Paul J Stevens <paul@nfg.nl>
+
+	* src/imap4.c, src/server.c:
+	fix selfpipe leak
+
+2008-04-28  Paul J Stevens <paul@nfg.nl>
+
+	* debian/rules, src/dbmail-message.c, src/dm_db.c, src/dm_db.h, 
+	src/imapcommands.c:
+	improve thread-safety in IMAP APPEND
+
+2008-04-26  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-mailbox.c, src/dbmailtypes.h, 
+	src/imapcommands.c:
+	fix invalid uid errors after search
+
 2008-04-25  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
