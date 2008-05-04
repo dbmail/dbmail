@@ -789,14 +789,6 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name);
 int db_msg_expunge(u64_t message_id);
 
 /**
- * \brief get first unseen message in a mailbox
- * \param mailbox_idnr
- * \return 
- *     - -1 on failure
- *     - msg_idnr of first unseen message in mailbox otherwise
- */
-u64_t db_first_unseen(u64_t mailbox_idnr);
-/**
  * \brief subscribe to a mailbox.
  * \param mailbox_idnr mailbox to subscribe to
  * \param user_idnr user to subscribe

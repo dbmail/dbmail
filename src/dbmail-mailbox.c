@@ -41,9 +41,8 @@ DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	dbmail_mailbox_set_id(self,id);
 	dbmail_mailbox_set_uid(self, FALSE);
 
-	if (dbmail_mailbox_open(self)) {
+	if (dbmail_mailbox_open(self))
 		TRACE(TRACE_ERROR,"mailbox open failed [%llu]", id);
-	}
 
 	return self;
 }

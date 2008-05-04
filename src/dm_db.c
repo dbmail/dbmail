@@ -295,18 +295,22 @@ S db_stmt_prepare(C c, const char *q, ...)
 
 int db_stmt_set_str(S s, int index, const char *x)
 {
+//	TRACE(TRACE_DEBUG,"[%p] %d:[%s]", s, index, x);
 	return PreparedStatement_setString(s, index, x);
 }
 int db_stmt_set_int(S s, int index, int x)
 {
+//	TRACE(TRACE_DEBUG,"[%p] %d:[%d]", s, index, x);
 	return PreparedStatement_setInt(s, index, x);
 }
 int db_stmt_set_u64(S s, int index, u64_t x)
 {	
+//	TRACE(TRACE_DEBUG,"[%p] %d:[%llu]", s, index, x);
 	return PreparedStatement_setLLong(s, index, (long long)x);
 }
 int db_stmt_set_blob(S s, int index, const void *x, int size)
 {
+//	TRACE(TRACE_DEBUG,"[%p] %d:[%s]", s, index, (const char *)x);
 	return PreparedStatement_setBlob(s, index, x, size);
 }
 gboolean db_stmt_exec(S s)
@@ -351,12 +355,17 @@ u64_t db_insert_result(C c, R r)
 	u64_t id = 0;
 
 	// lastRowId is always zero for pgsql tables without OIDs
-	if ((id = (u64_t )Connection_lastRowId(c)) == 0) {
+	// or possibly for sqlite after calling executeQuery but 
+	// before calling db_result_next
+	if ((id = (u64_t )Connection_lastRowId(c)) == 0) { // mysql
 		// but if we're using 'RETURNING id' clauses on inserts
-		// we can do this
-		if (r && db_result_next(r))
-			id = db_result_get_u64(r, 0);
+		// or we're using the sqlite backend, we can do this
+		if (r) db_result_next(r);
+
+		if ((id = (u64_t )Connection_lastRowId(c)) == 0) // sqlite
+			id = db_result_get_u64(r, 0); // postgresql
 	}
+	assert(id);
 	return id;
 }
 
@@ -1677,8 +1686,7 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_si
 	return t;
 }
 
-int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
-		      int update_curmail_size)
+int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_size)
 {
 	u64_t user_idnr = 0;
 	int result;
@@ -3209,30 +3217,6 @@ int db_msg_expunge(u64_t message_id)
 {
 	return db_update("UPDATE %smessages SET status=%d WHERE message_idnr=%llu ", 
 			DBPFX, MESSAGE_STATUS_DELETE, message_id);
-}
-
-u64_t db_first_unseen(u64_t mailbox_idnr)
-{
-	C c; R r;
-	u64_t id = 0;
-	INIT_QUERY;
-	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM %smessages " 
-			"WHERE mailbox_idnr = %llu " 
-			"AND status < %d AND seen_flag = 0 " 
-			"ORDER BY message_idnr LIMIT 1",
-			DBPFX, mailbox_idnr, MESSAGE_STATUS_DELETE);
-	c = db_con_get();
-	TRY
-		r = Connection_executeQuery(c, query);
-		if (db_result_next(r))
-			id = db_result_get_u64(r, 0);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		Connection_close(c);
-	END_TRY;
-
-	return id;
 }
 
 int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)

@@ -699,36 +699,32 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			else \
 				dbmail_imap_session_buff_append(self, " ")
 
-static gboolean _get_mailbox(u64_t UNUSED *id, MailboxInfo *mb, ImapSession *self)
+static gboolean _get_mailbox(u64_t UNUSED *id, MailboxInfo *mb, int *error)
 {
 	int result;
-	result = acl_has_right(mb, self->userid, ACL_RIGHT_READ);
+	result = acl_has_right(mb, mb->owner_idnr, ACL_RIGHT_READ);
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		self->error = -1;
+		*error = -1;
 		return TRUE;
 	}
 	if (result == 0) {
-		self->error = 1;
+		*error = 1;
 		return TRUE;
 	}
 
-	if (db_getmailbox(mb, self->userid) != DM_SUCCESS)
+	if (db_getmailbox(mb, mb->owner_idnr) != DM_SUCCESS)
 		return TRUE;
 
 	return FALSE;
 }
 
-void dbmail_imap_session_get_mbxinfo(ImapSession *self)
+static void dbmail_imap_session_get_mbxinfo(ImapSession *self)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; int t = FALSE, error = 0;
 	GTree *mbxinfo = NULL;
 	u64_t *id;
 	MailboxInfo *mb;
 	
-	if (self->mbxinfo)
-		_mbxinfo_destroy(self);
-
 	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	c = db_con_get();
 	TRY
@@ -739,8 +735,9 @@ void dbmail_imap_session_get_mbxinfo(ImapSession *self)
 
 			*id = db_result_get_u64(r, 0);
 			mb->uid = *id;
+			mb->owner_idnr = self->userid;
 
-			g_tree_insert(mbxinfo, id, mb);
+			g_tree_insert(mbxinfo, id, NULL);
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -751,17 +748,17 @@ void dbmail_imap_session_get_mbxinfo(ImapSession *self)
 
 	if (t == DM_EQUERY) return;
 
-	self->error = 0;
-	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, self);
+	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, &error);
 
-	if (! self->error) {
+	if (! error) {
+		if (self->mbxinfo) _mbxinfo_destroy(self);
 		self->mbxinfo = mbxinfo;
 		return;
 	}
 
-	if (self->error == DM_EQUERY)
+	if (error == DM_EQUERY)
 		TRACE(TRACE_ERROR, "[%p] database error retrieving mbxinfo", self);
-	if (self->error == DM_EGENERAL)
+	else if (error == DM_EGENERAL)
 		TRACE(TRACE_ERROR, "[%p] failure retrieving mbxinfo for unreadable mailbox", self);
 
 	g_tree_destroy(mbxinfo);
@@ -1403,39 +1400,31 @@ int dbmail_imap_session_readln(ImapSession *self, char * buffer)
 	
 int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password)
 {
-
-	timestring_t timestring;
-	create_current_timestring(&timestring);
-	
 	u64_t userid = 0;
 	
 	int valid = auth_validate(self->ci, username, password, &userid);
 	
-	TRACE(TRACE_DEBUG, "[%p] trying to validate user [%s], pass [%s]", 
-			self, username, (password ? "XXXX" : "(null)") );
+	TRACE(TRACE_DEBUG, "[%p] trying to validate user [%s], pass [%s]", self, username, (password ? "XXXX" : "(null)") );
 	
-	if (valid == -1) {
-		/* a db-error occurred */
-		dbmail_imap_session_printf(self, "* BYE internal db error validating user\r\n");
-		TRACE(TRACE_ERROR, "[%p] db-validate error while validating user %s (pass %s).",
-			       	self, username, password ? "XXXX" : "(null)");
-		return -1;
+	switch(valid) {
+		case -1: /* a db-error occurred */
+			dbmail_imap_session_printf(self, "* BYE internal db error validating user\r\n");
+			return -1;
+
+		case 0:
+			sleep(2);	/* security */
+			dbmail_imap_session_printf(self, "%s NO login rejected\r\n", self->tag);
+			TRACE(TRACE_MESSAGE, "[%p] login rejected: user [%s] ip [%s]", self, username, self->ci->ip_src);
+			return 1;
+
+		case 1:
+			TRACE(TRACE_MESSAGE, "[%p] login accepted: user [%s] ip [%s]", self, username, self->ci->ip_src);
+			break;
+
+		default:
+			TRACE(TRACE_ERROR, "[%p] auth_validate returned [%d]", self, valid);
+			return -1;
 	}
-
-	if (valid == 0) {
-		sleep(2);	/* security */
-
-		/* validation failed: invalid user/pass combination */
-		TRACE(TRACE_MESSAGE, "[%p] user (name %s) coming from [%s] login rejected", 
-			self, username, self->ci->ip_src);
-		dbmail_imap_session_printf(self, "%s NO login rejected\r\n", self->tag);
-
-		return 1;
-	}
-
-	/* login ok */
-	TRACE(TRACE_MESSAGE, "[%p] user (name %s) coming from [%s] login accepted", 
-		self, username, self->ci->ip_src);
 
 	self->userid = userid;
 
@@ -1594,81 +1583,6 @@ static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 	dbmail_mailbox_free(old);
 }
 
-static gboolean imap_mbxinfo_notify(u64_t UNUSED *id, MailboxInfo *mb, ImapSession *self)
-{
-	time_t oldmtime = mb->mtime;
-	unsigned oldexists = mb->exists;
-	unsigned oldrecent = mb->recent;
-	unsigned oldunseen = mb->unseen;
-	u64_t olduidnext = mb->msguidnext;
-	int changed = 0;
-
-	GList *plst = NULL;
-	gchar *astring, *pstring;
-
-	if (self->mailbox->info->uid == mb->uid)
-		return FALSE;
-
-	if (db_getmailbox(mb, self->userid) != DM_SUCCESS) {
-		self->error = 1;
-		return TRUE;
-	}
-
-	if (oldmtime == mb->mtime)
-		return FALSE;
-
-	TRACE(TRACE_DEBUG,"[%p] oldmtime[%d] != mtime[%d]", self, (int)oldmtime, (int)mb->mtime);
-
-	if (oldexists != mb->exists) {
-		plst = g_list_append_printf(plst,"MESSAGES %u", mb->exists);
-		changed++;
-	}
-	if (oldrecent != mb->recent) {
-		plst = g_list_append_printf(plst,"RECENT %u", mb->recent);
-		changed++;
-	}
-	if (oldunseen != mb->unseen) {
-		plst = g_list_append_printf(plst,"UNSEEN %u", mb->unseen);
-		changed++;
-	}
-	if (olduidnext != mb->msguidnext) {
-		plst = g_list_append_printf(plst,"UIDNEXT %llu", mb->msguidnext);
-		changed++;
-	}
-	
-	if (! changed)
-		return FALSE;
-
-	astring = dbmail_imap_astring_as_string(mb->name);
-	pstring = dbmail_imap_plist_as_string(plst); 
-
-	g_list_foreach(g_list_first(plst), (GFunc)g_free, NULL);
-	plst = NULL;
-
-	dbmail_imap_session_printf(self, "* STATUS %s %s\r\n", astring, pstring);
-
-	g_free(astring);
-	g_free(pstring);
-	
-	return FALSE;
-}
-
-static int dbmail_imap_session_mbxinfo_notify(ImapSession *self)
-{
-	if (! imap_feature_idle_status)
-		return DM_SUCCESS;
-
-	if (! self->mbxinfo)
-		dbmail_imap_session_get_mbxinfo(self);
-
-	self->error = 0;
-	if ( (! self->mbxinfo) || (g_tree_nnodes(self->mbxinfo) == 0) )
-		return self->error;
-		
-	g_tree_foreach(self->mbxinfo, (GTraverseFunc)imap_mbxinfo_notify, self);
-	return self->error;
-}
-
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 {
 	/* 
@@ -1733,10 +1647,6 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		break;
 
 		case IMAP_COMM_IDLE:
-#if 0 // experimental: send '* STATUS' updates for all subscribed mailboxes if they have changed
-			if (! self->mbxinfo) dbmail_imap_session_get_mbxinfo(self);
-			dbmail_imap_session_mbxinfo_notify(self);
-#endif
 		break;
 
 		case IMAP_COMM_APPEND:
@@ -1819,6 +1729,7 @@ MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbo
 {
 	MailboxInfo *mb = NULL;
 	u64_t *id;
+	int error = 0;
 
 	if (! self->mbxinfo) dbmail_imap_session_get_mbxinfo(self);
 
@@ -1829,11 +1740,12 @@ MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbo
 
 		*id = mailbox_idnr;
 		mb->uid = mailbox_idnr;
+		mb->owner_idnr = self->userid;
 
 		g_tree_insert(self->mbxinfo, id, mb);
 
 	}
-	_get_mailbox(0,mb,self);
+	_get_mailbox(0,mb,&error);
 
 	return mb;
 }

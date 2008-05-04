@@ -128,8 +128,6 @@ int check_state_and_args(ImapSession * self, int minargs, int maxargs, int state
 int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password);
 int dbmail_imap_session_prompt(ImapSession * self, char * prompt);
 
-
-void dbmail_imap_session_get_mbxinfo(ImapSession *self);
 MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr);
 
 u64_t dbmail_imap_session_mailbox_get_idnr(ImapSession * self, const char * mailbox);

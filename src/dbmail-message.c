@@ -205,6 +205,7 @@ static u64_t blob_insert(const char *buf, const char *hash)
 		Connection_close(c);
 	END_TRY;
 
+	TRACE(TRACE_DEBUG,"inserted id [%llu]", id);
 	g_free(frag);
 
 	return id;
@@ -212,24 +213,12 @@ static u64_t blob_insert(const char *buf, const char *hash)
 
 static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 {
-	INIT_QUERY;
-	C c; S s; gboolean t = FALSE;
-
-	snprintf(query,DEF_QUERYSIZE, "INSERT INTO %spartlists "
-		"(physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
-		"VALUES (?,?,?,?,?,?)", DBPFX);
-	
+	C c; gboolean t = FALSE;
 	c = db_con_get();
 	TRY
-		s = db_stmt_prepare(c, query);
-		db_stmt_set_u64(s, 1, dbmail_message_get_physid(m));
-		db_stmt_set_int(s, 2, is_header);
-		db_stmt_set_int(s, 3, m->part_key);
-		db_stmt_set_int(s, 4, m->part_depth);
-		db_stmt_set_int(s, 5, m->part_order);
-		db_stmt_set_u64(s, 6, id);	
-
-		t = db_stmt_exec(s);
+		t = Connection_execute(c, "INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
+				"VALUES (%llu,%d,%d,%d,%d,%llu)", DBPFX,
+				dbmail_message_get_physid(m), is_header, m->part_key, m->part_depth, m->part_order, id);	
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
