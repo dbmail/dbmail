@@ -186,9 +186,15 @@ int db_connect(void)
 	if (! (pool = ConnectionPool_new(url)))
 		TRACE(TRACE_FATAL,"error creating connection pool");
 	
+	if (_db_params.maxconnections > 0) {
+		if (_db_params.maxconnections < ConnectionPool_getInitialConnections(pool))
+			ConnectionPool_setInitialConnections(pool, _db_params.maxconnections);
+		ConnectionPool_setMaxConnections(pool, _db_params.maxconnections);
+	}
+
 	ConnectionPool_start(pool);
-	TRACE(TRACE_DEBUG, "connection pool started with [%d] connections", 
-		ConnectionPool_getInitialConnections(pool));
+	TRACE(TRACE_DEBUG, "connection pool started with [%d] connections, max [%d]", 
+		ConnectionPool_getInitialConnections(pool), ConnectionPool_getMaxConnections(pool));
 
 	ConnectionPool_setReaper(pool, sweepInterval);
 	TRACE(TRACE_DEBUG, "run a reaper thread every [%d] seconds", sweepInterval);
@@ -215,7 +221,15 @@ int db_disconnect(void)
 
 C db_con_get(void)
 {
-	return ConnectionPool_getConnection(pool);
+	int i=0; C c;
+	while (i++<30) {
+		c = ConnectionPool_getConnection(pool);
+		if (c) break;
+		sleep(1);
+	}
+	if (! c) TRACE(TRACE_FATAL,"can't get a database connection from the pool!");
+	assert(c);
+	return c;
 }
 
 void db_con_close(C c)
@@ -354,13 +368,16 @@ u64_t db_insert_result(C c, R r)
 {
 	u64_t id = 0;
 
+	assert(r);
+	db_result_next(r);
+
 	// lastRowId is always zero for pgsql tables without OIDs
 	// or possibly for sqlite after calling executeQuery but 
 	// before calling db_result_next
+
 	if ((id = (u64_t )Connection_lastRowId(c)) == 0) { // mysql
 		// but if we're using 'RETURNING id' clauses on inserts
 		// or we're using the sqlite backend, we can do this
-		if (r) db_result_next(r);
 
 		if ((id = (u64_t )Connection_lastRowId(c)) == 0) // sqlite
 			id = db_result_get_u64(r, 0); // postgresql
@@ -3126,11 +3143,11 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	}
 
 	/* Copy the message table entry of the message. */
+	frag = db_returning("message_idnr");
 	c = db_con_get();
 	TRY
 		char unique_id[UID_SIZE];
 		create_unique_id(unique_id, msg_idnr);
-		frag = db_returning("message_idnr");
 		r = Connection_executeQuery(c, "INSERT INTO %smessages ("
 			"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
 			" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,'%s',status"
@@ -3140,9 +3157,9 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		LOG_SQLERROR;
 	FINALLY
 		Connection_close(c);
-		g_free(frag);
 	END_TRY;
 
+	g_free(frag);
 	/* update quotum */
 	if (! dm_quota_user_inc(user_idnr, msgsize))
 		return DM_EQUERY;
@@ -3316,7 +3333,7 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 
 static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, MessageInfo *msginfo)
 {
-	C c; R r; S s; int t = DM_SUCCESS;
+	C c; S s; int t = DM_SUCCESS;
 	INIT_QUERY;
 
 	c = db_con_get();
@@ -3349,6 +3366,7 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 
 	else if (action_type == IMAPFA_ADD || action_type == IMAPFA_REPLACE) {
 		TRY
+			const char *ignore = db_get_sql(SQL_IGNORE);
 			db_begin_transaction(c);
 			if (action_type == IMAPFA_REPLACE) {
 				s = db_stmt_prepare(c, "DELETE FROM %skeywords WHERE message_idnr=?", DBPFX);
@@ -3357,22 +3375,15 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 			}
 
 			keywords = g_list_first(keywords);
-
 			while (keywords) {
 				if ((! msginfo) || (! g_list_find_custom(msginfo->keywords, 
 								(char *)keywords->data, 
 								(GCompareFunc)g_ascii_strcasecmp))) {
-					s = db_stmt_prepare(c, "SELECT * FROM %skeywords WHERE message_idnr=? AND keyword=?", DBPFX);
+					s = db_stmt_prepare(c, "INSERT %s INTO %skeywords (message_idnr,keyword) VALUES (?, ?)", 
+							ignore, DBPFX);
 					db_stmt_set_u64(s, 1, msg_idnr);
 					db_stmt_set_str(s, 2, (char *)keywords->data);
-					r = db_stmt_query(s);
-					if (! db_result_next(r)) {
-		//				Connection_clear(c);
-						s = db_stmt_prepare(c, "INSERT INTO %skeywords (message_idnr,keyword) VALUES (?, ?)", DBPFX);
-						db_stmt_set_u64(s, 1, msg_idnr);
-						db_stmt_set_str(s, 2, (char *)keywords->data);
-						db_stmt_exec(s);
-					}
+					db_stmt_exec(s);
 				}
 				if (! g_list_next(keywords)) break;
 				keywords = g_list_next(keywords);
@@ -3853,7 +3864,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 	INIT_QUERY;
 	C c; R r; S s; int t = FALSE;
 	char *encoding = NULL, *frag;
-	u64_t existing_user_idnr = 0;
+	u64_t id, existing_user_idnr = 0;
 
 	assert(user_idnr != NULL);
 
@@ -3902,8 +3913,8 @@ int db_user_create(const char *username, const char *password, const char *encty
 		g_free(frag);
 
 		r = db_stmt_query(s);
-		if (*user_idnr == 0)
-			*user_idnr = db_insert_result(c, r);
+		id = db_insert_result(c, r);
+		if (*user_idnr == 0) *user_idnr = id;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -4182,28 +4193,28 @@ int db_rehash_store(void)
 	ids = g_list_first(ids);
 	TRY
 		while (ids) {
-			db_begin_transaction(c);
-
 			u64_t *id = ids->data;
+
+			Connection_clear(c);
 			s = db_stmt_prepare(c, "SELECT data FROM %smimeparts WHERE id=?", DBPFX);
-			db_stmt_set_u64(s, 1, *id);
+			db_stmt_set_u64(s,1, *id);
 			r = db_stmt_query(s);
 			db_result_next(r);
 			buf = db_result_get(r, 0);
 			hash = dm_get_hash_for_string(buf);
+
+			Connection_clear(c);
 			s = db_stmt_prepare(c, "UPDATE %smimeparts SET hash=? WHERE id=?", DBPFX);
 			db_stmt_set_str(s, 1, hash);
 			db_stmt_set_u64(s, 2, *id);
 			db_stmt_exec(s);
 
-			db_commit_transaction(c);
 			g_free(hash);
 			if (! g_list_next(ids)) break;
 			ids = g_list_next(ids);
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		Connection_close(c);

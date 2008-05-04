@@ -678,14 +678,12 @@ static int _ic_list_real(ImapSession *self, int list_is_lsub)
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
 	
-	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED))
-		return 1;
+	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
 
 	/* check if self->args are both empty strings, i.e. A001 LIST "" "" 
 	   this has special meaning; show root & delimiter */
 	if (strlen(self->args[0]) == 0 && strlen(self->args[1]) == 0) {
-		dbmail_imap_session_printf(self, "* %s (\\NoSelect) \"/\" \"\"\r\n",
-			thisname);
+		dbmail_imap_session_printf(self, "* %s (\\NoSelect) \"/\" \"\"\r\n", thisname);
 		dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
 		return 0;
 	}
@@ -693,10 +691,7 @@ static int _ic_list_real(ImapSession *self, int list_is_lsub)
 	/* check the reference name, should contain only accepted mailboxname chars */
 	for (i = 0, slen = strlen(AcceptedMailboxnameChars); self->args[0][i]; i++) {
 		if (index(AcceptedMailboxnameChars, self->args[0][i]) == NULL) {
-			/* wrong char found */
-			dbmail_imap_session_printf(self,
-				"%s BAD reference name contains invalid characters\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s BAD reference name contains invalid characters\r\n", self->tag);
 			return 1;
 		}
 	}
@@ -740,25 +735,22 @@ int _ic_status(ImapSession *self)
 	MailboxInfo *mb;
 	u64_t id;
 	int i, endfound, result;
-	GString *response;
 	GList *plst = NULL;
 	gchar *pstring, *astring;
 	
-	
-	if (!check_state_and_args(self, 3, 0, IMAPCS_AUTHENTICATED))
-		return 1;
+	if (!check_state_and_args(self, 3, 0, IMAPCS_AUTHENTICATED)) return 1;
 
-	if (strcmp(self->args[1], "(") != 0) {
+	if (self->args[1][0] != '(') {
 		dbmail_imap_session_printf(self, "%s BAD argument list should be parenthesed\r\n", self->tag);
 		return 1;
 	}
 
 	/* check final arg: should be ')' and no new '(' in between */
 	for (i = 2, endfound = 0; self->args[i]; i++) {
-		if (strcmp(self->args[i], ")") == 0) {
+		if (self->args[i][0] == ')') {
 			endfound = i;
 			break;
-		} else if (strcmp(self->args[i], "(") == 0) {
+		} else if (self->args[i][0] == '(') {
 			dbmail_imap_session_printf(self, "%s BAD too many parentheses specified\r\n", self->tag);
 			return 1;
 		}
@@ -776,7 +768,7 @@ int _ic_status(ImapSession *self)
 	/* check if mailbox exists */
 	if (! db_findmailbox(self->args[0], self->userid, &id)) {
 		/* create missing INBOX for this authenticated user */
-		if ((! id ) && (strcasecmp(self->args[0], "INBOX")==0)) {
+		if ((! id ) && (MATCH(self->args[0], "INBOX"))) {
 			TRACE(TRACE_INFO, "[%p] Auto-creating INBOX for user id [%llu]", self, self->userid);
 			db_createmailbox("INBOX", self->userid, &id);
 		}
@@ -786,10 +778,7 @@ int _ic_status(ImapSession *self)
 		}
 	}
 
-	mb = dbmail_imap_session_mbxinfo_lookup(self, id);
-
-	if (mb == NULL) {
-		/* mailbox does not exist */
+	if (! (mb = dbmail_imap_session_mbxinfo_lookup(self, id))) {
 		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		return 1;
 	}
@@ -805,69 +794,54 @@ int _ic_status(ImapSession *self)
 	}
 
 	for (i = 2; self->args[i]; i++) {
-		if (strcasecmp(self->args[i], "messages") == 0)
+		if (MATCH(self->args[i], "messages"))
 			plst = g_list_append_printf(plst,"MESSAGES %u", mb->exists);
-		else if (strcasecmp(self->args[i], "recent") == 0)
+		else if (MATCH(self->args[i], "recent"))
 			plst = g_list_append_printf(plst,"RECENT %u", mb->recent);
-		else if (strcasecmp(self->args[i], "unseen") == 0)
+		else if (MATCH(self->args[i], "unseen"))
 			plst = g_list_append_printf(plst,"UNSEEN %u", mb->unseen);
-		else if (strcasecmp(self->args[i], "uidnext") == 0)
+		else if (MATCH(self->args[i], "uidnext"))
 			plst = g_list_append_printf(plst,"UIDNEXT %llu", mb->msguidnext);
-		else if (strcasecmp(self->args[i], "uidvalidity") == 0)
+		else if (MATCH(self->args[i], "uidvalidity"))
 			plst = g_list_append_printf(plst,"UIDVALIDITY %llu", mb->uid);
-		else if (strcasecmp(self->args[i], ")") == 0)
+		else if (MATCH(self->args[i], ")"))
 			break;
 		else {
-			dbmail_imap_session_printf(self,
-				"\r\n%s BAD unrecognized option '%s' specified\r\n",
+			dbmail_imap_session_printf(self, "\r\n%s BAD option '%s' specified\r\n",
 				self->tag, self->args[i]);
 			return 1;
 		}
 	}
 	astring = dbmail_imap_astring_as_string(self->args[0]);
 	pstring = dbmail_imap_plist_as_string(plst); 
+	g_list_destroy(plst);
 
-	response = g_string_new("");
-	g_string_printf(response, "* STATUS %s %s", astring, pstring);	
-	dbmail_imap_session_printf(self, "%s\r\n", response->str);
+	dbmail_imap_session_printf(self, "* STATUS %s %s\r\n", astring, pstring);	
 	dbmail_imap_session_printf(self, "%s OK STATUS completed\r\n", self->tag);
 
-	g_list_destroy(plst);
-	g_string_free(response,TRUE);
 	g_free(astring);
 	g_free(pstring);
 
 	return 0;
 }
 
-/*
- * _ic_idle
+/* _ic_idle
  *
  * non-expunging close for select mailbox and return to AUTH state
- *
  */
-
 int _ic_idle(ImapSession *self)
 {
 	int result;
-	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED))
-		return 1;	/* error, return */
-
-	if ((result = dbmail_imap_session_idle(self)) != 0)
-		return result;
-
+	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED)) return 1;
+	if ((result = dbmail_imap_session_idle(self)) != 0) return result;
 	return 0;
 }
 
-
-
-/*
- * _ic_append()
+/* _ic_append()
  *
  * append a message to a mailbox
  */
-
-static int imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
+static int imap_append_msg(const char *msgdata,
 		       u64_t mailbox_idnr, u64_t user_idnr,
 		       timestring_t internal_date, u64_t * msg_idnr)
 {
@@ -875,8 +849,7 @@ static int imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
 	int result;
 	GString *msgdata_string;
 
-	if (! mailbox_is_writable(mailbox_idnr))
-		return DM_EQUERY;
+	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
 
 	msgdata_string = g_string_new("");
 	g_string_printf(msgdata_string, "%s", msgdata);
@@ -884,7 +857,6 @@ static int imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
         message = dbmail_message_new();
         message = dbmail_message_init_with_string(message, msgdata_string);
 	dbmail_message_set_internal_date(message, (char *)internal_date);
-
 	g_string_free(msgdata_string, TRUE); 
         
 	/* 
@@ -930,7 +902,6 @@ typedef struct {
 void _ic_append_enter(imap_cmd_t *ic)
 {
 	imap_append_t *data = (imap_append_t *)ic->data;
-
 	if (data->flagcount > 0) {
 		if (db_set_msgflag(data->message_id, data->mboxid, data->flags, data->keywords, IMAPFA_ADD, NULL) < 0) {
 			TRACE(TRACE_ERROR, "[%p] error setting flags for message [%llu]", ic->session, data->message_id);
@@ -951,10 +922,10 @@ void _ic_append_leave(imap_cmd_t *ic)
 	
 	if (data->message_id) {
 		if (self->state == IMAPCS_SELECTED) {
+			//insert new Messageinfo struct into self->mailbox->msginfo
+			//
 			int j = 0;
 			u64_t *uid;
-			//insert new Messageinfo struct into self->mailbox->msginfo
-			
 			MessageInfo *msginfo = g_new0(MessageInfo,1);
 
 			/* id */
@@ -1006,8 +977,7 @@ int _ic_append(ImapSession *self)
 
 	memset(flaglist,0,sizeof(flaglist));
 
-	if (!check_state_and_args(self, 2, 0, IMAPCS_AUTHENTICATED))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, 2, 0, IMAPCS_AUTHENTICATED)) return 1;
 
 	/* find the mailbox to place the message */
 	if (! db_findmailbox(self->args[0], self->userid, &mboxid)) {
@@ -1022,8 +992,7 @@ int _ic_append(ImapSession *self)
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
-	}
-	if (result == 0) {
+	} else if (result == 0) {
 		dbmail_imap_session_printf(self, "%s NO no permission to append to mailbox\r\n", self->tag);
 		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 		return 1;
@@ -1040,7 +1009,7 @@ int _ic_append(ImapSession *self)
 		while (self->args[i] && self->args[i][0] != ')') {
 			TRACE(TRACE_DEBUG, "[%p] [%s]", self, self->args[i]);
 			for (j = 0; j < IMAP_NFLAGS; j++) {
-				if (strcasecmp (self->args[i], imap_flag_desc_escaped[j]) == 0) {
+				if (MATCH(self->args[i], imap_flag_desc_escaped[j])) {
 					flaglist[j] = 1;
 					flagcount++;
 					break;
@@ -1061,9 +1030,7 @@ int _ic_append(ImapSession *self)
 
 	if (!self->args[i]) {
 		TRACE(TRACE_INFO, "[%p] unexpected end of arguments", self);
-		dbmail_imap_session_printf(self, 
-				"%s BAD invalid arguments specified to APPEND\r\n", 
-				self->tag);
+		dbmail_imap_session_printf(self, "%s BAD invalid arguments specified to APPEND\r\n", self->tag);
 		return 1;
 	}
 
@@ -1072,9 +1039,8 @@ int _ic_append(ImapSession *self)
 		result = acl_has_right(mbx, self->userid, ACL_RIGHT_SEEN);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-			return -1;	/* fatal */
-		}
-		if (result == 0) {
+			return -1;
+		} else if (result == 0) {
 			dbmail_imap_session_printf(self, "%s NO no right to store \\SEEN flag\r\n", self->tag);
 			return 1;
 		}
@@ -1083,9 +1049,8 @@ int _ic_append(ImapSession *self)
 		result = acl_has_right(mbx, self->userid, ACL_RIGHT_DELETE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-			return -1;	/* fatal */
-		}
-		if (result == 0) {
+			return -1;
+		} else if (result == 0) {
 			dbmail_imap_session_printf(self, "%s NO no right to store \\DELETED flag\r\n", self->tag);
 			return 1;
 		}
@@ -1099,8 +1064,7 @@ int _ic_append(ImapSession *self)
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "*BYE internal database error\r\n");
 			return -1;
-		}
-		if (result == 0) {
+		} else if (result == 0) {
 			dbmail_imap_session_printf(self, "%s NO no right to store flags\r\n", self->tag);
 			return 1;
 		}
@@ -1132,7 +1096,7 @@ int _ic_append(ImapSession *self)
 
 	/* ok literal msg should be in self->args[i] */
 	/* insert this msg */
-	result = imap_append_msg(self->args[i], strlen(self->args[i]), mboxid, self->userid, sqldate, &msg_idnr);
+	result = imap_append_msg(self->args[i], mboxid, self->userid, sqldate, &msg_idnr);
 
 	switch (result) {
 	case -1:
@@ -1177,8 +1141,7 @@ int _ic_append(ImapSession *self)
  * sort, check, close, expunge, search, fetch, store, copy, uid
  */
 
-/*
- * _ic_check()
+/* _ic_check()
  * 
  * request a checkpoint for the selected mailbox
  * (equivalent to NOOP)
@@ -1187,29 +1150,24 @@ int _ic_check(ImapSession *self)
 {
 	int result;
 
-	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
 
 	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
 		return -1;
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to do check on "
-			"mailbox\r\n", self->tag);
+	} else if (result == 0) {
+		dbmail_imap_session_printf(self, "%s NO no permission to do check on mailbox\r\n", self->tag);
 		return 1;
 	}
 
 	dbmail_imap_session_mailbox_status(self, TRUE);
-
 	dbmail_imap_session_printf(self, "%s OK CHECK completed\r\n", self->tag);
 	return 0;
 }
 
 
-/*
- * _ic_close()
+/* _ic_close()
  *
  * expunge deleted messages from selected mailbox & return to AUTH state
  * do not show expunge-output
@@ -1218,11 +1176,8 @@ int _ic_close(ImapSession *self)
 {
 	int result;
 
-	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
 
-	/* check if the user has to right to expunge all messages from the
-	   mailbox. */
 	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_DELETE);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
@@ -1233,48 +1188,36 @@ int _ic_close(ImapSession *self)
 		if (self->mailbox->info->permission == IMAPPERM_READWRITE)
 			dbmail_imap_session_mailbox_expunge(self);
 
-
-	/* ok, update state (always go to IMAPCS_AUTHENTICATED) */
 	dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 	dbmail_imap_session_printf(self, "%s OK CLOSE completed\r\n", self->tag);
 	return 0;
 }
 
-/*
- * _ic_unselect
+/* _ic_unselect
  *
  * non-expunging close for select mailbox and return to AUTH state
- *
  */
-
 int _ic_unselect(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED))
-		return 1;	/* error, return */
-
+	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
 	dbmail_imap_session_mailbox_close(self);
 	dbmail_imap_session_printf(self, "%s OK UNSELECT completed\r\n", self->tag);
 	return 0;
 }
 
-/*
- * _ic_expunge()
+/* _ic_expunge()
  *
  * expunge deleted messages from selected mailbox
  * show expunge output per message
  */
-	
 int _ic_expunge(ImapSession *self)
 {
 	int result;
 
-	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED))
-		return 1; /* error, return */
+	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
 
 	if (self->mailbox->info->permission != IMAPPERM_READWRITE) {
-		dbmail_imap_session_printf(self,
-			"%s NO you do not have write permission on this folder\r\n",
-			self->tag);
+		dbmail_imap_session_printf(self, "%s NO you do not have write permission on this folder\r\n", self->tag);
 		return 1;
 	}
 
@@ -1282,8 +1225,7 @@ int _ic_expunge(ImapSession *self)
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
-	}
-	if (result == 0) {
+	} else if (result == 0) {
 		dbmail_imap_session_printf(self, "%s NO you do not have delete rights on this mailbox\r\n", 
 		self->tag);
 		return 1;
@@ -1313,18 +1255,18 @@ static int sorted_search(ImapSession *self, search_order_t order)
 	const gchar *cmd;
 	gboolean sorted;
 
-	if (!check_state_and_args(self, 1, 0, IMAPCS_SELECTED)) return 1;	/* error, return */
+	if (!check_state_and_args(self, 1, 0, IMAPCS_SELECTED)) return 1;
 
 	if (order == SEARCH_SORTED) sorted = 1;
 	
 	/* check ACL */
-	if (! (result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ))) {
-		dbmail_imap_session_printf(self, "%s NO no permission to search mailbox\r\n", self->tag);
-		return 1;
-	}
+	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
+	} else if (result == 0) {
+		dbmail_imap_session_printf(self, "%s NO no permission to search mailbox\r\n", self->tag);
+		return 1;
 	}
 
 	mb = self->mailbox;

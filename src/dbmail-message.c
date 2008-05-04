@@ -216,10 +216,15 @@ static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 	C c; gboolean t = FALSE;
 	c = db_con_get();
 	TRY
-		t = Connection_execute(c, "INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
+		t = Connection_execute(c, 
+				"INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
 				"VALUES (%llu,%d,%d,%d,%d,%llu)", DBPFX,
 				dbmail_message_get_physid(m), is_header, m->part_key, m->part_depth, m->part_order, id);	
 	CATCH(SQLException)
+		TRACE(TRACE_ERROR,"Failure: "
+				"INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
+				"VALUES (%llu,%d,%d,%d,%d,%llu)", DBPFX,
+				dbmail_message_get_physid(m), is_header, m->part_key, m->part_depth, m->part_order, id);
 		LOG_SQLERROR;
 	FINALLY
 		Connection_close(c);
@@ -1322,7 +1327,6 @@ int _message_insert(DbmailMessage *self,
 	u64_t mailboxid;
 	u64_t physmessage_id;
 	char *internal_date = NULL, *frag = NULL;
-	INIT_QUERY;
 	C c; R r;
 
 	assert(unique_id);
@@ -1357,17 +1361,14 @@ int _message_insert(DbmailMessage *self,
 	frag = db_returning("message_idnr");
 
 	/* now insert an entry into the messages table */
-	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
-			"%smessages(mailbox_idnr, physmessage_id, unique_id,"
-			"recent_flag, status) "
-			"VALUES (%llu, %llu, '%s', 1, %d) %s",
-			DBPFX, mailboxid, physmessage_id, unique_id,
-			MESSAGE_STATUS_INSERT, frag);
-	g_free(frag);
-
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, query);
+		r = Connection_executeQuery(c, "INSERT INTO "
+				"%smessages(mailbox_idnr, physmessage_id, unique_id,"
+				"recent_flag, status) "
+				"VALUES (%llu, %llu, '%s', 1, %d) %s",
+				DBPFX, mailboxid, physmessage_id, unique_id,
+				MESSAGE_STATUS_INSERT, frag);
 		self->id = db_insert_result(c, r);
 		TRACE(TRACE_DEBUG,"new message_idnr [%llu]", self->id);
 
@@ -1377,6 +1378,7 @@ int _message_insert(DbmailMessage *self,
 		Connection_close(c);
 	END_TRY;
 
+	g_free(frag);
 	return result;
 }
 

@@ -105,6 +105,7 @@ typedef struct {
 	unsigned int port;	/**< port number of database server */
 	field_t sock;		/**< path to local unix socket (local connection) */
 	field_t pfx;		/**< prefix for tables e.g. dbmail_ */
+	unsigned int maxconnections; /**< maximum connections the pool will create with the database */
 	unsigned int serverid;	/**< unique id for dbmail instance used in clusters */
 	field_t encoding;	/**< character encoding to use */
 	unsigned int query_time_info;

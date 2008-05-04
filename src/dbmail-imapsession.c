@@ -212,9 +212,8 @@ ImapSession * dbmail_imap_session_new(void)
 	self->cached_msg = cached_msg;
 	self->args = g_new0(char *, MAX_ARGS);
 	self->buff = g_string_new("");
+	self->fi = g_new0(fetch_items_t,1);
 
-	dbmail_imap_session_reset_fetchitems(self);
-	
 	return self;
 }
 
@@ -227,21 +226,14 @@ ImapSession * dbmail_imap_session_reset_fetchitems(ImapSession * self)
      
 ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag)
 {
-	if (self->tag) {
-		g_free(self->tag);
-		self->tag = NULL;
-	}
-	
+	if (self->tag) g_free(self->tag);
 	self->tag = g_strdup(tag);
 	return self;
 }
 
 ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command)
 {
-	if (self->command) {
-		g_free(self->command);
-		self->command = NULL;
-	}
+	if (self->command) g_free(self->command);
 	self->command = g_strdup(command);
 	return self;
 }
@@ -249,8 +241,7 @@ ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command
 
 static void _mbxinfo_keywords_destroy(u64_t UNUSED *id, MailboxInfo *mb, gpointer UNUSED x)
 {
-	if (mb->keywords)
-		g_list_destroy(mb->keywords);
+	if (mb->keywords) g_list_destroy(mb->keywords);
 }
 
 static void _mbxinfo_destroy(ImapSession *self)
@@ -624,14 +615,12 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		
 		dbmail_imap_session_bodyfetch_new(self);
 
-		if (MATCH(token,"body.peek"))
-			ispeek=1;
+		if (MATCH(token,"body.peek")) ispeek=1;
 		
 		nexttoken = (char *)self->args[self->args_idx+1];
 		
 		if (! nexttoken || ! MATCH(nexttoken,"[")) {
-			if (ispeek)
-				return -2;	/* error DONE */
+			if (ispeek) return -2;	/* error DONE */
 			self->fi->getMIME_IMB_noextension = 1;	/* just BODY specified */
 		} else {
 			/* now read the argument list to body */
@@ -652,8 +641,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 				return _imap_session_fetch_parse_octet_range(self);
 			}
 			
-			if (ispeek)
-				self->fi->noseen = 1;
+			if (ispeek) self->fi->noseen = 1;
 
 			if (_imap_session_fetch_parse_partspec(self) < 0) {
 				TRACE(TRACE_DEBUG,"[%p] fetch_parse_partspec return with error", self);
@@ -683,10 +671,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 	} else if (MATCH(token,"envelope")) {
 		self->fi->getEnvelope = 1;
 	} else {			
-		if ((! nexttoken) && (strcmp(token,")") == 0)) {
-			/* only allowed if last arg here */
-			return -1;
-		}
+		if ((! nexttoken) && (strcmp(token,")") == 0)) return -1;
 		TRACE(TRACE_INFO,"[%p] error [%s]", self, token);
 		return -2;	/* DONE */
 	}
@@ -703,6 +688,7 @@ static gboolean _get_mailbox(u64_t UNUSED *id, MailboxInfo *mb, int *error)
 {
 	int result;
 	result = acl_has_right(mb, mb->owner_idnr, ACL_RIGHT_READ);
+
 	if (result == -1) {
 		*error = -1;
 		return TRUE;
