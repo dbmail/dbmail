@@ -44,7 +44,6 @@ const char *IMAP_COMMANDS[] = {
 	"***NOMORE***"
 };
 
-extern int selfpipe[2];
 extern GAsyncQueue *queue;
 
 const char AcceptedTagChars[] =

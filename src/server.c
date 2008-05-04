@@ -137,6 +137,10 @@ static int server_setup(void)
 	// Asynchronous message queue
 	queue = g_async_queue_new();
 
+	pipe(selfpipe);
+	UNBLOCK(selfpipe[0]);
+	UNBLOCK(selfpipe[1]);
+	
 	return 0;
 }
 	
@@ -413,10 +417,6 @@ clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
 		}
 	}
 
-	pipe(selfpipe);
-	UNBLOCK(selfpipe[0]);
-	UNBLOCK(selfpipe[1]);
-	
 	client->pev = g_new0(struct event, 1);
 	event_set(client->pev, selfpipe[0], EV_READ, client_pipe_cb, client);
 	event_add(client->pev, NULL);
