@@ -68,8 +68,8 @@ typedef struct {
 	gboolean error; // command result
 	int state; // session status 
 	int error_count;
-	void (*cb_read)(void *);
-	void (*cb_time)(void *);
+//	void (*cb_read)(void *);
+//	void (*cb_time)(void *);
 	
 } ImapSession;
 
@@ -108,7 +108,7 @@ ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command
 ImapSession * dbmail_imap_session_reset_fetchitems(ImapSession * self);
 
 void dbmail_imap_session_set_callbacks(ImapSession *self, void *cb_r, void *cb_t, int timeout);
-void dbmail_imap_session_reset_callbacks(ImapSession *self);
+void dbmail_imap_session_reset(ImapSession *session);
 
 void dbmail_imap_session_args_free(ImapSession *self, gboolean all);
 void dbmail_imap_session_fetch_free(ImapSession *self);

@@ -140,9 +140,9 @@ START_TEST(test_dbmail_imap_astring_as_string)
 }
 END_TEST
 
-static clientinfo_t * ci_new(void)
+static clientbase_t * ci_new(void)
 {
-	clientinfo_t *ci = g_new0(clientinfo_t,1);
+	clientbase_t *ci = g_new0(clientbase_t,1);
 	FILE *fd = fopen("/dev/null","w");
 	ci->rx = fileno(stdin);
 	ci->tx = fileno(fd);
@@ -150,9 +150,9 @@ static clientinfo_t * ci_new(void)
 }
 
 static char *tempfile;
-static clientinfo_t * ci_new_writable(void)
+static clientbase_t * ci_new_writable(void)
 {
-	clientinfo_t *ci = ci_new();
+	clientbase_t *ci = ci_new();
 
 	tempfile = tmpnam(NULL);
 	mkfifo(tempfile, 0600);
@@ -163,7 +163,7 @@ static clientinfo_t * ci_new_writable(void)
 	return ci;
 }
 
-static void ci_free_writable(clientinfo_t *ci)
+static void ci_free_writable(clientbase_t *ci)
 {
 	close(ci->tx);
 	close(ci->rx);

@@ -1614,7 +1614,7 @@ void imap_cb_idle_read (void *arg)
 
 	if (strlen(buffer) > 4 && strncasecmp(buffer,"DONE",4)==0) {
 		dbmail_imap_session_printf(self, "%s OK IDLE terminated\r\n", self->tag);
-		dbmail_imap_session_reset_callbacks(self);
+		dbmail_imap_session_reset(self);
 		self->command_state = TRUE; // done
 	} else if (strlen(buffer) > 0) {
 		dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);

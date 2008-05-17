@@ -493,7 +493,7 @@ END_TEST
 START_TEST(test_auth_validate) 
 {
 	int result;
-	clientinfo_t *ci = NULL;
+	clientbase_t *ci = NULL;
 
 	u64_t user_idnr = 0;
 	result = auth_validate(ci,"testuser1","test",&user_idnr);

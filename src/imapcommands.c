@@ -54,6 +54,7 @@ int imap_before_smtp = 0;
 
 #define IC_DONE_OK \
 	dbmail_imap_session_printf(self, "%s OK %s%s completed\r\n", self->tag, self->use_uid ? "UID " : "", self->command); \
+	self->command_state=TRUE; \
 	return 0
 /*
  * RETURN VALUES _ic_ functions:

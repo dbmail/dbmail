@@ -74,7 +74,6 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 
 static int imap4_tokenizer(ImapSession *, char *);
 static void imap4(ImapSession *);
-static void dbmail_imap_session_reset(ImapSession *session);
 
 static void imap_session_bailout(ImapSession *session)
 {
@@ -198,21 +197,22 @@ static size_t stridx(const char *s, char c)
 	for (i = 0; s[i] && s[i] != c; i++);
 	return i;
 }
+
 void imap_cb_read(void *arg)
 {
 	ImapSession *session = (ImapSession *) arg;
 	char buffer[MAX_LINESIZE];
 
-	// we need to clear the session if the previous command was 
-	// finished; completed or aborted
+	TRACE(TRACE_DEBUG, "[%p]", session);
+
 	if (session->command_state) dbmail_imap_session_reset(session);
 
-	bufferevent_enable(session->ci->rev, EV_READ);
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
 		if (imap4_tokenizer(session, buffer)) {
 			imap4(session);
 			TRACE(TRACE_DEBUG,"command state [%d]", session->command_state);
-			if (! session->command_state) return; // unfinished command, new read callback
+			if (! session->command_state) 
+				return; // unfinished command, new read callback
 			dbmail_imap_session_reset(session);
 		}
 	}
@@ -239,7 +239,7 @@ void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, i
 	bufferevent_settimeout(session->ci->rev, session->timeout, 0);
 }
 
-void dbmail_imap_session_reset_callbacks(ImapSession *session)
+static void imap_cb_reset(ImapSession *session)
 {
 	dbmail_imap_session_set_callbacks(session, imap_cb_read, imap_cb_time, session->timeout);
 }
@@ -264,7 +264,7 @@ int imap_handle_connection(client_sock *c)
 	ci->cb_pipe = (void *)ci_drain_queue;
 	session->ci = ci;
 
-	dbmail_imap_session_reset_callbacks(session);
+	imap_cb_reset(session);
 	
 	send_greeting(session);
 	
@@ -273,6 +273,7 @@ int imap_handle_connection(client_sock *c)
 
 void dbmail_imap_session_reset(ImapSession *session)
 {
+	TRACE(TRACE_DEBUG,"[%p]", session);
 	if (session->tag) {
 		g_free(session->tag);
 		session->tag = NULL;
@@ -284,6 +285,7 @@ void dbmail_imap_session_reset(ImapSession *session)
 	session->command_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 	session->rbuff = NULL;
+	imap_cb_reset(session);
 	bufferevent_enable(session->ci->rev, EV_READ);
 }
 
@@ -366,7 +368,8 @@ void imap4(ImapSession *session)
 	if (session->command_state==TRUE) // did we receive a signal we're done already
 		return;
 
-	// whatever happens we're done with this command by default (IDLE being an exemption)
+	// whatever happens we're done with this command by default 
+	// (IDLE and threaded command being the exceptions)
 	session->command_state=TRUE;
 
 	if (! (session->tag && session->command)) {
@@ -411,10 +414,13 @@ void imap4(ImapSession *session)
 			break;
 			case IMAP_COMM_IDLE:
 				session->command_state=FALSE;
-				return;
 			break;
 		}
+	} else { // always done in case of error
+		session->command_state = TRUE;
 	}
+
+	if (! session->command_state) return;
 
 	if (before != (time_t)-1 && after != (time_t)-1)
 		elapsed = (int)((time_t) (after - before));

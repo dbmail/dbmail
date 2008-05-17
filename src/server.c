@@ -58,6 +58,7 @@ void ci_drain_queue(clientbase_t *client)
 		if (data) {
 			dm_thread_data *ic = (gpointer)data;
 			ic->cb_leave(data);
+			// ic is now freed and NULL
 		}
 	} while (data);
 
@@ -75,11 +76,12 @@ void ci_drain_queue(clientbase_t *client)
 void ic_flush(gpointer data)
 {
 	dm_thread_data *ic = (dm_thread_data *)data;
+	ImapSession *session = ic->session;
 
-	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, ic->session);
+	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, session);
 	/* flush and cleanup thread data */
 	if (ic->result) {
-		if (ic->session->ci) ci_write(ic->session->ci, "%s", ic->result);
+		if (session->ci) ci_write(session->ci, "%s", ic->result);
 		g_free(ic->result);
 	}
 	if (ic->tag) g_free(ic->tag);
@@ -88,6 +90,10 @@ void ic_flush(gpointer data)
 	if (ic->data) g_free(ic->data);
 
 	g_free(ic);
+	ic = NULL;
+
+	session->command_state = TRUE;
+	session->ci->cb_read(session);
 }
 
 void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
@@ -96,6 +102,9 @@ void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpo
 
 	assert(session);
 	assert(cb_enter);
+
+	session->command_state = FALSE; // we're not done until we're done
+	bufferevent_disable(session->ci->rev, EV_READ);
 
 	dm_thread_data *ic = g_new0(dm_thread_data,1);
 	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, session);
