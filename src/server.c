@@ -1,6 +1,6 @@
 /*
   
- Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (C) 1999-2004 IC & S  dbmail@D-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
@@ -28,22 +28,19 @@
 #include "dbmail.h"
 #define THIS_MODULE "server"
 
-volatile sig_atomic_t GeneralStopRequested = 0;
-volatile sig_atomic_t Restart = 0;
-volatile sig_atomic_t mainStop = 0;
 volatile sig_atomic_t mainRestart = 0;
-volatile sig_atomic_t mainStatus = 0;
-volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
 volatile sig_atomic_t alarm_occurred = 0;
 
 extern volatile sig_atomic_t event_gotsig;
 extern int (*event_sigcb)(void);
 
+// thread data
 int selfpipe[2];
 GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
 
+// 
 serverConfig_t *server_conf;
 
 static void worker_run(serverConfig_t *conf);
@@ -56,9 +53,13 @@ void ci_drain_queue(clientbase_t *client)
 	do {
 		data = g_async_queue_try_pop(queue);
 		if (data) {
-			dm_thread_data *ic = (gpointer)data;
-			ic->cb_leave(data);
-			// ic is now freed and NULL
+			dm_thread_data *D = (gpointer)data;
+			ImapSession *session = D->session;
+			if (D->cb_leave) D->cb_leave(data);
+			ic_flush(data);
+
+			session->command_state = TRUE;
+			session->ci->cb_read(session);
 		}
 	} while (data);
 
@@ -75,25 +76,19 @@ void ci_drain_queue(clientbase_t *client)
  */
 void ic_flush(gpointer data)
 {
-	dm_thread_data *ic = (dm_thread_data *)data;
-	ImapSession *session = ic->session;
+	dm_thread_data *D = (dm_thread_data *)data;
 
-	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, session);
+	TRACE(TRACE_DEBUG,"[%p]", D);
+
 	/* flush and cleanup thread data */
-	if (ic->result) {
-		if (session->ci) ci_write(session->ci, "%s", ic->result);
-		g_free(ic->result);
+	if (D->result) {
+		ci_write(D->session->ci, "%s", D->result);
+		g_free(D->result); D->result = NULL;
 	}
-	if (ic->tag) g_free(ic->tag);
-	if (ic->command) g_free(ic->command);
-	if (ic->args) g_strfreev(ic->args);
-	if (ic->data) g_free(ic->data);
 
-	g_free(ic);
-	ic = NULL;
+	if (D->data) g_free(D->data);
+	g_free(D); D = NULL;
 
-	session->command_state = TRUE;
-	session->ci->cb_read(session);
 }
 
 void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
@@ -106,45 +101,31 @@ void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpo
 	session->command_state = FALSE; // we're not done until we're done
 	bufferevent_disable(session->ci->rev, EV_READ);
 
-	dm_thread_data *ic = g_new0(dm_thread_data,1);
-	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, session);
+	dm_thread_data *D = g_new0(dm_thread_data,1);
 
-	assert(cb_enter);
+	TRACE(TRACE_DEBUG,"[%p] [%p]", D, session);
 
-	ic->userid	= session->userid;
-	ic->tag		= g_strdup(session->tag);
-	ic->command	= g_strdup(session->command);
-	if (session->args) {
-		ic->args = g_strdupv(session->args);
-		ic->arg	 = ic->args[session->args_idx];
-	}
-	ic->session	= session;	/* we need to pass this along */
-	ic->data	= data; 	/* payload */
+	D->cb_enter	= cb_enter;
+	D->cb_leave     = cb_leave;
+	D->session	= session;
+	D->data         = data;
 
-	ic->cb_enter	= cb_enter;
+	g_thread_pool_push(tpool, D, &err);
 
-	if (cb_leave)
-		ic->cb_leave = cb_leave;
-	else
-		ic->cb_leave = ic_flush;
+	if (err) TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
 
-	g_thread_pool_push(tpool, ic, &err);
-	if (err)
-		TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
 }
 
 static void dm_worker_dispatch(gpointer data, gpointer user_data)
 {
 	TRACE(TRACE_DEBUG,"data[%p], user_data[%p]", data, user_data);
-	dm_thread_data *ic = (dm_thread_data *)data;
-	ic->cb_enter(ic);
+	dm_thread_data *D = (dm_thread_data *)data;
+	D->cb_enter(D);
 }
 
 static int server_setup(void)
 {
 	GError *err = NULL;
-	Restart = 0;
-	GeneralStopRequested = 0;
 	get_sigchld = 0;
 
 	if (! g_thread_supported () ) g_thread_init (NULL);
@@ -565,41 +546,28 @@ void disconnect_all(void)
 
 int server_run(serverConfig_t *conf)
 {
-	mainStop = 0;
+	int ip;
+	struct event *evsock;
+
 	mainRestart = 0;
-	mainStatus = 0;
-	mainSig = 0;
 
 	assert(conf);
-
 	reopen_logs(conf);
-
 	server_create_sockets(conf);
 
 	if (server_setup()) return -1;
 
-	worker_run(conf);
-
-	server_close_sockets(conf);
-	
-	return 0;
-}
-
-void worker_run(serverConfig_t *conf)
-{
-	int ip;
-	struct event *evsock;
  	TRACE(TRACE_MESSAGE, "starting main service loop");
 
 	server_conf = conf;
 	if (db_connect() != 0) {
 		TRACE(TRACE_ERROR, "could not connect to database");
-		return;
+		return -1;
 	}
 
 	if (auth_connect() != 0) {
 		TRACE(TRACE_ERROR, "could not connect to authentication");
-		return;
+		return -1;
 	}
 
 	srand((int) ((int) time(NULL) + (int) getpid()));
@@ -616,5 +584,9 @@ void worker_run(serverConfig_t *conf)
 	event_dispatch();
 
 	disconnect_all();
+
+	server_close_sockets(conf);
+	
+	return 0;
 }
 

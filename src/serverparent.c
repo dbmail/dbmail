@@ -33,7 +33,6 @@
 
 static char *configFile = DEFAULT_CONFIG_FILE;
 
-extern volatile sig_atomic_t mainStop;
 extern volatile sig_atomic_t event_gotsig;
 extern int (*event_sigcb)(void);
 
@@ -157,7 +156,7 @@ int serverparent_mainloop(serverConfig_t *config, const char *service, const cha
 	pidfile_create(config->pidFile, getpid());
 
 	/* This is the actual main loop. */
-	while (!mainStop && server_run(config)) {
+	while (server_run(config)) {
 		/* Reread the config file and restart the services,
 		 * e.g. on SIGHUP or other graceful restart condition. */
 		DoConfig(config, service);

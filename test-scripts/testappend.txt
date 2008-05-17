@@ -1,0 +1,6 @@
+x capability
+x login testuser1 test
+x append INBOX {10}
+From: paul
+
+x logout

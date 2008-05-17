@@ -1,5 +1,5 @@
 /*
- Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (C) 1999-2004 IC & S  dbmail@D-s.nl
  Copyright (c) 2004-2008 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
@@ -74,7 +74,7 @@ int imap_before_smtp = 0;
  * returns a string to the client containing the server capabilities
  */
 // a trivial silly thread example
-void _ic_capability_enter(dm_thread_data *ic)
+void _ic_capability_enter(dm_thread_data *D)
 {
 	field_t val;
 	gboolean override = FALSE;
@@ -83,12 +83,12 @@ void _ic_capability_enter(dm_thread_data *ic)
 	GETCONFIGVALUE("capability", "IMAP", val);
 	if (strlen(val) > 0) override = TRUE;
 
-	g_string_append_printf(s, "* %s %s\r\n", ic->command, override ? val : IMAP_CAPABILITY_STRING);
-	g_string_append_printf(s, "%s OK %s completed\r\n", ic->tag, ic->command);
-	ic->result = s->str;
+	g_string_append_printf(s, "* %s %s\r\n", D->session->command, override ? val : IMAP_CAPABILITY_STRING);
+	g_string_append_printf(s, "%s OK %s completed\r\n", D->session->tag, D->session->command);
+	D->result = s->str;
 	g_string_free(s,FALSE);
 
-	NOTIFY_DONE(ic);
+	NOTIFY_DONE(D);
 
 	return;
 }
@@ -351,7 +351,7 @@ int _ic_examine(ImapSession *self)
  * create a mailbox
  */
 
-void _ic_create_enter(dm_thread_data *ic)
+void _ic_create_enter(dm_thread_data *D)
 {
 	/* Create the mailbox and its parents. */
 	int result;
@@ -359,19 +359,19 @@ void _ic_create_enter(dm_thread_data *ic)
 	const char *message;
 	GString *s = g_string_new("");
 
-	result = db_mailbox_create_with_parents(ic->arg, BOX_COMMANDLINE, ic->userid, &mboxid, &message);
+	result = db_mailbox_create_with_parents(D->session->args[D->session->args_idx], BOX_COMMANDLINE, D->session->userid, &mboxid, &message);
 
 	if (result > 0)
-		g_string_append_printf(s, "%s NO %s\r\n", ic->tag, message);
+		g_string_append_printf(s, "%s NO %s\r\n", D->session->tag, message);
 	else if (result < 0)
 		g_string_append_printf(s, "* BYE internal dbase error\r\n");
 	else
-		g_string_append_printf(s, "%s OK %s completed\r\n", ic->tag, ic->command);
+		g_string_append_printf(s, "%s OK %s completed\r\n", D->session->tag, D->session->command);
 
-	ic->result = s->str;
+	D->result = s->str;
 	g_string_free(s, FALSE);
 
-	NOTIFY_DONE(ic);
+	NOTIFY_DONE(D);
 }
 
 
@@ -681,37 +681,34 @@ typedef struct {
 
 } imap_list_t;
 
-void _ic_list_enter(dm_thread_data *ic)
+void _ic_list_enter(dm_thread_data *D)
 {
 	GList *children = NULL;
-	GString *s = g_string_new("");
-	imap_list_t *data = (imap_list_t *)ic->data;
+	imap_list_t *data = (imap_list_t *)D->data;
 	int list_is_lsub = 0;
 
-	if (ic->session->command_type == IMAP_COMM_LSUB) list_is_lsub = 1;
+	if (D->session->command_type == IMAP_COMM_LSUB) list_is_lsub = 1;
 
-	ic->status = db_findmailbox_by_regex(ic->userid, data->pattern, &children, list_is_lsub);
-	if (ic->status == -1) {
-		g_string_append_printf(s, "* BYE internal dbase error\r\n");
-	} else if (ic->status == 1) {
-		g_string_append_printf(s, "%s BAD invalid pattern specified\r\n", ic->tag);
+	D->status = db_findmailbox_by_regex(D->session->userid, data->pattern, &children, list_is_lsub);
+	if (D->status == -1) {
+		D->result = g_strdup_printf("* BYE internal dbase error\r\n");
+	} else if (D->status == 1) {
+		D->result = g_strdup_printf("%s BAD invalid pattern specified\r\n", D->session->tag);
 	}
 	data->children = children;
-	ic->result = s->str;
-	g_string_free(s, FALSE);
 
-	NOTIFY_DONE(ic);
+	NOTIFY_DONE(D);
 }
 
-void _ic_list_leave(dm_thread_data *ic)
+void _ic_list_leave(dm_thread_data *D)
 {
-	ImapSession *self = ic->session;
-	imap_list_t *data = (imap_list_t *)ic->data;
+	ImapSession *self = D->session;
+	imap_list_t *data = (imap_list_t *)D->data;
 	GList *plist = NULL, *children = g_list_first(data->children);
 	char *pstring;
 	MailboxInfo *mb = NULL;
 
-	while ((! ic->status) && children) {
+	while ((! D->status) && children) {
 		u64_t mailbox_id = *(u64_t *)children->data;
 		mb = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id);
 		
@@ -727,7 +724,7 @@ void _ic_list_leave(dm_thread_data *ic)
 		
 		/* show */
 		pstring = dbmail_imap_plist_as_string(plist);
-		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", ic->command, 
+		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", D->session->command, 
 				pstring, MAILBOX_SEPARATOR, mb->name);
 		
 		g_list_destroy(plist);
@@ -740,9 +737,7 @@ void _ic_list_leave(dm_thread_data *ic)
 	if (data->children) g_list_destroy(data->children);
 	g_free(data->pattern);
 
-	if (! ic->status) dbmail_imap_session_printf(self, "%s OK %s completed\r\n", ic->tag, ic->command);
-
-	ic_flush(ic);
+	if (! D->status) dbmail_imap_session_printf(self, "%s OK %s completed\r\n", D->session->tag, D->session->command);
 
 	return;
 }
@@ -957,26 +952,26 @@ typedef struct {
 	GList *keywords;
 } imap_append_t;
 
-void _ic_append_enter(dm_thread_data *ic)
+void _ic_append_enter(dm_thread_data *D)
 {
-	imap_append_t *data = (imap_append_t *)ic->data;
+	imap_append_t *data = (imap_append_t *)D->data;
 	if (data->flagcount > 0) {
 		if (db_set_msgflag(data->message_id, data->mboxid, data->flags, data->keywords, IMAPFA_ADD, NULL) < 0) {
-			TRACE(TRACE_ERROR, "[%p] error setting flags for message [%llu]", ic->session, data->message_id);
+			TRACE(TRACE_ERROR, "[%p] error setting flags for message [%llu]", D->session, data->message_id);
 		}
 	}
 
 	db_mailbox_mtime_update(data->mboxid);
 
-	NOTIFY_DONE(ic);
+	NOTIFY_DONE(D);
 
 	return;
 }
 
-void _ic_append_leave(dm_thread_data *ic)
+void _ic_append_leave(dm_thread_data *D)
 {
-	ImapSession *self = ic->session;
-	imap_append_t *data = (imap_append_t *)ic->data;
+	ImapSession *self = D->session;
+	imap_append_t *data = (imap_append_t *)D->data;
 	
 	if (data->message_id && self->state == IMAPCS_SELECTED) {
 		//insert new Messageinfo struct into self->mailbox->msginfo
@@ -999,7 +994,8 @@ void _ic_append_leave(dm_thread_data *ic)
 		msginfo->keywords = data->keywords;
 
 		/* internal date */
-		strncpy(msginfo->internaldate, (data->sqldate) ? data->sqldate : "01-Jan-1970 00:00:01 +0100", 
+		strncpy(msginfo->internaldate, 
+				(data->sqldate) ? data->sqldate : "01-Jan-1970 00:00:01 +0100", 
 				IMAP_INTERNALDATE_LEN);
 
 		/* rfcsize */
@@ -1020,7 +1016,7 @@ void _ic_append_leave(dm_thread_data *ic)
 
 	g_free(data->sqldate);
 
-	ic_flush(ic);
+	D->result = g_strdup_printf("%s OK APPEND completed\r\n", D->session->tag);
 
 	return;
 }
@@ -1125,10 +1121,8 @@ int _ic_append(ImapSession *self)
 		sqldate[0] = '\0';
 	}
 
-	/* ok literal msg should be in self->args[i] */
-	/* insert this msg */
+	/* literal msg in self->args[i] */
 	result = imap_append_msg(self->args[i], mboxid, self->userid, sqldate, &msg_idnr);
-
 	switch (result) {
 	case -1:
 		TRACE(TRACE_ERROR, "[%p] error appending msg", self);
@@ -1144,10 +1138,6 @@ int _ic_append(ImapSession *self)
 		TRACE(TRACE_ERROR, "[%p] faulty msg", self);
 		dbmail_imap_session_printf(self, "%s NO invalid message specified\r\n", self->tag);
 		return result;
-
-	case TRUE:
-		dbmail_imap_session_printf(self, "%s OK APPEND completed\r\n", self->tag);
-		break;
 	}
 
 	data = g_new0(imap_append_t,1);

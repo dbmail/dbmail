@@ -38,7 +38,7 @@ endif
 ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
 	export WITH_SIEVE=--with-sieve
 endif
-ifneq (,$(findstring 2.3,$(DBMAIL_VERSION)))
+ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export REAL_CLEAN=mrproper
 	export RECONFIG=configure
 endif

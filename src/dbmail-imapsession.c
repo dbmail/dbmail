@@ -1649,13 +1649,13 @@ gpointer db_update_recent(gpointer data)
 	INIT_QUERY;
 	C c;
 	int t = FALSE;
-	dm_thread_data *ic = (dm_thread_data *)data;
+	dm_thread_data *D = (dm_thread_data *)data;
 
-	assert(ic);
+	assert(D);
 
-	if (! ic->data) return NULL;
+	if (! D->data) return NULL;
 
-	GList *slices = (GList *)ic->data;
+	GList *slices = (GList *)D->data;
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
