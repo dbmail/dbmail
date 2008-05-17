@@ -83,7 +83,7 @@ static void imap_session_bailout(ImapSession *session)
 	ci_close(session->ci);
 	dbmail_imap_session_delete(session);
 
-	if (server_conf->no_daemonize) _exit(0);
+	if (server_conf->no_daemonize == 1) _exit(0);
 }
 
 

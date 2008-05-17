@@ -284,11 +284,8 @@ static void client_pipe_cb(int sock, short event, void *arg)
 	while (read(sock, buf, 1) > 0)
 		;
 	client = (clientinfo_t *)arg;
-	if (client->cb_pipe)
-		client->cb_pipe(client);
-	// reschedule
-	if (client->pev)
-		event_add(client->pev, NULL);
+	if (client->cb_pipe) client->cb_pipe(client);
+	if (client->pev) event_add(client->pev, NULL);
 }
 
 clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
@@ -352,6 +349,7 @@ void client_close(client_sock *c)
 	if (!c) return;
 	if (c->cb_close) c->cb_close(c);
 	g_free(c);
+	c = NULL;
 }
 
 

@@ -62,7 +62,7 @@ void serverparent_showhelp(const char *name, const char *greeting) {
         printf("\nCommon options for all DBMail daemons:\n");
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -p file   specify an alternative runtime pidfile\n");
-	printf("     -n        do not daemonize (no children are forked)\n");
+	printf("     -n        stdin/stdout mode\n");
 	printf("     -D        foreground mode\n");
 	printf("     -v        verbose logging to syslog and stderr\n");
 	printf("     -V        show the version\n");

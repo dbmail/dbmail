@@ -2356,6 +2356,9 @@ void ci_close(clientinfo_t *self)
 {
 	assert(self);
 
+	event_del(self->pev);
+	self->pev = NULL;
+
 	bufferevent_disable(self->rev, EV_READ);
 	bufferevent_disable(self->wev, EV_WRITE);
 	bufferevent_free(self->rev);
@@ -2366,12 +2369,13 @@ void ci_close(clientinfo_t *self)
 	if (self->tx > 0) {
 		shutdown(self->tx, SHUT_RDWR);
 		close(self->tx);
-		self->tx = -1;
 	}
 	if (self->rx >= 0) {
 		close(self->rx);
-		self->rx = -1;
 	}
+
+	self->tx = -1;
+	self->rx = -1;
 
 	g_string_free(self->line_buffer,TRUE);
 	g_free(self);

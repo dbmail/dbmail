@@ -522,7 +522,7 @@ int _ic_rename(ImapSession *self)
                 return 1;
         }
 
-	if (! (db_findmailbox(self->args[1], self->userid, &newmboxid))) {
+	if ((db_findmailbox(self->args[1], self->userid, &newmboxid))) {
 		dbmail_imap_session_printf(self, "%s NO new mailbox already exists\r\n", self->tag);
 		return 1;
 	}
@@ -977,44 +977,46 @@ void _ic_append_leave(imap_cmd_t *ic)
 	ImapSession *self = ic->session;
 	imap_append_t *data = (imap_append_t *)ic->data;
 	
-	if (data->message_id) {
-		if (self->state == IMAPCS_SELECTED) {
-			//insert new Messageinfo struct into self->mailbox->msginfo
-			//
-			int j = 0;
-			u64_t *uid;
-			MessageInfo *msginfo = g_new0(MessageInfo,1);
+	if (data->message_id && self->state == IMAPCS_SELECTED) {
+		//insert new Messageinfo struct into self->mailbox->msginfo
+		//
+		int j = 0;
+		u64_t *uid;
+		MessageInfo *msginfo = g_new0(MessageInfo,1);
 
-			/* id */
-			msginfo->id = data->message_id;
+		/* id */
+		msginfo->id = data->message_id;
 
-			/* mailbox_id */
-			msginfo->mailbox_id = data->mboxid;
+		/* mailbox_id */
+		msginfo->mailbox_id = data->mboxid;
 
-			/* flags */
-			for (j = 0; j < IMAP_NFLAGS; j++)
-				msginfo->flags[j] = data->flags[j];
+		/* flags */
+		for (j = 0; j < IMAP_NFLAGS; j++)
+			msginfo->flags[j] = data->flags[j];
 
-			/* internal date */
-			strncpy(msginfo->internaldate, (data->sqldate) ? data->sqldate : "01-Jan-1970 00:00:01 +0100", 
-					IMAP_INTERNALDATE_LEN);
+		/* keywords */
+		msginfo->keywords = data->keywords;
 
-			/* rfcsize */
-			msginfo->rfcsize = data->rfcsize;
+		/* internal date */
+		strncpy(msginfo->internaldate, (data->sqldate) ? data->sqldate : "01-Jan-1970 00:00:01 +0100", 
+				IMAP_INTERNALDATE_LEN);
 
-			uid = g_new0(u64_t,1);
-			*uid = data->message_id;
-			g_tree_insert(self->mailbox->msginfo, uid, msginfo); 
+		/* rfcsize */
+		msginfo->rfcsize = data->rfcsize;
 
-			self->mailbox->info->exists++;
+		uid = g_new0(u64_t,1);
+		*uid = data->message_id;
+		g_tree_insert(self->mailbox->msginfo, uid, msginfo); 
 
-			dbmail_mailbox_insert_uid(self->mailbox, data->message_id);
+		self->mailbox->info->exists++;
 
-			dbmail_imap_session_mailbox_status(self, FALSE);
-		}
+		dbmail_mailbox_insert_uid(self->mailbox, data->message_id);
+
+		dbmail_imap_session_mailbox_status(self, FALSE);
+	} else {
+		g_list_destroy(data->keywords);
 	}
 
-	g_list_destroy(data->keywords);
 	g_free(data->sqldate);
 
 	ic_flush(ic);
