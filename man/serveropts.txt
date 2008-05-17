@@ -9,7 +9,12 @@ OPTIONS
   place the pid file in your system's preferred location.
 
 -n::
-  No daemonize. The program remains attached to the console from
-  which it was started. This is quite useful for debugging when
-  combined with the -v option.
+  No daemonize: inetd mode. The program remains attached to the console from
+  which it was started and will read and write on stdin/stdout. This is quite
+  useful for debugging when combined with the -v option. It is also used for
+  running from (x)inetd.
 
+-D::
+  No daemonize: init mode. The program remains attached to the console and will
+  listen on the network sockets defined in dbmail.conf. This is mostly used 
+  when running from inittab or under the control of daemontools.

@@ -19,7 +19,5 @@ AUTHORS and THANKS files found in the DBMail source distribution.
   Roel Rozendaal      Open Source Engineer   NFG Net Facilities Group BV
   Ilja Booij          Palo Alto, CA USA      http://www.nfg.nl
   IC&S                http://hydricacid.com
-  Koningsweg 4
-  3582 GE Utrecht
   http://www.ic-s.nl
 

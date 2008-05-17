@@ -143,7 +143,7 @@
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
 
-#define PRINTF_THIS_IS_DBMAIL printf("This is DBMail version %s\n\n%s\n", DBMAIL_VERSION, COPYRIGHT)
+#define PRINTF_THIS_IS_DBMAIL printf("This is DBMail version %s\n\n%s\n", VERSION, COPYRIGHT)
 
 #define COPYRIGHT \
 "Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl\n" \

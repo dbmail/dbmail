@@ -44,6 +44,7 @@ const char *IMAP_COMMANDS[] = {
 	"***NOMORE***"
 };
 
+extern serverConfig_t *server_conf;
 extern GAsyncQueue *queue;
 
 const char AcceptedTagChars[] =
@@ -81,6 +82,8 @@ static void imap_session_bailout(ImapSession *session)
 	if (! session) return;
 	ci_close(session->ci);
 	dbmail_imap_session_delete(session);
+
+	if (server_conf->no_daemonize) _exit(0);
 }
 
 
@@ -177,7 +180,7 @@ static void send_greeting(ImapSession *session)
 	if (strlen(banner) > 0)
 		dbmail_imap_session_printf(session, "* OK %s\r\n", banner);
 	else
-		dbmail_imap_session_printf(session, "* OK dbmail imap (protocol version 4r1) server %s ready to run\r\n", VERSION);
+		dbmail_imap_session_printf(session, "* OK imap 4r1 server (dbmail %s)\r\n", VERSION);
 	dbmail_imap_session_set_state(session,IMAPCS_NON_AUTHENTICATED);
 }
 
@@ -190,8 +193,6 @@ void imap_cb_time(void *arg)
 
 	dbmail_imap_session_printf(session, "%s", IMAP_TIMEOUT_MSG);
 	dbmail_imap_session_set_state(session,IMAPCS_ERROR);
-
-	imap_session_bailout(session);
 }
 
 static int checktag(const char *s)

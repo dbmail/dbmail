@@ -36,8 +36,6 @@ volatile sig_atomic_t mainStatus = 0;
 volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
 volatile sig_atomic_t alarm_occurred = 0;
-volatile sig_atomic_t childSig = 0;
-volatile sig_atomic_t ChildStopRequested = 0;
 
 extern volatile sig_atomic_t event_gotsig;
 extern int (*event_sigcb)(void);
@@ -45,85 +43,10 @@ extern int (*event_sigcb)(void);
 int selfpipe[2];
 GAsyncQueue *queue;
 
-static serverConfig_t *server_conf;
+serverConfig_t *server_conf;
 
 static void worker_run(serverConfig_t *conf);
-
-static void server_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
-{
-	Restart = 0;
-	
-	event_gotsig = 1;
-
-	switch (sig) {
-
-	case SIGCHLD:
-		get_sigchld = 1;
-		break;		
-
-	case SIGHUP:
-		mainRestart = 1;
-		break;
-	
-	case SIGSEGV:
-		_exit(1);
-		break;
-
-	case SIGUSR1:
-		mainStatus = 1;
-		break;
-
-	case SIGALRM:
-		alarm_occurred = 1;
-		break;
-		
-	default:
-		GeneralStopRequested = 1;
-		break;
-	}
-}
-
-int server_sig_cb(void)
-{
-	if (GeneralStopRequested || mainStatus || alarm_occurred || get_sigchld) {
-		TRACE(TRACE_DEBUG,"event_loopexit");
-		(void)event_loopexit(NULL);
-	}
-	return (0);
-}
-
-static int server_set_sighandler(void)
-{
-	struct sigaction act;
-	struct sigaction sact;
-
-	/* init & install signal handlers */
-	memset(&act, 0, sizeof(act));
-	memset(&sact, 0, sizeof(sact));
-
-	act.sa_sigaction = server_sighandler;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO;
-
-	sact.sa_sigaction = server_sighandler;
-	sigemptyset(&sact.sa_mask);
-	sact.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
-
-	sigaction(SIGCHLD,	&sact, 0);
-	sigaction(SIGINT,	&sact, 0);
-	sigaction(SIGQUIT,	&sact, 0);
-	sigaction(SIGILL,	&sact, 0);
-	sigaction(SIGBUS,	&sact, 0);
-	sigaction(SIGFPE,	&sact, 0);
-	sigaction(SIGSEGV,	&sact, 0); 
-	sigaction(SIGTERM,	&sact, 0);
-	sigaction(SIGHUP, 	&sact, 0);
-	sigaction(SIGUSR1,	&sact, 0);
-
-	event_sigcb = server_sig_cb;
-
-	return 0;
-}
+static int worker_set_sighandler(void);
 
 static int server_setup(void)
 {
@@ -132,7 +55,7 @@ static int server_setup(void)
 	get_sigchld = 0;
 
 	if (! g_thread_supported () ) g_thread_init (NULL);
-	server_set_sighandler();
+	worker_set_sighandler();
 
 	// Asynchronous message queue
 	queue = g_async_queue_new();
@@ -485,14 +408,14 @@ static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	case SIGPIPE:
 		break;
 	default:
-		childSig = sig;
 		break;
 	}
 }
 
 static int worker_sig_cb(void)
 {
-	if (ChildStopRequested || alarm_occurred)
+	TRACE(TRACE_DEBUG, "...");
+	if (alarm_occurred)
 		(void)event_loopexit(NULL);
 
 	if (mainRestart) {
@@ -607,8 +530,6 @@ void worker_run(serverConfig_t *conf)
 		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, worker_sock_cb, &evsock[ip]);
 		event_add(&evsock[ip], NULL);
 	}
-
-	worker_set_sighandler();
 
 	TRACE(TRACE_DEBUG,"dispatch event loop");
 

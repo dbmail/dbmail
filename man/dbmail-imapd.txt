@@ -14,11 +14,7 @@ dbmail-imapd [-f configfile] [-p pidfile] [-nvVh]
 
 DESCRIPTION
 -----------
-The dbmail-imapd daemon is a fully featured IMAP4r1 server. It will
-spawn into a number of default processes as set in the dbmail.conf
-file. These processes will enable full IMAP4r1 communication with
-clients.
-
+The dbmail-imapd daemon is a fully featured IMAP4r1 server. 
 
 include::serveropts.txt[]
 
