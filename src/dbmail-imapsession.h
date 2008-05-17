@@ -97,7 +97,7 @@ typedef struct {
 	char *result; 				/* allocated output string buffer	*/
 	int status;				/* command result 			*/
 	ImapSession *session;
-} imap_cmd_t;
+} dm_thread_data;
 	
 
 /* public methods */

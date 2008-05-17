@@ -73,7 +73,7 @@ int imap_before_smtp = 0;
  * returns a string to the client containing the server capabilities
  */
 // a trivial silly thread example
-void _ic_capability_enter(imap_cmd_t *ic)
+void _ic_capability_enter(dm_thread_data *ic)
 {
 	field_t val;
 	gboolean override = FALSE;
@@ -350,7 +350,7 @@ int _ic_examine(ImapSession *self)
  * create a mailbox
  */
 
-void _ic_create_enter(imap_cmd_t *ic)
+void _ic_create_enter(dm_thread_data *ic)
 {
 	/* Create the mailbox and its parents. */
 	int result;
@@ -680,7 +680,7 @@ typedef struct {
 
 } imap_list_t;
 
-void _ic_list_enter(imap_cmd_t *ic)
+void _ic_list_enter(dm_thread_data *ic)
 {
 	GList *children = NULL;
 	GString *s = g_string_new("");
@@ -702,7 +702,7 @@ void _ic_list_enter(imap_cmd_t *ic)
 	NOTIFY_DONE(ic);
 }
 
-void _ic_list_leave(imap_cmd_t *ic)
+void _ic_list_leave(dm_thread_data *ic)
 {
 	ImapSession *self = ic->session;
 	imap_list_t *data = (imap_list_t *)ic->data;
@@ -956,7 +956,7 @@ typedef struct {
 	GList *keywords;
 } imap_append_t;
 
-void _ic_append_enter(imap_cmd_t *ic)
+void _ic_append_enter(dm_thread_data *ic)
 {
 	imap_append_t *data = (imap_append_t *)ic->data;
 	if (data->flagcount > 0) {
@@ -972,7 +972,7 @@ void _ic_append_enter(imap_cmd_t *ic)
 	return;
 }
 
-void _ic_append_leave(imap_cmd_t *ic)
+void _ic_append_leave(dm_thread_data *ic)
 {
 	ImapSession *self = ic->session;
 	imap_append_t *data = (imap_append_t *)ic->data;

@@ -83,7 +83,7 @@ static void ci_drain_queue(clientinfo_t *client)
 	do {
 		data = g_async_queue_try_pop(queue);
 		if (data) {
-			imap_cmd_t *ic = (gpointer)data;
+			dm_thread_data *ic = (gpointer)data;
 			ic->cb_leave(data);
 		}
 	} while (data);

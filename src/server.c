@@ -51,7 +51,7 @@ static int worker_set_sighandler(void);
 
 static void ci_dispatch(gpointer data, gpointer user_data)
 {
-	imap_cmd_t *ic = (imap_cmd_t *)data;
+	dm_thread_data *ic = (dm_thread_data *)data;
 
 	TRACE(TRACE_DEBUG,"data[%p], user_data[%p]", data, user_data);
 	

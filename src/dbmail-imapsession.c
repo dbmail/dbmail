@@ -56,7 +56,7 @@ extern GThreadPool *tpool;
  */
 void ic_flush(gpointer data)
 {
-	imap_cmd_t *ic = (imap_cmd_t *)data;
+	dm_thread_data *ic = (dm_thread_data *)data;
 
 	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, ic->session);
 	/* flush and cleanup thread data */
@@ -79,7 +79,7 @@ void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpo
 	assert(session);
 	assert(cb_enter);
 
-	imap_cmd_t *ic = g_new0(imap_cmd_t,1);
+	dm_thread_data *ic = g_new0(dm_thread_data,1);
 	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, session);
 
 	assert(cb_enter);
@@ -1713,7 +1713,7 @@ gpointer db_update_recent(gpointer data)
 	INIT_QUERY;
 	C c;
 	int t = FALSE;
-	imap_cmd_t *ic = (imap_cmd_t *)data;
+	dm_thread_data *ic = (dm_thread_data *)data;
 
 	assert(ic);
 
