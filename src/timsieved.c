@@ -42,12 +42,12 @@ int main(int argc, char *argv[])
         //fixes valgrind Conditional jump or move depends on uninitialised value(s)
         memset(&config, 0, sizeof(serverConfig_t));
 
-	result = serverparent_getopt(&config, "SIEVE", argc, argv);
+	result = server_getopt(&config, "SIEVE", argc, argv);
 	if (result == -1)
 		goto shutdown;
 
 	if (result == 1) {
-		serverparent_showhelp("dbmail-timsieved",
+		server_showhelp("dbmail-timsieved",
 			"This daemon provides Tim's Sieve Daemon services.\n");
 		goto shutdown;
 	}
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 		goto shutdown;
 	}
 
-	result = serverparent_mainloop(&config, "SIEVE", "dbmail-timsieved");
+	result = server_mainloop(&config, "SIEVE", "dbmail-timsieved");
 	
 shutdown:
 	g_mime_shutdown();

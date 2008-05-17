@@ -52,7 +52,6 @@ COMMON = dbmail-user.c \
 	dm_dsn.c $(DM_GETOPT)
 	
 SERVER = server.c \
-	serverparent.c \
 	clientsession.c \
 	dm_cidr.c
 

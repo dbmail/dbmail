@@ -1692,7 +1692,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 
 	if (recent == NULL) return t;
 
-	ic_dispatch(self, db_update_recent, NULL, (gpointer)g_list_slices(recent,100));
+	dm_thread_data_push(self, db_update_recent, NULL, (gpointer)g_list_slices(recent,100));
 
 	// update cached values
 	recent = g_list_first(recent);

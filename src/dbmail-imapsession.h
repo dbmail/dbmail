@@ -172,13 +172,13 @@ int build_args_array_ext(ImapSession *self, const char *originalString);
  * send the ic->result buffer to the client 
  * default thread-exit callback
  */
-void ic_flush(gpointer data);
+void dm_thread_data_flush(gpointer data);
 
 /*
  * thread launcher
  *
  */
-void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data);
+void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data);
 
 
 #endif

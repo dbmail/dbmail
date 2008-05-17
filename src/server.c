@@ -1,7 +1,7 @@
 /*
   
  Copyright (C) 1999-2004 IC & S  dbmail@D-s.nl
- Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2008 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -28,8 +28,9 @@
 #include "dbmail.h"
 #define THIS_MODULE "server"
 
+static char *configFile = DEFAULT_CONFIG_FILE;
+
 volatile sig_atomic_t mainRestart = 0;
-volatile sig_atomic_t get_sigchld = 0;
 volatile sig_atomic_t alarm_occurred = 0;
 
 extern volatile sig_atomic_t event_gotsig;
@@ -43,8 +44,8 @@ GThreadPool *tpool = NULL;
 // 
 serverConfig_t *server_conf;
 
-static void worker_run(serverConfig_t *conf);
-static int worker_set_sighandler(void);
+static void server_config_load(serverConfig_t * conf, const char * const service);
+static int server_set_sighandler(void);
 
 void ci_drain_queue(clientbase_t *client)
 {
@@ -56,7 +57,7 @@ void ci_drain_queue(clientbase_t *client)
 			dm_thread_data *D = (gpointer)data;
 			ImapSession *session = D->session;
 			if (D->cb_leave) D->cb_leave(data);
-			ic_flush(data);
+			dm_thread_data_flush(data);
 
 			session->command_state = TRUE;
 			session->ci->cb_read(session);
@@ -74,7 +75,32 @@ void ci_drain_queue(clientbase_t *client)
  *
  *
  */
-void ic_flush(gpointer data)
+void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
+{
+	GError *err = NULL;
+
+	assert(session);
+	assert(cb_enter);
+
+	// we're not done until we're done
+	session->command_state = FALSE; 
+	bufferevent_disable(session->ci->rev, EV_READ);
+
+	dm_thread_data *D = g_new0(dm_thread_data,1);
+	D->cb_enter	= cb_enter;
+	D->cb_leave     = cb_leave;
+	D->session	= session;
+	D->data         = data;
+
+	TRACE(TRACE_DEBUG,"[%p] [%p]", D, session);
+
+	g_thread_pool_push(tpool, D, &err);
+
+	if (err) TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
+
+}
+
+void dm_thread_data_flush(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 
@@ -91,32 +117,7 @@ void ic_flush(gpointer data)
 
 }
 
-void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
-{
-	GError *err = NULL;
-
-	assert(session);
-	assert(cb_enter);
-
-	session->command_state = FALSE; // we're not done until we're done
-	bufferevent_disable(session->ci->rev, EV_READ);
-
-	dm_thread_data *D = g_new0(dm_thread_data,1);
-
-	TRACE(TRACE_DEBUG,"[%p] [%p]", D, session);
-
-	D->cb_enter	= cb_enter;
-	D->cb_leave     = cb_leave;
-	D->session	= session;
-	D->data         = data;
-
-	g_thread_pool_push(tpool, D, &err);
-
-	if (err) TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
-
-}
-
-static void dm_worker_dispatch(gpointer data, gpointer user_data)
+static void dm_thread_dispatch(gpointer data, gpointer user_data)
 {
 	TRACE(TRACE_DEBUG,"data[%p], user_data[%p]", data, user_data);
 	dm_thread_data *D = (dm_thread_data *)data;
@@ -126,16 +127,15 @@ static void dm_worker_dispatch(gpointer data, gpointer user_data)
 static int server_setup(void)
 {
 	GError *err = NULL;
-	get_sigchld = 0;
 
 	if (! g_thread_supported () ) g_thread_init (NULL);
-	worker_set_sighandler();
+	server_set_sighandler();
 
 	// Asynchronous message queue
 	queue = g_async_queue_new();
 
 	// Thread pool for database work
-	if (! (tpool = g_thread_pool_new((GFunc)dm_worker_dispatch,NULL,10,TRUE,&err)))
+	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,10,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
 	pipe(selfpipe);
@@ -145,7 +145,7 @@ static int server_setup(void)
 	return 0;
 }
 	
-static int manage_start_cli_server(serverConfig_t *conf)
+static int server_start_cli(serverConfig_t *conf)
 {
 	server_conf = conf;
 	if (db_connect() != 0) {
@@ -171,14 +171,13 @@ static int manage_start_cli_server(serverConfig_t *conf)
 	return 0;
 }
 
-
 int StartCliServer(serverConfig_t * conf)
 {
 	if (!conf) TRACE(TRACE_FATAL, "NULL configuration");
 	
 	if (server_setup()) return -1;
 	
-	manage_start_cli_server(conf);
+	server_start_cli(conf);
 	
 	return 0;
 }
@@ -420,7 +419,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 	return client;
 }
 
-static void worker_sock_cb(int sock, short event, void *arg)
+static void server_sock_cb(int sock, short event, void *arg)
 {
 	client_sock *c = g_new0(client_sock,1);
 	struct sockaddr_in *caddr = g_new0(struct sockaddr_in, 1);
@@ -456,7 +455,7 @@ static void worker_sock_cb(int sock, short event, void *arg)
 	event_add(ev, NULL);
 }
 
-static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+static void server_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
 	event_gotsig = 1;
 
@@ -477,11 +476,12 @@ static void worker_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	}
 }
 
-static int worker_sig_cb(void)
+static int server_sig_cb(void)
 {
 	TRACE(TRACE_DEBUG, "...");
 	if (alarm_occurred)
 		(void)event_loopexit(NULL);
+	alarm_occurred = 0;
 
 	if (mainRestart) {
 		TRACE(TRACE_DEBUG,"restart... TBD");
@@ -489,7 +489,7 @@ static int worker_sig_cb(void)
 	return (0);
 }
 
-static int worker_set_sighandler(void)
+static int server_set_sighandler(void)
 {
 	struct sigaction act;
 	struct sigaction rstact;
@@ -497,11 +497,11 @@ static int worker_set_sighandler(void)
 	memset(&act, 0, sizeof(act));
 	memset(&rstact, 0, sizeof(rstact));
 
-	act.sa_sigaction = worker_sighandler;
+	act.sa_sigaction = server_sighandler;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 
-	rstact.sa_sigaction = worker_sighandler;
+	rstact.sa_sigaction = server_sighandler;
 	sigemptyset(&rstact.sa_mask);
 	rstact.sa_flags = SA_SIGINFO | SA_RESETHAND;
 
@@ -526,7 +526,7 @@ static int worker_set_sighandler(void)
 	sigaction(SIGALRM,	&act, 0);
 	sigaction(SIGCHLD,	&act, 0);
 
-	event_sigcb = worker_sig_cb;
+	event_sigcb = server_sig_cb;
 
 	TRACE(TRACE_INFO, "signal handler placed");
 
@@ -576,7 +576,7 @@ int server_run(serverConfig_t *conf)
 	event_init();
 	evsock = g_new0(struct event, server_conf->ipcount+1);
 	for (ip = 0; ip < server_conf->ipcount; ip++) {
-		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, worker_sock_cb, &evsock[ip]);
+		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, server_sock_cb, &evsock[ip]);
 		event_add(&evsock[ip], NULL);
 	}
 
@@ -589,4 +589,279 @@ int server_run(serverConfig_t *conf)
 	
 	return 0;
 }
+
+void server_showhelp(const char *name, const char *greeting) {
+	printf("*** %s ***\n", name);
+
+	printf("%s\n", greeting);
+	printf("See the man page for more info.\n");
+
+        printf("\nCommon options for all DBMail daemons:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -p file   specify an alternative runtime pidfile\n");
+	printf("     -n        stdin/stdout mode\n");
+	printf("     -D        foreground mode\n");
+	printf("     -v        verbose logging to syslog and stderr\n");
+	printf("     -V        show the version\n");
+	printf("     -h        show this help message\n");
+}
+
+/* Return values:
+ * -1 just quit
+ * 0 all is well, config is updated
+ * 1 help must be shown, then quit
+ */ 
+
+static void server_config_free(serverConfig_t * config)
+{
+	assert(config);
+
+	g_strfreev(config->iplist);
+	g_free(config->listenSockets);
+
+	config->listenSockets = NULL;
+	config->iplist = NULL;
+
+	memset(config, 0, sizeof(serverConfig_t));
+}
+
+int server_getopt(serverConfig_t *config, const char *service, int argc, char *argv[])
+{
+	int opt;
+	configFile = g_strdup(DEFAULT_CONFIG_FILE);
+
+	server_config_free(config);
+
+	TRACE(TRACE_DEBUG, "checking command line options");
+
+	/* get command-line options */
+	opterr = 0;		/* suppress error message from getopt() */
+	while ((opt = getopt(argc, argv, "vVhqnDf:p:s:")) != -1) {
+		switch (opt) {
+		case 'v':
+			config->log_verbose = 1;
+			break;
+		case 'V':
+			PRINTF_THIS_IS_DBMAIL;
+			return -1;
+		case 'n':
+			config->no_daemonize = 1;
+			break;
+		case 'D':
+			config->no_daemonize = 2;
+			break;
+		case 'h':
+			return 1;
+		case 'p':
+			if (optarg && strlen(optarg) > 0)
+				config->pidFile = g_strdup(optarg);
+			else {
+				fprintf(stderr, "%s: -p requires a filename argument\n\n", argv[0]);
+				return 1;
+			}
+			break;
+		case 'f':
+			if (optarg && strlen(optarg) > 0) {
+                                g_free(configFile);
+				configFile = g_strdup(optarg);
+			} else {
+				fprintf(stderr, "%s: -f requires a filename argument\n\n", argv[0]);
+				return 1;
+			}
+			break;
+
+		default:
+			fprintf(stderr, "%s: unrecognized option: %s\n\n", argv[0], argv[optind]);
+			return 1;
+		}
+	}
+
+	if (optind < argc) {
+		fprintf(stderr, "%s: unrecognized options: ", argv[0]);
+		while (optind < argc)
+			fprintf(stderr, "%s ", argv[optind++]);
+		fprintf(stderr, "\n\n");
+		return 1;
+	}
+
+	server_config_load(config, service);
+
+	return 0;
+}
+
+int server_mainloop(serverConfig_t *config, const char *service, const char *servicename)
+{
+	if (config->no_daemonize == 1) {
+		StartCliServer(config);
+		TRACE(TRACE_INFO, "exiting cli server");
+		return 0;
+	}
+	
+	if (! config->no_daemonize)
+		server_daemonize(config);
+
+	/* We write the pidFile after daemonize because
+	 * we may actually be a child of the original process. */
+	if (! config->pidFile)
+		config->pidFile = config_get_pidfile(config, servicename);
+
+	pidfile_create(config->pidFile, getpid());
+
+	/* This is the actual main loop. */
+	while (server_run(config)) {
+		/* Reread the config file and restart the services,
+		 * e.g. on SIGHUP or other graceful restart condition. */
+		server_config_load(config, service);
+		sleep(2);
+	}
+
+	server_config_free(config);
+	TRACE(TRACE_INFO, "leaving main loop");
+	return 0;
+}
+
+void server_config_load(serverConfig_t * config, const char * const service)
+{
+	field_t val;
+
+	TRACE(TRACE_DEBUG, "reading config [%s]", configFile);
+	config_free();
+	config_read(configFile);
+
+	SetTraceLevel(service);
+	/* Override SetTraceLevel. */
+	if (config->log_verbose) {
+		configure_debug(5,5);
+	}
+
+	config_get_logfiles(config);
+
+	/* read items: TIMEOUT */
+	config_get_value("TIMEOUT", service, val);
+	if (strlen(val) == 0) {
+		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
+		config->timeout = 0;
+	} else if ((config->timeout = atoi(val)) <= 30)
+		TRACE(TRACE_FATAL, "value for TIMEOUT is invalid: [%d]",
+		      config->timeout);
+
+	TRACE(TRACE_DEBUG, "timeout [%d] seconds",
+	      config->timeout);
+
+	/* read items: LOGIN_TIMEOUT */
+	config_get_value("LOGIN_TIMEOUT", service, val);
+	if (strlen(val) == 0) {
+		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
+		config->login_timeout = 60;
+	} else if ((config->login_timeout = atoi(val)) <= 10)
+		TRACE(TRACE_FATAL, "value for TIMEOUT is invalid: [%d]",
+		      config->login_timeout);
+
+	TRACE(TRACE_DEBUG, "login_timeout [%d] seconds",
+	      config->login_timeout);
+
+	/* SOCKET */
+	config_get_value("SOCKET", service, val);
+	if (strlen(val) == 0)
+		TRACE(TRACE_DEBUG, "no value for SOCKET in config file");
+	strncpy(config->socket, val, FIELDSIZE);
+	TRACE(TRACE_DEBUG, "socket [%s]", 
+		config->socket);
+	
+	/* read items: PORT */
+	config_get_value("PORT", service, val);
+	if (strlen(val) == 0)
+		TRACE(TRACE_FATAL, "no value for PORT in config file");
+
+	if ((config->port = atoi(val)) <= 0)
+		TRACE(TRACE_FATAL, "value for PORT is invalid: [%d]",
+		      config->port);
+
+	TRACE(TRACE_DEBUG, "binding to PORT [%d]",
+	      config->port);
+
+
+	/* read items: BINDIP */
+	config_get_value("BINDIP", service, val);
+	if (strlen(val) == 0)
+		TRACE(TRACE_FATAL, "no value for BINDIP in config file");
+	// If there was a SIGHUP, then we're resetting an active config.
+	g_strfreev(config->iplist);
+	g_free(config->listenSockets);
+	// Allowed list separators are ' ' and ','.
+	config->iplist = g_strsplit_set(val, " ,", 0);
+	config->ipcount = g_strv_length(config->iplist);
+	if (config->ipcount < 1) {
+		TRACE(TRACE_FATAL, "no value for BINDIP in config file");
+	}
+
+	int ip;
+	for (ip = 0; ip < config->ipcount; ip++) {
+		// Remove whitespace from each list entry, then log it.
+		g_strstrip(config->iplist[ip]);
+		TRACE(TRACE_DEBUG, "binding to IP [%s]", config->iplist[ip]);
+	}
+
+	/* read items: BACKLOG */
+	config_get_value("BACKLOG", service, val);
+	if (strlen(val) == 0) {
+		TRACE(TRACE_DEBUG, "no value for BACKLOG in config file. Using default value [%d]",
+			BACKLOG);
+		config->backlog = BACKLOG;
+	} else if ((config->backlog = atoi(val)) <= 0)
+		TRACE(TRACE_FATAL, "value for BACKLOG is invalid: [%d]",
+			config->backlog);
+
+	/* read items: RESOLVE_IP */
+	config_get_value("RESOLVE_IP", service, val);
+	if (strlen(val) == 0)
+		TRACE(TRACE_DEBUG, "no value for RESOLVE_IP in config file");
+
+	config->resolveIP = (strcasecmp(val, "yes") == 0);
+
+	TRACE(TRACE_DEBUG, "%sresolving client IP",
+	      config->resolveIP ? "" : "not ");
+
+	/* read items: service-BEFORE-SMTP */
+	char *service_before_smtp = g_strconcat(service, "_BEFORE_SMTP", NULL);
+	config_get_value(service_before_smtp, service, val);
+	g_free(service_before_smtp);
+
+	if (strlen(val) == 0)
+		TRACE(TRACE_DEBUG, "no value for %s_BEFORE_SMTP  in config file",
+		      service);
+
+	config->service_before_smtp = (strcasecmp(val, "yes") == 0);
+
+	TRACE(TRACE_DEBUG, "%s %s-before-SMTP",
+	      config->service_before_smtp ? "Enabling" : "Disabling", service);
+
+
+	/* read items: EFFECTIVE-USER */
+	config_get_value("EFFECTIVE_USER", service, val);
+	if (strlen(val) == 0)
+		TRACE(TRACE_FATAL, "no value for EFFECTIVE_USER in config file");
+
+	strncpy(config->serverUser, val, FIELDSIZE);
+	config->serverUser[FIELDSIZE - 1] = '\0';
+
+	TRACE(TRACE_DEBUG, "effective user shall be [%s]",
+	      config->serverUser);
+
+
+	/* read items: EFFECTIVE-GROUP */
+	config_get_value("EFFECTIVE_GROUP", service, val);
+	if (strlen(val) == 0)
+		TRACE(TRACE_FATAL, "no value for EFFECTIVE_GROUP in config file");
+
+	strncpy(config->serverGroup, val, FIELDSIZE);
+	config->serverGroup[FIELDSIZE - 1] = '\0';
+
+	TRACE(TRACE_DEBUG, "effective group shall be [%s]",
+	      config->serverGroup);
+
+	GetDBParams();
+}
+
+
 

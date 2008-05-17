@@ -1,7 +1,87 @@
-2008-05-04  Paul J Stevens <paul@nfg.nl>
+2008-05-17  Paul J Stevens <paul@nfg.nl>
 
-	* src/dbmail-imapsession.c:
+	* src/Makefile.am, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmail-user.c, src/dbmail.h.in, 
+	src/imapcommands.c, src/imapd.c, src/lmtpd.c, src/pop3.c, 
+	src/pop3d.c, src/server.c, src/server.h, src/serverparent.c, 
+	src/serverparent.h, src/timsieved.c, src/user.c:
+	wip cleanups
+	* debian/rules, src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/imapcommands.c, src/server.c, src/serverparent.c, 
+	test-scripts/testappend.txt:
+	wip re-structuring of thread data
+
+2008-05-16  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c, test-scripts/testlist.txt, 
+	test/check_dbmail_deliver.c, test/check_dbmail_imapd.c:
+	wip imap threads
+
+2008-05-13  Paul J Stevens <paul@nfg.nl>
+
+	* src/server.c:
+	blah
+	* src/auth.h, src/authmodule.c, src/authmodule.h, 
+	src/clientsession.c, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmailtypes.h, src/dm_db.c, 
+	src/dm_db.h, src/dm_misc.c, src/dm_misc.h, src/imap4.c, src/lmtp.c, 
+	src/modules/authldap.c, src/modules/authsql.c, src/pop3.c, 
+	src/server.c, src/server.h, src/timsieve.c:
+	rename clientinfo_t to clientbase_t
+	* src/dbmail-imapsession.c, src/dm_misc.c, src/imap4.c, 
+	src/imapcommands.c, src/server.c, src/server.h, 
+	test-scripts/testlist.txt:
+	small cleanups
+
+2008-05-12  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c:
+	rename struct
+	* src/dbmail-imapsession.c, src/imap4.c, src/server.c, src/server.h:
+	switch to using GThreadPool
+
+2008-05-06  Paul J Stevens <paul@nfg.nl>
+
+	* src/dm_misc.c, src/imap4.c, src/imapcommands.c, src/server.c, 
+	src/serverparent.c:
+	more testing
+	* VERSION, configure.in, dbmail.conf, man/dbmail-imapd.txt, 
+	man/footer.txt, man/serveropts.txt, src/dbmail.h.in, src/imap4.c, 
+	src/server.c, src/serverparent.c, src/timsieve.c:
+	cleanups in automake setup, signalhandling and manpages
+
+2008-05-05  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dm_db.c, src/imapcommands.c:
+	wip refactoring imap code
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/dm_db.c, 
+	src/imapcommands.c:
+	wip refactoring imap code
+	* src/dbmail-imapsession.c, src/dm_db.c, src/dm_db.h, 
+	src/modules/authsql.c:
+	wip
+
+2008-05-04  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, src/dbmail-imapsession.c:
 	cleanups
+	* src/dbmail-imapsession.c, src/dbmail-message.c, src/dbmailtypes.h, 
+	src/dm_config.c, src/dm_db.c, src/imapcommands.c:
+	small cleanups
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmail-mailbox.c, src/dbmail-message.c, src/dm_db.c, src/dm_db.h, 
+	src/imapcommands.c:
+	thread-safety inspired cleanups
+	* src/imap4.c, src/server.c:
+	fix selfpipe leak
+	* debian/rules, src/dbmail-message.c, src/dm_db.c, src/dm_db.h, 
+	src/imapcommands.c:
+	improve thread-safety in IMAP APPEND
+	* src/dbmail-imapsession.c, src/dbmail-mailbox.c, src/dbmailtypes.h, 
+	src/imapcommands.c:
+	fix invalid uid errors after search
 
 2008-05-02  Paul J Stevens <paul@nfg.nl>
 

@@ -40,6 +40,10 @@
  * in the incoming buffer */
 #define MAX_IN_BUFFER 255
 
+const char ValidNetworkChars[] =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    ",'\"?_.!|@#$%^&*()-+=~[]{}<>:;\\/ '";
+
 extern int pop_before_smtp;
 extern volatile sig_atomic_t alarm_occured;
 

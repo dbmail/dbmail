@@ -46,7 +46,9 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr);
 void ci_drain_queue(clientbase_t *client);
 
 void disconnect_all(void);
-
+void server_showhelp(const char *service, const char *greeting);
+int server_getopt(serverConfig_t *config, const char *service, int argc, char *argv[]);
+int server_mainloop(serverConfig_t *config, const char *service, const char *servicename);
 pid_t server_daemonize(serverConfig_t *conf);
 
 #endif

@@ -38,18 +38,18 @@ int main(int argc, char *argv[])
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
         memset(&config, 0, sizeof(serverConfig_t));
-	result = serverparent_getopt(&config, "LMTP", argc, argv);
+	result = server_getopt(&config, "LMTP", argc, argv);
 	if (result == -1)
 		goto shutdown;
 
 	if (result == 1) {
-		serverparent_showhelp("dbmail-lmtpd",
+		server_showhelp("dbmail-lmtpd",
 			"This daemon provides Local Mail Transport Protocol services.");
 		goto shutdown;
 	}
 
 	config.ClientHandler = lmtp_handle_connection;
-	result = serverparent_mainloop(&config, "LMTP", "dbmail-lmtpd");
+	result = server_mainloop(&config, "LMTP", "dbmail-lmtpd");
 	
 shutdown:
 	g_mime_shutdown();

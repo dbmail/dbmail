@@ -96,7 +96,6 @@
 #include "dm_misc.h"
 #include "dm_quota.h"
 #include "imapcommands.h"
-#include "serverparent.h"
 #include "server.h"
 #include "clientsession.h"
 #include "lmtp.h"

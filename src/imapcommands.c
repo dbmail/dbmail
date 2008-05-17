@@ -96,7 +96,7 @@ void _ic_capability_enter(dm_thread_data *D)
 int _ic_capability(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, -1)) return 1;
-	ic_dispatch(self, _ic_capability_enter, NULL, NULL);
+	dm_thread_data_push(self, _ic_capability_enter, NULL, NULL);
 	return 0;
 }
 
@@ -378,7 +378,7 @@ void _ic_create_enter(dm_thread_data *D)
 int _ic_create(ImapSession *self)
 {
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	ic_dispatch(self, _ic_create_enter, NULL, NULL);
+	dm_thread_data_push(self, _ic_create_enter, NULL, NULL);
 	return DM_SUCCESS;
 }
 
@@ -773,7 +773,7 @@ int _ic_list(ImapSession *self)
 	data->children = NULL;
 	data->pattern = pattern;
 
-	ic_dispatch(self, _ic_list_enter, _ic_list_leave, data);
+	dm_thread_data_push(self, _ic_list_enter, _ic_list_leave, data);
 	
 	return 0;
 }
@@ -1150,7 +1150,7 @@ int _ic_append(ImapSession *self)
 	for (j = 0; j < IMAP_NFLAGS; j++)
 		data->flags[j] = flaglist[j];
 
-	ic_dispatch(self, _ic_append_enter, _ic_append_leave, data);
+	dm_thread_data_push(self, _ic_append_enter, _ic_append_leave, data);
 
 	return 0;
 }

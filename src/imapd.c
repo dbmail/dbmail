@@ -43,12 +43,12 @@ int main(int argc, char *argv[])
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
 	memset(&config, 0, sizeof(serverConfig_t));
-	result = serverparent_getopt(&config, "IMAP", argc, argv);
+	result = server_getopt(&config, "IMAP", argc, argv);
 	if (result == -1)
 		goto shutdown;
 
 	if (result == 1) {
-		serverparent_showhelp("dbmail-imapd",
+		server_showhelp("dbmail-imapd",
 				"This daemon provides Internet "
 				"Message Access Protocol 4.1 "
 				"services.");
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	config.ClientHandler = imap_handle_connection;
 	imap_before_smtp = config.service_before_smtp;
 
-	result = serverparent_mainloop(&config, "IMAP", "dbmail-imapd");
+	result = server_mainloop(&config, "IMAP", "dbmail-imapd");
 	
 shutdown:
 	g_mime_shutdown();

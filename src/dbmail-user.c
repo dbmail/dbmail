@@ -38,11 +38,11 @@ static const char ValidChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "_.!@#$%^&*()-+=~[]{}<>:;\\/";
 
-extern int yes_to_all;
-extern int no_to_all;
-extern int verbose;
-extern int quiet; 		/* Don't be helpful. */
-extern int reallyquiet;	/* Don't print errors. */
+int verbose = 0;
+int no_to_all = 0;
+int yes_to_all = 0;
+int reallyquiet = 0;
+int quiet = 0;
 
 int do_add(const char * const user,
            const char * const password, const char * const enctype,

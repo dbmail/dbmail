@@ -33,11 +33,11 @@ char *configFile = DEFAULT_CONFIG_FILE;
 #define PNAME "dbmail/user"
 
 /* UI policy */
-int yes_to_all = 0;
-int no_to_all = 0;
-int verbose = 0;
-int quiet = 0;          /* Don't be helpful. */
-int reallyquiet = 0;    /* Don't print errors. */
+extern int yes_to_all;
+extern int no_to_all;
+extern int verbose;
+extern int quiet;          /* Don't be helpful. */
+extern int reallyquiet;    /* Don't print errors. */
 
 int do_showhelp(void)
 {
