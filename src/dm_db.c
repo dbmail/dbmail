@@ -2020,18 +2020,28 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
 	const char *simple_name;
-	char *namespace;
-	char *username;
-	int result;
+	char *mbox, *namespace, *username;
+	int i, result;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-	TRACE(TRACE_DEBUG, "looking for mailbox with FQN [%s].", fq_name);
+	mbox = g_strdup(fq_name);
+	
+	/* remove trailing '/' if present */
+	while (strlen(mbox) > 0 && mbox[strlen(mbox) - 1] == '/')
+		mbox[strlen(mbox) - 1] = '\0';
 
-	simple_name = mailbox_remove_namespace(fq_name, &namespace, &username);
+	/* remove leading '/' if present */
+	for (i = 0; mbox[i] && mbox[i] == '/'; i++);
+	memmove(&mbox[0], &mbox[i], (strlen(mbox) - i) * sizeof(char));
+
+	TRACE(TRACE_DEBUG, "looking for mailbox with FQN [%s].", mbox);
+
+	simple_name = mailbox_remove_namespace(mbox, &namespace, &username);
 
 	if (!simple_name) {
+		g_free(mbox);
 		TRACE(TRACE_MESSAGE, "Could not remove mailbox namespace.");
 		return FALSE;
 	}
@@ -2041,11 +2051,13 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 		result = auth_user_exists(username, &owner_idnr);
 		if (result < 0) {
 			TRACE(TRACE_ERROR, "error checking id of user.");
+			g_free(mbox);
 			g_free(username);
 			return FALSE;
 		}
 		if (result == 0) {
 			TRACE(TRACE_INFO, "user [%s] not found.", username);
+			g_free(mbox);
 			g_free(username);
 			return FALSE;
 		}
@@ -2054,6 +2066,7 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 	if (! (result = db_findmailbox_owner(simple_name, owner_idnr, mailbox_idnr)))
 		TRACE(TRACE_INFO, "no mailbox [%s] for owner [%llu]", simple_name, owner_idnr);
 
+	g_free(mbox);
 	g_free(username);
 	return result;
 }

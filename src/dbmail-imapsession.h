@@ -130,16 +130,10 @@ int dbmail_imap_session_prompt(ImapSession * self, char * prompt);
 
 MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr);
 
-u64_t dbmail_imap_session_mailbox_get_idnr(ImapSession * self, const char * mailbox);
-int dbmail_imap_session_mailbox_check_acl(ImapSession * self, u64_t idnr, ACLRight_t right);
 int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
 
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
 int dbmail_imap_session_idle(ImapSession *self);
-int dbmail_imap_session_mailbox_show_info(ImapSession * self);
-int dbmail_imap_session_mailbox_flags(ImapSession * self);
-int dbmail_imap_session_mailbox_open(ImapSession * self, const char * mailbox);
-int dbmail_imap_session_mailbox_close(ImapSession *self);
 
 int dbmail_imap_session_mailbox_expunge(ImapSession *self);
 int dbmail_imap_session_mailbox_select_recent(ImapSession *self);

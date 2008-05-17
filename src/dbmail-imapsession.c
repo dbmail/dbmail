@@ -1431,47 +1431,6 @@ int dbmail_imap_session_prompt(ImapSession * self, char * prompt)
 	return 0;
 }
 
-u64_t dbmail_imap_session_mailbox_get_idnr(ImapSession * self, const char * mailbox)
-{
-	char * mbox = g_strdup(mailbox);
-	u64_t uid;
-	int i;
-	
-	/* remove trailing '/' if present */
-	while (strlen(mbox) > 0 && mbox[strlen(mbox) - 1] == '/')
-		mbox[strlen(mbox) - 1] = '\0';
-
-	/* remove leading '/' if present */
-	for (i = 0; mbox[i] && mbox[i] == '/'; i++);
-	memmove(&mbox[0], &mbox[i], (strlen(mbox) - i) * sizeof(char));
-
-	db_findmailbox(mbox, self->userid, &uid);
-	
-	g_free(mbox);
-
-	return uid;
-}
-
-int dbmail_imap_session_mailbox_check_acl(ImapSession * self, u64_t idnr,  ACLRight_t acl)
-{
-	int access;
-	MailboxInfo *mailbox;
-
-	mailbox = dbmail_imap_session_mbxinfo_lookup(self, idnr);
-
-	access = acl_has_right(mailbox, self->userid, acl);
-	
-	if (access < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-	if (access == 0) {
-		dbmail_imap_session_printf(self, "%s NO permission denied\r\n", self->tag);
-		dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
-		return 1;
-	}
-	return 0;
-}
 
 int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr)
 {
@@ -1659,52 +1618,11 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		if (unhandled)
 			TRACE(TRACE_ERROR, "[%p] EXISTS/RECENT changed but client "
 				"is not notified", self);
-		switch (self->command_type) {
-			case IMAP_COMM_SELECT:
-			case IMAP_COMM_EXAMINE:
-			break;
-			default:
-				mailbox_notify_update(self, mailbox);
-			break;
-		}
+		mailbox_notify_update(self, mailbox);
 	}
 	return 0;
 }
 
-int dbmail_imap_session_mailbox_flags(ImapSession * self)
-{
-	GString *string = g_string_new("\\Seen \\Answered \\Deleted \\Flagged \\Draft");
-	if (self->mailbox->info->keywords) {
-		GString *keywords = g_list_join(self->mailbox->info->keywords," ");
-		g_string_append_printf(string, " %s", keywords->str);
-		g_string_free(keywords,TRUE);
-	}
-
-	/* flags */
-	dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", string->str);
-
-	/* permanent flags */
-	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", string->str);
-	g_string_free(string,TRUE);
-
-	return 0;
-}
-
-int dbmail_imap_session_mailbox_show_info(ImapSession * self) 
-{
-	dbmail_imap_session_mailbox_status(self, TRUE);
-	dbmail_imap_session_mailbox_flags(self);
-	/* UIDNEXT */
-	dbmail_imap_session_printf(self, "* OK [UIDNEXT %llu] Predicted next UID\r\n",
-		self->mailbox->info->msguidnext);
-	
-	/* UID */
-	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
-		self->mailbox->info->uid);
-
-	return 0;
-}
-	
 MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr)
 {
 	MailboxInfo *mb = NULL;
@@ -1728,48 +1646,6 @@ MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbo
 	_get_mailbox(0,mb,&error);
 
 	return mb;
-}
-
-int dbmail_imap_session_mailbox_open(ImapSession * self, const char * mailbox)
-{
-	int result;
-	u64_t mailbox_idnr;
-	
-	/* get the mailbox_idnr */
-	mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox);
-	
-	/* create missing INBOX for this authenticated user */
-	if ((! mailbox_idnr ) && (strcasecmp(mailbox, "INBOX")==0)) {
-		TRACE(TRACE_INFO, "[%p] Auto-creating INBOX for user id [%llu]", self, self->userid);
-		result = db_createmailbox("INBOX", self->userid, &mailbox_idnr);
-	}
-	
-	/* close the currently opened mailbox */
-	dbmail_imap_session_mailbox_close(self);
-
-	if (! mailbox_idnr) {
-		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
-		return 1; /* error */
-	}
-
-	/* check if user has right to select mailbox */
-	if ((result = dbmail_imap_session_mailbox_check_acl(self, mailbox_idnr, ACL_RIGHT_READ)))
-		return result;
-	
-	/* check if mailbox is selectable */
-	if ((result = dbmail_imap_session_mailbox_get_selectable(self, mailbox_idnr)))
-		return result;
-
-	/* new mailbox structure */
-	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
-
-	/* fetch mailbox metadata */
-	self->mailbox->info = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
-
-	/* keep these in sync */
-	self->mailbox->info->exists = g_tree_nnodes(self->mailbox->ids);
-
-	return 0;
 }
 
 void imap_cb_idle_time (void *arg)
@@ -1824,19 +1700,6 @@ int dbmail_imap_session_idle(ImapSession *self)
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
 	dbmail_imap_session_printf(self, "+ idling\r\n");
-
-	return 0;
-}
-
-int dbmail_imap_session_mailbox_close(ImapSession *self)
-{
-	// flush recent messages from previous select
-	dbmail_imap_session_mailbox_update_recent(self);
-	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
-	if (self->mailbox) {
-		dbmail_mailbox_free(self->mailbox);
-		self->mailbox = NULL;
-	}
 
 	return 0;
 }

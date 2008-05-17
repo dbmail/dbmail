@@ -204,50 +204,154 @@ static gboolean mailbox_first_unseen(gpointer key, gpointer value, gpointer data
 	return TRUE;
 }
 
-int _ic_select(ImapSession *self)
+char * mailbox_flags(MailboxInfo *info)
 {
-	int result;
+	char *s = NULL;
+	GString *string = g_string_new("\\Seen \\Answered \\Deleted \\Flagged \\Draft");
+	assert(info);
 
-	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-
-	if ((result = dbmail_imap_session_mailbox_open(self, self->args[self->args_idx]))) return result;
-	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
-
-	self->mailbox->info->permission = IMAPPERM_READWRITE;
-
-	if ((result = dbmail_imap_session_mailbox_show_info(self))) return result;
-
-	/* show msn of first unseen msg (if present) */
-	if (self->mailbox->info->exists) { 
-		u64_t key = 0, *msn = NULL;
-		g_tree_foreach(self->mailbox->msginfo, (GTraverseFunc)mailbox_first_unseen, &key);
-		if ( (key > 0) && (msn = g_tree_lookup(self->mailbox->ids, &key)))
-			dbmail_imap_session_printf(self, "* OK [UNSEEN %llu] first unseen message\r\n", *msn);
+	if (info->keywords) {
+		GString *keywords = g_list_join(info->keywords," ");
+		g_string_append_printf(string, " %s", keywords->str);
+		g_string_free(keywords,TRUE);
 	}
 
-	dbmail_imap_session_printf(self, "%s OK [READ-WRITE] SELECT completed\r\n", self->tag);
+	s = string->str;
+	g_string_free(string, FALSE);
+	return s;
+}
+
+static int imap_session_mailbox_close(ImapSession *self)
+{
+	// flush recent messages from previous select
+	dbmail_imap_session_mailbox_update_recent(self);
+	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
+	if (self->mailbox) {
+		dbmail_mailbox_free(self->mailbox);
+		self->mailbox = NULL;
+	}
+
 	return 0;
 }
 
-/* _ic_examine()
- * 
- * examines a specified mailbox 
- */
-int _ic_examine(ImapSession *self)
+static int mailbox_check_acl(ImapSession *self, MailboxInfo *mailbox, ACLRight_t acl)
+{
+	int access = acl_has_right(mailbox, self->userid, acl);
+	if (access < 0) {
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		return -1;
+	}
+	if (access == 0) {
+		dbmail_imap_session_printf(self, "%s NO permission denied\r\n", self->tag);
+		return 1;
+	}
+	return 0;
+
+}
+static int imap_session_mailbox_check_acl(ImapSession * self, u64_t idnr,  ACLRight_t acl)
 {
 	int result;
+	MailboxInfo *mailbox = dbmail_imap_session_mbxinfo_lookup(self, idnr);
+	if ((result = mailbox_check_acl(self, mailbox, acl)) == 1)
+		dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
+	return result;
+}
+
+static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
+{
+	int result;
+	u64_t mailbox_idnr = 0;
+
+	/* get the mailbox_idnr */
+	db_findmailbox(mailbox, self->userid, &mailbox_idnr);
+	
+	/* create missing INBOX for this authenticated user */
+	if ((! mailbox_idnr ) && (strcasecmp(mailbox, "INBOX")==0)) {
+		TRACE(TRACE_INFO, "[%p] Auto-creating INBOX for user id [%llu]", self, self->userid);
+		result = db_createmailbox("INBOX", self->userid, &mailbox_idnr);
+	}
+	
+	if (! mailbox_idnr) {
+		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
+		return 1; /* error */
+	}
+
+	/* check if user has right to select mailbox */
+	if ((result = imap_session_mailbox_check_acl(self, mailbox_idnr, ACL_RIGHT_READ))) return result;
+	
+	/* check if mailbox is selectable */
+	if ((result = dbmail_imap_session_mailbox_get_selectable(self, mailbox_idnr)))
+		return result;
+
+	/* new mailbox structure */
+	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
+
+	/* fetch mailbox metadata */
+	self->mailbox->info = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
+
+	/* keep these in sync */
+	self->mailbox->info->exists = g_tree_nnodes(self->mailbox->ids);
+
+	return 0;
+}
+
+static int _ic_select_real(ImapSession *self)
+{
+	int result;
+	char *flags;
 
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
 
-	if ((result = dbmail_imap_session_mailbox_open(self, self->args[self->args_idx]))) return result;
+	/* close the currently opened mailbox */
+	imap_session_mailbox_close(self);
+
+	if ((result = imap_session_mailbox_open(self, self->args[self->args_idx]))) return result;
 	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
 
-	self->mailbox->info->permission = IMAPPERM_READ;
+	dbmail_imap_session_printf(self, "* %u EXISTS\r\n", self->mailbox->info->exists);
+	dbmail_imap_session_printf(self, "* %u RECENT\r\n", self->mailbox->info->recent);
 
-	if ((result = dbmail_imap_session_mailbox_show_info(self))) return result;
+	/* flags */
+	flags = mailbox_flags(self->mailbox->info);
+	dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", flags);
+	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+	g_free(flags);
+
+	/* UIDNEXT */
+	dbmail_imap_session_printf(self, "* OK [UIDNEXT %llu] Predicted next UID\r\n",
+		self->mailbox->info->msguidnext);
 	
-	dbmail_imap_session_printf(self, "%s OK [READ-ONLY] EXAMINE completed\r\n", self->tag);
+	/* UID */
+	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
+		self->mailbox->info->uid);
+
+	if (self->command_type == IMAP_COMM_SELECT) {
+		// SELECT
+		if (self->mailbox->info->exists) { 
+			/* show msn of first unseen msg (if present) */
+			u64_t key = 0, *msn = NULL;
+			g_tree_foreach(self->mailbox->msginfo, (GTraverseFunc)mailbox_first_unseen, &key);
+			if ( (key > 0) && (msn = g_tree_lookup(self->mailbox->ids, &key)))
+				dbmail_imap_session_printf(self, "* OK [UNSEEN %llu] first unseen message\r\n", *msn);
+		}
+		self->mailbox->info->permission = IMAPPERM_READWRITE;
+		dbmail_imap_session_printf(self, "%s OK [READ-WRITE] SELECT completed\r\n", self->tag);
+	} else {
+		// EXAMINE
+		self->mailbox->info->permission = IMAPPERM_READ;
+		dbmail_imap_session_printf(self, "%s OK [READ-ONLY] EXAMINE completed\r\n", self->tag);
+	}
+
 	return 0;
+}
+
+int _ic_select(ImapSession *self)
+{
+	return _ic_select_real(self);
+}
+int _ic_examine(ImapSession *self)
+{
+	return _ic_select_real(self);
 }
 
 /*
@@ -302,20 +406,20 @@ int _ic_delete(ImapSession *self)
 
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
 
-	if (! (mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
-		dbmail_imap_session_printf(self, "%s NO mailbox doesn't exists\r\n", self->tag);
-		return 1;
-	}
-
-	/* Check if the user has ACL delete rights to this mailbox */
-	if ((result = dbmail_imap_session_mailbox_check_acl(self, mailbox_idnr, ACL_RIGHT_DELETE))) return result;
-	
 	/* check if there is an attempt to delete inbox */
 	if (MATCH(self->args[0], "INBOX")) {
 		dbmail_imap_session_printf(self, "%s NO cannot delete special mailbox INBOX\r\n", self->tag);
 		return 1;
 	}
 
+	if (! (db_findmailbox(mailbox, self->userid, &mailbox_idnr)) ) {
+		dbmail_imap_session_printf(self, "%s NO mailbox doesn't exists\r\n", self->tag);
+		return 1;
+	}
+
+	/* Check if the user has ACL delete rights to this mailbox */
+	if ((result = imap_session_mailbox_check_acl(self, mailbox_idnr, ACL_RIGHT_DELETE))) return result;
+	
 	/* check for children of this mailbox */
 	if ((result = db_listmailboxchildren(mailbox_idnr, self->userid, &children)) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "[%p] cannot retrieve list of mailbox children", self);
@@ -398,9 +502,11 @@ int _ic_delete(ImapSession *self)
  */
 static int mailbox_rename(MailboxInfo *mb, const char *newname)
 {
-	g_free(mb->name);
-	mb->name = g_strdup(newname);
+	char *oldname = mb->name;
 	if ( (db_setmailboxname(mb->uid, newname)) == DM_EQUERY) return DM_EQUERY;
+	mb->name = g_strdup(newname);
+	g_free(oldname);
+	oldname = NULL;
 	return DM_SUCCESS;
 }
 
@@ -416,7 +522,7 @@ int _ic_rename(ImapSession *self)
 
 	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
 
-	if ((mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0])) == 0) {
+	if (! (db_findmailbox(self->args[0], self->userid, &mboxid))) {
 		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		return 1;
 	}
@@ -427,7 +533,7 @@ int _ic_rename(ImapSession *self)
                 return 1;
         }
 
-	if ((newmboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[1])) != 0) {
+	if (! (db_findmailbox(self->args[1], self->userid, &newmboxid))) {
 		dbmail_imap_session_printf(self, "%s NO new mailbox already exists\r\n", self->tag);
 		return 1;
 	}
@@ -464,21 +570,19 @@ int _ic_rename(ImapSession *self)
 	/* Check if the user has ACL delete rights to old name, 
 	 * and create rights to the parent of the new name, or
 	 * if the user just owns both mailboxes. */
-	if ((result = dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_DELETE)))
-		return result;
+	if ((result = imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_DELETE))) return result;
 
 	if (!parentmboxid) {
 		TRACE(TRACE_DEBUG, "[%p] Destination is a top-level mailbox; not checking right to CREATE.", self);
 	} else {
 		TRACE(TRACE_DEBUG, "[%p] Checking right to CREATE under [%llu]", self, parentmboxid);
-		if ((result = dbmail_imap_session_mailbox_check_acl(self, parentmboxid, ACL_RIGHT_CREATE)))
-			return result;
+		if ((result = imap_session_mailbox_check_acl(self, parentmboxid, ACL_RIGHT_CREATE))) return result;
 
 		TRACE(TRACE_DEBUG, "[%p] We have the right to CREATE under [%llu]", self, parentmboxid);
 	}
 
 	/* check if it is INBOX to be renamed */
-	if (strcasecmp(self->args[0], "inbox") == 0) {
+	if (MATCH(self->args[0], "INBOX")) {
 		/* ok, renaming inbox */
 		/* this means creating a new mailbox and moving all the INBOX msgs to the new mailbox */
 		/* inferior names of INBOX are left unchanged */
@@ -543,16 +647,17 @@ int _ic_rename(ImapSession *self)
  *
  * subscribe to a specified mailbox
  */
-int _ic_subscribe_real(ImapSession *self, gboolean subscribe)
+int _ic_subscribe_real(ImapSession *self)
 {
 	u64_t mboxid;
 	int result = 0;
-	char *cmd = subscribe ? "SUBSCRIBE" : "UNSUBSCRIBE";
+	const char *cmd;
+
+	cmd = (self->command_type == IMAP_COMM_SUBSCRIBE) ? "SUBSCRIBE" : "UNSUBSCRIBE";
 
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
 	
-
-	if (! (mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0]))) {
+	if (! (db_findmailbox(self->args[0], self->userid, &mboxid))) {
 		dbmail_imap_session_printf(self, "%s OK %s on mailbox that does not exist\r\n", 
 			self->tag, cmd);
 		return 0;
@@ -561,9 +666,9 @@ int _ic_subscribe_real(ImapSession *self, gboolean subscribe)
 	/* check for the lookup-right. RFC is unclear about which right to
 	   use, so I guessed it should be lookup */
 
-	if (dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_LOOKUP)) return 1;
+	if (imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_LOOKUP)) return 1;
 
-	if (subscribe)
+	if (self->command_type == IMAP_COMM_SUBSCRIBE)
 		result = db_subscribe(mboxid, self->userid);
 	else
 		result = db_unsubscribe(mboxid, self->userid);
@@ -580,17 +685,11 @@ int _ic_subscribe_real(ImapSession *self, gboolean subscribe)
 
 int _ic_subscribe(ImapSession *self)
 {
-	return _ic_subscribe_real(self, TRUE);
+	return _ic_subscribe_real(self);
 }
-
-/*
- * _ic_unsubscribe()
- *
- * removes a mailbox from the users' subscription list
- */
 int _ic_unsubscribe(ImapSession *self)
 {
-	return _ic_subscribe_real(self, FALSE);
+	return _ic_subscribe_real(self);
 }
 
 /*
@@ -783,15 +882,7 @@ int _ic_status(ImapSession *self)
 		return 1;
 	}
 
-	result = acl_has_right(mb, self->userid, ACL_RIGHT_READ);
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no rights to get status for mailbox\r\n", self->tag);
-		return 1;
-	}
+	if ((result = mailbox_check_acl(self, mb, ACL_RIGHT_READ))) return result;
 
 	for (i = 2; self->args[i]; i++) {
 		if (MATCH(self->args[i], "messages"))
@@ -988,15 +1079,7 @@ int _ic_append(ImapSession *self)
 	mbx = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 
 	/* check if user has right to append to  mailbox */
-	result = acl_has_right(mbx, self->userid, ACL_RIGHT_INSERT);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	} else if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to append to mailbox\r\n", self->tag);
-		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
-		return 1;
-	}
+	if ((result = imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_INSERT))) return result;
 
 	i = 1;
 
@@ -1036,38 +1119,17 @@ int _ic_append(ImapSession *self)
 
 	/** check ACL's for STORE */
 	if (flaglist[IMAP_FLAG_SEEN] == 1) {
-		result = acl_has_right(mbx, self->userid, ACL_RIGHT_SEEN);
-		if (result < 0) {
-			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-			return -1;
-		} else if (result == 0) {
-			dbmail_imap_session_printf(self, "%s NO no right to store \\SEEN flag\r\n", self->tag);
-			return 1;
-		}
+		if ((result = mailbox_check_acl(self, mbx, ACL_RIGHT_SEEN))) return result;
 	}
 	if (flaglist[IMAP_FLAG_DELETED] == 1) {
-		result = acl_has_right(mbx, self->userid, ACL_RIGHT_DELETE);
-		if (result < 0) {
-			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-			return -1;
-		} else if (result == 0) {
-			dbmail_imap_session_printf(self, "%s NO no right to store \\DELETED flag\r\n", self->tag);
-			return 1;
-		}
+		if ((result = mailbox_check_acl(self, mbx, ACL_RIGHT_DELETE))) return result;
 	}
 	if (flaglist[IMAP_FLAG_ANSWERED] == 1 ||
 	    flaglist[IMAP_FLAG_FLAGGED] == 1 ||
 	    flaglist[IMAP_FLAG_DRAFT] == 1 ||
 	    flaglist[IMAP_FLAG_RECENT] == 1 ||
 	    g_list_length(keywords) > 0) {
-		result = acl_has_right(mbx, self->userid, ACL_RIGHT_WRITE);
-		if (result < 0) {
-			dbmail_imap_session_printf(self, "*BYE internal database error\r\n");
-			return -1;
-		} else if (result == 0) {
-			dbmail_imap_session_printf(self, "%s NO no right to store flags\r\n", self->tag);
-			return 1;
-		}
+		if ((result = mailbox_check_acl(self, mbx, ACL_RIGHT_WRITE))) return result;
 	}
 
 
@@ -1151,15 +1213,8 @@ int _ic_check(ImapSession *self)
 	int result;
 
 	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
-
-	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
-		return -1;
-	} else if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to do check on mailbox\r\n", self->tag);
-		return 1;
-	}
+	
+	if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_READ))) return result;
 
 	dbmail_imap_session_mailbox_status(self, TRUE);
 	dbmail_imap_session_printf(self, "%s OK CHECK completed\r\n", self->tag);
@@ -1200,7 +1255,7 @@ int _ic_close(ImapSession *self)
 int _ic_unselect(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
-	dbmail_imap_session_mailbox_close(self);
+	imap_session_mailbox_close(self);
 	dbmail_imap_session_printf(self, "%s OK UNSELECT completed\r\n", self->tag);
 	return 0;
 }
@@ -1221,15 +1276,8 @@ int _ic_expunge(ImapSession *self)
 		return 1;
 	}
 
-	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_DELETE);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	} else if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO you do not have delete rights on this mailbox\r\n", 
-		self->tag);
-		return 1;
-	}
+	if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_DELETE))) return result;
+	
 	if (dbmail_imap_session_mailbox_expunge(self) != DM_SUCCESS) {
 		dbmail_imap_session_printf(self, "* BYE expunge failed\r\n");
 		return -1;
@@ -1259,15 +1307,7 @@ static int sorted_search(ImapSession *self, search_order_t order)
 
 	if (order == SEARCH_SORTED) sorted = 1;
 	
-	/* check ACL */
-	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	} else if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to search mailbox\r\n", self->tag);
-		return 1;
-	}
+	if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_READ))) return result;
 
 	mb = self->mailbox;
 	switch(order) {
@@ -1376,19 +1416,10 @@ int _ic_fetch(ImapSession *self)
 {
 	int result, state, setidx;
 
-	if (!check_state_and_args (self, 2, 0, IMAPCS_SELECTED))
-		return 1;
+	if (!check_state_and_args (self, 2, 0, IMAPCS_SELECTED)) return 1;
 
 	/* check if the user has the right to fetch messages in this mailbox */
-	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to fetch from mailbox\r\n", self->tag);
-		return 1;
-	}
+	if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_READ))) return result;
 	
 	dbmail_imap_session_reset_fetchitems(self);
 
@@ -1561,40 +1592,16 @@ int _ic_store(ImapSession *self)
 
 	/** check ACL's for STORE */
 	if (cmd->flaglist[IMAP_FLAG_SEEN] == 1) {
-		result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_SEEN);
-		if (result < 0) {
-			dbmail_imap_session_printf(self, "* BYE internal database error");
-			return -1;	/* fatal */
-		}
-		if (result == 0) {
-			dbmail_imap_session_printf(self, "%s NO no right to store \\SEEN flag\r\n", self->tag);
-			return 1;
-		}
+		if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_SEEN))) return result;
 	}
 	if (cmd->flaglist[IMAP_FLAG_DELETED] == 1) {
-		result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_DELETE);
-		if (result < 0) {
-			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-			return -1;	/* fatal */
-		}
-		if (result == 0) {
-			dbmail_imap_session_printf(self, "%s NO no right to store \\DELETED flag\r\n", self->tag);
-			return 1;
-		}
+		if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_DELETE))) return result;
 	}
 	if (cmd->flaglist[IMAP_FLAG_ANSWERED] == 1 ||
 	    cmd->flaglist[IMAP_FLAG_FLAGGED] == 1 ||
 	    cmd->flaglist[IMAP_FLAG_DRAFT] == 1 ||
 	    g_list_length(cmd->keywords) > 0 ) {
-		result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_WRITE);
-		if (result < 0) {
-			dbmail_imap_session_printf(self, "* BYE internal database error");
-			return -1;
-		}
-		if (result == 0) {
-			dbmail_imap_session_printf(self, "%s NO no right to store flags", self->tag);
-			return 1;
-		}
+		if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_WRITE))) return result;
 	}
 	/* end of ACL checking. If we get here without returning, the user has
 	   the right to store the flags */
@@ -1611,8 +1618,12 @@ int _ic_store(ImapSession *self)
 	if (cmd->action == IMAPFA_ADD) {
 		guint l = g_list_length(self->mailbox->info->keywords);
 		g_list_merge(&self->mailbox->info->keywords, cmd->keywords, cmd->action, (GCompareFunc)g_ascii_strcasecmp);
-		if ( l < g_list_length(self->mailbox->info->keywords) )
-			dbmail_imap_session_mailbox_flags(self);
+		if ( l < g_list_length(self->mailbox->info->keywords) ) {
+			char *flags = mailbox_flags(self->mailbox->info);
+			dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", flags);
+			dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+			g_free(flags);
+		}
 		
 	}
 
@@ -1665,29 +1676,12 @@ int _ic_copy(ImapSession *self)
 		return 1;
 	}
 	// check if user has right to COPY from source mailbox
-	result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_READ);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;	/* fatal */
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to copy from mailbox\r\n",
-			self->tag);
-		return 1;
-	}
+	if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_READ))) return result;
+
 	// check if user has right to COPY to destination mailbox
 	destmbox = dbmail_imap_session_mbxinfo_lookup(self, destmboxid);
 
-	result = acl_has_right(destmbox, self->userid, ACL_RIGHT_INSERT);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;	/* fatal */
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to copy to mailbox\r\n", self->tag);
-		return 1;
-	}
+	if ((result = mailbox_check_acl(self, destmbox, ACL_RIGHT_INSERT))) return result;
 
 	cmd.mailbox_id = destmboxid;
 	self->cmd = &cmd;
@@ -1888,11 +1882,8 @@ int _ic_setacl(ImapSession *self)
 	// has the rights to 'administer' this mailbox? 
 	mailbox = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 
-	if (acl_has_right(mailbox, self->userid, ACL_RIGHT_ADMINISTER) != 1) {
-		dbmail_imap_session_printf(self, "%s NO SETACL failure: can't set acl, "
-			"you don't have the proper rights\r\n", self->tag);
-		return 1;
-	}
+	if ((result = mailbox_check_acl(self, mailbox, ACL_RIGHT_ADMINISTER))) return result;
+
 	// set the new acl
 	if (acl_set_rights(targetuserid, mboxid, self->args[self->args_idx+2]) < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
@@ -1907,9 +1898,9 @@ int _ic_setacl(ImapSession *self)
 int _ic_deleteacl(ImapSession *self)
 {
 	// DELETEACL mailboxname identifier
-	u64_t mboxid;
-	u64_t targetuserid;
+	u64_t mboxid, targetuserid;
 	MailboxInfo *mailbox;
+	int result;
 
 	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
@@ -1922,12 +1913,8 @@ int _ic_deleteacl(ImapSession *self)
 	
 	mailbox = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 
-	// has the rights to 'administer' this mailbox? 
-	if (acl_has_right(mailbox, self->userid, ACL_RIGHT_ADMINISTER) != 1) {
-		dbmail_imap_session_printf(self, "%s NO DELETEACL failure: can't delete "
-			"acl\r\n", self->tag);
-		return 1;
-	}
+	if ((result = mailbox_check_acl(self, mailbox, ACL_RIGHT_ADMINISTER))) return result;
+
 	// set the new acl
 	if (acl_delete_acl(targetuserid, mboxid) < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
@@ -1989,13 +1976,9 @@ int _ic_listrights(ImapSession *self)
 	}
 	// has the rights to 'administer' this mailbox? 
 	mailbox = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	
+	if ((result = mailbox_check_acl(self, mailbox, ACL_RIGHT_ADMINISTER))) return result;
 
-	if (acl_has_right(mailbox, self->userid, ACL_RIGHT_ADMINISTER) != 1) {
-		dbmail_imap_session_printf(self,
-			"%s NO LISTRIGHTS failure: can't set acl\r\n",
-			self->tag);
-		return 1;
-	}
 	// set the new acl
 	if (!(listrights_string = acl_listrights(targetuserid, mboxid))) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
