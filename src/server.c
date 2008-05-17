@@ -560,7 +560,6 @@ int server_run(serverConfig_t *conf)
 	mainRestart = 0;
 	mainStatus = 0;
 	mainSig = 0;
-	int result = 0;
 
 	assert(conf);
 
@@ -568,14 +567,13 @@ int server_run(serverConfig_t *conf)
 
 	server_create_sockets(conf);
 
-	if (server_setup())
-		return -1;
+	if (server_setup()) return -1;
 
 	worker_run(conf);
 
 	server_close_sockets(conf);
 	
-	return result;
+	return 0;
 }
 
 void worker_run(serverConfig_t *conf)
@@ -599,16 +597,13 @@ void worker_run(serverConfig_t *conf)
 
 	TRACE(TRACE_DEBUG,"setup event loop");
 	event_init();
-
 	evsock = g_new0(struct event, server_conf->ipcount+1);
-
 	for (ip = 0; ip < server_conf->ipcount; ip++) {
 		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, worker_sock_cb, &evsock[ip]);
 		event_add(&evsock[ip], NULL);
 	}
 
-	TRACE(TRACE_DEBUG,"dispatch event loop");
-
+	TRACE(TRACE_DEBUG,"dispatching event loop...");
 	event_dispatch();
 
 	disconnect_all();
