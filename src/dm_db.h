@@ -778,15 +778,6 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name);
  * 		- 0 on success
  */
 int db_setmailboxname(u64_t mailbox_idnr, const char *name);
-/**
- * \brief remove message that has the delete flag
- *        set. Remove is done by setting status to 2.
- * \param message_id id of the message to expunge
- * \return 
- * 		- -1 on failure
- * 		- 0 on success
- */
-int db_msg_expunge(u64_t message_id);
 
 /**
  * \brief subscribe to a mailbox.

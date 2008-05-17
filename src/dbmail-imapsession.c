@@ -1819,14 +1819,7 @@ int dbmail_imap_session_idle(ImapSession *self)
 		TRACE(TRACE_ERROR, "[%p] illegal value for idle_timeout [%s]", self, val);
 		idle_timeout = IDLE_TIMEOUT;	
 	}
-#if 0
-	GETCONFIGVALUE("idle_status", "IMAP", val);
-	if (strlen(val) && (g_strncasecmp(val,"yes",3)==0))
-		imap_feature_idle_status = TRUE;
-	else
-		imap_feature_idle_status = FALSE;
-#endif
-
+	
 	dbmail_imap_session_set_callbacks(self, imap_cb_idle_read, imap_cb_idle_time, idle_timeout);
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
@@ -1865,11 +1858,7 @@ gpointer db_update_recent(gpointer data)
 		db_begin_transaction(c);
 		slices = g_list_first(slices);
 		while (slices) {
-			snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag = 0 "
-					"WHERE message_idnr IN (%s) AND recent_flag = 1", 
-					DBPFX, (gchar *)slices->data);
-			Connection_execute(c, query);
-
+			Connection_execute(c, "UPDATE %smessages SET recent_flag = 0 WHERE message_idnr IN (%s) AND recent_flag = 1", DBPFX, (gchar *)slices->data);
 			if (! g_list_next(slices)) break;
 			slices = g_list_next(slices);
 		}
@@ -1971,10 +1960,9 @@ static gboolean _do_expunge(u64_t *id, ImapSession *self)
 	
 	assert(msginfo);
 
-	if (! msginfo->flags[IMAP_FLAG_DELETED])
-		return FALSE;
+	if (! msginfo->flags[IMAP_FLAG_DELETED]) return FALSE;
 
-	if (db_msg_expunge(*id) == DM_EQUERY)
+	if (db_update("UPDATE %smessages SET status=%d WHERE message_idnr=%llu ", DBPFX, MESSAGE_STATUS_DELETE, *id) == DM_EQUERY)
 		return TRUE;
 
 	if (self->command_type == IMAP_COMM_EXPUNGE) {

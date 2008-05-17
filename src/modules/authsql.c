@@ -30,10 +30,6 @@
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
-/* string to be returned by auth_getencryption() */
-#define _DESCSTRLEN 50
-
-
 int auth_connect()
 {
 	/* this function is only called after a connection has been made
@@ -296,12 +292,9 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 
 int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user_idnr)
 {
-	const char *query_result;
 	int is_validated = 0;
-	char salt[13];
-	char cryptres[35];
-	char real_username[DM_USERNAME_LEN];
-	char *md5str;
+	char salt[13], cryptres[35], real_username[DM_USERNAME_LEN];
+	char *md5str, *dbpass = NULL, *encode = NULL;
 	int result, t = FALSE;
 	C c; R r;
 
@@ -318,8 +311,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	}
 
 	/* the shared mailbox user should not log in! */
-	if (strcmp(username, PUBLIC_FOLDER_USER) == 0)
-		return 0;
+	if (strcmp(username, PUBLIC_FOLDER_USER) == 0) return 0;
 
 	strncpy(real_username, username, DM_USERNAME_LEN);
 	if (db_use_usermap()) {  /* use usermap */
@@ -331,55 +323,14 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	}
 	
 	/* lookup the user_idnr */
-	if (auth_user_exists(real_username, user_idnr) == DM_EQUERY)
-		return DM_EQUERY;
+	if (auth_user_exists(real_username, user_idnr) == DM_EQUERY) return DM_EQUERY;
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT user_idnr, passwd, encryption_type FROM %susers WHERE user_idnr = %llu", DBPFX, *user_idnr);
+		r = Connection_executeQuery(c, "SELECT passwd, encryption_type FROM %susers WHERE user_idnr = %llu", DBPFX, *user_idnr);
 		if (db_result_next(r)) {
-			/* get encryption type */
-			query_result = db_result_get(r,2);
-
-			if (!query_result || strcasecmp(query_result, "") == 0) {
-				TRACE(TRACE_DEBUG, "validating using plaintext passwords");
-				/* get password from database */
-				query_result = db_result_get(r,1);
-				is_validated = (strcmp(query_result, password) == 0) ? 1 : 0;
-			} else if (strcasecmp(query_result, "crypt") == 0) {
-				TRACE(TRACE_DEBUG, "validating using crypt() encryption");
-				query_result = db_result_get(r,1);
-				is_validated = (strcmp((const char *) crypt(password, query_result),	/* Flawfinder: ignore */
-						       query_result) == 0) ? 1 : 0;
-			} else if (strcasecmp(query_result, "md5") == 0) {
-				/* get password */
-				query_result = db_result_get(r,1);
-				if (strncmp(query_result, "$1$", 3)) {
-					TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-					/* redundant statement: query_result = db_result_get(0, 1); */
-					md5str = dm_md5(password);
-					is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-				} else {
-					TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
-					strncpy(salt, query_result, 12);
-					strncpy(cryptres, (char *) crypt(password, query_result), 34);	/* Flawfinder: ignore */
-					TRACE(TRACE_DEBUG, "salt   : %s", salt);
-					TRACE(TRACE_DEBUG, "hash   : %s", query_result);
-					TRACE(TRACE_DEBUG, "crypt(): %s", cryptres);
-					is_validated = (strncmp(query_result, cryptres, 34) == 0) ? 1 : 0;
-				}
-			} else if (strcasecmp(query_result, "md5sum") == 0) {
-				TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-				query_result = db_result_get(r,1);
-				md5str = dm_md5(password);
-				is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-			} else if (strcasecmp(query_result, "md5base64") == 0) {
-				TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
-				query_result = db_result_get(r,1);
-				md5str = dm_md5_base64(password);
-				is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
-				g_free(md5str);
-			}
+			dbpass = g_strdup(db_result_get(r,0));
+			encode = g_strdup(db_result_get(r,1));
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -388,7 +339,48 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		Connection_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY) return t;
+	if (t == DM_EQUERY) {
+		g_free(dbpass);
+		g_free(encode);
+		return t;
+	}
+
+	if (strcasecmp(encode, "") == 0) {
+		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
+		is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "crypt") == 0) {
+		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
+		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "md5") == 0) {
+		/* get password */
+		if (strncmp(dbpass, "$1$", 3)) {
+			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
+			md5str = dm_md5(password);
+			is_validated = (strncmp(md5str, dbpass, 32) == 0) ? 1 : 0;
+			g_free(md5str);
+		} else {
+			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
+			strncpy(salt, dbpass, 12);
+			strncpy(cryptres, (char *) crypt(password, dbpass), 34);
+			TRACE(TRACE_DEBUG, "salt   : %s", salt);
+			TRACE(TRACE_DEBUG, "hash   : %s", dbpass);
+			TRACE(TRACE_DEBUG, "crypt(): %s", cryptres);
+			is_validated = (strncmp(dbpass, cryptres, 34) == 0) ? 1 : 0;
+		}
+	} else if (strcasecmp(encode, "md5sum") == 0) {
+		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
+		md5str = dm_md5(password);
+		is_validated = (strncmp(md5str, dbpass, 32) == 0) ? 1 : 0;
+		g_free(md5str);
+	} else if (strcasecmp(encode, "md5base64") == 0) {
+		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
+		md5str = dm_md5_base64(password);
+		is_validated = (strncmp(md5str, dbpass, 32) == 0) ? 1 : 0;
+		g_free(md5str);
+	}
+
+	if (dbpass) g_free(dbpass);
+	if (encode) g_free(encode);
 
 	if (is_validated)
 		db_user_log_login(*user_idnr);
@@ -402,10 +394,9 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 		unsigned char *md5_apop_he, char *apop_stamp)
 {
 	/* returns useridnr on OK, 0 on validation failed, -1 on error */
-	char *checkstring = NULL;
-	char *md5_apop_we;
+	char *checkstring = NULL, *md5_apop_we;
 	u64_t user_idnr = 0;
-	const char *query_result;
+	const char *dbpass;
 	C c; R r;
 	int t = FALSE;
 
@@ -415,25 +406,27 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT passwd,user_idnr FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		r = Connection_executeQuery(c, "SELECT passwd FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
 		if (db_result_next(r)) { /* user found */
 			/* now authenticate using MD5 hash comparisation  */
-			query_result = db_result_get(r,0); /* value holds the password */
+			dbpass = db_result_get(r,0); /* value holds the password */
 
-			TRACE(TRACE_DEBUG, "apop_stamp=[%s], userpw=[%s]", apop_stamp, query_result);
+			TRACE(TRACE_DEBUG, "apop_stamp=[%s], userpw=[%s]", apop_stamp, dbpass);
 
-			checkstring = g_strdup_printf("%s%s", apop_stamp, query_result);
+			checkstring = g_strdup_printf("%s%s", apop_stamp, dbpass);
 			md5_apop_we = dm_md5(checkstring);
 
 			TRACE(TRACE_DEBUG, "checkstring for md5 [%s] -> result [%s]", checkstring, md5_apop_we);
 			TRACE(TRACE_DEBUG, "validating md5_apop_we=[%s] md5_apop_he=[%s]", md5_apop_we, md5_apop_he);
 
-			if (strcmp((char *)md5_apop_he, md5_apop_we)) {
+			if (strcmp((char *)md5_apop_he, md5_apop_we) == 0) {
 				TRACE(TRACE_MESSAGE, "user [%s] is validated using APOP", username);
-				/* get user idnr */
-				query_result = db_result_get(r,1);
-				user_idnr = (query_result) ? strtoull(query_result, NULL, 10) : 0;
+			} else {
+				user_idnr = 0; // failed
 			}
+			g_free(md5_apop_we);
+		} else {
+			user_idnr = 0;
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;

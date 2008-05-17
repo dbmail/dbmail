@@ -3230,11 +3230,6 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 	return t;
 }
 
-int db_msg_expunge(u64_t message_id)
-{
-	return db_update("UPDATE %smessages SET status=%d WHERE message_idnr=%llu ", 
-			DBPFX, MESSAGE_STATUS_DELETE, message_id);
-}
 
 int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
