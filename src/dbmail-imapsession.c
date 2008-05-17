@@ -224,7 +224,7 @@ ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag)
 ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command)
 {
 	if (self->command) g_free(self->command);
-	self->command = g_strdup(command);
+	self->command = g_ascii_strup(command,-1);
 	return self;
 }
 

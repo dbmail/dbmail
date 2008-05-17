@@ -3246,52 +3246,12 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 
 int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
-	C c; R r; gboolean t, subscribed = FALSE;
-	INIT_QUERY;
-	snprintf(query, DEF_QUERYSIZE, "SELECT * FROM %ssubscription "
-			"WHERE mailbox_id = %llu "
-			"AND user_id = %llu",
-			DBPFX, mailbox_idnr, user_idnr);
-
-	c = db_con_get();
-	TRY
-		r = Connection_executeQuery(c, query);
-		if (db_result_next(r))
-			subscribed = TRUE;
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		Connection_clear(c);
-	END_TRY;
-
-	if (subscribed) {
-		TRACE(TRACE_INFO, "mailbox [%llu] already subscribed to by user [%llu]",
-			mailbox_idnr, user_idnr);
-		Connection_close(c);
-		return TRUE;
-	}
-
-	memset(query,0,DEF_QUERYSIZE);
-	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO %ssubscription (user_id, mailbox_id) "
-		 "VALUES (%llu, %llu)",DBPFX, user_idnr, mailbox_idnr);
-
-	t = FALSE;
-	TRY
-		t = Connection_execute(c, query);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		Connection_close(c);
-	END_TRY;
-
-	return t;
+	return db_update("INSERT INTO %ssubscription (user_id, mailbox_id) VALUES (%llu, %llu)", DBPFX, user_idnr, mailbox_idnr);
 }
 
 int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
-	return db_update("DELETE FROM %ssubscription WHERE user_id=%llu AND mailbox_id=%llu", 
-			DBPFX, user_idnr, mailbox_idnr);
+	return db_update("DELETE FROM %ssubscription WHERE user_id=%llu AND mailbox_id=%llu", DBPFX, user_idnr, mailbox_idnr);
 }
 
 int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
