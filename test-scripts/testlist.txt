@@ -1,0 +1,3 @@
+x login testuser1 test
+x list "" *
+x logout

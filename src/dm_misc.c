@@ -2290,6 +2290,8 @@ int ci_write(clientinfo_t *self, char * msg, ...)
 	char *s;
 	va_list ap;
 
+	if (! self) return -1;
+
 	va_start(ap, msg);
 	s = g_strdup_vprintf(msg, ap);
 	va_end(ap);

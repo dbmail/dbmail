@@ -44,69 +44,6 @@ extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
 extern volatile sig_atomic_t alarm_occured;
 
-extern GThreadPool *tpool;
-
-/* 
- *
- * threaded command primitives 
- *
- * the goal is to make long running tasks (mainly database IO) non-blocking
- *
- *
- */
-void ic_flush(gpointer data)
-{
-	dm_thread_data *ic = (dm_thread_data *)data;
-
-	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, ic->session);
-	/* flush and cleanup thread data */
-	if (ic->result) {
-		dbmail_imap_session_printf(ic->session, "%s", ic->result);
-		g_free(ic->result);
-	}
-	if (ic->tag) g_free(ic->tag);
-	if (ic->command) g_free(ic->command);
-	if (ic->args) g_strfreev(ic->args);
-	if (ic->data) g_free(ic->data);
-
-	g_free(ic);
-}
-
-void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
-{
-	GError *err = NULL;
-
-	assert(session);
-	assert(cb_enter);
-
-	dm_thread_data *ic = g_new0(dm_thread_data,1);
-	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, session);
-
-	assert(cb_enter);
-
-	ic->userid	= session->userid;
-	ic->tag		= g_strdup(session->tag);
-	ic->command	= g_strdup(session->command);
-	if (session->args) {
-		ic->args = g_strdupv(session->args);
-		ic->arg	 = ic->args[session->args_idx];
-	}
-	ic->session	= session;	/* we need to pass this along */
-	ic->data	= data; 	/* payload */
-
-	ic->cb_enter	= cb_enter;
-
-	if (cb_leave)
-		ic->cb_leave = cb_leave;
-	else
-		ic->cb_leave = ic_flush;
-
-	g_thread_pool_push(tpool, ic, &err);
-	if (err)
-		TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
-}
-
-
 /*
  *
  * helpers 
@@ -1360,7 +1297,6 @@ int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
         gchar *ln;
 
 	assert(message);
-	if (! (self->ci && self->ci->wev)) return -1;
 
 	va_start(ap, message);
 	ln = g_strdup_vprintf(message,ap);

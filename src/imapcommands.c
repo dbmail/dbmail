@@ -127,9 +127,9 @@ int _ic_logout(ImapSession *self)
 	if (!check_state_and_args(self, 0, 0, -1)) return 1;
 
 	dbmail_imap_session_set_state(self,IMAPCS_LOGOUT);
-	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
-
 	dbmail_imap_session_printf(self, "* BYE\r\n");
+
+	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
 	return 0;
 }
 

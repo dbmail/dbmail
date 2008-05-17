@@ -76,21 +76,6 @@ static int imap4_tokenizer(ImapSession *, char *);
 static void imap4(ImapSession *);
 static void dbmail_imap_session_reset(ImapSession *session);
 
-static void ci_drain_queue(clientinfo_t *client)
-{
-	gpointer data;
-	TRACE(TRACE_DEBUG,"[%p] ...", client);
-	do {
-		data = g_async_queue_try_pop(queue);
-		if (data) {
-			dm_thread_data *ic = (gpointer)data;
-			ic->cb_leave(data);
-		}
-	} while (data);
-
-	TRACE(TRACE_DEBUG,"[%p] done", client);
-}
-
 static void imap_session_bailout(ImapSession *session)
 {
 	TRACE(TRACE_DEBUG,"[%p]", session);

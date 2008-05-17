@@ -49,12 +49,85 @@ serverConfig_t *server_conf;
 static void worker_run(serverConfig_t *conf);
 static int worker_set_sighandler(void);
 
-static void ci_dispatch(gpointer data, gpointer user_data)
+void ci_drain_queue(clientinfo_t *client)
+{
+	gpointer data;
+	TRACE(TRACE_DEBUG,"[%p] [%d]...", client, client->tx);
+	do {
+		data = g_async_queue_try_pop(queue);
+		if (data) {
+			dm_thread_data *ic = (gpointer)data;
+			ic->cb_leave(data);
+		}
+	} while (data);
+
+	TRACE(TRACE_DEBUG,"[%p] done", client);
+}
+
+/* 
+ *
+ * threaded command primitives 
+ *
+ * the goal is to make long running tasks (mainly database IO) non-blocking
+ *
+ *
+ */
+void ic_flush(gpointer data)
 {
 	dm_thread_data *ic = (dm_thread_data *)data;
 
+	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, ic->session);
+	/* flush and cleanup thread data */
+	if (ic->result) {
+		if (ic->session->ci) ci_write(ic->session->ci, "%s", ic->result);
+		g_free(ic->result);
+	}
+	if (ic->tag) g_free(ic->tag);
+	if (ic->command) g_free(ic->command);
+	if (ic->args) g_strfreev(ic->args);
+	if (ic->data) g_free(ic->data);
+
+	g_free(ic);
+}
+
+void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
+{
+	GError *err = NULL;
+
+	assert(session);
+	assert(cb_enter);
+
+	dm_thread_data *ic = g_new0(dm_thread_data,1);
+	TRACE(TRACE_DEBUG,"[%p] [%p]", ic, session);
+
+	assert(cb_enter);
+
+	ic->userid	= session->userid;
+	ic->tag		= g_strdup(session->tag);
+	ic->command	= g_strdup(session->command);
+	if (session->args) {
+		ic->args = g_strdupv(session->args);
+		ic->arg	 = ic->args[session->args_idx];
+	}
+	ic->session	= session;	/* we need to pass this along */
+	ic->data	= data; 	/* payload */
+
+	ic->cb_enter	= cb_enter;
+
+	if (cb_leave)
+		ic->cb_leave = cb_leave;
+	else
+		ic->cb_leave = ic_flush;
+
+	g_thread_pool_push(tpool, ic, &err);
+	if (err)
+		TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
+}
+
+static void dm_worker_dispatch(gpointer data, gpointer user_data)
+{
 	TRACE(TRACE_DEBUG,"data[%p], user_data[%p]", data, user_data);
-	
+	dm_thread_data *ic = (dm_thread_data *)data;
 	ic->cb_enter(ic);
 }
 
@@ -72,7 +145,7 @@ static int server_setup(void)
 	queue = g_async_queue_new();
 
 	// Thread pool for database work
-	if (! (tpool = g_thread_pool_new((GFunc)ci_dispatch,NULL,10,TRUE,&err)))
+	if (! (tpool = g_thread_pool_new((GFunc)dm_worker_dispatch,NULL,10,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
 	pipe(selfpipe);
@@ -225,8 +298,7 @@ static int create_unix_socket(serverConfig_t * conf)
 	saServer.sun_family = AF_UNIX;
 	strncpy(saServer.sun_path,conf->socket, sizeof(saServer.sun_path));
 
-	TRACE(TRACE_DEBUG, "create socket on [%s] with backlog [%d]",
-			conf->socket, conf->backlog);
+	TRACE(TRACE_DEBUG, "create socket [%s] backlog [%d]", conf->socket, conf->backlog);
 
 	// any error in dm_bind_and_listen is fatal
 	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), conf->backlog);
@@ -251,8 +323,7 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 	saServer.sin_family	= AF_INET;
 	saServer.sin_port	= htons(port);
 
-	TRACE(TRACE_DEBUG, "create socket on [%s:%d] with backlog [%d]",
-			ip, port, backlog);
+	TRACE(TRACE_DEBUG, "create socket [%s:%d] backlog [%d]", ip, port, backlog);
 	
 	if (ip[0] == '*') {
 		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -480,6 +551,7 @@ void disconnect_all(void)
 {
 	db_disconnect();
 	auth_disconnect();
+	if (tpool) g_thread_pool_free(tpool,TRUE,FALSE);
 }
 
 int server_run(serverConfig_t *conf)
@@ -540,7 +612,5 @@ void worker_run(serverConfig_t *conf)
 	event_dispatch();
 
 	disconnect_all();
-	if (tpool)
-		g_thread_pool_free(tpool,TRUE,FALSE);
 }
 
