@@ -3684,7 +3684,7 @@ int char2date_str(const char *date, field_t *frag)
 	return 0;
 }
 
-int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_username)
+int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_username)
 {
 	struct sockaddr saddr;
 	sa_family_t sa_family;

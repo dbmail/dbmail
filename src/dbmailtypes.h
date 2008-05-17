@@ -229,10 +229,10 @@ typedef struct {
 
 	size_t len;			/* octets read during last ci_read/ci_readln */
 	GString *line_buffer;		/* buffer for ci_readln */
-} clientinfo_t;
+} clientbase_t;
 
 typedef struct {
-	clientinfo_t *ci;
+	clientbase_t *ci;
 	int state;			/**< session state */
 
 	int error_count;		/**< number of errors that have occured */

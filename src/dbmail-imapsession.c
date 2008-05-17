@@ -58,7 +58,7 @@ extern volatile sig_atomic_t alarm_occured;
  * sends cnt bytes from a MEM structure to a FILE stream
  * uses a simple buffering system
  */
-static void send_data(clientinfo_t *ci, MEM * from, int cnt)
+static void send_data(clientbase_t *ci, MEM * from, int cnt)
 {
 	char buf[SEND_BUF_SIZE];
 

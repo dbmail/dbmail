@@ -627,7 +627,7 @@ u64_t dm_getguid(unsigned int serverid)
         return (u64_t)strtoll(s,NULL,10);
 }
 
-sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr)
+sa_family_t dm_get_client_sockaddr(clientbase_t *ci, struct sockaddr *saddr)
 {
 	#define maxsocklen	128
 	union {
@@ -1127,7 +1127,7 @@ gint ucmp(const u64_t *a, const u64_t *b)
 	return -1;
 }
 /* Read from instream until ".\r\n", discarding what is read. */
-int discard_client_input(clientinfo_t *ci)
+int discard_client_input(clientbase_t *ci)
 {
 	int c = 0, n = 0;
 
@@ -2285,7 +2285,7 @@ char * dm_get_hash_for_string(const char *buf)
 	return digest;
 }
 
-int ci_write(clientinfo_t *self, char * msg, ...)
+int ci_write(clientbase_t *self, char * msg, ...)
 {
 	char *s;
 	va_list ap;
@@ -2302,7 +2302,7 @@ int ci_write(clientinfo_t *self, char * msg, ...)
 	return 0;
 }
 
-int ci_read(clientinfo_t *self, char *buffer, size_t n)
+int ci_read(clientbase_t *self, char *buffer, size_t n)
 {
 	size_t i = 0;
 	char c;
@@ -2322,7 +2322,7 @@ int ci_read(clientinfo_t *self, char *buffer, size_t n)
 	return self->len;
 }	
 
-int ci_readln(clientinfo_t *self, char * buffer)
+int ci_readln(clientbase_t *self, char * buffer)
 {
 	char c=0;
 	int result = 0;
@@ -2354,7 +2354,7 @@ int ci_readln(clientinfo_t *self, char * buffer)
 }
 
 
-void ci_close(clientinfo_t *self)
+void ci_close(clientbase_t *self)
 {
 	assert(self);
 

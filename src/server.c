@@ -49,7 +49,7 @@ serverConfig_t *server_conf;
 static void worker_run(serverConfig_t *conf);
 static int worker_set_sighandler(void);
 
-void ci_drain_queue(clientinfo_t *client)
+void ci_drain_queue(clientbase_t *client)
 {
 	gpointer data;
 	TRACE(TRACE_DEBUG,"[%p] [%d]...", client, client->tx);
@@ -363,21 +363,21 @@ static void server_create_sockets(serverConfig_t * conf)
 
 static void client_pipe_cb(int sock, short event, void *arg)
 {
-	clientinfo_t *client;
+	clientbase_t *client;
 
 	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
 	char buf[1];
 	while (read(sock, buf, 1) > 0)
 		;
-	client = (clientinfo_t *)arg;
+	client = (clientbase_t *)arg;
 	if (client->cb_pipe) client->cb_pipe(client);
 	if (client->pev) event_add(client->pev, NULL);
 }
 
-clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
+clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 {
 	int err;
-	clientinfo_t *client	= g_new0(clientinfo_t, 1);
+	clientbase_t *client	= g_new0(clientbase_t, 1);
 
 	client->timeout		= server_conf->timeout;
 	client->login_timeout	= server_conf->login_timeout;

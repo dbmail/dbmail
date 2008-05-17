@@ -1231,7 +1231,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
  *
  * returns useridnr on OK, 0 on validation failed, -1 on error 
  */
-int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user_idnr)
+int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user_idnr)
 {
 	LDAP *_ldap_conn = ldap_con_get();
 	timestring_t timestring;
@@ -1306,7 +1306,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 }
 
 /* returns useridnr on OK, 0 on validation failed, -1 on error */
-u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username UNUSED,
+u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username UNUSED,
 			unsigned char *md5_apop_he UNUSED,
 			char *apop_stamp UNUSED)
 {

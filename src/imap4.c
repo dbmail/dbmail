@@ -247,7 +247,7 @@ void dbmail_imap_session_reset_callbacks(ImapSession *session)
 int imap_handle_connection(client_sock *c)
 {
 	ImapSession *session;
-	clientinfo_t *ci;
+	clientbase_t *ci;
 
 	if (c)
 		ci = client_init(c->sock, c->caddr);

@@ -198,7 +198,7 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 int lmtp(ClientSession_t * session)
 {
 	DbmailMessage *msg;
-	clientinfo_t *ci = session->ci;
+	clientbase_t *ci = session->ci;
 	int helpcmd;
 	const char *class, *subject, *detail;
 	size_t tmplen = 0, tmppos = 0;

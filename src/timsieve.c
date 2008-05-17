@@ -250,7 +250,7 @@ int tims(ClientSession_t *session)
 	int ret;
 	char *script = NULL, *scriptname = NULL;
 	sort_result_t *sort_result = NULL;
-	clientinfo_t *ci = session->ci;
+	clientbase_t *ci = session->ci;
 
 	switch (session->command_type) {
 	case TIMS_LOUT:

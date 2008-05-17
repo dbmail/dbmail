@@ -42,8 +42,8 @@
 int StartCliServer(serverConfig_t * conf);
 int server_run(serverConfig_t *conf);
 
-clientinfo_t * client_init(int socket, struct sockaddr_in *caddr);
-void ci_drain_queue(clientinfo_t *client);
+clientbase_t * client_init(int socket, struct sockaddr_in *caddr);
+void ci_drain_queue(clientbase_t *client);
 
 void disconnect_all(void);
 

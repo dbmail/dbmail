@@ -110,7 +110,7 @@ char * dm_base_subject(const char *subject);
 int listex_match(const char *p, const char *s, const char *x, int flags);
 u64_t dm_getguid(unsigned int serverid);
 
-sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr);
+sa_family_t dm_get_client_sockaddr(clientbase_t *ci, struct sockaddr *saddr);
 
 int dm_sock_score(const char *base, const char *test);
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny);
@@ -131,7 +131,7 @@ int check_date(const char *date);
  *      - -1 on error
  *      -  0 on success
  */
-int discard_client_input(clientinfo_t *ci);
+int discard_client_input(clientbase_t *ci);
 
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
@@ -161,10 +161,10 @@ char * dm_get_hash_for_string(const char *buf);
 
 
 // ClientInfo_t methods (move these to separate file)
-int ci_write(clientinfo_t *self, char * msg, ...);
-int ci_read(clientinfo_t *self, char *buffer, size_t n);
-int ci_readln(clientinfo_t *self, char * buffer);
-void ci_close(clientinfo_t *self);
+int ci_write(clientbase_t *self, char * msg, ...);
+int ci_read(clientbase_t *self, char *buffer, size_t n);
+int ci_readln(clientbase_t *self, char * buffer);
+void ci_close(clientbase_t *self);
 
 
 void strip_crlf(char *buffer);

@@ -78,7 +78,7 @@ static void send_greeting(ClientSession_t *session)
 
 static void pop3_close(ClientSession_t *session)
 {
-	clientinfo_t *ci = session->ci;
+	clientbase_t *ci = session->ci;
 	TRACE(TRACE_DEBUG,"[%p] sessionResult [%d]", session, session->SessionResult);
 
 	if (session->username != NULL && (session->was_apop || session->password != NULL)) {
@@ -180,7 +180,7 @@ int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 {
 	va_list argp;
 	char *s;
-	clientinfo_t *ci = session->ci;
+	clientbase_t *ci = session->ci;
 
 	if (session->error_count >= MAX_ERRORS) {
 		ci_write(ci, "-ERR too many errors\r\n");
@@ -211,7 +211,7 @@ int pop3(ClientSession_t *session, char *buffer)
 	u64_t result, top_lines, top_messageid, user_idnr;
 	unsigned char *md5_apop_he;
 	struct message *msg;
-	clientinfo_t *ci = session->ci;
+	clientbase_t *ci = session->ci;
 
 	char *client_ip = ci->ip_src;
 

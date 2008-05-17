@@ -31,8 +31,8 @@ typedef struct {
 			const char *new_pass, const char *enctype);
 	int (* change_clientid)(u64_t user_idnr, u64_t new_cid);
 	int (* change_mailboxsize)(u64_t user_idnr, u64_t new_size);
-	int (* validate)(clientinfo_t *ci, char *username, char *password, u64_t * user_idnr);
-	u64_t (* md5_validate)(clientinfo_t *ci, char *username,
+	int (* validate)(clientbase_t *ci, char *username, char *password, u64_t * user_idnr);
+	u64_t (* md5_validate)(clientbase_t *ci, char *username,
 			unsigned char *md5_apop_he, char *apop_stamp);
 	int (* get_users_from_clientid)(u64_t client_id,
 			u64_t ** user_ids, unsigned *num_users);

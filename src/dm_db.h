@@ -210,7 +210,7 @@ int db_use_usermap(void);
 
 /**
  * \brief check if username exists in the usermap table
- * \param ci clientinfo_t of connected client
+ * \param ci clientbase_t of connected client
  * \param userid login to lookup
  * \param real_username contains userid after successful lookup
  * \return
@@ -218,7 +218,7 @@ int db_use_usermap(void);
  *  -  0 on success
  *  -  1 on not found
  */
-int db_usermap_resolve(clientinfo_t *ci, const char *userid, char * real_username);
+int db_usermap_resolve(clientbase_t *ci, const char *userid, char * real_username);
 
 
 /**

@@ -28,7 +28,7 @@ typedef struct {
 
 /* ImapSession definition */
 typedef struct {
-	clientinfo_t *ci;
+	clientbase_t *ci;
 	u64_t msg_idnr;  // replace this with a GList
 
 	GString *buff; // output buffer
