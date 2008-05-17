@@ -76,11 +76,30 @@ static int imap4_tokenizer(ImapSession *, char *);
 static void imap4(ImapSession *);
 static void dbmail_imap_session_reset(ImapSession *session);
 
+static void ci_drain_queue(clientinfo_t *client)
+{
+	gpointer data;
+	TRACE(TRACE_DEBUG,"[%p] ...", client);
+	do {
+		data = g_async_queue_try_pop(queue);
+		if (data) {
+			imap_cmd_t *ic = (gpointer)data;
+			ic->cb_leave(data);
+		}
+	} while (data);
+
+	TRACE(TRACE_DEBUG,"[%p] done", client);
+}
+
 static void imap_session_bailout(ImapSession *session)
 {
 	TRACE(TRACE_DEBUG,"[%p]", session);
-	if (! session) return;
+	if (! (session && session->ci)) 
+		return;
+
+	ci_drain_queue(session->ci);
 	ci_close(session->ci);
+
 	dbmail_imap_session_delete(session);
 
 	if (server_conf->no_daemonize == 1) _exit(0);
@@ -106,22 +125,6 @@ void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
 		imap_session_bailout(session);
 	}
 }
-
-static void drain_queue(clientinfo_t *client UNUSED)
-{
-	gpointer data;
-	TRACE(TRACE_DEBUG,"...");
-	do {
-		data = g_async_queue_try_pop(queue);
-		if (data) {
-			imap_cmd_t *ic = (gpointer)data;
-			ic->cb_leave(data);
-		}
-	} while (data);
-
-	TRACE(TRACE_DEBUG,"done");
-}
-
 
 void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 {
@@ -256,7 +259,6 @@ void dbmail_imap_session_reset_callbacks(ImapSession *session)
 	dbmail_imap_session_set_callbacks(session, imap_cb_read, imap_cb_time, session->timeout);
 }
 
-
 int imap_handle_connection(client_sock *c)
 {
 	ImapSession *session;
@@ -272,10 +274,9 @@ int imap_handle_connection(client_sock *c)
 
 	dbmail_imap_session_set_state(session, IMAPCS_NON_AUTHENTICATED);
 
-	ci->rev = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
-	ci->wev = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
-	ci->cb_pipe = (void *)drain_queue;
-
+	ci->rev     = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
+	ci->wev     = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
+	ci->cb_pipe = (void *)ci_drain_queue;
 	session->ci = ci;
 
 	dbmail_imap_session_reset_callbacks(session);

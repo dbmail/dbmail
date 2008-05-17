@@ -42,14 +42,25 @@ extern int (*event_sigcb)(void);
 
 int selfpipe[2];
 GAsyncQueue *queue;
+GThreadPool *tpool = NULL;
 
 serverConfig_t *server_conf;
 
 static void worker_run(serverConfig_t *conf);
 static int worker_set_sighandler(void);
 
+static void ci_dispatch(gpointer data, gpointer user_data)
+{
+	imap_cmd_t *ic = (imap_cmd_t *)data;
+
+	TRACE(TRACE_DEBUG,"data[%p], user_data[%p]", data, user_data);
+	
+	ic->cb_enter(ic);
+}
+
 static int server_setup(void)
 {
+	GError *err = NULL;
 	Restart = 0;
 	GeneralStopRequested = 0;
 	get_sigchld = 0;
@@ -59,6 +70,10 @@ static int server_setup(void)
 
 	// Asynchronous message queue
 	queue = g_async_queue_new();
+
+	// Thread pool for database work
+	if (! (tpool = g_thread_pool_new((GFunc)ci_dispatch,NULL,10,TRUE,&err)))
+		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
 	pipe(selfpipe);
 	UNBLOCK(selfpipe[0]);
@@ -344,15 +359,6 @@ clientinfo_t * client_init(int socket, struct sockaddr_in *caddr)
 	return client;
 }
 
-void client_close(client_sock *c)
-{
-	if (!c) return;
-	if (c->cb_close) c->cb_close(c);
-	g_free(c);
-	c = NULL;
-}
-
-
 static void worker_sock_cb(int sock, short event, void *arg)
 {
 	client_sock *c = g_new0(client_sock,1);
@@ -534,5 +540,7 @@ void worker_run(serverConfig_t *conf)
 	event_dispatch();
 
 	disconnect_all();
+	if (tpool)
+		g_thread_pool_free(tpool,TRUE,FALSE);
 }
 

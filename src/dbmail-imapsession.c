@@ -44,6 +44,8 @@ extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
 extern volatile sig_atomic_t alarm_occured;
 
+extern GThreadPool *tpool;
+
 /* 
  *
  * threaded command primitives 
@@ -73,6 +75,7 @@ void ic_flush(gpointer data)
 void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
 {
 	GError *err = NULL;
+
 	assert(session);
 	assert(cb_enter);
 
@@ -85,8 +88,8 @@ void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpo
 	ic->tag		= g_strdup(session->tag);
 	ic->command	= g_strdup(session->command);
 	if (session->args) {
-		ic->args	= g_strdupv(session->args);
-		ic->arg		= ic->args[session->args_idx];
+		ic->args = g_strdupv(session->args);
+		ic->arg	 = ic->args[session->args_idx];
 	}
 	ic->session	= session;	/* we need to pass this along */
 	ic->data	= data; 	/* payload */
@@ -98,8 +101,9 @@ void ic_dispatch(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpo
 	else
 		ic->cb_leave = ic_flush;
 
-	if (! g_thread_create((GThreadFunc)ic->cb_enter, (gpointer)ic, FALSE, &err) )
-		TRACE(TRACE_DEBUG,"gthread creation failed [%s]", err->message);
+	g_thread_pool_push(tpool, ic, &err);
+	if (err)
+		TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
 }
 
 
@@ -1356,7 +1360,7 @@ int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
         gchar *ln;
 
 	assert(message);
-	assert(self->ci->wev);
+	if (! (self->ci && self->ci->wev)) return -1;
 
 	va_start(ap, message);
 	ln = g_strdup_vprintf(message,ap);
