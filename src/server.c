@@ -106,12 +106,6 @@ void dm_thread_data_flush(gpointer data)
 
 	TRACE(TRACE_DEBUG,"[%p]", D);
 
-	/* flush and cleanup thread data */
-	if (D->result) {
-		ci_write(D->session->ci, "%s", D->result);
-		g_free(D->result); D->result = NULL;
-	}
-
 	if (D->data) g_free(D->data);
 	g_free(D); D = NULL;
 

@@ -1269,22 +1269,19 @@ void dbmail_imap_session_buff_clear(ImapSession *self)
 void dbmail_imap_session_buff_append(ImapSession *self, char *message, ...)
 {
 	va_list ap;
-	gchar *ln;
 	assert(message);
 
 	va_start(ap, message);
-	ln = g_strdup_vprintf(message, ap);
+	g_string_append_vprintf(self->buff, message, ap);
 	va_end(ap);
-
-	g_string_append_printf(self->buff, "%s", ln);
-
-	g_free(ln);
-
 }
 
 void dbmail_imap_session_buff_flush(ImapSession *self)
 {
-	dbmail_imap_session_printf(self, "%s", self->buff->str);
+	if (self->buff->len < 1) return;
+
+	TRACE(TRACE_INFO,"[%p] RESPONSE: [%s]", self, self->buff->str);
+	bufferevent_write(self->ci->wev, (void *)self->buff->str, self->buff->len);
 	dbmail_imap_session_buff_clear(self);
 }
 
@@ -1292,25 +1289,13 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
 {
         va_list ap;
-        int len;
-        //FILE * fd;
-        gchar *ln;
 
 	assert(message);
-
 	va_start(ap, message);
-	ln = g_strdup_vprintf(message,ap);
+	g_string_append_vprintf(self->buff, message, ap);
 	va_end(ap);
 
-        if (! ln) return -1;
-	
-	len = strlen(ln);
-	bufferevent_write(self->ci->wev, (void *)ln, len);
-
-	TRACE(TRACE_INFO,"[%p] RESPONSE: [%s]", self, ln);
-	g_free(ln);
-
-        return len;
+        return self->buff->len;
 }
 
 int dbmail_imap_session_readln(ImapSession *self, char * buffer)

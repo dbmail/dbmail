@@ -153,6 +153,7 @@ void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
 		sleep(2);	/* avoid DOS attacks */
 		dbmail_imap_session_printf(session, "* BYE [TRY RFC]\r\n");
 		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+		dbmail_imap_session_buff_flush(session);
 		return;
 	}
 	session->ci->cb_read(session);
@@ -169,6 +170,7 @@ static void send_greeting(ImapSession *session)
 	else
 		dbmail_imap_session_printf(session, "* OK imap 4r1 server (dbmail %s)\r\n", VERSION);
 	dbmail_imap_session_set_state(session,IMAPCS_NON_AUTHENTICATED);
+	dbmail_imap_session_buff_flush(session);
 }
 
 /*
@@ -180,6 +182,7 @@ void imap_cb_time(void *arg)
 
 	dbmail_imap_session_printf(session, "%s", IMAP_TIMEOUT_MSG);
 	dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+	dbmail_imap_session_buff_flush(session);
 }
 
 static int checktag(const char *s)
@@ -214,6 +217,8 @@ void imap_cb_read(void *arg)
 			if (! session->command_state) 
 				return; // unfinished command, new read callback
 			dbmail_imap_session_reset(session);
+		} else {
+			dbmail_imap_session_buff_flush(session);
 		}
 	}
 }
@@ -273,6 +278,7 @@ int imap_handle_connection(client_sock *c)
 
 void dbmail_imap_session_reset(ImapSession *session)
 {
+	dbmail_imap_session_buff_flush(session);
 	TRACE(TRACE_DEBUG,"[%p]", session);
 	if (session->tag) {
 		g_free(session->tag);
