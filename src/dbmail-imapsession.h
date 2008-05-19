@@ -164,12 +164,11 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self);
 
 int build_args_array_ext(ImapSession *self, const char *originalString);
 
+void dbmail_imap_cb_leave(gpointer data);
 
 /* threaded work queue */
 	
 /* 
- * send the ic->result buffer to the client 
- * default thread-exit callback
  */
 void dm_thread_data_flush(gpointer data);
 
