@@ -164,7 +164,7 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self);
 
 int build_args_array_ext(ImapSession *self, const char *originalString);
 
-void dbmail_imap_cb_leave(gpointer data);
+void _ic_cb_leave(gpointer data);
 
 /* threaded work queue */
 	

@@ -80,7 +80,7 @@ static void imap_session_bailout(ImapSession *session)
 	if (! (session && session->ci)) return;
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
-	ci_drain_queue(session->ci);
+//	ci_drain_queue(session->ci);
 	ci_close(session->ci);
 
 	dbmail_imap_session_delete(session);
@@ -105,13 +105,13 @@ void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
 		session->ci->cb_time(session);
 	} else {
 		TRACE(TRACE_INFO, "client socket error. %s", strerror(serr));
-		imap_session_bailout(session);
+		session->state = IMAPCS_ERROR;
+		//imap_session_bailout(session);
 	}
 }
 
 void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 {
-
 	ImapSession *session = (ImapSession *)arg;
 
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
@@ -240,18 +240,17 @@ void imap_cb_read(void *arg)
 		} else {
 			dbmail_imap_session_buff_flush(session);
 		}
-	}
 
-	TRACE(TRACE_DEBUG,"error_count [%d]", session->error_count);
-	if (session->error_count >= MAX_FAULTY_RESPONSES) {
-		/* we have had just about it with this user */
-		sleep(2);	/* avoid DOS attacks */
-		dbmail_imap_session_printf(session, "* BYE [TRY RFC]\r\n");
-		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
-		dbmail_imap_session_buff_flush(session);
-		return;
+		if (session->error_count >= MAX_FAULTY_RESPONSES) {
+			TRACE(TRACE_DEBUG,"error_count [%d]", session->error_count);
+			/* we have had just about it with this user */
+			sleep(2);	/* avoid DOS attacks */
+			dbmail_imap_session_printf(session, "* BYE [TRY RFC]\r\n");
+			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+			dbmail_imap_session_buff_flush(session);
+			return;
+		}
 	}
-
 }
 
 void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, int timeout)
@@ -309,8 +308,8 @@ int imap_handle_connection(client_sock *c)
 
 void dbmail_imap_session_reset(ImapSession *session)
 {
-	dbmail_imap_session_buff_flush(session);
 	TRACE(TRACE_DEBUG,"[%p]", session);
+	dbmail_imap_session_buff_flush(session);
 	if (session->tag) {
 		g_free(session->tag);
 		session->tag = NULL;
@@ -391,7 +390,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 	return session->parser_state;
 }
 	
-void dbmail_imap_cb_leave(gpointer data)
+void _ic_cb_leave(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;

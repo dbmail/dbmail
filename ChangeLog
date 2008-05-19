@@ -1,3 +1,56 @@
+2008-05-19  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.h, src/imap4.c, src/imapcommands.c:
+	finish making imap commands threaded
+
+2008-05-18  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.h, src/imap4.c, src/imapcommands.c:
+	return value and exit status cleanups
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c:
+	thread framework now stable, make more commands threaded
+
+2008-05-17  Paul Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c, test-scripts/testlist.txt, 
+	test/check_dbmail_deliver.c, test/check_dbmail_imapd.c:
+	wip imap threads
+	* src/server.c:
+	blah
+	* src/auth.h, src/authmodule.c, src/authmodule.h, 
+	src/clientsession.c, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmailtypes.h, src/dm_db.c, 
+	src/dm_db.h, src/dm_misc.c, src/dm_misc.h, src/imap4.c, src/lmtp.c, 
+	src/modules/authldap.c, src/modules/authsql.c, src/pop3.c, 
+	src/server.c, src/server.h, src/timsieve.c:
+	rename clientinfo_t to clientbase_t
+	* src/dbmail-imapsession.c, src/dm_misc.c, src/imap4.c, 
+	src/imapcommands.c, src/server.c, src/server.h, 
+	test-scripts/testlist.txt:
+	small cleanups
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c:
+	rename struct
+	* src/dbmail-imapsession.c, src/imap4.c, src/server.c, src/server.h:
+	switch to using GThreadPool
+	* src/dm_misc.c, src/imap4.c, src/imapcommands.c, src/server.c, 
+	src/serverparent.c:
+	more testing
+	* VERSION, configure.in, dbmail.conf, man/dbmail-imapd.txt, 
+	man/footer.txt, man/serveropts.txt, src/dbmail.h.in, src/imap4.c, 
+	src/server.c, src/serverparent.c, src/timsieve.c:
+	cleanups in automake setup, signalhandling and manpages
+	* src/dbmail-imapsession.c, src/dm_db.c, src/imapcommands.c:
+	wip refactoring imap code
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/dm_db.c, 
+	src/imapcommands.c:
+	wip refactoring imap code
+	* src/dbmail-imapsession.c, src/dm_db.c, src/dm_db.h, 
+	src/modules/authsql.c:
+	wip
+
 2008-05-17  Paul J Stevens <paul@nfg.nl>
 
 	* src/Makefile.am, src/dbmail-imapsession.c, 
