@@ -80,7 +80,6 @@ static void imap_session_bailout(ImapSession *session)
 	if (! (session && session->ci)) return;
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
-//	ci_drain_queue(session->ci);
 	ci_close(session->ci);
 
 	dbmail_imap_session_delete(session);
@@ -97,6 +96,7 @@ void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
 	if (what & EVBUFFER_EOF) {
 		TRACE(TRACE_INFO, "client disconnected. %s", strerror(serr));
+		dbmail_imap_session_set_state(session, IMAPCS_ERROR);
 		// defer the actual disconnetion to socket_write_cb so the server
 		// will disconnect only when the write buffer is depleted and we're
 		// done writing
@@ -105,7 +105,7 @@ void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
 		session->ci->cb_time(session);
 	} else {
 		TRACE(TRACE_INFO, "client socket error. %s", strerror(serr));
-		session->state = IMAPCS_ERROR;
+		dbmail_imap_session_set_state(session, IMAPCS_ERROR);
 		//imap_session_bailout(session);
 	}
 }
@@ -123,9 +123,10 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 			break;
 
 		default:
-			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->timeout);
 			if (session->ci->rev) {
+				TRACE(TRACE_DEBUG,"reset timeout [%d]", session->timeout);
 				bufferevent_settimeout(session->ci->rev, session->timeout, 0);
+				TRACE(TRACE_DEBUG, "[%p] command_state [%d]", session, session->command_state);
 				bufferevent_enable(session->ci->rev, EV_READ);
 			}
 			break;
@@ -195,23 +196,22 @@ static size_t stridx(const char *s, char c)
 
 static void imap_handle_exit(ImapSession *session, int status)
 {
+	TRACE(TRACE_DEBUG, "[%p] [%s] returned with status [%d]", session, session->command, status);
 	switch(status) {
 		case -1:
-			TRACE(TRACE_ERROR, "command returned with error [%s]", session->command);
 			dbmail_imap_session_set_state(session,IMAPCS_ERROR);	/* fatal error occurred, kick this user */
 			session->command_state = TRUE;
 			break;
 
 		case 1:
-			TRACE(TRACE_INFO, "command returned with status [%s]", session->command);
 			session->error_count++;	/* server returned BAD or NO response */
 			session->command_state = TRUE;
 			break;
 
 		case 0:
-			TRACE(TRACE_DEBUG,"command returned successfully [%s]", session->command);
-			if (session->command_type == IMAP_COMM_LOGOUT)
+			if (session->command_type == IMAP_COMM_LOGOUT) {
 				dbmail_imap_session_set_state(session,IMAPCS_LOGOUT);
+			}
 			break;
 	}
 	dbmail_imap_session_buff_flush(session);
@@ -225,6 +225,8 @@ void imap_cb_read(void *arg)
 	int result;
 
 	TRACE(TRACE_DEBUG, "[%p]", session);
+
+	if (session->state == IMAPCS_ERROR) return;
 
 	if (session->command_state) dbmail_imap_session_reset(session);
 
@@ -309,7 +311,6 @@ int imap_handle_connection(client_sock *c)
 void dbmail_imap_session_reset(ImapSession *session)
 {
 	TRACE(TRACE_DEBUG,"[%p]", session);
-	dbmail_imap_session_buff_flush(session);
 	if (session->tag) {
 		g_free(session->tag);
 		session->tag = NULL;
@@ -318,6 +319,7 @@ void dbmail_imap_session_reset(ImapSession *session)
 		g_free(session->command);
 		session->command = NULL;
 	}
+	session->command_type = 0;
 	session->command_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 	session->rbuff = NULL;

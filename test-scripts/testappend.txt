@@ -1,5 +1,7 @@
 x capability
 x login testuser1 test
+x select INBOX
+x fetch 1 (UID RFC822.HEADER)
 x append INBOX {10}
 From: paul
 

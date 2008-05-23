@@ -93,7 +93,6 @@ R db_stmt_query(S stmt);
 R db_query(C c, const char *the_query, ...);
 gboolean db_exec(C c, const char *the_query, ...);
 gboolean db_update(const char *q, ...);
-gboolean db_update_deferred(const char *q, ...);
 
 int db_result_next(R r);
 /**

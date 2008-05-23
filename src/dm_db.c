@@ -237,40 +237,6 @@ void db_con_close(C c)
 	Connection_close(c);
 }
 
-static gpointer db_exec_deferred(char *query)
-{
-	C c;
-	assert(query);
-
-	c = db_con_get();
-	TRY
-		TRACE(TRACE_DEBUG,"[%s]", query);
-		Connection_execute(c, query);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	g_free(query);
-
-	return NULL;
-}
-
-gboolean db_update_deferred(const char *q, ...)
-{
-	gchar *query;
-	va_list ap;
-
-	va_start(ap, q);
-        query = g_strdup_vprintf(q, ap);
-        va_end(ap);
-
-	DISPATCH(db_exec_deferred,query);
-
-	return TRUE;
-}
-
 gboolean db_update(const char *q, ...)
 {
 	C c; gboolean result = FALSE;
@@ -4118,7 +4084,7 @@ int db_user_log_login(u64_t user_idnr)
 int db_mailbox_mtime_update(u64_t mailbox_id)
 {
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	return db_update_deferred("UPDATE %s %smailboxes SET mtime=%s WHERE mailbox_idnr=%llu", 
+	return db_update("UPDATE %s %smailboxes SET mtime=%s WHERE mailbox_idnr=%llu", 
 		db_get_sql(SQL_IGNORE), DBPFX, now, mailbox_id);
 }
 

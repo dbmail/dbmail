@@ -60,7 +60,8 @@ void ci_drain_queue(clientbase_t *client)
 			dm_thread_data_flush(data);
 
 			session->command_state = TRUE;
-			session->ci->cb_read(session);
+			if (session->ci->cb_read)
+				session->ci->cb_read(session);
 		}
 	} while (data);
 
@@ -458,12 +459,8 @@ static void server_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	case SIGHUP:
 		mainRestart = 1;
 		break;
-	case SIGCHLD:
-		break;
 	case SIGALRM:
 		alarm_occurred = 1;
-		break;
-	case SIGPIPE:
 		break;
 	default:
 		break;
@@ -507,6 +504,7 @@ static int server_set_sighandler(void)
 	sigaddset(&act.sa_mask, SIGSEGV);
 	sigaddset(&act.sa_mask, SIGTERM);
 	sigaddset(&act.sa_mask, SIGHUP);
+	sigaddset(&act.sa_mask, SIGPIPE);
 
 	sigaction(SIGINT,	&rstact, 0);
 	sigaction(SIGQUIT,	&rstact, 0);

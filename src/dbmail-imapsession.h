@@ -115,11 +115,10 @@ int dbmail_imap_session_readln(ImapSession * self, char * buffer);
 int dbmail_imap_session_discard_to_eol(ImapSession *self);
 
 void dbmail_imap_session_buff_clear(ImapSession *self);
-void dbmail_imap_session_buff_append(ImapSession *self, char *message, ...);
 void dbmail_imap_session_buff_flush(ImapSession *self);
 int dbmail_imap_session_printf(ImapSession * self, char * message, ...);
 
-int dbmail_imap_session_set_state(ImapSession *self, int state);
+int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state);
 int client_is_authenticated(ImapSession * self);
 int check_state_and_args(ImapSession * self, int minargs, int maxargs, int state);
 int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password);
