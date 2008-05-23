@@ -1275,40 +1275,22 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	dbmail_imap_session_buff_clear(self);
 }
 
-static void imap_session_buff_push(ImapSession *self)
-{
-	dm_thread_data *D = g_new0(dm_thread_data,1);
-	char *message = g_strdup(self->buff->str);
-	dbmail_imap_session_buff_clear(self);
-
-	D->session = self;
-	D->data = (gpointer)message;
-	D->cb_leave = dm_thread_data_sendmessage;
-
-	g_async_queue_push(queue, (gpointer)D); \
-	if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1); \
-}
-
-/* Returns -1 on error, -2 on serious error. */
 int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
 {
         va_list ap;
-	size_t j = 0, l = self->buff->len;
+        size_t j = 0, l;
 
-	assert(message);
-	va_start(ap, message);
-	g_string_append_vprintf(self->buff, message, ap);
-	va_end(ap);
+        assert(message);
+        va_start(ap, message);
+        j = self->buff->len;
+        g_string_append_vprintf(self->buff, message, ap);
+        l = self->buff->len;
+        va_end(ap);
 
-	j = self->buff->len - l;
+	if ((l-j) > 0)
+		TRACE(TRACE_DEBUG,"[%p] [%s %s] [%s]", self, self->tag, self->command, self->buff->str+j);
 
-	if (j > 0)
-		TRACE(TRACE_DEBUG,"[%p] [%s %s] [%s]", self, self->tag, self->command, self->buff->str+l);
-
-	if (self->buff->len > 1024)
-		imap_session_buff_push(self);
-
-        return j;
+        return (int)(l-j);
 }
 
 int dbmail_imap_session_readln(ImapSession *self, char * buffer)
@@ -1722,22 +1704,13 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 
 int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 {
-	TRACE(TRACE_DEBUG,"[%p] -> [%d]", self, state);
 	g_static_mutex_lock(&state_mutex);
-
-	if (self->state == IMAPCS_ERROR) {
+	if ( (self->state == state) || (self->state == IMAPCS_ERROR) ) {
 		g_static_mutex_unlock(&state_mutex);
 		return 0;
 	}
 
 	switch (state) {
-		case IMAPCS_AUTHENTICATED:
-			assert(self->ci);
-			// change from login_timeout to main timeout
-			self->timeout = self->ci->timeout; 
-			if (self->ci->rev)
-				bufferevent_settimeout(self->ci->rev, self->timeout, 0);
-			break;
 		case IMAPCS_ERROR:
 			assert(self->ci);
 			if (self->ci->wev)
@@ -1748,14 +1721,21 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 			if (self->ci->rev)
 				bufferevent_disable(self->ci->rev, EV_READ);
 			break;
+
+		case IMAPCS_AUTHENTICATED:
+			assert(self->ci);
+			// change from login_timeout to main timeout
+			self->timeout = self->ci->timeout; 
+			if (self->ci->rev)
+				bufferevent_settimeout(self->ci->rev, self->timeout, 0);
+			break;
+
 		default:
 			break;
 	}
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, self->state, state);
-
 	self->state = state;
-
 	g_static_mutex_unlock(&state_mutex);
 
 	return 0;

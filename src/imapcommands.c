@@ -131,8 +131,6 @@ static void _ic_logout_enter(dm_thread_data *D)
 	ImapSession *self = D->session;
 	dbmail_imap_session_mailbox_update_recent(self);
 	dbmail_imap_session_printf(self, "* BYE\r\n");
-	dbmail_imap_session_set_state(self,IMAPCS_LOGOUT);
-
 	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
 	NOTIFY_DONE(D);
 }

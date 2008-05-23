@@ -47,10 +47,10 @@ serverConfig_t *server_conf;
 static void server_config_load(serverConfig_t * conf, const char * const service);
 static int server_set_sighandler(void);
 
-void ci_drain_queue(clientbase_t *client)
+void dm_queue_drain(clientbase_t *client)
 {
 	gpointer data;
-	TRACE(TRACE_DEBUG,"[%p] [%d]...", client, client->tx);
+	TRACE(TRACE_DEBUG,"[%p]:cb_pipe", client);
 	do {
 		data = g_async_queue_try_pop(queue);
 		if (data) {
@@ -59,7 +59,7 @@ void ci_drain_queue(clientbase_t *client)
 			dm_thread_data_flush(data);
 		}
 	} while (data);
-	TRACE(TRACE_DEBUG,"[%p] done", client);
+	TRACE(TRACE_DEBUG,"[%p]:done", client);
 }
 
 /* 
@@ -77,17 +77,17 @@ void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_le
 	assert(session);
 	assert(cb_enter);
 
-	// we're not done until we're done
-	session->command_state = FALSE; 
-	bufferevent_disable(session->ci->rev, EV_READ);
-
 	dm_thread_data *D = g_new0(dm_thread_data,1);
 	D->cb_enter	= cb_enter;
 	D->cb_leave     = cb_leave;
 	D->session	= session;
 	D->data         = data;
 
-	TRACE(TRACE_DEBUG,"[%p] [%p]", D, session);
+	// we're not done until we're done
+	D->session->command_state = FALSE; 
+	bufferevent_disable(D->session->ci->rev, EV_READ);
+
+	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
 
 	g_thread_pool_push(tpool, D, &err);
 
@@ -100,7 +100,7 @@ void dm_thread_data_flush(gpointer data)
 	TRACE(TRACE_DEBUG,"[%p]", D);
 	
 	// are we done yet?
-	if (D->session->command_state == TRUE) {
+	if ( (D->session->command_state == TRUE) && (D->session->state < IMAPCS_LOGOUT) ) {
 		bufferevent_enable(D->session->ci->rev, EV_READ);
 		D->session->ci->cb_read(D->session);
 	}

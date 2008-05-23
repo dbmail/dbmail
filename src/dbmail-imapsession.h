@@ -66,7 +66,7 @@ typedef struct {
 	GList *ids_list;
 	gpointer cmd; // command structure
 	gboolean error; // command result
-	int state; // session status 
+	imap_cs_t state; // session status 
 	int error_count;
 } ImapSession;
 

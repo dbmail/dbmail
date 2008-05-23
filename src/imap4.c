@@ -90,7 +90,7 @@ static void imap_session_bailout(ImapSession *session)
 	assert(session && session->ci);
 	TRACE(TRACE_DEBUG,"[%p] state [%d]", session, session->state);
 	ci_close(session->ci);
-	dbmail_imap_session_set_state(session, IMAPCS_ZOMBIE);
+	dbmail_imap_session_delete(session);
 }
 
 
@@ -196,6 +196,7 @@ static size_t stridx(const char *s, char c)
 static void imap_handle_exit(ImapSession *session, int status)
 {
 	TRACE(TRACE_DEBUG, "[%p] [%s] returned with status [%d]", session, session->command, status);
+	dbmail_imap_session_buff_flush(session);
 	switch(status) {
 		case -1:
 			dbmail_imap_session_set_state(session,IMAPCS_ERROR);	/* fatal error occurred, kick this user */
@@ -213,7 +214,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 			}
 			break;
 	}
-	dbmail_imap_session_buff_flush(session);
 }
 
 
@@ -300,7 +300,7 @@ int imap_handle_connection(client_sock *c)
 
 	ci->rev     = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
 	ci->wev     = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
-	ci->cb_pipe = (void *)ci_drain_queue;
+	ci->cb_pipe = (void *)dm_queue_drain;
 	session->ci = ci;
 
 	imap_cb_reset(session);

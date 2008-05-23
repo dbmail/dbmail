@@ -1,3 +1,9 @@
+2007-05-24  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c, src/server.h:
+	running c100 without a hitch
+
 2008-05-23  Paul J Stevens <paul@nfg.nl>
 
 	* debian/control, src/dbmail-imapsession.c:
