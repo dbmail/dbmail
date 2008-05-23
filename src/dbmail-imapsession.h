@@ -68,9 +68,6 @@ typedef struct {
 	gboolean error; // command result
 	int state; // session status 
 	int error_count;
-//	void (*cb_read)(void *);
-//	void (*cb_time)(void *);
-	
 } ImapSession;
 
 typedef struct {

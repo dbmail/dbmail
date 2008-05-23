@@ -77,14 +77,20 @@ static int imap4(ImapSession *);
 
 static void imap_session_bailout(ImapSession *session)
 {
-	if (! (session && session->ci)) return;
-	TRACE(TRACE_DEBUG,"[%p]", session);
-
-	ci_close(session->ci);
-
-	dbmail_imap_session_delete(session);
-
+	// brute force:
 	if (server_conf->no_daemonize == 1) _exit(0);
+
+	// FIXME
+	//
+	// actually, we need to block here until
+	// all jobs in the thread pool that reference this 
+	// session have finished.
+	//
+
+	assert(session && session->ci);
+	TRACE(TRACE_DEBUG,"[%p]", session);
+	ci_close(session->ci);
+	dbmail_imap_session_delete(session);
 }
 
 
@@ -94,19 +100,12 @@ void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
 	int serr = errno;
 
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
-	if (what & EVBUFFER_EOF) {
-		TRACE(TRACE_INFO, "client disconnected. %s", strerror(serr));
-		dbmail_imap_session_set_state(session, IMAPCS_ERROR);
-		// defer the actual disconnetion to socket_write_cb so the server
-		// will disconnect only when the write buffer is depleted and we're
-		// done writing
-	} else if (what & EVBUFFER_TIMEOUT) {
+	if (what & EVBUFFER_TIMEOUT) {
 		TRACE(TRACE_INFO, "timeout");
 		session->ci->cb_time(session);
 	} else {
 		TRACE(TRACE_INFO, "client socket error. %s", strerror(serr));
 		dbmail_imap_session_set_state(session, IMAPCS_ERROR);
-		//imap_session_bailout(session);
 	}
 }
 

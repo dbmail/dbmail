@@ -187,6 +187,7 @@ static void _mbxinfo_destroy(ImapSession *self)
 }
 void dbmail_imap_session_delete(ImapSession * self)
 {
+
 	close_cache(self->cached_msg);
 
 	_imap_fetchitem_free(self);
