@@ -1,6 +1,11 @@
 2008-05-23  Paul J Stevens <paul@nfg.nl>
 
-	* src/clientsession.c, src/dbmail-imapsession.c, 
+	* debian/control, src/dbmail-imapsession.c:
+	make dbmail_imap_session_printf async and fix boundary error in 
+	send_data
+	* src/dbmail-imapsession.c:
+	small fix
+	* ChangeLog, src/clientsession.c, src/dbmail-imapsession.c, 
 	src/dbmail-imapsession.h, src/dbmailtypes.h, src/dm_db.c, 
 	src/dm_debug.c, src/imap4.c, src/imapcommands.c, src/server.c, 
 	test-scripts/testimap.py, test-scripts/testsearch.imap:

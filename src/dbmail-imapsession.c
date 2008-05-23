@@ -1278,9 +1278,8 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 static void imap_session_buff_push(ImapSession *self)
 {
 	dm_thread_data *D = g_new0(dm_thread_data,1);
-	char *message = self->buff->str;
-	g_string_free(self->buff, FALSE);
-	self->buff = g_string_new("");
+	char *message = g_strdup(self->buff->str);
+	dbmail_imap_session_buff_clear(self);
 
 	D->session = self;
 	D->data = (gpointer)message;
@@ -1306,8 +1305,9 @@ int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
 	if (j > 0)
 		TRACE(TRACE_DEBUG,"[%p] [%s %s] [%s]", self, self->tag, self->command, self->buff->str+l);
 
-	if (self->buff->len > 512)
+	if (self->buff->len > 1024)
 		imap_session_buff_push(self);
+
         return j;
 }
 
