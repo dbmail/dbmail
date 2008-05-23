@@ -539,7 +539,6 @@ class testImapServer(unittest.TestCase):
         p.login('testuser2','test'),('OK',['LOGIN completed'])
         self.assertEquals('(\\hasnochildren) "/" "#Users/testuser1/testaclbox"' in p.list()[1],True)
         p.logout()
-
         self.o.delete('testaclbox')
 
     def testSetquota(self):

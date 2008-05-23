@@ -44,6 +44,9 @@ extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
 extern volatile sig_atomic_t alarm_occured;
 
+extern int selfpipe[2];
+extern GAsyncQueue *queue;
+
 static GStaticMutex state_mutex = G_STATIC_MUTEX_INIT;
 /*
  *
@@ -187,7 +190,7 @@ static void _mbxinfo_destroy(ImapSession *self)
 }
 void dbmail_imap_session_delete(ImapSession * self)
 {
-
+	TRACE(TRACE_DEBUG,"[%p]", self);
 	close_cache(self->cached_msg);
 
 	_imap_fetchitem_free(self);
@@ -917,7 +920,6 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		return -1;
 
 	}
-	dbmail_imap_session_buff_flush(self);
 	return 0;
 }
 
@@ -1186,8 +1188,6 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, ImapSession *self)
 		return TRUE;
 	}
 
-	dbmail_imap_session_buff_flush(self);
-
 	return FALSE;
 }
 
@@ -1199,7 +1199,6 @@ int dbmail_imap_session_fetch_get_items(ImapSession *self)
 		dbmail_imap_session_buff_clear(self);
 		self->error = FALSE;
 		g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
-		dbmail_imap_session_buff_flush(self);
 		if (self->error) return -1;
 		dbmail_imap_session_mailbox_update_recent(self);
 	}
@@ -1276,21 +1275,40 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	dbmail_imap_session_buff_clear(self);
 }
 
+static void imap_session_buff_push(ImapSession *self)
+{
+	dm_thread_data *D = g_new0(dm_thread_data,1);
+	char *message = g_strdup(self->buff->str);
+	dbmail_imap_session_buff_clear(self);
+
+	D->session = self;
+	D->data = (gpointer)message;
+	D->cb_leave = dm_thread_data_sendmessage;
+
+	g_async_queue_push(queue, (gpointer)D); \
+	if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1); \
+}
+
 /* Returns -1 on error, -2 on serious error. */
 int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
 {
         va_list ap;
-	size_t l = self->buff->len;
+	size_t j = 0, l = self->buff->len;
 
 	assert(message);
 	va_start(ap, message);
 	g_string_append_vprintf(self->buff, message, ap);
 	va_end(ap);
 
-	if (self->buff->len > l)
-		TRACE(TRACE_DEBUG,"[%p] [%s]", self, self->buff->str+l);
+	j = self->buff->len - l;
 
-        return self->buff->len - l;
+	if (j > 0)
+		TRACE(TRACE_DEBUG,"[%p] [%s %s] [%s]", self, self->tag, self->command, self->buff->str+l);
+
+	if (self->buff->len > 1024)
+		imap_session_buff_push(self);
+
+        return j;
 }
 
 int dbmail_imap_session_readln(ImapSession *self, char * buffer)
@@ -1540,6 +1558,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 				"is not notified", self);
 		mailbox_notify_update(self, mailbox);
 	}
+
 	return 0;
 }
 
@@ -1574,10 +1593,12 @@ void imap_cb_idle_time (void *arg)
 
 	TRACE(TRACE_DEBUG,"[%p]", self);
 
-	if (! (self->loop++ % 10))
+	if (! (self->loop++ % 10)) {
 		dbmail_imap_session_printf(self, "* OK\r\n");
+	}
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	dbmail_imap_session_set_callbacks(self, NULL, NULL, 0);
+	dbmail_imap_session_buff_flush(self);
 }
 
 #define IDLE_BUFFER 8
@@ -1594,11 +1615,13 @@ void imap_cb_idle_read (void *arg)
 
 	if (strlen(buffer) > 4 && strncasecmp(buffer,"DONE",4)==0) {
 		dbmail_imap_session_printf(self, "%s OK IDLE terminated\r\n", self->tag);
+		dbmail_imap_session_buff_flush(self);
 		dbmail_imap_session_reset(self);
 		self->command_state = TRUE; // done
 	} else if (strlen(buffer) > 0) {
 		dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
-		dbmail_imap_session_set_state(self,IMAPCS_ERROR);
+		dbmail_imap_session_buff_flush(self);
+		self->command_state = TRUE; // done
 	}
 }
 
@@ -1616,10 +1639,11 @@ int dbmail_imap_session_idle(ImapSession *self)
 		idle_timeout = IDLE_TIMEOUT;	
 	}
 	
-	dbmail_imap_session_set_callbacks(self, imap_cb_idle_read, imap_cb_idle_time, idle_timeout);
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
 	dbmail_imap_session_printf(self, "+ idling\r\n");
+	dbmail_imap_session_set_callbacks(self, imap_cb_idle_read, imap_cb_idle_time, idle_timeout);
+	dbmail_imap_session_buff_flush(self);
 
 	return 0;
 }
@@ -1698,7 +1722,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 
 int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 {
-
+	TRACE(TRACE_DEBUG,"[%p] -> [%d]", self, state);
 	g_static_mutex_lock(&state_mutex);
 
 	if (self->state == IMAPCS_ERROR) {

@@ -174,6 +174,7 @@ void dm_thread_data_flush(gpointer data);
  */
 void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data);
 
+void dm_thread_data_sendmessage(gpointer data);
 
 #endif
 

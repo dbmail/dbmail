@@ -88,9 +88,9 @@ static void imap_session_bailout(ImapSession *session)
 	//
 
 	assert(session && session->ci);
-	TRACE(TRACE_DEBUG,"[%p]", session);
+	TRACE(TRACE_DEBUG,"[%p] state [%d]", session, session->state);
 	ci_close(session->ci);
-	dbmail_imap_session_delete(session);
+	dbmail_imap_session_set_state(session, IMAPCS_ZOMBIE);
 }
 
 
@@ -99,11 +99,11 @@ void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
 	ImapSession *session = (ImapSession *)arg;
 	int serr = errno;
 
-	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
+	TRACE(TRACE_DEBUG,"[%p] what [%d] errno [%d] state [%d]", session, what, serr, session->state);
 	if (what & EVBUFFER_TIMEOUT) {
 		TRACE(TRACE_INFO, "timeout");
 		session->ci->cb_time(session);
-	} else {
+	} else if (serr && serr != EAGAIN && serr != EWOULDBLOCK) {
 		TRACE(TRACE_INFO, "client socket error. %s", strerror(serr));
 		dbmail_imap_session_set_state(session, IMAPCS_ERROR);
 	}
@@ -225,8 +225,10 @@ void imap_cb_read(void *arg)
 
 	TRACE(TRACE_DEBUG, "[%p]", session);
 
-	if (session->state == IMAPCS_ERROR) return;
-
+	if (session->state == IMAPCS_ERROR) {
+		TRACE(TRACE_DEBUG, "session->state: ERROR. abort");
+		return;
+	}
 	if (session->command_state) dbmail_imap_session_reset(session);
 
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
@@ -237,6 +239,7 @@ void imap_cb_read(void *arg)
 			}
 
 			if (! session->command_state) return; // unfinished command: break read callback
+			dbmail_imap_session_buff_flush(session);
 			dbmail_imap_session_reset(session);
 		} else {
 			dbmail_imap_session_buff_flush(session);
@@ -277,7 +280,7 @@ void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, i
 
 static void imap_cb_reset(ImapSession *session)
 {
-	dbmail_imap_session_set_callbacks(session, imap_cb_read, imap_cb_time, session->timeout);
+	dbmail_imap_session_set_callbacks(session, imap_cb_read, imap_cb_time, server_conf->timeout);
 }
 
 int imap_handle_connection(client_sock *c)
@@ -318,6 +321,7 @@ void dbmail_imap_session_reset(ImapSession *session)
 		g_free(session->command);
 		session->command = NULL;
 	}
+	session->use_uid = 0;
 	session->command_type = 0;
 	session->command_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);

@@ -33,7 +33,12 @@ ClientSession_t * client_session_new(client_sock *c)
 	char unique_id[UID_SIZE];
 
 	ClientSession_t * session = g_new0(ClientSession_t,1);
-	clientbase_t *ci = client_init(c->sock, c->caddr);
+	clientbase_t *ci;
+
+	if (c)
+		ci = client_init(c->sock, c->caddr);
+	else
+		ci = client_init(0, NULL);
 
 	session->state = IMAPCS_INITIAL_CONNECT;
 

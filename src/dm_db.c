@@ -275,17 +275,17 @@ S db_stmt_prepare(C c, const char *q, ...)
 
 int db_stmt_set_str(S s, int index, const char *x)
 {
-//	TRACE(TRACE_DEBUG,"[%p] %d:[%s]", s, index, x);
+	TRACE(TRACE_DEBUG,"[%p] %d:[%s]", s, index, x);
 	return PreparedStatement_setString(s, index, x);
 }
 int db_stmt_set_int(S s, int index, int x)
 {
-//	TRACE(TRACE_DEBUG,"[%p] %d:[%d]", s, index, x);
+	TRACE(TRACE_DEBUG,"[%p] %d:[%d]", s, index, x);
 	return PreparedStatement_setInt(s, index, x);
 }
 int db_stmt_set_u64(S s, int index, u64_t x)
 {	
-//	TRACE(TRACE_DEBUG,"[%p] %d:[%llu]", s, index, x);
+	TRACE(TRACE_DEBUG,"[%p] %d:[%llu]", s, index, x);
 	return PreparedStatement_setLLong(s, index, (long long)x);
 }
 int db_stmt_set_blob(S s, int index, const void *x, int size)
@@ -2423,6 +2423,7 @@ static int db_getmailbox_mtime(MailboxInfo * mb)
 			t = DM_EQUERY;
 		}
 	CATCH(SQLException)
+		LOG_SQLERROR;
 		mb->mtime = (time_t)0;
 	FINALLY
 		Connection_close(c);
@@ -3212,7 +3213,27 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 
 int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
-	return db_update("INSERT INTO %ssubscription (user_id, mailbox_id) VALUES (%llu, %llu)", DBPFX, user_idnr, mailbox_idnr);
+	C c; S s; R r; int t = TRUE;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "SELECT * FROM %ssubscription WHERE user_id=? and mailbox_id=?", DBPFX);
+		db_stmt_set_u64(s,1,user_idnr);
+		db_stmt_set_u64(s,2,mailbox_idnr);
+		r = db_stmt_query(s);
+		if (! db_result_next(r)) {
+			s = db_stmt_prepare(c, "INSERT INTO %ssubscription (user_id, mailbox_id) VALUES (?, ?)", DBPFX);
+			db_stmt_set_u64(s,1,user_idnr);
+			db_stmt_set_u64(s,2,mailbox_idnr);
+			t = db_stmt_exec(s);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;		
+	FINALLY
+		Connection_close(c);
+	END_TRY;
+
+	return t;
 }
 
 int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
@@ -3443,6 +3464,7 @@ int db_acl_has_right(MailboxInfo *mailbox, u64_t userid, const char *right_flag)
 int db_acl_get_acl_map(MailboxInfo *mailbox, u64_t userid, struct ACLMap *map)
 {
 	int i, t = DM_SUCCESS;
+	gboolean gotrow = FALSE;
 	u64_t anyone;
 	C c; R r; S s;
 	INIT_QUERY;
@@ -3454,7 +3476,7 @@ int db_acl_get_acl_map(MailboxInfo *mailbox, u64_t userid, struct ACLMap *map)
 			"write_flag,insert_flag,post_flag,"
 			"create_flag,delete_flag,administer_flag "
 			"FROM %sacl "
-			"WHERE user_id = ? AND mailbox_id = ?",DBPFX);
+			"WHERE mailbox_id = ? AND user_id = ?",DBPFX);
 
 	if (! (auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone)))
 		return DM_EQUERY;
@@ -3469,19 +3491,24 @@ int db_acl_get_acl_map(MailboxInfo *mailbox, u64_t userid, struct ACLMap *map)
 			/* else check the 'anyone' user */
 			db_stmt_set_u64(s, 2, anyone);
 			r = db_stmt_query(s);
-			db_result_next(r);
+			if (db_result_next(r))
+				gotrow = TRUE;
+		} else {
+			gotrow = TRUE;
 		}
 
-		i = 0;
-		map->lookup_flag	= db_result_get_bool(r,i++);
-		map->read_flag		= db_result_get_bool(r,i++);
-		map->seen_flag		= db_result_get_bool(r,i++);
-		map->write_flag		= db_result_get_bool(r,i++);
-		map->insert_flag	= db_result_get_bool(r,i++);
-		map->post_flag		= db_result_get_bool(r,i++);
-		map->create_flag	= db_result_get_bool(r,i++);
-		map->delete_flag	= db_result_get_bool(r,i++);
-		map->administer_flag	= db_result_get_bool(r,i++);
+		if (gotrow) {
+			i = 0;
+			map->lookup_flag	= db_result_get_bool(r,i++);
+			map->read_flag		= db_result_get_bool(r,i++);
+			map->seen_flag		= db_result_get_bool(r,i++);
+			map->write_flag		= db_result_get_bool(r,i++);
+			map->insert_flag	= db_result_get_bool(r,i++);
+			map->post_flag		= db_result_get_bool(r,i++);
+			map->create_flag	= db_result_get_bool(r,i++);
+			map->delete_flag	= db_result_get_bool(r,i++);
+			map->administer_flag	= db_result_get_bool(r,i++);
+		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;

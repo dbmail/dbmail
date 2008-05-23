@@ -1,3 +1,31 @@
+2008-05-23  Paul J Stevens <paul@nfg.nl>
+
+	* src/clientsession.c, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmailtypes.h, src/dm_db.c, 
+	src/dm_debug.c, src/imap4.c, src/imapcommands.c, src/server.c, 
+	test-scripts/testimap.py, test-scripts/testsearch.imap:
+	basic thunderbird tests ok now
+
+2008-05-20  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c:
+	minor cleanups
+
+2008-05-19  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmailtypes.h, src/dm_db.c, src/dm_db.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c, test-scripts/testappend.txt:
+	more cleanups
+	* ChangeLog, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c:
+	finish making imap commands threaded
+	* src/dbmail-imapsession.h, src/imap4.c, src/imapcommands.c:
+	return value and exit status cleanups
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c:
+	thread framework now stable, make more commands threaded
+
 2008-05-19  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.h, src/imap4.c, src/imapcommands.c:

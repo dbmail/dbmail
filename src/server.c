@@ -55,16 +55,10 @@ void ci_drain_queue(clientbase_t *client)
 		data = g_async_queue_try_pop(queue);
 		if (data) {
 			dm_thread_data *D = (gpointer)data;
-			ImapSession *session = D->session;
 			if (D->cb_leave) D->cb_leave(data);
 			dm_thread_data_flush(data);
-
-			session->command_state = TRUE;
-			if (session->ci->cb_read)
-				session->ci->cb_read(session);
 		}
 	} while (data);
-
 	TRACE(TRACE_DEBUG,"[%p] done", client);
 }
 
@@ -98,18 +92,32 @@ void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_le
 	g_thread_pool_push(tpool, D, &err);
 
 	if (err) TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
-
 }
 
 void dm_thread_data_flush(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
-
 	TRACE(TRACE_DEBUG,"[%p]", D);
+	
+	// are we done yet?
+	if (D->session->command_state == TRUE) {
+		bufferevent_enable(D->session->ci->rev, EV_READ);
+		D->session->ci->cb_read(D->session);
+	}
 
-	if (D->data) g_free(D->data);
+	if (D->data) {
+		g_free(D->data);
+		D->data = NULL;
+	}
+
 	g_free(D); D = NULL;
+}
 
+void dm_thread_data_sendmessage(gpointer data)
+{
+	dm_thread_data *D = (dm_thread_data *)data;
+	char *message = (char *)D->data;
+	bufferevent_write(D->session->ci->wev,(gpointer)message, strlen(message));
 }
 
 static void dm_thread_dispatch(gpointer data, gpointer user_data)

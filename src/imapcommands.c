@@ -47,14 +47,14 @@ int imap_before_smtp = 0;
  * push a message onto the queue and notify the
  * event-loop by sending a char into the selfpipe
  */
-#define NOTIFY_DONE(a) \
-	g_async_queue_push(queue, (gpointer)a); \
+#define NOTIFY_DONE(D) \
+	D->session->command_state=TRUE; \
+	g_async_queue_push(queue, (gpointer)D); \
 	if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1); \
 	return;
 
 #define IC_DONE_OK \
-	dbmail_imap_session_printf(self, "%s OK %s%s completed\r\n", self->tag, self->use_uid ? "UID " : "", self->command); \
-	self->command_state=TRUE;
+	dbmail_imap_session_printf(self, "%s OK %s%s completed\r\n", self->tag, self->use_uid ? "UID " : "", self->command)
 /*
  * RETURN VALUES _ic_ functions:
  *
@@ -77,13 +77,14 @@ void _ic_capability_enter(dm_thread_data *D)
 {
 	field_t val;
 	gboolean override = FALSE;
+	ImapSession *self = D->session;
 
 	GETCONFIGVALUE("capability", "IMAP", val);
 	if (strlen(val) > 0) override = TRUE;
 
 	dbmail_imap_session_printf(D->session, "* %s %s\r\n", D->session->command, override ? val : IMAP_CAPABILITY_STRING);
-	dbmail_imap_session_printf(D->session, "%s OK %s completed\r\n", D->session->tag, D->session->command);
 
+	IC_DONE_OK;
 	NOTIFY_DONE(D);
 }
 
@@ -533,7 +534,6 @@ void _ic_delete_enter(dm_thread_data *D)
 
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
-
 }
 
 int _ic_delete(ImapSession *self) 
@@ -1095,8 +1095,6 @@ void _ic_append_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 
-	message = self->args[i];
-
 	/** check ACL's for STORE */
 	if (flaglist[IMAP_FLAG_SEEN] == 1) {
 		if ((result = mailbox_check_acl(self, mbx, ACL_RIGHT_SEEN))) {
@@ -1144,6 +1142,8 @@ void _ic_append_enter(dm_thread_data *D)
 	} else {
 		sqldate[0] = '\0';
 	}
+
+	message = self->args[i];
 
 	D->status = imap_append_msg(message, mboxid, D->session->userid, sqldate, &message_id);
 	switch (D->status) {
@@ -1434,7 +1434,9 @@ static void sorted_search_enter(dm_thread_data *D)
 static int sorted_search(ImapSession *self, search_order_t order)
 {
 	if (!check_state_and_args(self, 1, 0, IMAPCS_SELECTED)) return 1;
-	dm_thread_data_push(self, sorted_search_enter, _ic_cb_leave, (gpointer)&order);
+	search_order_t *data = g_new0(search_order_t,1);
+	*data = order;
+	dm_thread_data_push(self, sorted_search_enter, _ic_cb_leave, (gpointer)data);
 	return 0;
 }
 
@@ -1835,29 +1837,28 @@ int _ic_uid(ImapSession *self)
 	
 	/* ACL rights for UID are handled by the other functions called below */
 	if (MATCH(self->args[self->args_idx], "fetch")) {
-		self->args_idx++; 
+		dbmail_imap_session_set_command(self, self->args[self->args_idx++]);
 		result = _ic_fetch(self);
 	} else if (MATCH(self->args[self->args_idx], "copy")) {
-		self->args_idx++;
+		dbmail_imap_session_set_command(self, self->args[self->args_idx++]);
 		result = _ic_copy(self);
 	} else if (MATCH(self->args[self->args_idx], "store")) {
-		self->args_idx++;
+		dbmail_imap_session_set_command(self, self->args[self->args_idx++]);
 		result = _ic_store(self);
 	} else if (MATCH(self->args[self->args_idx], "search")) {
-		self->args_idx++;
+		dbmail_imap_session_set_command(self, self->args[self->args_idx++]);
 		result = _ic_search(self);
 	} else if (MATCH(self->args[self->args_idx], "sort")) {
-		self->args_idx++;
+		dbmail_imap_session_set_command(self, self->args[self->args_idx++]);
 		result = _ic_sort(self);
 	} else if (MATCH(self->args[self->args_idx], "thread")) {
-		self->args_idx++;
+		dbmail_imap_session_set_command(self, self->args[self->args_idx++]);
 		result = _ic_thread(self);
 	} else {
 		dbmail_imap_session_printf(self, "%s BAD invalid UID command\r\n", self->tag);
 		result = 1;
+		self->use_uid = 0;
 	}
-
-	self->use_uid = 0;
 
 	return result;
 }

@@ -344,7 +344,7 @@ typedef enum {
 	IMAPCS_AUTHENTICATED, 
 	IMAPCS_SELECTED, 
 	IMAPCS_LOGOUT,
-	IMAPCS_DONE,
+	IMAPCS_ZOMBIE,			// dead but still in-transit
 	IMAPCS_ERROR
 } imap_cs_t;
 
