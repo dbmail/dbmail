@@ -241,19 +241,6 @@ u64_t auth_md5_validate(clientbase_t *ci, char *username, unsigned char *md5_apo
 			char *apop_stamp);
 
 /**
- * \brief get user ids belonging to a client id
- * \param client_id 
- * \param user_ids
- * \param num_users
- * \return 
- *      - -2 on memory error
- *      - -1 on database error
- *      -  1 on success
- */
-int auth_get_users_from_clientid(u64_t client_id, 
-			       /*@out@*/ u64_t ** user_ids,
-			       /*@out@*/ unsigned *num_users);
-/**
  * \brief get deliver_to from alias. Gets a list of deliver_to
  * addresses
  * \param alias the alias

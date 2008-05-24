@@ -1315,24 +1315,6 @@ u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username UNUSED,
 }
 
 /**
- * \brief get user ids belonging to a client id
- * \param client_id 
- * \param user_ids
- * \param num_users
- * \return 
- *      - -2 on memory error
- *      - -1 on database error
- *      -  1 on success
- */
-int auth_get_users_from_clientid(u64_t client_id UNUSED, 
-			       /*@out@*/ u64_t ** user_ids UNUSED,
-			       /*@out@*/ unsigned *num_users UNUSED)
-{
-
-	return 1;
-}
-
-/**
  * \brief get a list of aliases associated with a user's user_idnr
  * \param user_idnr idnr of user
  * \param aliases list of aliases

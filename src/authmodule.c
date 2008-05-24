@@ -166,10 +166,6 @@ u64_t auth_md5_validate(clientbase_t *ci, char *username,
 		unsigned char *md5_apop_he, char *apop_stamp)
 	{ return auth->md5_validate(ci, username,
 			md5_apop_he, apop_stamp); }
-int auth_get_users_from_clientid(u64_t client_id, 
-		u64_t ** user_ids, unsigned *num_users)
-	{ return auth->get_users_from_clientid(client_id,
-			user_ids, num_users); }
 GList * auth_get_user_aliases(u64_t user_idnr)
 	{ return auth->get_user_aliases(user_idnr); }
 GList * auth_get_aliases_ext(const char *alias)
