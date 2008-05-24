@@ -152,9 +152,11 @@ case "$1" in
 	fi
 	
 	db_stop
-	chown dbmail:dbmail $CONFIG /usr/sbin/dbmail-deliver
-	chmod 0600 $CONFIG
-	chmod 4755 /usr/sbin/dbmail-deliver
+	if [ -e /usr/sbin/dbmail-deliver ]; then
+		chown dbmail:dbmail $CONFIG /usr/sbin/dbmail-deliver
+		chmod 4755 /usr/sbin/dbmail-deliver
+	fi
+	[ -e "$CONFIG" ] && chmod 0600 $CONFIG
 	
     ;;
     abort-upgrade)

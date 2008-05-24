@@ -6,11 +6,11 @@
 #export DH_VERBOSE=1
 
 export WITH_LDAP=--with-ldap
+export WITH_SIEVE=--with-sieve
 export SHARED=--enable-shared=yes
 export SHARED=--enable-static=no
 export MANPAGES=--enable-manpages=yes
 export REAL_CLEAN=
-export RECONFIG=
 
 CFLAGS = -Wall -O1 -D G_ERRORCHECK_MUTEXES
 LDFLAGS = -lcrypt
@@ -25,22 +25,11 @@ DBMAIL_VERSION	?= $(shell cat VERSION)
 
 ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
-	export WITH_LDAP=
-	export WITH_SIEVE=
 	export MANPAGES=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes
-	CFLAGS += -g
-endif
-ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
-	export WITH_LDAP=--with-ldap
-endif
-ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
-	export WITH_SIEVE=--with-sieve
-endif
-ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export REAL_CLEAN=mrproper
-	export RECONFIG=configure
+	CFLAGS += -g
 endif
 
 # dpatch
@@ -66,7 +55,7 @@ stamps/configure:
 	touch $@
 
 dbmail: stamps/dbmail
-stamps/dbmail: $(RECONFIG)
+stamps/dbmail: configure
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure $(CONFFLAGS) 
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
@@ -122,12 +111,8 @@ binary-common: build
 	dh_installdocs -a
 	dh_installchangelogs -a
 	## update examples
-	(cd $(CURDIR) && find sql/sqlite/ -type f && cat debian/dbmail.examples) | \
+	(cd $(CURDIR) && find sql/sqlite/ sql/mysql/ sql/postgresql/ -type f && cat debian/dbmail.examples) | \
 		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail.examples
-	(cd $(CURDIR) && find sql/mysql/ -type f && cat debian/dbmail-mysql.examples) | \
-		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-mysql.examples
-	(cd $(CURDIR) && find sql/postgresql/ -type f && cat debian/dbmail-pgsql.examples) | \
-		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-pgsql.examples
 	rm -f stamps/tmpfile
 	dh_installexamples -a
 	dh_installdirs -A etc/dbmail var/run/dbmail var/log/dbmail usr/share/dbmail

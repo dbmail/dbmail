@@ -1,5 +1,0 @@
-sql/postgresql/2_1_7-2_2_0.pgsql
-sql/postgresql/2_2_5-2_3_0.pgsql
-sql/postgresql/create_tables.pgsql
-sql/postgresql/migrate_from_1.x_to_2.0.pgsql
-sql/postgresql/migrate_from_2.0_to_2.2.pgsql
