@@ -1,6 +1,8 @@
 2008-05-24  Paul J Stevens <paul@nfg.nl>
 
-	* src/auth.h, src/authmodule.c, src/modules/authldap.c:
+	* src/dbmail-imapsession.c:
+	fix boundary error in send_data
+	* ChangeLog, src/auth.h, src/authmodule.c, src/modules/authldap.c:
 	remove unused call
 	* debian/dbmail-mysql.examples, debian/dbmail-mysql.install, 
 	debian/dbmail-mysql.postinst, debian/dbmail-pgsql.examples, 
@@ -10,7 +12,7 @@
 	debian updates
 	* ChangeLog, src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
 	src/imap4.c, src/imapcommands.c, src/server.c, src/server.h:
-	running c100 without a hitch
+	running c100 without a glitch
 
 2008-05-23  Paul Stevens <paul@nfg.nl>
 
