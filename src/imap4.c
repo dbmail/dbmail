@@ -80,13 +80,6 @@ static void imap_session_bailout(ImapSession *session)
 	// brute force:
 	if (server_conf->no_daemonize == 1) _exit(0);
 
-	// FIXME
-	//
-	// actually, we need to block here until
-	// all jobs in the thread pool that reference this 
-	// session have finished.
-	//
-
 	assert(session && session->ci);
 	TRACE(TRACE_DEBUG,"[%p] state [%d]", session, session->state);
 	ci_close(session->ci);

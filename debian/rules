@@ -31,6 +31,9 @@ ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export REAL_CLEAN=mrproper
 	CFLAGS += -g
 endif
+ifeq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
+	export WITH_LDAP=
+endif
 
 # dpatch
 export PACKAGE=dbmail
