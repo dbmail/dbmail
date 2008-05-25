@@ -1,7 +1,16 @@
+2008-05-25  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-message.c:
+	fix a couple of regressions in the message retrieval code
+	* debian/rules, src/dm_db.c, src/imap4.c:
+	add charset to mysql database url
+
 2008-05-24  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.c:
-	fix boundary error in send_data
+	missing patch to send_data
+	* src/authmodule.c:
+	removed last reference to auth_get_users_from_clientid
 	* ChangeLog, src/auth.h, src/authmodule.c, src/modules/authldap.c:
 	remove unused call
 	* debian/dbmail-mysql.examples, debian/dbmail-mysql.install, 

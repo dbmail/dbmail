@@ -29,7 +29,7 @@
 
 #define THIS_MODULE "imapsession"
 #define BUFLEN 2048
-#define SEND_BUF_SIZE 8192
+#define SEND_BUF_SIZE 1024
 #define MAX_ARGS 512
 #define IDLE_TIMEOUT 30
 
@@ -67,16 +67,15 @@ static void send_data(ImapSession *self, MEM * from, int cnt)
 	char buf[SEND_BUF_SIZE];
 	size_t l;
 
-	while (cnt >= SEND_BUF_SIZE) {
+	for (cnt -= SEND_BUF_SIZE; cnt >= 0; cnt -= SEND_BUF_SIZE) {
 		memset(buf,0,sizeof(buf));
-		l = mread(buf, SEND_BUF_SIZE-1, from);
+		l = mread(buf, SEND_BUF_SIZE, from);
 		dbmail_imap_session_printf(self, "%s", (l>0)?buf:"");
-		cnt -= l;
 	}
 
-	if (cnt > 0) {
+	if (cnt < 0) {
 		memset(buf,0,sizeof(buf));
-		l = mread(buf, cnt, from);
+		l = mread(buf, cnt + SEND_BUF_SIZE, from);
 		dbmail_imap_session_printf(self, "%s", (l>0)?buf:"");
 	}
 }
