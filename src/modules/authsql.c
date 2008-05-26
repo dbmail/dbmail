@@ -331,6 +331,9 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 		if (db_result_next(r)) {
 			dbpass = g_strdup(db_result_get(r,0));
 			encode = g_strdup(db_result_get(r,1));
+			t = TRUE;
+		} else {
+			t = FALSE;
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -344,6 +347,8 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 		g_free(encode);
 		return t;
 	}
+	
+	if (! t) return FALSE;
 
 	if (strcasecmp(encode, "") == 0) {
 		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
