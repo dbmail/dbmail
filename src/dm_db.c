@@ -179,6 +179,10 @@ int db_connect(void)
 		g_string_append_printf(dsn,"?user=%s", _db_params.user);
 		if (_db_params.pass && strlen((const char *)_db_params.pass)) 
 			g_string_append_printf(dsn,"&password=%s", _db_params.pass);
+		if (MATCH(_db_params.driver,"mysql")) {
+			if (_db_params.encoding && strlen((const char *)_db_params.encoding))
+				g_string_append_printf(dsn,"&charset=%s", _db_params.encoding);
+		}
 	}
 	TRACE(TRACE_DEBUG, "db at url: [%s]", dsn->str);
 	url = URL_new(dsn->str);
