@@ -1268,11 +1268,23 @@ void dbmail_imap_session_buff_clear(ImapSession *self)
 
 void dbmail_imap_session_buff_flush(ImapSession *self)
 {
+	dm_thread_data *D = g_new0(dm_thread_data,1);
 	if (self->buff->len < 1) return;
 
 	TRACE(TRACE_INFO,"[%p] RESPONSE: [%s]", self, self->buff->str);
-	bufferevent_write(self->ci->wev, (void *)self->buff->str, self->buff->len);
-	dbmail_imap_session_buff_clear(self);
+	
+	D->wev = self->ci->wev;
+	D->data = (gpointer)self->buff->str;
+	D->cb_leave = dm_thread_data_sendmessage;
+
+	g_string_free(self->buff, FALSE);
+	self->buff = g_string_new("");
+
+        g_async_queue_push(queue, (gpointer)D);
+        if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1);
+
+//	bufferevent_write(self->ci->wev, (void *)self->buff->str, self->buff->len);
+//	dbmail_imap_session_buff_clear(self);
 }
 
 int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
@@ -1289,6 +1301,9 @@ int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
 
 	if ((l-j) > 0)
 		TRACE(TRACE_DEBUG,"[%p] [%s %s] [%s]", self, self->tag, self->command, self->buff->str+j);
+
+	if (self->buff->len > 8192)
+		dbmail_imap_session_buff_flush(self);
 
         return (int)(l-j);
 }

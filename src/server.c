@@ -86,6 +86,7 @@ void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_le
 	// we're not done until we're done
 	D->session->command_state = FALSE; 
 	bufferevent_disable(D->session->ci->rev, EV_READ);
+	D->wev		= session->ci->wev;
 
 	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
 
@@ -100,7 +101,7 @@ void dm_thread_data_flush(gpointer data)
 	TRACE(TRACE_DEBUG,"[%p]", D);
 	
 	// are we done yet?
-	if ( (D->session->command_state == TRUE) && (D->session->state < IMAPCS_LOGOUT) ) {
+	if ( (D->session) && (D->session->command_state == TRUE) && (D->session->state < IMAPCS_LOGOUT) ) {
 		bufferevent_enable(D->session->ci->rev, EV_READ);
 		D->session->ci->cb_read(D->session);
 	}
@@ -116,8 +117,10 @@ void dm_thread_data_flush(gpointer data)
 void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
-	char *message = (char *)D->data;
-	bufferevent_write(D->session->ci->wev,(gpointer)message, strlen(message));
+	if (D->data && D->wev) {
+		char *message = (char *)D->data;
+		bufferevent_write(D->wev,(gpointer)message, strlen(message));
+	}
 }
 
 static void dm_thread_dispatch(gpointer data, gpointer user_data)
