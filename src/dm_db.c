@@ -241,6 +241,48 @@ void db_con_close(C c)
 	Connection_close(c);
 }
 
+gboolean db_exec(C c, const char *q, ...)
+{
+	gboolean result = FALSE;
+	va_list ap;
+	INIT_QUERY;
+
+	va_start(ap, q);
+        vsnprintf(query, DEF_QUERYSIZE, q, ap);
+        va_end(ap);
+
+	TRACE(TRACE_DEBUG,"[%s]", query);
+	TRY
+		result = Connection_execute(c, query);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	END_TRY;
+
+	return result;
+}
+
+R db_query(C c, const char *q, ...)
+{
+	R r = NULL;
+	va_list ap;
+	INIT_QUERY;
+
+	va_start(ap, q);
+        vsnprintf(query, DEF_QUERYSIZE, q, ap);
+        va_end(ap);
+
+	TRACE(TRACE_DEBUG,"[%s]", query);
+	TRY
+		r = Connection_executeQuery(c, query);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	END_TRY;
+
+	return r;
+}
+
+
+
 gboolean db_update(const char *q, ...)
 {
 	C c; gboolean result = FALSE;

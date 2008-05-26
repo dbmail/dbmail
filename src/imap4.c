@@ -232,11 +232,9 @@ void imap_cb_read(void *arg)
 			}
 
 			if (! session->command_state) return; // unfinished command: break read callback
-			dbmail_imap_session_buff_flush(session);
-			dbmail_imap_session_reset(session);
-		} else {
-			dbmail_imap_session_buff_flush(session);
 		}
+
+		dbmail_imap_session_buff_flush(session);
 
 		if (session->error_count >= MAX_FAULTY_RESPONSES) {
 			TRACE(TRACE_DEBUG,"error_count [%d]", session->error_count);

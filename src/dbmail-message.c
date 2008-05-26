@@ -216,15 +216,11 @@ static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 	C c; gboolean t = FALSE;
 	c = db_con_get();
 	TRY
-		t = Connection_execute(c, 
+		t = db_exec(c, 
 				"INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
 				"VALUES (%llu,%d,%d,%d,%d,%llu)", DBPFX,
 				dbmail_message_get_physid(m), is_header, m->part_key, m->part_depth, m->part_order, id);	
 	CATCH(SQLException)
-		TRACE(TRACE_ERROR,"Failure: "
-				"INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
-				"VALUES (%llu,%d,%d,%d,%d,%llu)", DBPFX,
-				dbmail_message_get_physid(m), is_header, m->part_key, m->part_depth, m->part_order, id);
 		LOG_SQLERROR;
 	FINALLY
 		Connection_close(c);
@@ -313,26 +309,22 @@ static const char * find_boundary(const char *s)
 
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
-	C c; R r; int t = FALSE;
+	C c; R r;
 	char *str = NULL;
-	const char *boundary = NULL;
-	const char *internal_date = NULL;
+	const char *boundary = NULL, *internal_date = NULL;
 	char **blist = g_new0(char *,32);
-	int prevdepth, depth = 0, order, row = 0;
-	int key = 1;
-	gboolean got_boundary = FALSE, prev_boundary = FALSE;
-	gboolean is_header = TRUE, prev_header;
+	int prevdepth, depth = 0, order, row = 0, key = 1, t = FALSE;
+	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
 	GString *m = NULL;
 	const void *blob;
 	field_t frag;
-	gboolean finalized=FALSE;
 
 	assert(dbmail_message_get_physid(self));
 	date2char_str("ph.internal_date", &frag);
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,data "
+		r = db_query(c, "SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,data "
 			"FROM %smimeparts p "
 			"JOIN %spartlists l ON p.id = l.part_id "
 			"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
@@ -399,7 +391,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		Connection_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY) return NULL;
+	if ((row == 0) || (t == DM_EQUERY)) return NULL;
 
 	if (row > 2 && boundary && !finalized) {
 		dprint("\n--%s-- final\n", boundary);
@@ -1165,18 +1157,19 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	snprintf(query, DEF_QUERYSIZE, query_template, frag, DBPFX, DBPFX, dbmail_message_get_physid(self));
 
 	c = db_con_get();
-	if (! (r = Connection_executeQuery(c, query))) {
+	if (! (r = db_query(c, query))) {
 		Connection_close(c);
 		return NULL;
 	}
 	
 	row = 0;
 	m = g_string_new("");
-	while (row++ && db_result_next(r)) {
+	while (db_result_next(r)) {
 		char *str = (char *)db_result_get(r,0);
 		if (row == 0) internal_date = g_strdup(db_result_get(r,2));
 
 		g_string_append_printf(m, "%s", str);
+		row++;
 	}
 	Connection_close(c);
 	
@@ -1363,7 +1356,7 @@ int _message_insert(DbmailMessage *self,
 	/* now insert an entry into the messages table */
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "INSERT INTO "
+		r = db_query(c, "INSERT INTO "
 				"%smessages(mailbox_idnr, physmessage_id, unique_id,"
 				"recent_flag, status) "
 				"VALUES (%llu, %llu, '%s', 1, %d) %s",
