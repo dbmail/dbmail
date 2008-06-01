@@ -360,7 +360,7 @@ ALTER TABLE ONLY dbmail_partlists
     ADD CONSTRAINT dbmail_partlists_physmessage_id_fkey FOREIGN KEY (physmessage_id) REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 ALTER TABLE ONLY dbmail_mailboxes
-    ADD mtime TIMESTAMP WITHOUT TIME ZONE;
+    ADD mtime TIMESTAMP WITHOUT TIME ZONE DEFAULT '1979-11-03 22:05:58' NOT NULL;
 
 CREATE TABLE dbmail_keywords (
 	message_idnr bigint NOT NULL,
