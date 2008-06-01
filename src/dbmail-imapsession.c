@@ -145,7 +145,7 @@ ImapSession * dbmail_imap_session_new(void)
 	self->args = g_new0(char *, MAX_ARGS);
 	self->buff = g_string_new("");
 	self->fi = g_new0(fetch_items_t,1);
-
+ 
 	return self;
 }
 
@@ -1279,9 +1279,6 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 
         g_async_queue_push(queue, (gpointer)D);
         if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1);
-
-//	bufferevent_write(self->ci->wev, (void *)self->buff->str, self->buff->len);
-//	dbmail_imap_session_buff_clear(self);
 }
 
 int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
@@ -1579,70 +1576,6 @@ MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbo
 	_get_mailbox(0,mb,&error);
 
 	return mb;
-}
-
-void imap_cb_idle_time (void *arg)
-{
-	ImapSession *self = (ImapSession *)arg;
-
-	TRACE(TRACE_DEBUG,"[%p]", self);
-
-	if (! (self->loop++ % 10)) {
-		dbmail_imap_session_printf(self, "* OK\r\n");
-	}
-	dbmail_imap_session_mailbox_status(self,TRUE);
-	dbmail_imap_session_set_callbacks(self, NULL, NULL, 0);
-	dbmail_imap_session_buff_flush(self);
-}
-
-#define IDLE_BUFFER 4
-void imap_cb_idle_read (void *arg)
-{
-	int l;
-	char buffer[IDLE_BUFFER];
-	ImapSession *self = (ImapSession *)arg;
-
-	TRACE(TRACE_DEBUG,"[%p] [%s]", self, self->tag);
-
-	memset(buffer,0,sizeof(buffer));
-	l = ci_read(self->ci, buffer, IDLE_BUFFER);
-	bufferevent_disable(self->ci->rev, EV_READ);
-
-	if (! l) return;
-
-	if (strlen(buffer) > 4 && strncasecmp(buffer,"DONE",4)==0) {
-		dbmail_imap_session_printf(self, "%s OK IDLE terminated\r\n", self->tag);
-		//dbmail_imap_session_buff_flush(self);
-		//dbmail_imap_session_reset(self);
-		self->command_state = TRUE; // done
-	} else if (strlen(buffer) > 0) {
-		dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
-		dbmail_imap_session_buff_flush(self);
-		self->command_state = TRUE; // done
-	}
-}
-
-
-int dbmail_imap_session_idle(ImapSession *self)
-{
-	int idle_timeout = IDLE_TIMEOUT;
-	field_t val;
-
-	bufferevent_disable(self->ci->rev, EV_READ);
-
-	GETCONFIGVALUE("idle_timeout", "IMAP", val);
-	if ( strlen(val) && (idle_timeout = atoi(val)) <= 0 ) {
-		TRACE(TRACE_ERROR, "[%p] illegal value for idle_timeout [%s]", self, val);
-		idle_timeout = IDLE_TIMEOUT;	
-	}
-	
-	dbmail_imap_session_mailbox_status(self,TRUE);
-	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
-	dbmail_imap_session_printf(self, "+ idling\r\n");
-	dbmail_imap_session_set_callbacks(self, imap_cb_idle_read, imap_cb_idle_time, idle_timeout);
-	imap_cb_idle_read((gpointer)self);
-
-	return 0;
 }
 
 static int db_update_recent(GList *slices)

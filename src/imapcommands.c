@@ -969,14 +969,69 @@ int _ic_status(ImapSession *self)
 
 /* _ic_idle
  *
- * non-expunging close for select mailbox and return to AUTH state
  */
 
+int imap_idle_loop(ImapSession *self, int timeout)
+{
+	gpointer data;
+	char *message;
+	GTimeVal end_time;
+
+	TRACE(TRACE_DEBUG,"[%p]", self);
+	do {
+		g_get_current_time(&end_time);
+		g_time_val_add(&end_time, 1000000*timeout);
+		data = g_async_queue_timed_pop(self->ci->queue, &end_time);
+		if (data) {
+			dm_thread_data *D = (gpointer)data;
+			message = (char *)D->data;
+			if (strlen(message) > 4 && strncasecmp(message,"DONE",4)==0) {
+				return 0;
+			} else if (strlen(message) > 0) {
+				dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
+				return 1;
+			}
+			g_free(D->data);
+			g_free(D);
+		} else {
+			TRACE(TRACE_DEBUG,"[%p]", self);
+			if (! (self->loop++ % 10)) dbmail_imap_session_printf(self, "* OK\r\n");
+			dbmail_imap_session_mailbox_status(self,TRUE);
+			dbmail_imap_session_buff_flush(self);
+			dbmail_imap_session_set_callbacks(self, NULL, NULL, 0);
+		}
+
+	} while (TRUE);
+
+	TRACE(TRACE_WARNING, "[%p] uncaught condition", self);
+	return 1;
+}
+
+
+#define IDLE_TIMEOUT 30
 
 void _ic_idle_enter(dm_thread_data *D)
 {
 	ImapSession *self = D->session;
-	D->status = dbmail_imap_session_idle(self);
+	int t = FALSE, idle_timeout = IDLE_TIMEOUT;
+	field_t val;
+
+	GETCONFIGVALUE("idle_timeout", "IMAP", val);
+	if ( strlen(val) && (idle_timeout = atoi(val)) <= 0 ) {
+		TRACE(TRACE_ERROR, "[%p] illegal value for idle_timeout [%s]", self, val);
+		idle_timeout = IDLE_TIMEOUT;	
+	}
+	
+	dbmail_imap_session_mailbox_status(self,TRUE);
+	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
+	dbmail_imap_session_printf(self, "+ idling\r\n");
+	dbmail_imap_session_buff_flush(self);
+	
+	if ((t = imap_idle_loop(self, idle_timeout))) {
+		D->status = t;
+		NOTIFY_DONE(D);
+	}
+	IC_DONE_OK;
 	NOTIFY_DONE(D);
 }
 

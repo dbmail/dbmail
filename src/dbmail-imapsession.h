@@ -126,8 +126,6 @@ MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbo
 int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
 
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
-int dbmail_imap_session_idle(ImapSession *self);
-
 int dbmail_imap_session_mailbox_expunge(ImapSession *self);
 int dbmail_imap_session_mailbox_select_recent(ImapSession *self);
 int dbmail_imap_session_mailbox_update_recent(ImapSession *self);

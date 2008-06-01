@@ -377,6 +377,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 	client->timeout		= server_conf->timeout;
 	client->login_timeout	= server_conf->login_timeout;
 	client->line_buffer	= g_string_new("");
+	client->queue           = g_async_queue_new();
 
 	/* make streams */
 	if (socket == 0 && caddr == NULL) {

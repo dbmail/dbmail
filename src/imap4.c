@@ -225,6 +225,14 @@ void imap_cb_read(void *arg)
 	if (session->command_state) dbmail_imap_session_reset(session);
 
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
+
+		if (session->command_type == IMAP_COMM_IDLE && !session->command_state) { // session is in a IDLE loop
+			dm_thread_data *D = g_new0(dm_thread_data,1);
+			D->data = (gpointer)g_strdup(buffer);
+			g_async_queue_push(session->ci->queue, (gpointer)D);
+			continue;
+		}
+
 		if (imap4_tokenizer(session, buffer)) {
 			if ((result = imap4(session))) {
 				imap_handle_exit(session, result);
@@ -269,11 +277,6 @@ void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, i
 	bufferevent_settimeout(session->ci->rev, session->timeout, 0);
 }
 
-static void imap_cb_reset(ImapSession *session)
-{
-	dbmail_imap_session_set_callbacks(session, imap_cb_read, imap_cb_time, server_conf->timeout);
-}
-
 int imap_handle_connection(client_sock *c)
 {
 	ImapSession *session;
@@ -294,7 +297,7 @@ int imap_handle_connection(client_sock *c)
 	ci->cb_pipe = (void *)dm_queue_drain;
 	session->ci = ci;
 
-	imap_cb_reset(session);
+	dbmail_imap_session_set_callbacks(session, imap_cb_read, imap_cb_time, server_conf->timeout);
 	
 	send_greeting(session);
 	
@@ -317,8 +320,8 @@ void dbmail_imap_session_reset(ImapSession *session)
 	session->command_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 	session->rbuff = NULL;
-	imap_cb_reset(session);
-	bufferevent_enable(session->ci->rev, EV_READ);
+	
+	dbmail_imap_session_set_callbacks(session, NULL, NULL, server_conf->timeout);
 }
 
 int imap4_tokenizer (ImapSession *session, char *buffer)

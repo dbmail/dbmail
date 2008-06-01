@@ -2361,6 +2361,7 @@ void ci_close(clientbase_t *self)
 	event_del(self->pev);
 	self->pev = NULL;
 
+	g_async_queue_unref(self->queue);
 	bufferevent_disable(self->rev, EV_READ);
 	bufferevent_disable(self->wev, EV_WRITE);
 	bufferevent_free(self->rev);
