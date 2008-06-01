@@ -100,7 +100,6 @@ typedef struct {
 ImapSession * dbmail_imap_session_new(void);
 ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag);
 ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command);
-ImapSession * dbmail_imap_session_reset_fetchitems(ImapSession * self);
 
 void dbmail_imap_session_set_callbacks(ImapSession *self, void *cb_r, void *cb_t, int timeout);
 void dbmail_imap_session_reset(ImapSession *session);
@@ -133,8 +132,8 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self);
 int dbmail_imap_session_mailbox_select_recent(ImapSession *self);
 int dbmail_imap_session_mailbox_update_recent(ImapSession *self);
 
-int dbmail_imap_session_fetch_parse_args(ImapSession * self);
 int dbmail_imap_session_fetch_get_items(ImapSession *self);
+int dbmail_imap_session_fetch_parse_args(ImapSession * self);
 
 void dbmail_imap_session_bodyfetch_new(ImapSession *self);
 void dbmail_imap_session_bodyfetch_free(ImapSession *self);

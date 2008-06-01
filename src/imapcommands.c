@@ -1506,9 +1506,13 @@ static void _ic_fetch_enter(dm_thread_data *D)
 		D->status = result;
 		NOTIFY_DONE(D);
 	}
-	
-	dbmail_imap_session_reset_fetchitems(self);
 
+	if (self->fi) {
+		dbmail_imap_session_bodyfetch_free(self);
+		g_free(self->fi);
+		self->fi = NULL;
+	}
+	self->fi = g_new0(fetch_items_t,1);
 	self->fi->getUID = self->use_uid;
 
 	setidx = self->args_idx;

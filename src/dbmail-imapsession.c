@@ -126,14 +126,7 @@ static void close_cache(cache_t *cached_msg)
 
 static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize); 
 
-static void _imap_fetchitem_free(ImapSession * self)
-{
-	if (self->fi) {
-		dbmail_imap_session_bodyfetch_free(self);
-		g_free(self->fi);
-		self->fi = NULL;
-	}
-}
+
 
 /* 
  * initializer and accessors for ImapSession
@@ -156,12 +149,6 @@ ImapSession * dbmail_imap_session_new(void)
 	return self;
 }
 
-ImapSession * dbmail_imap_session_reset_fetchitems(ImapSession * self)
-{
-	_imap_fetchitem_free(self);
-	self->fi = g_new0(fetch_items_t,1);
-	return self;
-}
      
 ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag)
 {
@@ -194,8 +181,11 @@ void dbmail_imap_session_delete(ImapSession * self)
 	TRACE(TRACE_DEBUG,"[%p]", self);
 	close_cache(self->cached_msg);
 
-	_imap_fetchitem_free(self);
-	
+	if (self->fi) {
+		dbmail_imap_session_bodyfetch_free(self);
+		g_free(self->fi);
+		self->fi = NULL;
+	}
 	if (self->tag) {
 		g_free(self->tag);
 		self->tag = NULL;
@@ -511,8 +501,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 	invalidargs = 0;
 
 	if (!self->args[self->args_idx]) return -1;	/* no more */
-	if (self->args[self->args_idx][0] == '(') 
-		self->args_idx++;
+	if (self->args[self->args_idx][0] == '(') self->args_idx++;
 	if (!self->args[self->args_idx]) return -2;	/* error */
 	
 	char *token = NULL, *nexttoken = NULL;
@@ -562,6 +551,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			if (ispeek) return -2;	/* error DONE */
 			self->fi->getMIME_IMB_noextension = 1;	/* just BODY specified */
 		} else {
+			int res = 0;
 			/* now read the argument list to body */
 			self->args_idx++;	/* now pointing at '[' (not the last arg, parentheses are matched) */
 			self->args_idx++;	/* now pointing at what should be the item type */
@@ -577,7 +567,11 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 				else
 					self->fi->getBodyTotal = 1;
 				self->args_idx++;				
-				return _imap_session_fetch_parse_octet_range(self);
+				res = _imap_session_fetch_parse_octet_range(self);
+				if (res == -2)
+					TRACE(TRACE_DEBUG,"[%p] fetch_parse_octet_range return with error", self);
+				return res;
+					
 			}
 			
 			if (ispeek) self->fi->noseen = 1;
@@ -589,7 +583,10 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			
 			self->args_idx++; // idx points to ']' now
 			self->args_idx++; // idx points to octet range now 
-			return _imap_session_fetch_parse_octet_range(self);
+			res = _imap_session_fetch_parse_octet_range(self);
+			if (res == -2)
+				TRACE(TRACE_DEBUG,"[%p] fetch_parse_octet_range return with error", self);
+			return res;
 		}
 	} else if (MATCH(token,"all")) {		
 		self->fi->msgparse_needed=1; // because of getEnvelope
