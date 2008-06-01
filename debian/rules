@@ -22,14 +22,21 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 DBMAIL_VERSION	?= $(shell cat VERSION)
 
-
 ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
 	export MANPAGES=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes
 	export REAL_CLEAN=mrproper
+	export WITH_LDAP=
+	export WITH_SIEVE=
 	CFLAGS += -g
+endif
+ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
+	export WITH_LDAP=--with-ldap
+endif
+ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
+	export WITH_SIEVE=--with-sieve
 endif
 
 # dpatch
@@ -96,12 +103,12 @@ binary-common: build
 	dh_testdir
 	dh_installdirs -a
 	## reduce RPATH to minimum (libdbmail.so in /usr/lib/dbmail/)
-	for file in $(CURDIR)/debian/tmp/usr/lib/dbmail/*.so ; do \
-		chrpath -d $$file; \
-	done
-	for file in $(CURDIR)/debian/tmp/usr/sbin/* ; do \
-		chrpath -r /usr/lib/dbmail $$file; \
-	done
+	#for file in $(CURDIR)/debian/tmp/usr/lib/dbmail/*.so ; do \
+	#	chrpath -d $$file; \
+	#done
+	#for file in $(CURDIR)/debian/tmp/usr/sbin/* ; do \
+	#	chrpath -r /usr/lib/dbmail $$file; \
+	#done
 	dh_install -a --sourcedir=debian/tmp
 	dh_installinit -a --name=dbmail -- defaults 25
 	dh_installcron -a --name=dbmail

@@ -970,10 +970,20 @@ int _ic_status(ImapSession *self)
  *
  * non-expunging close for select mailbox and return to AUTH state
  */
+
+
+void _ic_idle_enter(dm_thread_data *D)
+{
+	ImapSession *self = D->session;
+	D->status = dbmail_imap_session_idle(self);
+	NOTIFY_DONE(D);
+}
+
 int _ic_idle(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED)) return 1;
-	return dbmail_imap_session_idle(self);
+	dm_thread_data_push(self, _ic_idle_enter, _ic_cb_leave, NULL);
+	return 0;
 }
 
 /* _ic_append()

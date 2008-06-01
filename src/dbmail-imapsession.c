@@ -1641,7 +1641,7 @@ int dbmail_imap_session_idle(ImapSession *self)
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
 	dbmail_imap_session_printf(self, "+ idling\r\n");
 	dbmail_imap_session_set_callbacks(self, imap_cb_idle_read, imap_cb_idle_time, idle_timeout);
-	dbmail_imap_session_buff_flush(self);
+	imap_cb_idle_read((gpointer)self);
 
 	return 0;
 }
