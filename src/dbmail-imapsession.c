@@ -1599,7 +1599,7 @@ void imap_cb_idle_time (void *arg)
 	dbmail_imap_session_buff_flush(self);
 }
 
-#define IDLE_BUFFER 8
+#define IDLE_BUFFER 4
 void imap_cb_idle_read (void *arg)
 {
 	char buffer[IDLE_BUFFER];
