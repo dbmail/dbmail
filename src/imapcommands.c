@@ -1516,6 +1516,7 @@ static void _ic_fetch_enter(dm_thread_data *D)
 	self->fi->getUID = self->use_uid;
 
 	setidx = self->args_idx;
+	TRACE(TRACE_DEBUG, "id-set: [%s]", self->args[self->args_idx]);
 	self->args_idx++; //skip on past this for the fetch_parse_args coming next...
 
 	state = 1;
@@ -1539,6 +1540,7 @@ static void _ic_fetch_enter(dm_thread_data *D)
 	}
 
 	dbmail_imap_session_fetch_free(self);
+	dbmail_imap_session_args_free(self, FALSE);
 
 	if (result) {
 		D->status = result;

@@ -1648,12 +1648,14 @@ static int db_update_recent(GList *slices)
 	C c;
 	int t = FALSE;
 
+	if (! (slices = g_list_first(slices)))
+		return t;
+
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
-		slices = g_list_first(slices);
 		while (slices) {
-			Connection_execute(c, "UPDATE %smessages SET recent_flag = 0 WHERE message_idnr IN (%s) AND recent_flag = 1", DBPFX, (gchar *)slices->data);
+			db_exec(c, "UPDATE %smessages SET recent_flag = 0 WHERE message_idnr IN (%s) AND recent_flag = 1", DBPFX, (gchar *)slices->data);
 			if (! g_list_next(slices)) break;
 			slices = g_list_next(slices);
 		}
