@@ -22,7 +22,6 @@
 /* 
  * server.c
  *
- * code to implement a network server
  */
 
 #include "dbmail.h"
@@ -41,26 +40,13 @@ int selfpipe[2];
 GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
 
-// 
+
 serverConfig_t *server_conf;
 
 static void server_config_load(serverConfig_t * conf, const char * const service);
 static int server_set_sighandler(void);
 
-void dm_queue_drain(clientbase_t *client)
-{
-	gpointer data;
-	TRACE(TRACE_DEBUG,"[%p]:cb_pipe", client);
-	do {
-		data = g_async_queue_try_pop(queue);
-		if (data) {
-			dm_thread_data *D = (gpointer)data;
-			if (D->cb_leave) D->cb_leave(data);
-			dm_thread_data_flush(data);
-		}
-	} while (data);
-	TRACE(TRACE_DEBUG,"[%p]:done", client);
-}
+
 
 /* 
  *
@@ -70,13 +56,39 @@ void dm_queue_drain(clientbase_t *client)
  *
  *
  */
-void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data)
+
+static void dm_thread_data_free(gpointer data);
+
+/*
+ * async queue drainage callback for the main thread
+ */
+void dm_queue_drain(clientbase_t *client UNUSED)
+{
+	gpointer data;
+	do {
+		data = g_async_queue_try_pop(queue);
+		if (data) {
+			dm_thread_data *D = (gpointer)data;
+			if (D->cb_leave) D->cb_leave(data);
+			dm_thread_data_free(data);
+		}
+	} while (data);
+}
+
+/* 
+ * push a job to the thread pool
+ *
+ */
+
+void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave, gpointer data)
 {
 	GError *err = NULL;
+	ImapSession *s;
 
 	assert(session);
 	assert(cb_enter);
 
+	s = (ImapSession *)session;
 	dm_thread_data *D = g_new0(dm_thread_data,1);
 	D->cb_enter	= cb_enter;
 	D->cb_leave     = cb_leave;
@@ -85,8 +97,7 @@ void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_le
 
 	// we're not done until we're done
 	D->session->command_state = FALSE; 
-	bufferevent_disable(D->session->ci->rev, EV_READ);
-	D->wev		= session->ci->wev;
+	D->wev		= s->ci->wev;
 
 	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
 
@@ -95,34 +106,36 @@ void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_le
 	if (err) TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
 }
 
-void dm_thread_data_flush(gpointer data)
+void dm_thread_data_free(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
-	TRACE(TRACE_DEBUG,"[%p]", D);
-	
-	// are we done yet?
-	if ( (D->session) && (D->session->command_state == TRUE) && (D->session->state < IMAPCS_LOGOUT) ) {
-		bufferevent_enable(D->session->ci->rev, EV_READ);
-		D->session->ci->cb_read(D->session);
-	}
-
 	if (D->data) {
-		g_free(D->data);
-		D->data = NULL;
+		g_free(D->data); D->data = NULL;
 	}
-
 	g_free(D); D = NULL;
 }
 
+/* 
+ * worker threads can send messages to the client
+ * through the main thread async queue. This data
+ * is written directly to the output bufferevent
+ */
 void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	if (D->data && D->wev) {
 		char *message = (char *)D->data;
+		TRACE(TRACE_INFO,"[%p] S > [%s]", D, message);
 		bufferevent_write(D->wev,(gpointer)message, strlen(message));
 	}
 }
 
+/* 
+ * thread-entry callback
+ *
+ * if a thread in the pool is assigned a job from the queue
+ * this call is used as entry point for the job at hand.
+ */
 static void dm_thread_dispatch(gpointer data, gpointer user_data)
 {
 	TRACE(TRACE_DEBUG,"data[%p], user_data[%p]", data, user_data);
@@ -130,6 +143,11 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
 	D->cb_enter(D);
 }
 
+/*
+ *
+ * basic server setup
+ *
+ */
 static int server_setup(void)
 {
 	GError *err = NULL;
@@ -137,13 +155,19 @@ static int server_setup(void)
 	if (! g_thread_supported () ) g_thread_init (NULL);
 	server_set_sighandler();
 
-	// Asynchronous message queue
+	// Asynchronous message queue for receiving messages
+	// from worker threads in the main thread. 
+	//
+	// Only the main thread is allowed to do network IO.
+	// see the libevent docs for the ratio and a work-around.
+	// Dbmail only needs and uses a single eventbase for now.
 	queue = g_async_queue_new();
 
-	// Thread pool for database work
+	// Create the thread pool
 	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,10,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
+	// self-pipe used to push the event-loop
 	pipe(selfpipe);
 	UNBLOCK(selfpipe[0]);
 	UNBLOCK(selfpipe[1]);
@@ -177,6 +201,7 @@ static int server_start_cli(serverConfig_t *conf)
 	return 0;
 }
 
+// PUBLIC
 int StartCliServer(serverConfig_t * conf)
 {
 	if (!conf) TRACE(TRACE_FATAL, "NULL configuration");
@@ -492,6 +517,8 @@ static int server_sig_cb(void)
 	return (0);
 }
 
+// FIXME: signals have been in a bad shape since
+// the libevent rewrite
 static int server_set_sighandler(void)
 {
 	struct sigaction act;
@@ -539,8 +566,6 @@ static int server_set_sighandler(void)
 
 // 
 // Public methods
-//
-
 void disconnect_all(void)
 {
 	db_disconnect();

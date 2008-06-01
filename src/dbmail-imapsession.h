@@ -9,8 +9,8 @@
 
 #include "dbmail.h"
 
-#define ERROR -1
-#define DONE 1
+// command state during idle command
+#define IDLE -1 
 
 /*
  * cached raw message data
@@ -113,7 +113,7 @@ int dbmail_imap_session_discard_to_eol(ImapSession *self);
 
 void dbmail_imap_session_buff_clear(ImapSession *self);
 void dbmail_imap_session_buff_flush(ImapSession *self);
-int dbmail_imap_session_printf(ImapSession * self, char * message, ...);
+int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...);
 
 int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state);
 int client_is_authenticated(ImapSession * self);
@@ -158,21 +158,17 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self);
 
 int build_args_array_ext(ImapSession *self, const char *originalString);
 
-void _ic_cb_leave(gpointer data);
 
 /* threaded work queue */
 	
-/* 
- */
-void dm_thread_data_flush(gpointer data);
-
 /*
  * thread launcher
  *
  */
-void dm_thread_data_push(ImapSession *session, gpointer cb_enter, gpointer cb_leave, gpointer data);
+void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave, gpointer data);
 
 void dm_thread_data_sendmessage(gpointer data);
+void _ic_cb_leave(gpointer data);
 
 #endif
 

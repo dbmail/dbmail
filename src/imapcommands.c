@@ -54,7 +54,7 @@ int imap_before_smtp = 0;
 	return;
 
 #define IC_DONE_OK \
-	dbmail_imap_session_printf(self, "%s OK %s%s completed\r\n", self->tag, self->use_uid ? "UID " : "", self->command)
+	dbmail_imap_session_buff_printf(self, "%s OK %s%s completed\r\n", self->tag, self->use_uid ? "UID " : "", self->command)
 /*
  * RETURN VALUES _ic_ functions:
  *
@@ -82,7 +82,7 @@ void _ic_capability_enter(dm_thread_data *D)
 	GETCONFIGVALUE("capability", "IMAP", val);
 	if (strlen(val) > 0) override = TRUE;
 
-	dbmail_imap_session_printf(D->session, "* %s %s\r\n", D->session->command, override ? val : IMAP_CAPABILITY_STRING);
+	dbmail_imap_session_buff_printf(D->session, "* %s %s\r\n", D->session->command, override ? val : IMAP_CAPABILITY_STRING);
 
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
@@ -91,7 +91,7 @@ void _ic_capability_enter(dm_thread_data *D)
 int _ic_capability(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, -1)) return 1;
-	dm_thread_data_push(self, _ic_capability_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_capability_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -117,7 +117,7 @@ int _ic_noop(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, -1)) return 1;
 
-	dm_thread_data_push(self, _ic_noop_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_noop_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -130,18 +130,15 @@ static void _ic_logout_enter(dm_thread_data *D)
 {
 	ImapSession *self = D->session;
 	dbmail_imap_session_mailbox_update_recent(self);
-	dbmail_imap_session_printf(self, "* BYE\r\n");
-	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
-	IC_DONE_OK;
-	NOTIFY_DONE(D);
 }
 
 int _ic_logout(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, -1)) return 1;
-
-	dm_thread_data_push(self, _ic_logout_enter, _ic_cb_leave, NULL);
-	return 0;
+	dbmail_imap_session_set_state(self, IMAPCS_LOGOUT);
+	dm_thread_data_push((gpointer)self, _ic_logout_enter, NULL, NULL);
+	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
+	return 2;
 }
 /*
  * PRE-AUTHENTICATED STATE COMMANDS
@@ -184,7 +181,7 @@ int _ic_authenticate(ImapSession *self)
 		if (!check_state_and_args(self, 3, 3, IMAPCS_NON_AUTHENTICATED)) return 1;
 		/* check authentication method */
 		if (strcasecmp(self->args[self->args_idx], "login") != 0) {
-			dbmail_imap_session_printf(self, "%s NO Invalid authentication mechanism specified\r\n", self->tag);
+			dbmail_imap_session_buff_printf(self, "%s NO Invalid authentication mechanism specified\r\n", self->tag);
 			return 1;
 		}
 		self->args_idx++;
@@ -192,7 +189,7 @@ int _ic_authenticate(ImapSession *self)
 		if (!check_state_and_args(self, 2, 2, IMAPCS_NON_AUTHENTICATED)) return 1;
 	}
 
-	dm_thread_data_push(self, _ic_authenticate_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_authenticate_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -249,11 +246,11 @@ static int mailbox_check_acl(ImapSession *self, MailboxInfo *mailbox, ACLRight_t
 {
 	int access = acl_has_right(mailbox, self->userid, acl);
 	if (access < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (access == 0) {
-		dbmail_imap_session_printf(self, "%s NO permission denied\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO permission denied\r\n", self->tag);
 		return 1;
 	}
 	return 0;
@@ -283,7 +280,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	}
 	
 	if (! mailbox_idnr) {
-		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		return 1; /* error */
 	}
 
@@ -322,21 +319,21 @@ static void _ic_select_enter(dm_thread_data *D)
 	}	
 	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
 
-	dbmail_imap_session_printf(self, "* %u EXISTS\r\n", self->mailbox->info->exists);
-	dbmail_imap_session_printf(self, "* %u RECENT\r\n", self->mailbox->info->recent);
+	dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", self->mailbox->info->exists);
+	dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", self->mailbox->info->recent);
 
 	/* flags */
 	flags = mailbox_flags(self->mailbox->info);
-	dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", flags);
-	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+	dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+	dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
 	g_free(flags);
 
 	/* UIDNEXT */
-	dbmail_imap_session_printf(self, "* OK [UIDNEXT %llu] Predicted next UID\r\n",
+	dbmail_imap_session_buff_printf(self, "* OK [UIDNEXT %llu] Predicted next UID\r\n",
 		self->mailbox->info->msguidnext);
 	
 	/* UID */
-	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
+	dbmail_imap_session_buff_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
 		self->mailbox->info->uid);
 
 	if (self->command_type == IMAP_COMM_SELECT) {
@@ -346,7 +343,7 @@ static void _ic_select_enter(dm_thread_data *D)
 			u64_t key = 0, *msn = NULL;
 			g_tree_foreach(self->mailbox->msginfo, (GTraverseFunc)mailbox_first_unseen, &key);
 			if ( (key > 0) && (msn = g_tree_lookup(self->mailbox->ids, &key)))
-				dbmail_imap_session_printf(self, "* OK [UNSEEN %llu] first unseen message\r\n", *msn);
+				dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %llu] first unseen message\r\n", *msn);
 		}
 		self->mailbox->info->permission = IMAPPERM_READWRITE;
 		okarg = "READ-WRITE";
@@ -356,7 +353,7 @@ static void _ic_select_enter(dm_thread_data *D)
 		okarg = "READ-ONLY";
 	}
 
-	dbmail_imap_session_printf(self, "%s OK [%s] %s completed\r\n", self->tag, okarg, self->command);
+	dbmail_imap_session_buff_printf(self, "%s OK [%s] %s completed\r\n", self->tag, okarg, self->command);
 
 	NOTIFY_DONE(D);
 }
@@ -364,7 +361,7 @@ static void _ic_select_enter(dm_thread_data *D)
 int _ic_select(ImapSession *self) 
 {
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_select_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_select_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -391,11 +388,11 @@ void _ic_create_enter(dm_thread_data *D)
 	result = db_mailbox_create_with_parents(D->session->args[D->session->args_idx], BOX_COMMANDLINE, D->session->userid, &mboxid, &message);
 
 	if (result > 0)
-		dbmail_imap_session_printf(D->session, "%s NO %s\r\n", D->session->tag, message);
+		dbmail_imap_session_buff_printf(D->session, "%s NO %s\r\n", D->session->tag, message);
 	else if (result < 0)
-		dbmail_imap_session_printf(D->session, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_buff_printf(D->session, "* BYE internal dbase error\r\n");
 	else
-		dbmail_imap_session_printf(D->session, "%s OK %s completed\r\n", D->session->tag, D->session->command);
+		dbmail_imap_session_buff_printf(D->session, "%s OK %s completed\r\n", D->session->tag, D->session->command);
 
 	g_string_free(s, FALSE);
 
@@ -406,7 +403,7 @@ void _ic_create_enter(dm_thread_data *D)
 int _ic_create(ImapSession *self)
 {
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_create_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_create_enter, _ic_cb_leave, NULL);
 	return DM_SUCCESS;
 }
 
@@ -427,13 +424,13 @@ void _ic_delete_enter(dm_thread_data *D)
 
 	/* check if there is an attempt to delete inbox */
 	if (MATCH(self->args[0], "INBOX")) {
-		dbmail_imap_session_printf(self, "%s NO cannot delete special mailbox INBOX\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO cannot delete special mailbox INBOX\r\n", self->tag);
 		D->status=1;
 		NOTIFY_DONE(D);
 	}
 
 	if (! (db_findmailbox(mailbox, self->userid, &mailbox_idnr)) ) {
-		dbmail_imap_session_printf(self, "%s NO mailbox doesn't exists\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO mailbox doesn't exists\r\n", self->tag);
 		D->status=1;
 		NOTIFY_DONE(D);
 	}
@@ -447,7 +444,7 @@ void _ic_delete_enter(dm_thread_data *D)
 	/* check for children of this mailbox */
 	if ((result = db_listmailboxchildren(mailbox_idnr, self->userid, &children)) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "[%p] cannot retrieve list of mailbox children", self);
-		dbmail_imap_session_printf(self, "* BYE dbase/memory error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE dbase/memory error\r\n");
 		D->status= -1;
 		NOTIFY_DONE(D);
 	}
@@ -461,11 +458,11 @@ void _ic_delete_enter(dm_thread_data *D)
 		/* mailbox has inferior names; error if \noselect specified */
 		result = db_isselectable(mailbox_idnr);
 		if (result == FALSE) {
-			dbmail_imap_session_printf(self, "%s NO mailbox is non-selectable\r\n", self->tag);
+			dbmail_imap_session_buff_printf(self, "%s NO mailbox is non-selectable\r\n", self->tag);
 			NOTIFY_DONE(D);
 		}
 		if (result == DM_EQUERY) {
-			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 			D->status= -1;	/* fatal */
 			NOTIFY_DONE(D);
 		}
@@ -522,7 +519,7 @@ void _ic_delete_enter(dm_thread_data *D)
 
 	/* ok remove mailbox */
 	if (db_delete_mailbox(mailbox_idnr, 0, 1)) {
-		dbmail_imap_session_printf(self,"%s NO DELETE failed\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self,"%s NO DELETE failed\r\n", self->tag);
 		D->status=DM_EGENERAL;
 		NOTIFY_DONE(D);
 	}
@@ -538,7 +535,7 @@ void _ic_delete_enter(dm_thread_data *D)
 int _ic_delete(ImapSession *self) 
 {
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_delete_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_delete_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 /* _ic_rename()
@@ -567,20 +564,20 @@ void _ic_rename_enter(dm_thread_data *D)
 
 
 	if (! (db_findmailbox(self->args[0], self->userid, &mboxid))) {
-		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
 
 	/* check if new name is valid */
         if (!checkmailboxname(self->args[1])) {
-	        dbmail_imap_session_printf(self, "%s NO new mailbox name contains invalid characters\r\n", self->tag);
+	        dbmail_imap_session_buff_printf(self, "%s NO new mailbox name contains invalid characters\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
         }
 
 	if ((db_findmailbox(self->args[1], self->userid, &newmboxid))) {
-		dbmail_imap_session_printf(self, "%s NO new mailbox already exists\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO new mailbox already exists\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -594,7 +591,7 @@ void _ic_rename_enter(dm_thread_data *D)
 	 */
 	if (strncasecmp(self->args[0], self->args[1], (int) oldnamelen) == 0 &&
 	    strlen(self->args[1]) > oldnamelen && self->args[1][oldnamelen] == '/') {
-		dbmail_imap_session_printf(self, "%s NO new mailbox would invade mailbox structure\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO new mailbox would invade mailbox structure\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -607,7 +604,7 @@ void _ic_rename_enter(dm_thread_data *D)
 
 		if (! db_findmailbox(self->args[1], self->userid, &parentmboxid)) {
 			/* parent mailbox does not exist */
-			dbmail_imap_session_printf(self, "%s NO new mailbox would invade mailbox structure\r\n", self->tag);
+			dbmail_imap_session_buff_printf(self, "%s NO new mailbox would invade mailbox structure\r\n", self->tag);
 			D->status = 1;
 			NOTIFY_DONE(D);
 		}
@@ -643,14 +640,14 @@ void _ic_rename_enter(dm_thread_data *D)
 		/* inferior names of INBOX are left unchanged */
 		result = db_createmailbox(self->args[1], self->userid, &newmboxid);
 		if (result == -1) {
-			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 			D->status = DM_EQUERY;
 			NOTIFY_DONE(D);
 		}
 
 		result = db_movemsg(newmboxid, mboxid);
 		if (result == -1) {
-			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 			D->status = result;
 			NOTIFY_DONE(D);
 		}
@@ -662,7 +659,7 @@ void _ic_rename_enter(dm_thread_data *D)
 	/* check for inferior names */
 	result = db_listmailboxchildren(mboxid, self->userid, &children);
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		D->status = result;
 		NOTIFY_DONE(D);
 	}
@@ -676,7 +673,7 @@ void _ic_rename_enter(dm_thread_data *D)
 
 		g_snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s", self->args[1], &mb->name[oldnamelen]);
 		if ((mailbox_rename(mb, newname)) != DM_SUCCESS) {
-			dbmail_imap_session_printf(self, "* BYE error renaming mailbox\r\n");
+			dbmail_imap_session_buff_printf(self, "* BYE error renaming mailbox\r\n");
 			g_list_destroy(children);
 			D->status = DM_EGENERAL;
 			NOTIFY_DONE(D);
@@ -691,7 +688,7 @@ void _ic_rename_enter(dm_thread_data *D)
 	/* now replace name */
 	mb = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 	if ((mailbox_rename(mb, self->args[1])) != DM_SUCCESS) {
-		dbmail_imap_session_printf(self, "* BYE error renaming mailbox\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE error renaming mailbox\r\n");
 		D->status = DM_EGENERAL;
 		NOTIFY_DONE(D);
 	}
@@ -703,7 +700,7 @@ void _ic_rename_enter(dm_thread_data *D)
 int _ic_rename(ImapSession *self)
 {
 	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_rename_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_rename_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -721,7 +718,7 @@ void _ic_subscribe_enter(dm_thread_data *D)
 	int result = 0;
 	
 	if (! (db_findmailbox(self->args[0], self->userid, &mboxid))) {
-		dbmail_imap_session_printf(self, "%s OK %s on mailbox that does not exist\r\n", self->tag, self->command);
+		dbmail_imap_session_buff_printf(self, "%s OK %s on mailbox that does not exist\r\n", self->tag, self->command);
 		NOTIFY_DONE(D);
 	}
 
@@ -739,7 +736,7 @@ void _ic_subscribe_enter(dm_thread_data *D)
 		result = db_unsubscribe(mboxid, self->userid);
 
 	if (result == DM_EQUERY) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		D->status = DM_EQUERY;
 		NOTIFY_DONE(D);
 	}
@@ -751,7 +748,7 @@ void _ic_subscribe_enter(dm_thread_data *D)
 int _ic_subscribe(ImapSession *self)
 {
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_subscribe_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_subscribe_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -780,7 +777,7 @@ void _ic_list_enter(dm_thread_data *D)
 	/* check if self->args are both empty strings, i.e. A001 LIST "" "" 
 	   this has special meaning; show root & delimiter */
 	if (strlen(self->args[0]) == 0 && strlen(self->args[1]) == 0) {
-		dbmail_imap_session_printf(self, "* %s (\\NoSelect) \"/\" \"\"\r\n", self->command);
+		dbmail_imap_session_buff_printf(self, "* %s (\\NoSelect) \"/\" \"\"\r\n", self->command);
 		IC_DONE_OK;
 		NOTIFY_DONE(D);
 	}
@@ -788,7 +785,7 @@ void _ic_list_enter(dm_thread_data *D)
 	/* check the reference name, should contain only accepted mailboxname chars */
 	for (i = 0, slen = strlen(AcceptedMailboxnameChars); self->args[0][i]; i++) {
 		if (index(AcceptedMailboxnameChars, self->args[0][i]) == NULL) {
-			dbmail_imap_session_printf(self, "%s BAD reference name contains invalid characters\r\n", self->tag);
+			dbmail_imap_session_buff_printf(self, "%s BAD reference name contains invalid characters\r\n", self->tag);
 			D->status = 1;
 			NOTIFY_DONE(D);
 		}
@@ -801,10 +798,10 @@ void _ic_list_enter(dm_thread_data *D)
 
 	D->status = db_findmailbox_by_regex(D->session->userid, pattern, &children, list_is_lsub);
 	if (D->status == -1) {
-		dbmail_imap_session_printf(D->session, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_buff_printf(D->session, "* BYE internal dbase error\r\n");
 		NOTIFY_DONE(D);
 	} else if (D->status == 1) {
-		dbmail_imap_session_printf(D->session, "%s BAD invalid pattern specified\r\n", D->session->tag);
+		dbmail_imap_session_buff_printf(D->session, "%s BAD invalid pattern specified\r\n", D->session->tag);
 		NOTIFY_DONE(D);
 	}
 
@@ -824,7 +821,7 @@ void _ic_list_enter(dm_thread_data *D)
 		
 		/* show */
 		pstring = dbmail_imap_plist_as_string(plist);
-		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", D->session->command, 
+		dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", D->session->command, 
 				pstring, MAILBOX_SEPARATOR, mb->name);
 		
 		g_list_destroy(plist);
@@ -837,7 +834,7 @@ void _ic_list_enter(dm_thread_data *D)
 	if (children) g_list_destroy(children);
 	g_free(pattern);
 
-	if (! D->status) dbmail_imap_session_printf(self, "%s OK %s completed\r\n", D->session->tag, D->session->command);
+	if (! D->status) dbmail_imap_session_buff_printf(self, "%s OK %s completed\r\n", D->session->tag, D->session->command);
 
 	NOTIFY_DONE(D);
 }
@@ -846,7 +843,7 @@ int _ic_list(ImapSession *self)
 {
 
 	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_list_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_list_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -876,7 +873,7 @@ static void _ic_status_enter(dm_thread_data *D)
 	gchar *pstring, *astring;
 	
 	if (self->args[1][0] != '(') {
-		dbmail_imap_session_printf(self, "%s BAD argument list should be parenthesed\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD argument list should be parenthesed\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -887,19 +884,19 @@ static void _ic_status_enter(dm_thread_data *D)
 			endfound = i;
 			break;
 		} else if (self->args[i][0] == '(') {
-			dbmail_imap_session_printf(self, "%s BAD too many parentheses specified\r\n", self->tag);
+			dbmail_imap_session_buff_printf(self, "%s BAD too many parentheses specified\r\n", self->tag);
 			D->status = 1;
 			NOTIFY_DONE(D);
 		}
 	}
 
 	if (endfound == 2) {
-		dbmail_imap_session_printf(self, "%s BAD argument list empty\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD argument list empty\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
 	if (self->args[endfound + 1]) {
-		dbmail_imap_session_printf(self, "%s BAD argument list too long\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD argument list too long\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -912,14 +909,14 @@ static void _ic_status_enter(dm_thread_data *D)
 			db_createmailbox("INBOX", self->userid, &id);
 		}
 		if (! id) {
-			dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
+			dbmail_imap_session_buff_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 			D->status = 1;
 			NOTIFY_DONE(D);
 		}
 	}
 
 	if (! (mb = dbmail_imap_session_mbxinfo_lookup(self, id))) {
-		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -943,7 +940,7 @@ static void _ic_status_enter(dm_thread_data *D)
 		else if (MATCH(self->args[i], ")"))
 			break;
 		else {
-			dbmail_imap_session_printf(self, "\r\n%s BAD option '%s' specified\r\n",
+			dbmail_imap_session_buff_printf(self, "\r\n%s BAD option '%s' specified\r\n",
 				self->tag, self->args[i]);
 			D->status = 1;
 			NOTIFY_DONE(D);
@@ -953,7 +950,7 @@ static void _ic_status_enter(dm_thread_data *D)
 	pstring = dbmail_imap_plist_as_string(plst); 
 	g_list_destroy(plst);
 
-	dbmail_imap_session_printf(self, "* STATUS %s %s\r\n", astring, pstring);	
+	dbmail_imap_session_buff_printf(self, "* STATUS %s %s\r\n", astring, pstring);	
 	g_free(astring); g_free(pstring);
 
 	IC_DONE_OK;
@@ -963,7 +960,7 @@ static void _ic_status_enter(dm_thread_data *D)
 int _ic_status(ImapSession *self)
 {
 	if (!check_state_and_args(self, 3, 0, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_status_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_status_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -988,17 +985,16 @@ int imap_idle_loop(ImapSession *self, int timeout)
 			if (strlen(message) > 4 && strncasecmp(message,"DONE",4)==0) {
 				return 0;
 			} else if (strlen(message) > 0) {
-				dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
+				dbmail_imap_session_buff_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
 				return 1;
 			}
 			g_free(D->data);
 			g_free(D);
 		} else {
 			TRACE(TRACE_DEBUG,"[%p]", self);
-			if (! (self->loop++ % 10)) dbmail_imap_session_printf(self, "* OK\r\n");
+			if (! (self->loop++ % 10)) dbmail_imap_session_buff_printf(self, "* OK\r\n");
 			dbmail_imap_session_mailbox_status(self,TRUE);
 			dbmail_imap_session_buff_flush(self);
-			dbmail_imap_session_set_callbacks(self, NULL, NULL, 0);
 		}
 
 	} while (TRUE);
@@ -1024,7 +1020,7 @@ void _ic_idle_enter(dm_thread_data *D)
 	
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
-	dbmail_imap_session_printf(self, "+ idling\r\n");
+	dbmail_imap_session_buff_printf(self, "+ idling\r\n");
 	dbmail_imap_session_buff_flush(self);
 	
 	if ((t = imap_idle_loop(self, idle_timeout))) {
@@ -1038,7 +1034,8 @@ void _ic_idle_enter(dm_thread_data *D)
 int _ic_idle(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_idle_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_idle_enter, _ic_cb_leave, NULL);
+	bufferevent_enable(self->ci->rev, EV_READ);
 	return 0;
 }
 
@@ -1109,7 +1106,7 @@ void _ic_append_enter(dm_thread_data *D)
 
 	/* find the mailbox to place the message */
 	if (! db_findmailbox(self->args[0], self->userid, &mboxid)) {
-		dbmail_imap_session_printf(self, "%s NO [TRYCREATE]\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO [TRYCREATE]\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -1154,7 +1151,7 @@ void _ic_append_enter(dm_thread_data *D)
 
 	if (!self->args[i]) {
 		TRACE(TRACE_INFO, "[%p] unexpected end of arguments", self);
-		dbmail_imap_session_printf(self, "%s BAD invalid arguments specified to APPEND\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid arguments specified to APPEND\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -1213,17 +1210,17 @@ void _ic_append_enter(dm_thread_data *D)
 	switch (D->status) {
 	case -1:
 		TRACE(TRACE_ERROR, "[%p] error appending msg", D->session);
-		dbmail_imap_session_printf(D->session, "* BYE internal dbase error storing message\r\n");
+		dbmail_imap_session_buff_printf(D->session, "* BYE internal dbase error storing message\r\n");
 		break;
 
 	case -2:
 		TRACE(TRACE_INFO, "[%p] quotum would exceed", D->session);
-		dbmail_imap_session_printf(D->session, "%s NO not enough quotum left\r\n", D->session->tag);
+		dbmail_imap_session_buff_printf(D->session, "%s NO not enough quotum left\r\n", D->session->tag);
 		break;
 
 	case FALSE:
 		TRACE(TRACE_ERROR, "[%p] faulty msg", D->session);
-		dbmail_imap_session_printf(D->session, "%s NO invalid message specified\r\n", D->session->tag);
+		dbmail_imap_session_buff_printf(D->session, "%s NO invalid message specified\r\n", D->session->tag);
 		break;
 	case TRUE:
 		if (flagcount > 0) {
@@ -1277,7 +1274,7 @@ void _ic_append_enter(dm_thread_data *D)
 		g_list_destroy(keywords);
 	}
 
-	dbmail_imap_session_printf(D->session, "%s OK APPEND completed\r\n", D->session->tag);
+	dbmail_imap_session_buff_printf(D->session, "%s OK APPEND completed\r\n", D->session->tag);
 
 	NOTIFY_DONE(D);
 }
@@ -1285,7 +1282,7 @@ void _ic_append_enter(dm_thread_data *D)
 int _ic_append(ImapSession *self)
 {
 	if (!check_state_and_args(self, 2, 0, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_append_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_append_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -1319,7 +1316,7 @@ static void _ic_check_enter(dm_thread_data *D)
 int _ic_check(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
-	dm_thread_data_push(self, _ic_check_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_check_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -1334,7 +1331,7 @@ static void _ic_close_enter(dm_thread_data *D)
 	ImapSession *self = D->session;
 	int result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_DELETE);
 	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE Internal database error\r\n");
 		D->status=result;
 		NOTIFY_DONE(D);
 	}
@@ -1352,7 +1349,7 @@ static void _ic_close_enter(dm_thread_data *D)
 int _ic_close(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
-	dm_thread_data_push(self, _ic_close_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_close_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -1372,7 +1369,7 @@ static void _ic_unselect_enter(dm_thread_data *D)
 int _ic_unselect(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
-	dm_thread_data_push(self, _ic_unselect_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_unselect_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -1393,7 +1390,7 @@ static void _ic_expunge_enter(dm_thread_data *D)
 	}
 	
 	if (dbmail_imap_session_mailbox_expunge(self) != DM_SUCCESS) {
-		dbmail_imap_session_printf(self, "* BYE expunge failed\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE expunge failed\r\n");
 		D->status = DM_EQUERY;
 		NOTIFY_DONE(D);
 	}
@@ -1407,11 +1404,11 @@ int _ic_expunge(ImapSession *self)
 	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
 
 	if (self->mailbox->info->permission != IMAPPERM_READWRITE) {
-		dbmail_imap_session_printf(self, "%s NO you do not have write permission on this folder\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO you do not have write permission on this folder\r\n", self->tag);
 		return 1;
 	}
 
-	dm_thread_data_push(self, _ic_expunge_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_expunge_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -1460,7 +1457,7 @@ static void sorted_search_enter(dm_thread_data *D)
 		dbmail_mailbox_set_uid(mb,self->use_uid);
 
 		if (dbmail_mailbox_build_imap_search(mb, self->args, &(self->args_idx), order) < 0) {
-			dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
+			dbmail_imap_session_buff_printf(self, "%s BAD invalid arguments to %s\r\n",
 				self->tag, cmd);
 			D->status = 1;
 			NOTIFY_DONE(D);
@@ -1485,10 +1482,10 @@ static void sorted_search_enter(dm_thread_data *D)
 	}
 
 	if (s) {
-		dbmail_imap_session_printf(self, "* %s %s\r\n", cmd, s);
+		dbmail_imap_session_buff_printf(self, "* %s %s\r\n", cmd, s);
 		g_free(s);
 	} else {
-		dbmail_imap_session_printf(self, "* %s\r\n", cmd);
+		dbmail_imap_session_buff_printf(self, "* %s\r\n", cmd);
 	}
 
 	IC_DONE_OK;
@@ -1500,7 +1497,7 @@ static int sorted_search(ImapSession *self, search_order_t order)
 	if (!check_state_and_args(self, 1, 0, IMAPCS_SELECTED)) return 1;
 	search_order_t *data = g_new0(search_order_t,1);
 	*data = order;
-	dm_thread_data_push(self, sorted_search_enter, _ic_cb_leave, (gpointer)data);
+	dm_thread_data_push((gpointer)self, sorted_search_enter, _ic_cb_leave, (gpointer)data);
 	return 0;
 }
 
@@ -1519,7 +1516,7 @@ int _ic_thread(ImapSession *self)
 	if (MATCH(self->args[0],"ORDEREDSUBJECT"))
 		return sorted_search(self,SEARCH_THREAD_ORDEREDSUBJECT);
 	if (MATCH(self->args[0],"REFERENCES"))
-		dbmail_imap_session_printf(self, "%s BAD THREAD=REFERENCES not supported\r\n",self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD THREAD=REFERENCES not supported\r\n",self->tag);
 		//return sorted_search(self,SEARCH_THREAD_REFERENCES);
 
 	return 1;
@@ -1537,7 +1534,7 @@ int _dm_imapsession_get_ids(ImapSession *self, const char *set)
 	self->ids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
 
 	if ( (!self->ids) || (g_tree_nnodes(self->ids)==0) ) {
-		dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 		return DM_EGENERAL;
 	}
 
@@ -1578,7 +1575,7 @@ static void _ic_fetch_enter(dm_thread_data *D)
 	state = 1;
 	do {
 		if ( (state = dbmail_imap_session_fetch_parse_args(self)) == -2) {
-			dbmail_imap_session_printf(self, "%s BAD invalid argument list to fetch\r\n", self->tag);
+			dbmail_imap_session_buff_printf(self, "%s BAD invalid argument list to fetch\r\n", self->tag);
 			D->status = 1;
 			NOTIFY_DONE(D);
 		}
@@ -1610,7 +1607,7 @@ static void _ic_fetch_enter(dm_thread_data *D)
 int _ic_fetch(ImapSession *self)
 {
 	if (!check_state_and_args (self, 2, 0, IMAPCS_SELECTED)) return 1;
-	dm_thread_data_push(self, _ic_fetch_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_fetch_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -1641,7 +1638,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 
 	if (self->mailbox->info->permission == IMAPPERM_READWRITE) {
 		if (db_set_msgflag(*id, self->mailbox->info->uid, cmd->flaglist, cmd->keywords, cmd->action, msginfo) < 0) {
-			dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 			return TRUE;
 		}
 	}
@@ -1676,7 +1673,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 	// reporting callback
 	if (! cmd->silent) {
 		s = imap_flags_as_string(msginfo);
-		dbmail_imap_session_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
+		dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
 		g_free(s);
 	}
 
@@ -1693,7 +1690,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	k = self->args_idx;
 	/* multiple flags should be parenthesed */
 	if (self->args[k+3] && strcmp(self->args[k+2], "(") != 0) {
-		dbmail_imap_session_printf(self, "%s BAD invalid argument(s) to STORE\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid argument(s) to STORE\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -1719,7 +1716,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	}
 
 	if (cmd->action == IMAPFA_NONE) {
-		dbmail_imap_session_printf(self, "%s BAD invalid STORE action specified\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid STORE action specified\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -1731,7 +1728,7 @@ static void _ic_store_enter(dm_thread_data *D)
 		for (j = 0; j < IMAP_NFLAGS; j++) {
 			/* storing the recent flag explicitely is not allowed */
 			if (MATCH(self->args[k+i],"\\Recent")) {
-				dbmail_imap_session_printf(self, "%s BAD invalid flag list to STORE command\r\n", self->tag);
+				dbmail_imap_session_buff_printf(self, "%s BAD invalid flag list to STORE command\r\n", self->tag);
 				D->status = 1;
 				NOTIFY_DONE(D);
 			}
@@ -1785,8 +1782,8 @@ static void _ic_store_enter(dm_thread_data *D)
 		g_list_merge(&self->mailbox->info->keywords, cmd->keywords, cmd->action, (GCompareFunc)g_ascii_strcasecmp);
 		if ( l < g_list_length(self->mailbox->info->keywords) ) {
 			char *flags = mailbox_flags(self->mailbox->info);
-			dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", flags);
-			dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+			dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+			dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
 			g_free(flags);
 		}
 		
@@ -1804,7 +1801,7 @@ static void _ic_store_enter(dm_thread_data *D)
 int _ic_store(ImapSession *self)
 {
 	if (!check_state_and_args (self, 2, 0, IMAPCS_SELECTED)) return 1;
-	dm_thread_data_push(self, _ic_store_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_store_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -1822,11 +1819,11 @@ static gboolean _do_copy(u64_t *id, gpointer UNUSED value, ImapSession *self)
 
 	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid);
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		return TRUE;
 	}
 	if (result == -2) {
-		dbmail_imap_session_printf(self, "%s NO quotum would exceed\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO quotum would exceed\r\n", self->tag);
 		return TRUE;
 	}
 	return FALSE;
@@ -1843,7 +1840,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 
 	/* check if destination mailbox exists */
 	if (! db_findmailbox(self->args[self->args_idx+1], self->userid, &destmboxid)) {
-		dbmail_imap_session_printf(self, "%s NO [TRYCREATE] specified mailbox does not exist\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO [TRYCREATE] specified mailbox does not exist\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -1880,7 +1877,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 int _ic_copy(ImapSession *self) 
 {
 	if (!check_state_and_args(self, 2, 2, IMAPCS_SELECTED)) return 1;
-	dm_thread_data_push(self, _ic_copy_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_copy_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -1894,12 +1891,12 @@ int _ic_uid(ImapSession *self)
 	int result;
 
 	if (self->state != IMAPCS_SELECTED) {
-		dbmail_imap_session_printf(self, "%s BAD UID command received in invalid state\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD UID command received in invalid state\r\n", self->tag);
 		return 1;
 	}
 
 	if (!self->args[0]) {
-		dbmail_imap_session_printf(self, "%s BAD missing argument(s) to UID\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD missing argument(s) to UID\r\n", self->tag);
 		return 1;
 	}
 
@@ -1925,7 +1922,7 @@ int _ic_uid(ImapSession *self)
 		dbmail_imap_session_set_command(self, self->args[self->args_idx++]);
 		result = _ic_thread(self);
 	} else {
-		dbmail_imap_session_printf(self, "%s BAD invalid UID command\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid UID command\r\n", self->tag);
 		result = 1;
 		self->use_uid = 0;
 	}
@@ -1954,7 +1951,7 @@ void send_quota(ImapSession *self, quota_t * quota)
 			default:
 				continue;
 			}
-			dbmail_imap_session_printf(self, "* QUOTA \"%s\" (%s %llu %llu)\r\n", quota->root, name, usage, limit);
+			dbmail_imap_session_buff_printf(self, "* QUOTA \"%s\" (%s %llu %llu)\r\n", quota->root, name, usage, limit);
 		}
 	}
 }
@@ -1971,18 +1968,18 @@ static void _ic_getquotaroot_enter(dm_thread_data *D)
 	ImapSession *self = D->session;
 
 	if (! (root = quota_get_quotaroot(self->userid, self->args[self->args_idx], &errormsg))) {
-		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, errormsg);
+		dbmail_imap_session_buff_printf(self, "%s NO %s\r\n", self->tag, errormsg);
 		D->status=1;
 		NOTIFY_DONE(D);
 	}
 
 	if (! (quota = quota_get_quota(self->userid, root, &errormsg))) {
-		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, errormsg);
+		dbmail_imap_session_buff_printf(self, "%s NO %s\r\n", self->tag, errormsg);
 		D->status=1;
 		NOTIFY_DONE(D);
 	}
 
-	dbmail_imap_session_printf(self, "* QUOTAROOT \"%s\" \"%s\"\r\n", self->args[self->args_idx], quota->root);
+	dbmail_imap_session_buff_printf(self, "* QUOTAROOT \"%s\" \"%s\"\r\n", self->args[self->args_idx], quota->root);
 
 	send_quota(self, quota);
 	quota_free(quota);
@@ -1994,7 +1991,7 @@ static void _ic_getquotaroot_enter(dm_thread_data *D)
 int _ic_getquotaroot(ImapSession *self)
 {
 	if (! check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_getquotaroot_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_getquotaroot_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -2010,7 +2007,7 @@ static void _ic_getquota_enter(dm_thread_data *D)
 	ImapSession *self = D->session;
 
 	if (! (quota = quota_get_quota(self->userid, self->args[self->args_idx], &errormsg))) {
-		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, errormsg);
+		dbmail_imap_session_buff_printf(self, "%s NO %s\r\n", self->tag, errormsg);
 		D->status=1;
 		NOTIFY_DONE(D);
 	}
@@ -2025,7 +2022,7 @@ static void _ic_getquota_enter(dm_thread_data *D)
 int _ic_getquota(ImapSession *self)
 {
 	if (! check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_getquota_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_getquota_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -2057,11 +2054,11 @@ static void _ic_setacl_enter(dm_thread_data *D)
 
 	result = imap_acl_pre_administer(self->args[self->args_idx], self->args[self->args_idx+1], self->userid, &mboxid, &targetuserid);
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal database error\r\n");
 		D->status = -1;
 		NOTIFY_DONE(D);
 	} else if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO SETACL failure: can't set acl\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO SETACL failure: can't set acl\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -2075,7 +2072,7 @@ static void _ic_setacl_enter(dm_thread_data *D)
 
 	// set the new acl
 	if (acl_set_rights(targetuserid, mboxid, self->args[self->args_idx+2]) < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal database error\r\n");
 		D->status = -1;
 		NOTIFY_DONE(D);
 	}
@@ -2087,7 +2084,7 @@ static void _ic_setacl_enter(dm_thread_data *D)
 int _ic_setacl(ImapSession *self)
 {
 	if (!check_state_and_args(self, 3, 3, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_setacl_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_setacl_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 	
@@ -2102,7 +2099,7 @@ static void _ic_deleteacl_enter(dm_thread_data *D)
 
 	if (imap_acl_pre_administer(self->args[self->args_idx], 
 				self->args[self->args_idx+1], self->userid, &mboxid, &targetuserid) == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		D->status = -1;
 		NOTIFY_DONE(D);
 	}
@@ -2116,7 +2113,7 @@ static void _ic_deleteacl_enter(dm_thread_data *D)
 
 	// set the new acl
 	if (acl_delete_acl(targetuserid, mboxid) < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal database error\r\n");
 		D->status = -1;
 		NOTIFY_DONE(D);
 	}
@@ -2128,7 +2125,7 @@ static void _ic_deleteacl_enter(dm_thread_data *D)
 int _ic_deleteacl(ImapSession *self)
 {
 	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_deleteacl_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_deleteacl_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -2140,18 +2137,18 @@ static void _ic_getacl_enter(dm_thread_data *D)
 	ImapSession *self = D->session;
 
 	if (! db_findmailbox(self->args[self->args_idx], self->userid, &mboxid)) {
-		dbmail_imap_session_printf(self, "%s NO GETACL failure: can't get acl\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO GETACL failure: can't get acl\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
 	// get acl string (string of identifier-rights pairs)
 	if (!(acl_string = acl_get_acl(mboxid))) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal database error\r\n");
 		D->status = -1;
 		NOTIFY_DONE(D);
 	}
 
-	dbmail_imap_session_printf(self, "* ACL \"%s\" %s\r\n", self->args[self->args_idx], acl_string);
+	dbmail_imap_session_buff_printf(self, "* ACL \"%s\" %s\r\n", self->args[self->args_idx], acl_string);
 	g_free(acl_string);
 
 	IC_DONE_OK;
@@ -2161,7 +2158,7 @@ static void _ic_getacl_enter(dm_thread_data *D)
 int _ic_getacl(ImapSession *self)
 {
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_getacl_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_getacl_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -2177,11 +2174,11 @@ static void _ic_listrights_enter(dm_thread_data *D)
 
 	result = imap_acl_pre_administer(self->args[self->args_idx], self->args[self->args_idx+1], self->userid, &mboxid, &targetuserid);
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal database error\r\n");
 		D->status = -1;
 		NOTIFY_DONE(D);
 	} else if (result == 0) {
-		dbmail_imap_session_printf(self, "%s, NO LISTRIGHTS failure: can't set acl\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s, NO LISTRIGHTS failure: can't set acl\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
@@ -2195,12 +2192,12 @@ static void _ic_listrights_enter(dm_thread_data *D)
 
 	// set the new acl
 	if (!(listrights_string = acl_listrights(targetuserid, mboxid))) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal database error\r\n");
 		D->status=-1;
 		NOTIFY_DONE(D);
 	}
 
-	dbmail_imap_session_printf(self, "* LISTRIGHTS \"%s\" %s %s\r\n",
+	dbmail_imap_session_buff_printf(self, "* LISTRIGHTS \"%s\" %s %s\r\n",
 		self->args[self->args_idx], self->args[self->args_idx+1], listrights_string);
 	g_free(listrights_string);
 
@@ -2211,7 +2208,7 @@ static void _ic_listrights_enter(dm_thread_data *D)
 int _ic_listrights(ImapSession *self)
 {
 	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_listrights_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_listrights_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -2223,18 +2220,18 @@ static void _ic_myrights_enter(dm_thread_data *D)
 	ImapSession *self = D->session;
 
 	if (! db_findmailbox(self->args[self->args_idx], self->userid, &mboxid)) {
-		dbmail_imap_session_printf(self, "%s NO MYRIGHTS failure: unknown mailbox\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO MYRIGHTS failure: unknown mailbox\r\n", self->tag);
 		D->status=1;
 		NOTIFY_DONE(D);
 	}
 
 	if (!(myrights_string = acl_myrights(self->userid, mboxid))) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal database error\r\n");
 		D->status = -1;
 		NOTIFY_DONE(D);
 	}
 
-	dbmail_imap_session_printf(self, "* MYRIGHTS \"%s\" %s\r\n", self->args[self->args_idx], myrights_string);
+	dbmail_imap_session_buff_printf(self, "* MYRIGHTS \"%s\" %s\r\n", self->args[self->args_idx], myrights_string);
 	g_free(myrights_string);
 
 	IC_DONE_OK;
@@ -2244,7 +2241,7 @@ static void _ic_myrights_enter(dm_thread_data *D)
 int _ic_myrights(ImapSession *self)
 {
 	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_myrights_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_myrights_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 
@@ -2252,7 +2249,7 @@ static void _ic_namespace_enter(dm_thread_data *D)
 {
 	ImapSession *self = D->session;
 
-	dbmail_imap_session_printf(self, "* NAMESPACE ((\"\" \"%s\")) ((\"%s\" \"%s\")) "
+	dbmail_imap_session_buff_printf(self, "* NAMESPACE ((\"\" \"%s\")) ((\"%s\" \"%s\")) "
 		"((\"%s\" \"%s\"))\r\n",
 		MAILBOX_SEPARATOR, NAMESPACE_USER,
 		MAILBOX_SEPARATOR, NAMESPACE_PUBLIC, MAILBOX_SEPARATOR);
@@ -2264,6 +2261,6 @@ static void _ic_namespace_enter(dm_thread_data *D)
 int _ic_namespace(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED)) return 1;
-	dm_thread_data_push(self, _ic_namespace_enter, _ic_cb_leave, NULL);
+	dm_thread_data_push((gpointer)self, _ic_namespace_enter, _ic_cb_leave, NULL);
 	return 0;
 }

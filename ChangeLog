@@ -1,3 +1,62 @@
+2008-05-31  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmailtypes.h, src/imap4.c, src/imapcommands.c, src/server.c, 
+	test/check_dbmail_imapd.c:
+	libevent/async queue IO cleanups
+
+2008-05-29  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmailtypes.h, src/dm_misc.c, src/imap4.c, src/imapcommands.c, 
+	src/server.c:
+	finish IDLE rewrite
+	* src/dbmail-imapsession.c, src/imapcommands.c:
+	start fixing threaded idle
+	* sql/postgresql/create_tables.pgsql:
+	fix default value for timestamp field
+
+2008-05-28  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/imapcommands.c:
+	fix fetch-args corruption
+	* src/dbmail-imapsession.c:
+	tuning
+
+2008-05-27  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/imapcommands.c:
+	minor fetch cleanups
+
+2008-05-26  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, test-scripts/testidle.txt:
+	fix idle/done race condition
+	* debian/rules, src/dbmail-imapsession.c, src/imapcommands.c:
+	make idle threaded as well
+	* src/dbmail-message.c, src/dm_db.c, src/imap4.c:
+	re-instate db facade calls
+	* debian/rules:
+	debian update
+	* src/dbmail-imapsession.c, src/dm_db.c, src/imap4.c:
+	blah
+	* ChangeLog, src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/server.c:
+	keep the buffer size small
+	* src/modules/authsql.c:
+	fix regression in authsql
+
+2008-05-25  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, debian/rules, src/authmodule.c:
+	grrr
+	* ChangeLog, debian/rules, src/authmodule.c, 
+	src/dbmail-imapsession.c, src/dm_db.c, src/imap4.c:
+	fix a couple of regressions in the message retrieval code
+	* debian/rules, src/dm_db.c, src/imap4.c:
+	add charset to mysql database url
+
 2008-05-25  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/server.c:

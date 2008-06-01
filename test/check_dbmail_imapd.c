@@ -187,7 +187,7 @@ END_TEST
 //void dbmail_imap_session_delete(ImapSession * self);
 //int dbmail_imap_session_readln(ImapSession * self, char * buffer);
 //int dbmail_imap_session_discard_to_eol(ImapSession *self);
-//int dbmail_imap_session_printf(ImapSession * self, char * message, ...);
+//int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...);
 //int dbmail_imap_session_set_state(ImapSession *self, int state);
 //int check_state_and_args(ImapSession * self, const char * command, int minargs, int maxargs, int state);
 //int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password);

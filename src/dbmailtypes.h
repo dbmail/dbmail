@@ -271,9 +271,9 @@ typedef struct {
 	char *pidFile;
 	int timeout;
 	int login_timeout;
-	char **iplist; // Allocated memory.
+	char **iplist;                  // Allocated memory.
 	int ipcount;
-	int *listenSockets; // Allocated memory.
+	int *listenSockets;             // Allocated memory.
 	int service_before_smtp;
 	int port;
 	int backlog;

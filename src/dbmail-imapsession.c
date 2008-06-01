@@ -70,14 +70,14 @@ static void send_data(ImapSession *self, MEM * from, int cnt)
 	while (cnt >= SEND_BUF_SIZE) {
 		memset(buf,0,sizeof(buf));
 		l = mread(buf, SEND_BUF_SIZE-1, from);
-		dbmail_imap_session_printf(self, "%s", (l>0)?buf:"");
+		dbmail_imap_session_buff_printf(self, "%s", (l>0)?buf:"");
 		cnt -= l;
 	}
 
 	if (cnt > 0) {
 		memset(buf,0,sizeof(buf));
 		l = mread(buf, cnt, from);
-		dbmail_imap_session_printf(self, "%s", (l>0)?buf:"");
+		dbmail_imap_session_buff_printf(self, "%s", (l>0)?buf:"");
 	}
 }
 
@@ -284,11 +284,11 @@ static void imap_cache_send_tmpdump(ImapSession *self, body_fetch_t *bodyfetch, 
 
 	if (bodyfetch->octetcnt > 0) {
 		cnt = get_dumpsize(bodyfetch, size);
-		dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
+		dbmail_imap_session_buff_printf(self, "]<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
 		mseek(self->cached_msg->tmpdump, bodyfetch->octetstart, SEEK_SET);
 	} else {
 		cnt = size;
-		dbmail_imap_session_printf(self, "] {%llu}\r\n", size);
+		dbmail_imap_session_buff_printf(self, "] {%llu}\r\n", size);
 		mrewind(self->cached_msg->tmpdump);
 	}
 	send_data(self, (void *)self->cached_msg->tmpdump, cnt);
@@ -618,7 +618,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 #define SEND_SPACE if (self->fi->isfirstfetchout) \
 				self->fi->isfirstfetchout = 0; \
 			else \
-				dbmail_imap_session_printf(self, " ")
+				dbmail_imap_session_buff_printf(self, " ")
 
 static gboolean _get_mailbox(u64_t UNUSED *id, MailboxInfo *mb, int *error)
 {
@@ -690,13 +690,13 @@ static void dbmail_imap_session_get_mbxinfo(ImapSession *self)
 
 static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch_t *bodyfetch, const char *type)
 {
-	if (!part) dbmail_imap_session_printf(self, "] NIL");
+	if (!part) dbmail_imap_session_buff_printf(self, "] NIL");
 	else {
 		char *tmp = imap_get_logical_part(part,type);
 		u64_t tmpdumpsize = _imap_cache_set_dump(self,tmp,IMAP_CACHE_TMPDUMP);
 		g_free(tmp);
 		if (!tmpdumpsize) 
-			dbmail_imap_session_printf(self, "] NIL");
+			dbmail_imap_session_buff_printf(self, "] NIL");
 		else 
 			imap_cache_send_tmpdump(self,bodyfetch,tmpdumpsize);
 	}
@@ -711,10 +711,10 @@ void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean no
 	gchar *s;
 	GString *ts;
 
-	dbmail_imap_session_printf(self,"HEADER.FIELDS%s %s] ", not ? ".NOT" : "", bodyfetch->hdrplist);
+	dbmail_imap_session_buff_printf(self,"HEADER.FIELDS%s %s] ", not ? ".NOT" : "", bodyfetch->hdrplist);
 
 	if (! (s = g_tree_lookup(bodyfetch->headers, &(self->msg_idnr)))) {
-		dbmail_imap_session_printf(self, "{2}\r\n\r\n");
+		dbmail_imap_session_buff_printf(self, "{2}\r\n\r\n");
 		return;
 	}
 
@@ -733,12 +733,12 @@ void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean no
 		tmp = get_crlf_encoded(ts->str);
 		cnt = strlen(tmp);
 		
-		dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n%s\r\n", 
+		dbmail_imap_session_buff_printf(self, "<%llu> {%llu}\r\n%s\r\n", 
 				bodyfetch->octetstart, cnt+2, tmp);
 	} else {
 		tmp = get_crlf_encoded(ts->str);
 		cnt = strlen(tmp);
-		dbmail_imap_session_printf(self, "{%llu}\r\n%s\r\n", cnt+2, tmp);
+		dbmail_imap_session_buff_printf(self, "{%llu}\r\n%s\r\n", cnt+2, tmp);
 	}
 
 	g_string_free(ts,TRUE);
@@ -876,7 +876,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		if (bodyfetch->partspec[0]) {
 			if (bodyfetch->partspec[0] == '0') {
-				dbmail_imap_session_printf(self, "\r\n%s BAD protocol error\r\n", self->tag);
+				dbmail_imap_session_buff_printf(self, "\r\n%s BAD protocol error\r\n", self->tag);
 				TRACE(TRACE_ERROR, "[%p] PROTOCOL ERROR", self);
 				return 1;
 			}
@@ -889,21 +889,21 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 	SEND_SPACE;
 
 	if (! self->fi->noseen) self->fi->setseen = 1;
-	dbmail_imap_session_printf(self, "BODY[%s", bodyfetch->partspec);
+	dbmail_imap_session_buff_printf(self, "BODY[%s", bodyfetch->partspec);
 
 	switch (bodyfetch->itemtype) {
 
 	case BFIT_TEXT:
-		dbmail_imap_session_printf(self, "TEXT");
+		dbmail_imap_session_buff_printf(self, "TEXT");
 	case BFIT_TEXT_SILENT:
 		_imap_send_part(self, part, bodyfetch, "TEXT");
 		break;
 	case BFIT_HEADER:
-		dbmail_imap_session_printf(self, "HEADER");
+		dbmail_imap_session_buff_printf(self, "HEADER");
 		_imap_send_part(self, part, bodyfetch, "HEADER");
 		break;
 	case BFIT_MIME:
-		dbmail_imap_session_printf(self, "MIME");
+		dbmail_imap_session_buff_printf(self, "MIME");
 		_imap_send_part(self, part, bodyfetch, "MIME");
 		break;
 	case BFIT_HEADER_FIELDS_NOT:
@@ -913,7 +913,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		break;
 	default:
 		dbmail_imap_session_buff_clear(self);
-		dbmail_imap_session_printf(self, "\r\n* BYE internal server error\r\n");
+		dbmail_imap_session_buff_printf(self, "\r\n* BYE internal server error\r\n");
 		return -1;
 
 	}
@@ -939,7 +939,7 @@ static void _fetch_envelopes(ImapSession *self)
 	}
 
 	if ((s = g_tree_lookup(self->envelopes, &(self->msg_idnr))) != NULL) {
-		dbmail_imap_session_printf(self, "ENVELOPE %s", s?s:"");
+		dbmail_imap_session_buff_printf(self, "ENVELOPE %s", s?s:"");
 		return;
 	}
 
@@ -989,7 +989,7 @@ static void _fetch_envelopes(ImapSession *self)
 	self->lo += QUERY_BATCHSIZE;
 
 	s = g_tree_lookup(self->envelopes, &(self->msg_idnr));
-	dbmail_imap_session_printf(self, "ENVELOPE %s", s?s:"");
+	dbmail_imap_session_buff_printf(self, "ENVELOPE %s", s?s:"");
 }
 
 static void _imap_show_body_sections(ImapSession *self) 
@@ -1017,7 +1017,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 	g_return_val_if_fail(id,-1);
 	
-	dbmail_imap_session_printf(self, "* %llu FETCH (", *id);
+	dbmail_imap_session_buff_printf(self, "* %llu FETCH (", *id);
 
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
@@ -1029,23 +1029,23 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
 		char *s =date_sql2imap(msginfo->internaldate);
-		dbmail_imap_session_printf(self, "INTERNALDATE \"%s\"", s);
+		dbmail_imap_session_buff_printf(self, "INTERNALDATE \"%s\"", s);
 		g_free(s);
 	}
 	if (self->fi->getSize) {
 		SEND_SPACE;
-		dbmail_imap_session_printf(self, "RFC822.SIZE %llu", msginfo->rfcsize);
+		dbmail_imap_session_buff_printf(self, "RFC822.SIZE %llu", msginfo->rfcsize);
 	}
 	if (self->fi->getFlags) {
 		SEND_SPACE;
 		s = imap_flags_as_string(msginfo);
-		dbmail_imap_session_printf(self,"FLAGS %s",s);
+		dbmail_imap_session_buff_printf(self,"FLAGS %s",s);
 		g_free(s);
 
 	}
 	if (self->fi->getUID) {
 		SEND_SPACE;
-		dbmail_imap_session_printf(self, "UID %llu", msginfo->id);
+		dbmail_imap_session_buff_printf(self, "UID %llu", msginfo->id);
 	}
 
 	if (self->fi->getMIME_IMB) {
@@ -1054,10 +1054,10 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->cached_msg->dmsg)->content), 1))==NULL) {
-			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body structure\r\n");
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body structure\r\n");
 			return -1;
 		}
-		dbmail_imap_session_printf(self, "BODYSTRUCTURE %s", s);
+		dbmail_imap_session_buff_printf(self, "BODYSTRUCTURE %s", s);
 		g_free(s);
 	}
 
@@ -1067,10 +1067,10 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->cached_msg->dmsg)->content), 0))==NULL) {
-			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body\r\n");
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body\r\n");
 			return -1;
 		}
-		dbmail_imap_session_printf(self, "BODY %s",s);
+		dbmail_imap_session_buff_printf(self, "BODY %s",s);
 		g_free(s);
 	}
 
@@ -1086,7 +1086,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		SEND_SPACE;
 
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
-		dbmail_imap_session_printf(self, "RFC822 {%llu}\r\n", self->cached_msg->dumpsize);
+		dbmail_imap_session_buff_printf(self, "RFC822 {%llu}\r\n", self->cached_msg->dumpsize);
 		send_data(self, (void *)self->cached_msg->memdump, self->cached_msg->dumpsize);
 
 		if (self->fi->getRFC822)
@@ -1100,7 +1100,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
-			dbmail_imap_session_printf(self, "BODY[] {%llu}\r\n", self->cached_msg->dumpsize);
+			dbmail_imap_session_buff_printf(self, "BODY[] {%llu}\r\n", self->cached_msg->dumpsize);
 			send_data(self, (void *)self->cached_msg->memdump, self->cached_msg->dumpsize);
 		} else {
 			mseek(self->cached_msg->memdump, dbmail_imap_session_bodyfetch_get_last_octetstart(self), SEEK_SET);
@@ -1109,7 +1109,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 			    ? (((long long)self->cached_msg->dumpsize) - dbmail_imap_session_bodyfetch_get_last_octetstart(self)) 
 			    : dbmail_imap_session_bodyfetch_get_last_octetcnt(self);
 
-			dbmail_imap_session_printf(self, "BODY[]<%llu> {%llu}\r\n", 
+			dbmail_imap_session_buff_printf(self, "BODY[]<%llu> {%llu}\r\n", 
 					dbmail_imap_session_bodyfetch_get_last_octetstart(self), actual_cnt);
 			send_data(self, (void *)self->cached_msg->memdump, actual_cnt);
 		}
@@ -1124,7 +1124,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		SEND_SPACE;
 
 		tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_HEAD);
-		dbmail_imap_session_printf(self, "RFC822.HEADER {%llu}\r\n", tmpdumpsize);
+		dbmail_imap_session_buff_printf(self, "RFC822.HEADER {%llu}\r\n", tmpdumpsize);
 		send_data(self, (void *)self->cached_msg->tmpdump, tmpdumpsize);
 	}
 
@@ -1133,7 +1133,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		SEND_SPACE;
 
 		tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_BODY);
-		dbmail_imap_session_printf(self, "RFC822.TEXT {%llu}\r\n", tmpdumpsize);
+		dbmail_imap_session_buff_printf(self, "RFC822.TEXT {%llu}\r\n", tmpdumpsize);
 		send_data(self, (void *)self->cached_msg->tmpdump, tmpdumpsize);
 
 		self->fi->setseen = 1;
@@ -1152,7 +1152,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_SEEN);
 		if (result == -1) {
 			dbmail_imap_session_buff_clear(self);
-			dbmail_imap_session_printf(self, "\r\n *BYE internal dbase error\r\n");
+			dbmail_imap_session_buff_printf(self, "\r\n *BYE internal dbase error\r\n");
 			return -1;
 		}
 		
@@ -1160,16 +1160,16 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 			result = db_set_msgflag(self->msg_idnr, self->mailbox->info->uid, setSeenSet, NULL, IMAPFA_ADD, msginfo);
 			if (result == -1) {
 				dbmail_imap_session_buff_clear(self);
-				dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
+				dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 				return -1;
 			}
 		}
 
 		self->fi->getFlags = 1;
-		dbmail_imap_session_printf(self, " ");
+		dbmail_imap_session_buff_printf(self, " ");
 	}
 
-	dbmail_imap_session_printf(self, ")\r\n");
+	dbmail_imap_session_buff_printf(self, ")\r\n");
 
 	return 0;
 }
@@ -1228,7 +1228,7 @@ int check_state_and_args(ImapSession * self, int minargs, int maxargs, int state
 	if (state != -1) {
 		if (self->state != state) {
 			if (!  (state == IMAPCS_AUTHENTICATED && self->state == IMAPCS_SELECTED)) {
-				dbmail_imap_session_printf(self, "%s BAD %s command received in invalid state [%d] != [%d]\r\n", 
+				dbmail_imap_session_buff_printf(self, "%s BAD %s command received in invalid state [%d] != [%d]\r\n", 
 					self->tag, self->command, self->state, state);
 				return 0;
 			}
@@ -1239,7 +1239,7 @@ int check_state_and_args(ImapSession * self, int minargs, int maxargs, int state
 	for (i = 0; i < minargs; i++) {
 		if (!self->args[self->args_idx+i]) {
 			/* error: need more args */
-			dbmail_imap_session_printf(self, "%s BAD missing argument%s to %s\r\n", self->tag, (minargs == 1) ? "" : "(s)", 
+			dbmail_imap_session_buff_printf(self, "%s BAD missing argument%s to %s\r\n", self->tag, (minargs == 1) ? "" : "(s)", 
 					self->command);
 			return 0;
 		}
@@ -1249,7 +1249,7 @@ int check_state_and_args(ImapSession * self, int minargs, int maxargs, int state
 
 	if (maxargs && (i > maxargs)) {
 		/* error: too many args */
-		dbmail_imap_session_printf(self, "%s BAD too many arguments to %s\r\n", 
+		dbmail_imap_session_buff_printf(self, "%s BAD too many arguments to %s\r\n", 
 				self->tag, self->command);
 		return 0;
 	}
@@ -1266,10 +1266,9 @@ void dbmail_imap_session_buff_clear(ImapSession *self)
 void dbmail_imap_session_buff_flush(ImapSession *self)
 {
 	dm_thread_data *D = g_new0(dm_thread_data,1);
+	if (self->state >= IMAPCS_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
-	TRACE(TRACE_INFO,"[%p] RESPONSE: [%s]", self, self->buff->str);
-	
 	D->wev = self->ci->wev;
 	D->data = (gpointer)self->buff->str;
 	D->cb_leave = dm_thread_data_sendmessage;
@@ -1281,7 +1280,7 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
         if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1);
 }
 
-int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
+int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
 {
         va_list ap;
         size_t j = 0, l;
@@ -1317,12 +1316,12 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 	
 	switch(valid) {
 		case -1: /* a db-error occurred */
-			dbmail_imap_session_printf(self, "* BYE internal db error validating user\r\n");
+			dbmail_imap_session_buff_printf(self, "* BYE internal db error validating user\r\n");
 			return -1;
 
 		case 0:
 			sleep(2);	/* security */
-			dbmail_imap_session_printf(self, "%s NO login rejected\r\n", self->tag);
+			dbmail_imap_session_buff_printf(self, "%s NO login rejected\r\n", self->tag);
 			TRACE(TRACE_MESSAGE, "[%p] login rejected: user [%s] ip [%s]", self, username, self->ci->ip_src);
 			return 1;
 
@@ -1352,7 +1351,8 @@ int dbmail_imap_session_prompt(ImapSession * self, char * prompt)
 	/* base64 encoding increases string length by about 40%. */
 	promptcat = g_strdup_printf("%s\r\n", prompt);
 	prompt64 = (char *)g_base64_encode((const guchar *)promptcat, strlen(promptcat));
-	dbmail_imap_session_printf(self, "+ %s\r\n", prompt64);
+	dbmail_imap_session_buff_printf(self, "+ %s\r\n", prompt64);
+	dbmail_imap_session_buff_flush(self);
 	
 	g_free(prompt64);
 	g_free(promptcat);
@@ -1367,11 +1367,11 @@ int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr)
 	int selectable;
 	selectable = db_isselectable(idnr);
 	if (selectable == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 	if (selectable == FALSE) {
-		dbmail_imap_session_printf(self, "%s NO specified mailbox is not selectable\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO specified mailbox is not selectable\r\n", self->tag);
 		return 1;
 	}
 	return 0;
@@ -1389,7 +1389,7 @@ static void notify_expunge(ImapSession *self, u64_t *uid)
 	switch (self->command_type) {
 		case IMAP_COMM_NOOP:
 		case IMAP_COMM_IDLE:
-			dbmail_imap_session_printf(self, "* %llu EXPUNGE\r\n", *msn);
+			dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", *msn);
 			dbmail_mailbox_remove_uid(self->mailbox, *uid);
 		default:
 		break;
@@ -1417,7 +1417,7 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	for (i=0; i< IMAP_NFLAGS; i++) {
 		if (old->flags[i] != new->flags[i]) {
 			s = imap_flags_as_string(new);
-			dbmail_imap_session_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
+			dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
 			g_free(s);
 			break;
 		}
@@ -1540,8 +1540,8 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	}
 
 	// never decrease without first sending expunge !!
-	if (showexists) dbmail_imap_session_printf(self, "* %u EXISTS\r\n", self->mailbox->info->exists);
-	if (showrecent) dbmail_imap_session_printf(self, "* %u RECENT\r\n", self->mailbox->info->recent);
+	if (showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", self->mailbox->info->exists);
+	if (showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", self->mailbox->info->recent);
 
 	if (update) {
 		if (unhandled)
@@ -1711,7 +1711,7 @@ static gboolean _do_expunge(u64_t *id, ImapSession *self)
 		return TRUE;
 
 	if (self->command_type == IMAP_COMM_EXPUNGE) {
-		dbmail_imap_session_printf(self, "* %llu EXPUNGE\r\n", *msn);
+		dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", *msn);
 		dbmail_mailbox_remove_uid(self->mailbox, *id);
 	}
 		
@@ -2078,7 +2078,8 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 			TRACE(TRACE_DEBUG, "[%p] last char = %c", self, *lastchar);
 			if ((*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0') || 
 				(*lastchar == '}' && *(lastchar + 1) == '\0')) {
-				dbmail_imap_session_printf(self, "+ OK gimme that string\r\n");
+				dbmail_imap_session_buff_printf(self, "+ OK gimme that string\r\n");
+				dbmail_imap_session_buff_flush(self);
 				return 0;
 			}
 		}
