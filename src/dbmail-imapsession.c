@@ -702,8 +702,7 @@ static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch_t *
 	}
 }
 
-#define QUERY_BATCHSIZE 500
-
+#define QUERY_BATCHSIZE 2000
 
 void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean not)
 {
@@ -820,7 +819,7 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 
 	c = db_con_get();	
 	TRY
-		r = Connection_executeQuery(c, q->str);
+		r = db_query(c, q->str);
 		while (db_result_next(r)) {
 			
 			id = db_result_get_u64(r, 0);
@@ -1300,7 +1299,7 @@ int dbmail_imap_session_printf(ImapSession * self, char * message, ...)
 	if ((l-j) > 0)
 		TRACE(TRACE_DEBUG,"[%p] [%s %s] [%s]", self, self->tag, self->command, self->buff->str+j);
 
-	if (self->buff->len > 8192)
+	if (self->buff->len > 128)
 		dbmail_imap_session_buff_flush(self);
 
         return (int)(l-j);
