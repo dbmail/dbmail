@@ -1598,19 +1598,22 @@ void imap_cb_idle_time (void *arg)
 #define IDLE_BUFFER 4
 void imap_cb_idle_read (void *arg)
 {
+	int l;
 	char buffer[IDLE_BUFFER];
 	ImapSession *self = (ImapSession *)arg;
 
 	TRACE(TRACE_DEBUG,"[%p] [%s]", self, self->tag);
 
 	memset(buffer,0,sizeof(buffer));
-	if (! (ci_read(self->ci, buffer, IDLE_BUFFER)))
-		return;
+	l = ci_read(self->ci, buffer, IDLE_BUFFER);
+	bufferevent_disable(self->ci->rev, EV_READ);
+
+	if (! l) return;
 
 	if (strlen(buffer) > 4 && strncasecmp(buffer,"DONE",4)==0) {
 		dbmail_imap_session_printf(self, "%s OK IDLE terminated\r\n", self->tag);
-		dbmail_imap_session_buff_flush(self);
-		dbmail_imap_session_reset(self);
+		//dbmail_imap_session_buff_flush(self);
+		//dbmail_imap_session_reset(self);
 		self->command_state = TRUE; // done
 	} else if (strlen(buffer) > 0) {
 		dbmail_imap_session_printf(self,"%s BAD Expecting DONE\r\n", self->tag);

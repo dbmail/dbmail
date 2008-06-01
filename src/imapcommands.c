@@ -132,6 +132,7 @@ static void _ic_logout_enter(dm_thread_data *D)
 	dbmail_imap_session_mailbox_update_recent(self);
 	dbmail_imap_session_printf(self, "* BYE\r\n");
 	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
+	IC_DONE_OK;
 	NOTIFY_DONE(D);
 }
 
