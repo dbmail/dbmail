@@ -1,3 +1,8 @@
+2008-06-02  Paul J Stevens <paul@nfg.nl>
+
+	* src/dm_misc.c, src/imap4.c:
+	minor fix
+
 2008-05-31  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
@@ -49,20 +54,6 @@
 
 2008-05-25  Paul Stevens <paul@nfg.nl>
 
-	* ChangeLog, debian/rules, src/authmodule.c:
-	grrr
-	* ChangeLog, debian/rules, src/authmodule.c, 
-	src/dbmail-imapsession.c, src/dm_db.c, src/imap4.c:
-	fix a couple of regressions in the message retrieval code
-	* debian/rules, src/dm_db.c, src/imap4.c:
-	add charset to mysql database url
-
-2008-05-25  Paul J Stevens <paul@nfg.nl>
-
-	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/server.c:
-	keep the buffer size small
-	* src/modules/authsql.c:
-	fix regression in authsql
 	* ChangeLog, debian/rules, src/authmodule.c:
 	grrr
 	* ChangeLog, debian/rules, src/authmodule.c, 

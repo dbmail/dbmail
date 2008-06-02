@@ -2349,6 +2349,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 			break;
 		}
 	}
+	TRACE(TRACE_INFO, "[%p] C < [%s]", self, buffer);
 
 	return result;
 }

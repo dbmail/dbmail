@@ -242,6 +242,8 @@ static void imap_handle_exit(ImapSession *session, int status)
 			break;
 	}
 	session->command_state = TRUE;
+	bufferevent_enable(session->ci->rev, EV_READ);
+	session->ci->cb_read(session);
 }
 
 
