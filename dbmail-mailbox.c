@@ -741,6 +741,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	/* SEARCH */
 
 	if ( MATCH(key, "all") ) {
+		TRACE(TRACE_DEBUG,"IST_UIDSET: 1:*");
 		value->type = IST_UIDSET;
 		strcpy(value->search, "1:*");
 		(*idx)++;
@@ -752,6 +753,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		g_return_val_if_fail(check_msg_set(search_keys[*idx + 1]),-1);
 		value->type = IST_UIDSET;
 		(*idx)++;
+		TRACE(TRACE_DEBUG,"IST_UIDSET: %s", search_keys[(*idx)]);
 		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
 		(*idx)++;
 	}
@@ -1073,6 +1075,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		return 1;
 	
 	} else if (check_msg_set(key)) {
+		TRACE(TRACE_DEBUG,"IST_SET: %s", key);
 		value->type = IST_SET;
 		strncpy(value->search, key, MAX_SEARCH_LEN);
 		(*idx)++;
@@ -1116,10 +1119,7 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 
 	/* default initial key for ANDing */
 	value = g_new0(search_key_t,1);
-	if (self->uid)
-		value->type = IST_UIDSET;
-	else
-		value->type = IST_SET;
+	value->type = IST_SET;
 
 	if (check_msg_set(search_keys[*idx])) {
 		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
@@ -1293,24 +1293,26 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
 			 db_get_sql(SQL_INSENSITIVE_LIKE), s->hdrfld, 
 			 partial, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
-			break;
+		break;
 
 		case IST_DATA_TEXT:
-
-		memset(partial,0,sizeof(partial));
-		snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "headervalue");
-		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
-			"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-			"JOIN %sheadervalue v on v.physmessage_id=p.id "
-			"WHERE mailbox_idnr = %llu "
-			"AND status IN (%d,%d) "
-			"AND %s %s '%%%s%%' "
-			"ORDER BY message_idnr",
-			DBPFX, DBPFX, DBPFX, 
-			dbmail_mailbox_get_id(self),
-			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-			partial, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
-			break;
+		memset(partial, 0, sizeof(partial));
+		snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
+		g_string_printf(q, "SELECT m.message_idnr, v.headervalue, k.messageblk " 
+				"FROM %smessageblks k "
+				"JOIN %sphysmessage p ON k.physmessage_id=p.id "
+				"JOIN %smessages m ON m.physmessage_id=p.id "
+				"JOIN %sheadervalue v ON v.physmessage_id=p.id "
+				"WHERE m.mailbox_idnr=%llu AND m.status in (%d,%d) "
+				"HAVING %s %s '%%%s%%' "
+				"OR k.messageblk %s '%%%s%%'",
+				DBPFX,DBPFX,DBPFX,DBPFX,
+				dbmail_mailbox_get_id(self),
+				MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+				partial, db_get_sql(SQL_INSENSITIVE_LIKE), s->search,
+				db_get_sql(SQL_INSENSITIVE_LIKE), s->search
+			       );
+		break;
 			
 		case IST_IDATE:
 		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
