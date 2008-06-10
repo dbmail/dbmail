@@ -1386,14 +1386,18 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_DATA_TEXT:
 
 			memset(partial,0,sizeof(partial));
-			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "headervalue");
-			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
-				"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-				"JOIN %sheadervalue v on v.physmessage_id=p.id "
-				"WHERE mailbox_idnr = ? AND status IN (?,?) "
-				"AND %s %s ? ORDER BY message_idnr",
-				DBPFX, DBPFX, DBPFX, 
-				partial, db_get_sql(SQL_INSENSITIVE_LIKE));
+			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
+			g_string_printf(q,"SELECT m.message_idnr,v.headervalue,k.data FROM %smimeparts k "
+					"JOIN %spartlists l on k.id=l.part_id "
+					"JOIN %sphysmessage p ON l.physmessage_id=p.id "
+					"JOIN %sheadervalue v on v.physmessage_id=p.id "
+					"JOIN %smessages m on m.physmessage_id=p.id "
+					"WHERE m.mailbox_idnr = ? AND status IN (?,?) "
+					"HAVING %s %s ? OR k.data %s ? "
+					"ORDER BY message_idnr",
+					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
+					partial, db_get_sql(SQL_INSENSITIVE_LIKE), 
+					db_get_sql(SQL_INSENSITIVE_LIKE));
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
@@ -1402,6 +1406,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			memset(partial,0,sizeof(partial));
 			snprintf(partial, DEF_FRAGSIZE, "%%%s%%", s->search);
 			db_stmt_set_str(st, 4, partial);
+			db_stmt_set_str(st, 5, partial);
 
 			break;
 				
