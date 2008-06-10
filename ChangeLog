@@ -1,6 +1,11 @@
-2008-06-02  Paul J Stevens <paul@nfg.nl>
+2008-06-09  Paul J Stevens <paul@nfg.nl>
 
-	* src/dm_misc.c, src/imap4.c:
+	* src/dbmail-mailbox.c:
+	imap search fix
+
+2008-06-02  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, src/dm_misc.c, src/imap4.c:
 	minor fix
 
 2008-05-31  Paul J Stevens <paul@nfg.nl>
