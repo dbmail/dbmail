@@ -1186,10 +1186,7 @@ int dbmail_mailbox_build_imap_search(DbmailMailbox *self, char **search_keys, u6
 
 	/* default initial key for ANDing */
 	value = g_new0(search_key_t,1);
-	if (self->uid)
-		value->type = IST_UIDSET;
-	else
-		value->type = IST_SET;
+	value->type = IST_SET;
 
 	if (check_msg_set(search_keys[*idx])) {
 		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);

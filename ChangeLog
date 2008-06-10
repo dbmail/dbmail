@@ -1,3 +1,10 @@
+2008-06-10  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, src/dbmail-mailbox.c:
+	fix bugs 670 and 704 by fixing imap search text
+	* src/dbmail-mailbox.c:
+	imap search fix
+
 2008-06-09  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-mailbox.c:
