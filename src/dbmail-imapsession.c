@@ -166,14 +166,17 @@ ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command
 }
 
 
-static void _mbxinfo_keywords_destroy(u64_t UNUSED *id, MailboxInfo *mb, gpointer UNUSED x)
+static void _mbxinfo_free(u64_t UNUSED *id, MailboxInfo *mb, gpointer UNUSED x)
 {
 	if (mb->keywords) g_list_destroy(mb->keywords);
+	mb->keywords = NULL;
+	if (mb->name) g_free(mb->name);
+	mb->name = NULL;
 }
 
 static void _mbxinfo_destroy(ImapSession *self)
 {
-	g_tree_foreach(self->mbxinfo, (GTraverseFunc)_mbxinfo_keywords_destroy, NULL);
+	g_tree_foreach(self->mbxinfo, (GTraverseFunc)_mbxinfo_free, NULL);
 	g_tree_destroy(self->mbxinfo);
 	self->mbxinfo = NULL;
 }
@@ -1680,11 +1683,9 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 			break;
 
 		case IMAPCS_AUTHENTICATED:
-			assert(self->ci);
 			// change from login_timeout to main timeout
+			assert(self->ci);
 			self->timeout->tv_sec = self->ci->timeout; 
-			if (self->ci->rev)
-				event_add(self->ci->rev, self->timeout);
 			break;
 
 		default:
@@ -1992,8 +1993,10 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 			strncat(self->rbuff, buff, r);
 			self->rbuff_size -= self->ci->len;
 
-			if (self->rbuff_size > 0)
-				return 0; // return to fetch more
+			if (self->rbuff_size > 0) {
+				event_add(self->ci->rev, self->timeout); // reschedule cause we need more
+				return 0;
+			}
 				
 			// the string-literal is complete
 			self->args[self->args_idx++] = self->rbuff;
@@ -2115,11 +2118,6 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 	}
 
 finalize:
-	if (self->rbuff_size > 0) {
-		TRACE(TRACE_DEBUG, "[%p] need more: [%d]", self, self->rbuff_size);
-		event_add(self->ci->rev, self->timeout); // reschedule cause we need more
-		return 0;
-	}
 	if ((self->args_idx == 1) && MATCH(self->args[0],"LOGIN") ) {
 		TRACE(TRACE_DEBUG, "[%p] prompt for authenticate tokens", self);
 

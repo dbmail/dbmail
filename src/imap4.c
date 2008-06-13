@@ -259,7 +259,12 @@ void imap_cb_read(void *arg)
 			return;
 		}
 	
-		if (! imap4_tokenizer(session, buffer))
+		if (! imap4_tokenizer(session, buffer)) {
+			event_add(session->ci->rev, session->timeout);
+			return;
+		}
+		
+		if (! session->parser_state)
 			return;
 
 		if ((result = imap4(session))) {
@@ -357,7 +362,8 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 	/* fetch the tag and command */
 	if (! session->tag) {
 
-		if (strcmp(buffer,"\n")==0) return 0;
+		if (strcmp(buffer,"\n")==0)
+			return 0;
 
 		session->parser_state = 0;
 		TRACE(TRACE_INFO, "[%p] COMMAND: [%s]", session, buffer);
@@ -405,7 +411,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 	if (session->parser_state)
 		TRACE(TRACE_DEBUG,"parser_state: [%d]", session->parser_state);
 
-	return session->parser_state;
+	return 1;
 }
 	
 void _ic_cb_leave(gpointer data)
