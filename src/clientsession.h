@@ -24,7 +24,6 @@ void client_session_reset_parser(ClientSession_t *session);
 void client_session_bailout(ClientSession_t *session);
 void client_session_set_timeout(ClientSession_t *session, int timeout);
 
-void socket_time_cb(int fd, short what, void *arg);
 void socket_read_cb(int fd, short what, void *arg);
 void socket_write_cb(int fd, short what, void *arg);
  

@@ -42,7 +42,7 @@ typedef struct {
 	char *tag;
 	char *command;
 	int command_type;
-	int timeout;
+	struct timeval *timeout;
 	int loop; // idle loop counter
 	char **args;
 	u64_t args_idx;
@@ -88,7 +88,7 @@ typedef int (*IMAP_COMMAND_HANDLER) (ImapSession *);
 typedef struct {
 	void (* cb_enter)(gpointer);		/* callback on thread entry		*/
 	void (* cb_leave)(gpointer);		/* callback on thread exit		*/
-	struct event *wev;			/* */
+	int tx;					/* write filehandle */
 	int status;				/* command result 			*/
 	ImapSession *session;
 	gpointer data;				/* payload				*/

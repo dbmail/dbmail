@@ -50,11 +50,10 @@ ClientSession_t * client_session_new(client_sock *c)
 
         event_set(ci->rev, ci->rx, EV_READ, socket_read_cb, (void *)session);
         event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
-	timeout_set(ci->tev, socket_time_cb, (void *)session);
-
 	session->ci = ci;
 
 	session->rbuff = g_string_new("");
+	session->timeout = g_new0(struct timeval,1);
 
 	return session;
 }
@@ -109,6 +108,11 @@ void client_session_bailout(ClientSession_t *session)
 	ci_close(session->ci);
 }
 
+void client_session_set_timeout(ClientSession_t *session, int timeout)
+{
+	session->timeout->tv_sec = timeout;
+}
+
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	C c;
@@ -147,25 +151,13 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 		case IMAPCS_INITIAL_CONNECT:
 		case IMAPCS_NON_AUTHENTICATED:
 			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->login_timeout);
-			timeout_add(session->ci->tev, session->ci->login_timeout);
+			client_session_set_timeout(session, session->ci->login_timeout);
 			break;
 
 		default:
 			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->timeout);
-			timeout_add(session->ci->tev, session->ci->timeout);
+			client_session_set_timeout(session, session->ci->timeout);
 			break;
 	}
-}
-
-
-void socket_time_cb(int fd UNUSED, short what UNUSED, void *arg)
-{
-	ClientSession_t *session = (ClientSession_t *)arg;
-	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
-	int serr = errno;
-	if (serr) 
-		TRACE(TRACE_INFO, "client disconnected. %s", strerror(serr));
-
-	session->ci->cb_time(session);
 }
 

@@ -217,7 +217,6 @@ typedef struct {
 	struct event *pev;		/* self-pipe event */
 	void (*cb_pipe) (void *);	/* callback for self-pipe events */
 	struct event *rev, *wev;  	/* read event, write event */
-	struct event *tev, *tev_idle;	/* timeout events */
 	void (*cb_read) (void *);	// pointers to event callbacks
 	void (*cb_time) (void *);
 	void (*cb_write) (void *);
@@ -240,7 +239,7 @@ typedef struct {
 	int error_count;		/**< number of errors that have occured */
 	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */
 	int SessionResult;		/**< what happened during the session */
-	int timeout;			/**< timeout on socket */
+	struct timeval *timeout;		/**< timeout on socket */
 
 	int parser_state;
 	int command_state;

@@ -65,6 +65,7 @@ static void dm_thread_data_free(gpointer data);
 void dm_queue_drain(clientbase_t *client UNUSED)
 {
 	gpointer data;
+	TRACE(TRACE_DEBUG,"begin...");
 	do {
 		data = g_async_queue_try_pop(queue);
 		if (data) {
@@ -73,6 +74,7 @@ void dm_queue_drain(clientbase_t *client UNUSED)
 			dm_thread_data_free(data);
 		}
 	} while (data);
+	TRACE(TRACE_DEBUG,"done.");
 }
 
 /* 
@@ -97,7 +99,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 
 	// we're not done until we're done
 	D->session->command_state = FALSE; 
-	D->wev		= s->ci->wev;
+	D->tx		= s->ci->tx;
 
 	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
 
@@ -123,10 +125,10 @@ void dm_thread_data_free(gpointer data)
 void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
-	if (D->data && D->wev) {
+	if (D->data && D->tx) {
 		char *message = (char *)D->data;
 		TRACE(TRACE_INFO,"[%p] S > [%s]", D, message);
-		write(D->wev,(gconstpointer)message, strlen(message));
+		write(D->tx,(gconstpointer)message, strlen(message));
 	}
 }
 
@@ -446,9 +448,6 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 
 	client->rev = g_new0(struct event, 1);
 	client->wev = g_new0(struct event, 1);
-	client->tev = g_new0(struct event, 1);
-	client->tev_idle = g_new0(struct event, 1);
-
 	client->pev = g_new0(struct event, 1);
 	event_set(client->pev, selfpipe[0], EV_READ, client_pipe_cb, client);
 	event_add(client->pev, NULL);

@@ -145,6 +145,7 @@ ImapSession * dbmail_imap_session_new(void)
 	self->args = g_new0(char *, MAX_ARGS);
 	self->buff = g_string_new("");
 	self->fi = g_new0(fetch_items_t,1);
+	self->timeout = g_new0(struct timeval,1);
  
 	return self;
 }
@@ -204,6 +205,14 @@ void dbmail_imap_session_delete(ImapSession * self)
 	if (self->ids) {
 		g_tree_destroy(self->ids);
 		self->ids = NULL;
+	}
+	if (self->timeout) {
+		g_free(self->timeout);
+		self->timeout = NULL;
+	}
+	if (self->recent) {
+		g_list_destroy(self->recent);
+		self->recent = NULL;
 	}
 
 	dbmail_imap_session_fetch_free(self);
@@ -1269,7 +1278,7 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	if (self->state >= IMAPCS_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
-	D->wev = self->ci->wev;
+	D->tx = self->ci->tx;
 	D->data = (gpointer)self->buff->str;
 	D->cb_leave = dm_thread_data_sendmessage;
 
@@ -1278,6 +1287,7 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 
         g_async_queue_push(queue, (gpointer)D);
         if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1);
+	event_add(self->ci->wev, NULL);
 }
 
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
@@ -1675,7 +1685,7 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 		case IMAPCS_AUTHENTICATED:
 			assert(self->ci);
 			// change from login_timeout to main timeout
-			self->timeout = self->ci->timeout; 
+			self->timeout->tv_sec = self->ci->timeout; 
 			if (self->ci->rev)
 				event_add(self->ci->rev, self->timeout);
 			break;
