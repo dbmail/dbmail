@@ -126,17 +126,11 @@ int _ic_noop(ImapSession *self)
  *
  * prepares logout from IMAP-server
  */
-static void _ic_logout_enter(dm_thread_data *D)
-{
-	ImapSession *self = D->session;
-	dbmail_imap_session_mailbox_update_recent(self);
-}
-
 int _ic_logout(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, -1)) return 1;
+	dbmail_imap_session_mailbox_update_recent(self);
 	dbmail_imap_session_set_state(self, IMAPCS_LOGOUT);
-	dm_thread_data_push((gpointer)self, _ic_logout_enter, NULL, NULL);
 	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
 	return 2;
 }
