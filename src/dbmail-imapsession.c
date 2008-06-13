@@ -1274,10 +1274,11 @@ void dbmail_imap_session_buff_clear(ImapSession *self)
 
 void dbmail_imap_session_buff_flush(ImapSession *self)
 {
-	dm_thread_data *D = g_new0(dm_thread_data,1);
+	dm_thread_data *D;
 	if (self->state >= IMAPCS_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
+	D = g_new0(dm_thread_data,1);
 	D->session = self;
 	D->data = (gpointer)self->buff->str;
 	D->cb_leave = dm_thread_data_sendmessage;
@@ -1300,9 +1301,6 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
         g_string_append_vprintf(self->buff, message, ap);
         l = self->buff->len;
         va_end(ap);
-
-	if ((l-j) > 0)
-		TRACE(TRACE_DEBUG,"[%p] [%s %s] [%s]", self, self->tag, self->command, self->buff->str+j);
 
 	if (self->buff->len > 128)
 		dbmail_imap_session_buff_flush(self);
@@ -2119,6 +2117,7 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 finalize:
 	if (self->rbuff_size > 0) {
 		TRACE(TRACE_DEBUG, "[%p] need more: [%d]", self, self->rbuff_size);
+		event_add(self->ci->rev, self->timeout); // reschedule cause we need more
 		return 0;
 	}
 	if ((self->args_idx == 1) && MATCH(self->args[0],"LOGIN") ) {
@@ -2137,6 +2136,7 @@ finalize:
 	}
 #endif
 	self->args_idx = 0;
+
 	return 1;
 }
 

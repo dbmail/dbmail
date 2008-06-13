@@ -1,0 +1,11 @@
+1 capability
+2 authenticate login
+dGVzdHVzZXIx
+dGVzdA==
+3 select INBOX
+4 idle
+done
+5 list "" *
+6 append INBOX {10}
+From: test
+7 logout

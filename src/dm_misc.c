@@ -2296,7 +2296,8 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	s = g_strdup_vprintf(msg, ap);
 	va_end(ap);
 
-	TRACE(TRACE_DEBUG,"[%s]", s);
+	TRACE(TRACE_DEBUG,"[%p] S > [%s]", self, s);
+	event_add(self->wev, NULL);
 	write(self->tx, (gconstpointer)s, strlen(s));
 	g_free(s);
 	return 0;

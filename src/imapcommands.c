@@ -1029,7 +1029,6 @@ int _ic_idle(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_idle_enter, _ic_cb_leave, NULL);
-	event_add(self->ci->rev, self->timeout);
 	return 0;
 }
 

@@ -65,7 +65,6 @@ static void dm_thread_data_free(gpointer data);
 void dm_queue_drain(clientbase_t *client UNUSED)
 {
 	gpointer data;
-	TRACE(TRACE_DEBUG,"begin...");
 	do {
 		data = g_async_queue_try_pop(queue);
 		if (data) {
@@ -74,7 +73,6 @@ void dm_queue_drain(clientbase_t *client UNUSED)
 			dm_thread_data_free(data);
 		}
 	} while (data);
-	TRACE(TRACE_DEBUG,"done.");
 }
 
 /* 
@@ -125,12 +123,8 @@ void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
-	if (D->data && D->session) {
-		char *message = (char *)D->data;
-		TRACE(TRACE_INFO,"[%p] S > [%s]", D, message);
-		write(session->ci->tx,(gconstpointer)message, strlen(message));
-		event_add(session->ci->wev,NULL);
-	}
+	if (D->data && D->session)
+		ci_write(session->ci, (char *)D->data);
 }
 
 /* 
