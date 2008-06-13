@@ -1066,6 +1066,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->cached_msg->dmsg)->content), 1))==NULL) {
+			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body structure\r\n");
 			return -1;
 		}
@@ -1079,6 +1080,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->cached_msg->dmsg)->content), 0))==NULL) {
+			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body\r\n");
 			return -1;
 		}
@@ -1182,6 +1184,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 
 	dbmail_imap_session_buff_printf(self, ")\r\n");
+	dbmail_imap_session_buff_flush(self);
 
 	return 0;
 }
@@ -1305,8 +1308,8 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
         l = self->buff->len;
         va_end(ap);
 
-	if (self->buff->len > 128)
-		dbmail_imap_session_buff_flush(self);
+	//if (self->buff->len > 128)
+	//	dbmail_imap_session_buff_flush(self);
 
         return (int)(l-j);
 }

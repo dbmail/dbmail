@@ -48,6 +48,7 @@ int imap_before_smtp = 0;
  * event-loop by sending a char into the selfpipe
  */
 #define NOTIFY_DONE(D) \
+	dbmail_imap_session_buff_flush(D->session); \
 	D->session->command_state=TRUE; \
 	g_async_queue_push(queue, (gpointer)D); \
 	if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1); \
@@ -377,18 +378,16 @@ void _ic_create_enter(dm_thread_data *D)
 	int result;
 	u64_t mboxid;
 	const char *message;
-	GString *s = g_string_new("");
+	ImapSession *self = D->session;
 
-	result = db_mailbox_create_with_parents(D->session->args[D->session->args_idx], BOX_COMMANDLINE, D->session->userid, &mboxid, &message);
+	result = db_mailbox_create_with_parents(self->args[self->args_idx], BOX_COMMANDLINE, self->userid, &mboxid, &message);
 
 	if (result > 0)
-		dbmail_imap_session_buff_printf(D->session, "%s NO %s\r\n", D->session->tag, message);
+		dbmail_imap_session_buff_printf(self, "%s NO %s\r\n", self->tag, message);
 	else if (result < 0)
-		dbmail_imap_session_buff_printf(D->session, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 	else
-		dbmail_imap_session_buff_printf(D->session, "%s OK %s completed\r\n", D->session->tag, D->session->command);
-
-	g_string_free(s, FALSE);
+		IC_DONE_OK;
 
 	NOTIFY_DONE(D);
 }
