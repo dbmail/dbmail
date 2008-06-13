@@ -1278,7 +1278,7 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	if (self->state >= IMAPCS_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
-	D->tx = self->ci->tx;
+	D->session = self;
 	D->data = (gpointer)self->buff->str;
 	D->cb_leave = dm_thread_data_sendmessage;
 
@@ -1287,7 +1287,6 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 
         g_async_queue_push(queue, (gpointer)D);
         if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1);
-	event_add(self->ci->wev, NULL);
 }
 
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)

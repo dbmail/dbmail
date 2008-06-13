@@ -223,7 +223,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 			imap_session_printf(session, "%s OK LOGOUT completed\r\n", session->tag);
 			break;
 	}
-	session->command_state = TRUE;
 }
 
 
@@ -233,7 +232,7 @@ void imap_cb_read(void *arg)
 	char buffer[MAX_LINESIZE];
 	int result;
 
-	TRACE(TRACE_DEBUG, "[%p]", session);
+	TRACE(TRACE_DEBUG, "[%p] state [%d] command_state [%d]", session, session->state, session->command_state);
 
 	if (session->state == IMAPCS_ERROR) {
 		TRACE(TRACE_DEBUG, "session->state: ERROR. abort");
@@ -243,9 +242,15 @@ void imap_cb_read(void *arg)
 
 	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
 
+		if (session->error_count >= MAX_FAULTY_RESPONSES) {
+			imap_session_printf(session, "* BYE [TRY RFC]\r\n");
+			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+			event_add(session->ci->wev, NULL);
+			return;
+		}
+
 		TRACE(TRACE_DEBUG,"[%p] read [%s]", session, buffer);
 		if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop
-			event_add(session->ci->rev, NULL);
 			session->command_state = FALSE;
 			dm_thread_data *D = g_new0(dm_thread_data,1);
 			D->data = (gpointer)g_strdup(buffer);
@@ -259,15 +264,6 @@ void imap_cb_read(void *arg)
 		if ((result = imap4(session))) {
 			imap_handle_exit(session, result);
 			break;
-		}
-
-		if (session->error_count >= MAX_FAULTY_RESPONSES) {
-			TRACE(TRACE_DEBUG,"error_count [%d]", session->error_count);
-			/* we have had just about it with this user */
-			sleep(2);	/* avoid DOS attacks */
-			imap_session_printf(session, "* BYE [TRY RFC]\r\n");
-			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
-			return;
 		}
 
 		return;
@@ -404,6 +400,8 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 
 	if (session->parser_state)
 		TRACE(TRACE_DEBUG,"parser_state: [%d]", session->parser_state);
+	else
+		event_add(session->ci->wev, NULL); // reschedule cause we need more
 
 	return session->parser_state;
 }

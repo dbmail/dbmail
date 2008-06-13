@@ -99,7 +99,6 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 
 	// we're not done until we're done
 	D->session->command_state = FALSE; 
-	D->tx		= s->ci->tx;
 
 	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
 
@@ -125,10 +124,12 @@ void dm_thread_data_free(gpointer data)
 void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
-	if (D->data && D->tx) {
+	ImapSession *session = (ImapSession *)D->session;
+	if (D->data && D->session) {
 		char *message = (char *)D->data;
 		TRACE(TRACE_INFO,"[%p] S > [%s]", D, message);
-		write(D->tx,(gconstpointer)message, strlen(message));
+		write(session->ci->tx,(gconstpointer)message, strlen(message));
+		event_add(session->ci->wev,NULL);
 	}
 }
 
