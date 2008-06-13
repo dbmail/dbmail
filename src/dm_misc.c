@@ -1131,7 +1131,7 @@ int discard_client_input(clientbase_t *ci)
 {
 	int c = 0, n = 0;
 
-	while ((bufferevent_read(ci->rev, (void *)&c, 1)) == 1) {
+	while ((read(ci->rx, (void *)&c, 1)) == 1) {
 		if (c == '\r') {
 			if (n == 4) n = 5;	 /*  \r\n.\r    */
 			else n = 1; 		 /*  \r         */
@@ -2282,7 +2282,7 @@ char * dm_get_hash_for_string(const char *buf)
 		break;
 	}
 
-	return digest;
+	return (char *)digest;
 }
 
 int ci_write(clientbase_t *self, char * msg, ...)
@@ -2297,7 +2297,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	va_end(ap);
 
 	TRACE(TRACE_DEBUG,"[%s]", s);
-	bufferevent_write(self->wev, s, strlen(s));
+	write(self->tx, (gconstpointer)s, strlen(s));
 	g_free(s);
 	return 0;
 }
@@ -2307,13 +2307,12 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	size_t i = 0;
 	char c;
 
-	assert(self->rev);
 	assert(buffer);
 	memset(buffer, 0, sizeof(buffer));
 
 	self->len = 0;
 	while (self->len < n) {
-		if ((bufferevent_read(self->rev, (void *)&c, 1)) != 1)
+		if ((read(self->rx, (void *)&c, 1)) != 1)
 			break;
 		self->len++;
 		if (c == '\r') continue;
@@ -2327,7 +2326,6 @@ int ci_readln(clientbase_t *self, char * buffer)
 	char c=0;
 	int result = 0;
 
-	assert(self->rev);
 	assert(self->line_buffer);
 	memset(buffer, 0, MAX_LINESIZE);
 
@@ -2335,7 +2333,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 		self->len = 0;
 
 	while (self->len < MAX_LINESIZE) {
-		if ((bufferevent_read(self->rev, (void *)&c, 1)) != 1)
+		if ((read(self->rx, (void *)&c, 1)) != 1)
 			break;
 
 		result++;
@@ -2363,12 +2361,10 @@ void ci_close(clientbase_t *self)
 	self->pev = NULL;
 
 	g_async_queue_unref(self->queue);
-	bufferevent_disable(self->rev, EV_READ);
-	bufferevent_disable(self->wev, EV_WRITE);
-	bufferevent_free(self->rev);
-	bufferevent_free(self->wev);
-	self->rev = NULL;
-	self->wev = NULL;
+	event_del(self->rev);
+	event_del(self->wev);
+	g_free(self->rev); self->rev = NULL;
+	g_free(self->wev); self->wev = NULL;
 
 	if (self->tx > 0) {
 		shutdown(self->tx, SHUT_RDWR);

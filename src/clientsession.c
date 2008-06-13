@@ -48,11 +48,11 @@ ClientSession_t * client_session_new(client_sock *c)
 	create_unique_id(unique_id, 0);
 	session->apop_stamp = g_strdup_printf("<%s@%s>", unique_id, session->hostname);
 
-        ci->rev = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
-        ci->wev = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
+        event_set(ci->rev, ci->rx, EV_READ, socket_read_cb, (void *)session);
+        event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
+	timeout_set(ci->tev, socket_time_cb, (void *)session);
 
 	session->ci = ci;
-        session->timeout = ci->login_timeout;
 
 	session->rbuff = g_string_new("");
 
@@ -102,21 +102,14 @@ void client_session_reset_parser(ClientSession_t *session)
 	}
 }
 
-void client_session_set_timeout(ClientSession_t *session, int timeout)
-{
-	session->timeout = timeout;
-        bufferevent_settimeout(session->ci->rev, session->timeout, 0);
-}
-
 void client_session_bailout(ClientSession_t *session)
 {
 	if (! session) return;
 	client_session_reset(session);
-	//g_string_free(session->rbuff,TRUE);
 	ci_close(session->ci);
 }
 
-void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
+void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	C c;
 	ClientSession_t *session = (ClientSession_t *)arg;
@@ -134,9 +127,8 @@ void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
 	session->ci->cb_read(session);
 }
 
-void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
+void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
-
 	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
 
@@ -155,31 +147,25 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 		case IMAPCS_INITIAL_CONNECT:
 		case IMAPCS_NON_AUTHENTICATED:
 			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->login_timeout);
-			session->timeout = session->ci->login_timeout;
+			timeout_add(session->ci->tev, session->ci->login_timeout);
 			break;
 
 		default:
 			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->timeout);
-			session->timeout = session->ci->timeout;
+			timeout_add(session->ci->tev, session->ci->timeout);
 			break;
 	}
 }
 
 
-void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
+void socket_time_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
 	int serr = errno;
-	if (what & EVBUFFER_EOF)
+	if (serr) 
 		TRACE(TRACE_INFO, "client disconnected. %s", strerror(serr));
-		// defer the actual disconnetion to socket_write_cb so the server
-		// will disconnect only when the write buffer is depleted and we're
-		// done writing
 
-	else if (what & EVBUFFER_TIMEOUT)
-		session->ci->cb_time(session);
-	else
-		client_session_bailout(session);
+	session->ci->cb_time(session);
 }
 

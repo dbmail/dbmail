@@ -216,7 +216,8 @@ typedef struct {
 	int rx, tx;			/* read and write filehandles */
 	struct event *pev;		/* self-pipe event */
 	void (*cb_pipe) (void *);	/* callback for self-pipe events */
-	struct bufferevent *rev, *wev;  /* read bufferevent, write bufferevent */
+	struct event *rev, *wev;  	/* read event, write event */
+	struct event *tev, *tev_idle;	/* timeout events */
 	void (*cb_read) (void *);	// pointers to event callbacks
 	void (*cb_time) (void *);
 	void (*cb_write) (void *);

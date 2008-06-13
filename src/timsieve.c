@@ -100,8 +100,8 @@ static void reset_callbacks(ClientSession_t *session)
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
-        bufferevent_enable(session->ci->rev, EV_READ );
-        bufferevent_enable(session->ci->wev, EV_WRITE);
+        event_add(session->ci->rev, session->timeout);
+        event_add(session->ci->wev, NULL);
 }
 
 int tims_handle_connection(client_sock *c)

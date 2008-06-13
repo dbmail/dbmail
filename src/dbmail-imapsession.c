@@ -1664,12 +1664,12 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 		case IMAPCS_ERROR:
 			assert(self->ci);
 			if (self->ci->wev)
-				bufferevent_disable(self->ci->wev, EV_WRITE);
+				event_del(self->ci->wev);
 			// fall-through...
 		case IMAPCS_LOGOUT:
 			assert(self->ci);
 			if (self->ci->rev)
-				bufferevent_disable(self->ci->rev, EV_READ);
+				event_del(self->ci->rev);
 			break;
 
 		case IMAPCS_AUTHENTICATED:
@@ -1677,7 +1677,7 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 			// change from login_timeout to main timeout
 			self->timeout = self->ci->timeout; 
 			if (self->ci->rev)
-				bufferevent_settimeout(self->ci->rev, self->timeout, 0);
+				event_add(self->ci->rev, self->timeout);
 			break;
 
 		default:

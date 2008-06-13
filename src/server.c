@@ -118,7 +118,7 @@ void dm_thread_data_free(gpointer data)
 /* 
  * worker threads can send messages to the client
  * through the main thread async queue. This data
- * is written directly to the output bufferevent
+ * is written directly to the output event
  */
 void dm_thread_data_sendmessage(gpointer data)
 {
@@ -126,7 +126,7 @@ void dm_thread_data_sendmessage(gpointer data)
 	if (D->data && D->wev) {
 		char *message = (char *)D->data;
 		TRACE(TRACE_INFO,"[%p] S > [%s]", D, message);
-		bufferevent_write(D->wev,(gpointer)message, strlen(message));
+		write(D->wev,(gconstpointer)message, strlen(message));
 	}
 }
 
@@ -443,6 +443,11 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 			return NULL;
 		}
 	}
+
+	client->rev = g_new0(struct event, 1);
+	client->wev = g_new0(struct event, 1);
+	client->tev = g_new0(struct event, 1);
+	client->tev_idle = g_new0(struct event, 1);
 
 	client->pev = g_new0(struct event, 1);
 	event_set(client->pev, selfpipe[0], EV_READ, client_pipe_cb, client);

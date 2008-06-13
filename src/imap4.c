@@ -86,23 +86,18 @@ static void imap_session_bailout(ImapSession *session)
 	dbmail_imap_session_delete(session);
 }
 
-
-void socket_error_cb(struct bufferevent *ev UNUSED, short what, void *arg)
+void socket_time_cb(int fd UNUSED, struct event *ev UNUSED, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	int serr = errno;
 
-	TRACE(TRACE_DEBUG,"[%p] what [%d] errno [%d] state [%d]", session, what, serr, session->state);
-	if (what & EVBUFFER_TIMEOUT) {
-		TRACE(TRACE_INFO, "timeout");
-		session->ci->cb_time(session);
-	} else if (serr && serr != EAGAIN && serr != EWOULDBLOCK) {
-		TRACE(TRACE_INFO, "client socket error. %s", strerror(serr));
-		dbmail_imap_session_set_state(session, IMAPCS_ERROR);
-	}
+	if (serr)
+		TRACE(TRACE_WARNING,"[%p] [%s] state [%d]", session, strerror(serr), session->state);
+
+	session->ci->cb_time(session);
 }
 
-void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
+void socket_write_cb(int fd UNUSED, struct event *ev UNUSED, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 
@@ -110,36 +105,36 @@ void socket_write_cb(struct bufferevent *ev UNUSED, void *arg)
 	switch(session->state) {
 
 		case IMAPCS_LOGOUT:
-			bufferevent_disable(session->ci->wev, EV_WRITE);
+			event_del(session->ci->wev);
 		case IMAPCS_ERROR:
 			imap_session_bailout(session);
 			break;
 
 		default:
 			if (session->ci->rev) {
-				bufferevent_settimeout(session->ci->rev, session->timeout, 0);
 				if ( session->command_type == IMAP_COMM_IDLE ) {
 					if ( (session->command_state == FALSE) && (session->loop++ < 1) ) {
 						// make _very_ sure this is done only once during an idle command run
 						// only when the idle loop has just begun: just after we pushed the
 						// continuation '+' to the client
-						bufferevent_enable(session->ci->rev, EV_READ);
 						session->command_state = IDLE;
-						session->ci->cb_read(session);
+						event_add(session->ci->rev, NULL);
+						timeout_del(session->ci->tev);
 					} else if (session->command_state == TRUE) {
-						bufferevent_enable(session->ci->rev, EV_READ);
-						session->ci->cb_read(session);
+						event_add(session->ci->rev, NULL);
+						timeout_add(session->ci->tev, session->timeout);
 					}
 				} else if (session->command_state == TRUE) {
-					bufferevent_enable(session->ci->rev, EV_READ);
-					session->ci->cb_read(session);
+					event_add(session->ci->rev, NULL);
+					timeout_del(session->ci->tev);
+					timeout_add(session->ci->tev, session->timeout);
 				}
 			}
 			break;
 	}
 }
 
-void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
+void socket_read_cb(int fd UNUSED, struct event *ev UNUSED, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	C c; gboolean t;
@@ -160,7 +155,7 @@ void socket_read_cb(struct bufferevent *ev UNUSED, void *arg)
 }
 
 /* 
- * only the main thread may write to the bufferevent
+ * only the main thread may write to the network event
  * worker threads must use an async queue
  */
 static int imap_session_printf(ImapSession * self, char * message, ...)
@@ -174,7 +169,9 @@ static int imap_session_printf(ImapSession * self, char * message, ...)
         va_end(ap);
 
 	TRACE(TRACE_INFO,"[%p] S > [%s]", self, self->buff->str);
-	bufferevent_write(self->ci->wev,(gpointer)self->buff->str, self->buff->len);
+	
+	write (self->ci->tx,(gconstpointer)self->buff->str, self->buff->len);
+
         l = self->buff->len;
 	self->buff = g_string_truncate(self->buff, 0);
 
@@ -242,8 +239,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 			break;
 	}
 	session->command_state = TRUE;
-	bufferevent_enable(session->ci->rev, EV_READ);
-	session->ci->cb_read(session);
 }
 
 
@@ -266,7 +261,6 @@ void imap_cb_read(void *arg)
 		TRACE(TRACE_DEBUG,"[%p] read [%s]", session, buffer);
 		if ( (session->command_type == IMAP_COMM_IDLE) && (session->command_state == IDLE) ) { // session is in a IDLE loop
 			session->command_state = FALSE;
-			bufferevent_disable(session->ci->rev, EV_READ);
 			dm_thread_data *D = g_new0(dm_thread_data,1);
 			D->data = (gpointer)g_strdup(buffer);
 			g_async_queue_push(session->ci->queue, (gpointer)D);
@@ -310,9 +304,10 @@ void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, i
 	UNBLOCK(session->ci->rx);
 	UNBLOCK(session->ci->tx);
 
-	bufferevent_enable(session->ci->rev, EV_READ );
-	bufferevent_enable(session->ci->wev, EV_WRITE);
-	bufferevent_settimeout(session->ci->rev, session->timeout, 0);
+	event_add(session->ci->rev, NULL);
+	event_add(session->ci->wev, NULL);
+	timeout_del(session->ci->tev);
+	timeout_add(session->ci->tev, session->timeout);
 }
 
 int imap_handle_connection(client_sock *c)
@@ -330,8 +325,10 @@ int imap_handle_connection(client_sock *c)
 
 	dbmail_imap_session_set_state(session, IMAPCS_NON_AUTHENTICATED);
 
-	ci->rev     = bufferevent_new(ci->rx, socket_read_cb, NULL, socket_error_cb, (void *)session);
-	ci->wev     = bufferevent_new(ci->tx, NULL, socket_write_cb, socket_error_cb, (void *)session);
+	event_set(ci->rev, ci->rx, EV_READ, socket_read_cb, (void *)session);
+	event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
+	timeout_set(ci->tev, socket_time_cb, (void *)session);
+
 	ci->cb_pipe = (void *)dm_queue_drain;
 	session->ci = ci;
 
@@ -360,7 +357,10 @@ void dbmail_imap_session_reset(ImapSession *session)
 	session->command_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 	
-	bufferevent_settimeout(session->ci->rev, session->timeout, 0);
+	event_add(session->ci->rev, NULL);
+	timeout_del(session->ci->tev);
+	timeout_add(session->ci->tev, session->timeout);
+	
 }
 
 int imap4_tokenizer (ImapSession *session, char *buffer)
@@ -470,7 +470,7 @@ int imap4(ImapSession *session)
 	session->command_type = j;
 	session->command_state=FALSE; // unset command-is-done-state while command in progress
 
-	bufferevent_disable(session->ci->rev, EV_READ);
+	event_del(session->ci->rev);
 
 	TRACE(TRACE_INFO, "dispatch [%s]...\n", IMAP_COMMANDS[session->command_type]);
 	return (*imap_handler_functions[session->command_type]) (session);
