@@ -1531,14 +1531,8 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		break;
 
 		case IMAP_COMM_APPEND:
-			showrecent = showexists = FALSE;
-/* 
- * the rfc says we SHOULD send new message status notifications after APPEND
- * but it doesn't work like it should :-( So lets fall back to letting the
- * client issue a NOOP or CHECK instead
- *
- */
-		//	showexists = TRUE;
+			showrecent = FALSE;
+			showexists = TRUE;
 		break;
 
 		case IMAP_COMM_NOOP:

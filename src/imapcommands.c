@@ -1225,7 +1225,7 @@ void _ic_append_enter(dm_thread_data *D)
 		break;
 	}
 
-	if (message_id && self->state == IMAPCS_SELECTED) {
+	if (message_id && self->state == IMAPCS_SELECTED && self->mailbox->id == mboxid) {
 		//insert new Messageinfo struct into self->mailbox->msginfo
 		//
 		int j = 0;
