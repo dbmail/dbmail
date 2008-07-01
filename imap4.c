@@ -136,10 +136,12 @@ int IMAPClientHandler(clientinfo_t * ci)
 		if (ferror(session->ci->rx)) {
 			if (errno) {
 				serr = errno;
-				TRACE(TRACE_ERROR, "[%s] on read-stream\n", strerror(serr));
 				if (serr == EPIPE) {
+					TRACE(TRACE_ERROR, "[%s] on read-stream, delete session\n", strerror(serr));
 					dbmail_imap_session_delete(session);
 					return -1;	/* broken pipe */
+				} else {
+					TRACE(TRACE_INFO, "[%s] on read-stream, clearerr and proceed\n", strerror(serr));
 				} 
 			}
 			clearerr(session->ci->rx);
@@ -148,10 +150,12 @@ int IMAPClientHandler(clientinfo_t * ci)
 		if (ferror(session->ci->tx)) {
 			if (errno) {
 				serr = errno;
-				TRACE(TRACE_ERROR, "[%s] on write-stream\n", strerror(serr));
 				if (serr == EPIPE) {
+					TRACE(TRACE_ERROR, "[%s] on write-stream, delete session\n", strerror(serr));
 					dbmail_imap_session_delete(session);
 					return -1;	/* broken pipe */
+				} else {
+					TRACE(TRACE_INFO, "[%s] on write-stream, clearerr and proceed\n", strerror(serr));
 				}
 			}
 			clearerr(session->ci->tx);
