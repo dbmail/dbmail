@@ -1,3 +1,10 @@
+2008-07-01  Paul J Stevens <paul@nfg.nl>
+
+	* debug.c:
+	fix off-by-one error in debug.c (closes: #712)
+	* imap4.c:
+	silence unnecessary errors on read-stream (hinote) (closes: #710)
+
 2008-06-09  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c:

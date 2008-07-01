@@ -29,7 +29,7 @@ extern char     *__progname;            /* Program name, from crt0. */
 char            *__progname = NULL;
 #endif
 
-char		hostname[16];
+char		hostname[64];
  
 /* the debug variables */
 static trace_t TRACE_SYSLOG = TRACE_ERROR;  /* default: errors, warnings, fatals */
@@ -105,8 +105,8 @@ void trace(trace_t level, const char * module,
 		char date[32];
 
  		if (! configured) {
- 			memset(&hostname,'\0',16);
- 			gethostname(&hostname,16);
+ 			memset(&hostname,'\0',sizeof(hostname));
+ 			gethostname(hostname,sizeof(hostname)-1);
  			configured=1;
  		}
  
