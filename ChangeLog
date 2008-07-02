@@ -1,3 +1,8 @@
+2008-07-02  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	v2.2.11-rc1
+
 2008-07-01  Paul J Stevens <paul@nfg.nl>
 
 	* debug.c:
