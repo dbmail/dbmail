@@ -533,10 +533,10 @@ static const char * db_get_pgsql_sql(sql_fragment_t frag)
 			return "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";
 		break;
 		case SQL_TO_DATE:
-			return "TO_DATE(%s,'YYYY-MM-DD')";
+			return "TO_DATE(%s::text,'YYYY-MM-DD')";
 		break;
 		case SQL_TO_DATETIME:
-			return "TO_TIMESTAMP(%s, 'YYYY-MM-DD HH24:MI:SS')";
+			return "TO_TIMESTAMP(%s::text, 'YYYY-MM-DD HH24:MI:SS')";
 		break;
 		case SQL_TO_UNIXEPOCH:
 			return "ROUND(DATE_PART('epoch',%s))";
