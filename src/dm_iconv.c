@@ -29,7 +29,6 @@ struct DbmailIconv *ic;
 void dbmail_iconv_init(void)
 {
 	static gboolean initialized = FALSE;
-	iconv_t tmp_i = (iconv_t)-1;
 
 	if (initialized)
 		return;
@@ -45,39 +44,26 @@ void dbmail_iconv_init(void)
 	GETCONFIGVALUE("ENCODING", "DBMAIL", ic->db_charset);
 	GETCONFIGVALUE("DEFAULT_MSG_ENCODING", "DBMAIL", ic->msg_charset);
 
-	if(ic->db_charset[0]) {
-		if ((tmp_i=g_mime_iconv_open(ic->db_charset,"UTF-8")) == (iconv_t)-1) {
-			g_strlcpy(ic->db_charset, g_mime_locale_charset(),FIELDSIZE);
-		} else {
-			g_mime_iconv_close(tmp_i);
-		}
-	} else {
+	if (! ic->db_charset[0])
 		g_strlcpy(ic->db_charset,g_mime_locale_charset(), FIELDSIZE);
-	}
 
-	if (ic->msg_charset[0]) {
-		if ((tmp_i = g_mime_iconv_open(ic->msg_charset,"UTF-8")) == (iconv_t)-1) {
-			g_strlcpy(ic->msg_charset, g_mime_locale_charset(), FIELDSIZE);
-
-		} else {
-			g_mime_iconv_close(tmp_i);
-		}
-	} else {
+	if (! ic->msg_charset[0])
 		g_strlcpy(ic->msg_charset, g_mime_locale_charset(), FIELDSIZE);
-	}
-
 
 	TRACE(TRACE_DEBUG,"Initialize DB encoding surface [UTF-8..%s]", ic->db_charset);
 	ic->to_db = g_mime_iconv_open(ic->db_charset,"UTF-8");
-	assert(ic->to_db != (iconv_t)-1);
+	if (ic->to_db == (iconv_t)-1)
+		TRACE(TRACE_FATAL, "iconv failure");
 
 	TRACE(TRACE_DEBUG,"Initialize DB decoding surface [%s..UTF-8]", ic->db_charset);
 	ic->from_db = g_mime_iconv_open("UTF-8", ic->db_charset);
-	assert(ic->to_db != (iconv_t)-1);
+	if (ic->to_db == (iconv_t)-1)
+		TRACE(TRACE_FATAL, "iconv failure");
 
 	TRACE(TRACE_DEBUG,"Initialize default MSG decoding surface [%s..UTF-8]", ic->msg_charset);
 	ic->from_msg=g_mime_iconv_open("UTF-8",ic->msg_charset);
-	assert(ic->from_msg != (iconv_t)-1);
+	if (ic->from_msg == (iconv_t)-1)
+		TRACE(TRACE_FATAL, "iconv failure");
 	
 	initialized = TRUE;
 }

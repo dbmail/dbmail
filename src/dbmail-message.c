@@ -110,6 +110,40 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	return s;
 }
 
+#define ISNL(a) ((char)(a)=='\n')
+#define ISLF(a) ((char)(a)=='\r')
+#define ISDOT(a) ((char)(a)=='.')
+
+gchar *get_crlf_encoded_opt(const char *in, int dots)
+{
+	char prev = 0, curr = 0, *t, *out;
+	const char *p = in;
+	int i=0, nl = 0;
+	while (*p != '\0') {
+		if ISNL(*p) nl++;
+		p++; i++;
+	}
+	out = g_new0(char,i+(2*nl)+1);
+	t = out;
+	p = in;
+	while (*p != '\0') {
+		curr = *p;
+		if ISNL(curr) {
+			if (! ISLF(prev))
+				*t++ = '\r';
+		}
+		if (dots && ISDOT(curr)) {
+			if ISNL(prev)
+				*t++ = '.';
+		}
+		*t++=curr;
+		prev = curr;
+		p++;
+	}
+	return out;
+}
+
+#if 0
 gchar * get_crlf_encoded_opt(const gchar *string, int dots)
 {
 	GMimeStream *ostream, *fstream;
@@ -148,6 +182,7 @@ gchar * get_crlf_encoded_opt(const gchar *string, int dots)
 	return encoded;
 
 }
+#endif
 
 static u64_t blob_exists(const char *buf, const char *hash)
 {
@@ -310,8 +345,8 @@ static const char * find_boundary(const char *s)
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
 	C c; R r;
-	char *str = NULL;
-	const char *boundary = NULL, *internal_date = NULL;
+	char *str = NULL, *internal_date = NULL;
+	const char *boundary = NULL;
 	char **blist = g_new0(char *,32);
 	int prevdepth, depth = 0, order, row = 0, key = 1, t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
@@ -343,7 +378,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			depth		= db_result_get_int(r,1);
 			order		= db_result_get_int(r,2);
 			is_header	= db_result_get_bool(r,3);
-			if (row == 0) 	internal_date = db_result_get(r,4);
+			if (row == 0) 	internal_date = g_strdup(db_result_get(r,4));
 			blob		= db_result_get_blob(r,5,&l);
 
 			str 		= g_new0(char,l+1);
@@ -408,7 +443,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	}
 
 	self = dbmail_message_init_with_string(self,m);
-	dbmail_message_set_internal_date(self, (char *)internal_date);
+	dbmail_message_set_internal_date(self, internal_date);
 	g_string_free(m,TRUE);
 	g_free(blist);
 
@@ -737,12 +772,14 @@ static int _set_content(DbmailMessage *self, const GString *content)
 	static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
 	g_static_mutex_lock(&mutex);
-	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
-	g_static_mutex_unlock(&mutex);
 
+	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
 	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_mime_stream_close(stream);
 	g_object_unref(stream);
+
+	g_static_mutex_unlock(&mutex);
+
 	return res;
 }
 
