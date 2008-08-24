@@ -59,6 +59,7 @@ typedef struct {
 	gboolean error; // command result
 	imap_cs_t state; // session status 
 	int error_count;
+	GMutex *mutex;
 } ImapSession;
 
 
@@ -71,6 +72,7 @@ typedef struct {
 	ImapSession *session;
 	gpointer data;				/* payload				*/
 	int status;				/* command result 			*/
+	GMutex	*mutex;
 } dm_thread_data;
 
 /* public methods */

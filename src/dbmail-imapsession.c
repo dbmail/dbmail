@@ -47,7 +47,7 @@ extern volatile sig_atomic_t alarm_occured;
 extern int selfpipe[2];
 extern GAsyncQueue *queue;
 
-static GStaticMutex state_mutex = G_STATIC_MUTEX_INIT;
+//static GStaticMutex state_mutex = G_STATIC_MUTEX_INIT;
 /*
  *
  * helpers 
@@ -100,7 +100,7 @@ static void send_data(ImapSession *self, MEM * from, int cnt)
 static cache_t init_cache(void)
 {
 	int serr;
-	cache_t cached_msg = (cache_t)g_malloc0(sizeof(cache_t));
+	cache_t cached_msg = g_malloc0(sizeof(cache_t));
 
 	cached_msg->num = -1;
 	if (! (cached_msg->memdump = mopen())) {
@@ -156,6 +156,7 @@ ImapSession * dbmail_imap_session_new(void)
 	self->buff = g_string_new("");
 	self->fi = g_new0(fetch_items_t,1);
 	self->timeout = g_new0(struct timeval,1);
+	self->mutex = g_mutex_new();
  
 	return self;
 }
@@ -233,6 +234,7 @@ void dbmail_imap_session_delete(ImapSession * self)
 	
 	g_string_free(self->buff,TRUE);
 
+	g_mutex_free(self->mutex);
 	g_free(self);
 	self = NULL;
 }
@@ -1671,9 +1673,9 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 
 int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 {
-	g_static_mutex_lock(&state_mutex);
+//	g_static_mutex_lock(&state_mutex);
 	if ( (self->state == state) || (self->state == IMAPCS_ERROR) ) {
-		g_static_mutex_unlock(&state_mutex);
+//		g_static_mutex_unlock(&state_mutex);
 		return 0;
 	}
 
@@ -1701,7 +1703,7 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, self->state, state);
 	self->state = state;
-	g_static_mutex_unlock(&state_mutex);
+//	g_static_mutex_unlock(&state_mutex);
 
 	return 0;
 }
