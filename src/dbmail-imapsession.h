@@ -12,40 +12,30 @@
 // command state during idle command
 #define IDLE -1 
 
-/*
- * cached raw message data
- */
-typedef struct {
-	DbmailMessage *dmsg;
-	MEM *memdump;
-	MEM *tmpdump;
-	u64_t num;
-	u64_t dumpsize;
-	int file_dumped;
-	int msg_parsed;
-} cache_t;
-
+typedef struct cache_t *cache_t;
+typedef struct cmd_t *cmd_t;
 
 /* ImapSession definition */
 typedef struct {
 	clientbase_t *ci;
-	u64_t msg_idnr;  // replace this with a GList
-
-	GString *buff; // output buffer
-
-	int parser_state;
-	int command_state;
-	char *rbuff; // input buffer
-	int rbuff_size;
-
-	gboolean use_uid;
 	char *tag;
 	char *command;
 	int command_type;
-	struct timeval *timeout;
-	int loop; // idle loop counter
+	int command_state;
+
+	gboolean use_uid;
+	u64_t msg_idnr;  // replace this with a GList
+
+	GString *buff; // output buffer
+	char *rbuff; // input buffer
+	int rbuff_size;
+
+	int parser_state;
 	char **args;
 	u64_t args_idx;
+
+	struct timeval *timeout;
+	int loop; // idle loop counter
 	fetch_items_t *fi;
 
 	DbmailMailbox *mailbox;	/* currently selected mailbox */
@@ -55,7 +45,7 @@ typedef struct {
 
 	// FIXME: there is too much redundancy here
 	DbmailMessage *message;
-	cache_t *cached_msg;
+	cache_t cached_msg;
 
 	u64_t userid;		/* userID of client in dbase */
 
@@ -64,22 +54,12 @@ typedef struct {
 	GTree *mbxinfo; // cache MailboxInfo
 	GList *recent;
 	GList *ids_list;
-	gpointer cmd; // command structure
+
+	cmd_t cmd; // command structure (wip)
 	gboolean error; // command result
 	imap_cs_t state; // session status 
 	int error_count;
 } ImapSession;
-
-typedef struct {
-	gboolean silent;
-	int action;
-	int flaglist[IMAP_NFLAGS];
-	GList *keywords;
-} cmd_store_t;
-
-typedef struct {
-	u64_t mailbox_id;
-} cmd_copy_t;
 
 
 typedef int (*IMAP_COMMAND_HANDLER) (ImapSession *);
@@ -92,7 +72,6 @@ typedef struct {
 	gpointer data;				/* payload				*/
 	int status;				/* command result 			*/
 } dm_thread_data;
-	
 
 /* public methods */
 

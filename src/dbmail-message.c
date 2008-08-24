@@ -25,16 +25,9 @@
 
 #include "dbmail.h"
 
-
-extern GTree * global_cache;
-
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
-
-#define MESSAGE_MAX_LINE_SIZE 1024
-
 #define DBMAIL_TEMPMBOX "INBOX"
-
 #define THIS_MODULE "message"
 
 //#define dprint(fmt, args...) printf(fmt, ##args)
@@ -110,8 +103,8 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	return s;
 }
 
-#define ISNL(a) ((char)(a)=='\n')
-#define ISLF(a) ((char)(a)=='\r')
+#define ISCR(a) ((char)(a)=='\r')
+#define ISLF(a) ((char)(a)=='\n')
 #define ISDOT(a) ((char)(a)=='.')
 
 gchar *get_crlf_encoded_opt(const char *in, int dots)
@@ -120,7 +113,7 @@ gchar *get_crlf_encoded_opt(const char *in, int dots)
 	const char *p = in;
 	int i=0, nl = 0;
 	while (*p != '\0') {
-		if ISNL(*p) nl++;
+		if ISLF(*p) nl++;
 		p++; i++;
 	}
 	out = g_new0(char,i+(2*nl)+1);
@@ -128,12 +121,12 @@ gchar *get_crlf_encoded_opt(const char *in, int dots)
 	p = in;
 	while (*p != '\0') {
 		curr = *p;
-		if ISNL(curr) {
-			if (! ISLF(prev))
+		if ISLF(curr) {
+			if (! ISCR(prev))
 				*t++ = '\r';
 		}
 		if (dots && ISDOT(curr)) {
-			if ISNL(prev)
+			if ISLF(prev)
 				*t++ = '.';
 		}
 		*t++=curr;
@@ -142,47 +135,6 @@ gchar *get_crlf_encoded_opt(const char *in, int dots)
 	}
 	return out;
 }
-
-#if 0
-gchar * get_crlf_encoded_opt(const gchar *string, int dots)
-{
-	GMimeStream *ostream, *fstream;
-	GMimeFilter *filter;
-	gchar *encoded, *buf;
-	GString *raw;
-	
-	ostream = g_mime_stream_mem_new();
-	fstream = g_mime_stream_filter_new_with_stream(ostream);
-	if (dots) {
-		filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
-	} else {
-		filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
-	}
-	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
-	g_mime_stream_write_string(fstream,string);
-	
-	g_object_unref(filter);
-	g_object_unref(fstream);
-	
-	g_mime_stream_reset(ostream);
-
-	raw = g_string_new("");
-	buf = g_new0(char,256);
-	while ((g_mime_stream_read(ostream, buf, 255)) > 0) {
-		raw = g_string_append(raw, buf);
-		memset(buf,'\0', 256);
-	}
-	
-	g_object_unref(ostream);
-	
-	encoded = raw->str;
-	g_string_free(raw,FALSE);
-	g_free(buf);
-	
-	return encoded;
-
-}
-#endif
 
 static u64_t blob_exists(const char *buf, const char *hash)
 {
@@ -769,22 +721,18 @@ static int _set_content(DbmailMessage *self, const GString *content)
 {
 	int res;
 	GMimeStream *stream;
-	static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
-
-	g_static_mutex_lock(&mutex);
 
 	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
 	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_mime_stream_close(stream);
 	g_object_unref(stream);
 
-	g_static_mutex_unlock(&mutex);
-
 	return res;
 }
 
 static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
 {
+#define MESSAGE_MAX_LINE_SIZE 1024
 	/* 
 	 * We convert all messages to crlf->lf for internal usage and
 	 * db-insertion
@@ -820,8 +768,6 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 
 			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
-//			mstream = g_mime_stream_mem_new();
-
 			tmp = tmpfile(); 
 			if (! tmp) {
 				int serr = errno;

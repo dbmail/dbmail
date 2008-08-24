@@ -55,6 +55,19 @@ static GStaticMutex state_mutex = G_STATIC_MUTEX_INIT;
  *
  */
 
+/*
+ * cached raw message data
+ */
+struct cache_t {
+	DbmailMessage *dmsg;
+	MEM *memdump;
+	MEM *tmpdump;
+	u64_t num;
+	u64_t dumpsize;
+	int file_dumped;
+	int msg_parsed;
+};
+
 
 /*
  * send_data()
@@ -84,10 +97,10 @@ static void send_data(ImapSession *self, MEM * from, int cnt)
 /* 
  * init cache 
  */
-static cache_t * init_cache(void)
+static cache_t init_cache(void)
 {
 	int serr;
-	cache_t *cached_msg = g_new0(cache_t,1);
+	cache_t cached_msg = (cache_t)g_malloc0(sizeof(cache_t));
 
 	cached_msg->num = -1;
 	if (! (cached_msg->memdump = mopen())) {
@@ -112,7 +125,7 @@ static cache_t * init_cache(void)
 /*
  * closes the msg cache
  */
-static void close_cache(cache_t *cached_msg)
+static void close_cache(cache_t cached_msg)
 {
 	if (cached_msg->dmsg)
 		dbmail_message_free(cached_msg->dmsg);
@@ -123,10 +136,7 @@ static void close_cache(cache_t *cached_msg)
 	mclose(&cached_msg->tmpdump);
 	g_free(cached_msg);
 }
-
 static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize); 
-
-
 
 /* 
  * initializer and accessors for ImapSession
@@ -134,7 +144,7 @@ static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize);
 ImapSession * dbmail_imap_session_new(void)
 {
 	ImapSession * self;
-	cache_t *cached_msg;
+	cache_t cached_msg;
 
 	/* init: cache */
 	if (! (cached_msg = init_cache()))

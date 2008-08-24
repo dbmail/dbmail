@@ -43,6 +43,28 @@ extern const char AcceptedMailboxnameChars[];
 
 int imap_before_smtp = 0;
 
+struct cmd_t {
+	gboolean silent;
+	int action;
+	int flaglist[IMAP_NFLAGS];
+	GList *keywords;
+	u64_t mailbox_id;
+};
+
+cmd_t cmd_new(void)
+{
+	return (cmd_t)g_malloc0(sizeof(cmd_t));
+}
+
+void cmd_free(cmd_t *cmd)
+{
+	assert(cmd && *cmd);
+	if ((*cmd)->keywords)
+		g_list_destroy((*cmd)->keywords);
+	(*cmd)->keywords = NULL;
+	g_free((*cmd));	
+}
+
 /* 
  * push a message onto the queue and notify the
  * event-loop by sending a char into the selfpipe
@@ -1611,7 +1633,7 @@ int _ic_fetch(ImapSession *self)
 
 static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 {
-	cmd_store_t *cmd = (cmd_store_t *)self->cmd;
+	cmd_t cmd = self->cmd;
 
 	u64_t *msn;
 	MessageInfo *msginfo = NULL;
@@ -1675,10 +1697,10 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 static void _ic_store_enter(dm_thread_data *D)
 {
 	ImapSession *self = D->session;
-	cmd_store_t *cmd;
 	int result, i, j, k;
 
-	cmd = g_new0(cmd_store_t,1);
+	cmd_t cmd = g_malloc0(sizeof(cmd_t));
+
 	k = self->args_idx;
 	/* multiple flags should be parenthesed */
 	if (self->args[k+3] && strcmp(self->args[k+2], "(") != 0) {
@@ -1805,7 +1827,7 @@ int _ic_store(ImapSession *self)
 
 static gboolean _do_copy(u64_t *id, gpointer UNUSED value, ImapSession *self)
 {
-	cmd_copy_t *cmd = (cmd_copy_t *)self->cmd;
+	cmd_t cmd = self->cmd;
 	u64_t newid;
 	int result;
 
@@ -1828,7 +1850,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 	u64_t destmboxid;
 	int result;
 	MailboxInfo *destmbox;
-	cmd_copy_t cmd;
+	cmd_t cmd = g_malloc0(sizeof(cmd_t));
 
 	/* check if destination mailbox exists */
 	if (! db_findmailbox(self->args[self->args_idx+1], self->userid, &destmboxid)) {
@@ -1849,8 +1871,8 @@ static void _ic_copy_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 
-	cmd.mailbox_id = destmboxid;
-	self->cmd = &cmd;
+	cmd->mailbox_id = destmboxid;
+	self->cmd = cmd;
 
 	if (g_tree_nnodes(self->mailbox->ids) > 0) {
  		if ((_dm_imapsession_get_ids(self, self->args[self->args_idx]) == DM_SUCCESS))
