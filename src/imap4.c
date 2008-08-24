@@ -237,13 +237,21 @@ void imap_cb_read(void *arg)
 	char buffer[MAX_LINESIZE];
 	int result;
 
+	assert(buffer);				// Make sure buffer is clean. dm_misc.c,ci_read()
+	memset(buffer, 0, sizeof(buffer));	// has seen dirty buffers with out this
+
 	if (session->state == IMAPCS_ERROR) {
 		TRACE(TRACE_DEBUG, "session->state: ERROR. abort");
 		return;
 	}
 	if (session->command_state==TRUE) dbmail_imap_session_reset(session);
 
-	while (ci_readln(session->ci, buffer)) { // drain input buffer else return to wait for more.
+	// Drain input buffer else return to wait for more.
+	// Read in a line at a time if we don't have a string literal size defined
+	// Otherwise read in sizeof(buff) - 1024 [64KB[  or the remaining rbuff_size if less
+	while ((session->rbuff_size <= 0 && ci_readln(session->ci, buffer)) ||
+		ci_read(session->ci, buffer, (session->rbuff_size < sizeof(buffer) - 1024) ?
+			session->rbuff_size : sizeof(buffer) - 1024)) {
 
 		if (session->error_count >= MAX_FAULTY_RESPONSES) {
 			imap_session_printf(session, "* BYE [TRY RFC]\r\n");

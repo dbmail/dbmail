@@ -1,9 +1,59 @@
+2008-08-24  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/imap4.c:
+	append speedup (Jonathan Feally)
+
+2008-07-14  Paul J Stevens <paul@nfg.nl>
+
+	* src/dm_db.c:
+	fix for bug #689 (ahodgson)
+
+2008-06-17  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/server.c:
+	add session lock
+
+2008-06-16  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmail-message.c, src/imapcommands.c:
+	cleaning up
+
+2008-06-15  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-mailbox.h, src/dbmail.h.in, src/dbmailtypes.h:
+	move DbmailMailbox
+
 2008-06-13  Paul J Stevens <paul@nfg.nl>
 
-	* src/dbmail-imapsession.c, src/imapcommands.c:
+	* src/dbmail-message.c, src/dm_iconv.c, src/dm_misc.c, 
+	test/check_dbmail_message.c:
+	valgrind inspired threadsafety fixes
+	* ChangeLog, src/dbmail-imapsession.c, src/imapcommands.c:
 	fix EXISTS response after APPEND (closes: #706)
 	* INSTALL:
 	mention url for libzdb
+	* src/dbmail-imapsession.c, src/dm_misc.c, src/imapcommands.c:
+	output buffer cleanup
+	* src/dbmail-imapsession.c, src/imap4.c, src/server.c:
+	fix a leak and a segfault
+	* .gitignore, src/dbmail-imapsession.c, src/dm_misc.c, src/imap4.c, 
+	src/imapcommands.c, src/server.c, test-scripts/testauthenticate.txt:
+	more event handling ironing
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
+	src/server.c:
+	more event cleanups
+	* src/imapcommands.c:
+	make logout non-threaded
+	* src/clientsession.c, src/clientsession.h, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmailtypes.h, src/imap4.c, 
+	src/imapcommands.c, src/server.c:
+	bufferevent cleaned out
+	* src/clientsession.c, src/clientsession.h, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmailtypes.h, src/dm_misc.c, 
+	src/imap4.c, src/imapcommands.c, src/lmtp.c, src/pop3.c, 
+	src/server.c, src/timsieve.c:
+	wip bufferevent cleanout
 
 2008-06-12  Paul J Stevens <paul@nfg.nl>
 

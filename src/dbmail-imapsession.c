@@ -1991,12 +1991,12 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 		/* get bytes of string-literal */	
 		if (self->rbuff_size > 0) {
 			size_t r;
-			char buff[self->rbuff_size];
+			char buff[MAX_LINESIZE];  // We only need a buffer as large as the largest line
 			memset(buff, 0, sizeof(buff));
 
 			if (! self->rbuff) self->rbuff = g_new0(char, self->rbuff_size+1);
 
-			strncat(buff, &s[i], self->rbuff_size);
+			strncat(buff, &s[i], sizeof(buff));
 			r = strlen(buff);
 			
 			strncat(self->rbuff, buff, r);
