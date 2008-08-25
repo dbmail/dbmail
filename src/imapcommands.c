@@ -1102,7 +1102,7 @@ static int imap_append_msg(const char *msgdata,
                 
         TRACE(TRACE_MESSAGE, "message id=%llu is inserted", *msg_idnr);
         
-        return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
+        return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
 }
 
 void _ic_append_enter(dm_thread_data *D)
@@ -1232,11 +1232,11 @@ void _ic_append_enter(dm_thread_data *D)
 		dbmail_imap_session_buff_printf(D->session, "%s NO not enough quotum left\r\n", D->session->tag);
 		break;
 
-	case FALSE:
+	case TRUE:
 		TRACE(TRACE_ERROR, "[%p] faulty msg", D->session);
 		dbmail_imap_session_buff_printf(D->session, "%s NO invalid message specified\r\n", D->session->tag);
 		break;
-	case TRUE:
+	case FALSE:
 		if (flagcount > 0) {
 			if (db_set_msgflag(message_id, mboxid, flaglist, keywords, IMAPFA_ADD, NULL) < 0) {
 				TRACE(TRACE_ERROR, "[%p] error setting flags for message [%llu]", D->session, message_id);

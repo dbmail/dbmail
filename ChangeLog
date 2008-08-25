@@ -1,3 +1,8 @@
+2008-08-25  Paul J Stevens <paul@nfg.nl>
+
+	* src/imapcommands.c:
+	fix inverted logic
+
 2008-08-24  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.c, src/imap4.c:
@@ -33,27 +38,6 @@
 	fix EXISTS response after APPEND (closes: #706)
 	* INSTALL:
 	mention url for libzdb
-	* src/dbmail-imapsession.c, src/dm_misc.c, src/imapcommands.c:
-	output buffer cleanup
-	* src/dbmail-imapsession.c, src/imap4.c, src/server.c:
-	fix a leak and a segfault
-	* .gitignore, src/dbmail-imapsession.c, src/dm_misc.c, src/imap4.c, 
-	src/imapcommands.c, src/server.c, test-scripts/testauthenticate.txt:
-	more event handling ironing
-	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, src/imap4.c, 
-	src/server.c:
-	more event cleanups
-	* src/imapcommands.c:
-	make logout non-threaded
-	* src/clientsession.c, src/clientsession.h, src/dbmail-imapsession.c, 
-	src/dbmail-imapsession.h, src/dbmailtypes.h, src/imap4.c, 
-	src/imapcommands.c, src/server.c:
-	bufferevent cleaned out
-	* src/clientsession.c, src/clientsession.h, src/dbmail-imapsession.c, 
-	src/dbmail-imapsession.h, src/dbmailtypes.h, src/dm_misc.c, 
-	src/imap4.c, src/imapcommands.c, src/lmtp.c, src/pop3.c, 
-	src/server.c, src/timsieve.c:
-	wip bufferevent cleanout
 
 2008-06-12  Paul J Stevens <paul@nfg.nl>
 
