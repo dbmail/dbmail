@@ -777,14 +777,23 @@ int dm_quota_user_dec(u64_t user_idnr, u64_t size)
 
 static int dm_quota_user_validate(u64_t user_idnr, u64_t msg_size)
 {
+	u64_t maxmail_size;
 	C c; R r; gboolean t = TRUE;
+
+	if (auth_getmaxmailsize(user_idnr, &maxmail_size) == -1) {
+		TRACE(TRACE_ERROR, "auth_getmaxmailsize() failed\n");
+		return DM_EQUERY;
+	}
+
+	if (maxmail_size <= 0)
+		return TRUE;
+ 
 	c = db_con_get();
 
 	TRY
 		r = Connection_executeQuery(c, "SELECT 1 FROM %susers WHERE user_idnr = %llu "
-				"AND (maxmail_size > 0) "
-				"AND (curmail_size + %llu > maxmail_size)", 
-				DBPFX, user_idnr, msg_size);
+				"AND (curmail_size + %llu > %llu)", 
+				DBPFX, user_idnr, msg_size, maxmail_size);
 		if (! r)
 			t = DM_EQUERY;
 		else if (db_result_next(r))
