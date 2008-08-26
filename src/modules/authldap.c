@@ -666,7 +666,6 @@ static char *__auth_get_first_match(const char *q, const char **retfields)
 	if (ldap_res)
 		ldap_msgfree(ldap_res);
 
-	TRACE(TRACE_DEBUG,"returnid [%s]",returnid);
 	return returnid;
 }
 
@@ -797,7 +796,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	// if max_char is NULL g_free will not fail it simply return
 	g_free(max_char);
 
-	TRACE(TRACE_DEBUG, "returned value is [%llu]", *maxmail_size);
+	TRACE(TRACE_DEBUG, "%s: %llu", _ldap_cfg.field_maxmail, *maxmail_size);
 
 	return TRUE;
 }

@@ -164,7 +164,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 	GTree *msginfo;
 	u64_t *uid, *msn;
 	u64_t id;
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	field_t frag;
 	INIT_QUERY;
 	
@@ -479,13 +479,13 @@ static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * dat
 char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 {
 	GList *sublist = NULL;
-	u64_t i = 0, idnr = 0;
+	volatile u64_t i = 0, idnr = 0;
 	char *subj;
 	char *res = NULL;
 	u64_t *id, *msn;
 	GTree *tree;
 	GString *threads;
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	INIT_QUERY;
 	
 	/* thread-roots (ordered) */
