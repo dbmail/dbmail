@@ -89,7 +89,6 @@
 
 #include "dbmailtypes.h"
 #include "dm_list.h"
-#include "dm_memblock.h"
 #include "dm_debug.h"
 #include "dm_dsn.h"
 #include "dm_acl.h"

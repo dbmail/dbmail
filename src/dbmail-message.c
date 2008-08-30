@@ -1455,8 +1455,8 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	GTuples *values;
 	unsigned char *raw;
 	unsigned i;
-	gboolean isaddr = 0;
-	C c; S s; gboolean t = FALSE;
+	volatile gboolean isaddr = 0;
+	C c; S s; volatile gboolean t = FALSE;
 	const char *charset = dbmail_message_get_charset(self);
 
 	/* skip headernames with spaces like From_ */

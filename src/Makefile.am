@@ -59,6 +59,7 @@ MODULES = authmodule.c sortmodule.c
 
 IMAPD = dm_quota.c \
 	dm_memblock.c \
+	dm_cache.c \
 	imap4.c \
 	imapcommands.c \
 	dbmail-imapsession.c

@@ -1,8 +1,6 @@
  /*
-  
-
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2005-2008 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -26,53 +24,63 @@
  * implementations of functions declared in memblock.h
  */
 
-#include "dbmail.h"
+#include <glib.h>
+#include <assert.h>
+#include <string.h>
+#include <unistd.h>
+#include "dm_memblock.h"
 
+#define MEMBLOCK_SIZE (512ul*1024ul)
 #define MAX_ERROR_SIZE 128
+
+#define T Mem_T
+
+#define NEW(x) x = g_malloc0( sizeof(*x) )
+
+struct MemBlock_t {
+	struct MemBlock_t *nextblk, *prevblk;
+	char data[MEMBLOCK_SIZE];
+};
+
+typedef struct MemBlock_t *MemBlock_t;
+
+struct T {
+	int nblocks;
+	long mpos, eom;		/* eom = end-of-mem; these positions are relative to
+				 * currblk (mpos) and lastblk (eom)
+				 */
+	MemBlock_t firstblk, currblk, lastblk;
+};
 
 enum __M_ERRORS { M_NOERROR, M_NOMEM, M_BADMEM, M_BADDATA, M_BADWHENCE,
 	    M_LASTERR };
-
-const char *__m_error_desc[M_LASTERR] = {
-	"no error", "not enough memory", "bad memory structure specified",
-	"bad data block specified", "bad whence indicator specified"
-};
 
 int __m_errno;
 char __m_error_str[MAX_ERROR_SIZE];
 
 /* internal use only */
-int __m_blkadd(MEM * m);
-
+static int Mem_grow(T M);
 
 /*
  * mopen()
  *
  * opens a mem-structure
  */
-MEM *mopen()
+T Mem_open()
 {
-	MEM *mp = g_new0(MEM, 1);
+	T M;
+	MemBlock_t B;
 
-	if (!mp) {
-		__m_errno = M_NOMEM;
-		return NULL;
-	}
+	NEW(M);
+	NEW(B);
 
-	mp->firstblk = g_new0(memblock_t, 1);
-
-	memset(mp->firstblk->data, 0, _MEMBLOCK_SIZE);
-
-	mp->firstblk->nextblk = NULL;
-	mp->firstblk->prevblk = NULL;
-
-	mp->lastblk = mp->firstblk;
-	mp->currblk = mp->firstblk;
-
-	mp->nblocks = 1;
+	M->firstblk = B;
+	M->lastblk = B;
+	M->currblk = B;
+	M->nblocks = 1;
 
 	__m_errno = M_NOERROR;
-	return mp;
+	return M;
 }
 
 
@@ -82,24 +90,22 @@ MEM *mopen()
  * closes a mem structure
  *
  */
-void mclose(MEM ** m)
+void Mem_close(T *M)
 {
-	memblock_t *tmp, *next;
+	assert(M && *M);
+	MemBlock_t tmp, next;
 
 	__m_errno = M_NOERROR;
 
-	if (!m || !(*m))
-		return;
-
-	tmp = (*m)->firstblk;
+	tmp = (*M)->firstblk;
 	while (tmp) {
 		next = tmp->nextblk;	/* save address */
 		g_free(tmp);
 		tmp = next;
 	}
 
-	g_free(*m);
-	*m = NULL;
+	g_free(*M);
+	*M = NULL;
 
 	return;
 }
@@ -110,67 +116,57 @@ void mclose(MEM ** m)
  *
  * writes size bytes of data to the memory associated with m
  */
-int mwrite(const void *data, int size, MEM * m)
+int Mem_write(T M, const void *data, int size)
 {
 	long left;
 
-	if (!m) {
-		__m_errno = M_BADMEM;
-		return 0;
-	}
+	assert(M);
+	assert(data);
+	assert(size > 0);
 
-	if (!data) {
-		__m_errno = M_BADDATA;
-		return 0;
-	}
-
-	if (size <= 0)
-		return 0;
-
-
-	left = _MEMBLOCK_SIZE - m->mpos;
+	left = MEMBLOCK_SIZE - M->mpos;
 
 	if (size <= left) {
 		/* entire fit */
-		memmove(&m->currblk->data[m->mpos], data, size);
-		m->mpos += size;
+		memmove(&M->currblk->data[M->mpos], data, size);
+		M->mpos += size;
 
 		if (size == left) {
 			/* update */
-			if (m->currblk == m->lastblk) {
-				if (!__m_blkadd(m)) {
-					m->mpos--;
-					m->eom = m->mpos;
+			if (M->currblk == M->lastblk) {
+				if (!Mem_grow(M)) {
+					M->mpos--;
+					M->eom = M->mpos;
 					return size - 1;
 				}
 			}
 
-			m->currblk = m->currblk->nextblk;
-			m->mpos = 0;
+			M->currblk = M->currblk->nextblk;
+			M->mpos = 0;
 		}
 
-		if (m->currblk == m->lastblk && m->mpos > m->eom)
-			m->eom = m->mpos;
+		if (M->currblk == M->lastblk && M->mpos > M->eom)
+			M->eom = M->mpos;
 
 		return size;
 	}
 
 	/* copy everything that can be placed */
-	memmove(&m->currblk->data[m->mpos], data, left);
-	m->mpos += left;
+	memmove(&M->currblk->data[M->mpos], data, left);
+	M->mpos += left;
 
-	if (m->currblk == m->lastblk) {
+	if (M->currblk == M->lastblk) {
 		/* need a new block */
-		if (!__m_blkadd(m))
+		if (!Mem_grow(M))
 			return left;
 
-		m->eom = 0;
+		M->eom = 0;
 	}
 
-	m->currblk = m->currblk->nextblk;	/* advance current block */
-	m->mpos = 0;
+	M->currblk = M->currblk->nextblk;	/* advance current block */
+	M->mpos = 0;
 
-	return left + mwrite(&((char *) data)[left], size - left, m);
+	return left + Mem_write(M, &((char *) data)[left], size - left);
 }
 
 
@@ -181,52 +177,42 @@ int mwrite(const void *data, int size, MEM * m)
  *
  * returns the number of bytes actually read
  */
-int mread(void *data, int size, MEM * m)
+int Mem_read(T M, void *data, int size)
 {
 	long left;
+	assert(M);
+	assert(data);
+	assert(size >=0);
 
-	if (!m) {
-		__m_errno = M_BADMEM;
-		return 0;
-	}
-
-	if (!data) {
-		__m_errno = M_BADDATA;
-		return 0;
-	}
-
-	if (size <= 0)
-		return 0;
-
-	if (m->lastblk == m->currblk)
-		left = m->eom - m->mpos;
+	if (M->lastblk == M->currblk)
+		left = M->eom - M->mpos;
 	else
-		left = _MEMBLOCK_SIZE - m->mpos;
+		left = MEMBLOCK_SIZE - M->mpos;
 
 	if (left <= 0)
 		return 0;
 
 	if (size < left) {
 		/* entire fit */
-		memmove(data, &m->currblk->data[m->mpos], size);
-		m->mpos += size;
+		memmove(data, &M->currblk->data[M->mpos], size);
+		M->mpos += size;
 
 		return size;
 	}
 
 	/* copy everything that can be placed */
-	memmove(data, &m->currblk->data[m->mpos], left);
-	m->mpos += left;
+	memmove(data, &M->currblk->data[M->mpos], left);
+	M->mpos += left;
 
-	if (m->currblk == m->lastblk) {
+	if (M->currblk == M->lastblk) {
 		/* no more data */
 		return left;
 	}
 
-	m->currblk = m->currblk->nextblk;	/* advance current block */
-	m->mpos = 0;
+	M->currblk = M->currblk->nextblk;	/* advance current block */
+	M->mpos = 0;
 
-	return left + mread(&((char *) data)[left], size - left, m);
+	return left + Mem_read(M, &((char *) data)[left], size - left);
 }
 
 
@@ -240,76 +226,72 @@ int mread(void *data, int size, MEM * m)
  *
  * returns 0 on succes, -1 on error
  */
-int mseek(MEM * m, long offset, int whence)
+int Mem_seek(T M, long offset, int whence)
 {
 	long left;
 
-	if (!m) {
-		__m_errno = M_BADMEM;
-		return -1;
-	}
+	assert(M);
 
 	switch (whence) {
 	case SEEK_SET:
-		m->currblk = m->firstblk;
-		m->mpos = 0;
+		M->currblk = M->firstblk;
+		M->mpos = 0;
 
 		if (offset <= 0)
 			return 0;
 
-		return mseek(m, offset, SEEK_CUR);
+		return Mem_seek(M, offset, SEEK_CUR);
 
 	case SEEK_CUR:
 		if (offset == 0)
 			return 0;
 
 		if (offset > 0) {
-			left = _MEMBLOCK_SIZE - m->mpos;
+			left = MEMBLOCK_SIZE - M->mpos;
 			if (offset >= left) {
-				if (m->currblk == m->lastblk) {
-					m->mpos = m->eom;
+				if (M->currblk == M->lastblk) {
+					M->mpos = M->eom;
 					return 0;
 				}
 
-				m->currblk = m->currblk->nextblk;
-				m->mpos = 0;
-				return mseek(m, offset - left, SEEK_CUR);
+				M->currblk = M->currblk->nextblk;
+				M->mpos = 0;
+				return Mem_seek(M, offset - left, SEEK_CUR);
 			} else {
-				m->mpos += offset;
+				M->mpos += offset;
 
-				if (m->currblk == m->lastblk
-				    && m->mpos > m->eom)
-					m->mpos = m->eom;
+				if (M->currblk == M->lastblk && M->mpos > M->eom)
+					M->mpos = M->eom;
 
 				return 0;
 			}
 		} else {
 			/* offset < 0, walk backwards */
-			left = -m->mpos;
+			left = -M->mpos;
 
 			if (offset <= left) {
-				if (m->currblk == m->firstblk) {
-					m->mpos = 0;
+				if (M->currblk == M->firstblk) {
+					M->mpos = 0;
 					return 0;
 				}
 
-				m->currblk = m->currblk->prevblk;
-				m->mpos = _MEMBLOCK_SIZE;
-				return mseek(m, offset - left, SEEK_CUR);
+				M->currblk = M->currblk->prevblk;
+				M->mpos = MEMBLOCK_SIZE;
+				return Mem_seek(M, offset - left, SEEK_CUR);
 			} else {
-				m->mpos += offset;	/* remember: offset<0 */
+				M->mpos += offset;	/* remember: offset<0 */
 				return 0;
 			}
 		}
 
 	case SEEK_END:
-		m->currblk = m->lastblk;
-		m->mpos = m->eom;
+		M->currblk = M->lastblk;
+		M->mpos = M->eom;
 
 		if (offset >= 0)
 			return 0;
 
-		return mseek(m, offset, SEEK_CUR);
+		return Mem_seek(M, offset, SEEK_CUR);
 
 	default:
 		__m_errno = M_BADWHENCE;
@@ -325,36 +307,31 @@ int mseek(MEM * m, long offset, int whence)
  *
  * equivalent to mseek(m, 0, SEEK_SET)
  */
-void mrewind(MEM * m)
+void Mem_rewind(T M)
 {
-	mseek(m, 0, SEEK_SET);
+	Mem_seek(M, 0, SEEK_SET);
 	__m_errno = M_NOERROR;
 }
 
 
 /* 
- * __m_blkadd()
+ * Mem_grow()
  * adds a block to m
  * returns 0 on failure, 1 on succes
  */
-int __m_blkadd(MEM * m)
+int Mem_grow(T M)
 {
-	memblock_t *newblk;
+	MemBlock_t B;
 
-	if (!m) {
-		__m_errno = M_BADMEM;
-		return 0;
-	}
+	assert(M);
 
-	newblk = g_new0(memblock_t, 1);
+	NEW(B);
 
-	memset(newblk->data, 0, _MEMBLOCK_SIZE);
+	B->prevblk = M->lastblk;
+	M->lastblk->nextblk = B;
+	M->lastblk = B;
+	M->nblocks++;
 
-	newblk->prevblk = m->lastblk;
-	newblk->nextblk = NULL;
-
-	m->nblocks++;
-	m->lastblk->nextblk = newblk;
-	m->lastblk = newblk;
 	return 1;
 }
+

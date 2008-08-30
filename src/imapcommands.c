@@ -1698,8 +1698,7 @@ static void _ic_store_enter(dm_thread_data *D)
 {
 	ImapSession *self = D->session;
 	int result, i, j, k;
-
-	cmd_t cmd = g_malloc0(sizeof(cmd_t));
+	cmd_t cmd;
 
 	k = self->args_idx;
 	/* multiple flags should be parenthesed */
@@ -1709,6 +1708,7 @@ static void _ic_store_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 
+	cmd = g_malloc0(sizeof(*cmd));
 	cmd->silent = FALSE;
 
 	/* retrieve action type */
@@ -1732,6 +1732,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	if (cmd->action == IMAPFA_NONE) {
 		dbmail_imap_session_buff_printf(self, "%s BAD invalid STORE action specified\r\n", self->tag);
 		D->status = 1;
+		g_free(cmd);
 		NOTIFY_DONE(D);
 	}
 
@@ -1744,6 +1745,7 @@ static void _ic_store_enter(dm_thread_data *D)
 			if (MATCH(self->args[k+i],"\\Recent")) {
 				dbmail_imap_session_buff_printf(self, "%s BAD invalid flag list to STORE command\r\n", self->tag);
 				D->status = 1;
+				g_free(cmd);
 				NOTIFY_DONE(D);
 			}
 				
@@ -1761,12 +1763,16 @@ static void _ic_store_enter(dm_thread_data *D)
 	if (cmd->flaglist[IMAP_FLAG_SEEN] == 1) {
 		if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_SEEN))) {
 			D->status = result;
+			g_list_destroy(cmd->keywords);
+			g_free(cmd);
 			NOTIFY_DONE(D);
 		}
 	}
 	if (cmd->flaglist[IMAP_FLAG_DELETED] == 1) {
 		if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_DELETE))) {
 			D->status = result;
+			g_list_destroy(cmd->keywords);
+			g_free(cmd);
 			NOTIFY_DONE(D);
 		}
 	}
@@ -1776,6 +1782,8 @@ static void _ic_store_enter(dm_thread_data *D)
 	    g_list_length(cmd->keywords) > 0 ) {
 		if ((result = mailbox_check_acl(self, self->mailbox->info, ACL_RIGHT_WRITE))) {
 			D->status = result;
+			g_list_destroy(cmd->keywords);
+			g_free(cmd);
 			NOTIFY_DONE(D);
 		}
 	}
@@ -1802,6 +1810,9 @@ static void _ic_store_enter(dm_thread_data *D)
 		}
 		
 	}
+
+	g_list_destroy(cmd->keywords);
+	g_free(cmd);
 
 	if (result) {
 		D->status = result;

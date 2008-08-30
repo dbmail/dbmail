@@ -1,3 +1,19 @@
+2008-08-30  Paul J Stevens <paul@nfg.nl>
+
+	* src/Makefile.am, src/dbmail-imapsession.c, 
+	src/dbmail-imapsession.h, src/dbmail-message.c, src/dbmail.h.in, 
+	src/dm_cache.c, src/dm_cache.h, src/dm_db.c, src/dm_memblock.c, 
+	src/dm_memblock.h, src/dm_misc.c, src/imap4.c, src/imapcommands.c, 
+	src/modules/authsql.c, src/server.c, test/Makefile.am, 
+	test/check_dbmail_imapd.c, test/check_dbmail_mailbox.c:
+	merge interfaces branch
+
+2008-08-26  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, src/dbmail-mailbox.c, src/dbmail.h.in, src/imap4.c, 
+	src/modules/authldap.c:
+	set MAX_LINESIZE to 64k and silence a couple of compiler warnings
+
 2008-08-26  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-mailbox.c, src/dbmail.h.in, src/imap4.c, 

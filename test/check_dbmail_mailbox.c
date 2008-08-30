@@ -324,7 +324,7 @@ START_TEST(test_dbmail_mailbox_search)
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
 
-	fail_unless((all - found) == notfound, "dbmail_mailbox_search failed: SEARCH NOT");
+	fail_unless((all - found) == notfound, "dbmail_mailbox_search failed: SEARCH NOT (all: %d, found: %d, notfound: %d)", all, found, notfound);
 	
 	// third case
 	idx=0;

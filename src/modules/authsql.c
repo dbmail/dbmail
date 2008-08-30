@@ -256,7 +256,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 
 int auth_change_password(u64_t user_idnr, const char *new_pass, const char *enctype)
 {
-	C c; S s; int t = FALSE;
+	C c; S s; volatile int t = FALSE;
 
 	if (strlen(new_pass) >= DEF_QUERYSIZE/2) {
 		TRACE(TRACE_ERROR, "new password length is insane");
@@ -491,7 +491,7 @@ int auth_check_userid(u64_t user_idnr)
 
 int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 {
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s; volatile int t = FALSE;
 	INIT_QUERY;
 
 	/* check if this alias already exists */
@@ -545,7 +545,8 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 int auth_addalias_ext(const char *alias,
 		    const char *deliver_to, u64_t clientid)
 {
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s; 
+	volatile int t = FALSE;
 	INIT_QUERY;
 
 	c = db_con_get();

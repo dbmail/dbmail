@@ -69,9 +69,7 @@ void dm_queue_drain(clientbase_t *client UNUSED)
 		data = g_async_queue_try_pop(queue);
 		if (data) {
 			dm_thread_data *D = (gpointer)data;
-			g_mutex_lock(D->mutex);
 			if (D->cb_leave) D->cb_leave(data);
-			g_mutex_unlock(D->mutex);
 			dm_thread_data_free(data);
 		}
 	} while (data);
@@ -96,7 +94,6 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	D->cb_leave     = cb_leave;
 	D->session	= session;
 	D->data         = data;
-	D->mutex	= s->mutex;
 
 	// we're not done until we're done
 	D->session->command_state = FALSE; 
@@ -140,9 +137,7 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
 {
 	TRACE(TRACE_DEBUG,"data[%p], user_data[%p]", data, user_data);
 	dm_thread_data *D = (dm_thread_data *)data;
-	g_mutex_lock(D->mutex);
 	D->cb_enter(D);
-	g_mutex_unlock(D->mutex);
 }
 
 /*

@@ -236,6 +236,7 @@ void imap_cb_read(void *arg)
 	ImapSession *session = (ImapSession *) arg;
 	char buffer[MAX_LINESIZE];
 	int result;
+	size_t l;
 
 	memset(buffer, 0, sizeof(buffer));	// has seen dirty buffers with out this
 
@@ -249,8 +250,8 @@ void imap_cb_read(void *arg)
 	// Read in a line at a time if we don't have a string literal size defined
 	// Otherwise read in sizeof(buff) [64KB[  or the remaining rbuff_size if less
 	while ((session->rbuff_size <= 0 && ci_readln(session->ci, buffer)) ||
-		ci_read(session->ci, buffer, (session->rbuff_size < (int)sizeof(buffer)) ?
-			session->rbuff_size : (int)sizeof(buffer))) {
+		(l = ci_read(session->ci, buffer, (session->rbuff_size < (int)sizeof(buffer)) ?
+			session->rbuff_size : (int)sizeof(buffer)))) {
 
 		if (session->error_count >= MAX_FAULTY_RESPONSES) {
 			imap_session_printf(session, "* BYE [TRY RFC]\r\n");
@@ -281,6 +282,12 @@ void imap_cb_read(void *arg)
 
 		return;
 	}
+
+	if (session->rbuff_size > 0) {
+		TRACE(TRACE_DEBUG,"last read [%d], still need [%d]", l, session->rbuff_size);
+		event_add(session->ci->rev, session->timeout); // reschedule cause we need more
+	}
+	
 }
 
 void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, int timeout)

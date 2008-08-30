@@ -22,12 +22,11 @@ TESTS=check_dbmail_common \
 	check_dbmail_db
 
 IMAPD = $(top_srcdir)/src/dm_quota.c \
+        $(top_srcdir)/src/dm_cache.c \
         $(top_srcdir)/src/dm_memblock.c \
         $(top_srcdir)/src/imap4.c \
         $(top_srcdir)/src/imapcommands.c \
         $(top_srcdir)/src/dbmail-imapsession.c
-
-
 	
 noinst_PROGRAMS=$(TESTS)
 

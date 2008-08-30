@@ -8,11 +8,11 @@
 #define _DBMAIL_COMMANDCHANNEL_H
 
 #include "dbmail.h"
+#include "dm_cache.h"
 
 // command state during idle command
 #define IDLE -1 
 
-typedef struct cache_t *cache_t;
 typedef struct cmd_t *cmd_t;
 
 /* ImapSession definition */
@@ -45,7 +45,7 @@ typedef struct {
 
 	// FIXME: there is too much redundancy here
 	DbmailMessage *message;
-	cache_t cached_msg;
+	Cache_T cache;
 
 	u64_t userid;		/* userID of client in dbase */
 
@@ -72,7 +72,6 @@ typedef struct {
 	ImapSession *session;
 	gpointer data;				/* payload				*/
 	int status;				/* command result 			*/
-	GMutex	*mutex;
 } dm_thread_data;
 
 /* public methods */

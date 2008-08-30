@@ -1,7 +1,6 @@
- /*
-
- Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (C) 2008 NFG Net Facilities Group BV, support@nfg.nl
+/*
+  
+ Copyright (c) 2008 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -19,28 +18,27 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*
- * dm_memblock.h
- *
- * definitions & declarations for an interface that makes function calls
- * similar to those using FILE*'s possible but now no files but memory blocks
- * are used.
- */
+#ifndef DM_CACHE_H
+#define DM_CACHE_H
 
-#ifndef DM_MEMBLOCK_H
-#define DM_MEMBLOCK_H
+#include "dm_memblock.h"
 
-#define T Mem_T
+#define IMAP_CACHE_MEMDUMP 1
+#define IMAP_CACHE_TMPDUMP 2
+
+#define T Cache_T
+
 typedef struct T *T;
 
-extern T Mem_open(void);
-
-extern void Mem_close  (T *M);
-extern int  Mem_write  (T M, const void *data, int size);
-extern int  Mem_read   (T M, void *data, int size);
-extern int  Mem_seek   (T M, long offset, int whence);
-extern void Mem_rewind (T M);
-
-#undef T
+extern T     Cache_new(void);
+extern u64_t Cache_set_dump(T C, char *buf, int dumptype);
+extern void  Cache_clear(T C);
+extern u64_t Cache_update(T C, DbmailMessage *message, int filter);
+extern u64_t Cache_get_size(T C);
+extern void  Cache_set_memdump(T C, Mem_T M);
+extern Mem_T Cache_get_memdump(T C);
+extern void  Cache_set_tmpdump(T C, Mem_T M);
+extern Mem_T Cache_get_tmpdump(T C);
+extern void  Cache_free(T *C);
 
 #endif

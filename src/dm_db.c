@@ -1675,7 +1675,7 @@ static int mailbox_empty(u64_t mailbox_idnr)
 /** get the total size of messages in a mailbox. Does not work recursively! */
 int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_size)
 {
-	C c; R r = NULL; int t = DM_SUCCESS;
+	C c; R r = NULL; volatile int t = DM_SUCCESS;
 	INIT_QUERY;
 	assert(mailbox_size != NULL);
 
