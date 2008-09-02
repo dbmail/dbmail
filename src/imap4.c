@@ -236,7 +236,7 @@ void imap_cb_read(void *arg)
 	ImapSession *session = (ImapSession *) arg;
 	char buffer[MAX_LINESIZE];
 	int result;
-	size_t l;
+	int l;
 
 	memset(buffer, 0, sizeof(buffer));	// has seen dirty buffers with out this
 
@@ -249,44 +249,54 @@ void imap_cb_read(void *arg)
 	// Drain input buffer else return to wait for more.
 	// Read in a line at a time if we don't have a string literal size defined
 	// Otherwise read in sizeof(buff) [64KB[  or the remaining rbuff_size if less
-	while ((session->rbuff_size <= 0 && ci_readln(session->ci, buffer)) ||
-		(l = ci_read(session->ci, buffer, (session->rbuff_size < (int)sizeof(buffer)) ?
-			session->rbuff_size : (int)sizeof(buffer)))) {
+	if (session->rbuff_size <= 0) {
+		l = ci_readln(session->ci, buffer);
+	} else {
+		int needed = (session->rbuff_size < (int)sizeof(buffer)) ? session->rbuff_size : (int)sizeof(buffer);
+		l = ci_read(session->ci, buffer, needed);
+	}
 
-		if (session->error_count >= MAX_FAULTY_RESPONSES) {
-			imap_session_printf(session, "* BYE [TRY RFC]\r\n");
-			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
-			return;
+	if (l == 0) {
+		if (session->rbuff_size > 0) {
+			TRACE(TRACE_DEBUG,"last read [%d], still need [%d]", l, session->rbuff_size);
+//			event_add(session->ci->rev, session->timeout); // reschedule cause we need more
 		}
-
-		if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop
-			session->command_state = FALSE;
-			dm_thread_data *D = g_new0(dm_thread_data,1);
-			D->data = (gpointer)g_strdup(buffer);
-			g_async_queue_push(session->ci->queue, (gpointer)D);
-			return;
-		}
-	
-		if (! imap4_tokenizer(session, buffer)) {
-			event_add(session->ci->rev, session->timeout);
-			return;
-		}
-		
-		if (! session->parser_state)
-			return;
-
-		if ((result = imap4(session))) {
-			imap_handle_exit(session, result);
-			break;
-		}
-
 		return;
 	}
 
-	if (session->rbuff_size > 0) {
-		TRACE(TRACE_DEBUG,"last read [%d], still need [%d]", l, session->rbuff_size);
-		event_add(session->ci->rev, session->timeout); // reschedule cause we need more
+	if (l < 0) {
+		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+		return;
 	}
+
+	if (session->error_count >= MAX_FAULTY_RESPONSES) {
+		imap_session_printf(session, "* BYE [TRY RFC]\r\n");
+		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+		return;
+	}
+
+	if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop
+		session->command_state = FALSE;
+		dm_thread_data *D = g_new0(dm_thread_data,1);
+		D->data = (gpointer)g_strdup(buffer);
+		g_async_queue_push(session->ci->queue, (gpointer)D);
+		return;
+	}
+
+	if (! imap4_tokenizer(session, buffer)) {
+		event_add(session->ci->rev, session->timeout);
+		return;
+	}
+
+	if (! session->parser_state)
+		return;
+
+	if ((result = imap4(session))) {
+		imap_handle_exit(session, result);
+	}
+
+	return;
+
 	
 }
 

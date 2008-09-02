@@ -2307,26 +2307,36 @@ int ci_write(clientbase_t *self, char * msg, ...)
 
 int ci_read(clientbase_t *self, char *buffer, size_t n)
 {
+	ssize_t t = 0;
 	size_t i = 0;
 	char c;
 
 	assert(buffer);
 	memset(buffer, 0, sizeof(buffer));
 
+	TRACE(TRACE_DEBUG,"[%p] need [%lu]", self, n);
 	self->len = 0;
 	while (self->len < n) {
-		if ((read(self->rx, (void *)&c, 1)) != 1)
+		t = read(self->rx, (void *)&c, 1);
+		if (t == -1) {
+			int e;
+			if ((e = self->cb_error(self->tx, errno, (void *)self)))
+				return e;
+			break;
+		}
+		if (t != 1)
 			break;
 		self->len++;
 		if (c == '\r') continue;
 		buffer[i++] = c;
 	}
-	TRACE(TRACE_DEBUG,"got [%d], need [%d]", self->len, n);
+	TRACE(TRACE_DEBUG,"[%p] read [%lu]", self, self->len);
 	return self->len;
 }	
 
 int ci_readln(clientbase_t *self, char * buffer)
 {
+	ssize_t t = 0;
 	char c=0;
 	int result = 0;
 
@@ -2337,7 +2347,10 @@ int ci_readln(clientbase_t *self, char * buffer)
 		self->len = 0;
 
 	while (self->len < MAX_LINESIZE) {
-		if ((read(self->rx, (void *)&c, 1)) != 1)
+		t = read(self->rx, (void *)&c, 1);
+		if (t == -1)
+			return self->cb_error(self->tx, errno, (void *)self);
+		if (t != 1)
 			break;
 
 		result++;
