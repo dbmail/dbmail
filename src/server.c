@@ -388,6 +388,22 @@ static void client_pipe_cb(int sock, short event, void *arg)
 	if (client->pev) event_add(client->pev, NULL);
 }
 
+static int client_error_cb(int sock, short event, void *arg)
+{
+	int r = 0;
+	clientbase_t *client = (clientbase_t *)arg;
+	switch (event) {
+		case EAGAIN:
+			break;
+		default:
+			TRACE(TRACE_DEBUG,"%d %s, %p", sock, strerror((int)event), arg);
+			r = -1;
+			break;
+	}
+	return r;
+}
+
+
 clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 {
 	int err;
@@ -397,6 +413,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 	client->login_timeout	= server_conf->login_timeout;
 	client->line_buffer	= g_string_new("");
 	client->queue           = g_async_queue_new();
+	client->cb_error        = client_error_cb;
 
 	/* make streams */
 	if (socket == 0 && caddr == NULL) {
