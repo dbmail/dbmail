@@ -32,9 +32,6 @@ static char *configFile = DEFAULT_CONFIG_FILE;
 volatile sig_atomic_t mainRestart = 0;
 volatile sig_atomic_t alarm_occurred = 0;
 
-extern volatile sig_atomic_t event_gotsig;
-extern int (*event_sigcb)(void);
-
 // thread data
 int selfpipe[2];
 GAsyncQueue *queue;
@@ -46,6 +43,7 @@ serverConfig_t *server_conf;
 static void server_config_load(serverConfig_t * conf, const char * const service);
 static int server_set_sighandler(void);
 
+struct event *sig_int, *sig_hup, *sig_pipe;
 
 
 /* 
@@ -189,6 +187,9 @@ static int server_start_cli(serverConfig_t *conf)
 
 	/* streams are ready, perform handling */
 	event_init();
+
+	if (server_setup()) return -1;
+
 	conf->ClientHandler(NULL);
 	event_dispatch();
 
@@ -201,12 +202,8 @@ static int server_start_cli(serverConfig_t *conf)
 // PUBLIC
 int StartCliServer(serverConfig_t * conf)
 {
-	if (!conf) TRACE(TRACE_FATAL, "NULL configuration");
-	
-	if (server_setup()) return -1;
-	
+	assert(conf);
 	server_start_cli(conf);
-	
 	return 0;
 }
 
@@ -486,77 +483,34 @@ static void server_sock_cb(int sock, short event, void *arg)
 	event_add(ev, NULL);
 }
 
-static void server_sighandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+void server_sig_cb(int fd, short event, void *arg)
 {
-	event_gotsig = 1;
+	struct event *ev = arg;
+	
+	TRACE(TRACE_DEBUG,"fd [%d], event [%d], signal [%d]", fd, event, EVENT_SIGNAL(ev));
 
-	switch (sig) {
-
-	case SIGHUP:
-		mainRestart = 1;
+	switch (EVENT_SIGNAL(ev)) {
+		case SIGHUP:
+			mainRestart = 1;
 		break;
-	case SIGALRM:
-		alarm_occurred = 1;
-		break;
-	default:
+		default:
+			exit(0);
 		break;
 	}
-}
-
-static int server_sig_cb(void)
-{
-	TRACE(TRACE_DEBUG, "...");
-	if (alarm_occurred)
-		(void)event_loopexit(NULL);
-	alarm_occurred = 0;
-
-	if (mainRestart) {
-		TRACE(TRACE_DEBUG,"restart... TBD");
-	}
-	return (0);
 }
 
 // FIXME: signals have been in a bad shape since
 // the libevent rewrite
 static int server_set_sighandler(void)
 {
-	struct sigaction act;
-	struct sigaction rstact;
 
-	memset(&act, 0, sizeof(act));
-	memset(&rstact, 0, sizeof(rstact));
+	sig_int = g_new0(struct event, 1);
+	sig_hup = g_new0(struct event, 1);
+	sig_pipe = g_new0(struct event, 1);
 
-	act.sa_sigaction = server_sighandler;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO;
-
-	rstact.sa_sigaction = server_sighandler;
-	sigemptyset(&rstact.sa_mask);
-	rstact.sa_flags = SA_SIGINFO | SA_RESETHAND;
-
-	sigaddset(&act.sa_mask, SIGINT);
-	sigaddset(&act.sa_mask, SIGQUIT);
-	sigaddset(&act.sa_mask, SIGILL);
-	sigaddset(&act.sa_mask, SIGBUS);
-	sigaddset(&act.sa_mask, SIGFPE);
-	sigaddset(&act.sa_mask, SIGSEGV);
-	sigaddset(&act.sa_mask, SIGTERM);
-	sigaddset(&act.sa_mask, SIGHUP);
-	sigaddset(&act.sa_mask, SIGPIPE);
-
-	sigaction(SIGINT,	&rstact, 0);
-	sigaction(SIGQUIT,	&rstact, 0);
-	sigaction(SIGILL,	&rstact, 0);
-	sigaction(SIGBUS,	&rstact, 0);
-	sigaction(SIGFPE,	&rstact, 0);
-	sigaction(SIGSEGV,	&rstact, 0);
-	sigaction(SIGTERM,	&rstact, 0);
-	sigaction(SIGHUP,	&rstact, 0);
-	sigaction(SIGPIPE,	&rstact, 0);
-	sigaction(SIGALRM,	&act, 0);
-	sigaction(SIGCHLD,	&act, 0);
-
-	event_sigcb = server_sig_cb;
+	signal_set(sig_int, SIGINT, server_sig_cb, sig_int); signal_add(sig_int, NULL);
+	signal_set(sig_hup, SIGHUP, server_sig_cb, sig_hup); signal_add(sig_hup, NULL);
+	signal_set(sig_pipe, SIGPIPE, server_sig_cb, sig_pipe); signal_add(sig_pipe, NULL);
 
 	TRACE(TRACE_INFO, "signal handler placed");
 
@@ -570,8 +524,17 @@ void disconnect_all(void)
 	db_disconnect();
 	auth_disconnect();
 	if (tpool) g_thread_pool_free(tpool,TRUE,FALSE);
+	g_free(sig_int);
+	g_free(sig_hup);
+	g_free(sig_pipe);
 }
 
+static void server_exit(void)
+{
+	disconnect_all();
+	server_close_sockets(server_conf);
+}
+	
 int server_run(serverConfig_t *conf)
 {
 	int ip;
@@ -582,8 +545,6 @@ int server_run(serverConfig_t *conf)
 	assert(conf);
 	reopen_logs(conf);
 	server_create_sockets(conf);
-
-	if (server_setup()) return -1;
 
  	TRACE(TRACE_MESSAGE, "starting main service loop");
 
@@ -602,6 +563,9 @@ int server_run(serverConfig_t *conf)
 
 	TRACE(TRACE_DEBUG,"setup event loop");
 	event_init();
+
+	if (server_setup()) return -1;
+
 	evsock = g_new0(struct event, server_conf->ipcount+1);
 	for (ip = 0; ip < server_conf->ipcount; ip++) {
 		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, server_sock_cb, &evsock[ip]);
@@ -609,12 +573,11 @@ int server_run(serverConfig_t *conf)
 	}
 
 	TRACE(TRACE_DEBUG,"dispatching event loop...");
+
+	atexit(server_exit);
+
 	event_dispatch();
 
-	disconnect_all();
-
-	server_close_sockets(conf);
-	
 	return 0;
 }
 

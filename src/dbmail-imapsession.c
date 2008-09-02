@@ -1338,11 +1338,9 @@ static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 	}
 
 	// switch active mailbox view
-	g_mutex_lock(self->mutex);
 	old = self->mailbox;
 	self->mailbox = new;
 	dbmail_mailbox_free(old);
-	g_mutex_unlock(self->mutex);
 }
 
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
@@ -1542,9 +1540,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 
 int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 {
-	g_mutex_lock(self->mutex);
 	if ( (self->state == state) || (self->state == IMAPCS_ERROR) ) {
-		g_mutex_unlock(self->mutex);
 		return 0;
 	}
 
@@ -1572,7 +1568,6 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, self->state, state);
 	self->state = state;
-	g_mutex_unlock(self->mutex);
 
 	return 0;
 }
