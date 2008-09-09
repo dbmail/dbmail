@@ -223,6 +223,7 @@ typedef struct {
 	int (*cb_error) (int fd, short what, void *);
 
 	char ip_src[IPNUM_LEN];		/* client IP-number */
+	int ip_src_port;		/* client source port number */
 	field_t clientname;		/* resolved client hostname */
 	int timeout;			/* server timeout (seconds) */
 	int login_timeout;		/* login timeout (seconds) */

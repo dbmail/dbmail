@@ -422,6 +422,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 		client->tx		= STDOUT_FILENO;
 	} else {
 		strncpy((char *)client->ip_src, inet_ntoa(caddr->sin_addr), sizeof(client->ip_src));
+		client->ip_src_port = ntohs(caddr->sin_port);
 
 		if (server_conf->resolveIP) {
 			struct hostent *clientHost;
@@ -430,12 +431,12 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 			if (clientHost && clientHost->h_name)
 				strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
 
-			TRACE(TRACE_MESSAGE, "incoming connection from [%s (%s)] by pid [%d]",
-					client->ip_src,
+			TRACE(TRACE_MESSAGE, "incoming connection from [%s:%d (%s)] by pid [%d]",
+					client->ip_src, client->ip_src_port,
 					client->clientname[0] ? client->clientname : "Lookup failed", getpid());
 		} else {
-			TRACE(TRACE_MESSAGE, "incoming connection from [%s] by pid [%d]",
-					client->ip_src, getpid());
+			TRACE(TRACE_MESSAGE, "incoming connection from [%s:%d] by pid [%d]",
+					client->ip_src, client->ip_src_port, getpid());
 		}
 
 		/* make streams */
