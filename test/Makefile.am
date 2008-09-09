@@ -16,6 +16,7 @@ TESTS=check_dbmail_common \
 	check_dbmail_auth \
 	check_dbmail_misc \
 	check_dbmail_list \
+	check_dbmail_memblock \
 	check_dbmail_user \
 	check_dbmail_util \
 	check_dbmail_dsn \
@@ -45,6 +46,10 @@ check_dbmail_misc_INCLUDES=@CHECK_CFLAGS@
 check_dbmail_list_SOURCES=check_dbmail_list.c
 check_dbmail_list_LDADD=$(CHECK_LDADD)
 check_dbmail_list_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_memblock_SOURCES=check_dbmail_memblock.c $(top_srcdir)/src/dm_memblock.c
+check_dbmail_memblock_LDADD=$(CHECK_LDADD)
+check_dbmail_memblock_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_util_SOURCES=check_dbmail_util.c
 check_dbmail_util_LDADD=$(CHECK_LDADD)

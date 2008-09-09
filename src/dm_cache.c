@@ -146,8 +146,8 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 
 	}
 
-	Mem_rewind(C->memdump);
-	Mem_rewind(C->tmpdump);
+//	Mem_rewind(C->memdump);
+//	Mem_rewind(C->tmpdump);
 	
 	TRACE(TRACE_DEBUG,"cache size [%llu]", outcnt);	
 	return outcnt;
