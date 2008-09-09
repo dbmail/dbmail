@@ -1,3 +1,20 @@
+2008-09-09  Paul J Stevens <paul@nfg.nl>
+
+	* THANKS:
+	update THANKS
+	* src/dbmailtypes.h, src/server.c:
+	report client source port (Jon Feilly)
+	* src/imap4.c:
+	re-add event (Jon Feilly)
+
+2008-09-04  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-message.c, src/dm_misc.c, src/imap4.c, src/server.c, 
+	test/check_dbmail_imapd.c:
+	partial fix for lockup problem
+	* src/dm_cache.c, test/Makefile.am, test/check_dbmail_memblock.c:
+	add new test suite
+
 2008-09-02  Paul J Stevens <paul@nfg.nl>
 
 	* src/dm_misc.c, src/imap4.c, test-scripts/testappend.txt:
