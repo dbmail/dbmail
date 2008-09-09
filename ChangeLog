@@ -4,8 +4,6 @@
 	update THANKS
 	* src/dbmailtypes.h, src/server.c:
 	report client source port (Jon Feilly)
-	* src/imap4.c:
-	re-add event (Jon Feilly)
 
 2008-09-04  Paul J Stevens <paul@nfg.nl>
 
