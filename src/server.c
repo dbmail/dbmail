@@ -342,7 +342,7 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 	if (ip[0] == '*') {
 		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
 	} else if (! (inet_aton(ip, &saServer.sin_addr))) {
-		close(sock);
+		if (sock > 0) close(sock);
 		TRACE(TRACE_FATAL, "IP invalid [%s]", ip);
 	}
 
@@ -358,7 +358,8 @@ static void server_close_sockets(serverConfig_t *conf)
 {
 	int i;
 	for (i = 0; i < conf->ipcount; i++)
-		close(conf->listenSockets[i]);
+		if (conf->listenSockets[i] > 0)
+			close(conf->listenSockets[i]);
 }
 
 static void server_create_sockets(serverConfig_t * conf)
@@ -441,7 +442,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 		if (!(client->rx = dup(socket))) {
 			err = errno;
 			TRACE(TRACE_ERROR, "%s", strerror(err));
-			close(socket);
+			if (socket > 0) close(socket);
 			g_free(client);
 			return NULL;
 		}
@@ -449,7 +450,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 		if (!(client->tx = socket)) {
 			err = errno;
 			TRACE(TRACE_ERROR, "%s", strerror(err));
-			close(socket);
+			if (socket > 0) close(socket);
 			g_free(client);
 			return NULL;
 		}
@@ -521,13 +522,21 @@ void server_sig_cb(int fd, short event, void *arg)
 static int server_set_sighandler(void)
 {
 
+	struct sigaction sa;
+	
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	sa.sa_flags   = 0;
+
+	sigemptyset(&sa.sa_mask);
+	if (sigaction(SIGPIPE, &sa, 0) != 0)
+		perror("sigaction");
+
 	sig_int = g_new0(struct event, 1);
 	sig_hup = g_new0(struct event, 1);
-	sig_pipe = g_new0(struct event, 1);
 
 	signal_set(sig_int, SIGINT, server_sig_cb, sig_int); signal_add(sig_int, NULL);
 	signal_set(sig_hup, SIGHUP, server_sig_cb, sig_hup); signal_add(sig_hup, NULL);
-	signal_set(sig_pipe, SIGPIPE, server_sig_cb, sig_pipe); signal_add(sig_pipe, NULL);
 
 	TRACE(TRACE_INFO, "signal handler placed");
 
@@ -543,7 +552,6 @@ void disconnect_all(void)
 	if (tpool) g_thread_pool_free(tpool,TRUE,FALSE);
 	g_free(sig_int);
 	g_free(sig_hup);
-	g_free(sig_pipe);
 }
 
 static void server_exit(void)

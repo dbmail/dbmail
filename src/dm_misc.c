@@ -2291,6 +2291,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 {
 	char *s;
 	va_list ap;
+	ssize_t l, t;
 
 	if (! self) return -1;
 
@@ -2300,7 +2301,16 @@ int ci_write(clientbase_t *self, char * msg, ...)
 
 	TRACE(TRACE_INFO, "[%p] S > [%s]", self, s);
 	event_add(self->wev, NULL);
-	write(self->tx, (gconstpointer)s, strlen(s));
+	l = strlen(s);
+	t = write(self->tx, (gconstpointer)s, l);
+	if (t == -1) {
+		int e;
+		if ((e = self->cb_error(self->tx, errno, (void *)self)))
+			return e;
+	}
+	if (t < l)
+		TRACE(TRACE_INFO, "short write: [%lu] of [%lu]", t, l);
+
 	g_free(s);
 	return 0;
 }
@@ -2320,7 +2330,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		t = read(self->rx, (void *)&c, 1);
 		if (t == -1) {
 			int e;
-			if ((e = self->cb_error(self->tx, errno, (void *)self)))
+			if ((e = self->cb_error(self->rx, errno, (void *)self)))
 				return e;
 			break;
 		}
@@ -2331,6 +2341,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		buffer[i++] = c;
 	}
 	TRACE(TRACE_DEBUG,"[%p] read [%lu]", self, self->len);
+
 	return self->len;
 }	
 
@@ -2349,7 +2360,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 	while (self->len < MAX_LINESIZE) {
 		t = read(self->rx, (void *)&c, 1);
 		if (t == -1)
-			return self->cb_error(self->tx, errno, (void *)self);
+			return self->cb_error(self->rx, errno, (void *)self);
 		if (t != 1)
 			break;
 

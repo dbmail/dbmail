@@ -907,10 +907,16 @@ static void _register_header(const char *header, const char *value, gpointer use
 {
 	const char *hname, *hvalue;
 	DbmailMessage *m = (DbmailMessage *)user_data;
+
+	assert(header);
+	assert(value);
+	assert(m);
+
 	if (! (hname = g_tree_lookup(m->header_name,header))) {
 		g_tree_insert(m->header_name,(gpointer)header,(gpointer)header);
 		hname = header;
 	}
+
 	if (! (hvalue = g_tree_lookup(m->header_value,value))) {
 		g_tree_insert(m->header_value,(gpointer)value,(gpointer)value);
 		hvalue = value;
@@ -1245,7 +1251,6 @@ int dbmail_message_store(DbmailMessage *self)
 {
 	u64_t user_idnr;
 	char unique_id[UID_SIZE];
-	char *hdrs, *body;
 	int res = 0;
 	u64_t hdrs_size, body_size, rfcsize;
 	int i=1, retry=10, delay=200;
@@ -1263,9 +1268,6 @@ int dbmail_message_store(DbmailMessage *self)
 			usleep(delay*i);
 			continue;
 		}
-
-		hdrs = dbmail_message_hdrs_to_string(self);
-		body = dbmail_message_body_to_string(self);
 
 		hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
 		body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
@@ -1355,6 +1357,9 @@ int _message_insert(DbmailMessage *self,
 	END_TRY;
 
 	g_free(frag);
+
+	db_mailbox_mtime_update(mailboxid);
+
 	return result;
 }
 

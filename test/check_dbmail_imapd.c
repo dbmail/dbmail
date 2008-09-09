@@ -166,8 +166,8 @@ static clientbase_t * ci_new_writable(void)
 
 static void ci_free_writable(clientbase_t *ci)
 {
-	close(ci->tx);
-	close(ci->rx);
+	if (ci->tx > 0) close(ci->tx);
+	if (ci->rx >= 0) close(ci->rx);
 	unlink(tempfile);
 }
 
@@ -460,8 +460,8 @@ END_TEST
 
 
 			
-#define F(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[%s] should have yielded \n[%s] but got \n[%s]", a,b,c)
-#define Fnull(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[] should have yielded \n[" b "] but got \n[%s]", c)
+#define F(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[%s] should have yielded \n[%s] but got \n[%s]", a,b,c); free(c)
+#define Fnull(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[] should have yielded \n[" b "] but got \n[%s]", c); free(c)
 	
 START_TEST(test_imap_cleanup_address)
 {
@@ -847,11 +847,10 @@ START_TEST(test_listex_match)
 END_TEST
 
 /* this test will fail if you're not in the CET timezone */
-#define D(x,y) fail_unless(strncasecmp(date_sql2imap(x),y,IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed")
+#define D(x,y) fail_unless(strncasecmp(c = date_sql2imap(x),y,IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed"); free(c)
 START_TEST(test_date_sql2imap)
 {
-//	printf("[%s]\n", date_sql2imap("2005-05-03 14:10:06"));
-//	printf("[%s]\n", date_sql2imap("2005-01-03 14:10:06"));
+	char *c;
         D("2005-05-03 14:10:06","03-May-2005 14:10:06 +0200");
         D("2005-01-03 14:10:06","03-Jan-2005 14:10:06 +0100");
 }

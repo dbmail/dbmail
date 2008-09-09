@@ -246,6 +246,9 @@ void imap_cb_read(void *arg)
 	}
 	if (session->command_state==TRUE) dbmail_imap_session_reset(session);
 
+	// disable read events until we're done
+	event_del(session->ci->rev);
+
 	// Drain input buffer else return to wait for more.
 	// Read in a line at a time if we don't have a string literal size defined
 	// Otherwise read in sizeof(buff) [64KB[  or the remaining rbuff_size if less
@@ -257,10 +260,8 @@ void imap_cb_read(void *arg)
 	}
 
 	if (l == 0) {
-		if (session->rbuff_size > 0) {
+		if (session->rbuff_size > 0)
 			TRACE(TRACE_DEBUG,"last read [%d], still need [%d]", l, session->rbuff_size);
-//			event_add(session->ci->rev, session->timeout); // reschedule cause we need more
-		}
 		return;
 	}
 
@@ -376,9 +377,6 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 		
 	if (!(*buffer))
 		return 0;
-
-	// disable read events until we're done
-	event_del(session->ci->rev);
 
 	/* read tag & command */
 	cpy = buffer;
