@@ -493,73 +493,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			else \
 				dbmail_imap_session_buff_printf(self, " ")
 
-static gboolean _get_mailbox(u64_t UNUSED *id, MailboxInfo *mb, int *error)
-{
-	int result;
-	result = acl_has_right(mb, mb->owner_idnr, ACL_RIGHT_READ);
 
-	if (result == -1) {
-		*error = -1;
-		return TRUE;
-	}
-	if (result == 0) {
-		*error = 1;
-		return TRUE;
-	}
-
-	if (db_getmailbox(mb, mb->owner_idnr) != DM_SUCCESS)
-		return TRUE;
-
-	return FALSE;
-}
-
-static void dbmail_imap_session_get_mbxinfo(ImapSession *self)
-{
-	C c; R r; int t = FALSE, error = 0;
-	GTree *mbxinfo = NULL;
-	u64_t *id;
-	MailboxInfo *mb;
-	
-	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	c = db_con_get();
-	TRY
-		r = Connection_executeQuery(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);
-		while (db_result_next(r)) {
-			id = g_new0(u64_t,1);
-			mb = g_new0(MailboxInfo,1);
-
-			*id = db_result_get_u64(r, 0);
-			mb->uid = *id;
-			mb->owner_idnr = self->userid;
-
-			g_tree_insert(mbxinfo, id, NULL);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		Connection_close(c);
-		t = DM_EQUERY;
-	END_TRY;
-
-	if (t == DM_EQUERY) return;
-
-	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, &error);
-
-	if (! error) {
-		if (self->mbxinfo) _mbxinfo_destroy(self);
-		self->mbxinfo = mbxinfo;
-		return;
-	}
-
-	if (error == DM_EQUERY)
-		TRACE(TRACE_ERROR, "[%p] database error retrieving mbxinfo", self);
-	else if (error == DM_EGENERAL)
-		TRACE(TRACE_ERROR, "[%p] failure retrieving mbxinfo for unreadable mailbox", self);
-
-	g_tree_destroy(mbxinfo);
-
-	return;
-}
 
 static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch_t *bodyfetch, const char *type)
 {
@@ -1439,13 +1373,80 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	return 0;
 }
 
+static gboolean _get_mailbox(u64_t UNUSED *id, MailboxInfo *mb, int *error)
+{
+	int result;
+	result = acl_has_right(mb, mb->owner_idnr, ACL_RIGHT_READ);
+
+	if (result == -1) {
+		*error = -1;
+		return TRUE;
+	}
+	if (result == 0) {
+		*error = 1;
+		return TRUE;
+	}
+
+	if (db_getmailbox(mb, mb->owner_idnr) != DM_SUCCESS)
+		return TRUE;
+
+	return FALSE;
+}
+static void _get_mbxinfo(ImapSession *self)
+{
+	C c; R r; int t = FALSE, error = 0;
+	GTree *mbxinfo = NULL;
+	u64_t *id;
+	MailboxInfo *mb;
+	
+	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	c = db_con_get();
+	TRY
+		r = Connection_executeQuery(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);
+		while (db_result_next(r)) {
+			id = g_new0(u64_t,1);
+			mb = g_new0(MailboxInfo,1);
+
+			*id = db_result_get_u64(r, 0);
+			mb->uid = *id;
+			mb->owner_idnr = self->userid;
+
+			g_tree_insert(mbxinfo, id, NULL);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		Connection_close(c);
+		t = DM_EQUERY;
+	END_TRY;
+
+	if (t == DM_EQUERY) return;
+
+	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, &error);
+
+	if (! error) {
+		if (self->mbxinfo) _mbxinfo_destroy(self);
+		self->mbxinfo = mbxinfo;
+		return;
+	}
+
+	if (error == DM_EQUERY)
+		TRACE(TRACE_ERROR, "[%p] database error retrieving mbxinfo", self);
+	else if (error == DM_EGENERAL)
+		TRACE(TRACE_ERROR, "[%p] failure retrieving mbxinfo for unreadable mailbox", self);
+
+	g_tree_destroy(mbxinfo);
+
+	return;
+}
+
 MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr)
 {
 	MailboxInfo *mb = NULL;
 	u64_t *id;
 	int error = 0;
 
-	if (! self->mbxinfo) dbmail_imap_session_get_mbxinfo(self);
+	if (! self->mbxinfo) _get_mbxinfo(self);
 
 	/* fetch the cached mailbox metadata */
 	if ((mb = (MailboxInfo *)g_tree_lookup(self->mbxinfo, &mailbox_idnr)) == NULL) {

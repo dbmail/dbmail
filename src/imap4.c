@@ -202,7 +202,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 	TRACE(TRACE_DEBUG, "[%p] state [%d] command_status [%d] [%s] returned with status [%d]", 
 		session, session->state, session->command_state, session->command, status);
 
-	g_mutex_lock(session->mutex);
 	switch(status) {
 		case -1:
 			dbmail_imap_session_set_state(session,IMAPCS_ERROR);	/* fatal error occurred, kick this user */
@@ -229,7 +228,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 			imap_session_printf(session, "%s OK LOGOUT completed\r\n", session->tag);
 			break;
 	}
-	g_mutex_unlock(session->mutex);
 }
 
 
@@ -486,6 +484,5 @@ int imap4(ImapSession *session)
 	session->command_state=FALSE; // unset command-is-done-state while command in progress
 
 	TRACE(TRACE_INFO, "dispatch [%s]...\n", IMAP_COMMANDS[session->command_type]);
-	g_mutex_lock(session->mutex);
 	return (*imap_handler_functions[session->command_type]) (session);
 }

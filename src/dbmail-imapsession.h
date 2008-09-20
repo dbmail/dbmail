@@ -70,6 +70,7 @@ typedef struct {
 	void (* cb_enter)(gpointer);		/* callback on thread entry		*/
 	void (* cb_leave)(gpointer);		/* callback on thread exit		*/
 	ImapSession *session;
+	clientbase_t ci;
 	gpointer data;				/* payload				*/
 	int status;				/* command result 			*/
 } dm_thread_data;
