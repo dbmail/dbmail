@@ -59,6 +59,8 @@ typedef struct {
 	fetch_items_t *fi;	// imap fetch
 
 	gboolean uid, no_select, no_inferiors, no_children;
+	
+	GMutex *mutex;
 
 } DbmailMailbox;
 
