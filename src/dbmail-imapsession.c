@@ -79,8 +79,6 @@ static void send_data(ImapSession *self, Mem_T M, int cnt)
 	if (got != want) TRACE(TRACE_FATAL,"[%p] want [%d] <> got [%d]", self, want, got);
 }
 
-static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize); 
-
 /* 
  * initializer and accessors for ImapSession
  */
@@ -502,34 +500,6 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 
 
 
-static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch_t *bodyfetch, const char *type)
-{
-	if ( !part ) { 
-		dbmail_imap_session_buff_printf(self, "] NIL");
-	} else {
-		char *tmp = imap_get_logical_part(part,type);
-		u64_t size = Cache_set_dump(self->cache,tmp,IMAP_CACHE_TMPDUMP);
-		g_free(tmp);
-
-		if (!size) {
-			dbmail_imap_session_buff_printf(self, "] NIL");
-		} else {
-			Mem_T M = Cache_get_tmpdump(self->cache);
-			u64_t cnt = 0;
-			if (bodyfetch->octetcnt > 0) {
-				cnt = get_dumpsize(bodyfetch, size);
-				dbmail_imap_session_buff_printf(self, "]<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
-				Mem_seek(M, bodyfetch->octetstart, SEEK_SET);
-			} else {
-				cnt = size;
-				dbmail_imap_session_buff_printf(self, "] {%llu}\r\n", size);
-				Mem_rewind(M);
-			}
-			send_data(self, M, cnt);
-		}
-	}
-}
-
 #define QUERY_BATCHSIZE 2000
 
 void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean not)
@@ -686,6 +656,42 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 	_send_headers(self, bodyfetch, not);
 
 	return;
+}
+
+static u64_t get_dumpsize(body_fetch_t *bodyfetch, gsize dumpsize) 
+{
+	if (bodyfetch->octetstart > dumpsize)
+		return 0;
+	if ((bodyfetch->octetstart + dumpsize) > bodyfetch->octetcnt)
+		return bodyfetch->octetcnt;
+	return (dumpsize - bodyfetch->octetstart);
+}
+static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch_t *bodyfetch, const char *type)
+{
+	TRACE(TRACE_DEBUG,"[%p] type [%s]", self, type);
+	if ( !part ) { 
+		dbmail_imap_session_buff_printf(self, "] NIL");
+	} else {
+		char *tmp = imap_get_logical_part(part,type);
+		GString *str = g_string_new(tmp);
+		g_free(tmp);
+
+		if (str->len < 1) {
+			dbmail_imap_session_buff_printf(self, "] NIL");
+		} else {
+			gsize cnt = 0;
+			if (bodyfetch->octetcnt > 0) {
+				cnt = get_dumpsize(bodyfetch, str->len);
+				dbmail_imap_session_buff_printf(self, "]<%llu> {%lu}\r\n", bodyfetch->octetstart, cnt);
+				g_string_erase(str,0,bodyfetch->octetstart);
+				g_string_truncate(str,cnt);
+			} else {
+				dbmail_imap_session_buff_printf(self, "] {%lu}\r\n", str->len);
+			}
+			dbmail_imap_session_buff_printf(self,"%s", str->str);
+		}
+		g_string_free(str,TRUE);
+	}
 }
 
 
@@ -1774,15 +1780,7 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self)
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->octetcnt;
 }
-u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t dumpsize) 
-{
-	long long cnt = dumpsize - bodyfetch->octetstart;
-	if (cnt < 0)
-		cnt = 0;
-	if ((guint64)cnt > bodyfetch->octetcnt)
-		cnt = bodyfetch->octetcnt;
-	return (u64_t)cnt;
-}
+
 
 /* local defines */
 #define NORMPAR 1

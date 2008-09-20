@@ -819,10 +819,10 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 			g_mime_stream_reset(mstream);
 			g_mime_parser_init_with_stream(parser, mstream);
 
-			g_object_unref(filter);
 			g_object_unref(fstream);
 			g_object_unref(bstream);
 			g_object_unref(mstream);
+			g_object_unref(filter);
 
 		break;
 
