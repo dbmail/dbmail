@@ -58,7 +58,10 @@ static void send_data(ImapSession *self, Mem_T M, int cnt)
 {
 	char buf[SEND_BUF_SIZE];
 	size_t l;
+	int got = 0, want = cnt;
 
+	assert(M);
+	TRACE(TRACE_DEBUG,"[%p] C [%p] M [%p] cnt [%d]", self, self->cache, M, cnt);
 	while (cnt >= SEND_BUF_SIZE) {
 		memset(buf,0,sizeof(buf));
 		l = Mem_read(M, buf, SEND_BUF_SIZE-1);
@@ -70,8 +73,12 @@ static void send_data(ImapSession *self, Mem_T M, int cnt)
 		memset(buf,0,sizeof(buf));
 		l = Mem_read(M, buf, cnt);
 		dbmail_imap_session_buff_printf(self, "%s", (l>0)?buf:"");
+		cnt -= l;
 	}
+	got = want - cnt;
+	if (got != want) TRACE(TRACE_FATAL,"[%p] want [%d] <> got [%d]", self, want, got);
 }
+
 static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize); 
 
 /* 
@@ -827,8 +834,6 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	gchar *s = NULL;
 	u64_t *id = uid;
 
-	Cache_T C = self->cache;
-	Mem_T M = Cache_get_memdump(C);
 
 	MessageInfo *msginfo = g_tree_lookup(self->mailbox->msginfo, uid);
 
@@ -912,8 +917,8 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		SEND_SPACE;
 
 		dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL);
-		dbmail_imap_session_buff_printf(self, "RFC822 {%llu}\r\n", Cache_get_size(C) );
-		send_data(self, M, Cache_get_size(C) );
+		dbmail_imap_session_buff_printf(self, "RFC822 {%llu}\r\n", Cache_get_size(self->cache) );
+		send_data(self, Cache_get_memdump(self->cache), Cache_get_size(self->cache) );
 
 		if (self->fi->getRFC822)
 			self->fi->setseen = 1;
@@ -926,10 +931,11 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		
 		dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL);
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
-			dbmail_imap_session_buff_printf(self, "BODY[] {%llu}\r\n", Cache_get_size(C) );
-			send_data(self, M, Cache_get_size(C) );
+			dbmail_imap_session_buff_printf(self, "BODY[] {%llu}\r\n", Cache_get_size(self->cache) );
+			send_data(self, Cache_get_memdump(self->cache), Cache_get_size(self->cache) );
 		} else {
-			u64_t size = Cache_get_size(C);
+			u64_t size = Cache_get_size(self->cache);
+			Mem_T M = Cache_get_memdump(self->cache);
 			Mem_seek(M, dbmail_imap_session_bodyfetch_get_last_octetstart(self), SEEK_SET);
 			actual_cnt = (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) >
 			     (((long long)size) - dbmail_imap_session_bodyfetch_get_last_octetstart(self)))
@@ -952,7 +958,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 		tmpdumpsize = dbmail_imap_session_message_load(self,DBMAIL_MESSAGE_FILTER_HEAD);
 		dbmail_imap_session_buff_printf(self, "RFC822.HEADER {%llu}\r\n", tmpdumpsize);
-		send_data(self, Cache_get_tmpdump(C), tmpdumpsize);
+		send_data(self, Cache_get_tmpdump(self->cache), tmpdumpsize);
 	}
 
 	if (self->fi->getRFC822Text) {
@@ -961,7 +967,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 		tmpdumpsize = dbmail_imap_session_message_load(self,DBMAIL_MESSAGE_FILTER_BODY);
 		dbmail_imap_session_buff_printf(self, "RFC822.TEXT {%llu}\r\n", tmpdumpsize);
-		send_data(self, Cache_get_tmpdump(C), tmpdumpsize);
+		send_data(self, Cache_get_tmpdump(self->cache), tmpdumpsize);
 
 		self->fi->setseen = 1;
 	}
@@ -1118,6 +1124,12 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
         va_start(ap, message);
         j = self->buff->len;
         g_string_append_vprintf(self->buff, message, ap);
+	{
+		char *m = g_strdup_vprintf(message, ap);
+		TRACE(TRACE_DEBUG,"[%p] buf <<  [%s]", self, m);
+		g_free(m);
+	}
+
         l = self->buff->len;
         va_end(ap);
 

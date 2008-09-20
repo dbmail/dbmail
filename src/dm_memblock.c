@@ -46,17 +46,10 @@ typedef struct MemBlock_t *MemBlock_t;
 
 struct T {
 	int nblocks;
-	long mpos, eom;		/* eom = end-of-mem; these positions are relative to
-				 * currblk (mpos) and lastblk (eom)
-				 */
+	long eom;		/* eom = end-of-mem; relative to lastblk */
+	long mpos;		/* mpos = mem-position; relative to currblk */
 	MemBlock_t firstblk, currblk, lastblk;
 };
-
-enum __M_ERRORS { M_NOERROR, M_NOMEM, M_BADMEM, M_BADDATA, M_BADWHENCE,
-	    M_LASTERR };
-
-int __m_errno;
-char __m_error_str[MAX_ERROR_SIZE];
 
 /* internal use only */
 static int Mem_grow(T M);
@@ -79,7 +72,6 @@ T Mem_open()
 	M->currblk = B;
 	M->nblocks = 1;
 
-	__m_errno = M_NOERROR;
 	return M;
 }
 
@@ -94,8 +86,6 @@ void Mem_close(T *M)
 {
 	assert(M && *M);
 	MemBlock_t tmp, next;
-
-	__m_errno = M_NOERROR;
 
 	tmp = (*M)->firstblk;
 	while (tmp) {
@@ -189,8 +179,7 @@ int Mem_read(T M, void *data, int size)
 	else
 		left = MEMBLOCK_SIZE - M->mpos;
 
-	if (left <= 0)
-		return 0;
+	if (left <= 0) return 0;
 
 	if (size < left) {
 		/* entire fit */
@@ -237,14 +226,12 @@ int Mem_seek(T M, long offset, int whence)
 		M->currblk = M->firstblk;
 		M->mpos = 0;
 
-		if (offset <= 0)
-			return 0;
+		if (offset <= 0) return 0;
 
 		return Mem_seek(M, offset, SEEK_CUR);
 
 	case SEEK_CUR:
-		if (offset == 0)
-			return 0;
+		if (offset == 0) return 0;
 
 		if (offset > 0) {
 			left = MEMBLOCK_SIZE - M->mpos;
@@ -294,7 +281,6 @@ int Mem_seek(T M, long offset, int whence)
 		return Mem_seek(M, offset, SEEK_CUR);
 
 	default:
-		__m_errno = M_BADWHENCE;
 		return -1;
 	}
 
@@ -310,7 +296,6 @@ int Mem_seek(T M, long offset, int whence)
 void Mem_rewind(T M)
 {
 	Mem_seek(M, 0, SEEK_SET);
-	__m_errno = M_NOERROR;
 }
 
 
