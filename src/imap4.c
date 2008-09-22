@@ -266,8 +266,6 @@ void imap_cb_read(void *arg)
 	if (l == 0) {
 		if (session->rbuff_size > 0)
 			TRACE(TRACE_DEBUG,"last read [%d], still need [%d]", l, session->rbuff_size);
-		if (session->rbuff_size > 0 || session->ci->read_cmd)
-			event_add(session->ci->rev, session->timeout); // Re-Add Event For More Data From Network
 		return;
 	}
 

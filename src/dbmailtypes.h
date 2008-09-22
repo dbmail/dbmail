@@ -230,7 +230,6 @@ typedef struct {
 	int service_before_smtp;
 
 	size_t len;			/* octets read during last ci_read/ci_readln */
-	int read_cmd;			/* reading command */
 	GString *line_buffer;		/* buffer for ci_readln */
 	GString *write_buffer;		/* output buffer for ci_write */
 	GAsyncQueue *queue;		/* inter-thread message pipe */

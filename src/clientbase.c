@@ -191,8 +191,6 @@ int ci_readln(clientbase_t *self, char * buffer)
 	assert(self->line_buffer);
 	memset(buffer, 0, MAX_LINESIZE);
 
-	self->read_cmd = 1;
-
 	if (self->line_buffer->len == 0)
 		self->len = 0;
 
@@ -200,8 +198,11 @@ int ci_readln(clientbase_t *self, char * buffer)
 		t = read(self->rx, (void *)&c, 1);
 		if (t == -1)
 			return self->cb_error(self->rx, errno, (void *)self);
-		if (t != 1)
+
+		if (t != 1) {
+			event_add(self->rev, self->timeout);
 			break;
+		}
 
 		result++;
 		self->len++;
@@ -210,7 +211,6 @@ int ci_readln(clientbase_t *self, char * buffer)
 		g_string_append_c(self->line_buffer,c);
 		if (c=='\n') {
 			strncpy(buffer, self->line_buffer->str, MAX_LINESIZE);
-			self->read_cmd = 0;
 			g_string_truncate(self->line_buffer,0);
 			break;
 		}
