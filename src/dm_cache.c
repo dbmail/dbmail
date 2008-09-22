@@ -43,7 +43,7 @@ T Cache_new(void)
 	
 	C = g_malloc0(sizeof(*C));
 
-	C->id = -1;
+	C->id = 0;
 	if (! (C->memdump = Mem_open())) {
 		serr = errno;
 		TRACE(TRACE_ERROR,"Mem_open() failed [%s]", strerror(serr));
@@ -110,9 +110,9 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 	u64_t tmpcnt = 0, outcnt = 0;
 	char *buf = NULL;
 
-	if (C->id == message->id) {
-		outcnt = C->size;
-	} else {
+	TRACE(TRACE_DEBUG,"[%p] C->id[%llu] message->id[%llu]", C, C->id, message->id);
+
+	if (C->id != message->id) {
 
 		Cache_clear(C);
 
@@ -149,7 +149,8 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 	}
 
 	
-	TRACE(TRACE_DEBUG,"cache size [%llu]", outcnt);	
+	TRACE(TRACE_DEBUG,"C->size[%llu]", C->size);	
+
 	return outcnt;
 }
 

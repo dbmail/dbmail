@@ -196,13 +196,16 @@ int ci_readln(clientbase_t *self, char * buffer)
 
 	while (self->len < MAX_LINESIZE) {
 		t = read(self->rx, (void *)&c, 1);
-		if (t == -1)
-			return self->cb_error(self->rx, errno, (void *)self);
+		if (t == -1) {
+			int e;
+			if ((e = self->cb_error(self->rx, errno, (void *)self)))
+				return e;
 
-		if (t != 1) {
 			event_add(self->rev, self->timeout);
-			break;
 		}
+
+		if (t != 1)
+			break;
 
 		result++;
 		self->len++;
@@ -215,7 +218,8 @@ int ci_readln(clientbase_t *self, char * buffer)
 			break;
 		}
 	}
-	TRACE(TRACE_INFO, "[%p] C < [%s]", self, buffer);
+
+	if (result) TRACE(TRACE_INFO, "[%p] C < [%d:%s]", self, result, buffer);
 
 	return result;
 }

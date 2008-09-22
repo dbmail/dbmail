@@ -924,6 +924,7 @@ static void _register_header(const char *header, const char *value, gpointer use
 
 void dbmail_message_set_physid(DbmailMessage *self, u64_t physid)
 {
+	self->id = physid;
 	self->physid = physid;
 }
 

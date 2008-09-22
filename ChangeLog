@@ -1,5 +1,9 @@
 2008-09-22  Paul J Stevens <paul@nfg.nl>
 
+	* src/clientbase.c, src/dbmail-message.c, src/dm_cache.c:
+	fix a cache_update problem
+	* src/clientbase.c, src/dbmailtypes.h, src/imap4.c:
+	and backout again
 	* THANKS, src/clientbase.c, src/dbmailtypes.h, src/imap4.c:
 	fix missing event again (Jon)
 
