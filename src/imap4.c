@@ -242,7 +242,10 @@ void imap_cb_read(void *arg)
 	int result;
 	int l;
 
-	memset(buffer, 0, sizeof(buffer));	// has seen dirty buffers with out this
+	// disable read events until we're done
+	event_del(session->ci->rev);
+
+	memset(buffer, 0, sizeof(buffer));	// have seen dirty buffers with out this
 
 	if (session->state == IMAPCS_ERROR) {
 		TRACE(TRACE_DEBUG, "session->state: ERROR. abort");
@@ -250,12 +253,9 @@ void imap_cb_read(void *arg)
 	}
 	if (session->command_state==TRUE) dbmail_imap_session_reset(session);
 
-	// disable read events until we're done
-	event_del(session->ci->rev);
-
 	// Drain input buffer else return to wait for more.
 	// Read in a line at a time if we don't have a string literal size defined
-	// Otherwise read in sizeof(buff) [64KB[  or the remaining rbuff_size if less
+	// Otherwise read in sizeof(buffer) [64KB] or the remaining rbuff_size if less
 	if (session->rbuff_size <= 0) {
 		l = ci_readln(session->ci, buffer);
 	} else {
@@ -266,6 +266,8 @@ void imap_cb_read(void *arg)
 	if (l == 0) {
 		if (session->rbuff_size > 0)
 			TRACE(TRACE_DEBUG,"last read [%d], still need [%d]", l, session->rbuff_size);
+		if (session->rbuff_size > 0 || session->ci->read_cmd)
+			event_add(session->ci->rev, session->timeout); // Re-Add Event For More Data From Network
 		return;
 	}
 
@@ -371,7 +373,7 @@ void dbmail_imap_session_reset(ImapSession *session)
 	session->command_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 	
-	event_add(session->ci->rev, session->timeout);
+	return;
 }
 
 int imap4_tokenizer (ImapSession *session, char *buffer)
