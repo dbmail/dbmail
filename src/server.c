@@ -404,68 +404,6 @@ static int client_error_cb(int sock, short event, void *arg)
 	return r;
 }
 
-
-clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
-{
-	int err;
-	clientbase_t *client	= g_new0(clientbase_t, 1);
-
-	client->timeout		= server_conf->timeout;
-	client->login_timeout	= server_conf->login_timeout;
-	client->line_buffer	= g_string_new("");
-	client->queue           = g_async_queue_new();
-	client->cb_error        = client_error_cb;
-
-	/* make streams */
-	if (socket == 0 && caddr == NULL) {
-		client->rx		= STDIN_FILENO;
-		client->tx		= STDOUT_FILENO;
-	} else {
-		strncpy((char *)client->ip_src, inet_ntoa(caddr->sin_addr), sizeof(client->ip_src));
-		client->ip_src_port = ntohs(caddr->sin_port);
-
-		if (server_conf->resolveIP) {
-			struct hostent *clientHost;
-			clientHost = gethostbyaddr((gpointer) &(caddr->sin_addr), sizeof(caddr->sin_addr), caddr->sin_family);
-
-			if (clientHost && clientHost->h_name)
-				strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
-
-			TRACE(TRACE_MESSAGE, "incoming connection from [%s:%d (%s)] by pid [%d]",
-					client->ip_src, client->ip_src_port,
-					client->clientname[0] ? client->clientname : "Lookup failed", getpid());
-		} else {
-			TRACE(TRACE_MESSAGE, "incoming connection from [%s:%d] by pid [%d]",
-					client->ip_src, client->ip_src_port, getpid());
-		}
-
-		/* make streams */
-		if (!(client->rx = dup(socket))) {
-			err = errno;
-			TRACE(TRACE_ERROR, "%s", strerror(err));
-			if (socket > 0) close(socket);
-			g_free(client);
-			return NULL;
-		}
-
-		if (!(client->tx = socket)) {
-			err = errno;
-			TRACE(TRACE_ERROR, "%s", strerror(err));
-			if (socket > 0) close(socket);
-			g_free(client);
-			return NULL;
-		}
-	}
-
-	client->rev = g_new0(struct event, 1);
-	client->wev = g_new0(struct event, 1);
-	client->pev = g_new0(struct event, 1);
-	event_set(client->pev, selfpipe[0], EV_READ, client_pipe_cb, client);
-	event_add(client->pev, NULL);
-
-	return client;
-}
-
 static void server_sock_cb(int sock, short event, void *arg)
 {
 	client_sock *c = g_new0(client_sock,1);

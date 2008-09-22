@@ -53,6 +53,7 @@ COMMON = dbmail-user.c \
 	
 SERVER = server.c \
 	clientsession.c \
+	clientbase.c \
 	dm_cidr.c
 
 MODULES = authmodule.c sortmodule.c

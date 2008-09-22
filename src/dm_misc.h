@@ -160,13 +160,6 @@ char **base64_decodev(char *in);
 char * dm_get_hash_for_string(const char *buf);
 
 
-// ClientInfo_t methods (move these to separate file)
-int ci_write(clientbase_t *self, char * msg, ...);
-int ci_read(clientbase_t *self, char *buffer, size_t n);
-int ci_readln(clientbase_t *self, char * buffer);
-void ci_close(clientbase_t *self);
-
-
 void strip_crlf(char *buffer);
 
 #endif

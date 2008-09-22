@@ -103,6 +103,7 @@
 #include "imapcommands.h"
 #include "server.h"
 #include "clientsession.h"
+#include "clientbase.h"
 #include "lmtp.h"
 
 #include "dm_db.h"
