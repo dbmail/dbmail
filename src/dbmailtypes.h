@@ -231,6 +231,7 @@ typedef struct {
 
 	size_t len;			/* octets read during last ci_read/ci_readln */
 	GString *line_buffer;		/* buffer for ci_readln */
+	GString *write_buffer;		/* output buffer for ci_write */
 	GAsyncQueue *queue;		/* inter-thread message pipe */
 } clientbase_t;
 

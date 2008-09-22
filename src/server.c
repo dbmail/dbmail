@@ -37,7 +37,6 @@ int selfpipe[2];
 GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
 
-
 serverConfig_t *server_conf;
 
 static void server_config_load(serverConfig_t * conf, const char * const service);
@@ -121,8 +120,9 @@ void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
-	if (D->data && D->session)
+	if (D->data && D->session) {
 		ci_write(session->ci, "%s", (char *)D->data);
+	}
 }
 
 /* 
@@ -374,34 +374,6 @@ static void server_create_sockets(serverConfig_t * conf)
 		for (i = 0; i < conf->ipcount; i++)
 			conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
 	}
-}
-
-static void client_pipe_cb(int sock, short event, void *arg)
-{
-	clientbase_t *client;
-
-	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
-	char buf[1];
-	while (read(sock, buf, 1) > 0)
-		;
-	client = (clientbase_t *)arg;
-	if (client->cb_pipe) client->cb_pipe(client);
-	if (client->pev) event_add(client->pev, NULL);
-}
-
-static int client_error_cb(int sock, short event, void *arg)
-{
-	int r = 0;
-	clientbase_t *client = (clientbase_t *)arg;
-	switch (event) {
-		case EAGAIN:
-			break;
-		default:
-			TRACE(TRACE_DEBUG,"%d %s, %p", sock, strerror((int)event), arg);
-			r = -1;
-			break;
-	}
-	return r;
 }
 
 static void server_sock_cb(int sock, short event, void *arg)

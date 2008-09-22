@@ -112,6 +112,10 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 					event_add(session->ci->rev, session->timeout);
 				}
 			}
+
+			if (session->ci->wev)
+				ci_write(session->ci,NULL);
+
 			break;
 	}
 }

@@ -103,10 +103,6 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	return s;
 }
 
-#define ISCR(a) ((char)(a)=='\r')
-#define ISLF(a) ((char)(a)=='\n')
-#define ISDOT(a) ((char)(a)=='.')
-
 gchar *get_crlf_encoded_opt(const char *in, int dots)
 {
 	char prev = 0, curr = 0, *t, *out;

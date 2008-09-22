@@ -1127,20 +1127,13 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
         size_t j = 0, l;
 
         assert(message);
-        va_start(ap, message);
         j = self->buff->len;
-        g_string_append_vprintf(self->buff, message, ap);
-	{
-		char *m = g_strdup_vprintf(message, ap);
-		TRACE(TRACE_DEBUG,"[%p] buf <<  [%s]", self, m);
-		g_free(m);
-	}
 
-        l = self->buff->len;
+        va_start(ap, message);
+        g_string_append_vprintf(self->buff, message, ap);
         va_end(ap);
 
-	//if (self->buff->len > 128)
-	//	dbmail_imap_session_buff_flush(self);
+        l = self->buff->len;
 
         return (int)(l-j);
 }

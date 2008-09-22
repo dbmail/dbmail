@@ -26,6 +26,39 @@
 #define THIS_MODULE "clientbase"
 
 extern serverConfig_t *server_conf;
+extern int selfpipe[2];
+
+
+static void client_pipe_cb(int sock, short event, void *arg)
+{
+	clientbase_t *client;
+
+	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
+	char buf[1];
+	while (read(sock, buf, 1) > 0)
+		;
+	client = (clientbase_t *)arg;
+	if (client->cb_pipe) client->cb_pipe(client);
+	if (client->pev) event_add(client->pev, NULL);
+}
+
+
+static int client_error_cb(int sock, short event, void *arg)
+{
+	int r = 0;
+	clientbase_t *client = (clientbase_t *)arg;
+	switch (event) {
+		case EAGAIN:
+			break;
+		default:
+			TRACE(TRACE_DEBUG,"[%p] %d %s, %p", client, sock, strerror((int)event), arg);
+			client->write_buffer = g_string_truncate(client->write_buffer,0);
+			r = -1;
+			break;
+	}
+	return r;
+}
+
 
 clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 {
@@ -79,6 +112,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 		}
 	}
 
+	client->write_buffer = g_string_new("");
 	client->rev = g_new0(struct event, 1);
 	client->wev = g_new0(struct event, 1);
 	client->pev = g_new0(struct event, 1);
@@ -91,29 +125,30 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 
 int ci_write(clientbase_t *self, char * msg, ...)
 {
-	char *s;
 	va_list ap;
-	ssize_t l, t;
-
+	ssize_t t;
 	if (! self) return -1;
 
-	va_start(ap, msg);
-	s = g_strdup_vprintf(msg, ap);
-	va_end(ap);
+	if (msg) {
+		va_start(ap, msg);
+		g_string_append_vprintf(self->write_buffer, msg, ap);
+		va_end(ap);
+	}
+	
+	if (self->write_buffer->len < 1) return 0;
 
-	TRACE(TRACE_INFO, "[%p] S > [%s]", self, s);
-	event_add(self->wev, NULL);
-	l = strlen(s);
-	t = write(self->tx, (gconstpointer)s, l);
+	t = write(self->tx, (gconstpointer)self->write_buffer->str, self->write_buffer->len);
 	if (t == -1) {
 		int e;
 		if ((e = self->cb_error(self->tx, errno, (void *)self)))
 			return e;
+	} else {
+		TRACE(TRACE_INFO, "[%p] S > [%s]", self, self->write_buffer->str);
+		self->write_buffer = g_string_erase(self->write_buffer, 0, t);
 	}
-	if (t < l)
-		TRACE(TRACE_INFO, "short write: [%lu] of [%lu]", t, l);
 
-	g_free(s);
+	event_add(self->wev, NULL);
+
 	return 0;
 }
 
@@ -126,7 +161,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	assert(buffer);
 	memset(buffer, 0, sizeof(buffer));
 
-	TRACE(TRACE_DEBUG,"[%p] need [%lu]", self, n);
+	TRACE(TRACE_DEBUG,"[%p] need [%d]", self, n);
 	self->len = 0;
 	while (self->len < n) {
 		t = read(self->rx, (void *)&c, 1);
@@ -142,7 +177,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		if (c == '\r') continue;
 		buffer[i++] = c;
 	}
-	TRACE(TRACE_DEBUG,"[%p] read [%lu]", self, self->len);
+	TRACE(TRACE_DEBUG,"[%p] read [%d]", self, self->len);
 
 	return self->len;
 }	
@@ -207,7 +242,9 @@ void ci_close(clientbase_t *self)
 	self->tx = -1;
 	self->rx = -1;
 
-	g_string_free(self->line_buffer,TRUE);
+	g_string_free(self->line_buffer, TRUE);
+	g_string_free(self->write_buffer, TRUE);
+
 	g_free(self);
 	
 	self = NULL;
