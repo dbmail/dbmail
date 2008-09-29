@@ -1,13 +1,15 @@
 2008-09-29  Paul J Stevens <paul@nfg.nl>
 
-	* acinclude.m4, configure.in, dbmail.conf, src/authmodule.c, 
-	src/clientbase.c, src/clientsession.c, src/dbmail-imapsession.c, 
-	src/dbmail-mailbox.c, src/dbmail-message.c, src/dbmail.h.in, 
-	src/dbmailtypes.h, src/dm_acl.c, src/dm_cache.c, src/dm_config.c, 
-	src/dm_db.c, src/dm_debug.c, src/dm_debug.h, src/dm_dsn.c, 
-	src/dm_iconv.c, src/dm_misc.c, src/dm_pidfile.c, src/dm_quota.c, 
-	src/imap4.c, src/imapcommands.c, src/lmtp.c, src/main.c, 
-	src/modules/authldap.c, src/modules/authsql.c, 
+	* src/clientbase.c:
+	no event_add on t=0
+	* ChangeLog, acinclude.m4, configure.in, dbmail.conf, 
+	src/authmodule.c, src/clientbase.c, src/clientsession.c, 
+	src/dbmail-imapsession.c, src/dbmail-mailbox.c, src/dbmail-message.c, 
+	src/dbmail.h.in, src/dbmailtypes.h, src/dm_acl.c, src/dm_cache.c, 
+	src/dm_config.c, src/dm_db.c, src/dm_debug.c, src/dm_debug.h, 
+	src/dm_dsn.c, src/dm_iconv.c, src/dm_misc.c, src/dm_pidfile.c, 
+	src/dm_quota.c, src/imap4.c, src/imapcommands.c, src/lmtp.c, 
+	src/main.c, src/modules/authldap.c, src/modules/authsql.c, 
 	src/modules/sortsieve.c, src/pop3.c, src/server.c, src/sortmodule.c, 
 	src/top.c:
 	support fine-grained logging (Jon)
@@ -15,6 +17,9 @@
 	src/dbmail-imapsession.h, src/dbmailtypes.h, src/imap4.c, src/lmtp.c, 
 	src/pop3.c, src/timsieve.c:
 	struct timeval timeout cleanup
+	* src/clientbase.c, src/clientsession.c, src/dbmailtypes.h, 
+	src/imap4.c, src/lmtp.c, src/pop3.c, src/timsieve.c:
+	move struct timeval timeout from session to clientbase
 
 2008-09-28  Paul J Stevens <paul@nfg.nl>
 

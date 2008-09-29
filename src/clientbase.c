@@ -199,13 +199,11 @@ int ci_readln(clientbase_t *self, char * buffer)
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
 				return e;
+			event_add(self->rev, self->timeout);
 		}
 
-		if (t != 1) {
-			// t=-1 (EAGAIN) or t=0 (EOF)
-			event_add(self->rev, self->timeout);
+		if (t != 1)
 			break;
-		}
 
 		result++;
 		self->len++;
@@ -214,7 +212,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 		g_string_append_c(self->line_buffer,c);
 		if (c=='\n') {
 			strncpy(buffer, self->line_buffer->str, MAX_LINESIZE);
-			g_string_truncate(self->line_buffer,0);
+			g_string_printf(self->line_buffer,"%s", "");
 			done=TRUE;
 			break;
 		}
