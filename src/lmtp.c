@@ -26,9 +26,6 @@
 
 #define INCOMING_BUFFER_SIZE 512
 
-/* default timeout for server daemon */
-#define DEFAULT_SERVER_TIMEOUT 300
-
 /* max_errors defines the maximum number of allowed failures */
 #define MAX_ERRORS 3
 
@@ -37,6 +34,8 @@
 #define MAX_IN_BUFFER 255
 
 #define THIS_MODULE "lmtp"
+
+extern serverConfig_t *server_conf;
 
 extern volatile sig_atomic_t alarm_occured;
 
@@ -87,7 +86,7 @@ static void reset_callbacks(ClientSession_t *session)
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
-        event_add(session->ci->rev, session->ci->evtimeout);
+        event_add(session->ci->rev, session->ci->timeout);
         event_add(session->ci->wev, NULL);
 }
 
@@ -96,7 +95,7 @@ static void reset_callbacks(ClientSession_t *session)
 int lmtp_handle_connection(client_sock *c)
 {
 	ClientSession_t *session = client_session_new(c);
-	client_session_set_timeout(session,session->ci->login_timeout);
+	client_session_set_timeout(session, server_conf->login_timeout);
 	reset_callbacks(session);
         send_greeting(session);
 	return 0;
@@ -236,7 +235,7 @@ int lmtp(ClientSession_t * session)
 				 * */
 		client_session_reset(session);
 		session->state = IMAPCS_AUTHENTICATED;
-		client_session_set_timeout(session, session->ci->timeout);
+		client_session_set_timeout(session, server_conf->timeout);
 
 		return 1;
 

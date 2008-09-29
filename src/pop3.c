@@ -30,9 +30,6 @@
 #define APOP_STAMP_SIZE 255
 #define MAX_USERID_SIZE 100
 
-/* default timeout for server daemon */
-#define DEFAULT_SERVER_TIMEOUT 300
-
 /* max_errors defines the maximum number of allowed failures */
 #define MAX_ERRORS 3
 
@@ -44,6 +41,7 @@ const char ValidNetworkChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     ",'\"?_.!|@#$%^&*()-+=~[]{}<>:;\\/ '";
 
+extern serverConfig_t *server_conf;
 extern int pop_before_smtp;
 extern volatile sig_atomic_t alarm_occured;
 
@@ -166,7 +164,7 @@ static void reset_callbacks(ClientSession_t *session)
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
-        event_add(session->ci->rev, session->ci->evtimeout);
+        event_add(session->ci->rev, session->ci->timeout);
         event_add(session->ci->wev, NULL);
 }
 
@@ -174,7 +172,7 @@ int pop3_handle_connection(client_sock *c)
 {
 	ClientSession_t *session = client_session_new(c);
 	session->state = POP3_AUTHORIZATION_STATE;
-	client_session_set_timeout(session, session->ci->login_timeout);
+	client_session_set_timeout(session, server_conf->login_timeout);
         reset_callbacks(session);
         send_greeting(session);
 	return 0;
@@ -345,7 +343,7 @@ int pop3(ClientSession_t *session, char *buffer)
 			/* user logged in OK */
 			session->state = POP3_TRANSACTION_STATE;
 
-			client_session_set_timeout(session, session->ci->timeout);
+			client_session_set_timeout(session, server_conf->timeout);
 
 			/* now we're going to build up a session for this user */
 			TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]",
@@ -646,7 +644,7 @@ int pop3(ClientSession_t *session, char *buffer)
 			/* user logged in OK */
 			session->state = POP3_TRANSACTION_STATE;
 
-			client_session_set_timeout(session, session->ci->timeout);
+			client_session_set_timeout(session, server_conf->timeout);
 
 			/* user seems to be valid, let's build a session */
 			TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]", 

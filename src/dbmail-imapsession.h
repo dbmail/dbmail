@@ -34,7 +34,6 @@ typedef struct {
 	char **args;
 	u64_t args_idx;
 
-	struct timeval *timeout;
 	int loop; // idle loop counter
 	fetch_items_t *fi;
 

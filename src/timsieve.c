@@ -56,6 +56,7 @@ static const char *commands[] = {
 
 /* Defined in timsieved.c */
 extern const char *sieve_extensions;
+extern serverConfig_t *server_conf;
 
 static int tims(ClientSession_t *session);
 static int tims_tokenizer(ClientSession_t *session, char *buffer);
@@ -100,7 +101,7 @@ static void reset_callbacks(ClientSession_t *session)
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
-        event_add(session->ci->rev, session->ci->evtimeout);
+        event_add(session->ci->rev, session->ci->timeout);
         event_add(session->ci->wev, NULL);
 }
 
@@ -108,7 +109,7 @@ int tims_handle_connection(client_sock *c)
 {
 	ClientSession_t *session = client_session_new(c);
 	session->state = STRT;
-	client_session_set_timeout(session, session->ci->login_timeout);
+	client_session_set_timeout(session, server_conf->login_timeout);
 	reset_callbacks(session);
 	send_greeting(session);
 	return 0;
@@ -305,7 +306,7 @@ int tims(ClientSession_t *session)
 				session->username = g_strdup(tmp64[1]);
 				session->password = g_strdup(tmp64[2]);
 
-				client_session_set_timeout(session, session->ci->timeout);
+				client_session_set_timeout(session, server_conf->timeout);
 
 			} else
 				return tims_error(session, "NO \"Username or password incorrect.\"\r\n");

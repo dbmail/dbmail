@@ -65,9 +65,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 	int err;
 	clientbase_t *client	= g_new0(clientbase_t, 1);
 
-	client->evtimeout       = g_new0(struct timeval,1);
-	client->timeout		= server_conf->timeout;
-	client->login_timeout	= server_conf->login_timeout;
+	client->timeout       = g_new0(struct timeval,1);
 	client->line_buffer	= g_string_new("");
 	client->queue           = g_async_queue_new();
 	client->cb_error        = client_error_cb;
@@ -186,8 +184,8 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 int ci_readln(clientbase_t *self, char * buffer)
 {
 	ssize_t t = 0;
-	char c=0;
-	int result = 0;
+	char c = 0;
+	int done = FALSE, result = 0;
 
 	assert(self->line_buffer);
 	memset(buffer, 0, MAX_LINESIZE);
@@ -202,7 +200,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
 				return e;
 
-			event_add(self->rev, self->evtimeout);
+			event_add(self->rev, self->timeout);
 		}
 
 		if (t != 1)
@@ -216,11 +214,12 @@ int ci_readln(clientbase_t *self, char * buffer)
 		if (c=='\n') {
 			strncpy(buffer, self->line_buffer->str, MAX_LINESIZE);
 			g_string_truncate(self->line_buffer,0);
+			done=TRUE;
 			break;
 		}
 	}
 
-	if (result) TRACE(TRACE_INFO, "[%p] C < [%d:%s]", self, result, buffer);
+	if (done) TRACE(TRACE_INFO, "[%p] C < [%d:%s]", self, result, buffer);
 
 	return result;
 }

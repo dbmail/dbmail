@@ -109,7 +109,7 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 						event_add(session->ci->rev, NULL);
 					}
 				} else if ( (! session->parser_state) || session->command_state == TRUE) {
-					event_add(session->ci->rev, session->ci->evtimeout);
+					event_add(session->ci->rev, session->ci->timeout);
 				}
 			}
 
@@ -218,7 +218,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 				dbmail_imap_session_buff_clear(session);
 			}
 			if (session->command_state == TRUE)
-				event_add(session->ci->rev, session->ci->evtimeout);
+				event_add(session->ci->rev, session->ci->timeout);
 
 			break;
 		case 1:
@@ -289,7 +289,7 @@ void imap_cb_read(void *arg)
 	}
 
 	if (! imap4_tokenizer(session, buffer)) {
-		event_add(session->ci->rev, session->ci->evtimeout);
+		event_add(session->ci->rev, session->ci->timeout);
 		return;
 	}
 
@@ -309,19 +309,19 @@ void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, i
 {
 	if (r) session->ci->cb_read = r;
 	if (t) session->ci->cb_time = t;
-	if (timeout>0) session->ci->evtimeout->tv_sec = (time_t)timeout;
+	if (timeout>0) session->ci->timeout->tv_sec = (time_t)timeout;
 
 	assert(session->ci->cb_read);
 	assert(session->ci->cb_time);
-	assert(session->ci->evtimeout->tv_sec > 0);
+	assert(session->ci->timeout->tv_sec > 0);
 
 	TRACE(TRACE_DEBUG,"session [%p], cb_read [%p], cb_time [%p], timeout [%d]", 
-		session, session->ci->cb_read, session->ci->cb_time, (int)session->ci->evtimeout->tv_sec);
+		session, session->ci->cb_read, session->ci->cb_time, (int)session->ci->timeout->tv_sec);
 
 	UNBLOCK(session->ci->rx);
 	UNBLOCK(session->ci->tx);
 
-	event_add(session->ci->rev, session->ci->evtimeout );
+	event_add(session->ci->rev, session->ci->timeout );
 	event_add(session->ci->wev, NULL);
 }
 
@@ -334,8 +334,6 @@ int imap_handle_connection(client_sock *c)
 		ci = client_init(c->sock, c->caddr);
 	else
 		ci = client_init(0, NULL);
-
-	ci->evtimeout->tv_sec = ci->login_timeout;
 
 	session = dbmail_imap_session_new();
 

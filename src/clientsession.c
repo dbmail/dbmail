@@ -28,6 +28,8 @@
 
 #define THIS_MODULE "clientsession"
 
+extern serverConfig_t *server_conf;
+
 ClientSession_t * client_session_new(client_sock *c)
 {
 	char unique_id[UID_SIZE];
@@ -109,7 +111,7 @@ void client_session_bailout(ClientSession_t *session)
 
 void client_session_set_timeout(ClientSession_t *session, int timeout)
 {
-	session->ci->evtimeout->tv_sec = timeout;
+	session->ci->timeout->tv_sec = timeout;
 }
 
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
@@ -149,13 +151,13 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 
 		case IMAPCS_INITIAL_CONNECT:
 		case IMAPCS_NON_AUTHENTICATED:
-			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->login_timeout);
-			client_session_set_timeout(session, session->ci->login_timeout);
+			TRACE(TRACE_DEBUG,"reset timeout [%d]", server_conf->login_timeout);
+			client_session_set_timeout(session, server_conf->login_timeout);
 			break;
 
 		default:
-			TRACE(TRACE_DEBUG,"reset timeout [%d]", session->ci->timeout);
-			client_session_set_timeout(session, session->ci->timeout);
+			TRACE(TRACE_DEBUG,"reset timeout [%d]", server_conf->timeout);
+			client_session_set_timeout(session, server_conf->timeout);
 			break;
 	}
 }

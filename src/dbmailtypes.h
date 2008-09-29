@@ -225,9 +225,7 @@ typedef struct {
 	char ip_src[IPNUM_LEN];		/* client IP-number */
 	int ip_src_port;		/* client source port number */
 	field_t clientname;		/* resolved client hostname */
-	struct timeval *evtimeout;		/**< timeout on socket */
-	int timeout;			/* server timeout (seconds) */
-	int login_timeout;		/* login timeout (seconds) */
+	struct timeval *timeout;		/**< timeout on socket */
 	int service_before_smtp;
 
 	size_t len;			/* octets read during last ci_read/ci_readln */

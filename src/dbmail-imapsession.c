@@ -47,6 +47,7 @@ extern volatile sig_atomic_t alarm_occured;
 
 extern int selfpipe[2];
 extern GAsyncQueue *queue;
+extern serverConfig_t *server_conf;
 
 /*
  * send_data()
@@ -90,7 +91,6 @@ ImapSession * dbmail_imap_session_new(void)
 	self->args = g_new0(char *, MAX_ARGS);
 	self->buff = g_string_new("");
 	self->fi = g_new0(fetch_items_t,1);
-	self->timeout = g_new0(struct timeval,1);
 	self->mutex = g_mutex_new();
 	self->cache = Cache_new();
 
@@ -170,10 +170,6 @@ void dbmail_imap_session_delete(ImapSession * self)
 	if (self->ids) {
 		g_tree_destroy(self->ids);
 		self->ids = NULL;
-	}
-	if (self->timeout) {
-		g_free(self->timeout);
-		self->timeout = NULL;
 	}
 	if (self->recent) {
 		g_list_destroy(self->recent);
@@ -1571,7 +1567,7 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 		case IMAPCS_AUTHENTICATED:
 			// change from login_timeout to main timeout
 			assert(self->ci);
-			self->timeout->tv_sec = self->ci->timeout; 
+			self->ci->timeout->tv_sec = server_conf->timeout; 
 			break;
 
 		default:
@@ -1871,7 +1867,7 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 			self->rbuff_size -= self->ci->len;
 
 			if (self->rbuff_size > 0) {
-				event_add(self->ci->rev, self->timeout); // reschedule cause we need more
+				event_add(self->ci->rev, self->ci->timeout); // reschedule cause we need more
 				return 0;
 			}
 				
