@@ -65,6 +65,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 	int err;
 	clientbase_t *client	= g_new0(clientbase_t, 1);
 
+	client->evtimeout       = g_new0(struct timeval,1);
 	client->timeout		= server_conf->timeout;
 	client->login_timeout	= server_conf->login_timeout;
 	client->line_buffer	= g_string_new("");
@@ -201,7 +202,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
 				return e;
 
-			event_add(self->rev, self->timeout);
+			event_add(self->rev, self->evtimeout);
 		}
 
 		if (t != 1)

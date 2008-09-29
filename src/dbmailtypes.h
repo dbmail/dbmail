@@ -225,6 +225,7 @@ typedef struct {
 	char ip_src[IPNUM_LEN];		/* client IP-number */
 	int ip_src_port;		/* client source port number */
 	field_t clientname;		/* resolved client hostname */
+	struct timeval *evtimeout;		/**< timeout on socket */
 	int timeout;			/* server timeout (seconds) */
 	int login_timeout;		/* login timeout (seconds) */
 	int service_before_smtp;
@@ -242,7 +243,6 @@ typedef struct {
 	int error_count;		/**< number of errors that have occured */
 	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */
 	int SessionResult;		/**< what happened during the session */
-	struct timeval *timeout;		/**< timeout on socket */
 
 	int parser_state;
 	int command_state;

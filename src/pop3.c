@@ -166,7 +166,7 @@ static void reset_callbacks(ClientSession_t *session)
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
-        event_add(session->ci->rev, session->timeout);
+        event_add(session->ci->rev, session->ci->evtimeout);
         event_add(session->ci->wev, NULL);
 }
 

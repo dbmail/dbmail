@@ -53,7 +53,6 @@ ClientSession_t * client_session_new(client_sock *c)
 	session->ci = ci;
 
 	session->rbuff = g_string_new("");
-	session->timeout = g_new0(struct timeval,1);
 
 	return session;
 }
@@ -110,7 +109,7 @@ void client_session_bailout(ClientSession_t *session)
 
 void client_session_set_timeout(ClientSession_t *session, int timeout)
 {
-	session->timeout->tv_sec = timeout;
+	session->ci->evtimeout->tv_sec = timeout;
 }
 
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
