@@ -767,7 +767,7 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 			tmp = tmpfile(); 
 			if (! tmp) {
 				int serr = errno;
-				TRACE(TRACE_ERROR, "opening tmpfile failed: %s", strerror(serr));
+				TRACE(TRACE_ERR, "opening tmpfile failed: %s", strerror(serr));
 				res = 1;
 				break;
 			}
@@ -792,13 +792,13 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 				putslen = g_mime_stream_write(fstream, buf, getslen);
 
 				if (g_mime_stream_flush(fstream)) {
-					TRACE(TRACE_ERROR, "Failed to flush, is your /tmp filesystem full?");
+					TRACE(TRACE_ERR, "Failed to flush, is your /tmp filesystem full?");
 					res = 1;
 					break;
 				}
 
 				if (putslen < getslen && getslen > putslen+1) {
-					TRACE(TRACE_ERROR, "Short write [%zd < %zd], is your /tmp filesystem full?", 
+					TRACE(TRACE_ERR, "Short write [%zd < %zd], is your /tmp filesystem full?", 
 						putslen, getslen);
 					res = 1;
 					break;
@@ -806,7 +806,7 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 			}
 
 			if (getslen < 0) {
-				TRACE(TRACE_ERROR, "Read failed, did the client drop the connection?");
+				TRACE(TRACE_ERR, "Read failed, did the client drop the connection?");
 				res = 1;
 			}
 
@@ -1009,7 +1009,7 @@ GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *
 	TRACE(TRACE_INFO, "mail address parser looking at field [%s] with value [%s]", field_name, field_value);
 	
 	if ((ialist = internet_address_parse_string(field_value)) == NULL) {
-		TRACE(TRACE_MESSAGE, "mail address parser error parsing header field");
+		TRACE(TRACE_NOTICE, "mail address parser error parsing header field");
 		return NULL;
 	}
 
@@ -1230,7 +1230,7 @@ DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int f
 	
 
 	if ((!self) || (! self->content)) {
-		TRACE(TRACE_ERROR, "retrieval failed for physid [%llu]", physid);
+		TRACE(TRACE_ERR, "retrieval failed for physid [%llu]", physid);
 		return NULL;
 	}
 
@@ -1253,7 +1253,7 @@ int dbmail_message_store(DbmailMessage *self)
 	int i=1, retry=10, delay=200;
 	
 	if (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr) <= 0) {
-		TRACE(TRACE_ERROR, "unable to find user_idnr for user [%s]. Make sure this system user is in the database!", DBMAIL_DELIVERY_USERNAME);
+		TRACE(TRACE_ERR, "unable to find user_idnr for user [%s]. Make sure this system user is in the database!", DBMAIL_DELIVERY_USERNAME);
 		return DM_EQUERY;
 	}
 	
@@ -1270,7 +1270,7 @@ int dbmail_message_store(DbmailMessage *self)
 		body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
 
 		if ((res = _dm_message_store(self))) {
-			TRACE(TRACE_FATAL,"Failed to store mimeparts");
+			TRACE(TRACE_EMERG,"Failed to store mimeparts");
 			usleep(delay*i);
 			continue;
 		}
@@ -1311,7 +1311,7 @@ int _message_insert(DbmailMessage *self,
 		return -1;
 	
 	if (mailboxid == 0) {
-		TRACE(TRACE_ERROR, "mailbox [%s] could not be found!", mailbox);
+		TRACE(TRACE_ERR, "mailbox [%s] could not be found!", mailbox);
 		return -1;
 	}
 
@@ -1366,7 +1366,7 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	assert(self->physid);
 
 	if (! GMIME_IS_MESSAGE(self->content)) {
-		TRACE(TRACE_ERROR,"self->content is not a message");
+		TRACE(TRACE_ERR,"self->content is not a message");
 		return -1;
 	}
 
@@ -1557,7 +1557,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
-		TRACE(TRACE_ERROR, "insert %sfield failed [%s] [%s]", field, name, addr);
+		TRACE(TRACE_ERR, "insert %sfield failed [%s] [%s]", field, name, addr);
 	FINALLY
 		Connection_close(c);
 	END_TRY;
@@ -1582,7 +1582,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, value);
+		TRACE(TRACE_ERR, "insert %sfield failed [%s]", field, value);
 	FINALLY
 		Connection_close(c);
 	END_TRY;
@@ -1681,7 +1681,7 @@ void dbmail_message_cache_subjectfield(const DbmailMessage *self)
 	raw = (char *)dbmail_message_get_header(self, "Subject");
 
 	if (! raw) {
-		TRACE(TRACE_MESSAGE,"no subject field value [%llu]", self->physid);
+		TRACE(TRACE_NOTICE,"no subject field value [%llu]", self->physid);
 		return;
 	}
 
@@ -1712,7 +1712,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 
 	refs = g_mime_references_decode(field);
 	if (! refs) {
-		TRACE(TRACE_MESSAGE, "reference_decode failed [%llu]", self->physid);
+		TRACE(TRACE_NOTICE, "reference_decode failed [%llu]", self->physid);
 		return;
 	}
 	
@@ -1748,7 +1748,7 @@ void dbmail_message_cache_envelope(const DbmailMessage *self)
 		db_stmt_exec(s);
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		TRACE(TRACE_ERROR, "insert envelope failed [%s]", envelope);
+		TRACE(TRACE_ERR, "insert envelope failed [%s]", envelope);
 	FINALLY
 		Connection_close(c);
 	END_TRY;
@@ -1867,7 +1867,7 @@ DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
 	int result;
 	u64_t physid = 0;
 	if ((result = db_get_physmessage_id(msg_idnr, &physid)) != DM_SUCCESS) {
-		TRACE(TRACE_ERROR,"can't find physmessage_id for message_idnr [%llu]", msg_idnr);
+		TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%llu]", msg_idnr);
 		return NULL;
 	}
 	msg = dbmail_message_new();
@@ -1895,7 +1895,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 	 * We skip the Sieve scripts, and down the call
 	 * chain we don't check permissions on the mailbox. */
 	if (source == BOX_BRUTEFORCE) {
-		TRACE(TRACE_MESSAGE, "Beginning brute force delivery for user [%llu] to mailbox [%s].",
+		TRACE(TRACE_NOTICE, "Beginning brute force delivery for user [%llu] to mailbox [%s].",
 				useridnr, mailbox);
 		return sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
 	}
@@ -1986,7 +1986,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	TRACE(TRACE_INFO,"useridnr [%llu] mailbox [%s]", useridnr, mailbox);
 
 	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
-		TRACE(TRACE_ERROR, "mailbox [%s] not found", mailbox);
+		TRACE(TRACE_ERR, "mailbox [%s] not found", mailbox);
 		return DSN_CLASS_FAIL;
 	}
 
@@ -2005,17 +2005,17 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		
 		switch (acl_has_right(&mbox, useridnr, ACL_RIGHT_POST)) {
 		case -1:
-			TRACE(TRACE_MESSAGE, "error retrieving right for [%llu] to deliver mail to [%s]",
+			TRACE(TRACE_NOTICE, "error retrieving right for [%llu] to deliver mail to [%s]",
 					useridnr, mailbox);
 			return DSN_CLASS_TEMP;
 		case 0:
 			// No right.
-			TRACE(TRACE_MESSAGE, "user [%llu] does not have right to deliver mail to [%s]",
+			TRACE(TRACE_NOTICE, "user [%llu] does not have right to deliver mail to [%s]",
 					useridnr, mailbox);
 			// Switch to INBOX.
 			if (strcmp(mailbox, "INBOX") == 0) {
 				// Except if we've already been down this path.
-				TRACE(TRACE_MESSAGE, "already tried to deliver to INBOX");
+				TRACE(TRACE_NOTICE, "already tried to deliver to INBOX");
 				return DSN_CLASS_FAIL;
 			}
 			return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags);
@@ -2025,7 +2025,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 					useridnr, mailbox);
 			break;
 		default:
-			TRACE(TRACE_ERROR, "invalid return value from acl_has_right");
+			TRACE(TRACE_ERR, "invalid return value from acl_has_right");
 			return DSN_CLASS_FAIL;
 		}
 	}
@@ -2047,14 +2047,14 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 				"maxmail exceeded", useridnr);
 		return DSN_CLASS_QUOTA;
 	case -1:
-		TRACE(TRACE_ERROR, "error copying message to user [%llu]", 
+		TRACE(TRACE_ERR, "error copying message to user [%llu]", 
 				useridnr);
 		return DSN_CLASS_TEMP;
 	default:
-		TRACE(TRACE_MESSAGE, "message id=%llu, size=%zd is inserted", 
+		TRACE(TRACE_NOTICE, "message id=%llu, size=%zd is inserted", 
 				newmsgidnr, msgsize);
 		if (msgflags) {
-			TRACE(TRACE_MESSAGE, "message id=%llu, setting imap flags", 
+			TRACE(TRACE_NOTICE, "message id=%llu, setting imap flags", 
 				newmsgidnr);
 			db_set_msgflag(newmsgidnr, mboxidnr, msgflags, NULL, IMAPFA_ADD, NULL);
 		}
@@ -2087,19 +2087,19 @@ static int parse_and_escape(const char *in, char **out)
 	TRACE(TRACE_DEBUG, "parsing address [%s]", in);
 	ialist = internet_address_parse_string(in);
 	if (!ialist) {
-                TRACE(TRACE_MESSAGE, "unable to parse email address [%s]", in);
+                TRACE(TRACE_NOTICE, "unable to parse email address [%s]", in);
                 return -1;
 	}
 
         ia = ialist->address;
         if (!ia || ia->type != INTERNET_ADDRESS_NAME) {
-		TRACE(TRACE_MESSAGE, "unable to parse email address [%s]", in);
+		TRACE(TRACE_NOTICE, "unable to parse email address [%s]", in);
 		internet_address_list_destroy(ialist);
 		return -1;
 	}
 
 	if (! (*out = dm_shellesc(ia->value.addr))) {
-		TRACE(TRACE_ERROR, "out of memory calling dm_shellesc");
+		TRACE(TRACE_ERR, "out of memory calling dm_shellesc");
 		internet_address_list_destroy(ialist);
 		return -1;
 	}
@@ -2124,7 +2124,7 @@ int send_mail(DbmailMessage *message,
 
 	if (!from || strlen(from) < 1) {
 		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
-			TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+			TRACE(TRACE_NOTICE, "no config value for POSTMASTER");
 		}
 		if (strlen(postmaster))
 			from = postmaster;
@@ -2133,30 +2133,30 @@ int send_mail(DbmailMessage *message,
 	}
 
 	if (config_get_value("SENDMAIL", "DBMAIL", sendmail) < 0) {
-		TRACE(TRACE_ERROR, "error getting value for SENDMAIL in DBMAIL section of dbmail.conf.");
+		TRACE(TRACE_ERR, "error getting value for SENDMAIL in DBMAIL section of dbmail.conf.");
 		return -1;
 	}
 
 	if (strlen(sendmail) < 1) {
-		TRACE(TRACE_ERROR, "SENDMAIL not set in DBMAIL section of dbmail.conf.");
+		TRACE(TRACE_ERR, "SENDMAIL not set in DBMAIL section of dbmail.conf.");
 		return -1;
 	}
 
 	if (!sendmail_external) {
 		if (parse_and_escape(to, &escaped_to) < 0) {
-			TRACE(TRACE_MESSAGE, "could not prepare 'to' address.");
+			TRACE(TRACE_NOTICE, "could not prepare 'to' address.");
 			return 1;
 		}
 		if (parse_and_escape(from, &escaped_from) < 0) {
 			g_free(escaped_to);
-			TRACE(TRACE_MESSAGE, "could not prepare 'from' address.");
+			TRACE(TRACE_NOTICE, "could not prepare 'from' address.");
 			return 1;
 		}
 		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
 		g_free(escaped_to);
 		g_free(escaped_from);
 		if (!sendmail_command) {
-			TRACE(TRACE_ERROR, "out of memory calling g_strconcat");
+			TRACE(TRACE_ERR, "out of memory calling g_strconcat");
 			return -1;
 		}
 	} else {
@@ -2166,7 +2166,7 @@ int send_mail(DbmailMessage *message,
 	TRACE(TRACE_INFO, "opening pipe to [%s]", sendmail_command);
 
 	if (!(mailpipe = popen(sendmail_command, "w"))) {
-		TRACE(TRACE_ERROR, "could not open pipe to sendmail");
+		TRACE(TRACE_ERR, "could not open pipe to sendmail");
 		g_free(sendmail_command);
 		return 1;
 	}
@@ -2187,7 +2187,7 @@ int send_mail(DbmailMessage *message,
 		g_free(message_string);
 		break;
 	default:
-		TRACE(TRACE_ERROR, "invalid sendwhat in call to send_mail: [%d]", sendwhat);
+		TRACE(TRACE_ERR, "invalid sendwhat in call to send_mail: [%d]", sendwhat);
 		break;
 	}
 
@@ -2207,7 +2207,7 @@ int send_mail(DbmailMessage *message,
 	}
 
 	if (result != 0) {
-		TRACE(TRACE_ERROR, "sendmail error return value was [%d]", result);
+		TRACE(TRACE_ERR, "sendmail error return value was [%d]", result);
 
 		if (!sendmail_external)
 			g_free(sendmail_command);
@@ -2225,7 +2225,7 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 
 	if (!from) {
 		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0)
-			TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+			TRACE(TRACE_NOTICE, "no config value for POSTMASTER");
 		if (strlen(postmaster))
 			from = postmaster;
 		else
@@ -2237,7 +2237,7 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 		char *to = (char *)targets->data;
 
 		if (!to || strlen(to) < 1) {
-			TRACE(TRACE_ERROR, "forwarding address is zero length, message not forwarded.");
+			TRACE(TRACE_ERR, "forwarding address is zero length, message not forwarded.");
 		} else {
 			if (to[0] == '!') {
 				// The forward is a command to execute.
@@ -2289,15 +2289,15 @@ static int send_notification(DbmailMessage *message UNUSED, const char *to)
 	memset(subject,0,sizeof(subject));
 
 	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
-		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+		TRACE(TRACE_NOTICE, "no config value for POSTMASTER");
 	}
 
 	if (config_get_value("AUTO_NOTIFY_SENDER", "DELIVERY", from) < 0) {
-		TRACE(TRACE_MESSAGE, "no config value for AUTO_NOTIFY_SENDER");
+		TRACE(TRACE_NOTICE, "no config value for AUTO_NOTIFY_SENDER");
 	}
 
 	if (config_get_value("AUTO_NOTIFY_SUBJECT", "DELIVERY", subject) < 0) {
-		TRACE(TRACE_MESSAGE, "no config value for AUTO_NOTIFY_SUBJECT");
+		TRACE(TRACE_NOTICE, "no config value for AUTO_NOTIFY_SUBJECT");
 	}
 
 	if (strlen(from) < 1)
@@ -2330,7 +2330,7 @@ static int send_reply(DbmailMessage *message, const char *body)
 
 	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
 	if (x_dbmail_reply) {
-		TRACE(TRACE_MESSAGE, "reply loop detected [%s]", x_dbmail_reply);
+		TRACE(TRACE_NOTICE, "reply loop detected [%s]", x_dbmail_reply);
 		return 0;
 	}
 	
@@ -2346,7 +2346,7 @@ static int send_reply(DbmailMessage *message, const char *body)
 	if (!to)
 		to = dbmail_message_get_header(message, "Return-Path");
 	if (!to) {
-		TRACE(TRACE_ERROR, "no address to send to");
+		TRACE(TRACE_ERR, "no address to send to");
 		return 0;
 	}
 	if (!valid_sender(to)) {
@@ -2388,7 +2388,7 @@ static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
 
 	/* message has been succesfully inserted, perform auto-notification & auto-reply */
 	if (config_get_value("AUTO_NOTIFY", "DELIVERY", val) < 0) {
-		TRACE(TRACE_ERROR, "error getting config value for AUTO_NOTIFY");
+		TRACE(TRACE_ERR, "error getting config value for AUTO_NOTIFY");
 		return -1;
 	}
 
@@ -2396,7 +2396,7 @@ static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
 		do_auto_notify = 1;
 
 	if (config_get_value("AUTO_REPLY", "DELIVERY", val) < 0) {
-		TRACE(TRACE_ERROR, "error getting config value for AUTO_REPLY");
+		TRACE(TRACE_ERR, "error getting config value for AUTO_REPLY");
 		return -1;
 	}
 
@@ -2407,14 +2407,14 @@ static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
 		TRACE(TRACE_DEBUG, "starting auto-notification procedure");
 
 		if (db_get_notify_address(useridnr, &notify_address) != 0)
-			TRACE(TRACE_ERROR, "error fetching notification address");
+			TRACE(TRACE_ERR, "error fetching notification address");
 		else {
 			if (notify_address == NULL)
 				TRACE(TRACE_DEBUG, "no notification address specified, skipping");
 			else {
 				TRACE(TRACE_DEBUG, "sending notifcation to [%s]", notify_address);
 				if (send_notification(message, notify_address) < 0) {
-					TRACE(TRACE_ERROR, "error in call to send_notification.");
+					TRACE(TRACE_ERR, "error in call to send_notification.");
 					g_free(notify_address);
 					return -1;
 				}
@@ -2427,13 +2427,13 @@ static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
 		TRACE(TRACE_DEBUG, "starting auto-reply procedure");
 
 		if (db_get_reply_body(useridnr, &reply_body) != 0)
-			TRACE(TRACE_ERROR, "error fetching reply body");
+			TRACE(TRACE_ERR, "error fetching reply body");
 		else {
 			if (reply_body == NULL || reply_body[0] == '\0')
 				TRACE(TRACE_DEBUG, "no reply body specified, skipping");
 			else {
 				if (send_reply(message, reply_body) < 0) {
-					TRACE(TRACE_ERROR, "error in call to send_reply");
+					TRACE(TRACE_ERR, "error in call to send_reply");
 					g_free(reply_body);
 					return -1;
 				}
@@ -2489,7 +2489,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 	/* first start a new database transaction */
 
 	if ((result = dbmail_message_store(message)) == DM_EQUERY) {
-		TRACE(TRACE_ERROR,"storing message failed");
+		TRACE(TRACE_ERR,"storing message failed");
 		return result;
 	} 
 
@@ -2528,23 +2528,23 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 				has_2 = 1;
 				break;
 			case DSN_CLASS_FAIL:
-				TRACE(TRACE_ERROR, "permanent failure sort_and_deliver for useridnr [%llu]", *useridnr);
+				TRACE(TRACE_ERR, "permanent failure sort_and_deliver for useridnr [%llu]", *useridnr);
 				has_5 = 1;
 				break;
 			case DSN_CLASS_QUOTA:
-				TRACE(TRACE_MESSAGE, "mailbox over quota, message rejected for useridnr [%llu]", *useridnr);
+				TRACE(TRACE_NOTICE, "mailbox over quota, message rejected for useridnr [%llu]", *useridnr);
 				has_5_2 = 1;
 				break;
 			case DSN_CLASS_TEMP:
 			default:
-				TRACE(TRACE_ERROR, "unknown temporary failure in sort_and_deliver for useridnr [%llu]", *useridnr);
+				TRACE(TRACE_ERR, "unknown temporary failure in sort_and_deliver for useridnr [%llu]", *useridnr);
 				has_4 = 1;
 				break;
 			}
 
 			/* Automatic reply and notification */
 			if (execute_auto_ran(message, *useridnr) < 0)
-				TRACE(TRACE_ERROR, "error in execute_auto_ran(), but continuing delivery normally.");
+				TRACE(TRACE_ERR, "error in execute_auto_ran(), but continuing delivery normally.");
 
 			if (! g_list_next(userids))
 				break;
@@ -2595,7 +2595,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 			if (send_forward_list(message, delivery->forwards, from) < 0) {
 				/* If forward fails, tell the sender that we're
 				 * having a transient error. They'll resend. */
-				TRACE(TRACE_MESSAGE, "forwaring failed, reporting transient error.");
+				TRACE(TRACE_NOTICE, "forwaring failed, reporting transient error.");
 				set_dsn(&delivery->dsn, DSN_CLASS_TEMP, 1, 1);
 			}
 		}
@@ -2609,7 +2609,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
 	if (! db_delete_message(tmpid)) 
-		TRACE(TRACE_ERROR, "failed to delete temporary message [%llu]", message->id);
+		TRACE(TRACE_ERR, "failed to delete temporary message [%llu]", message->id);
 	TRACE(TRACE_DEBUG, "temporary message deleted from database. Done.");
 
 	return 0;

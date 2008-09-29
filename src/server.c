@@ -99,7 +99,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 
 	g_thread_pool_push(tpool, D, &err);
 
-	if (err) TRACE(TRACE_FATAL,"g_thread_pool_push failed [%s]", err->message);
+	if (err) TRACE(TRACE_EMERG,"g_thread_pool_push failed [%s]", err->message);
 }
 
 void dm_thread_data_free(gpointer data)
@@ -174,12 +174,12 @@ static int server_start_cli(serverConfig_t *conf)
 {
 	server_conf = conf;
 	if (db_connect() != 0) {
-		TRACE(TRACE_ERROR, "could not connect to database");
+		TRACE(TRACE_ERR, "could not connect to database");
 		return -1;
 	}
 
 	if (auth_connect() != 0) {
-		TRACE(TRACE_ERROR, "could not connect to authentication");
+		TRACE(TRACE_ERR, "could not connect to authentication");
 		return -1;
 	}
 
@@ -216,17 +216,17 @@ static void reopen_logs(serverConfig_t *conf)
 
 	if (! (freopen(conf->log, "a", stdout))) {
 		serr = errno;
-		TRACE(TRACE_ERROR, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
+		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
 	}
 
 	if (! (freopen(conf->error_log, "a", stderr))) {
 		serr = errno;
-		TRACE(TRACE_ERROR, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
+		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
 	}
 
 	if (! (freopen("/dev/null", "r", stdin))) {
 		serr = errno;
-		TRACE(TRACE_ERROR, "freopen failed on stdin [%s]", strerror(serr));
+		TRACE(TRACE_ERR, "freopen failed on stdin [%s]", strerror(serr));
 	}
 }
 	
@@ -238,15 +238,15 @@ static void reopen_logs_fatal(serverConfig_t *conf)
 
 	if (! (freopen(conf->log, "a", stdout))) {
 		serr = errno;
-		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
+		TRACE(TRACE_EMERG, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
 	}
 	if (! (freopen(conf->error_log, "a", stderr))) {
 		serr = errno;
-		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
+		TRACE(TRACE_EMERG, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
 	}
 	if (! (freopen("/dev/null", "r", stdin))) {
 		serr = errno;
-		TRACE(TRACE_FATAL, "freopen failed on stdin [%s]", strerror(serr));
+		TRACE(TRACE_EMERG, "freopen failed on stdin [%s]", strerror(serr));
 	}
 }
 
@@ -274,7 +274,7 @@ static int dm_socket(int domain)
 	int sock, err;
 	if ((sock = socket(domain, SOCK_STREAM, 0)) == -1) {
 		err = errno;
-		TRACE(TRACE_FATAL, "%s", strerror(err));
+		TRACE(TRACE_EMERG, "%s", strerror(err));
 	}
 	return sock;
 }
@@ -285,12 +285,12 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
 		err = errno;
-		TRACE(TRACE_FATAL, "%s", strerror(err));
+		TRACE(TRACE_EMERG, "%s", strerror(err));
 	}
 
 	if ((listen(sock, backlog)) == -1) {
 		err = errno;
-		TRACE(TRACE_FATAL, "%s", strerror(err));
+		TRACE(TRACE_EMERG, "%s", strerror(err));
 	}
 	
 	TRACE(TRACE_DEBUG, "done");
@@ -343,7 +343,7 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
 	} else if (! (inet_aton(ip, &saServer.sin_addr))) {
 		if (sock > 0) close(sock);
-		TRACE(TRACE_FATAL, "IP invalid [%s]", ip);
+		TRACE(TRACE_EMERG, "IP invalid [%s]", ip);
 	}
 
 	// any error in dm_bind_and_listen is fatal
@@ -396,7 +396,7 @@ static void server_sock_cb(int sock, short event, void *arg)
                                 TRACE(TRACE_DEBUG, "%s", strerror(serr));
                                 break;
                         default:
-                                TRACE(TRACE_ERROR, "%s", strerror(serr));
+                                TRACE(TRACE_ERR, "%s", strerror(serr));
                                 break;
                 }
                 return;
@@ -482,16 +482,16 @@ int server_run(serverConfig_t *conf)
 	reopen_logs(conf);
 	server_create_sockets(conf);
 
- 	TRACE(TRACE_MESSAGE, "starting main service loop");
+ 	TRACE(TRACE_NOTICE, "starting main service loop");
 
 	server_conf = conf;
 	if (db_connect() != 0) {
-		TRACE(TRACE_ERROR, "could not connect to database");
+		TRACE(TRACE_ERR, "could not connect to database");
 		return -1;
 	}
 
 	if (auth_connect() != 0) {
-		TRACE(TRACE_ERROR, "could not connect to authentication");
+		TRACE(TRACE_ERR, "could not connect to authentication");
 		return -1;
 	}
 
@@ -669,7 +669,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
 		config->timeout = 0;
 	} else if ((config->timeout = atoi(val)) <= 30)
-		TRACE(TRACE_FATAL, "value for TIMEOUT is invalid: [%d]",
+		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]",
 		      config->timeout);
 
 	TRACE(TRACE_DEBUG, "timeout [%d] seconds",
@@ -681,7 +681,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
 		config->login_timeout = 60;
 	} else if ((config->login_timeout = atoi(val)) <= 10)
-		TRACE(TRACE_FATAL, "value for TIMEOUT is invalid: [%d]",
+		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]",
 		      config->login_timeout);
 
 	TRACE(TRACE_DEBUG, "login_timeout [%d] seconds",
@@ -698,10 +698,10 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	/* read items: PORT */
 	config_get_value("PORT", service, val);
 	if (strlen(val) == 0)
-		TRACE(TRACE_FATAL, "no value for PORT in config file");
+		TRACE(TRACE_EMERG, "no value for PORT in config file");
 
 	if ((config->port = atoi(val)) <= 0)
-		TRACE(TRACE_FATAL, "value for PORT is invalid: [%d]",
+		TRACE(TRACE_EMERG, "value for PORT is invalid: [%d]",
 		      config->port);
 
 	TRACE(TRACE_DEBUG, "binding to PORT [%d]",
@@ -711,7 +711,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	/* read items: BINDIP */
 	config_get_value("BINDIP", service, val);
 	if (strlen(val) == 0)
-		TRACE(TRACE_FATAL, "no value for BINDIP in config file");
+		TRACE(TRACE_EMERG, "no value for BINDIP in config file");
 	// If there was a SIGHUP, then we're resetting an active config.
 	g_strfreev(config->iplist);
 	g_free(config->listenSockets);
@@ -719,7 +719,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	config->iplist = g_strsplit_set(val, " ,", 0);
 	config->ipcount = g_strv_length(config->iplist);
 	if (config->ipcount < 1) {
-		TRACE(TRACE_FATAL, "no value for BINDIP in config file");
+		TRACE(TRACE_EMERG, "no value for BINDIP in config file");
 	}
 
 	int ip;
@@ -736,7 +736,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 			BACKLOG);
 		config->backlog = BACKLOG;
 	} else if ((config->backlog = atoi(val)) <= 0)
-		TRACE(TRACE_FATAL, "value for BACKLOG is invalid: [%d]",
+		TRACE(TRACE_EMERG, "value for BACKLOG is invalid: [%d]",
 			config->backlog);
 
 	/* read items: RESOLVE_IP */
@@ -767,7 +767,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	/* read items: EFFECTIVE-USER */
 	config_get_value("EFFECTIVE_USER", service, val);
 	if (strlen(val) == 0)
-		TRACE(TRACE_FATAL, "no value for EFFECTIVE_USER in config file");
+		TRACE(TRACE_EMERG, "no value for EFFECTIVE_USER in config file");
 
 	strncpy(config->serverUser, val, FIELDSIZE);
 	config->serverUser[FIELDSIZE - 1] = '\0';
@@ -779,7 +779,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	/* read items: EFFECTIVE-GROUP */
 	config_get_value("EFFECTIVE_GROUP", service, val);
 	if (strlen(val) == 0)
-		TRACE(TRACE_FATAL, "no value for EFFECTIVE_GROUP in config file");
+		TRACE(TRACE_EMERG, "no value for EFFECTIVE_GROUP in config file");
 
 	strncpy(config->serverGroup, val, FIELDSIZE);
 	config->serverGroup[FIELDSIZE - 1] = '\0';

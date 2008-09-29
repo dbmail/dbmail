@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 	/* Read in the config file; do it after getopt
 	 * in case -f config.alt was specified. */
 	if (config_read(configFile) == -1) {
-		TRACE(TRACE_ERROR, "error reading alternate config file [%s]", configFile);
+		TRACE(TRACE_ERR, "error reading alternate config file [%s]", configFile);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 
@@ -226,13 +226,13 @@ int main(int argc, char *argv[])
 	GetDBParams();
 
 	if (db_connect() != 0) {
-		TRACE(TRACE_ERROR, "database connection failed");
+		TRACE(TRACE_ERR, "database connection failed");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
 
 	if (auth_connect() != 0) {
-		TRACE(TRACE_ERROR, "authentication connection failed");
+		TRACE(TRACE_ERR, "authentication connection failed");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
 
 	/* read the whole message */
 	if (! (msg = dbmail_message_new_from_stream(stdin, DBMAIL_STREAM_PIPE))) {
-		TRACE(TRACE_ERROR, "error reading message");
+		TRACE(TRACE_ERR, "error reading message");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
 		/* parse for destination addresses */
 		TRACE(TRACE_DEBUG, "scanning for [%s]", deliver_to_header);
 		if (! (userlist = dbmail_message_get_header_addresses(msg, deliver_to_header))) {
-			TRACE(TRACE_MESSAGE, "no email addresses (scanned for %s)", deliver_to_header);
+			TRACE(TRACE_NOTICE, "no email addresses (scanned for %s)", deliver_to_header);
 			exitcode = EX_NOUSER;
 			goto freeall;
 		}
@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (dsnuser_resolve_list(dsnusers) == -1) {
-		TRACE(TRACE_ERROR, "dsnuser_resolve_list failed");
+		TRACE(TRACE_ERR, "dsnuser_resolve_list failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
 
 	/* inserting messages into the database */
 	if (insert_messages(msg, dsnusers) == -1) {
-		TRACE(TRACE_ERROR, "insert_messages failed");
+		TRACE(TRACE_ERR, "insert_messages failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;
 	}
@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
 		}
 
 		/* Unfortunately, dbmail-deliver only gets to return a single worst-case code. */
-		TRACE(TRACE_MESSAGE, "exit code [%d] from DSN [%d%d%d  %s %s %s]",
+		TRACE(TRACE_NOTICE, "exit code [%d] from DSN [%d%d%d  %s %s %s]",
 			exitcode,
 			final_dsn.class, final_dsn.subject, final_dsn.detail,
 			class, subject, detail);

@@ -125,7 +125,7 @@ ACLRight_t acl_get_right_from_char(char right_char)
 	case 'a':
 		return ACL_RIGHT_ADMINISTER;
 	default:
-		TRACE(TRACE_ERROR, "error wrong acl character. This error should have been caught earlier!");
+		TRACE(TRACE_ERR, "error wrong acl character. This error should have been caught earlier!");
 		return ACL_RIGHT_NONE;
 	}
 }
@@ -162,7 +162,7 @@ acl_replace_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
 			set = 0;
 		if (db_acl_set_right
 		    (userid, mboxid, acl_right_strings[i], set) < 0) {
-			TRACE(TRACE_ERROR, "error replacing ACL");
+			TRACE(TRACE_ERR, "error replacing ACL");
 			return -1;
 		}
 	}
@@ -202,7 +202,7 @@ char *acl_get_acl(u64_t mboxid)
 	result = db_acl_get_identifier(mboxid, &identifier_list);
 
 	if (result < 0) {
-		TRACE(TRACE_ERROR, "error when getting identifier list for mailbox [%llu].", mboxid);
+		TRACE(TRACE_ERR, "error when getting identifier list for mailbox [%llu].", mboxid);
 		g_list_destroy(identifier_list);
 		return NULL;
 	}
@@ -211,13 +211,13 @@ char *acl_get_acl(u64_t mboxid)
 	 * of the mailbox
 	 */
 	if (db_get_mailbox_owner(mboxid, &userid) < 0) {
-		TRACE(TRACE_ERROR, "error querying ownership of mailbox");
+		TRACE(TRACE_ERR, "error querying ownership of mailbox");
 		g_list_destroy(identifier_list);
 		return NULL;
 	}
 
 	if ((username = auth_get_userid(userid)) == NULL) {
-		TRACE(TRACE_ERROR, "error getting username for user [%llu]", userid);
+		TRACE(TRACE_ERR, "error getting username for user [%llu]", userid);
 		g_list_destroy(identifier_list);
 		return NULL;
 	}
@@ -273,7 +273,7 @@ char *acl_listrights(u64_t userid, u64_t mboxid)
 	int result;
 	
 	if ((result = db_user_is_mailbox_owner(userid, mboxid)) < 0) {
-		TRACE(TRACE_ERROR, "error checking if user is owner of a mailbox");
+		TRACE(TRACE_ERR, "error checking if user is owner of a mailbox");
 		return NULL;
 	}
 
@@ -293,12 +293,12 @@ char *acl_myrights(u64_t userid, u64_t mboxid)
 	char *rightsstring;
 
 	if (! (rightsstring = g_new0(char, NR_ACL_FLAGS + 1))) {
-		TRACE(TRACE_ERROR, "error allocating memory for rightsstring");
+		TRACE(TRACE_ERR, "error allocating memory for rightsstring");
 		return NULL;
 	}
 
 	if (acl_get_rightsstring(userid, mboxid, rightsstring) < 0) {
-		TRACE(TRACE_ERROR, "error getting rightsstring.");
+		TRACE(TRACE_ERR, "error getting rightsstring.");
 		g_free(rightsstring);
 		return NULL;
 	}
@@ -315,7 +315,7 @@ int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid, char *rights
 	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
 	
 	if (auth_user_exists(identifier, &userid) < 0) {
-		TRACE(TRACE_ERROR, "error finding user id for user with name [%s]", identifier);
+		TRACE(TRACE_ERR, "error finding user id for user with name [%s]", identifier);
 		return -1;
 	}
 

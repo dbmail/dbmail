@@ -227,7 +227,7 @@
 #define ISLF(a) ((char)(a)=='\n')
 #define ISDOT(a) ((char)(a)=='.')
 
-#define LOG_SQLERROR TRACE(TRACE_ERROR,"SQLException: %s", Connection_getLastError(c))
+#define LOG_SQLERROR TRACE(TRACE_ERR,"SQLException: %s", Connection_getLastError(c))
 #define DISPATCH(f,a) \
 	{ \
 		GError *err = NULL; \
@@ -272,7 +272,7 @@ void GetDBParams(void);
 /** 
  \brief set the overall trace level, using the value in cfg_items
  \param service_name name of service to get trace level for.
- \attention trace level is set to TRACE_ERROR if no trace level value is found
+ \attention trace level is set to TRACE_ERR if no trace level value is found
  *                for service.
  */
 void SetTraceLevel(const char *service_name);

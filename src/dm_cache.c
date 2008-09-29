@@ -46,7 +46,7 @@ T Cache_new(void)
 	C->id = 0;
 	if (! (C->memdump = Mem_open())) {
 		serr = errno;
-		TRACE(TRACE_ERROR,"Mem_open() failed [%s]", strerror(serr));
+		TRACE(TRACE_ERR,"Mem_open() failed [%s]", strerror(serr));
 		g_free(C);
 		errno = serr;
 		return NULL;
@@ -54,7 +54,7 @@ T Cache_new(void)
 	
 	if (! (C->tmpdump = Mem_open())) {
 		serr = errno;
-		TRACE(TRACE_ERROR,"Mem_open() failed [%s]", strerror(serr));
+		TRACE(TRACE_ERR,"Mem_open() failed [%s]", strerror(serr));
 		errno = serr;
 		Mem_close(&C->memdump);
 		g_free(C);

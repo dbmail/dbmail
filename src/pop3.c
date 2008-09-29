@@ -87,7 +87,7 @@ static void pop3_close(ClientSession_t *session)
 
 		switch (session->SessionResult) {
 		case 0:
-			TRACE(TRACE_MESSAGE, "user %s logging out [messages=%llu, octets=%llu]", 
+			TRACE(TRACE_NOTICE, "user %s logging out [messages=%llu, octets=%llu]", 
 					session->username, 
 					session->virtual_totalmessages, 
 					session->virtual_totalsize);
@@ -101,18 +101,18 @@ static void pop3_close(ClientSession_t *session)
 
 		case 1:
 			ci_write(ci, "-ERR I'm leaving, you're too slow\r\n");
-			TRACE(TRACE_ERROR, "client timed out, connection closed");
+			TRACE(TRACE_ERR, "client timed out, connection closed");
 			break;
 
 		case 2:
-			TRACE(TRACE_ERROR, "alert! possible flood attempt, closing connection");
+			TRACE(TRACE_ERR, "alert! possible flood attempt, closing connection");
 			break;
 
 		case 3:
-			TRACE(TRACE_ERROR, "authorization layer failure");
+			TRACE(TRACE_ERR, "authorization layer failure");
 			break;
 		case 4:
-			TRACE(TRACE_ERROR, "storage layer failure");
+			TRACE(TRACE_ERR, "storage layer failure");
 			break;
 		}
 	} else {
@@ -328,7 +328,7 @@ int pop3(ClientSession_t *session, char *buffer)
 			session->SessionResult = 3;
 			return -1;
 		case 0:
-			TRACE(TRACE_ERROR, "user [%s] coming from [%s] tried to login with wrong password", 
+			TRACE(TRACE_ERR, "user [%s] coming from [%s] tried to login with wrong password", 
 				session->username, ci->ip_src);
 
 			g_free(session->username);
@@ -359,7 +359,7 @@ int pop3(ClientSession_t *session, char *buffer)
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
-				TRACE(TRACE_MESSAGE, "user %s logged in [messages=%llu, octets=%llu]", 
+				TRACE(TRACE_NOTICE, "user %s logged in [messages=%llu, octets=%llu]", 
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
@@ -603,7 +603,7 @@ int pop3(ClientSession_t *session, char *buffer)
 		 * by db_getencryption()
 		 */
 		if (auth_user_exists(session->username, &user_idnr) == -1) {
-			TRACE(TRACE_ERROR, "error finding if user exists. username = [%s]", 
+			TRACE(TRACE_ERR, "error finding if user exists. username = [%s]", 
 					session->username);
 			return -1;
 		}
@@ -630,7 +630,7 @@ int pop3(ClientSession_t *session, char *buffer)
 			session->SessionResult = 3;
 			return -1;
 		case 0:
-			TRACE(TRACE_ERROR, "user [%s] tried to login with wrong password", session->username);
+			TRACE(TRACE_ERR, "user [%s] tried to login with wrong password", session->username);
 
 			g_free(session->username);
 			session->username = NULL;
@@ -660,7 +660,7 @@ int pop3(ClientSession_t *session, char *buffer)
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
-				TRACE(TRACE_MESSAGE, "user %s logged in [messages=%llu, octets=%llu]", 
+				TRACE(TRACE_NOTICE, "user %s logged in [messages=%llu, octets=%llu]", 
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);

@@ -26,13 +26,13 @@ int sort_load_driver(void)
 	char *driver = NULL;
 
 	if (!g_module_supported()) {
-		TRACE(TRACE_FATAL, "loadable modules unsupported on this platform");
+		TRACE(TRACE_EMERG, "loadable modules unsupported on this platform");
 		return 1;
 	}
 
 	sort = g_new0(sort_func_t,1);
 	if (!sort) {
-		TRACE(TRACE_FATAL, "cannot allocate memory");
+		TRACE(TRACE_EMERG, "cannot allocate memory");
 		return -3;
 	}
 
@@ -70,7 +70,7 @@ int sort_load_driver(void)
 	/* If the list is exhausted without opening a module, we'll catch it,
 	 * but we don't bomb out as we do for db and auth; just deliver normally. */
 	if (!module) {
-		TRACE(TRACE_FATAL, "could not load sort module - turn up debug level for details");
+		TRACE(TRACE_EMERG, "could not load sort module - turn up debug level for details");
 		return -1;
 	}
 
@@ -83,7 +83,7 @@ int sort_load_driver(void)
 	||  !g_module_symbol(module, "sort_get_errormsg",           (gpointer)&sort->get_errormsg           )
 	||  !g_module_symbol(module, "sort_get_error",              (gpointer)&sort->get_error              )
 	||  !g_module_symbol(module, "sort_get_mailbox",            (gpointer)&sort->get_mailbox            )) {
-		TRACE(TRACE_ERROR, "cannot find function: %s: Did you enable SIEVE sorting in the DELIVERY "
+		TRACE(TRACE_ERR, "cannot find function: %s: Did you enable SIEVE sorting in the DELIVERY "
 			"section of dbmail.conf but forget to build the Sieve loadable module?", g_module_error());
 		return -2;
 	}
@@ -96,7 +96,7 @@ sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message)
 	if (!sort)
 		sort_load_driver();
 	if (!sort->process) {
-		TRACE(TRACE_ERROR, "Error loading sort driver");
+		TRACE(TRACE_ERR, "Error loading sort driver");
 		return NULL;
 	}
 	return sort->process(user_idnr, message);
@@ -107,7 +107,7 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
 	if (!sort)
 		sort_load_driver();
 	if (!sort->validate) {
-		TRACE(TRACE_ERROR, "Error loading sort driver");
+		TRACE(TRACE_ERR, "Error loading sort driver");
 		return NULL;
 	}
 	return sort->validate(user_idnr, scriptname);
@@ -118,7 +118,7 @@ const char *sort_listextensions(void)
 	if (!sort)
 		sort_load_driver();
 	if (!sort->listextensions) {
-		TRACE(TRACE_ERROR, "Error loading sort driver");
+		TRACE(TRACE_ERR, "Error loading sort driver");
 		return NULL;
 	}
 	return sort->listextensions();

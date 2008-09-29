@@ -28,7 +28,7 @@ int auth_load_driver(void)
 	char *driver = NULL;
 
 	if (!g_module_supported()) {
-		TRACE(TRACE_FATAL, "loadable modules unsupported on this platform");
+		TRACE(TRACE_EMERG, "loadable modules unsupported on this platform");
 		return 1;
 	}
 
@@ -39,7 +39,7 @@ int auth_load_driver(void)
 	else if (strcasecmp(_db_params.authdriver, "LDAP") == 0)
 		driver = "auth_ldap";
 	else
-		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from SQL or LDAP",
+		TRACE(TRACE_EMERG, "unsupported driver: %s, please choose from SQL or LDAP",
 				_db_params.authdriver);
 
 	field_t library_dir;
@@ -72,7 +72,7 @@ int auth_load_driver(void)
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		TRACE(TRACE_FATAL, "could not load auth module - turn up debug level for details");
+		TRACE(TRACE_EMERG, "could not load auth module - turn up debug level for details");
 		return -1;
 	}
 
@@ -102,7 +102,7 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_removealias",            (gpointer)&auth->removealias            )
 	||  !g_module_symbol(module, "auth_removealias_ext",        (gpointer)&auth->removealias_ext        )
 	||  !g_module_symbol(module, "auth_requires_shadow_user",   (gpointer)&auth->requires_shadow_user   )) {
-		TRACE(TRACE_FATAL, "cannot find function %s", g_module_error());
+		TRACE(TRACE_EMERG, "cannot find function %s", g_module_error());
 		return -2;
 	}
 

@@ -127,7 +127,7 @@ static gboolean dm_db_ping(void)
 	t = Connection_ping(c);
 	Connection_close(c);
 
-	if (!t) TRACE(TRACE_ERROR,"database has gone away");
+	if (!t) TRACE(TRACE_ERR,"database has gone away");
 
 	return t;
 }
@@ -465,7 +465,7 @@ int imap4(ImapSession *session)
 
 	session->command_state=TRUE; // set command-is-done-state while doing some checks
 	if (! (session->tag && session->command)) {
-		TRACE(TRACE_ERROR,"no tag or command");
+		TRACE(TRACE_ERR,"no tag or command");
 		return 1;
 	}
 	if (! session->args) {

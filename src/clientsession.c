@@ -123,7 +123,7 @@ void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 	c = db_con_get();
 	if (!Connection_ping(c)) {
 		Connection_close(c);
-		TRACE(TRACE_ERROR, "database connection error");
+		TRACE(TRACE_ERR, "database connection error");
 		client_session_bailout(session);
 		return;
 	}

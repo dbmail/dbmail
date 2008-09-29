@@ -365,7 +365,7 @@ int lmtp(ClientSession_t * session)
 		dsnuser->address = tmpaddr;
 
 		if (dsnuser_resolve(dsnuser) != 0) {
-			TRACE(TRACE_ERROR, "dsnuser_resolve_list failed");
+			TRACE(TRACE_ERR, "dsnuser_resolve_list failed");
 			ci_write(ci, "430 Temporary failure in recipient lookup\r\n");
 			dsnuser_free(dsnuser);
 			return 1;

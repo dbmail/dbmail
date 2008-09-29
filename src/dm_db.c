@@ -165,7 +165,7 @@ int db_connect(void)
 				char *homedir;
 				field_t db;
 				if ((homedir = getenv ("HOME")) == NULL)
-					TRACE(TRACE_FATAL, "can't expand ~ in db name");
+					TRACE(TRACE_EMERG, "can't expand ~ in db name");
 				g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(_db_params.db[1]));
 				g_strlcpy(_db_params.db, db, FIELDSIZE);
 			}
@@ -188,7 +188,7 @@ int db_connect(void)
 	url = URL_new(dsn->str);
 	g_string_free(dsn,TRUE);
 	if (! (pool = ConnectionPool_new(url)))
-		TRACE(TRACE_FATAL,"error creating connection pool");
+		TRACE(TRACE_EMERG,"error creating connection pool");
 	
 	if (_db_params.maxconnections > 0) {
 		if (_db_params.maxconnections < ConnectionPool_getInitialConnections(pool))
@@ -205,7 +205,7 @@ int db_connect(void)
 
 	if (! (c = ConnectionPool_getConnection(pool))) {
 		Connection_close(c);
-		TRACE(TRACE_FATAL, "error getting connection from the pool");
+		TRACE(TRACE_EMERG, "error getting connection from the pool");
 		return -1;
 	}
 	Connection_close(c);
@@ -231,7 +231,7 @@ C db_con_get(void)
 		if (c) break;
 		sleep(1);
 	}
-	if (! c) TRACE(TRACE_FATAL,"can't get a database connection from the pool!");
+	if (! c) TRACE(TRACE_EMERG,"can't get a database connection from the pool!");
 	assert(c);
 	return c;
 }
@@ -586,7 +586,7 @@ const char * db_get_sql(sql_fragment_t frag)
 			return db_get_pgsql_sql(frag);
 	}
 
-	TRACE(TRACE_FATAL, "driver not in [sqlite|mysql|postgresql]");
+	TRACE(TRACE_EMERG, "driver not in [sqlite|mysql|postgresql]");
 
 	return NULL;
 }
@@ -636,14 +636,14 @@ int db_check_version(void)
 
 	TRY
 		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %sphysmessage LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_FATAL, "pre-2.0 database incompatible. You need to run the conversion script");
+			TRACE(TRACE_EMERG, "pre-2.0 database incompatible. You need to run the conversion script");
 		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %sheadervalue LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_FATAL, "2.0 database incompatible. You need to add the header tables.");
+			TRACE(TRACE_EMERG, "2.0 database incompatible. You need to add the header tables.");
 		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %senvelope LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_FATAL, "2.1 database incompatible. You need to add the envelopes table "
+			TRACE(TRACE_EMERG, "2.1 database incompatible. You need to add the envelopes table "
 					"and run dbmail-util -by");
 		if (! Connection_executeQuery(c, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_FATAL, "2.2 database incompatible.");
+			TRACE(TRACE_EMERG, "2.2 database incompatible.");
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -716,7 +716,7 @@ static int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
 		u64_t idnr;
 		TRACE(TRACE_DEBUG, "looking up user_idnr for [%s]", DBMAIL_DELIVERY_USERNAME);
 		if (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &idnr) < 0) {
-			TRACE(TRACE_ERROR, "error looking up user_idnr for DBMAIL_DELIVERY_USERNAME");
+			TRACE(TRACE_ERR, "error looking up user_idnr for DBMAIL_DELIVERY_USERNAME");
 			return DM_EQUERY;
 		}
 		g_static_mutex_lock(&mutex);
@@ -781,7 +781,7 @@ static int dm_quota_user_validate(u64_t user_idnr, u64_t msg_size)
 	C c; R r; gboolean t = TRUE;
 
 	if (auth_getmaxmailsize(user_idnr, &maxmail_size) == -1) {
-		TRACE(TRACE_ERROR, "auth_getmaxmailsize() failed\n");
+		TRACE(TRACE_ERR, "auth_getmaxmailsize() failed\n");
 		return DM_EQUERY;
 	}
 
@@ -1078,7 +1078,7 @@ int db_update_message(u64_t message_idnr, const char *unique_id, u64_t message_s
 		return DM_EQUERY;
 
 	if (! dm_quota_user_inc(db_get_useridnr(message_idnr), message_size)) {
-		TRACE(TRACE_ERROR, "error calculating quotum "
+		TRACE(TRACE_ERR, "error calculating quotum "
 		      "used for user [%llu]. Database might be "
 		      "inconsistent. Run dbmail-util.",
 		      db_get_useridnr(message_idnr));
@@ -1165,7 +1165,7 @@ int db_empty_mailbox(u64_t user_idnr)
 	while (mboxids) {
 		id = mboxids->data;
 		if (db_delete_mailbox(*id, 1, 1)) {
-			TRACE(TRACE_ERROR, "error emptying mailbox [%llu]", *id);
+			TRACE(TRACE_ERR, "error emptying mailbox [%llu]", *id);
 			result = -1;
 			break;
 		}
@@ -1733,12 +1733,12 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_siz
 	/* get the user_idnr of the owner of the mailbox */
 	result = db_get_mailbox_owner(mailbox_idnr, &user_idnr);
 	if (result == DM_EQUERY) {
-		TRACE(TRACE_ERROR, "cannot find owner of mailbox for "
+		TRACE(TRACE_ERR, "cannot find owner of mailbox for "
 		      "mailbox [%llu]", mailbox_idnr);
 		return DM_EQUERY;
 	}
 	if (result == 0) {
-		TRACE(TRACE_ERROR, "unable to find owner of mailbox [%llu]",
+		TRACE(TRACE_ERR, "unable to find owner of mailbox [%llu]",
 		      mailbox_idnr);
 		return DM_EGENERAL;
 	}
@@ -1843,7 +1843,7 @@ int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
 	INIT_QUERY;
 
 	if (db_find_create_mailbox("INBOX", BOX_DEFAULT, user_idnr, &mailbox_idnr) < 0) {
-		TRACE(TRACE_MESSAGE, "find_create INBOX for user [%llu] failed, exiting..", user_idnr);
+		TRACE(TRACE_NOTICE, "find_create INBOX for user [%llu] failed, exiting..", user_idnr);
 		return DM_EQUERY;
 	}
 
@@ -1974,7 +1974,7 @@ int db_update_pop(ClientSession_t * session_ptr)
 	 * recalculated */
 	if (user_idnr != 0) {
 		if (dm_quota_rebuild_user(user_idnr) == -1) {
-			TRACE(TRACE_ERROR, "Could not calculate quotum used for user [%llu]", user_idnr);
+			TRACE(TRACE_ERR, "Could not calculate quotum used for user [%llu]", user_idnr);
 			return DM_EQUERY;
 		}
 	}
@@ -2063,7 +2063,7 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 
 	if (!simple_name) {
 		g_free(mbox);
-		TRACE(TRACE_MESSAGE, "Could not remove mailbox namespace.");
+		TRACE(TRACE_NOTICE, "Could not remove mailbox namespace.");
 		return FALSE;
 	}
 
@@ -2071,7 +2071,7 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
 		result = auth_user_exists(username, &owner_idnr);
 		if (result < 0) {
-			TRACE(TRACE_ERROR, "error checking id of user.");
+			TRACE(TRACE_ERR, "error checking id of user.");
 			g_free(mbox);
 			g_free(username);
 			return FALSE;
@@ -2112,14 +2112,14 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 	 * find the new user_idnr whose mailboxes we're searching in. */
 	spattern = mailbox_remove_namespace(pattern, &namespace, &username);
 	if (!spattern) {
-		TRACE(TRACE_MESSAGE, "invalid mailbox search pattern [%s]", pattern);
+		TRACE(TRACE_NOTICE, "invalid mailbox search pattern [%s]", pattern);
 		g_free(username);
 		return DM_SUCCESS;
 	}
 	if (username) {
 		/* Replace the value of search_user_idnr with the namespace user. */
 		if (auth_user_exists(username, &search_user_idnr) < 1) {
-			TRACE(TRACE_MESSAGE, "cannot search namespace because user [%s] does not exist", username);
+			TRACE(TRACE_NOTICE, "cannot search namespace because user [%s] does not exist", username);
 			g_free(username);
 			return DM_SUCCESS;
 		}
@@ -2221,7 +2221,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern, GList ** chil
 
 	/* list normal mailboxes */
 	if (mailboxes_by_regex(owner_idnr, only_subscribed, pattern, children) < 0) {
-		TRACE(TRACE_ERROR, "error listing mailboxes");
+		TRACE(TRACE_ERR, "error listing mailboxes");
 		return DM_EQUERY;
 	}
 
@@ -2353,27 +2353,25 @@ static int db_getmailbox_metadata(MailboxInfo *mb, u64_t user_idnr)
 
 static int db_getmailbox_count(MailboxInfo *mb)
 {
-	C c; R r; int t;
+	C c; R r; 
+	volatile int t;
 	unsigned exists = 0, seen = 0, recent = 0;
-	INIT_QUERY;
 
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
 
 	/* count messages */
-	snprintf(query, DEF_QUERYSIZE,
- 			 "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
- 			 "AND (status < %d) UNION "
- 			 "SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
- 			 "AND (status < %d) AND seen_flag=1 UNION "
- 			 "SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
- 			 "AND (status < %d) AND recent_flag=1", 
- 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
- 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
- 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-	t = FALSE;
+ 	t = FALSE;
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, query);
+		r = Connection_executeQuery(c, "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+				"AND (status < %d) UNION "
+				"SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+				"AND (status < %d) AND seen_flag=1 UNION "
+				"SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+				"AND (status < %d) AND recent_flag=1", 
+				DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+				DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+				DBPFX, mb->uid, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 		if (db_result_next(r)) exists = (unsigned)db_result_get_int(r,1);
 		if (db_result_next(r)) seen   = (unsigned)db_result_get_int(r,1);
 		if (db_result_next(r)) recent = (unsigned)db_result_get_int(r,1);
@@ -2398,15 +2396,12 @@ static int db_getmailbox_count(MailboxInfo *mb)
 	 * - the next uit MUST NOT change unless messages are added to THIS mailbox
 	 * */
 
-	memset(query,0,DEF_QUERYSIZE);
-	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr+1 FROM %smessages "
-			"WHERE mailbox_idnr=%llu "
-			"ORDER BY message_idnr DESC LIMIT 1",DBPFX, mb->uid);
-
 	Connection_clear(c);
 	t = FALSE;
 	TRY
-		r = Connection_executeQuery(c, query);
+		r = Connection_executeQuery(c, "SELECT message_idnr+1 FROM %smessages "
+			"WHERE mailbox_idnr=%llu "
+			"ORDER BY message_idnr DESC LIMIT 1",DBPFX, mb->uid);
 		if (db_result_next(r))
 			mb->msguidnext = db_result_get_u64(r,0);
 		else
@@ -2423,23 +2418,23 @@ static int db_getmailbox_count(MailboxInfo *mb)
 
 static int db_getmailbox_keywords(MailboxInfo *mb)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; 
+	volatile int t = DM_SUCCESS;
 	const char *key;
 	GList *keys = NULL;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE, "SELECT DISTINCT(keyword) FROM %skeywords k "
-		"JOIN %smessages m ON k.message_idnr=m.message_idnr "
-		"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-		"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, mb->uid);
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, query);
+		r = Connection_executeQuery(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
+				"JOIN %smessages m ON k.message_idnr=m.message_idnr "
+				"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
+				"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, mb->uid);
+
 		while (db_result_next(r)) {
 			key = db_result_get(r,0);
 			keys = g_list_prepend(keys, g_strdup(key));
 		}
+
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -2461,7 +2456,8 @@ static int db_getmailbox_keywords(MailboxInfo *mb)
 
 static int db_getmailbox_mtime(MailboxInfo * mb)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; 
+	volatile int t = DM_SUCCESS;
 	char f[DEF_FRAGSIZE];
 	memset(f,0,DEF_FRAGSIZE);
 	snprintf(f,DEF_FRAGSIZE,db_get_sql(SQL_TO_UNIXEPOCH), "mtime");
@@ -2473,7 +2469,7 @@ static int db_getmailbox_mtime(MailboxInfo * mb)
 		if (db_result_next(r)) {
 			if (! mb->name)
 				mb->name = g_strdup(db_result_get(r, 0));
-			mb->mtime = (time_t)db_result_get_int(r,1);
+			mb->mtime = (time_t)db_result_get_u64(r,1);
 		} else {
 			t = DM_EQUERY;
 		}
@@ -2484,11 +2480,11 @@ static int db_getmailbox_mtime(MailboxInfo * mb)
 		Connection_close(c);
 	END_TRY;
 
-	if (! mb->name) return DM_EQUERY;
-
 	TRACE(TRACE_DEBUG,"mtime [%lu]", mb->mtime);
 
-	return DM_SUCCESS;
+	if (! mb->name) return DM_EQUERY;
+
+	return t;
 }
 
 int db_getmailbox(MailboxInfo * mb, u64_t userid)
@@ -2558,7 +2554,7 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
 		result = auth_user_exists(username, &owner_idnr);
 		if (result < 0) {
-			TRACE(TRACE_ERROR, "error checking id of user.");
+			TRACE(TRACE_ERR, "error checking id of user.");
 			goto equery;
 		}
 		if (result == 0) {
@@ -2580,7 +2576,7 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 
 	/* split up the name  */
 	if (! (chunks = g_strsplit(simple_name, MAILBOX_SEPARATOR, 0))) {
-		TRACE(TRACE_ERROR, "could not create chunks");
+		TRACE(TRACE_ERR, "could not create chunks");
 		*errmsg = "Server ran out of memory";
 		goto egeneral;
 	}
@@ -2713,19 +2709,19 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 	/* Check if new name is valid. */
 	if (!checkmailboxname(mailbox)) {
 		*message = "New mailbox name contains invalid characters";
-		TRACE(TRACE_MESSAGE, "New mailbox name contains invalid characters. Aborting create.");
+		TRACE(TRACE_NOTICE, "New mailbox name contains invalid characters. Aborting create.");
 	        return DM_EGENERAL;
         }
 
 	/* Check if mailbox already exists. */
 	if (db_findmailbox(mailbox, owner_idnr, mailbox_idnr)) {
 		*message = "Mailbox already exists";
-		TRACE(TRACE_ERROR, "Asked to create mailbox which already exists. Aborting create.");
+		TRACE(TRACE_ERR, "Asked to create mailbox which already exists. Aborting create.");
 		return DM_EGENERAL;
 	}
 
 	if (db_imap_split_mailbox(mailbox, owner_idnr, &mailbox_list, message) == DM_EQUERY) {
-		TRACE(TRACE_ERROR, "Negative return code from db_imap_split_mailbox.");
+		TRACE(TRACE_ERR, "Negative return code from db_imap_split_mailbox.");
 		// Message pointer was set by db_imap_split_mailbox
 		return DM_EGENERAL;
 	}
@@ -2852,7 +2848,7 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 		TRACE(TRACE_DEBUG, "creating shadow user for [%llu]",
 				owner_idnr);
 		if ((db_user_find_create(owner_idnr) < 0)) {
-			TRACE(TRACE_ERROR, "unable to find or create sql shadow account for useridnr [%llu]", 
+			TRACE(TRACE_ERR, "unable to find or create sql shadow account for useridnr [%llu]", 
 					owner_idnr);
 			return DM_EQUERY;
 		}
@@ -2860,7 +2856,7 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 
 	/* remove namespace information from mailbox name */
 	if (!(simple_name = mailbox_remove_namespace(name, NULL, NULL))) {
-		TRACE(TRACE_MESSAGE, "Could not remove mailbox namespace.");
+		TRACE(TRACE_NOTICE, "Could not remove mailbox namespace.");
 		return DM_EGENERAL;
 	}
 
@@ -2928,7 +2924,7 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 		 || source == BOX_DEFAULT) {
 			/* Did we fail to create the mailbox? */
 			if (db_mailbox_create_with_parents(name, source, owner_idnr, &mboxidnr, &message) != DM_SUCCESS) {
-				TRACE(TRACE_ERROR, "could not create mailbox [%s] because [%s]",
+				TRACE(TRACE_ERR, "could not create mailbox [%s] because [%s]",
 						name, message);
 				return DM_EQUERY;
 			}
@@ -3164,7 +3160,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 
 	/* Get the size of the message to be copied. */
 	if (! (msgsize = message_get_size(msg_idnr))) {
-		TRACE(TRACE_ERROR, "error getting size for message [%llu]", msg_idnr);
+		TRACE(TRACE_ERR, "error getting size for message [%llu]", msg_idnr);
 		return DM_EQUERY;
 	}
 
@@ -3213,7 +3209,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 
 	result = db_get_mailbox_owner(mailbox_idnr, &owner_idnr);
 	if (result <= 0) {
-		TRACE(TRACE_ERROR, "error checking ownership of mailbox");
+		TRACE(TRACE_ERR, "error checking ownership of mailbox");
 		return DM_EQUERY;
 	}
 
@@ -3233,7 +3229,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	g_free(tmp_name);
 
 	if (!tmp_fq_name) {
-		TRACE(TRACE_ERROR, "error getting fully qualified mailbox name");
+		TRACE(TRACE_ERR, "error getting fully qualified mailbox name");
 		return DM_EQUERY;
 	}
 	tmp_fq_name_len = strlen(tmp_fq_name);
@@ -3610,7 +3606,7 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 
 	result = db_user_is_mailbox_owner(userid, mboxid);
 	if (result < 0) {
-		TRACE(TRACE_ERROR, "error checking ownership of mailbox.");
+		TRACE(TRACE_ERR, "error checking ownership of mailbox.");
 		return DM_EQUERY;
 	}
 	if (result == TRUE)
@@ -3619,7 +3615,7 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 	// if necessary, create ACL for user, mailbox
 	result = db_acl_has_acl(userid, mboxid);
 	if (result < 0) {
-		TRACE(TRACE_ERROR, "Error finding acl for user "
+		TRACE(TRACE_ERR, "Error finding acl for user "
 		      "[%llu], mailbox [%llu]",
 		      userid, mboxid);
 		return DM_EQUERY;
@@ -3627,7 +3623,7 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 
 	if (result == FALSE) {
 		if (db_acl_create_acl(userid, mboxid) == -1) {
-			TRACE(TRACE_ERROR, "Error creating ACL for "
+			TRACE(TRACE_ERR, "Error creating ACL for "
 			      "user [%llu], mailbox [%llu]",
 			      userid, mboxid);
 			return DM_EQUERY;
@@ -3888,7 +3884,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 		return TRUE;
 
 	if (strlen(password) >= (DEF_QUERYSIZE/2)) {
-		TRACE(TRACE_ERROR, "password length is insane");
+		TRACE(TRACE_ERR, "password length is insane");
 		return DM_EQUERY;
 	}
 
@@ -4009,7 +4005,7 @@ int db_user_find_create(u64_t user_idnr)
 	}
 
 	if ((idnr > 0) && (idnr != user_idnr)) {
-		TRACE(TRACE_ERROR, "user_idnr for sql shadow account "
+		TRACE(TRACE_ERR, "user_idnr for sql shadow account "
 				"differs from user_idnr [%llu != %llu]",
 				idnr, user_idnr);
 		g_free(username);

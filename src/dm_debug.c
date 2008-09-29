@@ -32,8 +32,8 @@ char            *__progname = NULL;
 char		hostname[16];
  
 /* the debug variables */
-static trace_t TRACE_SYSLOG = TRACE_ERROR;  /* default: errors, warnings, fatals */
-static trace_t TRACE_STDERR = TRACE_FATAL;  /* default: fatal errors only */
+static trace_t TRACE_SYSLOG = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
+static trace_t TRACE_STDERR = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
 
 /*
  * configure the debug settings
@@ -54,19 +54,21 @@ void null_logger(const char UNUSED *log_domain, GLogLevelFlags UNUSED log_level,
 static const char * trace_to_text(trace_t level)
 {
 	const char * const trace_text[] = {
-		"FATAL",
+		"EMERGENCY",
+		"Alert",
+		"Critical",
 		"Error",
 		"Warning",
-		"Message",
+		"Notice",
 		"Info",
 		"Debug"
 	};
-	return trace_text[level];
+	return trace_text[ilogb((double) level)];
 }
 
 /* Call me like this:
  *
- * TRACE(TRACE_ERROR, "Something happened with error code [%d]", resultvar);
+ * TRACE(TRACE_ERR, "Something happened with error code [%d]", resultvar);
  *
  * Please #define THIS_MODULE "mymodule" at the top of each file.
  * Arguments for __FILE__ and __func__ are added by the TRACE macro.
@@ -88,7 +90,7 @@ void trace(trace_t level, const char * module,
 	size_t l, maxlen=120;
 
 	/* Return now if we're not logging anything. */
-	if (level > TRACE_STDERR && level > TRACE_SYSLOG)
+	if (! level & TRACE_STDERR && ! level & TRACE_SYSLOG)
 		return;
 
 	va_start(argp, formatstring);
@@ -101,7 +103,7 @@ void trace(trace_t level, const char * module,
 	if (message[l] == '\n')
 		message[l] = '\0';
 
-	if (level <= TRACE_STDERR) {
+	if (level & TRACE_STDERR) {
 		time_t now = time(NULL);
 		struct tm *tmp = localtime(&now);
 		char date[32];
@@ -123,19 +125,15 @@ void trace(trace_t level, const char * module,
 		fflush(stderr);
 	}
 
-	if (level <= TRACE_SYSLOG) {
+	if (level & TRACE_SYSLOG) {
 		size_t w = min(l,maxlen);
 		message[w] = '\0';
-		/* set LOG_ALERT at warnings */
-		if (level <= TRACE_WARNING)
-			syslog(LOG_ALERT, syslog_format, g_thread_self(), trace_to_text(level), module, function, line, message);
-		else
-			syslog(LOG_NOTICE, syslog_format, g_thread_self(), trace_to_text(level), module, function, line, message);
+		syslog(ilogb((double) level), syslog_format, g_thread_self(), trace_to_text(level), module, function, line, message);
 	}
 	g_free(message);
 
 	/* Bail out on fatal errors. */
-	if (level == TRACE_FATAL)
+	if (level == TRACE_EMERG)
 		exit(EX_TEMPFAIL);
 }
 

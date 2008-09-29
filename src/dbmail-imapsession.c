@@ -77,7 +77,7 @@ static void send_data(ImapSession *self, Mem_T M, int cnt)
 		cnt -= l;
 	}
 	got = want - cnt;
-	if (got != want) TRACE(TRACE_FATAL,"[%p] want [%d] <> got [%d]", self, want, got);
+	if (got != want) TRACE(TRACE_EMERG,"[%p] want [%d] <> got [%d]", self, want, got);
 }
 
 /* 
@@ -707,7 +707,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		if (bodyfetch->partspec[0]) {
 			if (bodyfetch->partspec[0] == '0') {
 				dbmail_imap_session_buff_printf(self, "\r\n%s BAD protocol error\r\n", self->tag);
-				TRACE(TRACE_ERROR, "[%p] PROTOCOL ERROR", self);
+				TRACE(TRACE_ERR, "[%p] PROTOCOL ERROR", self);
 				return 1;
 			}
 			part = imap_get_partspec(GMIME_OBJECT((self->message)->content), bodyfetch->partspec);
@@ -1015,7 +1015,7 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, ImapSession *self)
 {
 	/* go fetch the items */
 	if (_fetch_get_items(self,uid) < 0) {
-		TRACE(TRACE_ERROR, "[%p] _fetch_get_items returned with error", self);
+		TRACE(TRACE_ERR, "[%p] _fetch_get_items returned with error", self);
 		dbmail_imap_session_buff_clear(self);
 		self->error = TRUE;
 		return TRUE;
@@ -1155,15 +1155,15 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 		case 0:
 			sleep(2);	/* security */
 			dbmail_imap_session_buff_printf(self, "%s NO login rejected\r\n", self->tag);
-			TRACE(TRACE_MESSAGE, "[%p] login rejected: user [%s] ip [%s]", self, username, self->ci->ip_src);
+			TRACE(TRACE_NOTICE, "[%p] login rejected: user [%s] ip [%s]", self, username, self->ci->ip_src);
 			return 1;
 
 		case 1:
-			TRACE(TRACE_MESSAGE, "[%p] login accepted: user [%s] ip [%s]", self, username, self->ci->ip_src);
+			TRACE(TRACE_NOTICE, "[%p] login accepted: user [%s] ip [%s]", self, username, self->ci->ip_src);
 			break;
 
 		default:
-			TRACE(TRACE_ERROR, "[%p] auth_validate returned [%d]", self, valid);
+			TRACE(TRACE_ERR, "[%p] auth_validate returned [%d]", self, valid);
 			return -1;
 	}
 
@@ -1372,7 +1372,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 	if (update) {
 		if (unhandled)
-			TRACE(TRACE_ERROR, "[%p] EXISTS/RECENT changed but client "
+			TRACE(TRACE_ERR, "[%p] EXISTS/RECENT changed but client "
 				"is not notified", self);
 		mailbox_notify_update(self, mailbox);
 	}
@@ -1438,9 +1438,9 @@ static void _get_mbxinfo(ImapSession *self)
 	}
 
 	if (error == DM_EQUERY)
-		TRACE(TRACE_ERROR, "[%p] database error retrieving mbxinfo", self);
+		TRACE(TRACE_ERR, "[%p] database error retrieving mbxinfo", self);
 	else if (error == DM_EGENERAL)
-		TRACE(TRACE_ERROR, "[%p] failure retrieving mbxinfo for unreadable mailbox", self);
+		TRACE(TRACE_ERR, "[%p] failure retrieving mbxinfo for unreadable mailbox", self);
 
 	g_tree_destroy(mbxinfo);
 
@@ -1586,7 +1586,7 @@ static gboolean _do_expunge(u64_t *id, ImapSession *self)
 	u64_t *msn = g_tree_lookup(self->mailbox->ids, id);
 
 	if (! msn) {
-		TRACE(TRACE_ERROR,"can't find msn for [%llu]", *id);
+		TRACE(TRACE_ERR,"can't find msn for [%llu]", *id);
 		return FALSE;
 	}
 

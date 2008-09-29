@@ -45,7 +45,7 @@ DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	dbmail_mailbox_set_uid(self, FALSE);
 
 	if (dbmail_mailbox_open(self))
-		TRACE(TRACE_ERROR,"mailbox open failed [%llu]", id);
+		TRACE(TRACE_ERR,"mailbox open failed [%llu]", id);
 
 	return self;
 }
@@ -296,7 +296,7 @@ int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t id)
 	}
 
 	if (! g_tree_remove(self->ids, &id)) {
-		TRACE(TRACE_ERROR,"trying to remove unknown UID [%llu]", id);
+		TRACE(TRACE_ERR,"trying to remove unknown UID [%llu]", id);
 		return DM_EGENERAL;
 	}
 
@@ -1489,7 +1489,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 		while (db_result_next(r)) {
 			id = db_result_get_u64(r,0);
 			if (! (w = g_tree_lookup(self->ids, &id))) {
-				TRACE(TRACE_ERROR, "key missing in self->ids: [%llu]\n", id);
+				TRACE(TRACE_ERR, "key missing in self->ids: [%llu]\n", id);
 				continue;
 			}
 			assert(w);
@@ -1631,7 +1631,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		
 		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
 			error = TRUE;
-			TRACE(TRACE_ERROR, "cannot compare null trees");
+			TRACE(TRACE_ERR, "cannot compare null trees");
 			break;
 		}
 		

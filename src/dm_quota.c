@@ -120,19 +120,19 @@ quota_t *quota_get_quota(u64_t useridnr, char *quotaroot, char **errormsg)
 
 	/* Currently, there's only the quota root "". */
 	if (strcmp(quotaroot, "") != 0) {
-		TRACE(TRACE_ERROR, "unknown quota root \"%s\"", quotaroot);
+		TRACE(TRACE_ERR, "unknown quota root \"%s\"", quotaroot);
 		*errormsg = "unknown quota root";
 		return NULL;
 	}
 
 	if (auth_getmaxmailsize(useridnr, &maxmail_size) == -1) {
-		TRACE(TRACE_ERROR, "auth_getmaxmailsize() failed\n");
+		TRACE(TRACE_ERR, "auth_getmaxmailsize() failed\n");
 		*errormsg = "invalid user";
 		return NULL;
 	}
 
 	if (dm_quota_user_get(useridnr, &usage) == -1) {
-		TRACE(TRACE_ERROR, "dm_quota_user_get() failed\n");
+		TRACE(TRACE_ERR, "dm_quota_user_get() failed\n");
 		*errormsg = "internal error";
 		return NULL;
 	}
@@ -140,14 +140,14 @@ quota_t *quota_get_quota(u64_t useridnr, char *quotaroot, char **errormsg)
 	/* We support exactly one resource: RT_STORAGE */
 	quota = quota_alloc(1);
 	if (quota == NULL) {
-		TRACE(TRACE_ERROR, "out of memory\n");
+		TRACE(TRACE_ERR, "out of memory\n");
 		*errormsg = "out of memory";
 		return NULL;
 	}
 
 	/* Set quota root */
 	if (quota_set_root(quota, quotaroot)) {
-		TRACE(TRACE_ERROR, "quota_set_root() failed\n");
+		TRACE(TRACE_ERR, "quota_set_root() failed\n");
 		*errormsg = "out of memory";
 		return NULL;
 	}

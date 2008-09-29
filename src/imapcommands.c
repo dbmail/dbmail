@@ -157,7 +157,7 @@ int _ic_logout(ImapSession *self)
 	if (!check_state_and_args(self, 0, 0, -1)) return 1;
 	dbmail_imap_session_mailbox_update_recent(self);
 	dbmail_imap_session_set_state(self, IMAPCS_LOGOUT);
-	TRACE(TRACE_MESSAGE, "[%p] userid:[%llu]", self, self->userid);
+	TRACE(TRACE_NOTICE, "[%p] userid:[%llu]", self, self->userid);
 	return 2;
 }
 /*
@@ -460,7 +460,7 @@ void _ic_delete_enter(dm_thread_data *D)
 	
 	/* check for children of this mailbox */
 	if ((result = db_listmailboxchildren(mailbox_idnr, self->userid, &children)) == DM_EQUERY) {
-		TRACE(TRACE_ERROR, "[%p] cannot retrieve list of mailbox children", self);
+		TRACE(TRACE_ERR, "[%p] cannot retrieve list of mailbox children", self);
 		dbmail_imap_session_buff_printf(self, "* BYE dbase/memory error\r\n");
 		D->status= -1;
 		NOTIFY_DONE(D);
@@ -1031,7 +1031,7 @@ void _ic_idle_enter(dm_thread_data *D)
 
 	GETCONFIGVALUE("idle_timeout", "IMAP", val);
 	if ( strlen(val) && (idle_timeout = atoi(val)) <= 0 ) {
-		TRACE(TRACE_ERROR, "[%p] illegal value for idle_timeout [%s]", self, val);
+		TRACE(TRACE_ERR, "[%p] illegal value for idle_timeout [%s]", self, val);
 		idle_timeout = IDLE_TIMEOUT;	
 	}
 	
@@ -1097,12 +1097,12 @@ static int imap_append_msg(const char *msgdata,
                             "maxmail exceeded", user_idnr);
                     return -2;
             case -1:
-                    TRACE(TRACE_ERROR, "error copying message to user [%llu]", 
+                    TRACE(TRACE_ERR, "error copying message to user [%llu]", 
                             user_idnr);
                     return -1;
         }
                 
-        TRACE(TRACE_MESSAGE, "message id=%llu is inserted", *msg_idnr);
+        TRACE(TRACE_NOTICE, "message id=%llu is inserted", *msg_idnr);
         
         return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
 }
@@ -1225,7 +1225,7 @@ void _ic_append_enter(dm_thread_data *D)
 	D->status = imap_append_msg(message, mboxid, self->userid, sqldate, &message_id);
 	switch (D->status) {
 	case -1:
-		TRACE(TRACE_ERROR, "[%p] error appending msg", self);
+		TRACE(TRACE_ERR, "[%p] error appending msg", self);
 		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error storing message\r\n");
 		break;
 
@@ -1235,13 +1235,13 @@ void _ic_append_enter(dm_thread_data *D)
 		break;
 
 	case TRUE:
-		TRACE(TRACE_ERROR, "[%p] faulty msg", self);
+		TRACE(TRACE_ERR, "[%p] faulty msg", self);
 		dbmail_imap_session_buff_printf(self, "%s NO invalid message specified\r\n", self->tag);
 		break;
 	case FALSE:
 		if (flagcount > 0) {
 			if (db_set_msgflag(message_id, mboxid, flaglist, keywords, IMAPFA_ADD, NULL) < 0) {
-				TRACE(TRACE_ERROR, "[%p] error setting flags for message [%llu]", self, message_id);
+				TRACE(TRACE_ERR, "[%p] error setting flags for message [%llu]", self, message_id);
 			}
 		}
 

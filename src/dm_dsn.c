@@ -283,7 +283,7 @@ static int address_is_username_mailbox(deliver_to_user_t *delivery)
 
 	if (user_exists < 0) {
 		/* An error occurred. */
-		TRACE(TRACE_ERROR, "error checking user [%s]", newaddress);
+		TRACE(TRACE_ERR, "error checking user [%s]", newaddress);
 		g_free(newaddress);
 		return -1;
 	}
@@ -317,7 +317,7 @@ static int address_is_username(deliver_to_user_t *delivery)
 
 	if (user_exists < 0) {
 		/* An error occurred. */
-		TRACE(TRACE_ERROR, "error checking user [%s]", delivery->address);
+		TRACE(TRACE_ERR, "error checking user [%s]", delivery->address);
 		return -1;
 	}
 
@@ -589,7 +589,7 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 	 * Something is wrong upstream. */
 	} else {
 
-		TRACE(TRACE_ERROR, "this delivery had neither useridnr nor address.");
+		TRACE(TRACE_ERR, "this delivery had neither useridnr nor address.");
 
 		return -1;
 	}

@@ -189,7 +189,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 	u64_t id, *uid;
 
 	if (checks > 20) {
-		TRACE(TRACE_ERROR,"too many checks. Possible loop detected.");
+		TRACE(TRACE_ERR,"too many checks. Possible loop detected.");
 		return 0;
 	}
 
@@ -259,7 +259,7 @@ int auth_change_password(u64_t user_idnr, const char *new_pass, const char *enct
 	C c; S s; volatile int t = FALSE;
 
 	if (strlen(new_pass) >= DEF_QUERYSIZE/2) {
-		TRACE(TRACE_ERROR, "new password length is insane");
+		TRACE(TRACE_ERR, "new password length is insane");
 		return -1;
 	}
 
@@ -425,7 +425,7 @@ u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username,
 			TRACE(TRACE_DEBUG, "validating md5_apop_we=[%s] md5_apop_he=[%s]", md5_apop_we, md5_apop_he);
 
 			if (strcmp((char *)md5_apop_he, md5_apop_we) == 0) {
-				TRACE(TRACE_MESSAGE, "user [%s] is validated using APOP", username);
+				TRACE(TRACE_NOTICE, "user [%s] is validated using APOP", username);
 			} else {
 				user_idnr = 0; // failed
 			}
@@ -443,7 +443,7 @@ u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username,
 	if (t == DM_EQUERY) return t;
 
 	if (user_idnr == 0)
-		TRACE(TRACE_MESSAGE, "user [%s] could not be validated", username);
+		TRACE(TRACE_NOTICE, "user [%s] could not be validated", username);
 	else
 		db_user_log_login(user_idnr);
 

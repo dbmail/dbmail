@@ -85,18 +85,18 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 			if (clientHost && clientHost->h_name)
 				strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
 
-			TRACE(TRACE_MESSAGE, "incoming connection from [%s:%d (%s)] by pid [%d]",
+			TRACE(TRACE_NOTICE, "incoming connection from [%s:%d (%s)] by pid [%d]",
 					client->ip_src, client->ip_src_port,
 					client->clientname[0] ? client->clientname : "Lookup failed", getpid());
 		} else {
-			TRACE(TRACE_MESSAGE, "incoming connection from [%s:%d] by pid [%d]",
+			TRACE(TRACE_NOTICE, "incoming connection from [%s:%d] by pid [%d]",
 					client->ip_src, client->ip_src_port, getpid());
 		}
 
 		/* make streams */
 		if (!(client->rx = dup(socket))) {
 			err = errno;
-			TRACE(TRACE_ERROR, "%s", strerror(err));
+			TRACE(TRACE_ERR, "%s", strerror(err));
 			if (socket > 0) close(socket);
 			g_free(client);
 			return NULL;
@@ -104,7 +104,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 
 		if (!(client->tx = socket)) {
 			err = errno;
-			TRACE(TRACE_ERROR, "%s", strerror(err));
+			TRACE(TRACE_ERR, "%s", strerror(err));
 			if (socket > 0) close(socket);
 			g_free(client);
 			return NULL;
@@ -199,12 +199,13 @@ int ci_readln(clientbase_t *self, char * buffer)
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
 				return e;
-
-			event_add(self->rev, self->timeout);
 		}
 
-		if (t != 1)
+		if (t != 1) {
+			// t=-1 (EAGAIN) or t=0 (EOF)
+			event_add(self->rev, self->timeout);
 			break;
+		}
 
 		result++;
 		self->len++;

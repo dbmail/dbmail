@@ -26,6 +26,7 @@ AC_MSG_RESULT([
  STATIC:                    $enable_static
  CHECK:                     $with_check
  SOCKETS:                   $SOCKETLIB
+ MATH:                      $MATHLIB
  MHASH:                     $MHASHLIB
  LIBEVENT:                  $EVENTLIB
  ZDB:                       $ZDBLIB
@@ -294,6 +295,15 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 
 AC_DEFUN([DM_SET_SQLITECREATE], [dnl
 	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\" \\\\/'  sql/sqlite/create_tables.sqlite`
+])
+
+AC_DEFUN([DM_CHECK_MATH], [dnl
+	AC_CHECK_HEADERS([math.h],[MATHLIB="-lm"], [MATHLIB="failed"])
+	if test [ "x$MATHLIB" = "xfailed" ]; then
+		AC_MSG_ERROR([Could not find MATH library.])
+	else
+		LDFLAGS="$LDFLAGS $MATHLIB"
+	fi
 ])
 
 AC_DEFUN([DM_CHECK_MHASH], [dnl

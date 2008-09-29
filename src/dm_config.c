@@ -49,7 +49,7 @@ int config_read(const char *config_filename)
 	
 	if (! g_key_file_load_from_file(config_dict, config_filename, G_KEY_FILE_NONE, NULL)) {
 		g_key_file_free(config_dict);
-                TRACE(TRACE_FATAL, "error reading config file %s", config_filename);
+                TRACE(TRACE_EMERG, "error reading config file %s", config_filename);
 		_exit(1);
 		return -1;
 	}
@@ -157,32 +157,97 @@ config_get_value_done:
 void SetTraceLevel(const char *service_name)
 {
 	trace_t trace_stderr_int, trace_syslog_int;
-	field_t trace_level, trace_syslog, trace_stderr;
+	field_t trace_level, trace_syslog, trace_stderr, syslog_logging_levels, file_logging_levels;
 
 	/* Warn about the deprecated "trace_level" config item,
 	 * but we will use this value for trace_syslog if needed. */
 	config_get_value("trace_level", service_name, trace_level);
 	if (strlen(trace_level)) {
-		TRACE(TRACE_MESSAGE,
-			"Config item TRACE_LEVEL is deprecated. "
-			"Please use TRACE_SYSLOG and TRACE_STDERR instead.");
+		TRACE(TRACE_ERR,
+			"Config item TRACE_LEVEL is deprecated and ignored. "
+			"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
 	}
 
-	/* Then we override globals with per-service settings. */
+	/* Then we override globals with per-service settings for old variables. */
 	config_get_value("trace_syslog", service_name, trace_syslog);
 	config_get_value("trace_stderr", service_name, trace_stderr);
 
-	if (strlen(trace_syslog))
-		trace_syslog_int = atoi(trace_syslog);
-	else if (strlen(trace_level))
-		trace_syslog_int = atoi(trace_level);
-	else
-		trace_syslog_int = TRACE_ERROR;
+	if (strlen(trace_syslog)) {
+		TRACE(TRACE_WARNING,
+			"Config item TRACE_SYSLOG is deprecated. "
+			"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
+	}
+	if (strlen(trace_stderr)) {
+		TRACE(TRACE_WARNING,
+			"Config item TRACE_STDERR is deprecated. "
+			"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
+	}
 
-	if (strlen(trace_stderr))
-		trace_stderr_int = atoi(trace_stderr);
+	/* Then we override globals with per-service settings for new variables. */
+	config_get_value("syslog_logging_levels", service_name, syslog_logging_levels);
+	config_get_value("file_logging_levels", service_name, file_logging_levels);
+
+	if (strlen(syslog_logging_levels))
+		trace_syslog_int = atoi(syslog_logging_levels);
+	else if (strlen(trace_syslog))
+	{
+		trace_syslog_int = atoi(trace_syslog);
+		switch(trace_syslog_int) // Convert old value to new system
+		{
+			case 0:
+				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT;
+				break;
+			case 1:
+				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR;
+				break;
+			case 2:
+				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;
+				break;
+			case 3:
+				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE;
+				break;
+			case 4:
+				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO;
+				break;
+			case 5:
+			default:
+				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO | TRACE_DEBUG;
+				break;
+		}
+	}
 	else
-		trace_stderr_int = TRACE_FATAL;
+		trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING; // Use Default Levels
+
+	if (strlen(file_logging_levels))
+		trace_stderr_int = atoi(file_logging_levels);
+	else if (strlen(trace_stderr))
+	{
+		trace_stderr_int = atoi(trace_stderr);
+		switch(trace_stderr_int) // Convert old value to new system
+		{
+			case 0:
+				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT;
+				break;
+			case 1:
+				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR;
+				break;
+			case 2:
+				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;
+				break;
+			case 3:
+				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE;
+				break;
+			case 4:
+				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO;
+				break;
+			case 5:
+			default:
+				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO | TRACE_DEBUG;
+				break;
+		}
+	}
+	else
+		trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT; // Use Default Levels
 
 	configure_debug(trace_syslog_int, trace_stderr_int);
 }
@@ -193,7 +258,7 @@ void GetDBParams(void)
 	field_t maxconnections;
 
 	if (config_get_value("driver", "DBMAIL", _db_params.driver) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [driver]");
+		TRACE(TRACE_EMERG, "error getting config! [driver]");
 
 	if (MATCH((const char *)_db_params.driver,"sqlite"))
 		_db_params.db_driver = DM_DRIVER_SQLITE;
@@ -202,49 +267,49 @@ void GetDBParams(void)
 	else if (MATCH((const char *)_db_params.driver,"postgresql"))
 		_db_params.db_driver = DM_DRIVER_POSTGRESQL;
 	else
-		TRACE(TRACE_FATAL,"driver not supported");
+		TRACE(TRACE_EMERG,"driver not supported");
 
 	if (config_get_value("authdriver", "DBMAIL", _db_params.authdriver) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [authdriver]");
+		TRACE(TRACE_EMERG, "error getting config! [authdriver]");
 	if (config_get_value("sortdriver", "DBMAIL", _db_params.sortdriver) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [sortdriver]");
+		TRACE(TRACE_EMERG, "error getting config! [sortdriver]");
 	if (config_get_value("host", "DBMAIL", _db_params.host) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [host]");
+		TRACE(TRACE_EMERG, "error getting config! [host]");
 	if (config_get_value("db", "DBMAIL", _db_params.db) < 0) 
-		TRACE(TRACE_FATAL, "error getting config! [db]");
+		TRACE(TRACE_EMERG, "error getting config! [db]");
 	if (config_get_value("user", "DBMAIL", _db_params.user) < 0) 
-		TRACE(TRACE_FATAL, "error getting config! [user]");
+		TRACE(TRACE_EMERG, "error getting config! [user]");
 	if (config_get_value("pass", "DBMAIL", _db_params.pass) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [pass]");
+		TRACE(TRACE_EMERG, "error getting config! [pass]");
 	if (config_get_value("sqlport", "DBMAIL", port_string) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [sqlpost]");
+		TRACE(TRACE_EMERG, "error getting config! [sqlpost]");
 	if (config_get_value("sqlsocket", "DBMAIL", sock_string) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [sqlsocket]");
+		TRACE(TRACE_EMERG, "error getting config! [sqlsocket]");
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [serverid]");
+		TRACE(TRACE_EMERG, "error getting config! [serverid]");
 	if (config_get_value("encoding", "DBMAIL", _db_params.encoding) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [encoding]");
+		TRACE(TRACE_EMERG, "error getting config! [encoding]");
 	if (config_get_value("table_prefix", "DBMAIL", _db_params.pfx) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [table_prefix]");
+		TRACE(TRACE_EMERG, "error getting config! [table_prefix]");
 	if (config_get_value("maxconnections", "DBMAIL", maxconnections) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [maxconnections]");
+		TRACE(TRACE_EMERG, "error getting config! [maxconnections]");
 
 	if (config_get_value("query_time_info", "DBMAIL", query_time) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [query_time_info]");
+		TRACE(TRACE_EMERG, "error getting config! [query_time_info]");
 		if (strlen(query_time) != 0)
 			_db_params.query_time_info = (unsigned int) strtoul(query_time, NULL, 10);
 		else
 			_db_params.query_time_info = 10;
 
-	if (config_get_value("query_time_message", "DBMAIL", query_time) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [query_time_message]");
+	if (config_get_value("query_time_notify", "DBMAIL", query_time) < 0)
+		TRACE(TRACE_EMERG, "error getting config! [query_time_notify]");
 		if (strlen(query_time) != 0)
-			_db_params.query_time_message = (unsigned int) strtoul(query_time, NULL, 10);
+			_db_params.query_time_notify = (unsigned int) strtoul(query_time, NULL, 10);
 		else
-			_db_params.query_time_message = 20;
+			_db_params.query_time_notify = 20;
 
 	if (config_get_value("query_time_warning", "DBMAIL", query_time) < 0)
-		TRACE(TRACE_FATAL, "error getting config! [query_time_warning]");
+		TRACE(TRACE_EMERG, "error getting config! [query_time_warning]");
 		if (strlen(query_time) != 0)
 			_db_params.query_time_warning = (unsigned int) strtoul(query_time, NULL, 10);
 		else
@@ -264,7 +329,7 @@ void GetDBParams(void)
 		char *homedir;
 		field_t db;
 		if ((homedir = getenv ("HOME")) == NULL)
-			TRACE(TRACE_FATAL, "can't expand ~ in db name");
+			TRACE(TRACE_EMERG, "can't expand ~ in db name");
 		g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(_db_params.db[1]));
 		g_strlcpy(_db_params.db, db, FIELDSIZE);
 	}
@@ -274,7 +339,7 @@ void GetDBParams(void)
 		_db_params.port =
 		    (unsigned int) strtoul(port_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			TRACE(TRACE_FATAL, "wrong value for sqlport in config file");
+			TRACE(TRACE_EMERG, "wrong value for sqlport in config file");
 	} else
 		_db_params.port = 0;
 
@@ -288,7 +353,7 @@ void GetDBParams(void)
 	if (strlen(serverid_string) != 0) {
 		_db_params.serverid = (unsigned int) strtol(serverid_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			TRACE(TRACE_FATAL, "serverid invalid in config file");
+			TRACE(TRACE_EMERG, "serverid invalid in config file");
 	} else {
 		_db_params.serverid = 1;
 	}
@@ -296,7 +361,7 @@ void GetDBParams(void)
 	if (strlen(maxconnections) != 0) {
 		_db_params.maxconnections = (unsigned int) strtol(maxconnections, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			TRACE(TRACE_FATAL, "maxconnnections invalid in config file");
+			TRACE(TRACE_EMERG, "maxconnnections invalid in config file");
 	}
 
 }

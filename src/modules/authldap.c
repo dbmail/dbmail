@@ -129,7 +129,7 @@ static int auth_ldap_bind(void)
 	LDAP *_ldap_conn = ldap_con_get();
 
 	if ((err = ldap_bind_s(_ldap_conn, _ldap_cfg.bind_dn, _ldap_cfg.bind_pw, LDAP_AUTH_SIMPLE))) {
-		TRACE(TRACE_ERROR, "ldap_bind_s failed: %s",  ldap_err2string(err));
+		TRACE(TRACE_ERR, "ldap_bind_s failed: %s",  ldap_err2string(err));
 		return -1;
 	}
 	TRACE(TRACE_DEBUG, "successfully bound to ldap server" );
@@ -188,7 +188,7 @@ static int authldap_connect(void)
 			"connecting to ldap server on [%s] version [%d]", 
 			uri, _ldap_cfg.version_int);
 		if ((ret = ldap_initialize(&_ldap_conn, uri)) != LDAP_SUCCESS) 
-			TRACE(TRACE_FATAL, "ldap_initialize() returned [%d]", ret);
+			TRACE(TRACE_EMERG, "ldap_initialize() returned [%d]", ret);
 
 		g_free(uri);
 #else
@@ -274,13 +274,13 @@ static LDAPMessage * authldap_search(const gchar *query)
 					sleep(2); // reconnect failed. wait before trying again
 				break;
 			default:
-				TRACE(TRACE_ERROR, "LDAP error(%d): %s", err, ldap_err2string(err));
+				TRACE(TRACE_ERR, "LDAP error(%d): %s", err, ldap_err2string(err));
 				return NULL;
 				break;
 		}
 	}
 	
-	TRACE(TRACE_FATAL,"unrecoverable error while talking to ldap server");
+	TRACE(TRACE_EMERG,"unrecoverable error while talking to ldap server");
 	return NULL;
 }
 
@@ -448,14 +448,14 @@ static char * dm_ldap_user_getdn(u64_t user_idnr)
 
 	if (! (ldap_msg = ldap_first_entry(_ldap_conn, ldap_res))) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &err);
-		TRACE(TRACE_ERROR, "ldap_first_entry failed: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "ldap_first_entry failed: %s", ldap_err2string(err));
 		ldap_msgfree(ldap_res);
 		return NULL;
 	}
 
 	if (! (dn = ldap_get_dn(_ldap_conn, ldap_msg))) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &err);
-		TRACE(TRACE_ERROR, "ldap_get_dn failed: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "ldap_get_dn failed: %s", ldap_err2string(err));
 		ldap_msgfree(ldap_res);
 		return NULL;
 	}
@@ -472,15 +472,15 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 	LDAP *_ldap_conn = ldap_con_get();
 	
 	if (! user_idnr) {
-		TRACE(TRACE_ERROR, "no user_idnr specified");
+		TRACE(TRACE_ERR, "no user_idnr specified");
 		return FALSE;
 	}
 	if (! fieldname) {
-		TRACE(TRACE_ERROR, "no fieldname specified");
+		TRACE(TRACE_ERR, "no fieldname specified");
 		return FALSE;
 	}
 	if (! newvalue) {
-		TRACE(TRACE_ERROR, "no new value specified");
+		TRACE(TRACE_ERR, "no new value specified");
 		return FALSE;
 	}
 		
@@ -500,7 +500,7 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 	err = ldap_modify_s(_ldap_conn, dn, mods);
 
 	if (err) {
-		TRACE(TRACE_ERROR,"dn: %s, %s: %s [%s]", dn, fieldname, newvalue, ldap_err2string(err));
+		TRACE(TRACE_ERR,"dn: %s, %s: %s [%s]", dn, fieldname, newvalue, ldap_err2string(err));
 		ldap_memfree(dn);
 		return FALSE;
 	}
@@ -578,7 +578,7 @@ static GList * __auth_get_every_match(const char *q, const char **retfields)
 	/* do the first entry here */
 	if ((ldap_msg = ldap_first_entry(_ldap_conn, ldap_res)) == NULL) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &err);
-		TRACE(TRACE_ERROR, "ldap_first_entry failed: [%s]", ldap_err2string(err));
+		TRACE(TRACE_ERR, "ldap_first_entry failed: [%s]", ldap_err2string(err));
 		if (ldap_res)
 			ldap_msgfree(ldap_res);
 		return NULL;
@@ -640,7 +640,7 @@ static char *__auth_get_first_match(const char *q, const char **retfields)
 	ldap_msg = ldap_first_entry(_ldap_conn, ldap_res);
 	if (ldap_msg == NULL) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &err);
-		TRACE(TRACE_ERROR, "ldap_first_entry failed: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "ldap_first_entry failed: %s", ldap_err2string(err));
 		goto endfree;
 	}
 	
@@ -680,7 +680,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	*user_idnr = 0;
 
 	if (!username) {
-		TRACE(TRACE_ERROR, "got NULL as username");
+		TRACE(TRACE_ERR, "got NULL as username");
 		return FALSE;
 	}
 
@@ -757,7 +757,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	*client_idnr = 0;
 
 	if (!user_idnr) {
-		TRACE(TRACE_ERROR, "got NULL as useridnr");
+		TRACE(TRACE_ERR, "got NULL as useridnr");
 		return FALSE;
 	}
 
@@ -784,7 +784,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	*maxmail_size = 0;
 
 	if (!user_idnr) {
-		TRACE(TRACE_ERROR, "got NULL as useridnr");
+		TRACE(TRACE_ERR, "got NULL as useridnr");
 		return FALSE;
 	}
 
@@ -894,7 +894,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 	GList *entlist, *fldlist, *attlist;
 
 	if (checks > 20) {
-		TRACE(TRACE_ERROR, "too many checks. Possible loop detected.");
+		TRACE(TRACE_ERR, "too many checks. Possible loop detected.");
 		return 0;
 	}
 
@@ -1052,7 +1052,7 @@ int auth_adduser(const char *username, const char *password,
 	ldap_memfree(dn);
 
 	if (err) {
-		TRACE(TRACE_ERROR, "could not add user: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "could not add user: %s", ldap_err2string(err));
 		return -1;
 	}
 
@@ -1060,7 +1060,7 @@ int auth_adduser(const char *username, const char *password,
 	result = db_user_create_shadow(username, user_idnr);
 	
 	if (result != 1) {
-		TRACE(TRACE_ERROR, "sql shadow account creation failed");
+		TRACE(TRACE_ERR, "sql shadow account creation failed");
 		auth_delete_user(username);
 		*user_idnr=0;
 		return result;
@@ -1083,7 +1083,7 @@ int auth_delete_user(const char *username)
 
 	/* look up who's got that username, get their dn, and delete it! */
 	if (!username) {
-		TRACE(TRACE_ERROR, "got NULL as useridnr");
+		TRACE(TRACE_ERR, "got NULL as useridnr");
 		return 0;
 	}
 
@@ -1101,7 +1101,7 @@ int auth_delete_user(const char *username)
 	ldap_msg = ldap_first_entry(_ldap_conn, ldap_res);
 	if (ldap_msg == NULL) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &err);
-		TRACE(TRACE_ERROR, "ldap_first_entry failed: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "ldap_first_entry failed: %s", ldap_err2string(err));
 		ldap_msgfree(ldap_res);
 		return -1;
 	}
@@ -1112,7 +1112,7 @@ int auth_delete_user(const char *username)
 		TRACE(TRACE_DEBUG, "deleting user at dn [%s]", dn);
 		err = ldap_delete_s(_ldap_conn, dn);
 		if (err) {
-			TRACE(TRACE_ERROR, "could not delete dn: %s", ldap_err2string(err));
+			TRACE(TRACE_ERR, "could not delete dn: %s", ldap_err2string(err));
 			ldap_memfree(dn);
 			ldap_msgfree(ldap_res);
 			return -1;
@@ -1124,7 +1124,7 @@ int auth_delete_user(const char *username)
 	ldap_msgfree(ldap_res);
 	
 	if (db_user_delete(username)) {
-		TRACE(TRACE_ERROR, "sql shadow account deletion failed");
+		TRACE(TRACE_ERR, "sql shadow account deletion failed");
 	}
 	
 	return 0;
@@ -1140,7 +1140,7 @@ static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name)
 		TRACE(TRACE_DEBUG, "call db_user_rename ([%llu],[%s])\n", dbidnr, new_name);
 	}
 	if ((! dbidnr) || (db_user_rename(dbidnr, new_name))) {
-		TRACE(TRACE_ERROR, "renaming shadow account in db failed for [%llu]->[%s]", user_idnr, new_name);
+		TRACE(TRACE_ERR, "renaming shadow account in db failed for [%llu]->[%s]", user_idnr, new_name);
 		return -1;
 	}
 	return 0;
@@ -1154,12 +1154,12 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	int err;
 	
 	if (!user_idnr) {
-		TRACE(TRACE_ERROR, "got NULL as useridnr");
+		TRACE(TRACE_ERR, "got NULL as useridnr");
 		return -1;
 	}
 
 	if (!new_name) {
-		TRACE(TRACE_ERROR, "got NULL as new_name");
+		TRACE(TRACE_ERR, "got NULL as new_name");
 		return -1;
 	}
 	
@@ -1183,7 +1183,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 		g_string_free(newrdn,TRUE);
 		
 		if (err) {
-			TRACE(TRACE_ERROR, "error calling ldap_modrdn_s [%s]", ldap_err2string(err));
+			TRACE(TRACE_ERR, "error calling ldap_modrdn_s [%s]", ldap_err2string(err));
 			return -1;
 		}
 		return 0;
@@ -1274,7 +1274,7 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 	}
 	
 	if (! (ldap_dn = dm_ldap_user_getdn(*user_idnr))) {
-		TRACE(TRACE_ERROR,"unable to determine DN for user");
+		TRACE(TRACE_ERR,"unable to determine DN for user");
 		return 0;
 	}
 
@@ -1284,7 +1284,7 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 	ldap_err = ldap_bind_s(_ldap_conn, ldap_dn, password, LDAP_AUTH_SIMPLE);
 
 	if (ldap_err) {
-		TRACE(TRACE_ERROR, "ldap_bind_s failed: %s", ldap_err2string(ldap_err));
+		TRACE(TRACE_ERR, "ldap_bind_s failed: %s", ldap_err2string(ldap_err));
 		*user_idnr = 0;
 	} else {
 		db_user_log_login(*user_idnr);
@@ -1442,7 +1442,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 	ldap_memfree(dn);
 	
 	if (err) {
-		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "update failed: %s", ldap_err2string(err));
 		return FALSE;
 	}
 	
@@ -1550,7 +1550,7 @@ static int forward_create(const char *alias, const char *deliver_to)
 	ldap_memfree(dn);
 
 	if (err) {
-		TRACE(TRACE_ERROR, "could not add forwardingAddress: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "could not add forwardingAddress: %s", ldap_err2string(err));
 		return FALSE;
 	}
 
@@ -1588,7 +1588,7 @@ static int forward_add(const char *alias,const char *deliver_to)
 	ldap_memfree(dn);
 	
 	if (err) {
-		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "update failed: %s", ldap_err2string(err));
 		return FALSE;
 	}
 	
@@ -1628,7 +1628,7 @@ static int forward_delete(const char *alias, const char *deliver_to)
 		TRACE(TRACE_DEBUG, "delete additional forward failed, removing dn [%s]", dn);
 		err = ldap_delete_s(_ldap_conn, dn);
 		if (err)
-			TRACE(TRACE_ERROR, "deletion failed [%s]", ldap_err2string(err));
+			TRACE(TRACE_ERR, "deletion failed [%s]", ldap_err2string(err));
 	} else {
 		result = TRUE;
 	}
@@ -1706,7 +1706,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	
 	err = ldap_modify_s(_ldap_conn, dn, modify);
 	if (err) {
-		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(err));
+		TRACE(TRACE_ERR, "update failed: %s", ldap_err2string(err));
 		g_strfreev(mailValues);
 		ldap_memfree(dn);
 		return FALSE;

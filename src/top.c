@@ -245,7 +245,7 @@ int read_file(FILE * f, char **m_buf)
 	char *f_buf = NULL;
 
 	if (!f) {
-		TRACE(TRACE_ERROR, "Received NULL file handle\n");
+		TRACE(TRACE_ERR, "Received NULL file handle\n");
 		return -1;
 	}
 
@@ -296,14 +296,14 @@ char **get_state(char *service)
 
 		pidFile = fopen(pidName, "r");
 		if (!pidFile) {
-			TRACE(TRACE_ERROR, "Could not open pid file [%s].", pidName);
+			TRACE(TRACE_ERR, "Could not open pid file [%s].", pidName);
 			g_free(pidName);
 			g_free(stateName);
 			return NULL;
 		}
 		stateFile = fopen(stateName, "r");
 		if (!stateFile) {
-			TRACE(TRACE_ERROR, "Could not open state file [%s].", stateName);
+			TRACE(TRACE_ERR, "Could not open state file [%s].", stateName);
 			g_free(pidName);
 			g_free(stateName);
 			return NULL;
@@ -316,12 +316,12 @@ char **get_state(char *service)
 		// // TODO: Stat the file to see if it changed.
 		res = read_file(pidFile, &pidStr);
 		if (res != 0) {
-			TRACE(TRACE_ERROR, "Could not read pid file [%s].", pidName);
+			TRACE(TRACE_ERR, "Could not read pid file [%s].", pidName);
 			return NULL;
 		}
 		pidInt = atoi(pidStr);
 		if (pidInt < 1) {
-			TRACE(TRACE_ERROR, "Invalid pid found [%s].", pidStr);
+			TRACE(TRACE_ERR, "Invalid pid found [%s].", pidStr);
 			return NULL;
 		}
 		kill(pidInt, SIGUSR1); // Request a state file.
@@ -330,7 +330,7 @@ char **get_state(char *service)
 		// Read statefiles
 		res = read_file(stateFile, &state);
 		if (res != 0) {
-			TRACE(TRACE_ERROR, "Could not read state file [%s].", stateName);
+			TRACE(TRACE_ERR, "Could not read state file [%s].", stateName);
 			return NULL;
 		}
 

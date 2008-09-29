@@ -95,7 +95,7 @@ static int send_vacation(DbmailMessage *message,
 	const char *x_dbmail_vacation = dbmail_message_get_header(message, "X-Dbmail-Vacation");
 
 	if (x_dbmail_vacation) {
-		TRACE(TRACE_MESSAGE, "vacation loop detected [%s]", x_dbmail_vacation);
+		TRACE(TRACE_NOTICE, "vacation loop detected [%s]", x_dbmail_vacation);
 		return 0;
 	}
 
@@ -113,7 +113,7 @@ static int send_vacation(DbmailMessage *message,
 static int send_redirect(DbmailMessage *message, const char *to, const char *from)
 {
 	if (!to || !from) {
-		TRACE(TRACE_ERROR, "both To and From addresses must be specified");
+		TRACE(TRACE_ERR, "both To and From addresses must be specified");
 		return -1;
 	}
 
@@ -147,7 +147,7 @@ int send_alert(u64_t user_idnr, char *subject, char *body)
 
 	// From the Postmaster.
 	if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
-		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+		TRACE(TRACE_NOTICE, "no config value for POSTMASTER");
 	}
 	if (strlen(postmaster))
 		from = postmaster;
@@ -170,7 +170,7 @@ int send_alert(u64_t user_idnr, char *subject, char *body)
 
 	if (sort_deliver_to_mailbox(new_message, user_idnr,
 			"INBOX", BOX_BRUTEFORCE, msgflags) != DSN_CLASS_OK) {
-		TRACE(TRACE_ERROR, "Unable to deliver alert [%s] to user [%llu]", subject, user_idnr);
+		TRACE(TRACE_ERR, "Unable to deliver alert [%s] to user [%llu]", subject, user_idnr);
 	}
 
 	g_free(to);
@@ -388,7 +388,7 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	/* Don't cancel the keep if there's a problem storing the message. */
 	if (sort_deliver_to_mailbox(m->message, m->user_idnr,
 			mailbox, BOX_SORTING, has_msgflags) != DSN_CLASS_OK) {
-		TRACE(TRACE_ERROR, "Could not file message into mailbox; not cancelling keep.");
+		TRACE(TRACE_ERR, "Could not file message into mailbox; not cancelling keep.");
 		m->result->cancelkeep = 0;
 	} else {
 		m->result->cancelkeep = 1;
@@ -485,7 +485,7 @@ int sort_getscript(sieve2_context_t *s, void *my)
 		TRACE(TRACE_INFO, "Getting default script named [%s]", m->script);
 		res = dm_sievescript_getbyname(m->user_idnr, m->script, &m->s_buf);
 		if (res != SIEVE2_OK) {
-			TRACE(TRACE_ERROR, "sort_getscript: read_file() returns %d\n", res);
+			TRACE(TRACE_ERR, "sort_getscript: read_file() returns %d\n", res);
 			return SIEVE2_ERROR_FAIL;
 		}
 		sieve2_setvalue_string(s, "script", m->s_buf);
@@ -680,7 +680,7 @@ static int sort_teardown(sieve2_context_t **s2c,
 
 	res = sieve2_free(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_free: [%s]",
+		TRACE(TRACE_ERR, "Error [%d] when calling sieve2_free: [%s]",
 			res, sieve2_errstr(res));
 		return DM_EGENERAL;
 	}
@@ -704,7 +704,7 @@ static int sort_startup(sieve2_context_t **s2c,
 
 	res = sieve2_alloc(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_alloc: [%s]",
+		TRACE(TRACE_ERR, "Error [%d] when calling sieve2_alloc: [%s]",
 			res, sieve2_errstr(res));
 		return DM_EGENERAL;
 	}
@@ -713,7 +713,7 @@ static int sort_startup(sieve2_context_t **s2c,
 
 	res = sieve2_callbacks(sieve2_context, sort_callbacks);
 	if (res != SIEVE2_OK) {
-		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
+		TRACE(TRACE_ERR, "Error [%d] when calling sieve2_callbacks: [%s]",
 			res, sieve2_errstr(res));
 		sort_teardown(&sieve2_context, &sort_context);
 		return DM_EGENERAL;
@@ -722,17 +722,17 @@ static int sort_startup(sieve2_context_t **s2c,
 		TRACE(TRACE_DEBUG, "Sieve vacation enabled.");
 		res = sieve2_callbacks(sieve2_context, vacation_callbacks);
 		if (res != SIEVE2_OK) {
-			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
+			TRACE(TRACE_ERR, "Error [%d] when calling sieve2_callbacks: [%s]",
 				res, sieve2_errstr(res));
 			sort_teardown(&sieve2_context, &sort_context);
 			return DM_EGENERAL;
 		}
 	}
 	if (sieve_config.notify) {
-		TRACE(TRACE_ERROR, "Sieve notify is not supported in this release.");
+		TRACE(TRACE_ERR, "Sieve notify is not supported in this release.");
 		res = sieve2_callbacks(sieve2_context, notify_callbacks);
 		if (res != SIEVE2_OK) {
-			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
+			TRACE(TRACE_ERR, "Error [%d] when calling sieve2_callbacks: [%s]",
 				res, sieve2_errstr(res));
 			sort_teardown(&sieve2_context, &sort_context);
 			return DM_EGENERAL;
@@ -742,7 +742,7 @@ static int sort_startup(sieve2_context_t **s2c,
 		TRACE(TRACE_DEBUG, "Sieve debugging enabled.");
 		res = sieve2_callbacks(sieve2_context, debug_callbacks);
 		if (res != SIEVE2_OK) {
-			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
+			TRACE(TRACE_ERR, "Error [%d] when calling sieve2_callbacks: [%s]",
 				res, sieve2_errstr(res));
 			sort_teardown(&sieve2_context, &sort_context);
 			return DM_EGENERAL;
@@ -784,7 +784,7 @@ const char * sort_listextensions(void)
 		sieve2_callbacks(sieve2_context, vacation_callbacks);
 	}
 	if (sieve_config.notify) {
-		TRACE(TRACE_ERROR, "Sieve notify is not supported in this release.");
+		TRACE(TRACE_ERR, "Sieve notify is not supported in this release.");
 		sieve2_callbacks(sieve2_context, notify_callbacks);
 	}
 	if (sieve_config.debug) {
@@ -836,7 +836,7 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
 
 	res = sieve2_validate(sieve2_context, sort_context);
 	if (res != SIEVE2_OK) {
-		TRACE(TRACE_ERROR, "Error %d when calling sieve2_validate: %s",
+		TRACE(TRACE_ERR, "Error %d when calling sieve2_validate: %s",
 			res, sieve2_errstr(res));
 		exitnull = 1;
 		goto freesieve;
@@ -895,7 +895,7 @@ sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message)
 
 	res = dm_sievescript_get(user_idnr, &sort_context->script);
 	if (res != 0) {
-		TRACE(TRACE_ERROR, "Error [%d] when calling db_getactive_sievescript", res);
+		TRACE(TRACE_ERR, "Error [%d] when calling db_getactive_sievescript", res);
 		exitnull = 1;
 		goto freesieve;
 	}
@@ -907,7 +907,7 @@ sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message)
 
 	res = sieve2_execute(sieve2_context, sort_context);
 	if (res != SIEVE2_OK) {
-		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_execute: [%s]",
+		TRACE(TRACE_ERR, "Error [%d] when calling sieve2_execute: [%s]",
 			res, sieve2_errstr(res));
 		exitnull = 1;
 	}

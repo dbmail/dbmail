@@ -53,17 +53,17 @@ void dbmail_iconv_init(void)
 	TRACE(TRACE_DEBUG,"Initialize DB encoding surface [UTF-8..%s]", ic->db_charset);
 	ic->to_db = g_mime_iconv_open(ic->db_charset,"UTF-8");
 	if (ic->to_db == (iconv_t)-1)
-		TRACE(TRACE_FATAL, "iconv failure");
+		TRACE(TRACE_EMERG, "iconv failure");
 
 	TRACE(TRACE_DEBUG,"Initialize DB decoding surface [%s..UTF-8]", ic->db_charset);
 	ic->from_db = g_mime_iconv_open("UTF-8", ic->db_charset);
 	if (ic->to_db == (iconv_t)-1)
-		TRACE(TRACE_FATAL, "iconv failure");
+		TRACE(TRACE_EMERG, "iconv failure");
 
 	TRACE(TRACE_DEBUG,"Initialize default MSG decoding surface [%s..UTF-8]", ic->msg_charset);
 	ic->from_msg=g_mime_iconv_open("UTF-8",ic->msg_charset);
 	if (ic->from_msg == (iconv_t)-1)
-		TRACE(TRACE_FATAL, "iconv failure");
+		TRACE(TRACE_EMERG, "iconv failure");
 	
 	initialized = TRUE;
 }

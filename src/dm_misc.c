@@ -71,23 +71,23 @@ int drop_privileges(char *newuser, char *newgroup)
 	grp = getgrnam(newgroup);
 
 	if (grp == NULL) {
-		TRACE(TRACE_ERROR, "could not find group %s\n", newgroup);
+		TRACE(TRACE_ERR, "could not find group %s\n", newgroup);
 		return -1;
 	}
 
 	pwd = getpwnam(newuser);
 	if (pwd == NULL) {
-		TRACE(TRACE_ERROR, "could not find user %s\n", newuser);
+		TRACE(TRACE_ERR, "could not find user %s\n", newuser);
 		return -1;
 	}
 
 	if (setgid(grp->gr_gid) != 0) {
-		TRACE(TRACE_ERROR, "could not set gid to %s\n", newgroup);
+		TRACE(TRACE_ERR, "could not set gid to %s\n", newgroup);
 		return -1;
 	}
 
 	if (setuid(pwd->pw_uid) != 0) {
-		TRACE(TRACE_ERROR, "could not set uid to %s\n", newuser);
+		TRACE(TRACE_ERR, "could not set uid to %s\n", newuser);
 		return -1;
 	}
 	return 0;
@@ -121,7 +121,7 @@ void create_current_timestring(timestring_t * timestring)
 	struct tm tm;
 
 	if (time(&td) == -1)
-		TRACE(TRACE_FATAL, "error getting time from OS");
+		TRACE(TRACE_EMERG, "error getting time from OS");
 
 	tm = *localtime(&td);	/* get components */
 	strftime((char *) timestring, sizeof(timestring_t),
@@ -136,7 +136,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 	GString *t;
 
 	if (mailbox_name == NULL) {
-		TRACE(TRACE_ERROR, "error, mailbox_name is NULL.");
+		TRACE(TRACE_ERR, "error, mailbox_name is NULL.");
 		return NULL;
 	}
 	
@@ -221,7 +221,7 @@ const char *mailbox_remove_namespace(const char *fq_name,
 		}
 
 		if (err) {
-			TRACE(TRACE_MESSAGE, "Illegal mailbox name");
+			TRACE(TRACE_NOTICE, "Illegal mailbox name");
 			return NULL;
 		}
 
@@ -1142,7 +1142,7 @@ int discard_client_input(clientbase_t *ci)
 			else if (n == 5)	 /*  \r\n.\r\n  DONE */
 				break;
 			else 			 /*  .\n ?      */
-				TRACE(TRACE_ERROR, "bare LF.");
+				TRACE(TRACE_ERR, "bare LF.");
 		} else if (c == '.' && n == 3)   /*  \r\n.      */
 			n = 4;
 		
@@ -1891,7 +1891,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	char *s = NULL, *t = NULL;
 
 	if (! GMIME_IS_MESSAGE(message)) {
-		TRACE(TRACE_ERROR, "argument is not a message");
+		TRACE(TRACE_ERR, "argument is not a message");
 		return NULL;
 	}
 	
@@ -2280,7 +2280,7 @@ char * dm_get_hash_for_string(const char *buf)
 		break;
 		default:
 			digest=NULL;
-			TRACE(TRACE_FATAL,"unhandled hash algorithm");
+			TRACE(TRACE_EMERG,"unhandled hash algorithm");
 		break;
 	}
 
