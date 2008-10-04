@@ -1,3 +1,8 @@
+2008-10-04  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	use MAX/MIN to determine first unseen and uidnext (fixes: #709)
+
 2008-08-26  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:

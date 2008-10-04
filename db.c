@@ -3014,9 +3014,8 @@ int db_getmailbox_count(mailbox_t *mb)
 	 * */
 
 	memset(query,0,DEF_QUERYSIZE);
-	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr+1 FROM %smessages "
-			"WHERE mailbox_idnr=%llu "
-			"ORDER BY message_idnr DESC LIMIT 1",DBPFX, mb->uid);
+	snprintf(query, DEF_QUERYSIZE, "SELECT max(message_idnr)+1 FROM %smessages "
+			"WHERE mailbox_idnr=%llu ", DBPFX, mb->uid);
 
 	if (db_query(query) == -1)
 		return DM_EQUERY;
@@ -4027,11 +4026,10 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 	memset(query,0,DEF_QUERYSIZE);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM %smessages "
+		 "SELECT MIN(message_idnr) FROM %smessages "
 		 "WHERE mailbox_idnr = %llu "
-		 "AND status < %d AND seen_flag = 0 "
-		 "ORDER BY message_idnr LIMIT 1",DBPFX,
-		 mailbox_idnr, MESSAGE_STATUS_DELETE);
+		 "AND status < %d AND seen_flag = 0",
+		 DBPFX, mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select messages");
