@@ -167,13 +167,13 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 /* Strips off the #Users or #Public namespace, returning
  * the simple name, the namespace and username, if present. */
 
-const char *mailbox_remove_namespace(const char *fq_name,
-		char **namespace, char **username)
+const char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username)
 {
 	const char *temp = NULL, *user = NULL, *mbox = NULL;
 	static size_t ns_user_len = 0;
 	static size_t ns_publ_len = 0;
 	size_t fq_name_len;
+	TRACE(TRACE_DEBUG,"[%s]", fq_name);
 
  	if(ns_user_len==0) {
  		ns_user_len = strlen(NAMESPACE_USER);
@@ -186,7 +186,6 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	fq_name_len = strlen(fq_name);
 
 	// i.e. '#Users/someuser/foldername'
-	// fail on '#Users*' and '#Users%'
 	// assume a slash in '#Users/foo*' and '#Users/foo%' like this '#Users/foo/*'
 	if (fq_name_len >= ns_user_len && strncasecmp(fq_name, NAMESPACE_USER, ns_user_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_USER;
@@ -199,25 +198,20 @@ const char *mailbox_remove_namespace(const char *fq_name,
 				if (!user) {
 					user = temp + 1;
 				} else if (user && !mbox) {
-					mbox = temp + 1;
 					slash = 1;
+					if (strlen(temp+1) && (*(temp+1) != '/'))
+						mbox = temp + 1;
 				} else if (user && mbox) {
 					end = 1;
 				}
 				break;
 			case '*':
-				if (!user)
-					err = 1;
 				mbox = temp;
 				break;
 			case '%':
-				if (!user)
-					err = 1;
 				mbox = temp;
 				break;
 			case '\0':
-				if (!user)
-					err = 1;
 				end = 1;
 				break;
 			}
@@ -228,9 +222,9 @@ const char *mailbox_remove_namespace(const char *fq_name,
 			return NULL;
 		}
 
-		if (!user || user + slash == mbox) {
-			TRACE(TRACE_DEBUG, "Username not found");
-			return NULL;
+		if (mbox && strlen(mbox) && (!user || (user + slash == mbox))) {
+			TRACE(TRACE_DEBUG, "Username not found, returning mbox [%s]", mbox);
+			return mbox;
 		}
 
 		if (!mbox) {
@@ -238,10 +232,10 @@ const char *mailbox_remove_namespace(const char *fq_name,
 			return NULL;
 		}
 
-		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%zu]",
-			user, (size_t)(mbox - user - slash));
+		TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%zu]", user, (size_t)(mbox - user - slash));
 		if (username) *username = g_strndup(user, mbox - user - slash);
 
+		TRACE(TRACE_DEBUG, "returning [%s]", mbox);
 		return mbox;
 	}
 	
