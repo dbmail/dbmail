@@ -71,7 +71,7 @@ static u64_t get_mailbox_id(const char *name, u64_t *userid)
  */
 void setup(void)
 {
-	configure_debug(5,0);
+	configure_debug(255,0);
 	if (config_read(configFile) < 0) {
 		printf( "Config file not found: %s\n", configFile );
 		exit(1);

@@ -103,7 +103,7 @@ static u64_t get_mailbox_id(const char *name)
 
 void setup(void)
 {
-	configure_debug(5,0);
+	configure_debug(255,0);
 	config_read(configFile);
 	GetDBParams();
 	db_connect();
@@ -291,7 +291,7 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 	dbmail_mailbox_search(mb);
-	all = g_tree_nnodes(mb->ids);
+	all = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
@@ -305,7 +305,7 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 	dbmail_mailbox_search(mb);
-	found = g_tree_nnodes(mb->ids);
+	found = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
@@ -319,7 +319,7 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 	dbmail_mailbox_search(mb);
-	notfound = g_tree_nnodes(mb->ids);
+	notfound = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
@@ -350,7 +350,7 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 	dbmail_mailbox_search(mb);
-	found = g_tree_nnodes(mb->ids);
+	found = g_tree_nnodes(mb->found);
 	fail_unless(found==1,"dbmail_mailbox_search failed: SEARCH UID 1");
 	
 	dbmail_mailbox_free(mb);
