@@ -1788,7 +1788,7 @@ char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
 	
 	u64_t physmessage_id = 0;
 	char *c, *raw = NULL, *hdr = NULL, *buf = NULL;
-	GString *s;
+	GString *s, *t;
 	int pos = 0;
 	long n = 0;
 	
@@ -1812,7 +1812,7 @@ char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
 
 	/* send requested body lines */	
 	raw = get_crlf_encoded_dots(buf);
-	g_string_append(s,raw);
+	t = g_string_new(raw);
 	g_free(buf);
 	
 	if (lines > 0) {
@@ -1820,9 +1820,12 @@ char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
 			if (raw[pos] == '\n') n++;
 			pos++;
 		}
-		if (pos) s = g_string_truncate(s,pos);
+		if (pos) t = g_string_truncate(t,pos);
 	}
 	g_free(raw);
+
+	g_string_append(s, t->str);
+	g_string_free(t, TRUE);
 
 	/* delimiter */
 	if (no_end_dot == 0)
