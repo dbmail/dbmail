@@ -2399,9 +2399,8 @@ static int db_getmailbox_count(MailboxInfo *mb)
 	Connection_clear(c);
 	t = FALSE;
 	TRY
-		r = Connection_executeQuery(c, "SELECT message_idnr+1 FROM %smessages "
-			"WHERE mailbox_idnr=%llu "
-			"ORDER BY message_idnr DESC LIMIT 1",DBPFX, mb->uid);
+		r = Connection_executeQuery(c, "SELECT MAX(message_idnr)+1 FROM %smessages "
+			"WHERE mailbox_idnr=%llu",DBPFX, mb->uid);
 		if (db_result_next(r))
 			mb->msguidnext = db_result_get_u64(r,0);
 		else

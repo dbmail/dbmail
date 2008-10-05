@@ -77,10 +77,24 @@ START_TEST(test_mailbox_remove_namespace)
 
 	char *simple, *username, *namespace;
 	char *patterns[] = {
-		"#Users/foo/mailbox", "#Users/foo/*", "#Users/foo*",
-		"#Users/", "#Users//", "#Users///", "#Users/%", "#Users*", "#Users",
-		"#Public/foo/mailbox", "#Public/foo/*", "#Public/foo*",
-		"#Public/", "#Public//", "#Public///", "#Public/%", "#Public*", "#Public", NULL
+		"#Users/foo/mailbox", 
+		"#Users/foo/*", 
+		"#Users/foo*",
+		"#Users/", 
+		"#Users//", 
+		"#Users///", 
+		"#Users/%", 
+		"#Users*", 
+		"#Users",
+		"#Public/foo/mailbox", 
+		"#Public/foo/*", 
+		"#Public/foo*",
+		"#Public/", 
+		"#Public//", 
+		"#Public///", 
+		"#Public/%", 
+		"#Public*", 
+		"#Public", NULL
 		};
 
 	char *expected[18][3] = {
@@ -91,8 +105,8 @@ START_TEST(test_mailbox_remove_namespace)
 		{ NAMESPACE_USER, NULL, NULL },
 		{ NAMESPACE_USER, NULL, NULL },
 		{ NAMESPACE_USER, NULL, NULL },
-		{ NAMESPACE_USER, NULL, NULL },
-		{ NAMESPACE_USER, NULL, NULL },
+		{ NAMESPACE_USER, NULL, "%" },
+		{ NAMESPACE_USER, NULL, "*" },
 		{ NAMESPACE_USER, NULL, NULL },
 
 		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo/mailbox" },
@@ -110,15 +124,9 @@ START_TEST(test_mailbox_remove_namespace)
 
 	for (i = 0; patterns[i]; i++) {
 		simple = (char *)mailbox_remove_namespace(patterns[i], &namespace, &username);
-		fail_unless(
-			((simple == NULL && expected[i][2] == NULL) || strcmp(simple, expected[i][2])==0) &&
-			((username== NULL && expected[i][1] == NULL) || strcmp(username, expected[i][1])==0) &&
-			((namespace == NULL && expected[i][0] == NULL) || strcmp(namespace, expected[i][0])==0),
-			"\n  mailbox_remove_namespace failed on [%s]\n"
-			"  Expected: namespace [%s] user [%s] simple [%s]\n"
-			"  Received: namespace [%s] user [%s] simple [%s]",
-			patterns[i], expected[i][0], expected[i][1], expected[i][2],
-			namespace, username, simple);
+		fail_unless( ((simple == NULL && expected[i][2] == NULL) || strcmp(simple, expected[i][2])==0),"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n", patterns[i], simple, expected[i][2] );
+		fail_unless( ((username== NULL && expected[i][1] == NULL) || strcmp(username, expected[i][1])==0) ,"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n" , patterns[i], username, expected[i][1]);
+		fail_unless( ((namespace == NULL && expected[i][0] == NULL) || strcmp(namespace, expected[i][0])==0) ,"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n" , patterns[i], namespace, expected[i][0]);
 	}
 
 }
