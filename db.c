@@ -3390,14 +3390,20 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 	g_free(escaped_simple_name);
 
 	if ((result = db_query(query)) == DM_EQUERY) {
-		TRACE(TRACE_ERROR, "could not create mailbox");
-		return DM_EQUERY;
+		/* Check if mailbox already exists. Other party may have already created it since the time we 
+		   checked the mailbox for existence last time so this should be ok. */
+		if (db_findmailbox(name, owner_idnr, mailbox_idnr) == 1) {
+			TRACE(TRACE_INFO, "Asked to create mailbox which already exists. It's ok - other party may have created it.");
+		} else {
+			TRACE(TRACE_ERROR, "could not create mailbox %s", name);
+			return DM_EQUERY;
+		}
+	} else {
+		*mailbox_idnr = db_insert_result("mailbox_idnr");
 	}
 
-	*mailbox_idnr = db_insert_result("mailbox_idnr");
-
-	TRACE(TRACE_DEBUG, "created mailbox with idnr [%llu] for user [%llu] result [%d]",
-			*mailbox_idnr, owner_idnr, result);
+	TRACE(TRACE_DEBUG, "created mailbox %s with idnr [%llu] for user [%llu] result [%d]",
+			name, *mailbox_idnr, owner_idnr, result);
 
 	return DM_SUCCESS;
 }
@@ -4072,8 +4078,26 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 		 "VALUES (%llu, %llu)",DBPFX, user_idnr, mailbox_idnr);
 
 	if (db_query(query) == -1) {
-		TRACE(TRACE_ERROR, "could not insert subscription");
-		return DM_EQUERY;
+		/* Verify subscription once again - perhaps other party made it at the same time with us */
+		memset(query,0,DEF_QUERYSIZE);
+		snprintf(query, DEF_QUERYSIZE,
+			"SELECT * FROM %ssubscription "
+			"WHERE mailbox_id = %llu "
+			"AND user_id = %llu",DBPFX, mailbox_idnr, user_idnr);
+
+		if (db_query(query) == -1) {
+			TRACE(TRACE_ERROR, "could not verify subscription");
+			return (-1);
+		}
+
+		if (db_num_rows() > 0) {
+			TRACE(TRACE_DEBUG, "already subscribed to mailbox [%llu], verified after attempt to subscribe", mailbox_idnr);
+			db_free_result();
+		} else {
+			TRACE(TRACE_ERROR, "could not insert subscription");
+			db_free_result();
+			return DM_EQUERY;
+		}
 	}
 
 	return DM_SUCCESS;
