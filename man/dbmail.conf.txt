@@ -2,7 +2,6 @@ DBMAIL.CONF(5)
 ==============
 Author
 
-
 NAME
 ----
 dbmail.conf - configuration file for DBMail, the Database Mailer.
@@ -16,5 +15,6 @@ DESCRIPTION
 -----------
   
 sys::[sed "s/^/ /" ../dbmail.conf]
+
 
 include::footer.txt[]

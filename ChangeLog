@@ -1,3 +1,8 @@
+2008-10-06  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.conf, dbmodule.c, man/Makefile.am, man/dbmail.conf.txt:
+	add missing entries to dbmail.conf (fixes #731)
+
 2008-10-05  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:

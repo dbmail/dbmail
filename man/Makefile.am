@@ -31,7 +31,7 @@ man8_MANS = dbmail-util.8 \
 EXTRA_DIST = $(man1_MANS) $(man5_MANS) $(man8_MANS)
 
 %.xml : %.txt
-	asciidoc -b docbook -d manpage $<
+	asciidoc --unsafe -b docbook -d manpage $<
 
 %.1 : %.xml
 	xmlto man $< 2>/dev/null
