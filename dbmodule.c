@@ -143,12 +143,12 @@ int db_query(const char *the_query)
 		 * so it might look like it went back in time. */
 		int elapsed = (int)((time_t) (after - before));
 		TRACE(TRACE_DEBUG, "last query took [%d] seconds", elapsed);
-		if (elapsed > (int)_db_params.query_time_info)
-			TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", the_query, elapsed);
-		if (elapsed > (int)_db_params.query_time_message)
-			TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", the_query, elapsed);
 		if (elapsed > (int)_db_params.query_time_warning)
 			TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", the_query, elapsed);
+		else if (elapsed > (int)_db_params.query_time_message)
+			TRACE(TRACE_MESSAGE, "slow query [%s] took [%d] seconds", the_query, elapsed);
+		else if (elapsed > (int)_db_params.query_time_info)
+			TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", the_query, elapsed);
 	}
 
 	return result;
