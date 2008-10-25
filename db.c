@@ -2761,8 +2761,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 	unsigned n_rows;
 	char *matchname;
 	const char *spattern;
-	char *namespace;
-	char *username;
+	char *namespace, *username;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
@@ -2802,7 +2801,6 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		matchname = g_strdup("");
 	}
 	
-	
 	if (only_subscribed)
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
@@ -2812,26 +2810,27 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 "LEFT JOIN %ssubscription sub ON sub.mailbox_id = mbx.mailbox_idnr "
 			 "WHERE %s (sub.user_id = %llu "
 			 "AND ((mbx.owner_idnr = %llu) "
-			 "OR (acl.user_id = %llu AND acl.lookup_flag = 1) "
+			 "%s (acl.user_id = %llu AND acl.lookup_flag = 1) "
 			 "OR (usr.userid = '%s' AND acl.lookup_flag = 1)))",
 			 DBPFX, DBPFX, DBPFX, DBPFX, matchname,
-			 user_idnr, search_user_idnr, user_idnr,
+			 user_idnr, search_user_idnr, 
+			 search_user_idnr == user_idnr?"OR":"AND",
+			 user_idnr,
 			 DBMAIL_ACL_ANYONE_USER);
 	else
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
 			 "FROM %smailboxes mbx "
-			 "LEFT JOIN %sacl acl "
-			 "ON mbx.mailbox_idnr = acl.mailbox_id "
-			 "LEFT JOIN %susers usr "
-			 "ON acl.user_id = usr.user_idnr "
-			 "WHERE %s "
-			 "((mbx.owner_idnr = %llu) OR "
-			 "(acl.user_id = %llu AND "
-			 "  acl.lookup_flag = 1) OR "
-			 "(usr.userid = '%s' AND acl.lookup_flag = 1))",
+			 "LEFT JOIN %sacl acl ON mbx.mailbox_idnr = acl.mailbox_id "
+			 "LEFT JOIN %susers usr ON acl.user_id = usr.user_idnr "
+			 "WHERE %s 1=1 "
+			 "AND ((mbx.owner_idnr = %llu) "
+			 "%s (acl.user_id = %llu AND acl.lookup_flag = 1) "
+			 "OR (usr.userid = '%s' AND acl.lookup_flag = 1))",
 			 DBPFX, DBPFX, DBPFX, matchname,
-			 search_user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
+			 search_user_idnr, 
+			 search_user_idnr == user_idnr?"OR":"AND",
+			 user_idnr, DBMAIL_ACL_ANYONE_USER);
 	
 	g_free(matchname);
 
@@ -4665,7 +4664,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 			"SELECT COUNT(*) AS nr_children "
 			"FROM %smailboxes WHERE owner_idnr = %llu "
 			"AND %s",
-			DBPFX, user_idnr, mailbox_like);
+			DBPFX, mb->owner_idnr, mailbox_like);
 
 	g_free(mailbox_like);
 
