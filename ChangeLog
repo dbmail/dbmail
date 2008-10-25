@@ -1,6 +1,8 @@
 2008-10-25  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:
+	always show INBOX for lsub
+	* db.c:
 	more fixes for #725
 
 2008-10-07  Paul J Stevens <paul@nfg.nl>

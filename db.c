@@ -2811,12 +2811,12 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 "WHERE %s (sub.user_id = %llu "
 			 "AND ((mbx.owner_idnr = %llu) "
 			 "%s (acl.user_id = %llu AND acl.lookup_flag = 1) "
-			 "OR (usr.userid = '%s' AND acl.lookup_flag = 1)))",
+			 "OR (usr.userid = '%s' AND acl.lookup_flag = 1))) "
+			 "OR (mbx.name = 'INBOX' AND mbx.owner_idnr = %llu)",
 			 DBPFX, DBPFX, DBPFX, DBPFX, matchname,
 			 user_idnr, search_user_idnr, 
 			 search_user_idnr == user_idnr?"OR":"AND",
-			 user_idnr,
-			 DBMAIL_ACL_ANYONE_USER);
+			 user_idnr, DBMAIL_ACL_ANYONE_USER, user_idnr);
 	else
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
