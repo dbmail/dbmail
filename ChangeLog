@@ -1,3 +1,8 @@
+2008-10-26  Paul J Stevens <paul@nfg.nl>
+
+	* VERSION:
+	bump version
+
 2008-10-25  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:
