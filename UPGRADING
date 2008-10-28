@@ -1,52 +1,91 @@
-Upgrading from DBMail 2.0 to DBMail 2.2
+Upgrading from DBMail 2.2 to DBMail 2.4
 
 Dependencies
 
-* Database: MySQL 4.1+ with innodb support, PostgreSQL 7.4+, or SQLite3
+* Database: MySQL 5.1+ with innodb support, PostgreSQL 8.3+, or SQLite3
 * Glib: (>= 2.8.0)
-* GMime: (>= 2.1.19 or >= 2.2.0)
+* GMime: (>= 2.2.0)
 * Optional: libSieve (>= 2.2.1)
-* Optional: LDAP such as OpenLDAP.
+* Optional: LDAP such as OpenLDAP or ActiveDirectory.
+* libmhash
+* libzdb (http://www.tildeslash.com/libzdb/)
+* libevent
 
 Config Changes
 
 * [DBMAIL] section 
 
- Dbmail allows you to select the database module and authentication module
- in the config file.
+ Dbmail allows you to select the database backend and authentication
+ module in the config file.
 
-driver=mysql/pgsql/sqlite
+driver=mysql/postgresql/sqlite
 authdriver=sql/ldap
 
- Some mail clients will send illegal 8bit headers. Dbmail will try to 
- decode these headers to make them readable. If you have clients that
- send 8bit headers (outlook office), set the next setting to charset 
- encoding that is most common amoung your users. Some examples: 
- windows-1250, latin-1, utf8.
+ The old TRACE_LEVEL is now not used anymore, and
+ TRACE_SYSLOG/TRACE_STDERR are now deprecated.
+ 
+ Logging has been broken up into 8 logging levels and each level can
+ be individually turned on or off. The Stderr/log file logs all
+ entries to stderr or the log file. Syslog logging uses the facility
+ mail and the logging level of the event for logging. Syslog can then
+ be configured to log data according to the levels.
 
-default_msg_encoding=
+ Set the log level to the sum of the values next to the levels you
+ want to record.
+ 
+   1 = Emergency 
+   2 = Alert
+   4 = Critical
+   8 = Error
+  16 = Warning
+  32 = Notice
+  64 = Info
+ 128 = Debug
 
- If your database is anything else than US_ASCII encoded please specify
- the encoding used in the next setting. 
+ Examples:   0 = Nothing
+            31 = Emergency + Alert + Critical + Error + Warning
+           255 = Everything
 
-encoding=
-
- the old TRACE_LEVEL was replaced by two new entries.
-
-trace_syslog=
-trace_stderr=
+FILE_LOGGING_LEVELS       = 7
+SYSLOG_LOGGING_LEVELS     = 31
 
 Schema Changes
 
-* Use the migrate_from_2.0_to_2.2 script, then run dbmail-util -by
+* Use the 2_2_5-2_3_0 script
 
 Migration scripts from 1.2 to 2.0 and from 2.0 to 2.2 are provided in
-sql/mysql and sql/postgresql. Please test them first before applying them
-to your live database. Especially people who have modified their tables, and
-users using databases that go back to 1.0 or earlier should take special care.
+sql/mysql, sql/postgresql and sql/sqlite. Please test them first
+before applying them to your live database. Especially people who have
+modified their tables, and users using databases that go back to 2.0
+or earlier should take special care.
 
-The schema for 2.2 adds a couple of new caching tables that will need to be 
-filled before you can restart your daemons. For that use 'dbmail-util -by'. This
-may run quite a long time depending on the size of your database.
+The schema for 2.4 add new tables for single-instance storage of
+mimeparts, and for supporting user labels on messages in IMAP. No
+migration of old data is supported, but the old data will remain
+accessible, while new messages will be stored in the new schema.
 
+Server Changes
 
+Dbmail until 2.2 used a pre-forking server design with a dedicated
+connection to the database backend for each forked process. Even with
+a hundred or so concurrently connected clients this stretched the
+scalability of the database backends. 
+
+Starting with version 2.3.3 dbmail has switched to a single process
+that uses a event-driven state machine to handle many many concurrent
+clients. Where needed a pool of worker threads is used to process
+database transactions. Finally, database transactions are handled by a
+single shared dynamic database connection pool to minimize the number
+of overall database connections.  
+
+All this means that a number of configuration options are now
+redundant. You can remove the following items from dbmail.conf:
+
+NCHILDREN
+MAXCHILDREN
+MINSPARECHILDREN
+MAXSPARECHILDREN
+MAXCONNECTS
+
+---
+EOF
