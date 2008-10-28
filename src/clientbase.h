@@ -31,5 +31,4 @@ int ci_read(clientbase_t *self, char *buffer, size_t n);
 int ci_readln(clientbase_t *self, char * buffer);
 void ci_close(clientbase_t *self);
 
-
 #endif

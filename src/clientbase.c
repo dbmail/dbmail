@@ -28,7 +28,6 @@
 extern serverConfig_t *server_conf;
 extern int selfpipe[2];
 
-
 static void client_pipe_cb(int sock, short event, void *arg)
 {
 	clientbase_t *client;
@@ -37,11 +36,13 @@ static void client_pipe_cb(int sock, short event, void *arg)
 	char buf[1];
 	while (read(sock, buf, 1) > 0)
 		;
-	client = (clientbase_t *)arg;
-	if (client->cb_pipe) client->cb_pipe(client);
-	if (client->pev) event_add(client->pev, NULL);
-}
 
+	client = (clientbase_t *)arg;
+	if (client && client->cb_pipe && client->pev) {
+		client->cb_pipe(client);
+		event_add(client->pev, NULL);
+	}
+}
 
 static int client_error_cb(int sock, short event, void *arg)
 {
@@ -49,7 +50,8 @@ static int client_error_cb(int sock, short event, void *arg)
 	clientbase_t *client = (clientbase_t *)arg;
 	switch (event) {
 		case EAGAIN:
-			break;
+		case EINTR:
+			break; // reschedule
 		default:
 			TRACE(TRACE_DEBUG,"[%p] %d %s, %p", client, sock, strerror((int)event), arg);
 			client->write_buffer = g_string_truncate(client->write_buffer,0);
@@ -58,7 +60,6 @@ static int client_error_cb(int sock, short event, void *arg)
 	}
 	return r;
 }
-
 
 clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 {
@@ -115,6 +116,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 	client->rev = g_new0(struct event, 1);
 	client->wev = g_new0(struct event, 1);
 	client->pev = g_new0(struct event, 1);
+
 	event_set(client->pev, selfpipe[0], EV_READ, client_pipe_cb, client);
 	event_add(client->pev, NULL);
 
@@ -126,7 +128,10 @@ int ci_write(clientbase_t *self, char * msg, ...)
 {
 	va_list ap;
 	ssize_t t;
-	if (! self) return -1;
+	if (! self) {
+		TRACE(TRACE_DEBUG, "called while self is null");
+		return -1;
+	}
 
 	if (msg) {
 		va_start(ap, msg);
@@ -160,7 +165,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	assert(buffer);
 	memset(buffer, 0, sizeof(buffer));
 
-	TRACE(TRACE_DEBUG,"[%p] need [%d]", self, n);
+	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
 	self->len = 0;
 	while (self->len < n) {
 		t = read(self->rx, (void *)&c, 1);
@@ -176,7 +181,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		if (c == '\r') continue;
 		buffer[i++] = c;
 	}
-	TRACE(TRACE_DEBUG,"[%p] read [%d]", self, self->len);
+	TRACE(TRACE_DEBUG,"[%p] read [%ld]", self, self->len);
 
 	return self->len;
 }	
@@ -228,14 +233,16 @@ void ci_close(clientbase_t *self)
 {
 	assert(self);
 
-	event_del(self->pev);
-	self->pev = NULL;
-
 	g_async_queue_unref(self->queue);
 	event_del(self->rev);
 	event_del(self->wev);
+	event_del(self->pev);
+
+	self->cb_pipe = NULL;
+
 	g_free(self->rev); self->rev = NULL;
 	g_free(self->wev); self->wev = NULL;
+	g_free(self->pev); self->pev = NULL;
 
 	if (self->tx > 0) {
 		shutdown(self->tx, SHUT_RDWR);

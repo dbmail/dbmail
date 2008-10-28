@@ -35,7 +35,7 @@ volatile sig_atomic_t alarm_occurred = 0;
 // thread data
 int selfpipe[2];
 GAsyncQueue *queue;
-GThreadPool *tpool = NULL;
+GThreadPool *tpool = NULL, *tpool_idle = NULL;
 
 serverConfig_t *server_conf;
 
@@ -96,8 +96,11 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	D->session->command_state = FALSE; 
 
 	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
-
-	g_thread_pool_push(tpool, D, &err);
+	
+	if (s->command_type == IMAP_COMM_IDLE)
+		g_thread_pool_push(tpool_idle, D, &err);
+	else
+		g_thread_pool_push(tpool, D, &err);
 
 	if (err) TRACE(TRACE_EMERG,"g_thread_pool_push failed [%s]", err->message);
 }
@@ -161,6 +164,11 @@ static int server_setup(void)
 	// Create the thread pool
 	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,10,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
+
+        if (! (tpool_idle = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,-1,FALSE,&err)))
+                TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
+        else
+                TRACE(TRACE_INFO,"thread pool created for idle imap clients");
 
 	// self-pipe used to push the event-loop
 	pipe(selfpipe);
@@ -428,11 +436,8 @@ void server_sig_cb(int fd, short event, void *arg)
 	}
 }
 
-// FIXME: signals have been in a bad shape since
-// the libevent rewrite
 static int server_set_sighandler(void)
 {
-
 	struct sigaction sa;
 	
 	memset(&sa, 0, sizeof(sa));
@@ -461,6 +466,7 @@ void disconnect_all(void)
 	db_disconnect();
 	auth_disconnect();
 	if (tpool) g_thread_pool_free(tpool,TRUE,FALSE);
+	if (tpool_idle) g_thread_pool_free(tpool_idle,TRUE,FALSE);
 	g_free(sig_int);
 	g_free(sig_hup);
 }
