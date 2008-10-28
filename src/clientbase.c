@@ -26,23 +26,6 @@
 #define THIS_MODULE "clientbase"
 
 extern serverConfig_t *server_conf;
-extern int selfpipe[2];
-
-static void client_pipe_cb(int sock, short event, void *arg)
-{
-	clientbase_t *client;
-
-	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
-	char buf[1];
-	while (read(sock, buf, 1) > 0)
-		;
-
-	client = (clientbase_t *)arg;
-	if (client && client->cb_pipe && client->pev) {
-		client->cb_pipe(client);
-		event_add(client->pev, NULL);
-	}
-}
 
 static int client_error_cb(int sock, short event, void *arg)
 {
@@ -115,10 +98,6 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 	client->write_buffer = g_string_new("");
 	client->rev = g_new0(struct event, 1);
 	client->wev = g_new0(struct event, 1);
-	client->pev = g_new0(struct event, 1);
-
-	event_set(client->pev, selfpipe[0], EV_READ, client_pipe_cb, client);
-	event_add(client->pev, NULL);
 
 	return client;
 }
@@ -236,13 +215,9 @@ void ci_close(clientbase_t *self)
 	g_async_queue_unref(self->queue);
 	event_del(self->rev);
 	event_del(self->wev);
-	event_del(self->pev);
-
-	self->cb_pipe = NULL;
 
 	g_free(self->rev); self->rev = NULL;
 	g_free(self->wev); self->wev = NULL;
-	g_free(self->pev); self->pev = NULL;
 
 	if (self->tx > 0) {
 		shutdown(self->tx, SHUT_RDWR);

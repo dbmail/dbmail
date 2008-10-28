@@ -342,7 +342,6 @@ int imap_handle_connection(client_sock *c)
 	event_set(ci->rev, ci->rx, EV_READ, socket_read_cb, (void *)session);
 	event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
 
-	ci->cb_pipe = (void *)dm_queue_drain;
 	session->ci = ci;
 
 	dbmail_imap_session_set_callbacks(session, imap_cb_read, imap_cb_time, server_conf->login_timeout);

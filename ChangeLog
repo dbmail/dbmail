@@ -1,6 +1,20 @@
-2008-10-05  Paul J Stevens <paul@nfg.nl>
+2008-10-28  Paul J Stevens <paul@nfg.nl>
+
+	* src/clientbase.c, src/imap4.c, src/server.c, src/server.h:
+	use a global pipe event
+	* src/clientbase.c, src/clientbase.h, src/dbmailtypes.h, src/server.c:
+	use separate thread-pool for idle clients
+
+2008-10-26  Paul J Stevens <paul@nfg.nl>
 
 	* src/dm_db.c:
+	additional fix for #725
+
+2008-10-05  Paul J Stevens <paul@nfg.nl>
+
+	* UPGRADING, sql/ingres/create_tables.sql:
+	cleanups
+	* ChangeLog, src/dm_db.c:
 	fix regression in pop3/top command (fixes: #714)
 	* src/dbmail-mailbox.c:
 	only use mutex in threads
@@ -35,29 +49,6 @@
 	src/pop3.c, src/timsieve.c:
 	struct timeval timeout cleanup
 
-2008-09-29  Paul J Stevens <paul@nfg.nl>
-
-	* src/clientbase.c:
-	no event_add on t=0
-	* ChangeLog, acinclude.m4, configure.in, dbmail.conf, 
-	src/authmodule.c, src/clientbase.c, src/clientsession.c, 
-	src/dbmail-imapsession.c, src/dbmail-mailbox.c, src/dbmail-message.c, 
-	src/dbmail.h.in, src/dbmailtypes.h, src/dm_acl.c, src/dm_cache.c, 
-	src/dm_config.c, src/dm_db.c, src/dm_debug.c, src/dm_debug.h, 
-	src/dm_dsn.c, src/dm_iconv.c, src/dm_misc.c, src/dm_pidfile.c, 
-	src/dm_quota.c, src/imap4.c, src/imapcommands.c, src/lmtp.c, 
-	src/main.c, src/modules/authldap.c, src/modules/authsql.c, 
-	src/modules/sortsieve.c, src/pop3.c, src/server.c, src/sortmodule.c, 
-	src/top.c:
-	support fine-grained logging (Jon)
-	* src/clientbase.c, src/clientsession.c, src/dbmail-imapsession.c, 
-	src/dbmail-imapsession.h, src/dbmailtypes.h, src/imap4.c, src/lmtp.c, 
-	src/pop3.c, src/timsieve.c:
-	struct timeval timeout cleanup
-	* src/clientbase.c, src/clientsession.c, src/dbmailtypes.h, 
-	src/imap4.c, src/lmtp.c, src/pop3.c, src/timsieve.c:
-	move struct timeval timeout from session to clientbase
-
 2008-09-28  Paul J Stevens <paul@nfg.nl>
 
 	* src/clientbase.c, src/clientsession.c, src/dbmailtypes.h, 
@@ -75,15 +66,6 @@
 	* src/clientbase.c, src/dbmail-imapsession.c, src/dbmail-message.c, 
 	src/dbmail.h.in, src/dbmailtypes.h, src/imap4.c, src/server.c:
 	finish clientbase cleanup
-
-2008-09-22  Paul J Stevens <paul@nfg.nl>
-
-	* src/clientbase.c, src/dbmail-message.c, src/dm_cache.c:
-	fix a cache_update problem
-	* src/clientbase.c, src/dbmailtypes.h, src/imap4.c:
-	and backout again
-	* THANKS, src/clientbase.c, src/dbmailtypes.h, src/imap4.c:
-	fix missing event again (Jon)
 
 2008-09-21  Paul J Stevens <paul@nfg.nl>
 

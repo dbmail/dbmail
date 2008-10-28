@@ -44,6 +44,7 @@ static int server_set_sighandler(void);
 
 struct event *sig_int, *sig_hup, *sig_pipe;
 
+struct event *pev = NULL;
 
 /* 
  *
@@ -59,17 +60,21 @@ static void dm_thread_data_free(gpointer data);
 /*
  * async queue drainage callback for the main thread
  */
-void dm_queue_drain(clientbase_t *client UNUSED)
+void dm_queue_drain(int sock, short event, void *arg)
 {
+	char buf[1];
 	gpointer data;
 	do {
 		data = g_async_queue_try_pop(queue);
+		read(sock, buf, 1);
 		if (data) {
 			dm_thread_data *D = (gpointer)data;
 			if (D->cb_leave) D->cb_leave(data);
 			dm_thread_data_free(data);
 		}
 	} while (data);
+
+	event_add(pev, NULL);
 }
 
 /* 
@@ -175,6 +180,10 @@ static int server_setup(void)
 	UNBLOCK(selfpipe[0]);
 	UNBLOCK(selfpipe[1]);
 	
+	pev = g_new0(struct event, 1);
+	event_set(pev, selfpipe[0], EV_READ, dm_queue_drain, NULL);
+	event_add(pev, NULL);
+
 	return 0;
 }
 	
