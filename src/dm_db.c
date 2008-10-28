@@ -2153,8 +2153,10 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 
 	g_string_append_printf(qs, 
 			"AND ((mbx.owner_idnr=?) "
-			"OR (acl.user_id=? AND acl.lookup_flag=1) "
-			"OR (usr.userid=? AND acl.lookup_flag=1)) ");
+			"%s (acl.user_id=? AND acl.lookup_flag=1) "
+			"OR (usr.userid=? AND acl.lookup_flag=1)) ",
+			search_user_idnr==user_idnr?"OR":"AND"
+	);
 
 	if (mailbox_like && mailbox_like->insensitive)
 		g_string_append_printf(qs, " AND mbx.name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
@@ -2327,7 +2329,7 @@ static int db_getmailbox_metadata(MailboxInfo *mb, u64_t user_idnr)
 	TRY
 		stmt = db_stmt_prepare(c, qs->str);
 		prml = 1;
-		db_stmt_set_u64(stmt, prml++, user_idnr);
+		db_stmt_set_u64(stmt, prml++, mb->owner_idnr);
 
 		if (mailbox_like && mailbox_like->insensitive)
 			db_stmt_set_str(stmt, prml++, mailbox_like->insensitive);
