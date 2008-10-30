@@ -231,14 +231,25 @@ int db_disconnect(void)
 
 C db_con_get(void)
 {
-	int i=0; C c;
+	int i=0, k=0; C c;
 	while (i++<30) {
 		c = ConnectionPool_getConnection(pool);
 		if (c) break;
-		if((int)(i % 5)==0) TRACE(TRACE_ALERT, "Thread is having trouble obtaining a database connection. Try [%d]", i);
+		if((int)(i % 5)==0) {
+			TRACE(TRACE_ALERT, "Thread is having trouble obtaining a database connection. Try [%d]", i);
+			k = ConnectionPool_reapConnections(pool);
+			TRACE(TRACE_INFO, "Reaper closed [%d] stale connections", k);
+		}
 		sleep(1);
 	}
-	if (! c) TRACE(TRACE_EMERG,"can't get a database connection from the pool! [%p]", c);
+	if (! c) {
+		TRACE(TRACE_EMERG,"[%p] can't get a database connection from the pool! max [%d] size [%d] active [%d]", 
+			pool,
+			ConnectionPool_getMaxConnections(pool),
+			ConnectionPool_size(pool),
+			ConnectionPool_active(pool));
+	}
+
 	assert(c);
 	TRACE(TRACE_DEBUG, "gave db connection [%p]", c);
 	return c;
@@ -280,7 +291,7 @@ gboolean db_exec(C c, const char *q, ...)
         vsnprintf(query, DEF_QUERYSIZE, q, ap);
         va_end(ap);
 
-	TRACE(TRACE_DEBUG,"[%s]", query);
+	TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
 	TRY
 		result = Connection_execute(c, query);
 	CATCH(SQLException)
@@ -300,7 +311,7 @@ R db_query(C c, const char *q, ...)
         vsnprintf(query, DEF_QUERYSIZE, q, ap);
         va_end(ap);
 
-	TRACE(TRACE_DEBUG,"[%s]", query);
+	TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
 	TRY
 		r = Connection_executeQuery(c, query);
 	CATCH(SQLException)
@@ -324,7 +335,7 @@ gboolean db_update(const char *q, ...)
 
 	c = db_con_get();
 	TRY
-		TRACE(TRACE_DEBUG,"[%s]", query);
+		TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
 		result = db_exec(c, query);
 	CATCH(SQLException)
 		LOG_SQLERROR;
