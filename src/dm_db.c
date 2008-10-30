@@ -244,7 +244,7 @@ C db_con_get(void)
 	return c;
 }
 
-static gboolean dm_db_ping(void)
+gboolean dm_db_ping(void)
 {
 	C c; gboolean t;
 	c = db_con_get();
