@@ -1,3 +1,23 @@
+
+For more recent changes please go to 
+
+http://git.dbmail.eu/?p=paul/dbmail;a=log
+
+
+
+2008-10-30  Paul J Stevens <paul@nfg.nl>
+
+	* src/dm_config.c:
+	minor typo
+	* src/imap4.c:
+	Kill imap idle looped sessions properly upon disconnect or daemon 
+	shutdown. (Jon)
+	* src/dm_config.c, src/dm_db.c, src/server.h:
+	silence compiler warnings after merging
+	* ChangeLog, src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmailtypes.h, src/imap4.c, src/imapcommands.c, src/server.c:
+	improve idle behaviour
+
 2008-10-30  Paul J Stevens <paul@nfg.nl>
 
 	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 

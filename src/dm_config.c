@@ -355,7 +355,7 @@ void GetDBParams(void)
 	if (strlen(max_db_connections) != 0) {
 		_db_params.max_db_connections = (unsigned int) strtol(max_db_connections, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			TRACE(TRACE_EMERG, "maxconnnections invalid in config file");
+			TRACE(TRACE_EMERG, "max_db_connnections invalid in config file");
 	}
 
 }
