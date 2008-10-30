@@ -640,7 +640,7 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 		g_string_free(q,TRUE);
 	END_TRY;
 
@@ -794,7 +794,7 @@ static void _fetch_envelopes(ImapSession *self)
 			self->mailbox->id, range);
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, q->str);
+		r = db_query(c, q->str);
 		while (db_result_next(r)) {
 			id = db_result_get_u64(r, 0);
 			
@@ -810,7 +810,7 @@ static void _fetch_envelopes(ImapSession *self)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 		g_string_free(q,TRUE);
 	END_TRY;
 
@@ -1155,19 +1155,18 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 		case 0:
 			sleep(2);	/* security */
 			dbmail_imap_session_buff_printf(self, "%s NO login rejected\r\n", self->tag);
-			TRACE(TRACE_NOTICE, "[%p] login rejected: user [%s] ip [%s]", self, username, self->ci->ip_src);
+			TRACE(TRACE_NOTICE, "[%p] login rejected: user [%s] from [%s:%d]", self, username, self->ci->ip_src, self->ci->ip_src_port);
 			return 1;
 
 		case 1:
-			TRACE(TRACE_NOTICE, "[%p] login accepted: user [%s] ip [%s]", self, username, self->ci->ip_src);
+			self->userid = userid;
+			TRACE(TRACE_NOTICE, "[%p] login accepted: user [%s] from [%s:%d]", self, username, self->ci->ip_src, self->ci->ip_src_port);
 			break;
 
 		default:
 			TRACE(TRACE_ERR, "[%p] auth_validate returned [%d]", self, valid);
 			return -1;
 	}
-
-	self->userid = userid;
 
 	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 
@@ -1409,7 +1408,7 @@ static void _get_mbxinfo(ImapSession *self)
 	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);
+		r = db_query(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
 			mb = g_new0(MailboxInfo,1);
@@ -1423,7 +1422,7 @@ static void _get_mbxinfo(ImapSession *self)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 		t = DM_EQUERY;
 	END_TRY;
 
@@ -1495,7 +1494,7 @@ static int db_update_recent(GList *slices)
 		t = DM_EQUERY;
 		db_rollback_transaction(c);
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 		g_list_destroy(slices);
 	END_TRY;
 

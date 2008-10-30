@@ -116,19 +116,8 @@ void client_session_set_timeout(ClientSession_t *session, int timeout)
 
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
-	C c;
 	ClientSession_t *session = (ClientSession_t *)arg;
-
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
-	c = db_con_get();
-	if (!Connection_ping(c)) {
-		Connection_close(c);
-		TRACE(TRACE_ERR, "database connection error");
-		client_session_bailout(session);
-		return;
-	}
-	Connection_close(c);
-
 	session->ci->cb_read(session);
 }
 

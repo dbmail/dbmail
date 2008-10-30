@@ -39,6 +39,9 @@
                         perror("F_SETFL"); \
         }
 
+static void server_config_load(serverConfig_t * conf, const char * const service);
+static int server_set_sighandler(void);
+
 int StartCliServer(serverConfig_t * conf);
 int server_run(serverConfig_t *conf);
 

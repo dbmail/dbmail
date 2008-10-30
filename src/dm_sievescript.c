@@ -46,7 +46,7 @@ int dm_sievescript_getbyname(u64_t user_idnr, char *scriptname, char **script)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -79,7 +79,7 @@ int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -93,7 +93,7 @@ int dm_sievescript_get(u64_t user_idnr, char **scriptname)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT name from %ssievescripts where owner_idnr = %llu and active = 1", DBPFX, user_idnr);
+		r = db_query(c, "SELECT name from %ssievescripts where owner_idnr = %llu and active = 1", DBPFX, user_idnr);
 		if (db_result_next(r))
 			 *scriptname = g_strdup(db_result_get(r,0));
 
@@ -101,7 +101,7 @@ int dm_sievescript_get(u64_t user_idnr, char **scriptname)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -113,7 +113,7 @@ int dm_sievescript_list(u64_t user_idnr, GList **scriptlist)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c,"SELECT name,active FROM %ssievescripts WHERE owner_idnr = %llu", DBPFX,user_idnr);
+		r = db_query(c,"SELECT name,active FROM %ssievescripts WHERE owner_idnr = %llu", DBPFX,user_idnr);
 		while (db_result_next(r)) {
 			struct ssinfo *info = g_new0(struct ssinfo,1);
 			info->name = g_strdup(db_result_get(r,0));   
@@ -124,7 +124,7 @@ int dm_sievescript_list(u64_t user_idnr, GList **scriptlist)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -152,7 +152,7 @@ int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname)
 		if (db_result_next(r)) {
 			active = db_result_get_int(r,0);
 
-			Connection_clear(c);
+			db_con_clear(c);
 
 			s = db_stmt_prepare(c, "DELETE FROM %ssievescripts WHERE owner_idnr = ? AND name = ?", DBPFX);
 			db_stmt_set_u64(s, 1, user_idnr);
@@ -160,7 +160,7 @@ int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname)
 			db_stmt_exec(s);
 		}
 
-		Connection_clear(c);
+		db_con_clear(c);
 
 		s = db_stmt_prepare(c, "UPDATE %ssievescripts SET name = ?, active = ? WHERE owner_idnr = ? AND name = ?", DBPFX);
 		db_stmt_set_str(s, 1, newname);
@@ -176,7 +176,7 @@ int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname)
 		t = DM_EQUERY;
 		db_rollback_transaction(c);
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -198,7 +198,7 @@ int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script)
 		r = db_stmt_query(s);
 		if (db_result_next(r)) {
 			
-			Connection_clear(c);
+			db_con_clear(c);
 
 			s = db_stmt_prepare(c,"DELETE FROM %ssievescripts WHERE owner_idnr = ? AND name = ?", DBPFX);
 			db_stmt_set_u64(s, 1, user_idnr);
@@ -207,7 +207,7 @@ int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script)
 			db_stmt_exec(s);
 		}
 		
-		Connection_clear(c);
+		db_con_clear(c);
 
 		s = db_stmt_prepare(c,"INSERT INTO %ssievescripts (owner_idnr, name, script, active) VALUES (?,?,?,1)", DBPFX);
 		db_stmt_set_u64(s, 1, user_idnr);
@@ -222,7 +222,7 @@ int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script)
 		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -242,7 +242,7 @@ int dm_sievescript_deactivate(u64_t user_idnr, char *scriptname)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -261,7 +261,7 @@ int dm_sievescript_activate(u64_t user_idnr, char *scriptname)
 		db_stmt_set_u64(s, 1, user_idnr);
 		db_stmt_exec(s);
 
-		Connection_clear(c);
+		db_con_clear(c);
 
 		s = db_stmt_prepare(c,"UPDATE %ssievescripts SET active = 1 WHERE owner_idnr = ? AND name = ?", DBPFX);
 		db_stmt_set_u64(s, 1, user_idnr);
@@ -273,7 +273,7 @@ int dm_sievescript_activate(u64_t user_idnr, char *scriptname)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -293,7 +293,7 @@ int dm_sievescript_delete(u64_t user_idnr, char *scriptname)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;

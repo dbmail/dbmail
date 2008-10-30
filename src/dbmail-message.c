@@ -158,7 +158,7 @@ static u64_t blob_exists(const char *buf, const char *hash)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return id;
@@ -185,7 +185,7 @@ static u64_t blob_insert(const char *buf, const char *hash)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	TRACE(TRACE_DEBUG,"inserted id [%llu]", id);
@@ -206,7 +206,7 @@ static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -371,7 +371,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	if ((row == 0) || (t == DM_EQUERY)) return NULL;
@@ -1144,7 +1144,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 
 	c = db_con_get();
 	if (! (r = db_query(c, query))) {
-		Connection_close(c);
+		db_con_close(c);
 		return NULL;
 	}
 	
@@ -1157,7 +1157,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 		g_string_append_printf(m, "%s", str);
 		row++;
 	}
-	Connection_close(c);
+	db_con_close(c);
 	
 	self = dbmail_message_init_with_string(self,m);
 	if (internal_date && strlen(internal_date))
@@ -1350,7 +1350,7 @@ int _message_insert(DbmailMessage *self,
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	g_free(frag);
@@ -1412,7 +1412,6 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 
 	TRY
 		*tmp = 0;
-		Connection_clear(c);
 
 		s = db_stmt_prepare(c, "SELECT id FROM %sheadername WHERE %s=?", DBPFX, case_header);
 		db_stmt_set_str(s,1,safe_header);
@@ -1421,7 +1420,7 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 		if (db_result_next(r)) {
 			*tmp = db_result_get_u64(r,0);
 		} else {
-			Connection_clear(c);
+			db_con_clear(c);
 			s = db_stmt_prepare(c, "INSERT %s INTO %sheadername (headername) VALUES (?) %s", 
 					db_get_sql(SQL_IGNORE), DBPFX, frag);
 			db_stmt_set_str(s,1,safe_header);
@@ -1433,9 +1432,10 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
 	END_TRY;
 		
-	Connection_close(c);
 
 	g_free(frag);
 	g_free(case_header);
@@ -1510,7 +1510,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		LOG_SQLERROR;
 		t = TRUE;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	g_tuples_destroy(values);
@@ -1559,7 +1559,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		db_rollback_transaction(c);
 		TRACE(TRACE_ERR, "insert %sfield failed [%s] [%s]", field, name, addr);
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 }
 
@@ -1584,7 +1584,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 		LOG_SQLERROR;
 		TRACE(TRACE_ERR, "insert %sfield failed [%s]", field, value);
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 	g_free(clean_value);
 }
@@ -1750,7 +1750,7 @@ void dbmail_message_cache_envelope(const DbmailMessage *self)
 		LOG_SQLERROR;
 		TRACE(TRACE_ERR, "insert envelope failed [%s]", envelope);
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	g_free(envelope);

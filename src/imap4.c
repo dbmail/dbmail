@@ -123,19 +123,6 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 	}
 }
 
-static gboolean dm_db_ping(void)
-{
-	C c; gboolean t;
-	c = db_con_get();
-	t = Connection_ping(c);
-	Connection_close(c);
-
-	if (!t) TRACE(TRACE_ERR,"database has gone away");
-
-	return t;
-}
-
-
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;

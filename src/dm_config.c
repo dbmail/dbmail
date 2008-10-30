@@ -255,7 +255,7 @@ void SetTraceLevel(const char *service_name)
 void GetDBParams(void)
 {
 	field_t port_string, sock_string, serverid_string, query_time;
-	field_t maxconnections;
+	field_t max_db_connections;
 
 	if (config_get_value("driver", "DBMAIL", _db_params.driver) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [driver]");
@@ -291,8 +291,8 @@ void GetDBParams(void)
 		TRACE(TRACE_EMERG, "error getting config! [encoding]");
 	if (config_get_value("table_prefix", "DBMAIL", _db_params.pfx) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [table_prefix]");
-	if (config_get_value("maxconnections", "DBMAIL", maxconnections) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [maxconnections]");
+	if (config_get_value("max_db_connections", "DBMAIL", max_db_connections) < 0)
+		TRACE(TRACE_EMERG, "error getting config! [max_db_connections]");
 
 	if (config_get_value("query_time_info", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [query_time_info]");
@@ -357,9 +357,9 @@ void GetDBParams(void)
 	} else {
 		_db_params.serverid = 1;
 	}
-	/* maxconnections */
-	if (strlen(maxconnections) != 0) {
-		_db_params.maxconnections = (unsigned int) strtol(maxconnections, NULL, 10);
+	/* max_db_connections */
+	if (strlen(max_db_connections) != 0) {
+		_db_params.max_db_connections = (unsigned int) strtol(max_db_connections, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
 			TRACE(TRACE_EMERG, "maxconnnections invalid in config file");
 	}

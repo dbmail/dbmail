@@ -56,13 +56,13 @@ GList * auth_get_known_users(void)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT userid FROM %susers ORDER BY userid",DBPFX);
+		r = db_query(c, "SELECT userid FROM %susers ORDER BY userid",DBPFX);
 		while (db_result_next(r)) 
 			users = g_list_append(users, g_strdup(db_result_get(r, 0)));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 	
 	return users;
@@ -75,13 +75,13 @@ GList * auth_get_known_aliases(void)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c,"SELECT alias FROM %saliases ORDER BY alias",DBPFX);
+		r = db_query(c,"SELECT alias FROM %saliases ORDER BY alias",DBPFX);
 		while (db_result_next(r))
 			aliases = g_list_append(aliases, g_strdup(db_result_get(r,0)));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 	
 	return aliases;
@@ -95,14 +95,14 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT client_idnr FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		r = db_query(c, "SELECT client_idnr FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
 		if (db_result_next(r))
 			*client_idnr = db_result_get_u64(r,0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -116,14 +116,14 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT maxmail_size FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		r = db_query(c, "SELECT maxmail_size FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
 		if (db_result_next(r))
 			*maxmail_size = db_result_get_u64(r,0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 	
 	return t;
@@ -138,13 +138,13 @@ char *auth_getencryption(u64_t user_idnr)
 	assert(user_idnr > 0);
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT encryption_type FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		r = db_query(c, "SELECT encryption_type FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
 		if (db_result_next(r))
 			res = g_strdup(db_result_get(r,0));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return res;
@@ -174,7 +174,7 @@ static GList *user_get_deliver_to(const char *username)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return d;
@@ -274,7 +274,7 @@ int auth_change_password(u64_t user_idnr, const char *new_pass, const char *enct
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -327,7 +327,7 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT passwd, encryption_type FROM %susers WHERE user_idnr = %llu", DBPFX, *user_idnr);
+		r = db_query(c, "SELECT passwd, encryption_type FROM %susers WHERE user_idnr = %llu", DBPFX, *user_idnr);
 		if (db_result_next(r)) {
 			dbpass = g_strdup(db_result_get(r,0));
 			encode = g_strdup(db_result_get(r,1));
@@ -339,7 +339,7 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) {
@@ -411,7 +411,7 @@ u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username,
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT passwd FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		r = db_query(c, "SELECT passwd FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
 		if (db_result_next(r)) { /* user found */
 			/* now authenticate using MD5 hash comparisation  */
 			dbpass = db_result_get(r,0); /* value holds the password */
@@ -437,7 +437,7 @@ u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username,
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
@@ -459,13 +459,13 @@ char *auth_get_userid(u64_t user_idnr)
 	c = db_con_get();
 
 	TRY
-		r = Connection_executeQuery(c, "SELECT userid FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
 		if (db_result_next(r))
 			result = g_strdup(db_result_get(r,0));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return result;
@@ -477,13 +477,13 @@ int auth_check_userid(u64_t user_idnr)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT userid FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
 		if (db_result_next(r))
 			t = FALSE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -519,11 +519,11 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 	END_TRY;
 
 	if (t) {
-		Connection_close(c);
+		db_con_close(c);
 		return t;
 	}
 
-	Connection_clear(c);
+	db_con_clear(c);
 
 	TRY
 		s = db_stmt_prepare(c, "INSERT INTO %saliases (alias,deliver_to,client_idnr) VALUES (?,?,?)",DBPFX);
@@ -536,7 +536,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -586,11 +586,11 @@ int auth_addalias_ext(const char *alias,
 	END_TRY;
 
 	if (t) {
-		Connection_close(c);
+		db_con_close(c);
 		return t;
 	}
 
-	Connection_clear(c);
+	db_con_clear(c);
 
 	TRY
 		s = db_stmt_prepare(c, "INSERT INTO %saliases (alias,deliver_to,client_idnr) VALUES (?,?,?)",DBPFX);
@@ -603,7 +603,7 @@ int auth_addalias_ext(const char *alias,
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -622,7 +622,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -641,7 +641,7 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return t;
@@ -654,13 +654,13 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT alias FROM %saliases WHERE deliver_to = '%llu' ORDER BY alias",DBPFX, user_idnr);
+		r = db_query(c, "SELECT alias FROM %saliases WHERE deliver_to = '%llu' ORDER BY alias",DBPFX, user_idnr);
 		while (db_result_next(r))
 			l = g_list_prepend(l,g_strdup(db_result_get(r,0)));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return l;
@@ -673,13 +673,13 @@ GList * auth_get_aliases_ext(const char *alias)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT deliver_to FROM %saliases WHERE alias = '%s' ORDER BY alias DESC",DBPFX, alias);
+		r = db_query(c, "SELECT deliver_to FROM %saliases WHERE alias = '%s' ORDER BY alias DESC",DBPFX, alias);
 		while (db_result_next(r))
 			l = g_list_prepend(l,g_strdup(db_result_get(r,0)));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
-		Connection_close(c);
+		db_con_close(c);
 	END_TRY;
 
 	return l;

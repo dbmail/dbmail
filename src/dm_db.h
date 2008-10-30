@@ -68,6 +68,10 @@ int db_check_version(void);
 /* get a connection from the pool */
 C db_con_get(void);
 
+static gboolean dm_db_ping(void);
+void db_con_close(C c);
+void db_con_clear(C c);
+
 /**
  * \brief disconnect from database server
  * \return 0

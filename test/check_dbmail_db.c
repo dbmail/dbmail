@@ -127,7 +127,7 @@ START_TEST(test_db_stmt_prepare)
 	c = db_con_get();
 	s = db_stmt_prepare(c, "SELECT 1=1");
 	fail_unless(s != NULL, "db_stmt_prepare failed");
-	Connection_close(c);
+	db_con_close(c);
 
 }
 END_TEST
@@ -156,7 +156,7 @@ START_TEST(test_db_stmt_set_str)
 	fail_unless(r != NULL, "db_stmt_query failed");
 	fail_unless(db_result_next(r), "db_result_next failed");
 	printf("[%llu]\n", db_result_get_u64(r, 0));
-	Connection_close(c);
+	db_con_close(c);
 
 }
 END_TEST
@@ -179,13 +179,13 @@ START_TEST(test_Connection_executeQuery)
 
 	c = db_con_get();
 	TRY
-		r = Connection_executeQuery(c, "SELECT foo FROM bar");
+		r = db_query(c, "SELECT foo FROM bar");
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	END_TRY;
 	fail_unless(r==NULL, "Connection_executeQuery should have failed");
 
-	r = Connection_executeQuery(c, "SELECT 1=1");
+	r = db_query(c, "SELECT 1=1");
 	fail_unless(r!=NULL, "Connection_executeQuery should have succeeded");
 	fail_unless(db_result_next(r), "db_result_next failed");
 	fail_unless(strlen(db_result_get(r,0)), "db_result_get failed");

@@ -4,6 +4,9 @@
 	src/dbmailtypes.h, src/imap4.c, src/imapcommands.c, src/server.c:
 	improve idle behaviour
 
+2008-10-29  Jonathan Feally <vulture@netvulture.com>
+	* Change all database operations to be in database wrappers for better logging
+
 2008-10-28  Paul Stevens <paul@nfg.nl>
 
 	* ChangeLog, src/clientbase.c, src/imap4.c, src/server.c, 
@@ -15,18 +18,6 @@
 	additional fix for #725
 	* UPGRADING, sql/ingres/create_tables.sql:
 	cleanups
-
-2008-10-28  Paul J Stevens <paul@nfg.nl>
-
-	* src/clientbase.c, src/imap4.c, src/server.c, src/server.h:
-	use a global pipe event
-	* src/clientbase.c, src/clientbase.h, src/dbmailtypes.h, src/server.c:
-	use separate thread-pool for idle clients
-
-2008-10-26  Paul J Stevens <paul@nfg.nl>
-
-	* src/dm_db.c:
-	additional fix for #725
 
 2008-10-05  Paul J Stevens <paul@nfg.nl>
 
