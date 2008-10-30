@@ -82,6 +82,16 @@ static void imap_session_bailout(ImapSession *session)
 
 	assert(session && session->ci);
 	TRACE(TRACE_DEBUG,"[%p] state [%d]", session, session->state);
+
+	if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop - need to exit the loop first
+		TRACE(TRACE_DEBUG, "[%p] Session is in an idle loop, exiting loop.", session);
+		session->command_state = FALSE;
+		dm_thread_data *D = g_new0(dm_thread_data,1);
+		D->data = (gpointer)"DONE\n\0";
+		g_async_queue_push(session->ci->queue, (gpointer)D);
+		usleep(25000);
+	}
+
 	ci_close(session->ci);
 	dbmail_imap_session_delete(session);
 }
