@@ -238,9 +238,9 @@ C db_con_get(void)
 		if((int)(i % 5)==0) TRACE(TRACE_ALERT, "Thread is having trouble obtaining a database connection. Try [%d]", i);
 		sleep(1);
 	}
-	if (! c) TRACE(TRACE_EMERG,"can't get a database connection from the pool! [%d]", c);
+	if (! c) TRACE(TRACE_EMERG,"can't get a database connection from the pool! [%p]", c);
 	assert(c);
-	TRACE(TRACE_DEBUG, "gave db conneciton [%d]", c);
+	TRACE(TRACE_DEBUG, "gave db connection [%p]", c);
 	return c;
 }
 
@@ -259,14 +259,14 @@ gboolean dm_db_ping(void)
 void db_con_close(C c)
 {
 	Connection_close(c);
-	TRACE(TRACE_DEBUG, "closed db conneciton [%d]", c);
+	TRACE(TRACE_DEBUG, "closed db connection [%p]", c);
 	return;
 }
 
 void db_con_clear(C c)
 {
 	Connection_clear(c);
-	TRACE(TRACE_DEBUG, "cleared db conneciton [%d]", c);
+	TRACE(TRACE_DEBUG, "cleared db connection [%p]", c);
 	return;
 }
 

@@ -168,86 +168,80 @@ void SetTraceLevel(const char *service_name)
 			"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
 	}
 
-	/* Then we override globals with per-service settings for old variables. */
-	config_get_value("trace_syslog", service_name, trace_syslog);
-	config_get_value("trace_stderr", service_name, trace_stderr);
-
-	if (strlen(trace_syslog)) {
-		TRACE(TRACE_WARNING,
-			"Config item TRACE_SYSLOG is deprecated. "
-			"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
-	}
-	if (strlen(trace_stderr)) {
-		TRACE(TRACE_WARNING,
-			"Config item TRACE_STDERR is deprecated. "
-			"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
-	}
-
-	/* Then we override globals with per-service settings for new variables. */
 	config_get_value("syslog_logging_levels", service_name, syslog_logging_levels);
 	config_get_value("file_logging_levels", service_name, file_logging_levels);
 
-	if (strlen(syslog_logging_levels))
+	if (strlen(syslog_logging_levels)) {
 		trace_syslog_int = atoi(syslog_logging_levels);
-	else if (strlen(trace_syslog))
-	{
-		trace_syslog_int = atoi(trace_syslog);
-		switch(trace_syslog_int) // Convert old value to new system
-		{
-			case 0:
-				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT;
-				break;
-			case 1:
-				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR;
-				break;
-			case 2:
-				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;
-				break;
-			case 3:
-				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE;
-				break;
-			case 4:
-				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO;
-				break;
-			case 5:
-			default:
-				trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO | TRACE_DEBUG;
-				break;
-		}
-	}
-	else
-		trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING; // Use Default Levels
+	} else {
+		config_get_value("trace_syslog", service_name, trace_syslog);
+		if (strlen(trace_syslog)) {
+			TRACE(TRACE_WARNING,
+					"Config item TRACE_SYSLOG is deprecated. "
+					"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
 
-	if (strlen(file_logging_levels))
-		trace_stderr_int = atoi(file_logging_levels);
-	else if (strlen(trace_stderr))
-	{
-		trace_stderr_int = atoi(trace_stderr);
-		switch(trace_stderr_int) // Convert old value to new system
-		{
-			case 0:
-				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT;
-				break;
-			case 1:
-				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR;
-				break;
-			case 2:
-				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;
-				break;
-			case 3:
-				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE;
-				break;
-			case 4:
-				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO;
-				break;
-			case 5:
-			default:
-				trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO | TRACE_DEBUG;
-				break;
+			trace_syslog_int = atoi(trace_syslog);
+			switch(trace_syslog_int) { // Convert old value to new system
+				case 0:
+					trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT;
+					break;
+				case 1:
+					trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR;
+					break;
+				case 2:
+					trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;
+					break;
+				case 3:
+					trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE;
+					break;
+				case 4:
+					trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO;
+					break;
+				case 5:
+				default:
+					trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO | TRACE_DEBUG;
+					break;
+			}
+		} else {
+			trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING; // Use Default Levels
 		}
 	}
-	else
-		trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT; // Use Default Levels
+
+	if (strlen(file_logging_levels)) {
+		trace_stderr_int = atoi(file_logging_levels);
+	} else {
+		config_get_value("trace_stderr", service_name, trace_stderr);
+		if (strlen(trace_stderr)) {
+			TRACE(TRACE_WARNING,
+				"Config item TRACE_STDERR is deprecated. "
+				"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
+
+			trace_stderr_int = atoi(trace_stderr);
+			switch(trace_stderr_int) { // Convert old value to new system
+				case 0:
+					trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT;
+					break;
+				case 1:
+					trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR;
+					break;
+				case 2:
+					trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;
+					break;
+				case 3:
+					trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE;
+					break;
+				case 4:
+					trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO;
+					break;
+				case 5:
+				default:
+					trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING | TRACE_NOTICE | TRACE_INFO | TRACE_DEBUG;
+					break;
+			}
+		} else {
+			trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT; // Use Default Levels
+		}
+	}
 
 	configure_debug(trace_syslog_int, trace_stderr_int);
 }
