@@ -1,3 +1,21 @@
+2008-10-30  Paul J Stevens <paul@nfg.nl>
+
+	* src/dbmail-imapsession.c, src/dbmail-imapsession.h, 
+	src/dbmailtypes.h, src/imap4.c, src/imapcommands.c, src/server.c:
+	improve idle behaviour
+
+2008-10-28  Paul Stevens <paul@nfg.nl>
+
+	* ChangeLog, src/clientbase.c, src/imap4.c, src/server.c, 
+	src/server.h:
+	use a global pipe event
+	* src/clientbase.c, src/clientbase.h, src/dbmailtypes.h, src/server.c:
+	use separate thread-pool for idle clients
+	* src/dm_db.c:
+	additional fix for #725
+	* UPGRADING, sql/ingres/create_tables.sql:
+	cleanups
+
 2008-10-28  Paul J Stevens <paul@nfg.nl>
 
 	* src/clientbase.c, src/imap4.c, src/server.c, src/server.h:

@@ -107,7 +107,10 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 						// continuation '+' to the client
 						session->command_state = IDLE;
 						event_add(session->ci->rev, NULL);
+					} else if (session->command_state == TRUE)  { // IDLE is done
+						event_add(session->ci->rev, session->ci->timeout);
 					}
+
 				} else if ( (! session->parser_state) || session->command_state == TRUE) {
 					event_add(session->ci->rev, session->ci->timeout);
 				}
@@ -213,17 +216,22 @@ static void imap_handle_exit(ImapSession *session, int status)
 
 		case 0:
 			/* only do this in the main thread */
-			if (session->buff->len) {
-				ci_write(session->ci, session->buff->str);
+			if (session->state < IMAPCS_LOGOUT) {
+				if (session->buff->len) {
+					ci_write(session->ci, session->buff->str);
+					dbmail_imap_session_buff_clear(session);
+				}
+				if (session->command_state == TRUE)
+					event_add(session->ci->rev, session->ci->timeout);
+			} else {
 				dbmail_imap_session_buff_clear(session);
-			}
-			if (session->command_state == TRUE)
-				event_add(session->ci->rev, session->ci->timeout);
+			}				
 
 			break;
 		case 1:
 			dbmail_imap_session_buff_flush(session);
 			session->error_count++;	/* server returned BAD or NO response */
+
 			break;
 
 		case 2:
@@ -281,6 +289,7 @@ void imap_cb_read(void *arg)
 	}
 
 	if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop
+		TRACE(TRACE_DEBUG,"read [%s] while in IDLE loop", buffer);
 		session->command_state = FALSE;
 		dm_thread_data *D = g_new0(dm_thread_data,1);
 		D->data = (gpointer)g_strdup(buffer);

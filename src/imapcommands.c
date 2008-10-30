@@ -119,7 +119,7 @@ void _ic_capability_enter(dm_thread_data *D)
 
 int _ic_capability(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, -1)) return 1;
+	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_capability_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -142,7 +142,7 @@ void _ic_noop_enter(dm_thread_data *D)
 
 int _ic_noop(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, -1)) return 1;
+	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_noop_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -154,9 +154,9 @@ int _ic_noop(ImapSession *self)
  */
 int _ic_logout(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, -1)) return 1;
-	dbmail_imap_session_mailbox_update_recent(self);
+	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
 	dbmail_imap_session_set_state(self, IMAPCS_LOGOUT);
+	dbmail_imap_session_mailbox_update_recent(self);
 	TRACE(TRACE_NOTICE, "[%p] userid:[%llu]", self, self->userid);
 	return 2;
 }
@@ -992,6 +992,7 @@ int imap_idle_loop(ImapSession *self, int timeout)
 	GTimeVal end_time;
 
 	TRACE(TRACE_DEBUG,"[%p]", self);
+	self->loop = 0;
 	do {
 		g_get_current_time(&end_time);
 		g_time_val_add(&end_time, 1000000*timeout);
@@ -1035,9 +1036,9 @@ void _ic_idle_enter(dm_thread_data *D)
 		idle_timeout = IDLE_TIMEOUT;	
 	}
 	
-	dbmail_imap_session_mailbox_status(self,TRUE);
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
 	dbmail_imap_session_buff_printf(self, "+ idling\r\n");
+	dbmail_imap_session_mailbox_status(self,TRUE);
 	dbmail_imap_session_buff_flush(self);
 	
 	if ((t = imap_idle_loop(self, idle_timeout))) {

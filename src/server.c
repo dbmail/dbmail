@@ -60,7 +60,7 @@ static void dm_thread_data_free(gpointer data);
 /*
  * async queue drainage callback for the main thread
  */
-void dm_queue_drain(int sock, short event, void *arg)
+void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
 {
 	char buf[1];
 	gpointer data;
@@ -128,7 +128,7 @@ void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
-	if (D->data && D->session) {
+	if (D->data && session && session->state < IMAPCS_LOGOUT) {
 		ci_write(session->ci, "%s", (char *)D->data);
 	}
 }

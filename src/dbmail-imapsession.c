@@ -1054,14 +1054,14 @@ int client_is_authenticated(ImapSession * self)
  *
  * returns 1 on succes, 0 on failure
  */
-int check_state_and_args(ImapSession * self, int minargs, int maxargs, int state)
+int check_state_and_args(ImapSession * self, int minargs, int maxargs, imap_cs_t state)
 {
 	int i;
 
 	if (self->state == IMAPCS_ERROR) return 0;
 
 	/* check state */
-	if (state != -1) {
+	if (state != IMAPCS_ANY) {
 		if (self->state != state) {
 			if (!  (state == IMAPCS_AUTHENTICATED && self->state == IMAPCS_SELECTED)) {
 				dbmail_imap_session_buff_printf(self, "%s BAD %s command received in invalid state [%d] != [%d]\r\n", 
@@ -1555,13 +1555,11 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 	switch (state) {
 		case IMAPCS_ERROR:
 			assert(self->ci);
-			if (self->ci->wev)
-				event_del(self->ci->wev);
+			if (self->ci->wev) event_del(self->ci->wev);
 			// fall-through...
 		case IMAPCS_LOGOUT:
 			assert(self->ci);
-			if (self->ci->rev)
-				event_del(self->ci->rev);
+			if (self->ci->rev) event_del(self->ci->rev);
 			break;
 
 		case IMAPCS_AUTHENTICATED:
