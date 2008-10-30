@@ -111,7 +111,7 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 		default:
 			if (session->ci->rev) {
 				if ( session->command_type == IMAP_COMM_IDLE ) {
-					if ( (session->command_state == FALSE) && (session->loop++ < 1) ) {
+					if ( session->command_state == FALSE ) {
 						// make _very_ sure this is done only once during an idle command run
 						// only when the idle loop has just begun: just after we pushed the
 						// continuation '+' to the client

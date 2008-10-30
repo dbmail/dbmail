@@ -1004,7 +1004,7 @@ int imap_idle_loop(ImapSession *self, int timeout)
 				return 0;
 			} else if (strlen(message) > 0) {
 				dbmail_imap_session_buff_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
-				return 1;
+				dbmail_imap_session_buff_flush(self);
 			}
 			g_free(D->data);
 			g_free(D);
