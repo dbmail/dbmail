@@ -151,13 +151,16 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
  * basic server setup
  *
  */
-static int server_setup(void)
+static int server_setup(serverConfig_t *conf)
 {
 	GError *err = NULL;
 
-	if (! g_thread_supported () ) g_thread_init (NULL);
 	server_set_sighandler();
 
+	if (! MATCH(conf->service_name,"IMAPD")) 
+		return 0;
+
+	if (! g_thread_supported () ) g_thread_init (NULL);
 	// Asynchronous message queue for receiving messages
 	// from worker threads in the main thread. 
 	//
@@ -205,7 +208,7 @@ static int server_start_cli(serverConfig_t *conf)
 	/* streams are ready, perform handling */
 	event_init();
 
-	if (server_setup()) return -1;
+	if (server_setup(conf)) return -1;
 
 	conf->ClientHandler(NULL);
 	event_dispatch();
@@ -472,10 +475,10 @@ static int server_set_sighandler(void)
 // Public methods
 void disconnect_all(void)
 {
-	db_disconnect();
-	auth_disconnect();
 	if (tpool) g_thread_pool_free(tpool,TRUE,FALSE);
 	if (tpool_idle) g_thread_pool_free(tpool_idle,TRUE,FALSE);
+	db_disconnect();
+	auth_disconnect();
 	g_free(sig_int);
 	g_free(sig_hup);
 }
@@ -497,7 +500,7 @@ int server_run(serverConfig_t *conf)
 	reopen_logs(conf);
 	server_create_sockets(conf);
 
- 	TRACE(TRACE_NOTICE, "starting main service loop");
+ 	TRACE(TRACE_NOTICE, "starting main service loop for [%s]", conf->service_name);
 
 	server_conf = conf;
 	if (db_connect() != 0) {
@@ -515,7 +518,7 @@ int server_run(serverConfig_t *conf)
 	TRACE(TRACE_DEBUG,"setup event loop");
 	event_init();
 
-	if (server_setup()) return -1;
+	if (server_setup(conf)) return -1;
 
 	evsock = g_new0(struct event, server_conf->ipcount+1);
 	for (ip = 0; ip < server_conf->ipcount; ip++) {
@@ -802,6 +805,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	TRACE(TRACE_DEBUG, "effective group shall be [%s]",
 	      config->serverGroup);
 
+	strncpy(config->service_name, service, FIELDSIZE);
 	GetDBParams();
 }
 

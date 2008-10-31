@@ -198,7 +198,7 @@ int lmtp(ClientSession_t * session)
 {
 	DbmailMessage *msg;
 	clientbase_t *ci = session->ci;
-	int helpcmd;
+	int helpcmd, state;
 	const char *class, *subject, *detail;
 	size_t tmplen = 0, tmppos = 0;
 	char *tmpaddr = NULL, *tmpbody = NULL, *arg;
@@ -216,7 +216,9 @@ int lmtp(ClientSession_t * session)
 
 	case LMTP_RSET:
 		ci_write(ci, "250 OK\r\n");
+		state = session->state;
 		client_session_reset(session);
+		session->state = state;
 		return 1;
 
 	case LMTP_LHLO:

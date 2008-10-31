@@ -2,7 +2,7 @@
 
 base=`dirname $0`
 
-echo "LHLO host"
+echo "LHLO host"
 i=0
 
 msg1=`cat $base/lmtp2.txt`
