@@ -123,6 +123,13 @@ int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
 	return 1;
 }
 
+static void lmtp_rset(ClientSession_t *session)
+{
+	int state = session->state;
+	client_session_reset(session);
+	session->state = state;
+}
+
 int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 {
 	char *command = NULL, *value;
@@ -168,14 +175,17 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 		if (command) {
 			if (session->state != IMAPCS_AUTHENTICATED) {
 				ci_write(session->ci, "550 Command out of sequence\r\n");
+				lmtp_rset(session);
 				return TRUE;
 			}
 			if (g_list_length(session->rcpt) < 1) {
 				ci_write(session->ci, "503 No valid recipients\r\n");
+				lmtp_rset(session);
 				return TRUE;
 			}
 			if (g_list_length(session->from) < 1) {
 				ci_write(session->ci, "554 No valid sender.\r\n");
+				lmtp_rset(session);
 				return TRUE;
 			}
 			ci_write(session->ci, "354 Start mail input; end with <CRLF>.<CRLF>\r\n");
@@ -194,11 +204,12 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 	return session->parser_state;
 }
 
+
 int lmtp(ClientSession_t * session)
 {
 	DbmailMessage *msg;
 	clientbase_t *ci = session->ci;
-	int helpcmd, state;
+	int helpcmd;
 	const char *class, *subject, *detail;
 	size_t tmplen = 0, tmppos = 0;
 	char *tmpaddr = NULL, *tmpbody = NULL, *arg;
@@ -216,9 +227,7 @@ int lmtp(ClientSession_t * session)
 
 	case LMTP_RSET:
 		ci_write(ci, "250 OK\r\n");
-		state = session->state;
-		client_session_reset(session);
-		session->state = state;
+		lmtp_rset(session);
 		return 1;
 
 	case LMTP_LHLO:

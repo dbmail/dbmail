@@ -27,16 +27,16 @@
 
 extern serverConfig_t *server_conf;
 
-static int client_error_cb(int sock, short event, void *arg)
+static int client_error_cb(int sock, int error, void *arg)
 {
 	int r = 0;
 	clientbase_t *client = (clientbase_t *)arg;
-	switch (event) {
+	switch (error) {
 		case EAGAIN:
 		case EINTR:
 			break; // reschedule
 		default:
-			TRACE(TRACE_DEBUG,"[%p] %d %s, %p", client, sock, strerror((int)event), arg);
+			TRACE(TRACE_DEBUG,"[%p] %d %s, %p", client, sock, strerror(error), arg);
 			client->write_buffer = g_string_truncate(client->write_buffer,0);
 			r = -1;
 			break;

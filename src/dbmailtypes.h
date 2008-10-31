@@ -220,7 +220,7 @@ typedef struct {
 	void (*cb_read) (void *);	// pointers to event callbacks
 	void (*cb_time) (void *);
 	void (*cb_write) (void *);
-	int (*cb_error) (int fd, short what, void *);
+	int (*cb_error) (int fd, int error, void *);
 
 	char ip_src[IPNUM_LEN];		/* client IP-number */
 	int ip_src_port;		/* client source port number */
