@@ -97,6 +97,17 @@ static void reset_callbacks(ClientSession_t *session)
         event_add(session->ci->wev, NULL);
 }
 
+static void lmtp_rset(ClientSession_t *session, gboolean reset_state)
+{
+	int state = session->state;
+	client_session_reset(session);
+	if (reset_state)
+		session->state = IMAPCS_AUTHENTICATED;
+	else
+		session->state = state;
+}
+
+
 // socket callbacks.
 
 int lmtp_handle_connection(client_sock *c)
@@ -128,13 +139,6 @@ int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
 
 	session->error_count++;
 	return -1;
-}
-
-static void lmtp_rset(ClientSession_t *session)
-{
-	int state = session->state;
-	client_session_reset(session);
-	session->state = state;
 }
 
 int lmtp_tokenizer(ClientSession_t *session, char *buffer)
@@ -228,7 +232,7 @@ int lmtp(ClientSession_t * session)
 
 	case LMTP_RSET:
 		ci_write(ci, "250 OK\r\n");
-		lmtp_rset(session);
+		lmtp_rset(session,TRUE);
 		return 1;
 
 	case LMTP_LHLO:
