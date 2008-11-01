@@ -450,6 +450,7 @@ void server_sig_cb(int fd, short event, void *arg)
 
 static int server_set_sighandler(void)
 {
+
 	struct sigaction sa;
 	
 	memset(&sa, 0, sizeof(sa));

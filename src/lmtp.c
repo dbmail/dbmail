@@ -68,11 +68,18 @@ static void lmtp_cb_read(void *arg)
 {
 	char buffer[MAX_LINESIZE];	/* connection buffer */
 	ClientSession_t *session = (ClientSession_t *)arg;
+	int r;
 
-	while (ci_readln(session->ci, buffer)) {
-		if (lmtp_tokenizer(session, buffer)) {
-			lmtp(session);
-			client_session_reset_parser(session);
+	while ((r = ci_readln(session->ci, buffer))) {
+		if (r == -1) break;
+		if ((r = lmtp_tokenizer(session, buffer))) {
+			if (r > 0) {
+				lmtp(session);
+				client_session_reset_parser(session);
+			}
+			if (r < 0) {
+				client_session_reset_parser(session);
+			}
 		}
 	}
 	TRACE(TRACE_DEBUG,"[%p] done", session);
@@ -120,7 +127,7 @@ int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
 	g_free(s);
 
 	session->error_count++;
-	return 1;
+	return -1;
 }
 
 static void lmtp_rset(ClientSession_t *session)
@@ -174,19 +181,13 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 	if (session->command_type == LMTP_DATA) {
 		if (command) {
 			if (session->state != IMAPCS_AUTHENTICATED) {
-				ci_write(session->ci, "550 Command out of sequence\r\n");
-				lmtp_rset(session);
-				return TRUE;
+				return lmtp_error(session, "550 Command out of sequence\r\n");
 			}
 			if (g_list_length(session->rcpt) < 1) {
-				ci_write(session->ci, "503 No valid recipients\r\n");
-				lmtp_rset(session);
-				return TRUE;
+				return lmtp_error(session, "503 No valid recipients\r\n");
 			}
 			if (g_list_length(session->from) < 1) {
-				ci_write(session->ci, "554 No valid sender.\r\n");
-				lmtp_rset(session);
-				return TRUE;
+				return lmtp_error(session, "554 No valid sender.\r\n");
 			}
 			ci_write(session->ci, "354 Start mail input; end with <CRLF>.<CRLF>\r\n");
 			return FALSE;

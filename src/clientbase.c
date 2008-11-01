@@ -37,7 +37,8 @@ static int client_error_cb(int sock, int error, void *arg)
 			break; // reschedule
 		default:
 			TRACE(TRACE_DEBUG,"[%p] %d %s, %p", client, sock, strerror(error), arg);
-			client->write_buffer = g_string_truncate(client->write_buffer,0);
+			if (client->write_buffer)
+				client->write_buffer = g_string_truncate(client->write_buffer,0);
 			r = -1;
 			break;
 	}
@@ -51,7 +52,9 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 
 	client->timeout       = g_new0(struct timeval,1);
 	client->line_buffer	= g_string_new("");
-	client->queue           = g_async_queue_new();
+
+	if (g_thread_supported())
+		client->queue           = g_async_queue_new();
 	client->cb_error        = client_error_cb;
 
 	/* make streams */
@@ -212,7 +215,7 @@ void ci_close(clientbase_t *self)
 {
 	assert(self);
 
-	g_async_queue_unref(self->queue);
+	if (self->queue) g_async_queue_unref(self->queue);
 	event_del(self->rev);
 	event_del(self->wev);
 

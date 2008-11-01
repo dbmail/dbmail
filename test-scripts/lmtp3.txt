@@ -1,5 +1,5 @@
 MAIL FROM: <nobody@nowhereelse.org>
-RCPT TO: <testuser3>
+RCPT TO: <testuser2>
 DATA
 To: user@dom
 Subject: =?ISO-8859-2?Q?E-mail=20noviny=2016/06:=20Vli?=
