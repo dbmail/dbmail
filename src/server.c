@@ -157,7 +157,7 @@ static int server_setup(serverConfig_t *conf)
 
 	server_set_sighandler();
 
-	if (! MATCH(conf->service_name,"IMAPD")) 
+	if (! MATCH(conf->service_name,"IMAP")) 
 		return 0;
 
 	if (! g_thread_supported () ) g_thread_init (NULL);
