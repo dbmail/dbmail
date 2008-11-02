@@ -1817,7 +1817,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 			lines, message_idnr);
 	if (! (s = db_get_message_lines(message_idnr, lines, no_end_dot)))
 		return -1;
-	i = fprintf((FILE *)fstream, s);
+	i = fprintf((FILE *)fstream, "%s", s);
 	g_free(s);
 	return i;
 }
