@@ -39,8 +39,6 @@ DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	assert(id);
 	assert(self);
 
-	if (g_thread_supported()) self->mutex = g_mutex_new();
-
 	dbmail_mailbox_set_id(self,id);
 	dbmail_mailbox_set_uid(self, FALSE);
 
@@ -81,8 +79,6 @@ void dbmail_mailbox_free(DbmailMailbox *self)
 		g_free(self->charset);
 		self->charset = NULL;
 	}
-	if (self->mutex) g_mutex_free(self->mutex);
-
 	g_free(self);
 }
 
@@ -115,11 +111,8 @@ static void uid_msn_map(DbmailMailbox *self)
 
 	ids = g_tree_keys(self->ids);
 
-	if (self->mutex) g_mutex_lock(self->mutex);
-
 	if (self->msn) g_tree_destroy(self->msn);
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
-	if (self->mutex) g_mutex_unlock(self->mutex);
 
 	self->rows = 1;
 
