@@ -288,7 +288,7 @@ int do_maxmail(u64_t useridnr, u64_t maxmail)
 		return 1;
 	}
 
-	if ((result = auth_change_mailboxsize(useridnr, maxmail)))
+	if (! (result = auth_change_mailboxsize(useridnr, maxmail)))
 		qerrorf("Error: could not change max mail size.\n");
 
 	return result;
