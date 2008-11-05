@@ -729,7 +729,7 @@ static int sort_startup(sieve2_context_t **s2c,
 		}
 	}
 	if (sieve_config.notify) {
-		TRACE(TRACE_ERR, "Sieve notify is not supported in this release.");
+		TRACE(TRACE_INFO, "Sieve notify is not supported in this release.");
 		res = sieve2_callbacks(sieve2_context, notify_callbacks);
 		if (res != SIEVE2_OK) {
 			TRACE(TRACE_ERR, "Error [%d] when calling sieve2_callbacks: [%s]",
