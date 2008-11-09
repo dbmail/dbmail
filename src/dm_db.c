@@ -185,31 +185,31 @@ int db_connect(void)
 				g_string_append_printf(dsn,"&charset=%s", _db_params.encoding);
 		}
 	}
-	TRACE(TRACE_DEBUG, "db at url: [%s]", dsn->str);
+	TRACE(TRACE_DATABASE, "db at url: [%s]", dsn->str);
 	url = URL_new(dsn->str);
 	db_connected = 1;
 	g_string_free(dsn,TRUE);
 	if (! (pool = ConnectionPool_new(url)))
-		TRACE(TRACE_EMERG,"error creating connection pool");
+		TRACE(TRACE_EMERG,"error creating database connection pool");
 	db_connected = 2;
 	
 	if (_db_params.max_db_connections > 0) {
 		if (_db_params.max_db_connections < ConnectionPool_getInitialConnections(pool))
 			ConnectionPool_setInitialConnections(pool, _db_params.max_db_connections);
 		ConnectionPool_setMaxConnections(pool, _db_params.max_db_connections);
-		TRACE(TRACE_INFO,"db connection pool created with max db connections of [%d]", _db_params.max_db_connections);
+		TRACE(TRACE_INFO,"database connection pool created with maximum connections of [%d]", _db_params.max_db_connections);
 	}
 
 	ConnectionPool_start(pool);
-	TRACE(TRACE_DEBUG, "connection pool started with [%d] connections, max [%d]", 
+	TRACE(TRACE_DATABASE, "database connection pool started with [%d] connections, max [%d]", 
 		ConnectionPool_getInitialConnections(pool), ConnectionPool_getMaxConnections(pool));
 
 	ConnectionPool_setReaper(pool, sweepInterval);
-	TRACE(TRACE_DEBUG, "run a reaper thread every [%d] seconds", sweepInterval);
+	TRACE(TRACE_DATABASE, "run a database connection reaper thread every [%d] seconds", sweepInterval);
 
 	if (! (c = ConnectionPool_getConnection(pool))) {
 		db_con_close(c);
-		TRACE(TRACE_EMERG, "error getting connection from the pool");
+		TRACE(TRACE_EMERG, "error getting a database connection from the pool");
 		return -1;
 	}
 	db_connected = 3;
@@ -238,7 +238,7 @@ C db_con_get(void)
 		if((int)(i % 5)==0) {
 			TRACE(TRACE_ALERT, "Thread is having trouble obtaining a database connection. Try [%d]", i);
 			k = ConnectionPool_reapConnections(pool);
-			TRACE(TRACE_INFO, "Reaper closed [%d] stale connections", k);
+			TRACE(TRACE_INFO, "Database reaper closed [%d] stale connections", k);
 		}
 		sleep(1);
 	}
@@ -251,7 +251,7 @@ C db_con_get(void)
 	}
 
 	assert(c);
-	TRACE(TRACE_DEBUG, "gave db connection [%p]", c);
+	TRACE(TRACE_DATABASE, "gave database connection [%p]", c);
 	return c;
 }
 
@@ -270,19 +270,33 @@ gboolean dm_db_ping(void)
 void db_con_close(C c)
 {
 	Connection_close(c);
-	TRACE(TRACE_DEBUG, "closed db connection [%p]", c);
+	TRACE(TRACE_DATABASE, "closed database connection [%p]", c);
 	return;
 }
 
 void db_con_clear(C c)
 {
 	Connection_clear(c);
-	TRACE(TRACE_DEBUG, "cleared db connection [%p]", c);
+	TRACE(TRACE_DATABASE, "cleared database connection [%p]", c);
+	return;
+}
+
+void log_query_time(char *query, struct timeval before, struct timeval after)
+{
+	double elapsed = ((double)after.tv_sec + ((double)after.tv_usec / 1000000)) - ((double)before.tv_sec + ((double)before.tv_usec / 1000000));
+	TRACE(TRACE_DATABASE, "last query took [%.3f] seconds", elapsed);
+	if (elapsed > (double)_db_params.query_time_warning)
+		TRACE(TRACE_WARNING, "slow query [%s] took [%.3f] seconds", query, elapsed);
+	else if (elapsed > (double)_db_params.query_time_notice)
+		TRACE(TRACE_NOTICE, "slow query [%s] took [%.3f] seconds", query, elapsed);
+	else if (elapsed > (double)_db_params.query_time_info)
+		TRACE(TRACE_INFO, "slow query [%s] took [%.3f] seconds", query, elapsed);
 	return;
 }
 
 gboolean db_exec(C c, const char *q, ...)
 {
+	struct timeval before, after;
 	gboolean result = FALSE;
 	va_list ap;
 	INIT_QUERY;
@@ -291,18 +305,23 @@ gboolean db_exec(C c, const char *q, ...)
         vsnprintf(query, DEF_QUERYSIZE, q, ap);
         va_end(ap);
 
-	TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
+	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
+		gettimeofday(&before, NULL);
 		result = Connection_execute(c, query);
+		gettimeofday(&after, NULL);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	END_TRY;
+
+	log_query_time(query, before, after);
 
 	return result;
 }
 
 R db_query(C c, const char *q, ...)
 {
+	struct timeval before, after;
 	R r = NULL;
 	va_list ap;
 	INIT_QUERY;
@@ -311,12 +330,16 @@ R db_query(C c, const char *q, ...)
         vsnprintf(query, DEF_QUERYSIZE, q, ap);
         va_end(ap);
 
-	TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
+	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
+		gettimeofday(&before, NULL);
 		r = Connection_executeQuery(c, query);
+		gettimeofday(&after, NULL);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	END_TRY;
+
+	log_query_time(query, before, after);
 
 	return r;
 }
@@ -334,8 +357,8 @@ gboolean db_update(const char *q, ...)
         va_end(ap);
 
 	c = db_con_get();
+	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
-		TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
 		result = db_exec(c, query);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -355,28 +378,28 @@ S db_stmt_prepare(C c, const char *q, ...)
         vsnprintf(query, DEF_QUERYSIZE, q, ap);
         va_end(ap);
 
-	TRACE(TRACE_DEBUG,"[%p] [%s]", c, query);
+	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	return Connection_prepareStatement(c, query);
 }
 
 int db_stmt_set_str(S s, int index, const char *x)
 {
-	TRACE(TRACE_DEBUG,"[%p] %d:[%s]", s, index, x);
+	TRACE(TRACE_DATABASE,"[%p] %d:[%s]", s, index, x);
 	return PreparedStatement_setString(s, index, x);
 }
 int db_stmt_set_int(S s, int index, int x)
 {
-	TRACE(TRACE_DEBUG,"[%p] %d:[%d]", s, index, x);
+	TRACE(TRACE_DATABASE,"[%p] %d:[%d]", s, index, x);
 	return PreparedStatement_setInt(s, index, x);
 }
 int db_stmt_set_u64(S s, int index, u64_t x)
 {	
-	TRACE(TRACE_DEBUG,"[%p] %d:[%llu]", s, index, x);
+	TRACE(TRACE_DATABASE,"[%p] %d:[%llu]", s, index, x);
 	return PreparedStatement_setLLong(s, index, (long long)x);
 }
 int db_stmt_set_blob(S s, int index, const void *x, int size)
 {
-//	TRACE(TRACE_DEBUG,"[%p] %d:[%s]", s, index, (const char *)x);
+//	TRACE(TRACE_DATABASE,"[%p] %d:[%s]", s, index, (const char *)x);
 	return PreparedStatement_setBlob(s, index, x, size);
 }
 gboolean db_stmt_exec(S s)
@@ -440,7 +463,7 @@ u64_t db_insert_result(C c, R r)
 
 int db_begin_transaction(C c)
 {
-	TRACE(TRACE_DEBUG,"BEGIN");
+	TRACE(TRACE_DATABASE,"BEGIN");
 	if (! Connection_beginTransaction(c))
 		return DM_EQUERY;
 	return DM_SUCCESS;
@@ -448,7 +471,7 @@ int db_begin_transaction(C c)
 
 int db_commit_transaction(C c)
 {
-	TRACE(TRACE_DEBUG,"COMMIT");
+	TRACE(TRACE_DATABASE,"COMMIT");
 	if (! Connection_commit(c)) {
 		db_rollback_transaction(c);
 		return DM_EQUERY;
@@ -459,7 +482,7 @@ int db_commit_transaction(C c)
 
 int db_rollback_transaction(C c)
 {
-	TRACE(TRACE_DEBUG,"ROLLBACK");
+	TRACE(TRACE_DATABASE,"ROLLBACK");
 	if (! Connection_rollback(c))
 		return DM_EQUERY;
 	return DM_SUCCESS;

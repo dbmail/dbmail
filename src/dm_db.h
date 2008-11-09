@@ -78,6 +78,8 @@ void db_con_clear(C c);
  */
 int db_disconnect(void);
 
+void log_query_time(char *query, struct timeval before, struct timeval after);
+
 S db_stmt_prepare(C c,const char *query, ...);
 int db_stmt_set_str(S stmt, int index, const char *x);
 int db_stmt_set_int(S stmt, int index, int x);

@@ -61,7 +61,8 @@ static const char * trace_to_text(trace_t level)
 		"Warning",
 		"Notice",
 		"Info",
-		"Debug"
+		"Debug",
+		"Database"
 	};
 	return trace_text[ilogb((double) level)];
 }
@@ -81,6 +82,7 @@ void trace(trace_t level, const char * module,
 		const char * file, const char * function,
 		int line, char *formatstring, ...)
 {
+	trace_t syslog_level;
 	va_list argp;
 
 	gchar *message;
@@ -126,9 +128,43 @@ void trace(trace_t level, const char * module,
 	}
 
 	if (level & TRACE_SYSLOG) {
+		/* Convert our extended log levels (>128) to syslog levels */
+		switch((int)ilogb((double) level))
+		{
+			case 0:
+				syslog_level = LOG_EMERG;
+				break;
+			case 1:
+				syslog_level = LOG_ALERT;
+				break;
+			case 2:
+				syslog_level = LOG_CRIT;
+				break;
+			case 3:
+				syslog_level = LOG_ERR;
+				break;
+			case 4:
+				syslog_level = LOG_WARNING;
+				break;
+			case 5:
+				syslog_level = LOG_NOTICE;
+				break;
+			case 6:
+				syslog_level = LOG_INFO;
+				break;
+			case 7:
+				syslog_level = LOG_DEBUG;
+				break;
+			case 8:
+				syslog_level = LOG_DEBUG;
+				break;
+			default:
+				syslog_level = LOG_DEBUG;
+				break;
+		}
 		size_t w = min(l,maxlen);
 		message[w] = '\0';
-		syslog(ilogb((double) level), syslog_format, g_thread_self(), trace_to_text(level), module, function, line, message);
+		syslog(syslog_level, syslog_format, g_thread_self(), trace_to_text(level), module, function, line, message);
 	}
 	g_free(message);
 

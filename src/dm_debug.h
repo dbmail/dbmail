@@ -35,7 +35,8 @@ typedef enum {
 	TRACE_WARNING = 16,
 	TRACE_NOTICE = 32,
 	TRACE_INFO = 64,
-	TRACE_DEBUG = 128
+	TRACE_DEBUG = 128,
+	TRACE_DATABASE = 256 // Logs at Debug Level
 } trace_t;
 
 

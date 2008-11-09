@@ -109,7 +109,7 @@ typedef struct {
 	unsigned int serverid;	/**< unique id for dbmail instance used in clusters */
 	field_t encoding;	/**< character encoding to use */
 	unsigned int query_time_info;
-	unsigned int query_time_notify;
+	unsigned int query_time_notice;
 	unsigned int query_time_warning;
 } db_param_t;
 

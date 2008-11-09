@@ -295,12 +295,12 @@ void GetDBParams(void)
 		else
 			_db_params.query_time_info = 10;
 
-	if (config_get_value("query_time_notify", "DBMAIL", query_time) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [query_time_notify]");
+	if (config_get_value("query_time_notice", "DBMAIL", query_time) < 0)
+		TRACE(TRACE_EMERG, "error getting config! [query_time_notice]");
 		if (strlen(query_time) != 0)
-			_db_params.query_time_notify = (unsigned int) strtoul(query_time, NULL, 10);
+			_db_params.query_time_notice = (unsigned int) strtoul(query_time, NULL, 10);
 		else
-			_db_params.query_time_notify = 20;
+			_db_params.query_time_notice = 20;
 
 	if (config_get_value("query_time_warning", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [query_time_warning]");
