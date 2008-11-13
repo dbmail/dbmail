@@ -1547,6 +1547,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 
 int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 {
+	TRACE(TRACE_DEBUG,"state [%d]", state);
 	if ( (self->state == state) || (self->state == IMAPCS_ERROR) ) {
 		return 0;
 	}
@@ -1813,7 +1814,7 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 	char *lastchar;
 
 	assert(originalString);
-	TRACE(TRACE_DEBUG,"[%p] tokenize [%d/%d] [%s]", self, self->ci->len, self->rbuff_size, originalString);
+	TRACE(TRACE_DEBUG,"[%p] tokenize [%ld/%d] [%s]", self, self->ci->len, self->rbuff_size, originalString);
 
 	/* Check for zero length input */
 	if (! strlen(originalString)) goto finalize;

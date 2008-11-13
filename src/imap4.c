@@ -96,11 +96,11 @@ static void imap_session_bailout(ImapSession *session)
 	dbmail_imap_session_delete(session);
 }
 
-void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
+void socket_write_cb(int fd UNUSED, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 
-	TRACE(TRACE_DEBUG,"[%p] state [%d] command_state [%d]", session, session->state, session->command_state);
+	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
 
 	switch(session->state) {
 		case IMAPCS_LOGOUT:
@@ -133,10 +133,10 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 	}
 }
 
-void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
+void socket_read_cb(int fd UNUSED, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
-	TRACE(TRACE_DEBUG,"[%p] state [%d] command_state [%d]", session, session->state, session->command_state);
+	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
 	session->ci->cb_read(session);
 }
 
@@ -253,7 +253,7 @@ void imap_cb_read(void *arg)
 	memset(buffer, 0, sizeof(buffer));	// have seen dirty buffers with out this
 
 	if (session->state == IMAPCS_ERROR) {
-		TRACE(TRACE_DEBUG, "session->state: ERROR. abort");
+		TRACE(TRACE_NOTICE, "session->state: ERROR. abort");
 		return;
 	}
 	if (session->command_state==TRUE) dbmail_imap_session_reset(session);
@@ -269,8 +269,8 @@ void imap_cb_read(void *arg)
 	}
 
 	if (l == 0) {
-		if (session->rbuff_size > 0)
-			TRACE(TRACE_DEBUG,"last read [%d], still need [%d]", l, session->rbuff_size);
+		TRACE(TRACE_NOTICE,"empty read on possibly stale socket (still needed [%d])", session->rbuff_size);
+		imap_session_bailout(session);
 		return;
 	}
 
