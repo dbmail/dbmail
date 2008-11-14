@@ -527,10 +527,14 @@ int server_run(serverConfig_t *conf)
 		event_add(&evsock[ip], NULL);
 	}
 
-	TRACE(TRACE_DEBUG,"dispatching event loop...");
-
 	atexit(server_exit);
 
+	if (drop_privileges(conf->serverUser, conf->serverGroup) < 0) {
+		TRACE(TRACE_ERR,"unable to drop privileges");
+		return 0;
+	}
+
+	TRACE(TRACE_DEBUG,"dispatching event loop...");
 	event_dispatch();
 
 	return 0;
