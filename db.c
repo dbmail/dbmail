@@ -2867,13 +2867,8 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		mailbox_name = mailbox_add_namespace(simple_mailbox_name, owner_idnr, user_idnr);
 		TRACE(TRACE_DEBUG, "adding namespace prefix to [%s] got [%s]", simple_mailbox_name, mailbox_name);
 		if (mailbox_name) {
-			/* Enforce match of mailbox to pattern. */
-			if (listex_match(pattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
-				tmp_mailboxes[*nr_mailboxes] = mailbox_idnr;
-				(*nr_mailboxes)++;
-			} else {
-				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox_name, pattern);
-			}
+			tmp_mailboxes[*nr_mailboxes] = mailbox_idnr;
+			(*nr_mailboxes)++;
 		}
 		
 		g_free(mailbox_name);

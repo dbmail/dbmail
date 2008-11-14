@@ -739,9 +739,46 @@ int _ic_list(struct ImapSession *self)
 	mb = g_new0(mailbox_t,1);
 
 	for (i = 0; i < nchildren; i++) {
+		gboolean show = FALSE;
 		if ((db_getmailbox_list_result(children[i], ud->userid, mb) != 0))
 			continue;
-		
+
+		/* Enforce match of mailbox to pattern. */
+		if ((! listex_match(pattern, mb->name, MAILBOX_SEPARATOR, 0)) && (g_str_has_suffix(pattern,"%"))) {
+			/*
+			   If the "%" wildcard is the last character of a mailbox name argument, matching levels
+			   of hierarchy are also returned.  If these levels of hierarchy are not also selectable 
+			   mailboxes, they are returned with the \Noselect mailbox name attribute
+			 */
+
+			TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mb->name, pattern);
+			char *m = NULL, **p = g_strsplit(mb->name,MAILBOX_SEPARATOR,0);
+
+			int l = g_strv_length(p);
+			while (l-- > 1) {
+				if (p[l]) {
+					g_free(p[l]);
+					p[l] = NULL;
+				}
+				m = g_strjoinv(MAILBOX_SEPARATOR,p);
+
+				if (listex_match(pattern, m, MAILBOX_SEPARATOR, 0)) {
+					g_free(mb->name);
+					mb->name = m;
+					mb->no_select = 1;
+					mb->no_children = 0;
+					show = TRUE;
+					break;
+				}
+				g_free(m);
+			}
+			g_strfreev(p);
+		} else {
+			show = TRUE;
+		}
+
+		if (! show) continue;
+	
 		plist = NULL;
 		if (mb->no_select)
 			plist = g_list_append(plist, g_strdup("\\noselect"));
