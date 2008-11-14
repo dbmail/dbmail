@@ -126,12 +126,23 @@ static void pop3_close(ClientSession_t *session)
 /* the default pop3 read handler */
 void pop3_cb_read(void *arg)
 {
+	int l = 0;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
 	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
-	while ((ci_readln(session->ci, buffer)))
-		pop3(session, buffer);
+	
+	event_del(session->ci->rev);
+	l = ci_readln(session->ci, buffer);
+
+	if (l==0) { // error
+		client_session_bailout(session);
+		return;
+	}
+
+	if (pop3(session, buffer) != -3)
+		event_add(session->ci->rev, session->ci->timeout);
 }
+
 
 void pop3_cb_write(void *arg)
 {
@@ -186,7 +197,7 @@ int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 
 	if (session->error_count >= MAX_ERRORS) {
 		ci_write(ci, "-ERR too many errors\r\n");
-		session->SessionResult = 2;	/* possible flood */
+		client_session_bailout(session);
 		return -3;
 	} else {
 		va_start(argp, formatstring);

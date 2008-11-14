@@ -75,14 +75,31 @@ static void send_greeting(ClientSession_t *session)
 }
 void tims_cb_read(void *arg)
 {
+	int l = 0;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
 	ClientSession_t *session = (ClientSession_t *)arg;
-	while (ci_readln(session->ci, buffer)) {
-		if (tims_tokenizer(session, buffer)) {
-			tims(session);
-			client_session_reset_parser(session);
-		}
+	event_del(session->ci->rev);
+
+	l = ci_readln(session->ci, buffer);
+	if (l == 0) {
+		client_session_bailout(session);
+		return;
 	}
+
+	if ((l = tims_tokenizer(session, buffer))) {
+		if (l == -3) {
+			client_session_bailout(session);
+			return;
+		}
+		if (tims(session) == -3) {
+			client_session_bailout(session);
+			return;
+		}
+		client_session_reset_parser(session);
+	}
+
+	event_add(session->ci->rev, session->ci->timeout);
+
 }
 
 void tims_cb_time(void * arg)
@@ -123,7 +140,6 @@ int tims_error(ClientSession_t * session, const char *formatstring, ...)
 	if (session->error_count >= MAX_ERRORS) {
 		ci_write(session->ci, "BYE \"Too many errors, closing connection.\"\r\n");
 		session->SessionResult = 2;	/* possible flood */
-		client_session_bailout(session);
 		return -3;
 	}
 

@@ -105,6 +105,7 @@ void client_session_reset_parser(ClientSession_t *session)
 void client_session_bailout(ClientSession_t *session)
 {
 	if (! session) return;
+	TRACE(TRACE_DEBUG,"[%p]", session);
 	client_session_reset(session);
 	ci_close(session->ci);
 }

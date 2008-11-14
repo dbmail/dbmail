@@ -66,22 +66,41 @@ static void lmtp_cb_time(void *arg)
 
 static void lmtp_cb_read(void *arg)
 {
+	int r;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
 	ClientSession_t *session = (ClientSession_t *)arg;
-	int r;
 
-	while ((r = ci_readln(session->ci, buffer))) {
-		if (r == -1) break;
-		if ((r = lmtp_tokenizer(session, buffer))) {
-			if (r > 0) {
-				lmtp(session);
-				client_session_reset_parser(session);
+	event_del(session->ci->rev);
+
+	r = ci_readln(session->ci, buffer);
+	if (r == -1) return;
+	
+	if (r == 0) {
+		client_session_bailout(session);
+		return;
+	}
+		
+	if ((r = lmtp_tokenizer(session, buffer))) {
+		if (r == -3) {
+			client_session_bailout(session);
+			return;
+		}
+
+		if (r > 0) {
+			if (lmtp(session) == -3) {
+				client_session_bailout(session);
+				return;
 			}
-			if (r < 0) {
-				client_session_reset_parser(session);
-			}
+			client_session_reset_parser(session);
+		}
+
+		if (r < 0) {
+			client_session_reset_parser(session);
 		}
 	}
+	
+	event_add(session->ci->rev, session->ci->timeout);
+
 	TRACE(TRACE_DEBUG,"[%p] done", session);
 }
 
@@ -127,7 +146,6 @@ int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
 	if (session->error_count >= MAX_ERRORS) {
 		ci_write(session->ci, "500 Too many errors, closing connection.\r\n");
 		session->SessionResult = 2;	/* possible flood */
-		client_session_bailout(session);
 		return -3;
 	}
 
