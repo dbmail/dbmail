@@ -823,26 +823,63 @@ void _ic_list_enter(dm_thread_data *D)
 	}
 
 	while ((! D->status) && children) {
+		gboolean show = FALSE;
+
 		u64_t mailbox_id = *(u64_t *)children->data;
 		mb = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id);
+
+		/* Enforce match of mailbox to pattern. */
+		if ((! listex_match(pattern, mb->name, MAILBOX_SEPARATOR, 0)) && (g_str_has_suffix(pattern,"%"))) {
+			/*
+			   If the "%" wildcard is the last character of a mailbox name argument, matching levels
+			   of hierarchy are also returned.  If these levels of hierarchy are not also selectable 
+			   mailboxes, they are returned with the \Noselect mailbox name attribute
+			 */
+
+			TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mb->name, pattern);
+			char *m = NULL, **p = g_strsplit(mb->name,MAILBOX_SEPARATOR,0);
+			int l = g_strv_length(p);
+			while (l-- > 1) {
+				if (p[l]) {
+					g_free(p[l]);
+					p[l] = NULL;
+				}
+				m = g_strjoinv(MAILBOX_SEPARATOR,p);
+				if (listex_match(pattern, m, MAILBOX_SEPARATOR, 0)) {
+					g_free(mb->name);
+					mb->name = m;
+					mb->no_select = 1;
+					mb->no_children = 0;
+					show = TRUE;
+					break;
+				}
+				g_free(m);
+			}
+			g_strfreev(p);
+		} else {
+			show = TRUE;
+		}
+
+		if (show) {
 		
-		plist = NULL;
-		if (mb->no_select)
-			plist = g_list_append(plist, g_strdup("\\noselect"));
-		if (mb->no_inferiors)
-			plist = g_list_append(plist, g_strdup("\\noinferiors"));
-		if (mb->no_children)
-			plist = g_list_append(plist, g_strdup("\\hasnochildren"));
-		else
-			plist = g_list_append(plist, g_strdup("\\haschildren"));
-		
-		/* show */
-		pstring = dbmail_imap_plist_as_string(plist);
-		dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", self->command, 
-				pstring, MAILBOX_SEPARATOR, mb->name);
-		
-		g_list_destroy(plist);
-		g_free(pstring);
+			plist = NULL;
+			if (mb->no_select)
+				plist = g_list_append(plist, g_strdup("\\noselect"));
+			if (mb->no_inferiors)
+				plist = g_list_append(plist, g_strdup("\\noinferiors"));
+			if (mb->no_children)
+				plist = g_list_append(plist, g_strdup("\\hasnochildren"));
+			else
+				plist = g_list_append(plist, g_strdup("\\haschildren"));
+			
+			/* show */
+			pstring = dbmail_imap_plist_as_string(plist);
+			dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", self->command, 
+					pstring, MAILBOX_SEPARATOR, mb->name);
+			
+			g_list_destroy(plist);
+			g_free(pstring);
+		}
 
 		if (! g_list_next(children)) break;
 		children = g_list_next(children);
