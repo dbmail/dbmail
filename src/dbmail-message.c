@@ -1270,7 +1270,7 @@ int dbmail_message_store(DbmailMessage *self)
 		body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
 
 		if ((res = _dm_message_store(self))) {
-			TRACE(TRACE_EMERG,"Failed to store mimeparts");
+			TRACE(TRACE_WARNING,"Failed to store mimeparts");
 			usleep(delay*i);
 			continue;
 		}
