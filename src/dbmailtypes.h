@@ -520,7 +520,7 @@ typedef struct {
 	gboolean is_users;
 	gboolean is_inbox;
 	// reference dbmail_keywords
-	GList *keywords;
+	GTree *keywords;
 } MailboxInfo;
 
 /*

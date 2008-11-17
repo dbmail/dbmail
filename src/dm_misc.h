@@ -146,7 +146,7 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 
 char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not);
 
-char * imap_flags_as_string(MessageInfo *msginfo);
+char * imap_flags_as_string(MailboxInfo *mbxinfo, MessageInfo *msginfo);
 char * imap_cleanup_address(const char *a);
 
 char * message_get_charset(GMimeMessage *self);

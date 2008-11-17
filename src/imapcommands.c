@@ -238,9 +238,11 @@ char * mailbox_flags(MailboxInfo *info)
 	assert(info);
 
 	if (info->keywords) {
-		GString *keywords = g_list_join(info->keywords," ");
+		GList *k = g_tree_keys(info->keywords);
+		GString *keywords = g_list_join(k," ");
 		g_string_append_printf(string, " %s", keywords->str);
 		g_string_free(keywords,TRUE);
+		g_list_free(g_list_first(k));
 	}
 
 	s = string->str;
@@ -365,15 +367,15 @@ static void _ic_select_enter(dm_thread_data *D)
 	dbmail_imap_session_buff_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
 		self->mailbox->info->uid);
 
+	if (self->mailbox->info->exists) { 
+		/* show msn of first unseen msg (if present) */
+		u64_t key = 0, *msn = NULL;
+		g_tree_foreach(self->mailbox->msginfo, (GTraverseFunc)mailbox_first_unseen, &key);
+		if ( (key > 0) && (msn = g_tree_lookup(self->mailbox->ids, &key)))
+			dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %llu] first unseen message\r\n", *msn);
+	}
 	if (self->command_type == IMAP_COMM_SELECT) {
 		// SELECT
-		if (self->mailbox->info->exists) { 
-			/* show msn of first unseen msg (if present) */
-			u64_t key = 0, *msn = NULL;
-			g_tree_foreach(self->mailbox->msginfo, (GTraverseFunc)mailbox_first_unseen, &key);
-			if ( (key > 0) && (msn = g_tree_lookup(self->mailbox->ids, &key)))
-				dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %llu] first unseen message\r\n", *msn);
-		}
 		self->mailbox->info->permission = IMAPPERM_READWRITE;
 		okarg = "READ-WRITE";
 	} else {
@@ -1743,7 +1745,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 
 	// reporting callback
 	if (! cmd->silent) {
-		s = imap_flags_as_string(msginfo);
+		s = imap_flags_as_string(self->mailbox->info, msginfo);
 		dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
 		g_free(s);
 	}
@@ -1756,6 +1758,8 @@ static void _ic_store_enter(dm_thread_data *D)
 	LOCK_SESSION;
 	int result, i, j, k;
 	cmd_t cmd;
+	guint ol = 0;
+	gboolean update = FALSE;
 
 	k = self->args_idx;
 	/* multiple flags should be parenthesed */
@@ -1768,6 +1772,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	cmd = g_malloc0(sizeof(*cmd));
 	cmd->silent = FALSE;
 
+	ol = g_tree_nnodes(self->mailbox->info->keywords);
 	/* retrieve action type */
 	if (MATCH(self->args[k+1], "flags"))
 		cmd->action = IMAPFA_REPLACE;
@@ -1812,8 +1817,14 @@ static void _ic_store_enter(dm_thread_data *D)
 			}
 		}
 
-		if (j == IMAP_NFLAGS)
-			cmd->keywords = g_list_append(cmd->keywords,g_strdup(self->args[k+i]));
+		if (j == IMAP_NFLAGS) {
+			char *kw = self->args[k+i];
+			cmd->keywords = g_list_append(cmd->keywords,g_strdup(kw));
+			if (! g_tree_lookup(self->mailbox->info->keywords, kw)) {
+				update = TRUE;
+				g_tree_insert(self->mailbox->info->keywords, g_strdup(kw), kw );
+			}
+		}
 	}
 
 	/** check ACL's for STORE */
@@ -1856,16 +1867,11 @@ static void _ic_store_enter(dm_thread_data *D)
  			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
   	}	
 
-	if (cmd->action == IMAPFA_ADD) {
-		guint l = g_list_length(self->mailbox->info->keywords);
-		g_list_merge(&self->mailbox->info->keywords, cmd->keywords, cmd->action, (GCompareFunc)g_ascii_strcasecmp);
-		if ( l < g_list_length(self->mailbox->info->keywords) ) {
-			char *flags = mailbox_flags(self->mailbox->info);
-			dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
-			dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
-			g_free(flags);
-		}
-		
+	if ( update ) {
+		char *flags = mailbox_flags(self->mailbox->info);
+		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+		g_free(flags);
 	}
 
 	g_list_destroy(cmd->keywords);
@@ -1918,7 +1924,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 	u64_t destmboxid;
 	int result;
 	MailboxInfo *destmbox;
-	cmd_t cmd = g_malloc0(sizeof(cmd_t));
+	cmd_t cmd;
 
 	/* check if destination mailbox exists */
 	if (! db_findmailbox(self->args[self->args_idx+1], self->userid, &destmboxid)) {
@@ -1939,6 +1945,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 
+	cmd = g_malloc0(sizeof(cmd_t));
 	cmd->mailbox_id = destmboxid;
 	self->cmd = cmd;
 
@@ -1946,6 +1953,9 @@ static void _ic_copy_enter(dm_thread_data *D)
  		if ((_dm_imapsession_get_ids(self, self->args[self->args_idx]) == DM_SUCCESS))
  			g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
   	}	
+	g_free(self->cmd);
+	self->cmd = NULL;
+
 	db_mailbox_seq_update(destmboxid);
 
 	IC_DONE_OK;

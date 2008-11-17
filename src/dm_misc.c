@@ -2145,7 +2145,7 @@ char * imap_cleanup_address(const char *a)
 	return r;
 }
 
-char * imap_flags_as_string(MessageInfo *msginfo)
+char * imap_flags_as_string(MailboxInfo *mbxinfo, MessageInfo *msginfo)
 {
 	GList *t, *sublist = NULL;
 	int j;
@@ -2158,9 +2158,9 @@ char * imap_flags_as_string(MessageInfo *msginfo)
 	
 	t = g_list_first(msginfo->keywords);
 	while (t) {
-		sublist = g_list_append(sublist, g_strdup((gchar *)t->data));
-		if (! g_list_next(t))
-			break;
+		if (g_tree_lookup(mbxinfo->keywords, t->data))
+			sublist = g_list_append(sublist, g_strdup((gchar *)t->data));
+		if (! g_list_next(t)) break;
 		t = g_list_next(t);
 	}
 	

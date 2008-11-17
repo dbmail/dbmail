@@ -2487,7 +2487,9 @@ static int db_getmailbox_keywords(MailboxInfo *mb)
 	C c; R r; 
 	volatile int t = DM_SUCCESS;
 	const char *key;
-	GList *keys = NULL;
+
+	if (! mb->keywords)
+		mb->keywords = g_tree_new_full((GCompareDataFunc)g_ascii_strcasecmp, NULL,(GDestroyNotify)g_free,NULL);
 
 	c = db_con_get();
 	TRY
@@ -2498,24 +2500,18 @@ static int db_getmailbox_keywords(MailboxInfo *mb)
 
 		while (db_result_next(r)) {
 			key = db_result_get(r,0);
-			keys = g_list_prepend(keys, g_strdup(key));
+			g_tree_insert(mb->keywords, (gpointer)g_strdup(key), (gpointer)key);
 		}
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
-		if (keys) g_list_destroy(keys);
+		if (mb->keywords) g_tree_destroy(mb->keywords);
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
 	if (t == DM_EQUERY) return t;
-
-	if (keys) {
-		GList *oldkeys = mb->keywords;
-		mb->keywords = keys;
-		if (oldkeys) g_list_destroy(oldkeys);
-	}
 
 	return t;
 }

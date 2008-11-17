@@ -512,7 +512,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
-			if (! g_tree_lookup(self->found,&idnr))
+			if (! g_tree_lookup(self->found,(gconstpointer)&idnr))
 				continue;
 			subj = (char *)db_result_get(r,1);
 			g_tree_insert(tree,g_strdup(subj), NULL);
@@ -549,7 +549,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
-			if (! (msn = g_tree_lookup(self->found, &idnr)))
+			if (! (msn = g_tree_lookup(self->found, (gconstpointer)&idnr)))
 				continue;
 			subj = (char *)db_result_get(r,1);
 			

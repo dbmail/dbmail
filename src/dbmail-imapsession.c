@@ -130,7 +130,7 @@ ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command
 
 static void _mbxinfo_free(u64_t UNUSED *id, MailboxInfo *mb, gpointer UNUSED x)
 {
-	if (mb->keywords) g_list_destroy(mb->keywords);
+	if (mb->keywords) g_tree_destroy(mb->keywords);
 	mb->keywords = NULL;
 	if (mb->name) g_free(mb->name);
 	mb->name = NULL;
@@ -869,7 +869,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 	if (self->fi->getFlags) {
 		SEND_SPACE;
-		s = imap_flags_as_string(msginfo);
+		s = imap_flags_as_string(self->mailbox->info, msginfo);
 		dbmail_imap_session_buff_printf(self,"FLAGS %s",s);
 		g_free(s);
 
@@ -1236,7 +1236,7 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	char *s;
 	MessageInfo *old, *new;
 
-	if (! (new = g_tree_lookup(newbox->msginfo, uid)))
+	if (! (newbox->msginfo && (new = g_tree_lookup(newbox->msginfo, uid))))
 		return;
 
 	if (! (msn = g_tree_lookup(newbox->ids, uid))) {
@@ -1249,7 +1249,7 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	// FETCH
 	for (i=0; i< IMAP_NFLAGS; i++) {
 		if (old->flags[i] != new->flags[i]) {
-			s = imap_flags_as_string(new);
+			s = imap_flags_as_string(self->mailbox->info, new);
 			dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
 			g_free(s);
 			break;
@@ -1310,8 +1310,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 	if (update) {
 		MailboxInfo *info;
-		time_t oldseq;
-		unsigned oldexists, oldrecent, olduidnext;
+		unsigned oldseq, oldexists, oldrecent, olduidnext;
 
 		info = self->mailbox->info;
 		oldseq = info->seq;
