@@ -248,9 +248,9 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 		"SELECT message_idnr, keyword FROM %skeywords k "
 		"JOIN %smessages m USING (message_idnr) "
 		"JOIN %smailboxes b USING (mailbox_idnr) "
-		"WHERE b.mailbox_idnr = %llu ",
+		"WHERE b.mailbox_idnr = %llu AND m.status < %d",
 		DBPFX, DBPFX, DBPFX,
-		self->id);
+		self->id, MESSAGE_STATUS_DELETE);
 
 	TRY
 		nrows = 0;
