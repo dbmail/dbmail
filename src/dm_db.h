@@ -668,8 +668,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
  *    -  1 on failure
  *    - -1 on error
  */
-int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
-		GList ** mailboxes, const char ** errmsg);
+GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char ** errmsg);
 
 /**
  * \brief set permission on a mailbox (readonly/readwrite)
@@ -929,8 +928,8 @@ int db_replycache_unregister(const char *to, const char *from, const char *handl
 const char * db_get_sql(sql_fragment_t frag);
 char * db_returning(const char *s);
 
-int db_mailbox_mtime_update(u64_t mailbox_id);
-int db_message_mailbox_mtime_update(u64_t message_id);
+int db_mailbox_seq_update(u64_t mailbox_id);
+int db_message_mailbox_seq_update(u64_t message_id);
 
 int db_rehash_store(void);
 

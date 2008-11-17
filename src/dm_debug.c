@@ -78,16 +78,14 @@ static const char * trace_to_text(trace_t level)
  *
  */
 
-void trace(trace_t level, const char * module,
-		const char * file, const char * function,
-		int line, char *formatstring, ...)
+#define SYSLOGFORMAT "[%p] %s:[%s] %s(+%d): %s"
+#define STDERRFORMAT "%s %s %s[%d]: [%p] %s:[%s] %s(+%d): %s"
+void trace(trace_t level, const char * module, const char * function, int line, const char *formatstring, ...)
 {
 	trace_t syslog_level;
-	va_list argp;
+	va_list ap, cp;
 
 	gchar *message;
-	const char *syslog_format = "[%p] %s:[%s] %s(+%d): %s";
-	const char *stderr_format = "%s %s %s[%d]: [%p] %s:[%s] %s(+%d): %s";
 	static int configured=0;
 	size_t l, maxlen=120;
 
@@ -95,11 +93,11 @@ void trace(trace_t level, const char * module,
 	if (! level & TRACE_STDERR && ! level & TRACE_SYSLOG)
 		return;
 
-	va_start(argp, formatstring);
+	va_start(ap, formatstring);
+	va_copy(cp, ap);
+	message = g_strdup_vprintf(formatstring, cp);
+	va_end(cp);
 
-	message = g_strdup_vprintf(formatstring, argp);
-
-	va_end(argp);
 	l = strlen(message);
 	
 	if (message[l] == '\n')
@@ -119,7 +117,7 @@ void trace(trace_t level, const char * module,
 		memset(date,0,sizeof(date));
 		strftime(date,32,"%b %d %H:%M:%S", tmp);
 
- 		fprintf(stderr, stderr_format, date, hostname, __progname?__progname:"", getpid(), 
+ 		fprintf(stderr, STDERRFORMAT, date, hostname, __progname?__progname:"", getpid(), 
 			g_thread_self(), trace_to_text(level), module, function, line, message);
  
 		if (message[l] != '\n')
@@ -164,7 +162,7 @@ void trace(trace_t level, const char * module,
 		}
 		size_t w = min(l,maxlen);
 		message[w] = '\0';
-		syslog(syslog_level, syslog_format, g_thread_self(), trace_to_text(level), module, function, line, message);
+		syslog(syslog_level, SYSLOGFORMAT, g_thread_self(), trace_to_text(level), module, function, line, message);
 	}
 	g_free(message);
 

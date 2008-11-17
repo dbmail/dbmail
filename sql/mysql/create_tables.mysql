@@ -79,11 +79,11 @@ CREATE TABLE dbmail_mailboxes (
 	no_inferiors tinyint(1) NOT NULL default '0',
 	no_select tinyint(1) NOT NULL default '0',
 	permission tinyint(1) default '2',
-	mtime DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
+	seq bigint(21) not null default '0',
 	PRIMARY KEY  (mailbox_idnr),
 	INDEX name_index (name),
 	INDEX owner_idnr_index (owner_idnr),
-	INDEX mtime_index (mtime),
+	INDEX seq_index (seq),
 	UNIQUE INDEX owner_idnr_name_index (owner_idnr, name),
 	FOREIGN KEY owner_idnr_fk (owner_idnr) 
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE

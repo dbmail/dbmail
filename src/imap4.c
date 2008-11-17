@@ -92,6 +92,7 @@ static void imap_session_bailout(ImapSession *session)
 		usleep(25000);
 	}
 
+	dbmail_imap_session_mailbox_update_recent(session);
 	ci_close(session->ci);
 	dbmail_imap_session_delete(session);
 }
@@ -146,13 +147,14 @@ void socket_read_cb(int fd UNUSED, short what, void *arg)
  */
 static int imap_session_printf(ImapSession * self, char * message, ...)
 {
-        va_list ap;
+        va_list ap, cp;
         size_t l;
 
         assert(message);
         va_start(ap, message);
-        g_string_vprintf(self->buff, message, ap);
-        va_end(ap);
+	va_copy(cp, ap);
+        g_string_vprintf(self->buff, message, cp);
+        va_end(cp);
 
 	ci_write(self->ci, self->buff->str);
 

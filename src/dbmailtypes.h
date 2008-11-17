@@ -507,7 +507,7 @@ typedef struct {
 	u64_t msguidnext;
 	u64_t owner_idnr;
 	char *name;
-	time_t mtime;
+	u64_t seq;
 	unsigned no_select;
 	unsigned no_children;
 	unsigned no_inferiors;

@@ -108,7 +108,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 
 int ci_write(clientbase_t *self, char * msg, ...)
 {
-	va_list ap;
+	va_list ap, cp;
 	ssize_t t;
 	if (! (self && self->write_buffer)) {
 		TRACE(TRACE_DEBUG, "called while clientbase is stale");
@@ -117,8 +117,9 @@ int ci_write(clientbase_t *self, char * msg, ...)
 
 	if (msg) {
 		va_start(ap, msg);
-		g_string_append_vprintf(self->write_buffer, msg, ap);
-		va_end(ap);
+		va_copy(cp, ap);
+		g_string_append_vprintf(self->write_buffer, msg, cp);
+		va_end(cp);
 	}
 	
 	if (self->write_buffer->len < 1) return 0;

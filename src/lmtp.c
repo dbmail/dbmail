@@ -140,7 +140,7 @@ int lmtp_handle_connection(client_sock *c)
 
 int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
 {
-	va_list argp;
+	va_list ap, cp;
 	char *s;
 
 	if (session->error_count >= MAX_ERRORS) {
@@ -149,9 +149,10 @@ int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
 		return -3;
 	}
 
-	va_start(argp, formatstring);
-	s = g_strdup_vprintf(formatstring, argp);
-	va_end(argp);
+	va_start(ap, formatstring);
+	va_copy(cp, ap);
+	s = g_strdup_vprintf(formatstring, cp);
+	va_end(cp);
 	ci_write(session->ci, s);
 	g_free(s);
 

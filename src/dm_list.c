@@ -159,10 +159,11 @@ GString * g_list_join_u64(GList * list, const gchar * sep)
  */
 GList * g_list_append_printf(GList * list, const char * format, ...)
 {
-	va_list argp;
-	va_start(argp, format);
-	list = g_list_append(list, g_strdup_vprintf(format, argp));
-	va_end(argp);
+	va_list ap, cp;
+	va_start(ap, format);
+	va_copy(cp, ap);
+	list = g_list_append(list, g_strdup_vprintf(format, cp));
+	va_end(cp);
 	return list;
 }
 

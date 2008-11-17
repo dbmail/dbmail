@@ -1,0 +1,3 @@
+
+alter table dbmail_mailboxes add seq integer default '0' not null;
+

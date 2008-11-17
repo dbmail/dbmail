@@ -53,10 +53,8 @@ typedef enum {
 #endif
 
 
-#define TRACE(level, fmt...) trace(level, THIS_MODULE, __FILE__, __func__, __LINE__, fmt)
-void trace(trace_t level, const char * module,
-		const char * file, const char * function,
-		int line, char *formatstring, ...) PRINTF_ARGS(6, 7);
+#define TRACE(level, fmt...) trace(level, THIS_MODULE, __func__, __LINE__, fmt)
+void trace(trace_t level, const char * module, const char * function, int line, const char *formatstring, ...) PRINTF_ARGS(5, 6);
 
 void configure_debug(trace_t trace_syslog, trace_t trace_stderr);
 

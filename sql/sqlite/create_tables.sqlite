@@ -46,7 +46,7 @@ CREATE TABLE dbmail_mailboxes (
    mailbox_idnr INTEGER PRIMARY KEY,
    owner_idnr INTEGER DEFAULT '0' NOT NULL,
    name TEXT BINARY NOT NULL,
-   mtime DATETIME DEFAULT '0' NOT NULL,
+   seq INTEGER DEFAULT '0' NOT NULL,
    seen_flag BOOLEAN default '0' not null,
    answered_flag BOOLEAN default '0' not null,
    deleted_flag BOOLEAN default '0' not null,
@@ -60,7 +60,7 @@ CREATE TABLE dbmail_mailboxes (
 CREATE INDEX dbmail_mailboxes_1 ON dbmail_mailboxes(name);
 CREATE INDEX dbmail_mailboxes_2 ON dbmail_mailboxes(owner_idnr);
 CREATE UNIQUE INDEX dbmail_mailboxes_3 ON dbmail_mailboxes(owner_idnr,name);
-CREATE INDEX dbmail_mailbox_4 ON dbmail_mailboxes(mtime);
+CREATE INDEX dbmail_mailbox_4 ON dbmail_mailboxes(seq);
 
 CREATE TRIGGER fk_insert_mailboxes_users_idnr
 	BEFORE INSERT ON dbmail_mailboxes

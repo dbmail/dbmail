@@ -854,8 +854,8 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	self->fi->isfirstfetchout = 1;
 	
         /* queue this message's recent_flag for removal */
-        if (self->mailbox->info->permission == IMAPPERM_READWRITE)
-            self->recent = g_list_prepend(self->recent, g_strdup_printf("%llu",self->msg_idnr));
+//        if (self->mailbox->info->permission == IMAPPERM_READWRITE)
+//            self->recent = g_list_prepend(self->recent, g_strdup_printf("%llu",self->msg_idnr));
 
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
@@ -1119,15 +1119,16 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
 {
-        va_list ap;
+        va_list ap, cp;
         size_t j = 0, l;
 
         assert(message);
         j = self->buff->len;
 
         va_start(ap, message);
-        g_string_append_vprintf(self->buff, message, ap);
-        va_end(ap);
+	va_copy(cp, ap);
+        g_string_append_vprintf(self->buff, message, cp);
+        va_end(cp);
 
         l = self->buff->len;
 
@@ -1309,11 +1310,11 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 	if (update) {
 		MailboxInfo *info;
-		time_t oldmtime;
+		time_t oldseq;
 		unsigned oldexists, oldrecent, olduidnext;
 
 		info = self->mailbox->info;
-		oldmtime = info->mtime;
+		oldseq = info->seq;
 		oldexists = info->exists;
 		oldrecent = info->recent;
 		olduidnext = info->msguidnext;
@@ -1321,7 +1322,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
                 // re-read flags and counters
 		if ((res = db_getmailbox(info, self->userid)) != DM_SUCCESS) return res;
 
-		if (oldmtime != info->mtime) {
+		if (oldseq != info->seq) {
 			// rebuild uid/msn trees
 			// ATTN: new messages shouldn't be visible in any way to a 
 			// client session until it has been announced with EXISTS
@@ -1503,7 +1504,6 @@ static int db_update_recent(GList *slices)
 
 int dbmail_imap_session_mailbox_update_recent(ImapSession *self) 
 {
-	int t = FALSE;
 	GList *recent;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
@@ -1511,9 +1511,15 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 	gchar *uid = NULL;
 	u64_t id = 0;
 
-	recent = self->recent;
+	if (self->mailbox && self->mailbox->info && self->mailbox->info->permission != IMAPPERM_READWRITE) 
+		return DM_SUCCESS;
 
-	if (recent == NULL) return t;
+	recent = g_list_first(self->recent);
+
+	TRACE(TRACE_DEBUG,"flush [%d] recent messages", g_list_length(recent));
+
+	if (recent == NULL) 
+		return DM_SUCCESS;
 
 	db_update_recent(g_list_slices(recent,100));
 
@@ -1527,8 +1533,9 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 		assert(id);
 		if ( (msginfo = g_tree_lookup(self->mailbox->msginfo, &id)) != NULL) {
 			msginfo->flags[IMAP_FLAG_RECENT] = 0;
-			if ( (self->mailbox->info) && (self->mailbox->info->uid == msginfo->mailbox_id) )
+			if ( (self->mailbox->info) && (self->mailbox->info->uid == msginfo->mailbox_id) ) {
 				self->mailbox->info->recent--;
+			}
 		} else {
 			TRACE(TRACE_WARNING,"[%p] can't find msginfo for [%llu]", self, id);
 		}
@@ -1537,7 +1544,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 	}
 
 	if ( (self->mailbox->info) && (self->mailbox->info->uid) )
-		db_mailbox_mtime_update(self->mailbox->info->uid);
+		db_mailbox_seq_update(self->mailbox->info->uid);
 
 	g_list_destroy(self->recent);
 	self->recent = NULL;
@@ -1622,7 +1629,7 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self)
 	g_list_foreach(ids, (GFunc) _do_expunge, self);
 
 	if (i > g_tree_nnodes(self->mailbox->msginfo)) {
-		db_mailbox_mtime_update(self->mailbox->id);
+		db_mailbox_seq_update(self->mailbox->id);
 		if (! dm_quota_user_dec(self->userid, mailbox_size))
 			return DM_EQUERY;
 	}

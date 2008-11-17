@@ -191,7 +191,7 @@ int pop3_handle_connection(client_sock *c)
 
 int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 {
-	va_list argp;
+	va_list ap, cp;
 	char *s;
 	clientbase_t *ci = session->ci;
 
@@ -200,9 +200,10 @@ int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 		client_session_bailout(session);
 		return -3;
 	} else {
-		va_start(argp, formatstring);
-		s = g_strdup_vprintf(formatstring, argp);
-		va_end(argp);
+		va_start(ap, formatstring);
+		va_copy(cp, ap);
+		s = g_strdup_vprintf(formatstring, cp);
+		va_end(cp);
 		ci_write(ci, s);
 		g_free(s);
 	}

@@ -72,6 +72,7 @@ CREATE TABLE dbmail_mailboxes (
    no_inferiors INT2 DEFAULT '0' NOT NULL,
    no_select INT2 DEFAULT '0' NOT NULL,
    permission INT2 DEFAULT '2' NOT NULL,
+   seq INT8 DEFAULT '0' NOT NULL,
    PRIMARY KEY (mailbox_idnr)
 );
 CREATE INDEX dbmail_mailboxes_owner_idx ON dbmail_mailboxes(owner_idnr);
@@ -358,9 +359,6 @@ ALTER TABLE ONLY dbmail_partlists
 
 ALTER TABLE ONLY dbmail_partlists
     ADD CONSTRAINT dbmail_partlists_physmessage_id_fkey FOREIGN KEY (physmessage_id) REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-ALTER TABLE ONLY dbmail_mailboxes
-    ADD mtime TIMESTAMP WITHOUT TIME ZONE DEFAULT '1979-11-03 22:05:58' NOT NULL;
 
 CREATE TABLE dbmail_keywords (
 	message_idnr bigint NOT NULL,

@@ -298,12 +298,13 @@ gboolean db_exec(C c, const char *q, ...)
 {
 	struct timeval before, after;
 	gboolean result = FALSE;
-	va_list ap;
+	va_list ap, cp;
 	INIT_QUERY;
 
 	va_start(ap, q);
-        vsnprintf(query, DEF_QUERYSIZE, q, ap);
-        va_end(ap);
+	va_copy(cp, ap);
+        vsnprintf(query, DEF_QUERYSIZE, q, cp);
+        va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
@@ -323,12 +324,13 @@ R db_query(C c, const char *q, ...)
 {
 	struct timeval before, after;
 	R r = NULL;
-	va_list ap;
+	va_list ap, cp;
 	INIT_QUERY;
 
 	va_start(ap, q);
-        vsnprintf(query, DEF_QUERYSIZE, q, ap);
-        va_end(ap);
+	va_copy(cp, ap);
+        vsnprintf(query, DEF_QUERYSIZE, q, cp);
+        va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
@@ -349,12 +351,13 @@ R db_query(C c, const char *q, ...)
 gboolean db_update(const char *q, ...)
 {
 	C c; gboolean result = FALSE;
-	va_list ap;
+	va_list ap, cp;
 	INIT_QUERY;
 
 	va_start(ap, q);
-        vsnprintf(query, DEF_QUERYSIZE, q, ap);
-        va_end(ap);
+	va_copy(cp, ap);
+        vsnprintf(query, DEF_QUERYSIZE, q, cp);
+        va_end(cp);
 
 	c = db_con_get();
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
@@ -371,12 +374,13 @@ gboolean db_update(const char *q, ...)
 
 S db_stmt_prepare(C c, const char *q, ...)
 {
-	va_list ap;
+	va_list ap, cp;
 	INIT_QUERY;
 
 	va_start(ap, q);
-        vsnprintf(query, DEF_QUERYSIZE, q, ap);
-        va_end(ap);
+	va_copy(cp, ap);
+        vsnprintf(query, DEF_QUERYSIZE, q, cp);
+        va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	return Connection_prepareStatement(c, query);
@@ -1671,8 +1675,7 @@ int db_set_envelope(GList *lost)
 			fprintf(stderr,".");
 		}
 		dbmail_message_free(msg);
-		if (! g_list_next(lost))
-			break;
+		if (! g_list_next(lost)) break;
 		lost = g_list_next(lost);
 	}
 	return DM_SUCCESS;
@@ -2453,6 +2456,7 @@ static int db_getmailbox_count(MailboxInfo *mb)
  	mb->unseen = exists - seen;
  	mb->recent = recent;
  
+	TRACE(TRACE_DEBUG, "exists [%d] unseen [%d] recent [%d]", mb->exists, mb->unseen, mb->recent);
 	/* now determine the next message UID 
 	 * NOTE:
 	 * - expunged messages are selected as well in order to be able to restore them 
@@ -2516,33 +2520,30 @@ static int db_getmailbox_keywords(MailboxInfo *mb)
 	return t;
 }
 
-static int db_getmailbox_mtime(MailboxInfo * mb)
+static int db_getmailbox_seq(MailboxInfo * mb)
 {
 	C c; R r; 
 	volatile int t = DM_SUCCESS;
-	char f[DEF_FRAGSIZE];
-	memset(f,0,DEF_FRAGSIZE);
-	snprintf(f,DEF_FRAGSIZE,db_get_sql(SQL_TO_UNIXEPOCH), "mtime");
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT name,%s FROM %smailboxes WHERE mailbox_idnr=%llu", 
-						f, DBPFX, mb->uid);
+		r = db_query(c, "SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=%llu", 
+						DBPFX, mb->uid);
 		if (db_result_next(r)) {
 			if (! mb->name)
 				mb->name = g_strdup(db_result_get(r, 0));
-			mb->mtime = (time_t)db_result_get_u64(r,1);
+			mb->seq = db_result_get_u64(r,1);
 		} else {
 			t = DM_EQUERY;
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		mb->mtime = (time_t)0;
+		mb->seq = 0;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
-	TRACE(TRACE_DEBUG,"mtime [%lu]", mb->mtime);
+	TRACE(TRACE_DEBUG,"seq [%lu]", mb->seq);
 
 	if (! mb->name) return DM_EQUERY;
 
@@ -2552,16 +2553,16 @@ static int db_getmailbox_mtime(MailboxInfo * mb)
 int db_getmailbox(MailboxInfo * mb, u64_t userid)
 {
 	int res;
-	time_t oldmtime;
+	u64_t oldseq;
 	
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
 
-	oldmtime = mb->mtime;
+	oldseq = mb->seq;
 	
-	if ((res = db_getmailbox_mtime(mb)) != DM_SUCCESS)
+	if ((res = db_getmailbox_seq(mb)) != DM_SUCCESS)
 		return res;
 
-	if ( mb->msguidnext && (mb->mtime == oldmtime) )
+	if ( mb->msguidnext && (mb->seq == oldseq) )
 		return DM_SUCCESS;
 
 	if ((res = db_getmailbox_flags(mb)) != DM_SUCCESS)
@@ -2593,13 +2594,12 @@ int mailbox_is_writable(u64_t mailbox_idnr)
 
 }
 
-int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
-		GList ** mailboxes, const char ** errmsg)
+GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char ** errmsg)
 {
 	assert(mailbox);
-	assert(mailboxes);
 	assert(errmsg);
 
+	GList *mailboxes = NULL;
 	char *cpy, **chunks = NULL;
 	const char *simple_name;
 	char *namespace, *username;
@@ -2692,7 +2692,6 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 		/* Prepend a mailbox struct onto the list. */
 		MailboxInfo *mbox;
 		mbox = g_new0(MailboxInfo, 1);
-		*mailboxes = g_list_prepend(*mailboxes, mbox);
 
 		/* If the mboxid is 0, then we know
 		 * that the mailbox does not exist. */
@@ -2707,40 +2706,40 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 		} else {
 			mbox->owner_idnr = owner_idnr;
 		}
+
+		mailboxes = g_list_prepend(mailboxes, mbox);
 	}
 
 	/* We built the path with prepends,
 	 * so we have to reverse it now. */
-	*mailboxes = g_list_reverse(*mailboxes);
+	mailboxes = g_list_reverse(mailboxes);
 	*errmsg = "Everything is peachy keen";
 
 	g_strfreev(chunks);
 	g_free(username);
 	g_free(cpy);
  
-	return DM_SUCCESS;
+	return mailboxes;
 
 equery:
 	ret = DM_EQUERY;
 
 egeneral:
-	if (!ret) ret = DM_EGENERAL;
-
-	GList *tmp;
-	tmp = g_list_first(*mailboxes);
-	while (tmp) {
-		MailboxInfo *mbox = (MailboxInfo *)tmp->data;
+	mailboxes = g_list_first(mailboxes);
+	while (mailboxes) {
+		MailboxInfo *mbox = (MailboxInfo *)mailboxes->data;
 		if (mbox) {
 			g_free(mbox->name);
 			g_free(mbox);
 		}
-		tmp = g_list_next(tmp);
+		if (! g_list_next(mailboxes)) break;
+		mailboxes = g_list_next(mailboxes);
 	}
-	g_list_free(g_list_first(*mailboxes));
+	g_list_free(g_list_first(mailboxes));
 	g_strfreev(chunks);
 	g_free(username);
 	g_free(cpy);
-	return ret;
+	return NULL;
 }
 
 /** Create a mailbox, recursively creating its parents.
@@ -2782,8 +2781,8 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 		return DM_EGENERAL;
 	}
 
-	if (db_imap_split_mailbox(mailbox, owner_idnr, &mailbox_list, message) == DM_EQUERY) {
-		TRACE(TRACE_ERR, "Negative return code from db_imap_split_mailbox.");
+	if ((mailbox_list = db_imap_split_mailbox(mailbox, owner_idnr, message)) == NULL) {
+		TRACE(TRACE_ERR, "db_imap_split_mailbox returned with error");
 		// Message pointer was set by db_imap_split_mailbox
 		return DM_EGENERAL;
 	}
@@ -2880,6 +2879,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 		if (skip_and_free)
 			break;
 
+		if (! g_list_next(mailbox_item)) break;
 		mailbox_item = g_list_next(mailbox_item);
 	}
 
@@ -2888,6 +2888,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 		MailboxInfo *mbox = (MailboxInfo *)mailbox_item->data;
 		g_free(mbox->name);
 		g_free(mbox);
+		if (! g_list_next(mailbox_item)) break;
 		mailbox_item = g_list_next(mailbox_item);
 	}
 	g_list_free(g_list_first(mailbox_list));
@@ -3137,8 +3138,8 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 
 	if (t == DM_EQUERY) return t;
 
-	db_mailbox_mtime_update(mailbox_to);
-	db_mailbox_mtime_update(mailbox_from);
+	db_mailbox_seq_update(mailbox_to);
+	db_mailbox_seq_update(mailbox_from);
 
 	return DM_SUCCESS;		/* success */
 }
@@ -3523,7 +3524,7 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 	if (t == DM_EQUERY) return t;
 
 	db_set_msgkeywords(msg_idnr, keywords, action_type, msginfo);
-	db_mailbox_mtime_update(mailbox_idnr);
+	db_mailbox_seq_update(mailbox_idnr);
 
 	return DM_SUCCESS;
 }
@@ -4222,19 +4223,17 @@ int db_user_log_login(u64_t user_idnr)
 	return db_update("UPDATE %susers SET last_login = '%s' WHERE user_idnr = %llu",DBPFX, timestring, user_idnr);
 }
 
-int db_mailbox_mtime_update(u64_t mailbox_id)
+int db_mailbox_seq_update(u64_t mailbox_id)
 {
-	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	return db_update("UPDATE %s %smailboxes SET mtime=%s WHERE mailbox_idnr=%llu", 
-		db_get_sql(SQL_IGNORE), DBPFX, now, mailbox_id);
+	return db_update("UPDATE %s %smailboxes SET seq=seq+1 WHERE mailbox_idnr=%llu", 
+		db_get_sql(SQL_IGNORE), DBPFX, mailbox_id);
 }
 
-int db_message_mailbox_mtime_update(u64_t message_id)
+int db_message_mailbox_seq_update(u64_t message_id)
 {
-	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	return db_update("UPDATE %s %smailboxes SET mtime=%s WHERE mailbox_idnr=("
+	return db_update("UPDATE %s %smailboxes SET seq=seq+1 WHERE mailbox_idnr=("
 			"SELECT mailbox_idnr FROM %smessages WHERE message_idnr=%llu)", 
-			db_get_sql(SQL_IGNORE), DBPFX, now, DBPFX, message_id);
+			db_get_sql(SQL_IGNORE), DBPFX, DBPFX, message_id);
 }
 
 int db_rehash_store(void)

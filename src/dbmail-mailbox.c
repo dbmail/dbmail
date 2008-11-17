@@ -278,7 +278,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 
 	mailbox_set_msginfo(self, msginfo);
 
-	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
+	TRACE(TRACE_DEBUG,"mailbox [%llu] ids [%d], msn [%d]", self->id, g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
 
 	return t;
 }
@@ -1546,8 +1546,6 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 			TRACE(TRACE_WARNING, "mailbox info out of sync: exists [%llu] ids [%u]", 
 				hi, g_tree_nnodes(self->ids));
 	}
-	
-	TRACE(TRACE_DEBUG,"[%s] uid [%d] lo [%llu] hi [%llu]", set, uid, lo, hi);
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
