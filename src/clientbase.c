@@ -110,8 +110,8 @@ int ci_write(clientbase_t *self, char * msg, ...)
 {
 	va_list ap;
 	ssize_t t;
-	if (! self) {
-		TRACE(TRACE_DEBUG, "called while self is null");
+	if (! (self && self->write_buffer)) {
+		TRACE(TRACE_DEBUG, "called while clientbase is stale");
 		return -1;
 	}
 
