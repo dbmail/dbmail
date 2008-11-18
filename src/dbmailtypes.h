@@ -506,7 +506,6 @@ typedef struct {
 	u64_t uid;
 	u64_t msguidnext;
 	u64_t owner_idnr;
-	char *name;
 	u64_t seq;
 	unsigned no_select;
 	unsigned no_children;
@@ -514,11 +513,13 @@ typedef struct {
 	unsigned exists;
 	unsigned recent;
 	unsigned unseen;
-	int permission;
+	unsigned permission;
 	// 
 	gboolean is_public;
 	gboolean is_users;
 	gboolean is_inbox;
+
+	char *name;
 	// reference dbmail_keywords
 	GTree *keywords;
 } MailboxInfo;

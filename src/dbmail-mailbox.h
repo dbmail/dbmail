@@ -41,7 +41,7 @@ typedef struct {
 	u64_t unseen;
 	u64_t owner_id;
 	u64_t size;
-	GTree *keywords;
+//	GTree *keywords;
 
 	gchar *name;
 
