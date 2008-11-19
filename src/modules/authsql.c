@@ -294,7 +294,7 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 {
 	int is_validated = 0;
 	char salt[13], cryptres[35], real_username[DM_USERNAME_LEN];
-	char *md5str, *dbpass = NULL, *encode = NULL;
+	char *hashstr, *dbpass = NULL, *encode = NULL;
 	int result, t = FALSE;
 	C c; R r;
 
@@ -360,9 +360,9 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 		/* get password */
 		if (strncmp(dbpass, "$1$", 3)) {
 			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-			md5str = dm_md5(password);
-			is_validated = (strncmp(md5str, dbpass, 32) == 0) ? 1 : 0;
-			g_free(md5str);
+			hashstr = dm_md5(password);
+			is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+			g_free(hashstr);
 		} else {
 			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
 			strncpy(salt, dbpass, 12);
@@ -374,14 +374,39 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 		}
 	} else if (strcasecmp(encode, "md5sum") == 0) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-		md5str = dm_md5(password);
-		is_validated = (strncmp(md5str, dbpass, 32) == 0) ? 1 : 0;
-		g_free(md5str);
+		hashstr = dm_md5(password);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+		g_free(hashstr);
 	} else if (strcasecmp(encode, "md5base64") == 0) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
-		md5str = dm_md5_base64(password);
-		is_validated = (strncmp(md5str, dbpass, 32) == 0) ? 1 : 0;
-		g_free(md5str);
+		hashstr = dm_md5_base64(password);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+		g_free(hashstr);
+	} else if (strcasecmp(encode, "whirlpool") == 0) {
+		TRACE(TRACE_DEBUG, "validating using WHIRLPOOL hash comparison");
+		hashstr = dm_whirlpool(password);
+		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
+		g_free(hashstr);
+	} else if (strcasecmp(encode, "sha512") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-512 hash comparison");
+		hashstr = dm_sha512(password);
+		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
+		g_free(hashstr);
+	} else if (strcasecmp(encode, "sha256") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-256 hash comparison");
+		hashstr = dm_sha256(password);
+		is_validated = (strncmp(hashstr, dbpass, 64) == 0) ? 1 : 0;
+		g_free(hashstr);
+	} else if (strcasecmp(encode, "sha1") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-1 hash comparison");
+		hashstr = dm_sha1(password);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+		g_free(hashstr);
+	} else if (strcasecmp(encode, "tiger") == 0) {
+		TRACE(TRACE_DEBUG, "validating using TIGER hash comparison");
+		hashstr = dm_tiger(password);
+		is_validated = (strncmp(hashstr, dbpass, 48) == 0) ? 1 : 0;
+		g_free(hashstr);
 	}
 
 	if (dbpass) g_free(dbpass);

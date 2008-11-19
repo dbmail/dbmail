@@ -145,8 +145,8 @@ int mkpassword(const char * const user, const char * const passwd,
 	int pwindex = 0;
 	int result = 0;
 	char *entry = NULL;
-	char *md5str = NULL;
-	char pw[50];
+	char *hashstr = NULL;
+	char pw[130];
 
 	/* These are the easy text names. */
 	const char * const pwtypes[] = {
@@ -154,7 +154,8 @@ int mkpassword(const char * const user, const char * const passwd,
 		"md5", 		"md5-raw",		"md5sum",	"md5sum-raw", 
 		"md5-hash",	"md5-hash-raw",		"md5-digest",	"md5-digest-raw",
 		"md5-base64",	"md5-base64-raw",	"md5base64",	"md5base64-raw",
-		"shadow", 	"", 	NULL
+		"shadow", 	"",			"whirlpool",	"sha512",
+		"sha256",	"sha1",			"tiger",	NULL
 	};
 
 	/* These must correspond to the easy text names. */
@@ -163,10 +164,11 @@ int mkpassword(const char * const user, const char * const passwd,
 		MD5_HASH, 	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
 		MD5_HASH,	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
 		MD5_BASE64,	MD5_BASE64_RAW,		MD5_BASE64,	MD5_BASE64_RAW,
-		SHADOW,		PLAINTEXT,	PWTYPE_NULL
+		SHADOW,		PLAINTEXT,		WHIRLPOOL,	SHA512,
+		SHA256,		SHA1,			TIGER,		PWTYPE_NULL
 	};
 
-	memset(pw, 0, 50);
+	memset(pw, 0, 130);
 
 	/* Only search if there's a string to compare. */
 	if (passwdtype)
@@ -180,7 +182,7 @@ int mkpassword(const char * const user, const char * const passwd,
 	switch (pwtype) {
 		case PLAINTEXT:
 		case PLAINTEXT_RAW:
-			null_strncpy(pw, passwd, 49);
+			null_strncpy(pw, passwd, 129);
 			*enctype = "";
 			break;
 		case CRYPT:
@@ -188,7 +190,7 @@ int mkpassword(const char * const user, const char * const passwd,
 			*enctype = "crypt";
 			break;
 		case CRYPT_RAW:
-			null_strncpy(pw, passwd, 49);
+			null_strncpy(pw, passwd, 129);
 			*enctype = "crypt";
 			break;
 		case MD5_HASH:
@@ -197,28 +199,28 @@ int mkpassword(const char * const user, const char * const passwd,
 			*enctype = "md5";
 			break;
 		case MD5_HASH_RAW:
-			null_strncpy(pw, passwd, 49);
+			null_strncpy(pw, passwd, 129);
 			*enctype = "md5";
 			break;
 		case MD5_DIGEST:
-			md5str = dm_md5(passwd);
-			null_strncpy(pw, md5str, 49);
+			hashstr = dm_md5(passwd);
+			null_strncpy(pw, hashstr, 129);
 			*enctype = "md5sum";
 			break;
 		case MD5_DIGEST_RAW:
-			null_strncpy(pw, passwd, 49);
+			null_strncpy(pw, passwd, 129);
 			*enctype = "md5sum";
 			break;
 		case MD5_BASE64:
 			{
-			md5str = dm_md5_base64(passwd);
-			null_strncpy(pw, md5str, 49);
+			hashstr = dm_md5_base64(passwd);
+			null_strncpy(pw, hashstr, 129);
 			*enctype = "md5base64";
-			g_free(md5str);
+			g_free(hashstr);
 			}
 			break;
 		case MD5_BASE64_RAW:
-			null_strncpy(pw, passwd, 49);
+			null_strncpy(pw, passwd, 129);
 			*enctype = "md5base64";
 			break;
 		case SHADOW:
@@ -232,7 +234,7 @@ int mkpassword(const char * const user, const char * const passwd,
 				break;
 			}
                 
-			null_strncpy(pw, entry, 49);
+			null_strncpy(pw, entry, 129);
 			if (strcmp(pw, "") == 0) {
 				qerrorf("Error: password for user [%s] not found in file [%s].\n",
 				     user, passwdfile);
@@ -240,12 +242,37 @@ int mkpassword(const char * const user, const char * const passwd,
 				break;
 			}
 
-			/* Safe because we know pw is 50 long. */
+			/* Safe because we know pw is 130 long. */
 			if (strncmp(pw, "$1$", 3) == 0) {
 				*enctype = "md5";
 			} else {
 				*enctype = "crypt";
 			}
+			break;
+		case WHIRLPOOL:
+			hashstr = dm_whirlpool(passwd);
+			null_strncpy(pw, hashstr, 129);
+			*enctype = "whirlpool";
+			break;
+		case SHA512:
+			hashstr = dm_sha512(passwd);
+			null_strncpy(pw, hashstr, 129);
+			*enctype = "sha512";
+			break;
+		case SHA256:
+			hashstr = dm_sha256(passwd);
+			null_strncpy(pw, hashstr, 129);
+			*enctype = "sha256";
+			break;
+		case SHA1:
+			hashstr = dm_sha1(passwd);
+			null_strncpy(pw, hashstr, 129);
+			*enctype = "sha1";
+			break;
+		case TIGER:
+			hashstr = dm_tiger(passwd);
+			null_strncpy(pw, hashstr, 129);
+			*enctype = "tiger";
 			break;
 		default:
 			qerrorf("Error: password type not supported [%s].\n",

@@ -36,7 +36,7 @@ CREATE SEQUENCE dbmail_user_idnr_seq;
 CREATE TABLE dbmail_users (
    user_idnr INT8 DEFAULT nextval('dbmail_user_idnr_seq'),
    userid VARCHAR(100) NOT NULL,
-   passwd VARCHAR(34) NOT NULL,
+   passwd VARCHAR(130) NOT NULL,
    client_idnr INT8 DEFAULT '0' NOT NULL,
    maxmail_size INT8 DEFAULT '0' NOT NULL,
    curmail_size INT8 DEFAULT '0' NOT NULL,

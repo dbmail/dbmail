@@ -44,7 +44,7 @@ DROP TABLE IF EXISTS dbmail_users;
 CREATE TABLE dbmail_users (
 	user_idnr bigint(21) NOT NULL auto_increment,
 	userid varchar(100) NOT NULL default '',
-	passwd varchar(34) NOT NULL default '',
+	passwd varchar(130) NOT NULL default '',
 	client_idnr bigint(21) NOT NULL default '0',
 	maxmail_size bigint(21) NOT NULL default '0',
 	curmail_size bigint(21) NOT NULL default '0',
