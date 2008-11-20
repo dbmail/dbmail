@@ -33,6 +33,7 @@
 #define _DBMAIL_MAILBOX_H
 
 #include "dbmail.h"
+#include "dm_mailboxstate.h"
 
 typedef struct {
 	u64_t id;
@@ -47,7 +48,7 @@ typedef struct {
 
 	GList *sorted;		// ordered list of UID values
 
-	MailboxInfo *info;	// cache mailbox metadata;
+	MailboxState_T state;	// cache mailbox metadata;
 	GTree *msginfo; 	// cache MessageInfo
 
 	GTree *found;		// search result (key: uid, value: msn)

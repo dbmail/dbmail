@@ -25,6 +25,8 @@
  */
 
 #include "dbmail.h"
+#include "dm_mailboxstate.h"
+
 #define THIS_MODULE "db"
 #define DEF_FRAGSIZE 64
 
@@ -2302,287 +2304,13 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern, GList ** chil
 	return DM_SUCCESS;
 }
 
-static int db_getmailbox_flags(MailboxInfo *mb)
-{
-	C c; R r; int t = DM_SUCCESS;
-	g_return_val_if_fail(mb->uid,DM_EQUERY);
-	
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %llu",
-				DBPFX, mb->uid);
-		if (db_result_next(r))
-			mb->permission = db_result_get_int(r, 0);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
-}
-
-static int db_getmailbox_metadata(MailboxInfo *mb, u64_t user_idnr)
-{
-	/* query mailbox for LIST results */
-	C c; R r; int t = DM_SUCCESS;
-	char *mbxname, *name, *pattern;
-	struct mailbox_match *mailbox_like = NULL;
-	GString *fqname, *qs;
-	int i=0, prml;
-	S stmt;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT owner_idnr, name, no_select, no_inferiors "
-		 "FROM %smailboxes WHERE mailbox_idnr = %llu",
-		 DBPFX, mb->uid);
-
-	c = db_con_get();
-	TRY
-		r = db_query(c, query);
-		if (db_result_next(r)) {
-			/* owner_idnr */
-			mb->owner_idnr=db_result_get_u64(r, i++);
-			
-			/* name */
-			name=g_strdup(db_result_get(r,i++));
-			mbxname = mailbox_add_namespace(name, mb->owner_idnr, user_idnr);
-			fqname = g_string_new(mbxname);
-			fqname = g_string_truncate(fqname,IMAP_MAX_MAILBOX_NAMELEN);
-			mb->name = fqname->str;
-			g_string_free(fqname,FALSE);
-			g_free(mbxname);
-
-			/* no_select */
-			mb->no_select=db_result_get_bool(r,i++);
-			/* no_inferior */
-			mb->no_inferiors=db_result_get_bool(r,i++);
-			
-			/* no_children */
-			pattern = g_strdup_printf("%s/%%", name);
-			mailbox_like = mailbox_match_new(pattern);
-			g_free(pattern);
-			g_free(name);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	END_TRY;
-
-	if (t == DM_EQUERY) {
-		db_con_close(c);
-		return t;
-	}
-
-	db_con_clear(c);
-
-	qs = g_string_new("");
-	g_string_printf(qs, "SELECT COUNT(*) AS nr_children FROM %smailboxes WHERE owner_idnr = ? ", DBPFX);
-
-	if (mailbox_like && mailbox_like->insensitive)
-		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
-	if (mailbox_like && mailbox_like->sensitive)
-		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
-
-	t = DM_SUCCESS;
-	TRY
-		stmt = db_stmt_prepare(c, qs->str);
-		prml = 1;
-		db_stmt_set_u64(stmt, prml++, mb->owner_idnr);
-
-		if (mailbox_like && mailbox_like->insensitive)
-			db_stmt_set_str(stmt, prml++, mailbox_like->insensitive);
-		if (mailbox_like && mailbox_like->sensitive)
-			db_stmt_set_str(stmt, prml++, mailbox_like->sensitive);
-
-		r = db_stmt_query(stmt);
-		if (db_result_next(r)) {
-			int nr_children = db_result_get_int(r,0);
-			mb->no_children=nr_children ? 0 : 1;
-		} else {
-			mb->no_children=1;
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	mailbox_match_free(mailbox_like);
-	g_string_free(qs, TRUE);
-
-	return t;
-}
-
-static int db_getmailbox_count(MailboxInfo *mb)
-{
-	C c; R r; 
-	volatile int t;
-	unsigned exists = 0, seen = 0, recent = 0;
-
-	g_return_val_if_fail(mb->uid,DM_EQUERY);
-
-	/* count messages */
- 	t = FALSE;
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
-				"AND (status < %d) UNION "
-				"SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
-				"AND (status < %d) AND seen_flag=1 UNION "
-				"SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
-				"AND (status < %d) AND recent_flag=1", 
-				DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-				DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-				DBPFX, mb->uid, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-		if (db_result_next(r)) exists = (unsigned)db_result_get_int(r,1);
-		if (db_result_next(r)) seen   = (unsigned)db_result_get_int(r,1);
-		if (db_result_next(r)) recent = (unsigned)db_result_get_int(r,1);
-		db_con_clear(c);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	END_TRY;
-
-	if (t == DM_EQUERY) {
-		db_con_close(c);
-		return t;
-	}
-
- 	mb->exists = exists;
- 	mb->unseen = exists - seen;
- 	mb->recent = recent;
- 
-	TRACE(TRACE_DEBUG, "exists [%d] unseen [%d] recent [%d]", mb->exists, mb->unseen, mb->recent);
-	/* now determine the next message UID 
-	 * NOTE:
-	 * - expunged messages are selected as well in order to be able to restore them 
-	 * - the next uit MUST NOT change unless messages are added to THIS mailbox
-	 * */
-
-	db_con_clear(c);
-	t = FALSE;
-	TRY
-		r = db_query(c, "SELECT MAX(message_idnr)+1 FROM %smessages "
-			"WHERE mailbox_idnr=%llu",DBPFX, mb->uid);
-		if (db_result_next(r))
-			mb->msguidnext = db_result_get_u64(r,0);
-		else
-			mb->msguidnext = 1;
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
-}
-
-static int db_getmailbox_keywords(MailboxInfo *mb)
-{
-	C c; R r; 
-	volatile int t = DM_SUCCESS;
-	const char *key;
-
-	if (! mb->keywords)
-		mb->keywords = g_tree_new_full((GCompareDataFunc)g_ascii_strcasecmp, NULL,(GDestroyNotify)g_free,NULL);
-
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
-				"JOIN %smessages m ON k.message_idnr=m.message_idnr "
-				"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-				"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, mb->uid);
-
-		while (db_result_next(r)) {
-			key = db_result_get(r,0);
-			g_tree_insert(mb->keywords, (gpointer)g_strdup(key), (gpointer)key);
-		}
-
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-		if (mb->keywords) g_tree_destroy(mb->keywords);
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) return t;
-
-	return t;
-}
-
-static int db_getmailbox_seq(MailboxInfo * mb)
-{
-	C c; R r; 
-	volatile int t = DM_SUCCESS;
-
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=%llu", 
-						DBPFX, mb->uid);
-		if (db_result_next(r)) {
-			if (! mb->name)
-				mb->name = g_strdup(db_result_get(r, 0));
-			mb->seq = db_result_get_u64(r,1);
-		} else {
-			t = DM_EQUERY;
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		mb->seq = 0;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	TRACE(TRACE_DEBUG,"seq [%lu]", mb->seq);
-
-	if (! mb->name) return DM_EQUERY;
-
-	return t;
-}
-
-int db_getmailbox(MailboxInfo * mb, u64_t userid)
-{
-	int res;
-	u64_t oldseq;
-	
-	g_return_val_if_fail(mb->uid,DM_EQUERY);
-
-	oldseq = mb->seq;
-	
-	if ((res = db_getmailbox_seq(mb)) != DM_SUCCESS)
-		return res;
-
-	if ( mb->msguidnext && (mb->seq == oldseq) )
-		return DM_SUCCESS;
-
-	if ((res = db_getmailbox_flags(mb)) != DM_SUCCESS)
-		return res;
-	if ((res = db_getmailbox_count(mb)) != DM_SUCCESS)
-		return res;
-	if ((res = db_getmailbox_keywords(mb)) != DM_SUCCESS)
-		return res;
-	if ((res = db_getmailbox_metadata(mb, userid)) != DM_SUCCESS)
-		return res;
-
-	return DM_SUCCESS;
-}
-
 int mailbox_is_writable(u64_t mailbox_idnr)
 {
-	MailboxInfo mb;
-	memset(&mb,'\0', sizeof(mb));
-	mb.uid = mailbox_idnr;
+	MailboxState_T S = MailboxState_new(mailbox_idnr);
 	
-	if (db_getmailbox_flags(&mb) == DM_EQUERY)
-		return FALSE;
+	MailboxState_reload(S,0);
 	
-	if (mb.permission != IMAPPERM_READWRITE) {
+	if (MailboxState_getPermission(S) != IMAPPERM_READWRITE) {
 		TRACE(TRACE_INFO, "read-only mailbox");
 		return FALSE;
 	}
@@ -2647,10 +2375,12 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 	for (i = 0; chunks[i]; i++) {
 
 		/* Indicates a // in the mailbox name. */
-		if (! (strlen(chunks[i]))) {
+		if ((! (strlen(chunks[i])) && chunks[i+1])) {
 			*errmsg = "Invalid mailbox name specified";
 			goto egeneral;
 		}
+		if (! (strlen(chunks[i]))) // trailing / in name
+			break;
 
 		if (i == 0) {
 			if (strcasecmp(chunks[0], "inbox") == 0) {
@@ -2686,24 +2416,19 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 		}
 
 		/* Prepend a mailbox struct onto the list. */
-		MailboxInfo *mbox;
-		mbox = g_new0(MailboxInfo, 1);
-
-		/* If the mboxid is 0, then we know
-		 * that the mailbox does not exist. */
-		mbox->name = g_strdup(cpy);
-		mbox->uid = mboxid;
-		mbox->is_users = is_users;
-		mbox->is_public = is_public;
+		MailboxState_T S = MailboxState_new(mboxid);
+		MailboxState_setName(S, g_strdup(cpy));
+		MailboxState_setIsUsers(S, is_users);
+		MailboxState_setIsPublic(S, is_public);
 
 		/* Only the PUBLIC user is allowed to own #Public folders. */
 		if (is_public) {
-			mbox->owner_idnr = public;
+			MailboxState_setOwner(S, public);
 		} else {
-			mbox->owner_idnr = owner_idnr;
+			MailboxState_setOwner(S, owner_idnr);
 		}
 
-		mailboxes = g_list_prepend(mailboxes, mbox);
+		mailboxes = g_list_prepend(mailboxes, S);
 	}
 
 	/* We built the path with prepends,
@@ -2723,11 +2448,8 @@ equery:
 egeneral:
 	mailboxes = g_list_first(mailboxes);
 	while (mailboxes) {
-		MailboxInfo *mbox = (MailboxInfo *)mailboxes->data;
-		if (mbox) {
-			g_free(mbox->name);
-			g_free(mbox);
-		}
+		MailboxState_T S = (MailboxState_T)mailboxes->data;
+		MailboxState_free(&S);
 		if (! g_list_next(mailboxes)) break;
 		mailboxes = g_list_next(mailboxes);
 	}
@@ -2760,6 +2482,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 	assert(mailbox_idnr);
 	assert(message);
 	
+
 	TRACE(TRACE_INFO, "Creating mailbox [%s] source [%d] for user [%llu]",
 			mailbox, source, owner_idnr);
 
@@ -2791,26 +2514,26 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 	mailbox_item = g_list_first(mailbox_list);
 	while (mailbox_item) {
-		MailboxInfo *mbox = (MailboxInfo *)mailbox_item->data;
-		TRACE(TRACE_DEBUG,"mbox->name [%s] mbox->owner_idnr [%llu]", mbox->name, mbox->owner_idnr);
+		MailboxState_T S = (MailboxState_T)mailbox_item->data;
 
 		/* Needs to be created. */
-		if (mbox->uid == 0) {
-			if (mbox->is_users && mbox->owner_idnr != owner_idnr) {
+		if (MailboxState_getId(S) == 0) {
+			if (MailboxState_isUsers(S) && MailboxState_getOwner(S) != owner_idnr) {
 				*message = "Top-level mailboxes may not be created for others under #Users";
 				skip_and_free = DM_EGENERAL;
 			} else {
 				u64_t this_owner_idnr;
 
 				/* Only the PUBLIC user is allowed to own #Public. */
-				if (mbox->is_public) {
-					this_owner_idnr = mbox->owner_idnr;
+				if (MailboxState_isPublic(S)) {
+					this_owner_idnr = MailboxState_getOwner(S);
 				} else {
 					this_owner_idnr = owner_idnr;
 				}
 
 				/* Create it! */
-				result = db_createmailbox(mbox->name, this_owner_idnr, &created_mboxid);
+				result = db_createmailbox(MailboxState_getName(S), this_owner_idnr, &created_mboxid);
+
 				if (result == DM_EGENERAL) {
 					*message = "General error while creating";
 					skip_and_free = DM_EGENERAL;
@@ -2826,7 +2549,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 				}
 
 				/* If the PUBLIC user owns it, then the current user needs ACLs. */
-				if (mbox->is_public) {
+				if (MailboxState_isPublic(S)) {
 					result = acl_set_rights(owner_idnr, created_mboxid, "lrswipcda");
 					if (result == DM_EQUERY) {
 						*message = "Database error while setting rights";
@@ -2837,7 +2560,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 			if (!skip_and_free) {
 				*message = "Folder created";
-				mbox->uid = created_mboxid;
+				MailboxState_setId(S, created_mboxid);
 			}
 		}
 
@@ -2846,10 +2569,10 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 		if (source != BOX_BRUTEFORCE) {
 			TRACE(TRACE_DEBUG, "Checking if we have the right to "
-				"create mailboxes under mailbox [%llu]", mbox->uid);
+				"create mailboxes under mailbox [%llu]", MailboxState_getId(S));
 
 			/* Mailbox does exist, failure if no_inferiors flag set. */
-			result = db_noinferiors(mbox->uid);
+			result = db_noinferiors(MailboxState_getId(S));
 			if (result == DM_EGENERAL) {
 				*message = "Mailbox cannot have inferior names";
 				skip_and_free = DM_EGENERAL;
@@ -2859,7 +2582,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 			}
 
 			/* Mailbox does exist, failure if ACLs disallow CREATE. */
-			result = acl_has_right(mbox, owner_idnr, ACL_RIGHT_CREATE);
+			result = acl_has_right(S, owner_idnr, ACL_RIGHT_CREATE);
 			if (result == 0) {
 				*message = "Permission to create mailbox denied";
 				skip_and_free = DM_EGENERAL;
@@ -2872,8 +2595,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 				ok_to_create = 1;
 		}
 
-		if (skip_and_free)
-			break;
+		if (skip_and_free) break;
 
 		if (! g_list_next(mailbox_item)) break;
 		mailbox_item = g_list_next(mailbox_item);
@@ -2881,9 +2603,8 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 	mailbox_item = g_list_first(mailbox_list);
 	while (mailbox_item) {
-		MailboxInfo *mbox = (MailboxInfo *)mailbox_item->data;
-		g_free(mbox->name);
-		g_free(mbox);
+		MailboxState_T S = (MailboxState_T)mailbox_item->data;
+		MailboxState_free(&S);
 		if (! g_list_next(mailbox_item)) break;
 		mailbox_item = g_list_next(mailbox_item);
 	}
@@ -3240,7 +2961,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		create_unique_id(unique_id, msg_idnr);
 		r = db_query(c, "INSERT INTO %smessages ("
 			"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
-			" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,'%s',status"
+			" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,1,draft_flag,'%s',status"
 			" FROM %smessages WHERE message_idnr = %llu %s",DBPFX, mailbox_to, unique_id,DBPFX, msg_idnr, frag);
 		*newmsg_idnr = db_insert_result(c, r);
 	CATCH(SQLException)
@@ -3250,6 +2971,19 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	END_TRY;
 
 	g_free(frag);
+
+	/* Copy the message keywords */
+	c = db_con_get();
+	TRY
+		r = db_query(c, "INSERT INTO %skeywords (message_idnr, keyword) "
+			"SELECT %llu,keyword from %skeywords WHERE message_idnr=%llu", 
+			DBPFX, *newmsg_idnr, DBPFX, msg_idnr);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
 	/* update quotum */
 	if (! dm_quota_user_inc(user_idnr, msgsize))
 		return DM_EQUERY;
@@ -3523,110 +3257,6 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 	db_mailbox_seq_update(mailbox_idnr);
 
 	return DM_SUCCESS;
-}
-
-int db_acl_has_right(MailboxInfo *mailbox, u64_t userid, const char *right_flag)
-{
-	C c; R r;
-	int result = FALSE;
-	INIT_QUERY;
-
-	u64_t mboxid = mailbox->uid;
-
-	TRACE(TRACE_DEBUG, "checking ACL [%s] for user [%llu] on mailbox [%llu]",
-			right_flag, userid, mboxid);
-
-	/* If we don't know who owns the mailbox, look it up. */
-	if (! mailbox->owner_idnr) {
-		result = db_get_mailbox_owner(mboxid, &mailbox->owner_idnr);
-		if (! result > 0)
-			return result;
-	}
-
-	if (mailbox->owner_idnr == userid) {
-		TRACE(TRACE_DEBUG, "mailbox [%llu] is owned by user [%llu], giving all rights",
-				mboxid, userid);
-		return 1;
-	}
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT * FROM %sacl "
-		 "WHERE user_id = %llu "
-		 "AND mailbox_id = %llu "
-		 "AND %s = 1",DBPFX, userid, mboxid, right_flag);
-
-	result = FALSE;
-	c = db_con_get();
-	TRY
-		r = db_query(c, query);
-		if (db_result_next(r))
-			result = TRUE;
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		result = DM_EQUERY;
-	FINALLY	
-		db_con_close(c);
-	END_TRY;
-
-	return result;
-}
-
-int db_acl_get_acl_map(MailboxInfo *mailbox, u64_t userid, struct ACLMap *map)
-{
-	int i, t = DM_SUCCESS;
-	gboolean gotrow = FALSE;
-	u64_t anyone;
-	C c; R r; S s;
-	INIT_QUERY;
-
-	g_return_val_if_fail(mailbox->uid,DM_EGENERAL); 
-
-	snprintf(query, DEF_QUERYSIZE,
-			"SELECT lookup_flag,read_flag,seen_flag,"
-			"write_flag,insert_flag,post_flag,"
-			"create_flag,delete_flag,administer_flag "
-			"FROM %sacl "
-			"WHERE mailbox_id = ? AND user_id = ?",DBPFX);
-
-	if (! (auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone)))
-		return DM_EQUERY;
-
-	c = db_con_get();
-	TRY
-		s = db_stmt_prepare(c, query);
-		db_stmt_set_u64(s, 1, mailbox->uid);
-		db_stmt_set_u64(s, 2, userid);
-		r = db_stmt_query(s);
-		if (! db_result_next(r)) {
-			/* else check the 'anyone' user */
-			db_stmt_set_u64(s, 2, anyone);
-			r = db_stmt_query(s);
-			if (db_result_next(r))
-				gotrow = TRUE;
-		} else {
-			gotrow = TRUE;
-		}
-
-		if (gotrow) {
-			i = 0;
-			map->lookup_flag	= db_result_get_bool(r,i++);
-			map->read_flag		= db_result_get_bool(r,i++);
-			map->seen_flag		= db_result_get_bool(r,i++);
-			map->write_flag		= db_result_get_bool(r,i++);
-			map->insert_flag	= db_result_get_bool(r,i++);
-			map->post_flag		= db_result_get_bool(r,i++);
-			map->create_flag	= db_result_get_bool(r,i++);
-			map->delete_flag	= db_result_get_bool(r,i++);
-			map->administer_flag	= db_result_get_bool(r,i++);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
 }
 
 static int db_acl_has_acl(u64_t userid, u64_t mboxid)

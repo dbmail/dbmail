@@ -130,7 +130,7 @@ static void uid_msn_map(DbmailMailbox *self)
 
 	g_list_free(g_list_first(ids));
 
-	if (self->info) self->info->exists = g_tree_nnodes(self->ids);
+	if (self->state) MailboxState_setExists(self->state, g_tree_nnodes(self->ids));
 
 	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->ids));
 	TRACE(TRACE_DEBUG,"total [%d] MSNs", g_tree_nnodes(self->msn));
@@ -1537,8 +1537,8 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 
 	if (! uid) {
 		lo = 1;
-		if (self->info)
-			hi = self->info->exists;
+		if (self->state)
+			hi = MailboxState_getExists(self->state);
 		else
 			hi = (u64_t)g_tree_nnodes(self->ids);
 

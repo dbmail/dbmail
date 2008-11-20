@@ -867,15 +867,15 @@ END_TEST
 START_TEST(test_db_getmailbox)
 {
 	int res;
-	u64_t userid;
-	MailboxInfo mb;
-	memset(&mb,0,sizeof(MailboxInfo));
+	u64_t id, userid;
+	MailboxState_T M;
 	
-	mb.uid = get_mailbox_id("INBOX", &userid);
+	id = get_mailbox_id("INBOX", &userid);
+	M = MailboxState_new(id);
 	
-	res = db_getmailbox(&mb, userid);
+	res = MailboxState_reload(M, userid);
 	fail_unless(res == DM_SUCCESS, "db_getmailbox failed");
-	fail_unless(MATCH("INBOX", mb.name), "db_getmailbox failed");
+	fail_unless(MATCH("INBOX", MailboxState_getName(M)), "db_getmailbox failed");
 }
 END_TEST
 

@@ -128,20 +128,6 @@ ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command
 }
 
 
-static void _mbxinfo_free(u64_t UNUSED *id, MailboxInfo *mb, gpointer UNUSED x)
-{
-	if (mb->keywords) g_tree_destroy(mb->keywords);
-	mb->keywords = NULL;
-	if (mb->name) g_free(mb->name);
-	mb->name = NULL;
-}
-
-static void _mbxinfo_destroy(ImapSession *self)
-{
-	g_tree_foreach(self->mbxinfo, (GTraverseFunc)_mbxinfo_free, NULL);
-	g_tree_destroy(self->mbxinfo);
-	self->mbxinfo = NULL;
-}
 void dbmail_imap_session_delete(ImapSession * self)
 {
 	TRACE(TRACE_DEBUG,"[%p]", self);
@@ -165,7 +151,8 @@ void dbmail_imap_session_delete(ImapSession * self)
 		self->mailbox = NULL;
 	}
 	if (self->mbxinfo) {
-		_mbxinfo_destroy(self);
+		g_tree_destroy(self->mbxinfo);
+		self->mbxinfo = NULL;
 	}
 	if (self->ids) {
 		g_tree_destroy(self->ids);
@@ -854,7 +841,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	self->fi->isfirstfetchout = 1;
 	
         /* queue this message's recent_flag for removal */
-//        if (self->mailbox->info->permission == IMAPPERM_READWRITE)
+//        if (self->mailbox->state->permission == IMAPPERM_READWRITE)
 //            self->recent = g_list_prepend(self->recent, g_strdup_printf("%llu",self->msg_idnr));
 
 	if (self->fi->getInternalDate) {
@@ -869,7 +856,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 	if (self->fi->getFlags) {
 		SEND_SPACE;
-		s = imap_flags_as_string(self->mailbox->info, msginfo);
+		s = imap_flags_as_string(self->mailbox->state, msginfo);
 		dbmail_imap_session_buff_printf(self,"FLAGS %s",s);
 		g_free(s);
 
@@ -980,11 +967,11 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	 * for db_get_msgflag()!
 	 */
 	int setSeenSet[IMAP_NFLAGS] = { 1, 0, 0, 0, 0, 0 };
-	if (self->fi->setseen && db_get_msgflag("seen", self->msg_idnr, self->mailbox->info->uid) != 1) {
+	if (self->fi->setseen && db_get_msgflag("seen", self->msg_idnr, MailboxState_getId(self->mailbox->state)) != 1) {
 		/* only if the user has an ACL which grants
 		   him rights to set the flag should the
 		   flag be set! */
-		result = acl_has_right(self->mailbox->info, self->userid, ACL_RIGHT_SEEN);
+		result = acl_has_right(self->mailbox->state, self->userid, ACL_RIGHT_SEEN);
 		if (result == -1) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n *BYE internal dbase error\r\n");
@@ -992,7 +979,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		}
 		
 		if (result == 1) {
-			result = db_set_msgflag(self->msg_idnr, self->mailbox->info->uid, setSeenSet, NULL, IMAPFA_ADD, msginfo);
+			result = db_set_msgflag(self->msg_idnr, MailboxState_getId(self->mailbox->state), setSeenSet, NULL, IMAPFA_ADD, msginfo);
 			if (result == -1) {
 				dbmail_imap_session_buff_clear(self);
 				dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
@@ -1249,7 +1236,7 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	// FETCH
 	for (i=0; i< IMAP_NFLAGS; i++) {
 		if (old->flags[i] != new->flags[i]) {
-			s = imap_flags_as_string(self->mailbox->info, new);
+			s = imap_flags_as_string(self->mailbox->state, new);
 			dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
 			g_free(s);
 			break;
@@ -1309,32 +1296,32 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	if (self->state != IMAPCS_SELECTED) return FALSE;
 
 	if (update) {
-		MailboxInfo *info;
+		MailboxState_T M;
 		unsigned oldseq, oldexists, oldrecent, olduidnext;
 
-		info = self->mailbox->info;
-		oldseq = info->seq;
-		oldexists = info->exists;
-		oldrecent = info->recent;
-		olduidnext = info->msguidnext;
+		M = self->mailbox->state;
+		oldseq = MailboxState_getSeq(M);
+		oldexists = MailboxState_getExists(M);
+		oldrecent = MailboxState_getRecent(M);
+		olduidnext = MailboxState_getUidnext(M);
 
                 // re-read flags and counters
-		if ((res = db_getmailbox(info, self->userid)) != DM_SUCCESS) return res;
+		if ((res = MailboxState_reload(M, self->userid)) != DM_SUCCESS) return res;
 
-		if (oldseq != info->seq) {
+		if (oldseq != MailboxState_getSeq(M)) {
 			// rebuild uid/msn trees
 			// ATTN: new messages shouldn't be visible in any way to a 
 			// client session until it has been announced with EXISTS
 			mailbox = dbmail_mailbox_new(self->mailbox->id);
-			mailbox->info = info;
-			mailbox->info->exists = g_tree_nnodes(mailbox->ids);
+			MailboxState_setExists(M, g_tree_nnodes(mailbox->ids));
+			mailbox->state = M;
 
 			// EXISTS response may never decrease
-			if ((info->msguidnext > olduidnext) && (info->exists > oldexists))
+			if ((MailboxState_getUidnext(M) > olduidnext) && (MailboxState_getExists(M) > oldexists))
 				showexists = TRUE;
 
 			// RECENT response only when changed
-			if (info->recent != oldrecent)
+			if (MailboxState_getRecent(M) != oldrecent)
 				showrecent = TRUE;
 		}
 	}
@@ -1366,58 +1353,50 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	}
 
 	// never decrease without first sending expunge !!
-	if (showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", self->mailbox->info->exists);
-	if (showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", self->mailbox->info->recent);
+	if (showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(self->mailbox->state));
+	if (showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(self->mailbox->state));
 
 	if (update) {
 		if (unhandled)
 			TRACE(TRACE_ERR, "[%p] EXISTS/RECENT changed but client "
 				"is not notified", self);
+		char *flags = MailboxState_flags(self->mailbox->state);
+		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+		g_free(flags);
+
 		mailbox_notify_update(self, mailbox);
 	}
 
 	return 0;
 }
 
-static gboolean _get_mailbox(u64_t UNUSED *id, MailboxInfo *mb, int *error)
+static gboolean _get_mailbox(u64_t UNUSED *id, MailboxState_T M, int UNUSED *error)
 {
-	int result;
-	result = acl_has_right(mb, mb->owner_idnr, ACL_RIGHT_READ);
-
-	if (result == -1) {
-		*error = -1;
-		return TRUE;
-	}
-	if (result == 0) {
-		*error = 1;
-		return TRUE;
-	}
-
-	if (db_getmailbox(mb, mb->owner_idnr) != DM_SUCCESS)
-		return TRUE;
-
-	return FALSE;
+	return MailboxState_reload(M, 0)?FALSE:TRUE;
 }
+
+static void mailboxstate_destroy(MailboxState_T M)
+{
+	MailboxState_free(&M);
+}
+
 static void _get_mbxinfo(ImapSession *self)
 {
 	C c; R r; int t = FALSE, error = 0;
-	GTree *mbxinfo = NULL;
+	GTree *old = NULL, *mbxinfo = NULL;
 	u64_t *id;
-	MailboxInfo *mb;
 	
-	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
-			mb = g_new0(MailboxInfo,1);
-
 			*id = db_result_get_u64(r, 0);
-			mb->uid = *id;
-			mb->owner_idnr = self->userid;
-
-			g_tree_insert(mbxinfo, id, NULL);
+			MailboxState_T M = MailboxState_new(*id);
+			MailboxState_setOwner(M, self->userid);
+			g_tree_insert(mbxinfo, id, M);
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1430,45 +1409,36 @@ static void _get_mbxinfo(ImapSession *self)
 
 	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, &error);
 
-	if (! error) {
-		if (self->mbxinfo) _mbxinfo_destroy(self);
-		self->mbxinfo = mbxinfo;
-		return;
+	if (self->mbxinfo) old = self->mbxinfo;
+	self->mbxinfo = mbxinfo;
+
+	if (old) {
+		g_tree_destroy(old);
+		old = NULL;
 	}
-
-	if (error == DM_EQUERY)
-		TRACE(TRACE_ERR, "[%p] database error retrieving mbxinfo", self);
-	else if (error == DM_EGENERAL)
-		TRACE(TRACE_ERR, "[%p] failure retrieving mbxinfo for unreadable mailbox", self);
-
-	g_tree_destroy(mbxinfo);
 
 	return;
 }
 
-MailboxInfo * dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr)
+MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_id)
 {
-	MailboxInfo *mb = NULL;
+	MailboxState_T M = NULL;
 	u64_t *id;
-	int error = 0;
 
 	if (! self->mbxinfo) _get_mbxinfo(self);
 
 	/* fetch the cached mailbox metadata */
-	if ((mb = (MailboxInfo *)g_tree_lookup(self->mbxinfo, &mailbox_idnr)) == NULL) {
-		mb = g_new0(MailboxInfo,1);
+	if ((M = (MailboxState_T)g_tree_lookup(self->mbxinfo, &mailbox_id)) == NULL) {
 		id = g_new0(u64_t,1);
-
-		*id = mailbox_idnr;
-		mb->uid = mailbox_idnr;
-		mb->owner_idnr = self->userid;
-
-		g_tree_insert(self->mbxinfo, id, mb);
+		*id = mailbox_id;
+		M = MailboxState_new(mailbox_id);
+		MailboxState_setOwner(M, self->userid);
+		g_tree_insert(self->mbxinfo, id, M);
 
 	}
-	_get_mailbox(0,mb,&error);
+	_get_mailbox(0,M,NULL);
 
-	return mb;
+	return M;
 }
 
 static int db_update_recent(GList *slices)
@@ -1510,7 +1480,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 	gchar *uid = NULL;
 	u64_t id = 0;
 
-	if (self->mailbox && self->mailbox->info && self->mailbox->info->permission != IMAPPERM_READWRITE) 
+	if (self->mailbox && self->mailbox->state && MailboxState_getPermission(self->mailbox->state) != IMAPPERM_READWRITE) 
 		return DM_SUCCESS;
 
 	recent = g_list_first(self->recent);
@@ -1532,8 +1502,8 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 		assert(id);
 		if ( (msginfo = g_tree_lookup(self->mailbox->msginfo, &id)) != NULL) {
 			msginfo->flags[IMAP_FLAG_RECENT] = 0;
-			if ( (self->mailbox->info) && (self->mailbox->info->uid == msginfo->mailbox_id) ) {
-				self->mailbox->info->recent--;
+			if ( (self->mailbox->state) && (MailboxState_getId(self->mailbox->state) == msginfo->mailbox_id) ) {
+				MailboxState_setRecent(self->mailbox->state, MailboxState_getRecent(self->mailbox->state)-1);
 			}
 		} else {
 			TRACE(TRACE_WARNING,"[%p] can't find msginfo for [%llu]", self, id);
@@ -1542,8 +1512,8 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 		recent = g_list_next(recent);
 	}
 
-	if ( (self->mailbox->info) && (self->mailbox->info->uid) )
-		db_mailbox_seq_update(self->mailbox->info->uid);
+	if ( (self->mailbox->state) && (MailboxState_getId(self->mailbox->state)) )
+		db_mailbox_seq_update(MailboxState_getId(self->mailbox->state));
 
 	g_list_destroy(self->recent);
 	self->recent = NULL;

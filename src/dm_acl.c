@@ -52,7 +52,7 @@ static int acl_get_rightsstring(u64_t userid, u64_t mboxid,
 				/*@out@*/ char *rightsstring);
 
 
-int acl_has_right(MailboxInfo *mailbox, u64_t userid, ACLRight_t right)
+int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right)
 {
 	u64_t anyone_userid;
 	int test;
@@ -65,7 +65,7 @@ int acl_has_right(MailboxInfo *mailbox, u64_t userid, ACLRight_t right)
 		case ACL_RIGHT_CREATE:
 		case ACL_RIGHT_DELETE:
 		case ACL_RIGHT_ADMINISTER:
-			if (! mailbox_is_writable(mailbox->uid))
+			if (! mailbox_is_writable(MailboxState_getId(S)))
 				return FALSE;
 		break;
 
@@ -81,7 +81,7 @@ int acl_has_right(MailboxInfo *mailbox, u64_t userid, ACLRight_t right)
 
 	/* Check if the user has the right; this will also
 	 * return true if the user is the mailbox owner. */
-	if ((test = db_acl_has_right(mailbox, userid, right_flag)))
+	if ((test = db_acl_has_right(S, userid, right_flag)))
 		return TRUE;
 
 	/* else check the 'anyone' user */
@@ -89,7 +89,7 @@ int acl_has_right(MailboxInfo *mailbox, u64_t userid, ACLRight_t right)
 	if (test == DM_EQUERY) 
 		return DM_EQUERY;
 	if (test)
-		return db_acl_has_right(mailbox, anyone_userid, right_flag);
+		return db_acl_has_right(S, anyone_userid, right_flag);
 	
 	return FALSE;
 }
@@ -326,7 +326,7 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 {
 	int result;
 	u64_t owner_idnr;
-	MailboxInfo mailbox;
+	MailboxState_T S;
 	struct ACLMap map;
 
 	assert(rightsstring);
@@ -341,14 +341,13 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 		return 1;
 	}
 	
-	memset(&mailbox, '\0', sizeof(MailboxInfo));
 	memset(&map, '\0', sizeof(struct ACLMap));
-	
-	mailbox.uid = mboxid;
-	mailbox.owner_idnr = owner_idnr;
-	
-	if ((result = db_acl_get_acl_map(&mailbox, userid, &map)) == DM_EQUERY)
-		return result;
+	S = MailboxState_new(mboxid);
+	MailboxState_setOwner(S, owner_idnr);
+	result = db_acl_get_acl_map(S, userid, &map);
+	MailboxState_free(&S);
+
+	if (result == DM_EQUERY) return result;
 	
 	if (map.lookup_flag)
 		g_strlcat(rightsstring,"l", NR_ACL_FLAGS+1);

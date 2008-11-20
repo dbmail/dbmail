@@ -600,17 +600,6 @@ int db_findmailbox(const char *name, u64_t user_idnr,
  */
 int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern, GList ** children, int only_subscribed);
 /**
- * \brief get info on a mailbox. Info is filled in in the
- *        MailboxInfo struct.
- * \param mb the MailboxInfo to fill in. (mb->uid needs to be
- *        set already!
- * \return
- *     - -1 on failure
- *     - 0 on success
- */
-int db_getmailbox(MailboxInfo * mb, u64_t userid);
-
-/**
  * \brief find owner of a mailbox
  * \param mboxid id of mailbox
  * \param owner_id will hold owner of mailbox after return
@@ -836,27 +825,6 @@ int db_get_msgflag(const char *flag_name,
  */
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
 		   GList *keywords, int action_type, MessageInfo *msginfo);
-
-/**
- * \brief check if a user has a certain right to a mailbox
- * \param mailbox
- * \param user_idnr id of user
- * \param right_flag string holding the flag to check for
- * \return
- *     - -1 on db error
- *     -  0 if no right
- *     -  1 if user has the right
- */
-int db_acl_has_right(MailboxInfo *mailbox, u64_t user_idnr, const char *right_flag);
-/**
- * \brief get all permissions on a mailbox for a user
- * \param mailbox
- * \param user_idnr id of user
- * \param map result 
- * 
- */
-int db_acl_get_acl_map(MailboxInfo *mailbox, u64_t userid, struct ACLMap *map);
-
 /**
  * \brief set one right in an acl for a user
  * \param userid id of user

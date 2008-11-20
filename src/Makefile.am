@@ -38,6 +38,7 @@ sbin_PROGRAMS = dbmail-deliver \
 COMMON = dbmail-user.c \
 	dbmail-message.c \
 	dbmail-mailbox.c \
+	dm_mailboxstate.c \
 	dm_config.c \
 	dm_debug.c \
 	dm_list.c \

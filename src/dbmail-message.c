@@ -1997,13 +1997,14 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		// it must not be no_select, and it may require an ACL for
 		// the user whose Sieve script this is, since it's possible that
 		// we've looked up a #Public or a #Users mailbox.
+		int permission;
 		TRACE(TRACE_DEBUG, "Checking if we have the right to post incoming messages");
         
-		MailboxInfo mbox;
-		memset(&mbox, '\0', sizeof(mbox));
-		mbox.uid = mboxidnr;
+		MailboxState_T S = MailboxState_new(mboxidnr);
+		permission = acl_has_right(S, useridnr, ACL_RIGHT_POST);
+		MailboxState_free(&S);
 		
-		switch (acl_has_right(&mbox, useridnr, ACL_RIGHT_POST)) {
+		switch (permission) {
 		case -1:
 			TRACE(TRACE_NOTICE, "error retrieving right for [%llu] to deliver mail to [%s]",
 					useridnr, mailbox);

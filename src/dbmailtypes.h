@@ -498,31 +498,6 @@ typedef struct {
 /************************************************************************ 
  *                      simple cache mechanism
  ***********************************************************************/
-/* 
- * cached mailbox info
- */
-typedef struct {
-	// map dbmail_mailboxes
-	u64_t uid;
-	u64_t msguidnext;
-	u64_t owner_idnr;
-	u64_t seq;
-	unsigned no_select;
-	unsigned no_children;
-	unsigned no_inferiors;
-	unsigned exists;
-	unsigned recent;
-	unsigned unseen;
-	unsigned permission;
-	// 
-	gboolean is_public;
-	gboolean is_users;
-	gboolean is_inbox;
-
-	char *name;
-	// reference dbmail_keywords
-	GTree *keywords;
-} MailboxInfo;
 
 /*
  * cached message info

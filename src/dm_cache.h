@@ -41,4 +41,6 @@ extern void  Cache_set_tmpdump(T C, Mem_T M);
 extern Mem_T Cache_get_tmpdump(T C);
 extern void  Cache_free(T *C);
 
+#undef T
+
 #endif

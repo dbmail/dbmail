@@ -33,18 +33,7 @@
  */
 
 #include "dbmailtypes.h"
-
-/**
- * \brief checks if a user has a certain right to a mailbox 
- * \param userid id of user
- * \param mboxid id of mailbox
- * \param right the right to check for
- * \return 
- *     - -1 on db error
- *     -  0 if no right
- *     -  1 if user has this right
- */
-int acl_has_right(MailboxInfo *mailbox, u64_t userid, ACLRight_t right);
+#include "dm_mailboxstate.h"
 
 /**
  * \brief sets new rights to a mailbox for a user.
@@ -68,6 +57,18 @@ int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring);
  */
 //int acl_delete_acl(u64_t userid, u64_t mboxid);
 #define acl_delete_acl(a,b) db_acl_delete_acl((a),(b))
+
+/**
+ * \brief checks if a user has a certain right to a mailbox 
+ * \param userid id of user
+ * \param mboxid id of mailbox
+ * \param right the right to check for
+ * \return 
+ *     - -1 on db error
+ *     -  0 if no right
+ *     -  1 if user has this right
+ */
+int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right);
 
 /**
  * \brief get complete acl for a mailbox
