@@ -97,11 +97,6 @@ unsigned MailboxState_getRecent(T M)
 	return M->recent;
 }
 
-void MailboxState_setUidnext(T M, u64_t uidnext)
-{
-	M->uidnext = uidnext;
-}
-
 u64_t MailboxState_getUidnext(T M)
 {
 	return M->uidnext;

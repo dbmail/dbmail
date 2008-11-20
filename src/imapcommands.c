@@ -1722,8 +1722,12 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 
 	// reporting callback
 	if (! cmd->silent) {
+		char *uid = NULL;
+		if (self->use_uid)
+			uid = g_strdup_printf("UID %llu ", *id);
 		s = imap_flags_as_string(self->mailbox->state, msginfo);
-		dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
+		dbmail_imap_session_buff_printf(self,"* %llu FETCH (%sFLAGS %s)\r\n", *msn, uid?uid:"", s);
+		if (uid) g_free(uid);
 		g_free(s);
 	}
 

@@ -2306,11 +2306,10 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern, GList ** chil
 
 int mailbox_is_writable(u64_t mailbox_idnr)
 {
-	MailboxState_T S = MailboxState_new(mailbox_idnr);
+	MailboxState_T M = MailboxState_new(mailbox_idnr);
 	
-	MailboxState_reload(S,0);
-	
-	if (MailboxState_getPermission(S) != IMAPPERM_READWRITE) {
+	MailboxState_reload(M,0);
+	if (MailboxState_getPermission(M) != IMAPPERM_READWRITE) {
 		TRACE(TRACE_INFO, "read-only mailbox");
 		return FALSE;
 	}
@@ -2416,19 +2415,19 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 		}
 
 		/* Prepend a mailbox struct onto the list. */
-		MailboxState_T S = MailboxState_new(mboxid);
-		MailboxState_setName(S, g_strdup(cpy));
-		MailboxState_setIsUsers(S, is_users);
-		MailboxState_setIsPublic(S, is_public);
+		MailboxState_T M = MailboxState_new(mboxid);
+		MailboxState_setName(M, g_strdup(cpy));
+		MailboxState_setIsUsers(M, is_users);
+		MailboxState_setIsPublic(M, is_public);
 
 		/* Only the PUBLIC user is allowed to own #Public folders. */
 		if (is_public) {
-			MailboxState_setOwner(S, public);
+			MailboxState_setOwner(M, public);
 		} else {
-			MailboxState_setOwner(S, owner_idnr);
+			MailboxState_setOwner(M, owner_idnr);
 		}
 
-		mailboxes = g_list_prepend(mailboxes, S);
+		mailboxes = g_list_prepend(mailboxes, M);
 	}
 
 	/* We built the path with prepends,
@@ -2448,8 +2447,8 @@ equery:
 egeneral:
 	mailboxes = g_list_first(mailboxes);
 	while (mailboxes) {
-		MailboxState_T S = (MailboxState_T)mailboxes->data;
-		MailboxState_free(&S);
+		MailboxState_T M = (MailboxState_T)mailboxes->data;
+		MailboxState_free(&M);
 		if (! g_list_next(mailboxes)) break;
 		mailboxes = g_list_next(mailboxes);
 	}
@@ -2514,25 +2513,25 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 	mailbox_item = g_list_first(mailbox_list);
 	while (mailbox_item) {
-		MailboxState_T S = (MailboxState_T)mailbox_item->data;
+		MailboxState_T M = (MailboxState_T)mailbox_item->data;
 
 		/* Needs to be created. */
-		if (MailboxState_getId(S) == 0) {
-			if (MailboxState_isUsers(S) && MailboxState_getOwner(S) != owner_idnr) {
+		if (MailboxState_getId(M) == 0) {
+			if (MailboxState_isUsers(M) && MailboxState_getOwner(M) != owner_idnr) {
 				*message = "Top-level mailboxes may not be created for others under #Users";
 				skip_and_free = DM_EGENERAL;
 			} else {
 				u64_t this_owner_idnr;
 
 				/* Only the PUBLIC user is allowed to own #Public. */
-				if (MailboxState_isPublic(S)) {
-					this_owner_idnr = MailboxState_getOwner(S);
+				if (MailboxState_isPublic(M)) {
+					this_owner_idnr = MailboxState_getOwner(M);
 				} else {
 					this_owner_idnr = owner_idnr;
 				}
 
 				/* Create it! */
-				result = db_createmailbox(MailboxState_getName(S), this_owner_idnr, &created_mboxid);
+				result = db_createmailbox(MailboxState_getName(M), this_owner_idnr, &created_mboxid);
 
 				if (result == DM_EGENERAL) {
 					*message = "General error while creating";
@@ -2549,7 +2548,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 				}
 
 				/* If the PUBLIC user owns it, then the current user needs ACLs. */
-				if (MailboxState_isPublic(S)) {
+				if (MailboxState_isPublic(M)) {
 					result = acl_set_rights(owner_idnr, created_mboxid, "lrswipcda");
 					if (result == DM_EQUERY) {
 						*message = "Database error while setting rights";
@@ -2560,7 +2559,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 			if (!skip_and_free) {
 				*message = "Folder created";
-				MailboxState_setId(S, created_mboxid);
+				MailboxState_setId(M, created_mboxid);
 			}
 		}
 
@@ -2569,10 +2568,10 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 		if (source != BOX_BRUTEFORCE) {
 			TRACE(TRACE_DEBUG, "Checking if we have the right to "
-				"create mailboxes under mailbox [%llu]", MailboxState_getId(S));
+				"create mailboxes under mailbox [%llu]", MailboxState_getId(M));
 
 			/* Mailbox does exist, failure if no_inferiors flag set. */
-			result = db_noinferiors(MailboxState_getId(S));
+			result = db_noinferiors(MailboxState_getId(M));
 			if (result == DM_EGENERAL) {
 				*message = "Mailbox cannot have inferior names";
 				skip_and_free = DM_EGENERAL;
@@ -2582,7 +2581,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 			}
 
 			/* Mailbox does exist, failure if ACLs disallow CREATE. */
-			result = acl_has_right(S, owner_idnr, ACL_RIGHT_CREATE);
+			result = acl_has_right(M, owner_idnr, ACL_RIGHT_CREATE);
 			if (result == 0) {
 				*message = "Permission to create mailbox denied";
 				skip_and_free = DM_EGENERAL;
@@ -2603,8 +2602,8 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 	mailbox_item = g_list_first(mailbox_list);
 	while (mailbox_item) {
-		MailboxState_T S = (MailboxState_T)mailbox_item->data;
-		MailboxState_free(&S);
+		MailboxState_T M = (MailboxState_T)mailbox_item->data;
+		MailboxState_free(&M);
 		if (! g_list_next(mailbox_item)) break;
 		mailbox_item = g_list_next(mailbox_item);
 	}
