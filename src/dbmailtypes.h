@@ -508,8 +508,8 @@ typedef struct {
 	u64_t id;
 	u64_t mailbox_id;
 	u64_t rfcsize;
-	int flags[IMAP_NFLAGS];
 	char internaldate[IMAP_INTERNALDATE_LEN];
+	int flags[IMAP_NFLAGS];
 	// reference dbmail_keywords
 	GList *keywords;
 } MessageInfo;

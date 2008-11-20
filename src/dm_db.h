@@ -803,8 +803,7 @@ int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr);
  * 		- 0 if flag is not set or a non-existent flag is asked.
  * 		- 1 if flag is set.
  */
-int db_get_msgflag(const char *flag_name,
-		   u64_t msg_idnr, u64_t mailbox_idnr);
+int db_get_msgflag(const char *flag_name, u64_t msg_idnr, u64_t mailbox_idnr);
 
 /**
  * \brief set flags for a message
@@ -823,8 +822,7 @@ int db_get_msgflag(const char *flag_name,
  * 		- -1 on failure
  * 		-  0 on success
  */
-int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
-		   GList *keywords, int action_type, MessageInfo *msginfo);
+int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo);
 /**
  * \brief set one right in an acl for a user
  * \param userid id of user
@@ -837,8 +835,7 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
  * \note if the user has no acl for this mailbox, it
  *       will be created.
  */
-int db_acl_set_right(u64_t userid, u64_t mboxid,
-		     const char *right_flag, int set);
+int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag, int set);
 
 /**
  * \brief delete an ACL for a user, mailbox

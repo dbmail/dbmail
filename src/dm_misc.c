@@ -1403,7 +1403,7 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 	v = t;
 	i = 0;
 	while (v[i++]) {
-		if (v[i]=='\n')
+		if (v[i]=='\n' && v[i+1])
 			l++;
 	}
 	if (s >=2 && v[s-2] != '\n')
@@ -1945,7 +1945,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	list = imap_append_header_as_string(list,part,"In-Reply-to");
 	/* message-id */
 	result = (char *)g_mime_message_get_message_id(message);
-	if (result && (! g_strrstr(result,"="))) {
+	if (result && (! g_strrstr(result,"=")) && (! g_strrstr(result,"@(none)"))) {
                 t = g_strdup_printf("<%s>", result);
 		s = dbmail_imap_astring_as_string(t);
 		list = g_list_append_printf(list,"%s", s);

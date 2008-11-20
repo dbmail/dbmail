@@ -834,16 +834,12 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	id = g_tree_lookup(self->mailbox->ids,uid);
 
 	g_return_val_if_fail(id,-1);
-	
+
 	dbmail_imap_session_buff_printf(self, "* %llu FETCH (", *id);
 
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
 	
-        /* queue this message's recent_flag for removal */
-//        if (self->mailbox->state->permission == IMAPPERM_READWRITE)
-//            self->recent = g_list_prepend(self->recent, g_strdup_printf("%llu",self->msg_idnr));
-
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
 		char *s =date_sql2imap(msginfo->internaldate);
@@ -1223,7 +1219,9 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	char *s;
 	MessageInfo *old, *new;
 
-	if (! (newbox->msginfo && (new = g_tree_lookup(newbox->msginfo, uid))))
+	assert(uid);
+
+	if (! (newbox->msginfo && *uid && (new = g_tree_lookup(newbox->msginfo, uid))))
 		return;
 
 	if (! (msn = g_tree_lookup(newbox->ids, uid))) {
@@ -1236,9 +1234,12 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	// FETCH
 	for (i=0; i< IMAP_NFLAGS; i++) {
 		if (old->flags[i] != new->flags[i]) {
+			char *t = NULL;
+			if (self->use_uid) t = g_strdup_printf(" UID %llu", *uid);
 			s = imap_flags_as_string(self->mailbox->state, new);
-			dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s)\r\n", *msn, s);
+			dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s%s)\r\n", *msn, s, t?t:"");
 			g_free(s);
+			if (t) g_free(t);
 			break;
 		}
 	}
@@ -1291,15 +1292,17 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 	int res;
         DbmailMailbox *mailbox = NULL;
-	gboolean showexists = FALSE, showrecent = FALSE, unhandled=FALSE;
+	gboolean showexists = FALSE, showrecent = FALSE, unhandled=FALSE, showflags=FALSE;
 
 	if (self->state != IMAPCS_SELECTED) return FALSE;
 
 	if (update) {
 		MailboxState_T M;
 		unsigned oldseq, oldexists, oldrecent, olduidnext;
+		const char *oldflags;
 
 		M = self->mailbox->state;
+		oldflags = MailboxState_flags(M);
 		oldseq = MailboxState_getSeq(M);
 		oldexists = MailboxState_getExists(M);
 		oldrecent = MailboxState_getRecent(M);
@@ -1323,6 +1326,9 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			// RECENT response only when changed
 			if (MailboxState_getRecent(M) != oldrecent)
 				showrecent = TRUE;
+
+			if (! MATCH(MailboxState_flags(M),oldflags))
+				showflags = TRUE;
 		}
 	}
 
@@ -1333,6 +1339,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			showexists = showrecent = TRUE;
 		break;
 
+		case IMAP_COMM_FETCH:
 		case IMAP_COMM_IDLE:
 		break;
 
@@ -1360,10 +1367,12 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		if (unhandled)
 			TRACE(TRACE_ERR, "[%p] EXISTS/RECENT changed but client "
 				"is not notified", self);
-		char *flags = MailboxState_flags(self->mailbox->state);
-		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
-		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
-		g_free(flags);
+		if (showflags) {
+			char *flags = MailboxState_flags(self->mailbox->state);
+			dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+			dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+			g_free(flags);
+		}
 
 		mailbox_notify_update(self, mailbox);
 	}
