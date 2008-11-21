@@ -1322,6 +1322,8 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			// EXISTS response may never decrease
 			if ((MailboxState_getUidnext(M) > olduidnext) && (MailboxState_getExists(M) > oldexists))
 				showexists = TRUE;
+			else
+				MailboxState_setExists(M,oldexists);
 
 			// RECENT response only when changed
 			if (MailboxState_getRecent(M) != oldrecent)
@@ -1339,21 +1341,18 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			showexists = showrecent = TRUE;
 		break;
 
-		case IMAP_COMM_FETCH:
-		case IMAP_COMM_IDLE:
-		break;
-
 		case IMAP_COMM_APPEND:
 			showrecent = FALSE;
 			showexists = TRUE;
 		break;
 
+		case IMAP_COMM_FETCH:
+		case IMAP_COMM_IDLE:
 		case IMAP_COMM_NOOP:
 		case IMAP_COMM_CHECK:
 			// ok show them if needed
 		break;
 
-		break;
 		default:
 			unhandled=TRUE;
 		break;
@@ -1366,7 +1365,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	if (update) {
 		if (unhandled)
 			TRACE(TRACE_ERR, "[%p] EXISTS/RECENT changed but client "
-				"is not notified", self);
+				"is not notified [%d]", self, self->command_type);
 		if (showflags) {
 			char *flags = MailboxState_flags(self->mailbox->state);
 			dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);

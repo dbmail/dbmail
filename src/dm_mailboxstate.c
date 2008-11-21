@@ -360,12 +360,12 @@ static int db_getmailbox_count(T M)
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY) {
-		db_con_close(c);
+	if (t == DM_EQUERY)
 		return t;
-	}
 
  	M->exists = exists;
  	M->unseen = exists - seen;
@@ -378,7 +378,7 @@ static int db_getmailbox_count(T M)
 	 * - the next uit MUST NOT change unless messages are added to THIS mailbox
 	 * */
 
-	db_con_clear(c);
+	c = db_con_get();
 	t = FALSE;
 	TRY
 		r = db_query(c, "SELECT MAX(message_idnr)+1 FROM %smessages WHERE mailbox_idnr=%llu",DBPFX, M->id);

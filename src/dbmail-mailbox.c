@@ -1385,6 +1385,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_DATA_TEXT:
 
 			memset(partial,0,sizeof(partial));
+			g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "k.data");
 			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
 			g_string_printf(q,"SELECT m.message_idnr,v.headervalue,k.data FROM %smimeparts k "
 					"JOIN %spartlists l on k.id=l.part_id "
@@ -1392,10 +1393,12 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"JOIN %sheadervalue v on v.physmessage_id=p.id "
 					"JOIN %smessages m on m.physmessage_id=p.id "
 					"WHERE m.mailbox_idnr = ? AND status IN (?,?) "
-					"HAVING %s %s ? OR k.data %s ? "
+					"GROUP BY m.message_idnr,v.headervalue,k.data "
+					"HAVING %s %s ? OR %s %s ? "
 					"ORDER BY message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
 					partial, db_get_sql(SQL_INSENSITIVE_LIKE), 
+					t->str,
 					db_get_sql(SQL_INSENSITIVE_LIKE));
 
 			st = db_stmt_prepare(c,q->str);

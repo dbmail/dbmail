@@ -317,7 +317,7 @@ gboolean db_exec(C c, const char *q, ...)
 		LOG_SQLERROR;
 	END_TRY;
 
-	log_query_time(query, before, after);
+	if (result) log_query_time(query, before, after);
 
 	return result;
 }
@@ -326,6 +326,7 @@ R db_query(C c, const char *q, ...)
 {
 	struct timeval before, after;
 	R r = NULL;
+	gboolean result = FALSE;
 	va_list ap, cp;
 	INIT_QUERY;
 
@@ -339,11 +340,12 @@ R db_query(C c, const char *q, ...)
 		gettimeofday(&before, NULL);
 		r = Connection_executeQuery(c, query);
 		gettimeofday(&after, NULL);
+		result = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	END_TRY;
 
-	log_query_time(query, before, after);
+	if (result) log_query_time(query, before, after);
 
 	return r;
 }
