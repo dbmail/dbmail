@@ -378,6 +378,11 @@ static int db_getmailbox_count(T M)
 	 * - the next uit MUST NOT change unless messages are added to THIS mailbox
 	 * */
 
+	if (M->exists == 0) {
+		M->uidnext = 1;
+		return t;
+	}
+
 	c = db_con_get();
 	t = FALSE;
 	TRY

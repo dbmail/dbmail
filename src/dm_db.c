@@ -2976,7 +2976,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	/* Copy the message keywords */
 	c = db_con_get();
 	TRY
-		r = db_query(c, "INSERT INTO %skeywords (message_idnr, keyword) "
+		db_exec(c, "INSERT INTO %skeywords (message_idnr, keyword) "
 			"SELECT %llu,keyword from %skeywords WHERE message_idnr=%llu", 
 			DBPFX, *newmsg_idnr, DBPFX, msg_idnr);
 	CATCH(SQLException)
