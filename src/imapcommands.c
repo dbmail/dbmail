@@ -156,7 +156,6 @@ int _ic_logout(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
 	dbmail_imap_session_set_state(self, IMAPCS_LOGOUT);
-	dbmail_imap_session_mailbox_update_recent(self);
 	TRACE(TRACE_NOTICE, "[%p] userid:[%llu]", self, self->userid);
 	return 2;
 }
@@ -234,7 +233,6 @@ static gboolean mailbox_first_unseen(gpointer key, gpointer value, gpointer data
 static int imap_session_mailbox_close(ImapSession *self)
 {
 	// flush recent messages from previous select
-	dbmail_imap_session_mailbox_update_recent(self);
 	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 	if (self->mailbox) {
 		dbmail_mailbox_free(self->mailbox);
@@ -293,6 +291,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 
 	/* fetch mailbox metadata */
 	self->mailbox->state = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
+	MailboxState_reload(self->mailbox->state, self->userid);
 
 	/* check if user has right to select mailbox */
 	if (mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_READ) == 1) {
@@ -300,6 +299,14 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 		return DM_EGENERAL;
 	}
 	
+	if (self->command_type == IMAP_COMM_SELECT) {
+		// SELECT
+		MailboxState_setPermission(self->mailbox->state,IMAPPERM_READWRITE);
+	} else {
+		// EXAMINE
+		MailboxState_setPermission(self->mailbox->state,IMAPPERM_READ);
+	}
+
 	/* check if mailbox is selectable */
 	if (MailboxState_noSelect(self->mailbox->state)) return DM_EGENERAL;
 
@@ -356,15 +363,11 @@ static void _ic_select_enter(dm_thread_data *D)
 		if ( (key > 0) && (msn = g_tree_lookup(self->mailbox->ids, &key)))
 			dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %llu] first unseen message\r\n", *msn);
 	}
-	if (self->command_type == IMAP_COMM_SELECT) {
-		// SELECT
-		MailboxState_setPermission(self->mailbox->state,IMAPPERM_READWRITE);
+
+	if (self->command_type == IMAP_COMM_SELECT) 
 		okarg = "READ-WRITE";
-	} else {
-		// EXAMINE
-		MailboxState_setPermission(self->mailbox->state,IMAPPERM_READ);
+	else
 		okarg = "READ-ONLY";
-	}
 
 	dbmail_imap_session_buff_printf(self, "%s OK [%s] %s completed\r\n", self->tag, okarg, self->command);
 
@@ -918,7 +921,7 @@ int _ic_lsub(ImapSession *self)
 static void _ic_status_enter(dm_thread_data *D)
 {
 	LOCK_SESSION;
-	MailboxState_T S;
+	MailboxState_T M;
 	u64_t id;
 	int i, endfound, result;
 	GList *plst = NULL;
@@ -967,28 +970,28 @@ static void _ic_status_enter(dm_thread_data *D)
 		}
 	}
 
-	if (! (S = dbmail_imap_session_mbxinfo_lookup(self, id))) {
+	if (! (M = dbmail_imap_session_mbxinfo_lookup(self, id))) {
 		dbmail_imap_session_buff_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
 	}
 
-	if ((result = mailbox_check_acl(self, S, ACL_RIGHT_READ))) {
+	if ((result = mailbox_check_acl(self, M, ACL_RIGHT_READ))) {
 		D->status = result;
 		NOTIFY_DONE(D);
 	}
 
 	for (i = 2; self->args[i]; i++) {
 		if (MATCH(self->args[i], "messages"))
-			plst = g_list_append_printf(plst,"MESSAGES %u", MailboxState_getExists(S));
+			plst = g_list_append_printf(plst,"MESSAGES %u", MailboxState_getExists(M));
 		else if (MATCH(self->args[i], "recent"))
-			plst = g_list_append_printf(plst,"RECENT %u", MailboxState_getRecent(S));
+			plst = g_list_append_printf(plst,"RECENT %u", MailboxState_getRecent(M));
 		else if (MATCH(self->args[i], "unseen"))
-			plst = g_list_append_printf(plst,"UNSEEN %u", MailboxState_getUnseen(S));
+			plst = g_list_append_printf(plst,"UNSEEN %u", MailboxState_getUnseen(M));
 		else if (MATCH(self->args[i], "uidnext"))
-			plst = g_list_append_printf(plst,"UIDNEXT %llu", MailboxState_getUidnext(S));
+			plst = g_list_append_printf(plst,"UIDNEXT %llu", MailboxState_getUidnext(M));
 		else if (MATCH(self->args[i], "uidvalidity"))
-			plst = g_list_append_printf(plst,"UIDVALIDITY %llu", MailboxState_getId(S));
+			plst = g_list_append_printf(plst,"UIDVALIDITY %llu", MailboxState_getId(M));
 		else if (MATCH(self->args[i], ")"))
 			break;
 		else {
@@ -1150,7 +1153,7 @@ void _ic_append_enter(dm_thread_data *D)
 	timestring_t sqldate;
 	int flaglist[IMAP_NFLAGS], flagcount = 0;
 	GList *keywords = NULL;
-	MailboxState_T S;
+	MailboxState_T M;
 	LOCK_SESSION;
 	char *message;
 
@@ -1163,7 +1166,7 @@ void _ic_append_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 
-	S = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 
 	/* check if user has right to append to  mailbox */
 	if ((result = imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_INSERT))) {
@@ -1210,13 +1213,13 @@ void _ic_append_enter(dm_thread_data *D)
 
 	/** check ACL's for STORE */
 	if (flaglist[IMAP_FLAG_SEEN] == 1) {
-		if ((result = mailbox_check_acl(self, S, ACL_RIGHT_SEEN))) {
+		if ((result = mailbox_check_acl(self, M, ACL_RIGHT_SEEN))) {
 			D->status = result;
 			NOTIFY_DONE(D);
 		}
 	}
 	if (flaglist[IMAP_FLAG_DELETED] == 1) {
-		if ((result = mailbox_check_acl(self, S, ACL_RIGHT_DELETE))) {
+		if ((result = mailbox_check_acl(self, M, ACL_RIGHT_DELETE))) {
 			D->status = result;
 			NOTIFY_DONE(D);
 		}
@@ -1226,7 +1229,7 @@ void _ic_append_enter(dm_thread_data *D)
 	    flaglist[IMAP_FLAG_DRAFT] == 1 ||
 	    flaglist[IMAP_FLAG_RECENT] == 1 ||
 	    g_list_length(keywords) > 0) {
-		if ((result = mailbox_check_acl(self, S, ACL_RIGHT_WRITE))) {
+		if ((result = mailbox_check_acl(self, M, ACL_RIGHT_WRITE))) {
 			D->status = result;
 			NOTIFY_DONE(D);
 		}
@@ -1275,13 +1278,10 @@ void _ic_append_enter(dm_thread_data *D)
 		dbmail_imap_session_buff_printf(self, "%s NO invalid message specified\r\n", self->tag);
 		break;
 	case FALSE:
-		if (flagcount > 0) {
-			if (db_set_msgflag(message_id, mboxid, flaglist, keywords, IMAPFA_ADD, NULL) < 0) {
+		if (flagcount) {
+			if (db_set_msgflag(message_id, mboxid, flaglist, keywords, IMAPFA_ADD, NULL) < 0)
 				TRACE(TRACE_ERR, "[%p] error setting flags for message [%llu]", self, message_id);
-			}
 		}
-
-		db_mailbox_seq_update(mboxid);
 		break;
 	}
 
@@ -1316,8 +1316,6 @@ void _ic_append_enter(dm_thread_data *D)
 		uid = g_new0(u64_t,1);
 		*uid = message_id;
 		g_tree_insert(self->mailbox->msginfo, uid, msginfo); 
-
-		MailboxState_setExists(S, MailboxState_getExists(S)+1);
 
 		dbmail_mailbox_insert_uid(self->mailbox, message_id);
 
@@ -1393,7 +1391,6 @@ static void _ic_close_enter(dm_thread_data *D)
 			dbmail_imap_session_mailbox_expunge(self);
 
 	dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
-	dbmail_imap_session_mailbox_update_recent(self);
 
 	IC_DONE_OK;
 	NOTIFY_DONE(D);

@@ -1442,10 +1442,9 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 		*id = mailbox_id;
 		M = MailboxState_new(mailbox_id);
 		MailboxState_setOwner(M, self->userid);
+		_get_mailbox(0,M,NULL);
 		g_tree_insert(self->mbxinfo, id, M);
-
 	}
-	_get_mailbox(0,M,NULL);
 
 	return M;
 }
@@ -1511,9 +1510,6 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 		assert(id);
 		if ( (msginfo = g_tree_lookup(self->mailbox->msginfo, &id)) != NULL) {
 			msginfo->flags[IMAP_FLAG_RECENT] = 0;
-			if ( (self->mailbox->state) && (MailboxState_getId(self->mailbox->state) == msginfo->mailbox_id) ) {
-				MailboxState_setRecent(self->mailbox->state, MailboxState_getRecent(self->mailbox->state)-1);
-			}
 		} else {
 			TRACE(TRACE_WARNING,"[%p] can't find msginfo for [%llu]", self, id);
 		}

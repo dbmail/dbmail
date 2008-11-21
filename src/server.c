@@ -489,7 +489,22 @@ static void server_exit(void)
 	disconnect_all();
 	server_close_sockets(server_conf);
 }
-	
+
+static void server_pidfile(serverConfig_t *conf)
+{
+	static gboolean configured = FALSE;
+	if (configured) return;
+
+	/* We write the pidFile after daemonize because
+	 * we may actually be a child of the original process. */
+	if (! conf->pidFile)
+		conf->pidFile = config_get_pidfile(conf, conf->process_name);
+
+	pidfile_create(conf->pidFile, getpid());
+
+	configured = TRUE;
+}
+
 int server_run(serverConfig_t *conf)
 {
 	int ip;
@@ -499,6 +514,7 @@ int server_run(serverConfig_t *conf)
 
 	assert(conf);
 	reopen_logs(conf);
+
 	server_create_sockets(conf);
 
  	TRACE(TRACE_NOTICE, "starting main service loop for [%s]", conf->service_name);
@@ -533,6 +549,9 @@ int server_run(serverConfig_t *conf)
 		TRACE(TRACE_ERR,"unable to drop privileges");
 		return 0;
 	}
+	
+	server_pidfile(conf);
+
 
 	TRACE(TRACE_DEBUG,"dispatching event loop...");
 	event_dispatch();
@@ -641,6 +660,8 @@ int server_getopt(serverConfig_t *config, const char *service, int argc, char *a
 
 int server_mainloop(serverConfig_t *config, const char *service, const char *servicename)
 {
+	strncpy(config->process_name, servicename, FIELDSIZE);
+	
 	if (config->no_daemonize == 1) {
 		StartCliServer(config);
 		TRACE(TRACE_INFO, "exiting cli server");
@@ -649,13 +670,6 @@ int server_mainloop(serverConfig_t *config, const char *service, const char *ser
 	
 	if (! config->no_daemonize)
 		server_daemonize(config);
-
-	/* We write the pidFile after daemonize because
-	 * we may actually be a child of the original process. */
-	if (! config->pidFile)
-		config->pidFile = config_get_pidfile(config, servicename);
-
-	pidfile_create(config->pidFile, getpid());
 
 	/* This is the actual main loop. */
 	while (server_run(config)) {

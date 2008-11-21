@@ -253,7 +253,6 @@ C db_con_get(void)
 	}
 
 	assert(c);
-	TRACE(TRACE_DATABASE, "gave database connection [%p]", c);
 	return c;
 }
 
@@ -272,14 +271,12 @@ gboolean dm_db_ping(void)
 void db_con_close(C c)
 {
 	Connection_close(c);
-	TRACE(TRACE_DATABASE, "closed database connection [%p]", c);
 	return;
 }
 
 void db_con_clear(C c)
 {
 	Connection_clear(c);
-	TRACE(TRACE_DATABASE, "cleared database connection [%p]", c);
 	return;
 }
 
@@ -364,7 +361,6 @@ gboolean db_update(const char *q, ...)
         va_end(cp);
 
 	c = db_con_get();
-	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
 		result = db_exec(c, query);
 	CATCH(SQLException)
@@ -3207,31 +3203,37 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 {
 	C c; int t = DM_SUCCESS;
 	size_t i, pos = 0;
+	int seen = 0;
 	INIT_QUERY;
 
 	memset(query,0,DEF_QUERYSIZE);
-	pos += snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0", DBPFX);
+	pos += snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET ", DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
 
-		// Skip recent_flag because it is part of the query.
+		// Skip recent_flag
 		if (i == IMAP_FLAG_RECENT) continue;
 
 		switch (action_type) {
 		case IMAPFA_ADD:
-			if (flags[i])
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, ", %s=1", db_flag_desc[i]); 
+			if (flags[i]) {
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=1", seen?",":"", db_flag_desc[i]); 
+				seen++;
+			}
 			break;
 		case IMAPFA_REMOVE:
-			if (flags[i])
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, ", %s=0", db_flag_desc[i]); 
+			if (flags[i]) {
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=0", seen?",":"", db_flag_desc[i]); 
+				seen++;
+			}
 			break;
 
 		case IMAPFA_REPLACE:
 			if (flags[i])
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, ", %s=1", db_flag_desc[i]); 
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=1", seen?",":"", db_flag_desc[i]); 
 			else
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, ", %s=0", db_flag_desc[i]); 
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=0", seen?",":"", db_flag_desc[i]); 
+			seen++;
 			break;
 		}
 	}
