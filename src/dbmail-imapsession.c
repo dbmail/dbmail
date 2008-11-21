@@ -1362,16 +1362,17 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	if (showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(self->mailbox->state));
 	if (showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(self->mailbox->state));
 
+	if (showflags) {
+		char *flags = MailboxState_flags(self->mailbox->state);
+		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+		g_free(flags);
+	}
+
 	if (update) {
 		if (unhandled)
 			TRACE(TRACE_ERR, "[%p] EXISTS/RECENT changed but client "
 				"is not notified [%d]", self, self->command_type);
-		if (showflags) {
-			char *flags = MailboxState_flags(self->mailbox->state);
-			dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
-			dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
-			g_free(flags);
-		}
 
 		mailbox_notify_update(self, mailbox);
 	}
