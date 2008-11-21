@@ -307,6 +307,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
         if (MailboxState_getPermission(self->mailbox->state) == IMAPPERM_READWRITE && self->mailbox->msginfo) {
 		g_tree_foreach(self->mailbox->msginfo, (GTraverseFunc)mailbox_build_recent, self);
 		TRACE(TRACE_DEBUG, "build list of [%d] [%d] recent messages...", g_tree_nnodes(self->mailbox->msginfo), g_list_length(self->recent));
+		dbmail_imap_session_mailbox_update_recent(self);
 	}
 
 	/* keep these in sync */
@@ -1320,7 +1321,7 @@ void _ic_append_enter(dm_thread_data *D)
 
 		dbmail_mailbox_insert_uid(self->mailbox, message_id);
 
-		dbmail_imap_session_mailbox_status(self, FALSE);
+		dbmail_imap_session_mailbox_status(self, TRUE);
 	} else {
 		g_list_destroy(keywords);
 	}

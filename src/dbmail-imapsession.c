@@ -1214,9 +1214,8 @@ static void notify_expunge(ImapSession *self, u64_t *uid)
 
 static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 {
-	int i;
 	u64_t *msn;
-	char *s;
+	char *oldflags, *newflags;
 	MessageInfo *old, *new;
 
 	assert(uid);
@@ -1232,17 +1231,18 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	old = g_tree_lookup(self->mailbox->msginfo, uid);
 
 	// FETCH
-	for (i=0; i< IMAP_NFLAGS; i++) {
-		if (old->flags[i] != new->flags[i]) {
-			char *t = NULL;
-			if (self->use_uid) t = g_strdup_printf(" UID %llu", *uid);
-			s = imap_flags_as_string(self->mailbox->state, new);
-			dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s%s)\r\n", *msn, s, t?t:"");
-			g_free(s);
-			if (t) g_free(t);
-			break;
-		}
+	oldflags = imap_flags_as_string(self->mailbox->state, old);
+	newflags = imap_flags_as_string(self->mailbox->state, new);
+
+	if (! MATCH(oldflags,newflags)) {
+		char *t = NULL;
+		if (self->use_uid) t = g_strdup_printf(" UID %llu", *uid);
+		dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s%s)\r\n", *msn, newflags, t?t:"");
+		if (t) g_free(t);
 	}
+
+	g_free(oldflags);
+	g_free(newflags);
 }
 
 static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
