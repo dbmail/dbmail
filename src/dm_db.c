@@ -253,6 +253,7 @@ C db_con_get(void)
 	}
 
 	assert(c);
+	TRACE(TRACE_DATABASE,"[%p] connection from pool", c);
 	return c;
 }
 
@@ -270,12 +271,14 @@ gboolean dm_db_ping(void)
 
 void db_con_close(C c)
 {
+	TRACE(TRACE_DATABASE,"[%p] connection to pool", c);
 	Connection_close(c);
 	return;
 }
 
 void db_con_clear(C c)
 {
+	TRACE(TRACE_DATABASE,"[%p] connection cleared", c);
 	Connection_clear(c);
 	return;
 }
