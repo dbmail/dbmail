@@ -240,6 +240,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 	if (! i) {
 		TRACE(TRACE_DEBUG, "empty mailbox");
 		mailbox_set_msginfo(self, msginfo);
+		db_con_close(c);
 		return t;
 	}
 
