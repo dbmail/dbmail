@@ -1380,9 +1380,10 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	return 0;
 }
 
-static gboolean _get_mailbox(u64_t UNUSED *id, MailboxState_T M, int UNUSED *error)
+static gboolean _get_mailbox(u64_t UNUSED *id, MailboxState_T M, gpointer data)
 {
-	return MailboxState_reload(M, 0)?FALSE:TRUE;
+	ImapSession *self = (ImapSession *)data;
+	return MailboxState_reload(M, self->userid)?FALSE:TRUE;
 }
 
 static void mailboxstate_destroy(MailboxState_T M)
@@ -1392,7 +1393,7 @@ static void mailboxstate_destroy(MailboxState_T M)
 
 static void _get_mbxinfo(ImapSession *self)
 {
-	C c; R r; int t = FALSE, error = 0;
+	C c; R r; int t = FALSE;
 	GTree *old = NULL, *mbxinfo = NULL;
 	u64_t *id;
 	
@@ -1416,7 +1417,7 @@ static void _get_mbxinfo(ImapSession *self)
 
 	if (t == DM_EQUERY) return;
 
-	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, &error);
+	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, (gpointer)self);
 
 	if (self->mbxinfo) old = self->mbxinfo;
 	self->mbxinfo = mbxinfo;
@@ -1441,8 +1442,7 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 		id = g_new0(u64_t,1);
 		*id = mailbox_id;
 		M = MailboxState_new(mailbox_id);
-		MailboxState_setOwner(M, self->userid);
-		_get_mailbox(0,M,NULL);
+		_get_mailbox(0,M,(gpointer)self);
 		g_tree_insert(self->mbxinfo, id, M);
 	}
 

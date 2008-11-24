@@ -2417,7 +2417,7 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 
 		/* Prepend a mailbox struct onto the list. */
 		MailboxState_T M = MailboxState_new(mboxid);
-		MailboxState_setName(M, g_strdup(cpy));
+		MailboxState_setName(M, g_strdup(mailbox));
 		MailboxState_setIsUsers(M, is_users);
 		MailboxState_setIsPublic(M, is_public);
 
@@ -2496,7 +2496,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 	/* Check if mailbox already exists. */
 	if (db_findmailbox(mailbox, owner_idnr, mailbox_idnr)) {
 		*message = "Mailbox already exists";
-		TRACE(TRACE_ERR, "Asked to create mailbox which already exists. Aborting create.");
+		TRACE(TRACE_ERR, "Asked to create mailbox [%s] which already exists. Aborting create.", mailbox);
 		return DM_EGENERAL;
 	}
 

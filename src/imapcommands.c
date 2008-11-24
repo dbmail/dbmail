@@ -781,12 +781,17 @@ int _ic_unsubscribe(ImapSession *self)
  *
  * executes a list command
  */
+static int dm_strcmpdata(gconstpointer a, gconstpointer b, gpointer data UNUSED)
+{
+	return strcmp((const char *)a, (const char *)b);
+}
 
 void _ic_list_enter(dm_thread_data *D)
 {
 	LOCK_SESSION;
 	int list_is_lsub = 0;
 	GList *plist = NULL, *children = NULL;
+	GTree *shown = NULL;
 	char *pstring;
 	MailboxState_T M = NULL;
 	size_t slen;
@@ -823,6 +828,8 @@ void _ic_list_enter(dm_thread_data *D)
 		dbmail_imap_session_buff_printf(self, "%s BAD invalid pattern specified\r\n", self->tag);
 		NOTIFY_DONE(D);
 	}
+
+	shown = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,(GDestroyNotify)g_free,NULL);
 
 	while ((! D->status) && children) {
 		gboolean show = FALSE;
@@ -861,7 +868,10 @@ void _ic_list_enter(dm_thread_data *D)
 			show = TRUE;
 		}
 
-		if (show) {
+		if (show && (! g_tree_lookup(shown, MailboxState_getName(M)))) {
+			char *s = g_strdup(MailboxState_getName(M));
+			TRACE(TRACE_DEBUG,"[%s]", s);
+			g_tree_insert(shown, s, s);
 		
 			plist = NULL;
 			if (MailboxState_noSelect(M))
@@ -886,6 +896,7 @@ void _ic_list_enter(dm_thread_data *D)
 		children = g_list_next(children);
 	}
 
+	if (shown) g_tree_destroy(shown);
 	if (children) g_list_destroy(children);
 	g_free(pattern);
 
