@@ -111,11 +111,7 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 			break;
 		default:
 			if (session->ci->rev) {
-				if ( session->command_type == IMAP_COMM_STARTTLS ) {
-					if ( session->command_state == FALSE ) {
-						ci_starttls(session->ci);
-					}
-				} else if ( session->command_type == IMAP_COMM_IDLE ) {
+				if ( session->command_type == IMAP_COMM_IDLE ) {
 					if ( session->command_state == FALSE ) {
 						// make _very_ sure this is done only once during an idle command run
 						// only when the idle loop has just begun: just after we pushed the

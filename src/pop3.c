@@ -64,7 +64,8 @@ const char *commands[] = {
 	"apop", /**< POP3_APOP */
 	"auth", /**< POP3_AUTH */
 	"top", /**< POP3_TOP */
-	"capa" /**< POP3_CAPA */
+	"capa", /**< POP3_CAPA */
+	"stls"  /**< POP3_STLS */
 };
 
 static void send_greeting(ClientSession_t *session)
@@ -132,6 +133,13 @@ void pop3_cb_read(void *arg)
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 	
 	event_del(session->ci->rev);
+
+	if (session->ci->ssl && session->ci->ssl_state == FALSE) {
+		ci_starttls(session->ci);
+		event_add(session->ci->rev, session->ci->timeout);
+		return;
+	}
+
 	l = ci_readln(session->ci, buffer);
 
 	if (l==0) { // error
@@ -277,6 +285,7 @@ int pop3(ClientSession_t *session, char *buffer)
 			case POP3_UIDL:
 			case POP3_AUTH:
 			case POP3_CAPA:
+			case POP3_STLS:
 				break;
 			default:
 				return pop3_error(session, "-ERR your command does not compute\r\n");
@@ -295,6 +304,15 @@ int pop3(ClientSession_t *session, char *buffer)
 		pop3_close(session);
 		return 0;
 		
+	case POP3_STLS:
+		if (session->state != POP3_AUTHORIZATION_STATE)
+			return pop3_error(session, "-ERR wrong command mode\r\n");
+		if (session->ci->ssl_state)
+			return pop3_error(session, "-ERR TLS already active\r\n");
+		ci_write(session->ci, "+OK Begin TLS now");
+		if (ci_starttls(session->ci) < 0) return 0;
+		return 1;
+
 	case POP3_USER:
 		if (session->state != POP3_AUTHORIZATION_STATE)
 			return pop3_error(session, "-ERR wrong command mode\r\n");

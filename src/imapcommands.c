@@ -100,7 +100,11 @@ int _ic_starttls(ImapSession *self)
 {
 	int i;
 	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
-	ci_write(self->ci, "%s OK Begin TLS now", self->tag);
+	if (self->ci->ssl_state) {
+		ci_write(self->ci, "%s NO TLS already active\r\n", self->tag);
+		return 1;
+	}
+	ci_write(self->ci, "%s OK Begin TLS now\r\n", self->tag);
 	i = ci_starttls(self->ci);
 	if (i < 0) return 0;
 	return i;

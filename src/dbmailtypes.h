@@ -176,6 +176,7 @@ typedef enum {
 	POP3_AUTH,
 	POP3_TOP,
 	POP3_CAPA,
+	POP3_STLS
 } Pop3Cmd_t;
 
 
