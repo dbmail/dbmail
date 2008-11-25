@@ -112,7 +112,7 @@ static void uid_msn_map(DbmailMailbox *self)
 	ids = g_tree_keys(self->ids);
 
 	if (self->msn) g_tree_destroy(self->msn);
-	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
+	self->msn = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
 
 	self->rows = 1;
 
@@ -144,8 +144,8 @@ void mailbox_uid_msn_new(DbmailMailbox *self)
 	self->ids = NULL;
 	self->msn = NULL;
 
-	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
+	self->ids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	self->msn = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
 	self->rows = 1;
 }
 
@@ -183,7 +183,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	mailbox_uid_msn_new(self);
-	msginfo = g_tree_new_full((GCompareDataFunc)ucmp, NULL,NULL,(GDestroyNotify)g_free);
+	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,NULL,(GDestroyNotify)g_free);
 
 	c = db_con_get();
 	TRY
@@ -503,7 +503,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 			dbmail_mailbox_get_id(self),
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
-	tree = g_tree_new_full((GCompareDataFunc)strcmp,NULL,(GDestroyNotify)g_free, NULL);
+	tree = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,(GDestroyNotify)g_free, NULL);
 
 	t = FALSE;
 	c = db_con_get();
@@ -1483,7 +1483,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 
 		r = db_stmt_query(st);
 
-		s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
+		s->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
 		while (db_result_next(r)) {
 			id = db_result_get_u64(r,0);
@@ -1526,7 +1526,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 
 	assert (self && self->ids && set);
 
-	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
 	if (g_tree_nnodes(self->ids) == 0)
 		return b;
@@ -1551,7 +1551,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 				hi, g_tree_nnodes(self->ids));
 	}
 	
-	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
 	t = g_string_new(set);
 	
@@ -1703,7 +1703,7 @@ static gboolean _do_search(GNode *node, DbmailMailbox *self)
 		case IST_SUBSEARCH_AND:
 		case IST_SUBSEARCH_OR:
 			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_do_search, (gpointer)self);
-			s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
+			s->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
 			break;
 
 
@@ -1812,7 +1812,7 @@ int dbmail_mailbox_search(DbmailMailbox *self)
 	if (! self->search) return 0;
 	
 	if (self->found) g_tree_destroy(self->found);
-	self->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
+	self->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
 
 	g_tree_foreach(self->ids, (GTraverseFunc)_shallow_tree_copy, self->found);
 

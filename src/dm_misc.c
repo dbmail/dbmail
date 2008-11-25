@@ -167,13 +167,13 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 /* Strips off the #Users or #Public namespace, returning
  * the simple name, the namespace and username, if present. */
 
-const char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username)
+const char *mailbox_remove_namespace(const char *name, char **namespace, char **username)
 {
 	const char *temp = NULL, *user = NULL, *mbox = NULL;
 	size_t ns_user_len = 0;
 	size_t ns_publ_len = 0;
 	size_t fq_name_len;
- 	TRACE(TRACE_DEBUG,"[%s]", fq_name);
+	char *fq_name = (char *)name;
 
 	ns_user_len = strlen(NAMESPACE_USER);
 	ns_publ_len = strlen(NAMESPACE_PUBLIC);
@@ -182,6 +182,12 @@ const char *mailbox_remove_namespace(const char *fq_name, char **namespace, char
 	if (namespace) *namespace = NULL;
 
 	fq_name_len = strlen(fq_name);
+	while (fq_name_len && g_str_has_suffix(fq_name,"/")) {
+		fq_name[fq_name_len-1] = '\0';
+		fq_name_len--;
+	}
+
+ 	TRACE(TRACE_DEBUG,"[%s]", fq_name);
 
 	// i.e. '#Users/someuser/foldername'
 	// assume a slash in '#Users/foo*' and '#Users/foo%' like this '#Users/foo/*'
@@ -1123,6 +1129,23 @@ gint ucmp(const u64_t *a, const u64_t *b)
 		return 0;
 	return -1;
 }
+
+gint ucmpdata(const u64_t *a, const u64_t *b, gpointer data UNUSED)
+{
+	return ucmp(a,b);
+}
+
+gint dm_strcmpdata(gconstpointer a, gconstpointer b, gpointer data UNUSED)
+{
+	return strcmp((const char *)a, (const char *)b);
+}
+
+gint dm_strcasecmpdata(gconstpointer a, gconstpointer b, gpointer data UNUSED)
+{
+	return g_ascii_strcasecmp((const char *)a, (const char *)b);
+}
+
+
 /* Read from instream until ".\r\n", discarding what is read. */
 int discard_client_input(clientbase_t *ci)
 {

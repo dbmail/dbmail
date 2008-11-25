@@ -714,7 +714,7 @@ START_TEST(test_g_tree_keys)
 	u64_t *k, *v;
 	int i=0;
 	
-	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	akeys = g_tree_keys(a);
 
 	fail_unless(g_tree_nnodes(a)==0,"g_tree_keys failed");
@@ -755,8 +755,8 @@ START_TEST(test_g_tree_merge_not)
 	u64_t *k, *v;
 	GTree *a, *b;
 	
-	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
 	for (r=1; r<=10; r+=2) {
 		k = g_new0(u64_t,1);
@@ -771,8 +771,8 @@ START_TEST(test_g_tree_merge_not)
 	g_tree_destroy(a);
 	g_tree_destroy(b);
 	
-	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
 	for (r=1; r<=10; r+=2) {
 		k = g_new0(u64_t,1);
@@ -796,8 +796,8 @@ START_TEST(test_g_tree_merge_or)
 	u64_t *k, *v;
 	GTree *a, *b;
 	
-	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
 	for (r=2; r<=10; r+=2) {
 		k = g_new0(u64_t,1);
@@ -822,8 +822,8 @@ START_TEST(test_g_tree_merge_and)
 	u64_t *k, *v;
 	GTree *a, *b;
 	
-	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
 	for (r=1; r<40; r+=10) {
 		k = g_new0(u64_t,1);
@@ -848,8 +848,8 @@ START_TEST(test_g_tree_merge_and)
 	g_tree_destroy(a);
 	g_tree_destroy(b);
 
-	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
 	for (r=2; r<=10; r+=2) {
 		k = g_new0(u64_t,1);

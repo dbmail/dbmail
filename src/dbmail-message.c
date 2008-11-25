@@ -1717,7 +1717,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	}
 	
 	head = refs;
-	tree = g_tree_new_full((GCompareDataFunc)strcmp, NULL, NULL, NULL);
+	tree = g_tree_new_full((GCompareDataFunc)dm_strcmpdata, NULL, NULL, NULL);
 	
 	while (refs->msgid) {
 		if (! g_tree_lookup(tree,refs->msgid)) {

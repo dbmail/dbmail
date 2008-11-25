@@ -59,7 +59,7 @@ T MailboxState_new(u64_t id)
 	
 	M = g_malloc0(sizeof(*M));
 	M->id = id;
-	M->keywords = g_tree_new_full((GCompareDataFunc)g_ascii_strcasecmp, NULL,(GDestroyNotify)g_free,NULL);
+	M->keywords = g_tree_new_full((GCompareDataFunc)dm_strcasecmpdata, NULL,(GDestroyNotify)g_free,NULL);
 
 	return M;
 }
@@ -454,7 +454,7 @@ static int db_getmailbox_seq(T M)
 		db_con_close(c);
 	END_TRY;
 
-	TRACE(TRACE_DEBUG,"seq [%llu]", M->seq);
+	TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
 
 	if (! M->name) return DM_EQUERY;
 

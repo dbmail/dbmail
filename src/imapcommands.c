@@ -794,11 +794,6 @@ int _ic_unsubscribe(ImapSession *self)
  *
  * executes a list command
  */
-static int dm_strcmpdata(gconstpointer a, gconstpointer b, gpointer data UNUSED)
-{
-	return strcmp((const char *)a, (const char *)b);
-}
-
 void _ic_list_enter(dm_thread_data *D)
 {
 	LOCK_SESSION;
@@ -1165,9 +1160,10 @@ static int imap_append_msg(const char *msgdata,
                     return -1;
         }
                 
+	db_mailbox_seq_update(mailbox_idnr);
         TRACE(TRACE_NOTICE, "message id=%llu is inserted", *msg_idnr);
         
-        return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
+        return DM_SUCCESS;
 }
 
 void _ic_append_enter(dm_thread_data *D)
@@ -1286,6 +1282,7 @@ void _ic_append_enter(dm_thread_data *D)
 	message = self->args[i];
 
 	D->status = imap_append_msg(message, mboxid, self->userid, sqldate, &message_id);
+
 	switch (D->status) {
 	case -1:
 		TRACE(TRACE_ERR, "[%p] error appending msg", self);

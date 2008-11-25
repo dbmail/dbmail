@@ -96,7 +96,11 @@ GList * g_string_split(GString * string, const gchar * sep);
 
 char * g_strcasestr(const char *haystack, const char *needle);
 
+gint ucmpdata(const u64_t *a, const u64_t *b, gpointer data);
 gint ucmp(const u64_t *a, const u64_t *b);
+gint dm_strcmpdata(gconstpointer a, gconstpointer b, gpointer data);
+gint dm_strcasecmpdata(gconstpointer a, gconstpointer b, gpointer data);
+
 GList * g_tree_keys(GTree *tree);
 GList * g_tree_values(GTree *tree);
 void tree_dump(GTree *t);

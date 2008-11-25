@@ -542,7 +542,7 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 
 	if (! bodyfetch->headers) {
 		TRACE(TRACE_DEBUG, "[%p] init bodyfetch->headers", self);
-		bodyfetch->headers = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+		bodyfetch->headers = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 		self->ceiling = 0;
 		self->hi = 0;
 		self->lo = 0;
@@ -750,7 +750,7 @@ static void _fetch_envelopes(ImapSession *self)
 	memset(range,0,DEF_FRAGSIZE);
 
 	if (! self->envelopes) {
-		self->envelopes = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+		self->envelopes = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 		self->lo = 0;
 		self->hi = 0;
 	}
@@ -1238,6 +1238,9 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 		char *t = NULL;
 		if (self->use_uid) t = g_strdup_printf(" UID %llu", *uid);
 		dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s%s)\r\n", *msn, newflags, t?t:"");
+
+		if (new->flags[IMAP_FLAG_RECENT])
+			self->recent = g_list_prepend(self->recent, g_strdup_printf("%llu", *uid));
 		if (t) g_free(t);
 	}
 
@@ -1265,6 +1268,8 @@ static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 		if (! g_list_next(ids)) break;
 		ids = g_list_next(ids);
 	}
+
+	dbmail_imap_session_mailbox_update_recent(self);
 
 	// switch active mailbox view
 	old = self->mailbox;
@@ -1298,7 +1303,8 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 	if (update) {
 		MailboxState_T M;
-		unsigned oldseq, oldexists, oldrecent, olduidnext;
+		unsigned oldseq, oldexists, oldrecent;
+		u64_t olduidnext;
 		const char *oldflags;
 
 		M = self->mailbox->state;
@@ -1316,14 +1322,14 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			// ATTN: new messages shouldn't be visible in any way to a 
 			// client session until it has been announced with EXISTS
 			mailbox = dbmail_mailbox_new(self->mailbox->id);
-			MailboxState_setExists(M, g_tree_nnodes(mailbox->ids));
 			mailbox->state = M;
 
 			// EXISTS response may never decrease
-			if ((MailboxState_getUidnext(M) > olduidnext) && (MailboxState_getExists(M) > oldexists))
+			if ((MailboxState_getUidnext(M) > olduidnext) && (MailboxState_getExists(M) > oldexists)) {
 				showexists = TRUE;
-			else
+			} else {
 				MailboxState_setExists(M,oldexists);
+			}
 
 			// RECENT response only when changed
 			if (MailboxState_getRecent(M) != oldrecent)
@@ -1346,9 +1352,9 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			showexists = TRUE;
 		break;
 
+		case IMAP_COMM_NOOP:
 		case IMAP_COMM_FETCH:
 		case IMAP_COMM_IDLE:
-		case IMAP_COMM_NOOP:
 		case IMAP_COMM_CHECK:
 			// ok show them if needed
 		break;
@@ -1397,7 +1403,7 @@ static void _get_mbxinfo(ImapSession *self)
 	GTree *old = NULL, *mbxinfo = NULL;
 	u64_t *id;
 	
-	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
+	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);

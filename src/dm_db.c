@@ -678,7 +678,7 @@ char *db_returning(const char *s)
 
 void global_cache_init(void)
 {
-	global_cache = g_tree_new_full((GCompareDataFunc)strcmp, NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	global_cache = g_tree_new_full((GCompareDataFunc)dm_strcmpdata, NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 }
 
 gpointer global_cache_lookup(gpointer key)
