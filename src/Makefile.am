@@ -55,6 +55,7 @@ COMMON = dbmail-user.c \
 SERVER = server.c \
 	clientsession.c \
 	clientbase.c \
+	dm_tls.c \
 	dm_cidr.c
 
 MODULES = authmodule.c sortmodule.c
@@ -79,9 +80,6 @@ dbmail_pop3d_LDADD = libdbmail.la
 
 dbmail_imapd_SOURCES = $(IMAPD) imapd.c 
 dbmail_imapd_LDADD = libdbmail.la
-
-#dbmail_top_SOURCES = top.c
-#dbmail_top_LDADD = libdbmail.la -lncurses
 
 dbmail_util_SOURCES = maintenance.c
 dbmail_util_LDADD = libdbmail.la

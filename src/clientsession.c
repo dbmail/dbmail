@@ -38,9 +38,9 @@ ClientSession_t * client_session_new(client_sock *c)
 	clientbase_t *ci;
 
 	if (c)
-		ci = client_init(c->sock, c->caddr);
+		ci = client_init(c->sock, c->caddr, c->ssl);
 	else
-		ci = client_init(0, NULL);
+		ci = client_init(0, NULL, NULL);
 
 	session->state = IMAPCS_INITIAL_CONNECT;
 

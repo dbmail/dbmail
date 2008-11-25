@@ -164,8 +164,8 @@ int mkpassword(const char * const user, const char * const passwd,
 		MD5_HASH, 	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
 		MD5_HASH,	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
 		MD5_BASE64,	MD5_BASE64_RAW,		MD5_BASE64,	MD5_BASE64_RAW,
-		SHADOW,		PLAINTEXT,		WHIRLPOOL,	SHA512,
-		SHA256,		SHA1,			TIGER,		PWTYPE_NULL
+		SHADOW,		PLAINTEXT,		DM_WHIRLPOOL,	DM_SHA512,
+		DM_SHA256,	DM_SHA1,		DM_TIGER,	PWTYPE_NULL
 	};
 
 	memset(pw, 0, 130);
@@ -249,27 +249,27 @@ int mkpassword(const char * const user, const char * const passwd,
 				*enctype = "crypt";
 			}
 			break;
-		case WHIRLPOOL:
+		case DM_WHIRLPOOL:
 			hashstr = dm_whirlpool(passwd);
 			null_strncpy(pw, hashstr, 129);
 			*enctype = "whirlpool";
 			break;
-		case SHA512:
+		case DM_SHA512:
 			hashstr = dm_sha512(passwd);
 			null_strncpy(pw, hashstr, 129);
 			*enctype = "sha512";
 			break;
-		case SHA256:
+		case DM_SHA256:
 			hashstr = dm_sha256(passwd);
 			null_strncpy(pw, hashstr, 129);
 			*enctype = "sha256";
 			break;
-		case SHA1:
+		case DM_SHA1:
 			hashstr = dm_sha1(passwd);
 			null_strncpy(pw, hashstr, 129);
 			*enctype = "sha1";
 			break;
-		case TIGER:
+		case DM_TIGER:
 			hashstr = dm_tiger(passwd);
 			null_strncpy(pw, hashstr, 129);
 			*enctype = "tiger";

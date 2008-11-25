@@ -75,6 +75,7 @@
 #include <mhash.h>
 #include <event.h>
 #include <math.h>
+#include <openssl/ssl.h>
 
 #ifdef AUTHLDAP
 #define LDAP_DEPRECATED 1
@@ -95,6 +96,7 @@
 #include "dm_acl.h"
 #include "dm_misc.h"
 #include "dm_quota.h"
+#include "dm_tls.h"
 
 #include "dbmail-user.h"
 #include "dbmail-mailbox.h"
@@ -189,7 +191,7 @@
 #define DEFAULT_LOG_FILE "@DM_LOGDIR@/dbmail.log"
 #define DEFAULT_ERROR_LOG "@DM_LOGDIR@/dbmail.err"
 
-#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE"
+#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS"
 #define IMAP_TIMEOUT_MSG "* BYE dbmail IMAP4 server signing off due to timeout\r\n"
 /** prefix for #Users namespace */
 #define NAMESPACE_USER "#Users"

@@ -26,11 +26,15 @@
 #define THIS_MODULE "clientbase"
 
 extern serverConfig_t *server_conf;
+extern SSL_CTX *tls_context;
 
 static int client_error_cb(int sock, int error, void *arg)
 {
 	int r = 0;
 	clientbase_t *client = (clientbase_t *)arg;
+	if (client->ssl)
+		error = SSL_get_error(client->ssl, error);
+
 	switch (error) {
 		case EAGAIN:
 		case EINTR:
@@ -45,9 +49,8 @@ static int client_error_cb(int sock, int error, void *arg)
 	return r;
 }
 
-clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
+clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl)
 {
-	int err;
 	clientbase_t *client	= g_new0(clientbase_t, 1);
 
 	client->timeout       = g_new0(struct timeval,1);
@@ -81,21 +84,8 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 		}
 
 		/* make streams */
-		if (!(client->rx = dup(socket))) {
-			err = errno;
-			TRACE(TRACE_ERR, "%s", strerror(err));
-			if (socket > 0) close(socket);
-			g_free(client);
-			return NULL;
-		}
-
-		if (!(client->tx = socket)) {
-			err = errno;
-			TRACE(TRACE_ERR, "%s", strerror(err));
-			if (socket > 0) close(socket);
-			g_free(client);
-			return NULL;
-		}
+		client->rx = client->tx = socket;
+		client->ssl = ssl;
 	}
 
 	client->write_buffer = g_string_new("");
@@ -105,6 +95,51 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr)
 	return client;
 }
 
+int ci_starttls(clientbase_t *self)
+{
+	int e;
+	TRACE(TRACE_DEBUG,"[%p] ssl_state [%d]", self, self->ssl_state);
+	if (self->ssl && self->ssl_state) {
+		TRACE(TRACE_ERR, "ssl already initialized");
+		return DM_EGENERAL;
+	}
+
+	if (! self->ssl) {
+		self->ssl_state = FALSE;
+		if (! (self->ssl = SSL_new(tls_context))) {
+			TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
+			return DM_EGENERAL;
+		}
+		if ( !SSL_set_fd(self->ssl, self->tx)) {
+			TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
+			SSL_free(self->ssl);
+			self->ssl = NULL;
+			return DM_EGENERAL;
+		}
+	}
+	if (! self->ssl_state) {
+		if ((e = SSL_accept(self->ssl)) != 1) {
+			int e2 = SSL_get_error(self->ssl, e);
+			switch (e2) {
+				case SSL_ERROR_WANT_READ:
+				case SSL_ERROR_WANT_WRITE:
+					// try again later
+					event_add(self->rev, self->timeout);
+					return e;
+				break;
+			}
+
+			TRACE(TRACE_ERR, "Error in TLS handshake");
+			SSL_free(self->ssl);
+			self->ssl = NULL;
+			return DM_EGENERAL;
+		}
+		self->ssl_state = TRUE;
+	}
+
+	TRACE(TRACE_DEBUG,"[%p] ssl initialized", self);
+	return DM_SUCCESS;
+}
 
 int ci_write(clientbase_t *self, char * msg, ...)
 {
@@ -124,7 +159,11 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	
 	if (self->write_buffer->len < 1) return 0;
 
-	t = write(self->tx, (gconstpointer)self->write_buffer->str, self->write_buffer->len);
+	if (self->ssl)
+		t = SSL_write(self->ssl, (gconstpointer)self->write_buffer->str, self->write_buffer->len);
+	else
+		t = write(self->tx, (gconstpointer)self->write_buffer->str, self->write_buffer->len);
+
 	if (t == -1) {
 		int e;
 		if ((e = self->cb_error(self->tx, errno, (void *)self)))
@@ -151,7 +190,10 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
 	self->len = 0;
 	while (self->len < n) {
-		t = read(self->rx, (void *)&c, 1);
+		if (self->ssl)
+			t = SSL_read(self->ssl, (void *)&c, 1);
+		else
+			t = read(self->rx, (void *)&c, 1);
 		if (t == -1) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
@@ -182,7 +224,10 @@ int ci_readln(clientbase_t *self, char * buffer)
 		self->len = 0;
 
 	while (self->len < MAX_LINESIZE) {
-		t = read(self->rx, (void *)&c, 1);
+		if (self->ssl)
+			t = SSL_read(self->ssl, (void *)&c, 1);
+		else
+			t = read(self->rx, (void *)&c, 1);
 		if (t == -1) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
@@ -237,6 +282,7 @@ void ci_close(clientbase_t *self)
 	g_string_free(self->line_buffer, TRUE);
 	g_string_free(self->write_buffer, TRUE);
 
+	g_free(self->timeout);
 	g_free(self);
 	
 	self = NULL;

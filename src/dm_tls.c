@@ -1,0 +1,91 @@
+/*
+  Copyright (c) 2008 NFG Net Facilities Group BV support@nfg.nl
+  Copyright (c) 2008 John T. Guthrie III guthrie@counterexample.org
+
+  This program is free software; you can redistribute it and/or 
+  modify it under the terms of the GNU General Public License 
+  as published by the Free Software Foundation; either 
+  version 2 of the License, or (at your option) any later 
+  version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+
+/*
+ * tls.c
+ *
+ * SSL/TLS-related routines.
+ */
+
+#include "dbmail.h"
+#include <openssl/err.h>
+
+#define THIS_MODULE "tls"
+
+
+SSL_CTX *tls_context;
+
+/* Create the initial SSL context structure */
+SSL_CTX *tls_init(void) {
+	SSL_library_init();
+	SSL_load_error_strings();
+	/* FIXME: We need to allow for the allowed SSL/TLS versions to be */
+	/* configurable. */
+	return SSL_CTX_new(SSLv23_method());
+}
+
+/* load the certificates into the context */
+void tls_load_certs(serverConfig_t *conf) {
+	/* load CA file */
+	if (SSL_CTX_load_verify_locations(tls_context, conf->tls_cafile, NULL) == 0) {
+		TRACE(TRACE_WARNING, "Error loading CA file [%s]: %s",
+		      conf->tls_cafile ? conf->tls_cafile : "",
+		      tls_get_error());
+	}
+
+	/* load certificate */
+	if (SSL_CTX_use_certificate_file(tls_context, conf->tls_cert, SSL_FILETYPE_PEM) != 1) {
+		TRACE(TRACE_WARNING, "Error loading certificate file [%s]: %s",
+		      conf->tls_cert ? conf->tls_cert : "",
+		      tls_get_error());
+	}
+
+	/* load private key */
+	if (SSL_CTX_use_PrivateKey_file(tls_context, conf->tls_key, SSL_FILETYPE_PEM) != 1) {
+		TRACE(TRACE_WARNING, "Error loading key file [%s]: %s",
+		      conf->tls_key ? conf->tls_key : "",
+		      tls_get_error());
+	}
+
+	/* check certificate/private key consistency */
+	if (SSL_CTX_check_private_key(tls_context) != 1) {
+		TRACE(TRACE_WARNING, "Mismatch between certificate file [%s] and key file [%s]: %s",
+		      conf->tls_cert ? conf->tls_cert : "",
+		      conf->tls_key ? conf->tls_key : "",
+		      tls_get_error());
+	}
+}
+
+/* load the ciphers into the context */
+void tls_load_ciphers(serverConfig_t *conf) {
+	if (conf->tls_ciphers && strlen(conf->tls_ciphers) &&
+	      SSL_CTX_set_cipher_list(tls_context, conf->tls_ciphers) == 0) {
+		TRACE(TRACE_WARNING, "Unable to set any ciphers in list [%s]: %s",
+		     conf->tls_ciphers, tls_get_error());
+	}
+}
+
+/* Grab the top error off of the error stack and then return a string
+ * corresponding to that error */
+char *tls_get_error(void) {
+	return ERR_error_string(ERR_get_error(), NULL);
+}
+

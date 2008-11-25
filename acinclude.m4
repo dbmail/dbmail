@@ -29,6 +29,7 @@ AC_MSG_RESULT([
  MATH:                      $MATHLIB
  MHASH:                     $MHASHLIB
  LIBEVENT:                  $EVENTLIB
+ OPENSSL:                   $SSLLIB
  ZDB:                       $ZDBLIB
 
 ])
@@ -321,6 +322,15 @@ AC_DEFUN([DM_CHECK_EVENT], [
 		AC_MSG_ERROR([Could not find EVENT library.])
 	else
 		LDFLAGS="$LDFLAGS $EVENTLIB"
+	fi
+])
+
+AC_DEFUN([DM_CHECK_SSL], [
+	AC_CHECK_HEADERS([openssl/ssl.h], [SSLLIB="-lssl"],[SSLLIB="failed"])
+	if test [ "x$SSLLIB" = "xfailed" ]; then
+		AC_MSG_ERROR([Could not find OPENSSL library.])
+	else
+		LDFLAGS="$LDFLAGS $SSLLIB"
 	fi
 ])
 

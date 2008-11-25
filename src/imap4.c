@@ -40,7 +40,7 @@ const char *IMAP_COMMANDS[] = {
 	"check", "close", "expunge", "search", "fetch", "store", "copy",
 	"uid", "sort", "getquotaroot", "getquota",
 	"setacl", "deleteacl", "getacl", "listrights", "myrights",
-	"namespace","thread","unselect","idle",
+	"namespace","thread","unselect","idle","starttls",
 	"***NOMORE***"
 };
 
@@ -64,7 +64,7 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 	_ic_getquotaroot, _ic_getquota,
 	_ic_setacl, _ic_deleteacl, _ic_getacl, _ic_listrights,
 	_ic_myrights,
-	_ic_namespace, _ic_thread, _ic_unselect, _ic_idle,
+	_ic_namespace, _ic_thread, _ic_unselect, _ic_idle, _ic_starttls,
 	NULL
 };
 
@@ -111,7 +111,11 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 			break;
 		default:
 			if (session->ci->rev) {
-				if ( session->command_type == IMAP_COMM_IDLE ) {
+				if ( session->command_type == IMAP_COMM_STARTTLS ) {
+					if ( session->command_state == FALSE ) {
+						ci_starttls(session->ci);
+					}
+				} else if ( session->command_type == IMAP_COMM_IDLE ) {
 					if ( session->command_state == FALSE ) {
 						// make _very_ sure this is done only once during an idle command run
 						// only when the idle loop has just begun: just after we pushed the
@@ -254,17 +258,24 @@ void imap_cb_read(void *arg)
 	// disable read events until we're done
 	event_del(session->ci->rev);
 
-	memset(buffer, 0, sizeof(buffer));	// have seen dirty buffers with out this
-
 	if (session->state == IMAPCS_ERROR) {
 		TRACE(TRACE_NOTICE, "session->state: ERROR. abort");
 		return;
 	}
 	if (session->command_state==TRUE) dbmail_imap_session_reset(session);
 
+	if (session->ci->ssl && session->ci->ssl_state == FALSE) {
+		if (ci_starttls(session->ci) == DM_SUCCESS)
+			dbmail_imap_session_reset(session);
+		event_add(session->ci->rev, session->ci->timeout);
+		return;
+	}
+
 	// Drain input buffer else return to wait for more.
 	// Read in a line at a time if we don't have a string literal size defined
 	// Otherwise read in sizeof(buffer) [64KB] or the remaining rbuff_size if less
+	memset(buffer, 0, sizeof(buffer));	// have seen dirty buffers with out this
+
 	if (session->rbuff_size <= 0) {
 		l = ci_readln(session->ci, buffer);
 	} else {
@@ -341,9 +352,9 @@ int imap_handle_connection(client_sock *c)
 	clientbase_t *ci;
 
 	if (c)
-		ci = client_init(c->sock, c->caddr);
+		ci = client_init(c->sock, c->caddr, c->ssl);
 	else
-		ci = client_init(0, NULL);
+		ci = client_init(0, NULL, NULL);
 
 	session = dbmail_imap_session_new();
 

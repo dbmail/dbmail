@@ -93,9 +93,18 @@ void cmd_free(cmd_t *cmd)
  */
 
 /* 
- * ANY-STATE COMMANDS: capability, noop, logout
+ * ANY-STATE COMMANDS: capability, starttls, noop, logout
  */
 
+int _ic_starttls(ImapSession *self)
+{
+	int i;
+	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
+	ci_write(self->ci, "%s OK Begin TLS now", self->tag);
+	i = ci_starttls(self->ci);
+	if (i < 0) return 0;
+	return i;
+}
 /*
  * _ic_capability()
  *
@@ -2339,3 +2348,5 @@ int _ic_namespace(ImapSession *self)
 	dm_thread_data_push((gpointer)self, _ic_namespace_enter, _ic_cb_leave, NULL);
 	return 0;
 }
+
+

@@ -206,6 +206,7 @@ typedef enum {
 // client_thread
 typedef struct  {
 	int sock;
+	SSL *ssl;                       /* SSL/TLS context for this client */
 	struct sockaddr_in *caddr;
 	void (*cb_close) (void *);	/* termination callback */
 } client_sock;
@@ -214,6 +215,8 @@ typedef struct  {
 
 typedef struct {
 	int rx, tx;			/* read and write filehandles */
+	SSL *ssl;                       /* SSL/TLS context for this client */
+	gboolean ssl_state;		/* SSL_accept done or not */
 	struct event *pev;		/* self-pipe event */
 	void (*cb_pipe) (void *);	/* callback for self-pipe events */
 	struct event *rev, *wev;  	/* read event, write event */
@@ -275,8 +278,10 @@ typedef struct {
 	char **iplist;                  // Allocated memory.
 	int ipcount;
 	int *listenSockets;             // Allocated memory.
+	int *ssl_listenSockets;         // Allocated memory.
 	int service_before_smtp;
 	int port;
+	int ssl_port;
 	int backlog;
 	int resolveIP;
 	field_t service_name, process_name;
@@ -285,6 +290,10 @@ typedef struct {
 	field_t socket;
 	field_t log, error_log;
 	field_t pid_dir;
+        field_t tls_cafile;
+        field_t tls_cert;
+        field_t tls_key;
+        field_t tls_ciphers;
 	int (*ClientHandler) (client_sock *);
 } serverConfig_t;
 
@@ -337,7 +346,8 @@ enum IMAP_COMMAND_TYPES {
 	IMAP_COMM_THREAD, 		// 34
 	IMAP_COMM_UNSELECT,		// 35
 	IMAP_COMM_IDLE,			// 36
-	IMAP_COMM_LAST			// 37
+	IMAP_COMM_STARTTLS,		// 37
+	IMAP_COMM_LAST			// 38
 };
 
 

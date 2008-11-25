@@ -45,6 +45,7 @@ static int server_set_sighandler(void);
 struct event *sig_int, *sig_hup, *sig_pipe;
 
 struct event *pev = NULL;
+SSL_CTX *tls_context;
 
 /* 
  *
@@ -387,12 +388,22 @@ static void server_create_sockets(serverConfig_t * conf)
 	int i;
 
 	conf->listenSockets = g_new0(int, conf->ipcount);
+	conf->ssl_listenSockets = g_new0(int, conf->ipcount);
 
 	if (strlen(conf->socket) > 0) {
 		conf->listenSockets[0] = create_unix_socket(conf);
 	} else {
-		for (i = 0; i < conf->ipcount; i++)
-			conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
+		tls_load_certs(conf);
+		tls_load_ciphers(conf);
+		if (conf->port > 0) {
+			for (i = 0; i < conf->ipcount; i++)
+				conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
+		}
+
+		if (conf->ssl_port > 0) {
+			for (i = 0; i < conf->ipcount; i++)
+				conf->ssl_listenSockets[i] = create_inet_socket(conf->iplist[i], conf->ssl_port, conf->backlog);
+		}
 	}
 }
 
@@ -428,9 +439,66 @@ static void server_sock_cb(int sock, short event, void *arg)
 	/* streams are ready, perform handling */
 	server_conf->ClientHandler((client_sock *)c);
 
+	g_free(caddr);
+	g_free(c);
+
 	/* reschedule */
 	event_add(ev, NULL);
 }
+
+static void server_sock_ssl_cb(int sock, short event, void *arg)
+{
+	client_sock *c = g_new0(client_sock,1);
+	struct sockaddr_in *caddr = g_new0(struct sockaddr_in, 1);
+	struct event *ev = (struct event *)arg;
+
+	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
+
+	/* accept the active fd */
+	int len = sizeof(struct sockaddr_in);
+
+	if ((c->sock = accept(sock, caddr, (socklen_t *)&len)) < 0) {
+                int serr=errno;
+                switch(serr) {
+                        case ECONNABORTED:
+                        case EPROTO:
+                        case EINTR:
+                                TRACE(TRACE_DEBUG, "%s", strerror(serr));
+                                break;
+                        default:
+                                TRACE(TRACE_ERR, "%s", strerror(serr));
+                                break;
+                }
+                return;
+        }
+	
+	if (! (c->ssl = SSL_new(tls_context))) {
+		TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
+		return;
+	}
+	if ( !SSL_set_fd(c->ssl, c->sock)) {
+		TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
+		SSL_free(c->ssl);
+		c->ssl = NULL;
+		return;
+	}
+	if (SSL_accept(c->ssl) != 1) {
+		TRACE(TRACE_ERR, "Error in TLS handshake: %s", tls_get_error());
+		SSL_free(c->ssl);
+		c->ssl = NULL;
+		return;
+	}
+
+	c->caddr = caddr;
+	TRACE(TRACE_INFO, "connection accepted");
+
+	/* streams are ready, perform handling */
+	server_conf->ClientHandler((client_sock *)c);
+
+	/* reschedule */
+	event_add(ev, NULL);
+}
+
 
 void server_sig_cb(int fd, short event, void *arg)
 {
@@ -509,6 +577,7 @@ int server_run(serverConfig_t *conf)
 {
 	int ip;
 	struct event *evsock;
+	struct event *evssl;
 
 	mainRestart = 0;
 
@@ -537,10 +606,19 @@ int server_run(serverConfig_t *conf)
 
 	if (server_setup(conf)) return -1;
 
-	evsock = g_new0(struct event, server_conf->ipcount+1);
-	for (ip = 0; ip < server_conf->ipcount; ip++) {
-		event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, server_sock_cb, &evsock[ip]);
-		event_add(&evsock[ip], NULL);
+	if (conf->port > 0) {
+		evsock = g_new0(struct event, server_conf->ipcount + 1);
+		for (ip = 0; ip < server_conf->ipcount; ip++) {
+			event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, server_sock_cb, &evsock[ip]);
+			event_add(&evsock[ip], NULL);
+		}
+	}
+	if (conf->ssl_port > 0) {
+		evssl = g_new0(struct event, server_conf->ipcount + 1);
+		for (ip = 0; ip < server_conf->ipcount; ip++) {
+			event_set(&evssl[ip], server_conf->ssl_listenSockets[ip], EV_READ, server_sock_ssl_cb, &evssl[ip]);
+			event_add(&evssl[ip], NULL);
+		}
 	}
 
 	atexit(server_exit);
@@ -587,8 +665,10 @@ static void server_config_free(serverConfig_t * config)
 
 	g_strfreev(config->iplist);
 	g_free(config->listenSockets);
+	g_free(config->ssl_listenSockets);
 
 	config->listenSockets = NULL;
+	config->ssl_listenSockets = NULL;
 	config->iplist = NULL;
 
 	memset(config, 0, sizeof(serverConfig_t));
@@ -662,6 +742,8 @@ int server_mainloop(serverConfig_t *config, const char *service, const char *ser
 {
 	strncpy(config->process_name, servicename, FIELDSIZE);
 	
+	tls_context = tls_init();
+
 	if (config->no_daemonize == 1) {
 		StartCliServer(config);
 		TRACE(TRACE_INFO, "exiting cli server");
@@ -670,6 +752,7 @@ int server_mainloop(serverConfig_t *config, const char *service, const char *ser
 	
 	if (! config->no_daemonize)
 		server_daemonize(config);
+
 
 	/* This is the actual main loop. */
 	while (server_run(config)) {
@@ -686,7 +769,7 @@ int server_mainloop(serverConfig_t *config, const char *service, const char *ser
 
 void server_config_load(serverConfig_t * config, const char * const service)
 {
-	field_t val;
+	field_t val, val_ssl;
 
 	TRACE(TRACE_DEBUG, "reading config [%s]", configFile);
 	config_free();
@@ -706,11 +789,9 @@ void server_config_load(serverConfig_t * config, const char * const service)
 		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
 		config->timeout = 0;
 	} else if ((config->timeout = atoi(val)) <= 30)
-		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]",
-		      config->timeout);
+		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]", config->timeout);
 
-	TRACE(TRACE_DEBUG, "timeout [%d] seconds",
-	      config->timeout);
+	TRACE(TRACE_DEBUG, "timeout [%d] seconds", config->timeout);
 
 	/* read items: LOGIN_TIMEOUT */
 	config_get_value("LOGIN_TIMEOUT", service, val);
@@ -718,8 +799,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
 		config->login_timeout = 60;
 	} else if ((config->login_timeout = atoi(val)) <= 10)
-		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]",
-		      config->login_timeout);
+		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]", config->login_timeout);
 
 	TRACE(TRACE_DEBUG, "login_timeout [%d] seconds",
 	      config->login_timeout);
@@ -729,21 +809,23 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	if (strlen(val) == 0)
 		TRACE(TRACE_DEBUG, "no value for SOCKET in config file");
 	strncpy(config->socket, val, FIELDSIZE);
-	TRACE(TRACE_DEBUG, "socket [%s]", 
-		config->socket);
+	TRACE(TRACE_DEBUG, "socket [%s]", config->socket);
 	
 	/* read items: PORT */
 	config_get_value("PORT", service, val);
-	if (strlen(val) == 0)
-		TRACE(TRACE_EMERG, "no value for PORT in config file");
+	config_get_value("TLS_PORT", service, val_ssl);
+	if ((strlen(val) == 0) && (strlen(val_ssl) == 0))
+		TRACE(TRACE_EMERG, "no value for PORT or TLS_PORT in config file");
 
-	if ((config->port = atoi(val)) <= 0)
-		TRACE(TRACE_EMERG, "value for PORT is invalid: [%d]",
-		      config->port);
+	if ((strlen(val) > 0) && ((config->port = atoi(val)) <= 0))
+		TRACE(TRACE_EMERG, "value for PORT is invalid: [%d]", config->port);
+	if (config->port > 0)
+		TRACE(TRACE_DEBUG, "binding to PORT [%d]", config->port);
 
-	TRACE(TRACE_DEBUG, "binding to PORT [%d]",
-	      config->port);
-
+	if ((strlen(val_ssl) > 0) && ((config->ssl_port = atoi(val_ssl)) <= 0))
+		TRACE(TRACE_EMERG, "value for SSL_PORT is invalid: [%d]", config->ssl_port);
+	if (config->ssl_port > 0)
+		TRACE(TRACE_DEBUG, "binding to SSL_PORT [%d]", config->ssl_port);
 
 	/* read items: BINDIP */
 	config_get_value("BINDIP", service, val);
@@ -755,9 +837,8 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	// Allowed list separators are ' ' and ','.
 	config->iplist = g_strsplit_set(val, " ,", 0);
 	config->ipcount = g_strv_length(config->iplist);
-	if (config->ipcount < 1) {
+	if (config->ipcount < 1)
 		TRACE(TRACE_EMERG, "no value for BINDIP in config file");
-	}
 
 	int ip;
 	for (ip = 0; ip < config->ipcount; ip++) {
@@ -769,12 +850,10 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	/* read items: BACKLOG */
 	config_get_value("BACKLOG", service, val);
 	if (strlen(val) == 0) {
-		TRACE(TRACE_DEBUG, "no value for BACKLOG in config file. Using default value [%d]",
-			BACKLOG);
+		TRACE(TRACE_DEBUG, "no value for BACKLOG in config file. Using default value [%d]", BACKLOG);
 		config->backlog = BACKLOG;
 	} else if ((config->backlog = atoi(val)) <= 0)
-		TRACE(TRACE_EMERG, "value for BACKLOG is invalid: [%d]",
-			config->backlog);
+		TRACE(TRACE_EMERG, "value for BACKLOG is invalid: [%d]", config->backlog);
 
 	/* read items: RESOLVE_IP */
 	config_get_value("RESOLVE_IP", service, val);
@@ -812,7 +891,6 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	TRACE(TRACE_DEBUG, "effective user shall be [%s]",
 	      config->serverUser);
 
-
 	/* read items: EFFECTIVE-GROUP */
 	config_get_value("EFFECTIVE_GROUP", service, val);
 	if (strlen(val) == 0)
@@ -821,10 +899,46 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	strncpy(config->serverGroup, val, FIELDSIZE);
 	config->serverGroup[FIELDSIZE - 1] = '\0';
 
-	TRACE(TRACE_DEBUG, "effective group shall be [%s]",
-	      config->serverGroup);
+	TRACE(TRACE_DEBUG, "effective group shall be [%s]", config->serverGroup);
+
+	/* read items: TLS_CAFILE */
+	config_get_value("TLS_CAFILE", service, val);
+	if(strlen(val) == 0)
+		TRACE(TRACE_WARNING, "no value for TLS_CAFILE in config file");
+	strncpy(config->tls_cafile, val, FIELDSIZE);
+        config->tls_cafile[FIELDSIZE - 1] = '\0';
+
+        TRACE(TRACE_DEBUG, "CA file is set to [%s]", config->tls_cafile);
+
+	/* read items: TLS_CERT */
+	config_get_value("TLS_CERT", service, val);
+	if(strlen(val) == 0)
+		TRACE(TRACE_WARNING, "no value for TLS_CERT in config file");
+	strncpy(config->tls_cert, val, FIELDSIZE);
+        config->tls_cert[FIELDSIZE - 1] = '\0';
+
+        TRACE(TRACE_DEBUG, "Certificate file is set to [%s]", config->tls_cert);
+
+	/* read items: TLS_KEY */
+	config_get_value("TLS_KEY", service, val);
+	if(strlen(val) == 0)
+		TRACE(TRACE_WARNING, "no value for TLS_KEY in config file");
+	strncpy(config->tls_key, val, FIELDSIZE);
+        config->tls_key[FIELDSIZE - 1] = '\0';
+
+        TRACE(TRACE_DEBUG, "Key file is set to [%s]", config->tls_key);
+
+	/* read items: TLS_CIPHERS */
+	config_get_value("TLS_CIPHERS", service, val);
+	if(strlen(val) == 0)
+		TRACE(TRACE_INFO, "no value for TLS_CIPHERS in config file");
+	strncpy(config->tls_ciphers, val, FIELDSIZE);
+        config->tls_ciphers[FIELDSIZE - 1] = '\0';
+
+        TRACE(TRACE_DEBUG, "Cipher string is set to [%s]", config->tls_ciphers);
 
 	strncpy(config->service_name, service, FIELDSIZE);
+
 	GetDBParams();
 }
 

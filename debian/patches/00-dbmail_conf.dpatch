@@ -6,20 +6,20 @@
 
 @DPATCH@
 diff -urNad dbmail~/dbmail.conf dbmail/dbmail.conf
---- dbmail~/dbmail.conf	2008-02-07 10:20:35.000000000 +0100
-+++ dbmail/dbmail.conf	2008-02-07 10:21:09.000000000 +0100
-@@ -100,8 +100,8 @@
+--- dbmail~/dbmail.conf	2008-11-24 14:58:34.000000000 +0100
++++ dbmail/dbmail.conf	2008-11-24 14:59:23.000000000 +0100
+@@ -131,8 +131,8 @@
  # Root privs are used to open a port, then privs
  # are dropped down to the user/group specified here.
  #
--EFFECTIVE_USER        = nobody   
--EFFECTIVE_GROUP       = nogroup 
-+EFFECTIVE_USER        = dbmail
-+EFFECTIVE_GROUP       = dbmail 
+-effective_user        = nobody
+-effective_group       = nogroup 
++effective_user        = dbmail
++effective_group       = dbmail 
  
  # 
  # The IP addresses the services will bind to.
-@@ -134,17 +134,17 @@
+@@ -160,17 +160,17 @@
  # 
  # logfile for stdout messages
  #

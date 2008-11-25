@@ -96,6 +96,7 @@ struct mailbox_match * mailbox_match_new(const char *mailbox)
 		res->sensitive = sensitive;
 	} else {
 		res->insensitive = insensitive;
+		g_free(sensitive);
 	}
 
 	return res;

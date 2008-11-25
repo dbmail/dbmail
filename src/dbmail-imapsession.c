@@ -1415,7 +1415,10 @@ static void _get_mbxinfo(ImapSession *self)
 		t = DM_EQUERY;
 	END_TRY;
 
-	if (t == DM_EQUERY) return;
+	if (t == DM_EQUERY) {
+		g_tree_destroy(mbxinfo);
+		return;
+	}
 
 	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, (gpointer)self);
 
