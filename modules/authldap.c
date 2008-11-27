@@ -889,7 +889,7 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 		NULL 
 	};
 	char *attrvalue;
-	GList *entlist, *fldlist, *attlist;
+	GList *entlist, *fldlist, *attlist, *searchlist;
 
 	if (checks > 20) {
 		TRACE(TRACE_ERROR, "too many checks. Possible loop detected.");
@@ -898,8 +898,30 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 
 	TRACE(TRACE_DEBUG, "checking user [%s] in alias table", address);
 
-	/* This is my private line for sending a DN rather than a search */
-	snprintf(query, AUTH_QUERY_SIZE, "(%s=%s)", _ldap_cfg.field_mail, address);
+	/* build a mail filter, with multiple attributes, if needed */
+	GString *f = g_string_new(_ldap_cfg.field_mail);
+	searchlist = g_string_split(f,",");
+	g_string_free(f,TRUE);
+	
+	GString *t = g_string_new("");
+	GString *q = g_string_new("");
+	GList *l = NULL;
+	searchlist = g_list_first(searchlist);
+	while(searchlist) {
+		g_string_printf(t,"%s=%s",(char *)searchlist->data,address);
+		l = g_list_append(l,g_strdup(t->str));
+		if(!g_list_next(searchlist))
+			break;
+		searchlist = g_list_next(searchlist);	
+	}
+
+	t = g_list_join(l,")(");
+	g_string_printf(q,"(|(%s))", t->str);
+	snprintf(query, AUTH_QUERY_SIZE, q->str);
+	g_string_free(t,TRUE);
+	g_string_free(q,FALSE);
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_list_free(l);	
 	
 	TRACE(TRACE_DEBUG, "searching with query [%s], checks [%d]", query, checks);
 
