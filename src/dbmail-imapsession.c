@@ -459,7 +459,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		self->fi->msgparse_needed=1;
 		self->fi->getInternalDate = 1;
 		self->fi->getEnvelope = 1;
-		self->fi->getMIME_IMB = 1;
+		self->fi->getMIME_IMB_noextension = 1;
 		self->fi->getFlags = 1;
 		self->fi->getSize = 1;
 	} else if (MATCH(token,"bodystructure")) {
