@@ -822,7 +822,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	u64_t actual_cnt, tmpdumpsize;
 	gchar *s = NULL;
 	u64_t *id = uid;
-
+	gboolean reportflags = FALSE;
 
 	MessageInfo *msginfo = g_tree_lookup(self->mailbox->msginfo, uid);
 
@@ -975,6 +975,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		}
 		
 		if (result == 1) {
+			reportflags = TRUE;
 			result = db_set_msgflag(self->msg_idnr, MailboxState_getId(self->mailbox->state), setSeenSet, NULL, IMAPFA_ADD, msginfo);
 			if (result == -1) {
 				dbmail_imap_session_buff_clear(self);
@@ -984,11 +985,20 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		}
 
 		self->fi->getFlags = 1;
-		dbmail_imap_session_buff_printf(self, " ");
 	}
 
 	dbmail_imap_session_buff_printf(self, ")\r\n");
 	dbmail_imap_session_buff_flush(self);
+
+	if (reportflags) {
+		char *t = NULL;
+		if (self->use_uid)
+			t = g_strdup_printf("UID %llu ", *uid);
+		s = imap_flags_as_string(self->mailbox->state, msginfo);
+		dbmail_imap_session_buff_printf(self,"* %llu FETCH (%sFLAGS %s)\r\n", *id, t?t:"", s);
+		if (t) g_free(t);
+		g_free(s);
+	}
 
 	return 0;
 }

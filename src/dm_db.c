@@ -3221,22 +3221,27 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 		switch (action_type) {
 		case IMAPFA_ADD:
 			if (flags[i]) {
+				if (msginfo && msginfo->flags) msginfo->flags[i] = 1;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=1", seen?",":"", db_flag_desc[i]); 
 				seen++;
 			}
 			break;
 		case IMAPFA_REMOVE:
 			if (flags[i]) {
+				if (msginfo && msginfo->flags) msginfo->flags[i] = 0;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=0", seen?",":"", db_flag_desc[i]); 
 				seen++;
 			}
 			break;
 
 		case IMAPFA_REPLACE:
-			if (flags[i])
+			if (flags[i]) {
+				if (msginfo && msginfo->flags) msginfo->flags[i] = 1;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=1", seen?",":"", db_flag_desc[i]); 
-			else
+			} else {
+				if (msginfo && msginfo->flags) msginfo->flags[i] = 0;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=0", seen?",":"", db_flag_desc[i]); 
+			}
 			seen++;
 			break;
 		}

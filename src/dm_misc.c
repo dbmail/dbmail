@@ -1993,7 +1993,7 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 	
 	if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) {
 		t = g_mime_object_get_headers(GMIME_OBJECT(object));
-		g_string_printf(s,"%s\n", t);
+		g_string_printf(s,"%s\r\n", t);
 		g_free(t);
 	} 
 	
