@@ -1193,25 +1193,6 @@ int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr)
 	return 0;
 }
 
-static void notify_expunge(ImapSession *self, u64_t *uid)
-{
-	u64_t * msn;
-
-	if (! (msn = g_tree_lookup(self->mailbox->ids, uid))) {
-		TRACE(TRACE_DEBUG,"[%p] can't find uid [%llu]", self, *uid);
-		return;
-	}
-
-	switch (self->command_type) {
-		case IMAP_COMM_NOOP:
-		case IMAP_COMM_IDLE:
-			dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", *msn);
-			dbmail_mailbox_remove_uid(self->mailbox, *uid);
-		default:
-		break;
-	}
-}
-
 static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 {
 	u64_t *msn;
@@ -1248,6 +1229,29 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	g_free(newflags);
 }
 
+static gboolean notify_expunge(ImapSession *self, u64_t *uid)
+{
+	u64_t * msn;
+
+	if (! (msn = g_tree_lookup(self->mailbox->ids, uid))) {
+		TRACE(TRACE_DEBUG,"[%p] can't find uid [%llu]", self, *uid);
+		return TRUE;
+	}
+
+	switch (self->command_type) {
+		case IMAP_COMM_EXPUNGE:
+		case IMAP_COMM_CHECK:
+		case IMAP_COMM_NOOP:
+		case IMAP_COMM_IDLE:
+			dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", *msn);
+			dbmail_mailbox_remove_uid(self->mailbox, *uid);
+		default:
+		break;
+	}
+
+	return FALSE;
+}
+
 static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 {
 	u64_t *uid;
@@ -1258,16 +1262,27 @@ static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 	ids  = g_tree_keys(self->mailbox->ids);
 	ids = g_list_reverse(ids);
 
+	// send expunge updates
 	while (ids) {
 		uid = (u64_t *)ids->data;
 		if (! g_tree_lookup(new->ids, uid))
 			notify_expunge(self, uid);
+
+		if (! g_list_next(ids)) break;
+		ids = g_list_next(ids);
+	}
+
+	// send fetch updates
+	ids = g_list_first(ids);
+	while (ids) {
+		uid = (u64_t *)ids->data;
 
 		notify_fetch(self, new, uid);
 
 		if (! g_list_next(ids)) break;
 		ids = g_list_next(ids);
 	}
+
 
 	dbmail_imap_session_mailbox_update_recent(self);
 
@@ -1571,12 +1586,6 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 static gboolean _do_expunge(u64_t *id, ImapSession *self)
 {
 	MessageInfo *msginfo;
-	u64_t *msn = g_tree_lookup(self->mailbox->ids, id);
-
-	if (! msn) {
-		TRACE(TRACE_ERR,"can't find msn for [%llu]", *id);
-		return FALSE;
-	}
 
 	msginfo = g_tree_lookup(self->mailbox->msginfo, id);
 	
@@ -1587,12 +1596,7 @@ static gboolean _do_expunge(u64_t *id, ImapSession *self)
 	if (db_update("UPDATE %smessages SET status=%d WHERE message_idnr=%llu ", DBPFX, MESSAGE_STATUS_DELETE, *id) == DM_EQUERY)
 		return TRUE;
 
-	if (self->command_type == IMAP_COMM_EXPUNGE) {
-		dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", *msn);
-		dbmail_mailbox_remove_uid(self->mailbox, *id);
-	}
-		
-	return FALSE;
+	return notify_expunge(self, id);
 }
 
 int dbmail_imap_session_mailbox_expunge(ImapSession *self)
