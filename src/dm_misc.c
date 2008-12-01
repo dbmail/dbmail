@@ -567,12 +567,19 @@ int listex_match(const char *p, const char *s,
 		if (!p8 && *p == '%') {
 			p++;
 			while (*s) {
+				/* fast-forward until after next separator in string */
 				for (i = 0; x[i] && x[i] == s[i]; i++);
 				if (! x[i]) {
 					s += i;
 					break;
 				}
-				s++;
+				/* %foo. */
+				for (i = 0; s[i] && p[i] && s[i] == p[i] && s[i] != x[0] && p[i] != x[0]; i++);
+				if (i > 0 && ((! p[i] ) || (p[i] == x[0] && s[i] == x[0]))) {
+					p += i; s += i;
+				} else {
+					s++;
+				}
 			}
 			/* %. */
 			for (i = 0; x[i] && x[i] == p[i]; i++);
@@ -1993,7 +2000,7 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 	
 	if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) {
 		t = g_mime_object_get_headers(GMIME_OBJECT(object));
-		g_string_printf(s,"%s\r\n", t);
+		g_string_printf(s,"%s\n", t);
 		g_free(t);
 	} 
 	
