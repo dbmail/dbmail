@@ -231,8 +231,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 			session->command_state = TRUE;
 			dbmail_imap_session_buff_flush(session);
 			session->error_count++;	/* server returned BAD or NO response */
-			event_add(session->ci->rev, session->ci->timeout);
-
 			break;
 
 		case 2:
