@@ -211,6 +211,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 	switch(status) {
 		case -1:
 			dbmail_imap_session_set_state(session,IMAPCS_ERROR);	/* fatal error occurred, kick this user */
+			imap_session_bailout(session);
 			break;
 
 		case 0:
@@ -220,7 +221,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 					ci_write(session->ci, session->buff->str);
 					dbmail_imap_session_buff_clear(session);
 				}
-				if (session->command_state == TRUE)
+				if (session->command_state == TRUE && session->ci && session->ci->rev)
 					event_add(session->ci->rev, session->ci->timeout);
 			} else {
 				dbmail_imap_session_buff_clear(session);
@@ -231,6 +232,8 @@ static void imap_handle_exit(ImapSession *session, int status)
 			session->command_state = TRUE;
 			dbmail_imap_session_buff_flush(session);
 			session->error_count++;	/* server returned BAD or NO response */
+			if (session->ci && session->ci->rev)
+				event_add(session->ci->rev, session->ci->timeout);
 			break;
 
 		case 2:

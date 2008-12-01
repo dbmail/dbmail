@@ -2116,6 +2116,7 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 	const char *simple_name;
 	char *mbox, *namespace, *username;
 	int i, result;
+	size_t l;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
@@ -2123,8 +2124,9 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 	mbox = g_strdup(fq_name);
 	
 	/* remove trailing '/' if present */
-	while (strlen(mbox) > 0 && mbox[strlen(mbox) - 1] == '/')
-		mbox[strlen(mbox) - 1] = '\0';
+	l = strlen(mbox);
+	while (--l > 0 && mbox[l] == '/')
+		mbox[l] = '\0';
 
 	/* remove leading '/' if present */
 	for (i = 0; mbox[i] && mbox[i] == '/'; i++);
@@ -2476,14 +2478,13 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 {
 	int skip_and_free = DM_SUCCESS;
 	u64_t created_mboxid = 0;
-	int result, ok_to_create = -1;
+	int result;
 	GList *mailbox_list = NULL, *mailbox_item = NULL;
 
 	assert(mailbox);
 	assert(mailbox_idnr);
 	assert(message);
 	
-
 	TRACE(TRACE_INFO, "Creating mailbox [%s] source [%d] for user [%llu]",
 			mailbox, source, owner_idnr);
 
@@ -2510,7 +2511,6 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 	if (source == BOX_BRUTEFORCE) {
 		TRACE(TRACE_INFO, "Mailbox requested with BRUTEFORCE creation status; "
 			"pretending that all permissions have been granted to create it.");
-		ok_to_create = 1;
 	}
 
 	mailbox_item = g_list_first(mailbox_list);
@@ -2591,9 +2591,6 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 				*message = "Internal database error while checking ACL";
 				skip_and_free = DM_EQUERY;
 			}
-
-			if (!skip_and_free)
-				ok_to_create = 1;
 		}
 
 		if (skip_and_free) break;
