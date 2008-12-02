@@ -85,6 +85,7 @@ static void imap_session_bailout(ImapSession *session)
 
 	if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop - need to exit the loop first
 		TRACE(TRACE_DEBUG, "[%p] Session is in an idle loop, exiting loop.", session);
+		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
 		session->command_state = FALSE;
 		dm_thread_data *D = g_new0(dm_thread_data,1);
 		D->data = (gpointer)"DONE\n\0";
