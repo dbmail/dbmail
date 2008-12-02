@@ -880,7 +880,7 @@ void _ic_list_enter(dm_thread_data *D)
 			show = TRUE;
 		}
 
-		if (show && (! g_tree_lookup(shown, MailboxState_getName(M)))) {
+		if (show && MailboxState_getName(M) && (! g_tree_lookup(shown, MailboxState_getName(M)))) {
 			char *s = g_strdup(MailboxState_getName(M));
 			TRACE(TRACE_DEBUG,"[%s]", s);
 			g_tree_insert(shown, s, s);
