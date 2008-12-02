@@ -316,6 +316,7 @@ gboolean db_exec(C c, const char *q, ...)
 		gettimeofday(&after, NULL);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		TRACE(TRACE_ERR,"failed query [%s]", query);
 	END_TRY;
 
 	if (result) log_query_time(query, before, after);
@@ -344,6 +345,7 @@ R db_query(C c, const char *q, ...)
 		result = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		TRACE(TRACE_ERR,"failed query [%s]", query);
 	END_TRY;
 
 	if (result) log_query_time(query, before, after);
@@ -3213,7 +3215,7 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 	for (i = 0; i < IMAP_NFLAGS; i++) {
 
 		// Skip recent_flag
-		if (i == IMAP_FLAG_RECENT) continue;
+//		if (i == IMAP_FLAG_RECENT) continue;
 
 		switch (action_type) {
 		case IMAPFA_ADD:
@@ -3250,17 +3252,19 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 			msg_idnr, MESSAGE_STATUS_DELETE, 
 			mailbox_idnr);
 
-	c = db_con_get();
-	TRY
-		db_exec(c, query);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
+	if (seen) {
+		c = db_con_get();
+		TRY
+			db_exec(c, query);
+		CATCH(SQLException)
+			LOG_SQLERROR;
+			t = DM_EQUERY;
+		FINALLY
+			db_con_close(c);
+		END_TRY;
 
-	if (t == DM_EQUERY) return t;
+		if (t == DM_EQUERY) return t;
+	}
 
 	db_set_msgkeywords(msg_idnr, keywords, action_type, msginfo);
 	db_mailbox_seq_update(mailbox_idnr);
