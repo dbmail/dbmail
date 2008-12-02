@@ -89,7 +89,7 @@ static void imap_session_bailout(ImapSession *session)
 		dm_thread_data *D = g_new0(dm_thread_data,1);
 		D->data = (gpointer)"DONE\n\0";
 		g_async_queue_push(session->ci->queue, (gpointer)D);
-		usleep(25000);
+		return;
 	}
 
 	dbmail_imap_session_mailbox_update_recent(session);
@@ -221,7 +221,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 					ci_write(session->ci, session->buff->str);
 					dbmail_imap_session_buff_clear(session);
 				}
-				if (session->command_state == TRUE && session->ci && session->ci->rev)
+				if (session->command_state == TRUE)
 					event_add(session->ci->rev, session->ci->timeout);
 			} else {
 				dbmail_imap_session_buff_clear(session);
@@ -232,8 +232,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 			session->command_state = TRUE;
 			dbmail_imap_session_buff_flush(session);
 			session->error_count++;	/* server returned BAD or NO response */
-			if (session->ci && session->ci->rev)
-				event_add(session->ci->rev, session->ci->timeout);
+			event_add(session->ci->rev, session->ci->timeout);
 			break;
 
 		case 2:
