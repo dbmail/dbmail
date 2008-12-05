@@ -1121,14 +1121,14 @@ size_t dbmail_message_get_body_size(const DbmailMessage *self, gboolean crlf)
 
 static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template)
 {
-	
-	int row = 0;
+	int l, row = 0;
 	GString *m;
 	INIT_QUERY;
 	C c; R r;
 	DbmailMessage *store;
 	field_t frag;
 	char *internal_date = NULL;
+	gconstpointer blob;
 	
 	assert(dbmail_message_get_physid(self));
 	
@@ -1151,10 +1151,14 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	row = 0;
 	m = g_string_new("");
 	while (db_result_next(r)) {
-		char *str = (char *)db_result_get(r,0);
+		blob = db_result_get_blob(r,0,&l);
+		char *str = g_new0(char,l+1);
+		str = strncpy(str, blob, l);
+
 		if (row == 0) internal_date = g_strdup(db_result_get(r,2));
 
 		g_string_append_printf(m, "%s", str);
+		g_free(str);
 		row++;
 	}
 	db_con_close(c);
