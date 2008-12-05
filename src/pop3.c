@@ -309,6 +309,9 @@ int pop3(ClientSession_t *session, char *buffer)
 	case POP3_STLS:
 		if (session->state != POP3_AUTHORIZATION_STATE)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
+		if (! server_conf->ssl)
+			return pop3_error(session, "-ERR server error\r\n");
+
 		if (session->ci->ssl_state)
 			return pop3_error(session, "-ERR TLS already active\r\n");
 		ci_write(session->ci, "+OK Begin TLS now");
@@ -763,7 +766,7 @@ int pop3(ClientSession_t *session, char *buffer)
 		return pop3_error(session, "-ERR no such message\r\n");
 
 	case POP3_CAPA:
-		ci_write(ci, "+OK Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
+		ci_write(ci, "+OK Capability list follows\r\nTOP\r\nUSER\r\nUIDL%s\r\n.\r\n", server_conf->ssl?"\r\nSTLS":"");
 		return 1;
 
 	default:

@@ -283,6 +283,7 @@ typedef struct {
 	int service_before_smtp;
 	int port;
 	int ssl_port;
+	gboolean ssl;
 	int backlog;
 	int resolveIP;
 	field_t service_name, process_name;

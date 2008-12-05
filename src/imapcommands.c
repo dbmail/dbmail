@@ -35,6 +35,7 @@
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
+extern serverConfig_t *server_conf;
 extern int selfpipe[2];
 extern GAsyncQueue *queue;
 extern const char *imap_flag_desc[];
@@ -100,6 +101,10 @@ int _ic_starttls(ImapSession *self)
 {
 	int i;
 	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
+	if (! server_conf->ssl) {
+		ci_write(self->ci, "%s NO TLS not available\r\n", self->tag);
+		return 1;
+	}
 	if (self->ci->ssl_state) {
 		ci_write(self->ci, "%s NO TLS already active\r\n", self->tag);
 		return 1;

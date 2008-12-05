@@ -388,19 +388,20 @@ static void server_create_sockets(serverConfig_t * conf)
 	int i;
 
 	conf->listenSockets = g_new0(int, conf->ipcount);
-	conf->ssl_listenSockets = g_new0(int, conf->ipcount);
 
 	if (strlen(conf->socket) > 0) {
 		conf->listenSockets[0] = create_unix_socket(conf);
 	} else {
 		tls_load_certs(conf);
-		tls_load_ciphers(conf);
+		if (conf->ssl)
+			tls_load_ciphers(conf);
 		if (conf->port > 0) {
 			for (i = 0; i < conf->ipcount; i++)
 				conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
 		}
 
-		if (conf->ssl_port > 0) {
+		if (conf->ssl && conf->ssl_port > 0) {
+			conf->ssl_listenSockets = g_new0(int, conf->ipcount);
 			for (i = 0; i < conf->ipcount; i++)
 				conf->ssl_listenSockets[i] = create_inet_socket(conf->iplist[i], conf->ssl_port, conf->backlog);
 		}
@@ -613,7 +614,7 @@ int server_run(serverConfig_t *conf)
 			event_add(&evsock[ip], NULL);
 		}
 	}
-	if (conf->ssl_port > 0) {
+	if (conf->ssl && conf->ssl_port > 0) {
 		evssl = g_new0(struct event, server_conf->ipcount + 1);
 		for (ip = 0; ip < server_conf->ipcount; ip++) {
 			event_set(&evssl[ip], server_conf->ssl_listenSockets[ip], EV_READ, server_sock_ssl_cb, &evssl[ip]);
@@ -665,7 +666,8 @@ static void server_config_free(serverConfig_t * config)
 
 	g_strfreev(config->iplist);
 	g_free(config->listenSockets);
-	g_free(config->ssl_listenSockets);
+	if (config->ssl_listenSockets)
+		g_free(config->ssl_listenSockets);
 
 	config->listenSockets = NULL;
 	config->ssl_listenSockets = NULL;
