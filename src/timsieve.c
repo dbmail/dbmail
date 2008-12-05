@@ -25,6 +25,7 @@
 
 #define STRT 1
 #define AUTH 2
+#define QUIT 3
 
 #define TIMS_STRT 0		/* lower bound of array - 0 */
 #define TIMS_LOUT 0
@@ -98,7 +99,8 @@ void tims_cb_read(void *arg)
 		client_session_reset_parser(session);
 	}
 
-	event_add(session->ci->rev, session->ci->timeout);
+	if (session->state < QUIT)
+		event_add(session->ci->rev, session->ci->timeout);
 
 }
 
@@ -106,14 +108,27 @@ void tims_cb_time(void * arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
 	ci_write(session->ci, "BYE \"Connection timed out.\"\r\n");
-	session->state = IMAPCS_LOGOUT;
+	session->state = QUIT;
 }
 
+void tims_cb_write(void *arg)
+{
+	ClientSession_t *session = (ClientSession_t *)arg;
+	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
+
+	ci_write(session->ci, NULL); //flush buffered data
+	switch(session->state) {
+		case QUIT:
+			client_session_bailout(session);
+			break;
+	}
+}
 
 static void reset_callbacks(ClientSession_t *session)
 {
         session->ci->cb_time = tims_cb_time;
         session->ci->cb_read = tims_cb_read;
+        session->ci->cb_write = tims_cb_write;
 
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
@@ -198,7 +213,7 @@ int tims_tokenizer(ClientSession_t *session, char *buffer)
 			g_string_printf(session->rbuff,"%s","");
 			session->parser_state = TRUE;
 		}
-		TRACE(TRACE_DEBUG, "state [%d], size [%d]", session->parser_state, session->rbuff_size);
+		TRACE(TRACE_DEBUG, "state [%d], size [%ld]", session->parser_state, session->rbuff_size);
 		return session->parser_state;
 	}
 
@@ -274,7 +289,7 @@ int tims(ClientSession_t *session)
 	switch (session->command_type) {
 	case TIMS_LOUT:
 		ci_write(ci, "OK \"Bye.\"\r\n");
-		session->state = IMAPCS_LOGOUT;
+		session->state = QUIT;
 		return 1;
 		
 	case TIMS_STLS:
@@ -351,7 +366,7 @@ int tims(ClientSession_t *session)
 		script = (char *)session->args->data;
 
 		scriptlen = strlen(script);
-		TRACE(TRACE_INFO, "Client sending script of length [%d]", scriptlen);
+		TRACE(TRACE_INFO, "Client sending script of length [%ld]", scriptlen);
 		if (scriptlen >= UINT_MAX)
 			return tims_error(session, "NO \"Invalid script length.\"\r\n");
 

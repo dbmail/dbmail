@@ -157,6 +157,8 @@ void pop3_cb_write(void *arg)
 	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
+	ci_write(session->ci, NULL); //flush buffered data
+
 	switch (session->state) {
 		case POP3_QUIT_STATE:
 			db_session_cleanup(session);

@@ -106,6 +106,10 @@ void client_session_bailout(ClientSession_t *session)
 {
 	if (! session) return;
 	TRACE(TRACE_DEBUG,"[%p]", session);
+
+	// brute force:
+	if (server_conf->no_daemonize == 1) _exit(0);
+
 	client_session_reset(session);
 	ci_close(session->ci);
 }
