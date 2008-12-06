@@ -101,7 +101,9 @@ if __name__ == '__main__':
     for i in range(0,CLIENTS):
         id = thread.start_new_thread(frontloader, (i,))
         tdict[i] = id
+        time.sleep(1)
 
+    time.sleep(5)
     # wait for the clients to finish
     while 1:
         for i in range(0,CLIENTS):
