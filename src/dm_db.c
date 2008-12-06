@@ -2063,9 +2063,7 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	struct mailbox_match *mailbox_like = NULL;
 	S stmt;
 	GString *qs;
-	u64_t *idnr;
 	int p;
-
 
 	assert(mailbox_idnr);
 	*mailbox_idnr = 0;
@@ -2105,9 +2103,6 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 
 	if (t == DM_EQUERY) return FALSE;
 	if (*mailbox_idnr == 0) return FALSE;
-
-	idnr = g_new0(u64_t,1);
-	*idnr = *mailbox_idnr;
 
 	return TRUE;
 }
@@ -2316,9 +2311,12 @@ int mailbox_is_writable(u64_t mailbox_idnr)
 	
 	MailboxState_reload(M,0);
 	if (MailboxState_getPermission(M) != IMAPPERM_READWRITE) {
+		MailboxState_free(&M);
 		TRACE(TRACE_INFO, "read-only mailbox");
 		return FALSE;
 	}
+
+	MailboxState_free(&M);
 	return TRUE;
 
 }

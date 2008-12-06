@@ -96,24 +96,27 @@ int drop_privileges(char *newuser, char *newgroup)
 
 void create_unique_id(char *target, u64_t message_idnr)
 {
-	char *a_message_idnr, *a_rand;
-	char *md5_str;
 	GRand *r = g_rand_new();
+	char *a_message_idnr, *a_rand, *md5_str;
 
-	a_message_idnr = g_strdup_printf("%llu",message_idnr);
 	a_rand = g_strdup_printf("%d",g_rand_int(r));
 	g_rand_free(r);
 
-	if (message_idnr != 0)
-		snprintf(target, UID_SIZE, "%s:%s",
-			 a_message_idnr, a_rand);
-	else
-		snprintf(target, UID_SIZE, "%s", a_rand);
-	md5_str = dm_md5(target);
-	snprintf(target, UID_SIZE, "%s", md5_str);
-	TRACE(TRACE_DEBUG, "created: %s", target);
-	g_free(a_message_idnr);
+	if (message_idnr != 0) {
+		a_message_idnr = g_strdup_printf("%llu",message_idnr);
+		snprintf(target, UID_SIZE, "%s:%s", a_message_idnr, a_rand);
+		g_free(a_message_idnr);
+	} else {
+		strncpy(target, a_rand, UID_SIZE);
+	}
+
 	g_free(a_rand);
+
+	md5_str = dm_md5(target);
+	strncpy(target, (const char *)md5_str, UID_SIZE);
+	g_free(md5_str);
+
+	TRACE(TRACE_DEBUG, "created: %s", target);
 }
 
 void create_current_timestring(timestring_t * timestring)
@@ -288,29 +291,21 @@ int find_bounded(const char * const value, char left, char right,
 		*retsize = 0;
 		*retlast = 0;
 		return -1;
-	} else {
-		/* Step left up to skip the actual left thinger */
-		if (tmpright != tmpleft)
-			tmpleft++;
+	} 
+	/* else */
+	/* Step left up to skip the actual left thinger */
+	if (tmpright != tmpleft)
+		tmpleft++;
 
-		tmplen = tmpright - tmpleft;
-		*retchar = g_new0(char, tmplen + 1);
-		if (*retchar == NULL) {
-			*retchar = NULL;
-			*retsize = 0;
-			*retlast = 0;
-			TRACE(TRACE_INFO, "Found [%s] of length [%zu] between '%c' and '%c' so next skip [%zu]", *retchar, *retsize,
-			      left, right, *retlast);
-			return -2;
-		}
-		strncpy(*retchar, tmpleft, tmplen);
-		(*retchar)[tmplen] = '\0';
-		*retsize = tmplen;
-		*retlast = tmpright - value;
-		TRACE(TRACE_INFO, "Found [%s] of length [%zu] between '%c' and '%c' so next skip [%zu]", *retchar, *retsize, left,
-		      right, *retlast);
-		return 0;
-	}
+	tmplen = tmpright - tmpleft;
+	*retchar = g_new0(char, tmplen + 1);
+	strncpy(*retchar, tmpleft, tmplen);
+	(*retchar)[tmplen] = '\0';
+	*retsize = tmplen;
+	*retlast = tmpright - value;
+	TRACE(TRACE_INFO, "Found [%s] of length [%zu] between '%c' and '%c' so next skip [%zu]", *retchar, *retsize, left,
+	      right, *retlast);
+	return 0;
 }
 
 int zap_between(const char * const instring, signed char left, signed char right,
@@ -2257,7 +2252,7 @@ char **base64_decodev(char *str)
 char * dm_get_hash_for_string(const char *buf)
 {
 	field_t hash_algorithm;
-	const char *digest;
+	char *digest;
 	static hashid type;
 	static int initialized=0;
 
@@ -2309,7 +2304,7 @@ char * dm_get_hash_for_string(const char *buf)
 		break;
 	}
 
-	return (char *)digest;
+	return digest;
 }
 
 void strip_crlf(char *buffer)

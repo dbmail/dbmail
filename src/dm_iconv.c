@@ -282,6 +282,8 @@ char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean i
 		value = dbmail_iconv_decode_address(tmp_raw);
 	else
 		value = dbmail_iconv_decode_text(tmp_raw);
+	
+	g_free(tmp_raw);
 
 	return value;
 }

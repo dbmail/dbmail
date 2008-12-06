@@ -415,8 +415,8 @@ static int db_getmailbox_keywords(T M)
 				"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, M->id);
 
 		while (db_result_next(r)) {
-			key = db_result_get(r,0);
-			g_tree_insert(M->keywords, (gpointer)g_strdup(key), (gpointer)key);
+			key = g_strdup(db_result_get(r,0));
+			g_tree_insert(M->keywords, (gpointer)key, (gpointer)key);
 		}
 
 	CATCH(SQLException)
@@ -454,9 +454,9 @@ static int db_getmailbox_seq(T M)
 		db_con_close(c);
 	END_TRY;
 
-	TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
+	assert(M->name);
 
-	if (! M->name) return DM_EQUERY;
+	TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
 
 	return t;
 }

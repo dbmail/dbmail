@@ -452,6 +452,7 @@ int lmtp(ClientSession_t * session)
 							dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
 							dsnuser->address, class, subject, detail);
 			}
+
 			if (! g_list_next(session->rcpt)) break;
 			session->rcpt = g_list_next(session->rcpt);
 		}

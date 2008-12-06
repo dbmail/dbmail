@@ -215,7 +215,13 @@ static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 static u64_t blob_store(const char *buf)
 {
 	u64_t id;
-	char *hash = dm_get_hash_for_string(buf);
+	char *hash;
+
+	if (! buf) return 0;
+
+	hash = dm_get_hash_for_string(buf);
+
+	if (! hash) return 0;
 
 	// store this message fragment
 	if ((id = blob_exists(buf, (const char *)hash)) != 0) {
@@ -227,6 +233,8 @@ static u64_t blob_store(const char *buf)
 		g_free(hash);
 		return id;
 	}
+
+	g_free(hash);
 	
 	return 0;
 }
@@ -574,7 +582,7 @@ DbmailMessage * dbmail_message_new(void)
 	
 	/* internal cache: header_dict[headername.name] = headername.id */
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
-			(GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
+			(GEqualFunc)g_str_equal, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
 	
@@ -1395,7 +1403,7 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 
 static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *id)
 {
-	u64_t *tmp = g_new0(u64_t,1);
+	u64_t *tmp = NULL;
 	gpointer cacheid;
 	gchar *case_header, *safe_header, *frag;
 	C c; R r; S s;
@@ -1411,6 +1419,7 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 
 	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
 	frag = db_returning("id");
+	tmp = g_new0(u64_t,1);
 
 	c = db_con_get();
 
@@ -1439,13 +1448,13 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 	FINALLY
 		db_con_close(c);
 	END_TRY;
-		
 
 	g_free(frag);
 	g_free(case_header);
 
 	if (t == DM_EQUERY) {
 		g_free(safe_header);
+		g_free(tmp);
 		return t;
 	}
 

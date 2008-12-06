@@ -206,10 +206,14 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	g_list_destroy(dsnuser->userids);
 	g_list_destroy(dsnuser->forwards);
 
-	dsnuser->address = NULL;
-	if (dsnuser->mailbox)
-               g_free(dsnuser->mailbox);
-	dsnuser->mailbox = NULL;
+	if (dsnuser->address) {
+		g_free(dsnuser->address);
+		dsnuser->address = NULL;
+	}
+	if (dsnuser->mailbox) {
+		g_free(dsnuser->mailbox);
+		dsnuser->mailbox = NULL;
+	}
 	
 	TRACE(TRACE_DEBUG, "dsnuser freed");
 }
@@ -436,8 +440,7 @@ void dsnuser_free_list(GList *deliveries)
 	deliveries = g_list_first(deliveries);
 	while (deliveries) {
 		dsnuser_free((deliver_to_user_t *) deliveries->data);
-		if (! g_list_next(deliveries))
-			break;
+		if (! g_list_next(deliveries)) break;
 		deliveries = g_list_next(deliveries);
 	}
 	g_list_free(g_list_first(deliveries));
