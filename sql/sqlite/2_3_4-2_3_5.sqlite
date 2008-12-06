@@ -1,3 +1,5 @@
 
-alter table dbmail_mailboxes add seq integer default '0' not null;
+ALTER TABLE dbmail_mailboxes ADD seq INTEGER DEFAULT '0' NOT NULL;
+CREATE INDEX dbmail_mailbox_4 ON dbmail_mailboxes(seq);
+
 

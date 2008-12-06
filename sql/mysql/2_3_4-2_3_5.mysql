@@ -1,5 +1,4 @@
-alter table dbmail_mailboxes add seq bigint default 0 not null;
-ALTER TABLE dbmail_mailboxes ADD KEY seq (mtime);
-alter table dbmail_mailboxes drop mtime;
-
-alter table dbmail_users modify column passwd varchar(130) not null;
+ALTER TABLE dbmail_mailboxes ADD seq bigint DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_mailboxes ADD KEY seq (seq);
+ALTER TABLE dbmail_mailboxes DROP mtime;
+ALTER TABLE dbmail_users MODIFY COLUMN passwd VARCHAR(130) NOT NULL;
