@@ -161,11 +161,12 @@ class testPopServer(unittest.TestCase):
         l = self.o.list()
         count = string.split(l[0])[1]
         n,s=string.split(l[1][int(count)-1])
-        result = self.o.retr(n)
-        r = string.split(result[0])
-        self.assertEquals(r[0],"+OK")
-        message = string.join(result[1],"\n")
-        self.assertEquals(int(r[1]),len(message))
+        for i in range(1,int(n)):
+            result = self.o.retr(i)
+            r = string.split(result[0])
+            self.assertEquals(r[0],"+OK")
+            message = string.join(result[1],"\n")
+            self.assertEquals(int(r[1]),len(message))
         
     def test_dele(self):
         """
@@ -231,6 +232,7 @@ class testPopServer(unittest.TestCase):
 
 
     def tearDown(self):
+        self.o.rset()
         self.o.quit()
 
 
