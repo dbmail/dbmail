@@ -440,6 +440,7 @@ void dsnuser_free_list(GList *deliveries)
 	deliveries = g_list_first(deliveries);
 	while (deliveries) {
 		dsnuser_free((deliver_to_user_t *) deliveries->data);
+		g_free((deliver_to_user_t *) deliveries->data);
 		if (! g_list_next(deliveries)) break;
 		deliveries = g_list_next(deliveries);
 	}

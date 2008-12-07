@@ -35,6 +35,10 @@
 
 #define THIS_MODULE "lmtp"
 
+#define STRT 1
+#define AUTH 2
+#define QUIT 3
+
 extern serverConfig_t *server_conf;
 
 extern volatile sig_atomic_t alarm_occured;
@@ -61,7 +65,7 @@ static void lmtp_cb_time(void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
 	ci_write(session->ci, "221 Connection timeout BYE\r\n");
-	session->state = IMAPCS_LOGOUT;
+	session->state = QUIT;
 }
 
 static void lmtp_cb_read(void *arg)
@@ -77,18 +81,21 @@ static void lmtp_cb_read(void *arg)
 	
 	if (r == 0) {
 		client_session_bailout(session);
+		g_free(session);
 		return;
 	}
 		
 	if ((r = lmtp_tokenizer(session, buffer))) {
 		if (r == -3) {
 			client_session_bailout(session);
+			g_free(session);
 			return;
 		}
 
 		if (r > 0) {
 			if (lmtp(session) == -3) {
 				client_session_bailout(session);
+				g_free(session);
 				return;
 			}
 			client_session_reset_parser(session);
@@ -104,10 +111,26 @@ static void lmtp_cb_read(void *arg)
 	TRACE(TRACE_DEBUG,"[%p] done", session);
 }
 
+void lmtp_cb_write(void *arg)
+{
+	ClientSession_t *session = (ClientSession_t *)arg;
+	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
+
+	ci_write(session->ci, NULL); //flush buffered data
+
+	switch (session->state) {
+		case QUIT:
+			client_session_bailout(session);
+			break;
+	}
+}
+
+
 static void reset_callbacks(ClientSession_t *session)
 {
         session->ci->cb_time = lmtp_cb_time;
         session->ci->cb_read = lmtp_cb_read;
+        session->ci->cb_write = lmtp_cb_write;
 
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
@@ -121,7 +144,7 @@ static void lmtp_rset(ClientSession_t *session, gboolean reset_state)
 	int state = session->state;
 	client_session_reset(session);
 	if (reset_state)
-		session->state = IMAPCS_AUTHENTICATED;
+		session->state = AUTH;
 	else
 		session->state = state;
 }
@@ -203,7 +226,7 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 
 	if (session->command_type == LMTP_DATA) {
 		if (command) {
-			if (session->state != IMAPCS_AUTHENTICATED) {
+			if (session->state != AUTH) {
 				return lmtp_error(session, "550 Command out of sequence\r\n");
 			}
 			if (g_list_length(session->rcpt) < 1) {
@@ -242,7 +265,7 @@ int lmtp(ClientSession_t * session)
 
 	case LMTP_QUIT:
 		ci_write(ci, "221 %s BYE\r\n", session->hostname);
-		session->state = IMAPCS_LOGOUT;
+		session->state = QUIT;
 		return 1;
 
 	case LMTP_NOOP:
@@ -269,7 +292,7 @@ int lmtp(ClientSession_t * session)
 				 * "250-BINARYMIME\r\n"
 				 * */
 		client_session_reset(session);
-		session->state = IMAPCS_AUTHENTICATED;
+		session->state = AUTH;
 		client_session_set_timeout(session, server_conf->timeout);
 
 		return 1;
@@ -317,7 +340,7 @@ int lmtp(ClientSession_t * session)
 		/* We need to LHLO first because the client
 		 * needs to know what extensions we support.
 		 * */
-		if (session->state != IMAPCS_AUTHENTICATED) {
+		if (session->state != AUTH) {
 			ci_write(ci, "550 Command out of sequence.\r\n");
 			return 1;
 		} 
@@ -375,7 +398,7 @@ int lmtp(ClientSession_t * session)
 		return 1;
 
 	case LMTP_RCPT:
-		if (session->state != IMAPCS_AUTHENTICATED) {
+		if (session->state != AUTH) {
 			ci_write(ci, "550 Command out of sequence.\r\n");
 			return 1;
 		} 
@@ -403,6 +426,7 @@ int lmtp(ClientSession_t * session)
 			TRACE(TRACE_ERR, "dsnuser_resolve_list failed");
 			ci_write(ci, "430 Temporary failure in recipient lookup\r\n");
 			dsnuser_free(dsnuser);
+			g_free(dsnuser);
 			return 1;
 		}
 
@@ -415,6 +439,7 @@ int lmtp(ClientSession_t * session)
 			default:
 				ci_write(ci, "550 Recipient <%s> FAIL\r\n", dsnuser->address);
 				dsnuser_free(dsnuser);
+				g_free(dsnuser);
 				break;
 		}
 		return 1;

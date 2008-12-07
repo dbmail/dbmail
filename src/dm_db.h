@@ -549,17 +549,6 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot);
 
 /**
- * \brief create a new POP3 session. (was createsession() in dbmysql.c)
- * \param user_idnr user idnr 
- * \param session_ptr pointer to POP3 session 
- */
-int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr);
-/** 
- * \brief Clean up a POP3 Session
- * \param session_ptr pointer to POP3 session
- */
-void db_session_cleanup(ClientSession_t * session_ptr);
-/**
  * \brief update POP3 session
  * \param session_ptr pointer to POP3 session
  * \return

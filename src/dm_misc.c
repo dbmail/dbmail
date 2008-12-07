@@ -107,13 +107,13 @@ void create_unique_id(char *target, u64_t message_idnr)
 		snprintf(target, UID_SIZE, "%s:%s", a_message_idnr, a_rand);
 		g_free(a_message_idnr);
 	} else {
-		strncpy(target, a_rand, UID_SIZE);
+		snprintf(target, UID_SIZE, "%s", a_rand);
 	}
 
 	g_free(a_rand);
 
 	md5_str = dm_md5(target);
-	strncpy(target, (const char *)md5_str, UID_SIZE);
+	snprintf(target, UID_SIZE, "%s", md5_str);
 	g_free(md5_str);
 
 	TRACE(TRACE_DEBUG, "created: %s", target);

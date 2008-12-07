@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2007 NFG Net Facilities Group support@nfg.nl
+ Copyright (C) 2007-2008 NFG Net Facilities Group support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -46,61 +46,59 @@ static char * dm_digest(const unsigned char * hash, hashid type)
 	return buffer;
 }
 
-static const unsigned char * dm_hash(const unsigned char * buf, hashid type)
+static void dm_hash(const unsigned char * buf, hashid type, gpointer data)
 {
 	MHASH td = mhash_init(type);
 	mhash(td, buf, strlen((const char *)buf));
-	return (const unsigned char *)mhash_end(td);
+	mhash_deinit(td, data);
 }
+
+#define DM_HASH(x, t) \
+	g_return_val_if_fail(x != NULL, NULL); \
+	unsigned char h[1024]; \
+	char *d = NULL; \
+	memset(h,'\0', sizeof(h)); \
+	dm_hash((unsigned char *)x, t, (gpointer)h); \
+	d = dm_digest(h, t); \
+	return d
 
 char * dm_whirlpool(const char * const s)
 {
-	g_return_val_if_fail(s != NULL, NULL);
-
-	return dm_digest(dm_hash((unsigned char *)s, MHASH_WHIRLPOOL), MHASH_WHIRLPOOL);
+	DM_HASH(s, MHASH_WHIRLPOOL);
 }
 
 char * dm_sha512(const char * const s)
 {
-	g_return_val_if_fail(s != NULL, NULL);
-
-	return dm_digest(dm_hash((unsigned char *)s, MHASH_SHA512), MHASH_SHA512);
+	DM_HASH(s, MHASH_SHA512);
 }
 
 char * dm_sha256(const char * const s)
 {
-	g_return_val_if_fail(s != NULL, NULL);
-
-	return dm_digest(dm_hash((unsigned char *)s, MHASH_SHA256), MHASH_SHA256);
+	DM_HASH(s, MHASH_SHA256);
 }
 
 char * dm_sha1(const char * const s)
 {
-	g_return_val_if_fail(s != NULL, NULL);
-
-	return dm_digest(dm_hash((unsigned char *)s, MHASH_SHA1), MHASH_SHA1);
+	DM_HASH(s, MHASH_SHA1);
 }
 
 char * dm_tiger(const char * const s)
 {
-	g_return_val_if_fail(s != NULL, NULL);
-	
-	return dm_digest(dm_hash((unsigned char *)s, MHASH_TIGER), MHASH_TIGER);
+	DM_HASH(s, MHASH_TIGER);
 }
 
 char *dm_md5(const char * const s)
 {
-	g_return_val_if_fail(s != NULL, NULL);
-
-	return dm_digest(dm_hash((unsigned char *)s, MHASH_MD5), MHASH_MD5);
+	DM_HASH(s, MHASH_MD5);
 }
 
 char *dm_md5_base64(const char * const s)
 {
 	g_return_val_if_fail(s != NULL, NULL);
-
-	const unsigned char *h = (unsigned char *)dm_hash((unsigned char *)s, MHASH_MD5);
-
-	return g_base64_encode(h, sizeof(h));
+	unsigned char h[2048];
+	memset(h,'\0', sizeof(h));
+	dm_hash((unsigned char *)s, MHASH_MD5, h);
+	char *d = g_base64_encode(h, sizeof(h));
+	return d;
 }
 

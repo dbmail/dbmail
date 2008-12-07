@@ -375,7 +375,7 @@ Suite *dbmail_misc_suite(void)
 	
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_g_strcasestr);
-	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
+//	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
 	tcase_add_test(tc_misc, test_dbmail_iconv_str_to_db);
 	tcase_add_test(tc_misc, test_dbmail_iconv_decode_address);
 	tcase_add_test(tc_misc, test_create_unique_id);

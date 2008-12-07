@@ -45,6 +45,9 @@ extern serverConfig_t *server_conf;
 extern int pop_before_smtp;
 extern volatile sig_atomic_t alarm_occured;
 
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
+
 int pop3(ClientSession_t *session, char *buffer);
 int pop3_error(ClientSession_t * session, const char *formatstring, ...) PRINTF_ARGS(2, 3);
 
@@ -78,6 +81,106 @@ static void send_greeting(ClientSession_t *session)
 		ci_write(session->ci, "+OK DBMAIL pop3 server ready to rock %s\r\n", session->apop_stamp);
 	}
 }
+
+static int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
+{
+	C c; R r; int t = DM_SUCCESS;
+	struct message *tmpmessage;
+	int message_counter = 0;
+	const char *query_result;
+	u64_t mailbox_idnr;
+	INIT_QUERY;
+
+	if (db_find_create_mailbox("INBOX", BOX_DEFAULT, user_idnr, &mailbox_idnr) < 0) {
+		TRACE(TRACE_NOTICE, "find_create INBOX for user [%llu] failed, exiting..", user_idnr);
+		return DM_EQUERY;
+	}
+
+	g_return_val_if_fail(mailbox_idnr > 0, DM_EQUERY);
+
+	/* query is < MESSAGE_STATUS_DELETE  because we don't want deleted 
+	 * messages
+	 */
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT pm.messagesize, msg.message_idnr, msg.status, "
+		 "msg.unique_id FROM %smessages msg, %sphysmessage pm "
+		 "WHERE msg.mailbox_idnr = %llu "
+		 "AND msg.status < %d "
+		 "AND msg.physmessage_id = pm.id "
+		 "ORDER BY msg.message_idnr ASC",DBPFX,DBPFX,
+		 mailbox_idnr, MESSAGE_STATUS_DELETE);
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, query);
+
+		session_ptr->totalmessages = 0;
+		session_ptr->totalsize = 0;
+
+		/* messagecounter is total message, +1 tot end at message 1 */
+		message_counter = 1;
+
+		/* filling the list */
+		TRACE(TRACE_DEBUG, "adding items to list");
+		while (db_result_next(r)) {
+			tmpmessage = g_new0(struct message,1);
+			/* message size */
+			tmpmessage->msize = db_result_get_u64(r,0);
+			/* real message id */
+			tmpmessage->realmessageid = db_result_get_u64(r,1);
+			/* message status */
+			tmpmessage->messagestatus = db_result_get_u64(r,2);
+			/* virtual message status */
+			tmpmessage->virtual_messagestatus = tmpmessage->messagestatus;
+			/* unique id */
+			query_result = db_result_get(r,3);
+			if (query_result)
+				strncpy(tmpmessage->uidl, query_result, UID_SIZE);
+
+			session_ptr->totalmessages++;
+			session_ptr->totalsize += tmpmessage->msize;
+			tmpmessage->messageid = (u64_t) message_counter;
+
+			session_ptr->messagelst = g_list_prepend(session_ptr->messagelst, tmpmessage);
+
+			message_counter++;
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (t == DM_EQUERY) return t;
+	if (message_counter == 1) {
+		/* there are no messages for this user */
+		return DM_EGENERAL;
+	}
+
+	/* descending list */
+	session_ptr->messagelst = g_list_reverse(session_ptr->messagelst);
+
+	TRACE(TRACE_DEBUG, "adding succesful");
+
+	/* setting all virtual values */
+	session_ptr->virtual_totalmessages = session_ptr->totalmessages;
+	session_ptr->virtual_totalsize = session_ptr->totalsize;
+
+	return DM_EGENERAL;
+}
+
+static void db_session_cleanup(ClientSession_t * session_ptr)
+{
+	/* cleanups a session 
+	   removes a list and all references */
+	session_ptr->totalsize = 0;
+	session_ptr->virtual_totalsize = 0;
+	session_ptr->totalmessages = 0;
+	session_ptr->virtual_totalmessages = 0;
+	g_list_destroy(session_ptr->messagelst);
+}
+
 
 static void pop3_close(ClientSession_t *session)
 {
