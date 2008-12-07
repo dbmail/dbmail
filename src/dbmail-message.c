@@ -263,12 +263,11 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 	return 0;
 
 }
-static const char * find_boundary(const char *s)
+static char * find_boundary(const char *s)
 {
 	GMimeContentType *type;
 	GString *header;
-	const char *boundary;
-	char *rest, *h;
+	char *boundary, *rest, *h;
 	int i=0;
 
 	rest = g_strcasestr(s, "\nContent-type: ");
@@ -290,8 +289,8 @@ static const char * find_boundary(const char *s)
 	h = header->str;
 	g_strstrip(h);
 	type = g_mime_content_type_new_from_string(h);
-	boundary = g_mime_content_type_get_parameter(type,"boundary");
-        g_free(type);
+	boundary = g_strdup(g_mime_content_type_get_parameter(type,"boundary"));
+        g_mime_content_type_destroy(type);
 	g_string_free(header,TRUE);
 	
 	return boundary;
@@ -302,7 +301,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
 	C c; R r;
 	char *str = NULL, *internal_date = NULL;
-	const char *boundary = NULL;
+	char *boundary = NULL;
 	char **blist = g_new0(char *,32);
 	int prevdepth, depth = 0, order, row = 0, key = 1, t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
@@ -347,7 +346,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if (is_header && ((boundary = find_boundary(str)) != NULL)) {
 				got_boundary = TRUE;
 				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
-				blist[depth] = (char *)boundary;
+				blist[depth] = boundary;
 			}
 
 			if (prevdepth > depth && blist[depth]) {
@@ -358,7 +357,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			}
 
 			if (depth>0 && blist[depth-1])
-				boundary = (const char *)blist[depth-1];
+				boundary = (char *)blist[depth-1];
 
 			if (is_header && (!prev_header|| prev_boundary)) {
 				dprint("\n--%s\n", boundary);
@@ -397,10 +396,14 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		} else
 			g_string_append_printf(m, "\n");
 	}
+	
 
 	self = dbmail_message_init_with_string(self,m);
 	dbmail_message_set_internal_date(self, internal_date);
+	g_free(internal_date);
 	g_string_free(m,TRUE);
+	for (depth=0; blist[depth]; depth++)
+		g_free(blist[depth]);
 	g_free(blist);
 
 	return self;
@@ -784,6 +787,7 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 
 			assert(mstream);
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
+			g_mime_stream_file_set_owner((GMimeStreamFile *)mstream, TRUE);
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 			
