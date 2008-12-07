@@ -857,6 +857,8 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 
 	g_object_unref(parser);
 
+	fclose(tmp);
+
 	return res;
 }
 
