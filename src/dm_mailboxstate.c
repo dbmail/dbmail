@@ -201,15 +201,11 @@ unsigned MailboxState_getUnseen(T M)
 void MailboxState_free(T *M)
 {
 	T s = *M;
+	if (s->name) g_free(s->name);
+	g_tree_destroy(s->keywords);
 	s->id = 0;
-	if (s->keywords) {
-		g_tree_destroy(s->keywords);
-		s->keywords = NULL;
-	}
-	if (s->name) {
-		g_free(s->name);
-		s->name = NULL;
-	}
+	s->name = NULL;
+	s->keywords = NULL;
 	g_free(s);
 	s = NULL;
 }
@@ -266,8 +262,8 @@ static int db_getmailbox_metadata(T M, u64_t user_idnr)
 			mbxname = mailbox_add_namespace(name, M->owner_id, user_idnr);
 			fqname = g_string_new(mbxname);
 			fqname = g_string_truncate(fqname,IMAP_MAX_MAILBOX_NAMELEN);
-			M->name = fqname->str;
-			g_string_free(fqname,FALSE);
+			MailboxState_setName(M, fqname->str);
+			g_string_free(fqname,TRUE);
 			g_free(mbxname);
 
 			/* no_select */

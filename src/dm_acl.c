@@ -65,7 +65,8 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right)
 		case ACL_RIGHT_CREATE:
 		case ACL_RIGHT_DELETE:
 		case ACL_RIGHT_ADMINISTER:
-			if (! mailbox_is_writable(MailboxState_getId(S)))
+
+			if (MailboxState_getPermission(S) != IMAPPERM_READWRITE)
 				return FALSE;
 		break;
 

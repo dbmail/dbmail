@@ -13,6 +13,7 @@ TESTS=check_dbmail_common \
 	check_dbmail_imapd \
 	check_dbmail_message \
 	check_dbmail_mailbox \
+	check_dbmail_mailboxstate \
 	check_dbmail_auth \
 	check_dbmail_misc \
 	check_dbmail_list \
@@ -82,6 +83,10 @@ check_dbmail_message_INCLUDES=@CHECK_CFLAGS@
 check_dbmail_mailbox_SOURCES=check_dbmail_mailbox.c
 check_dbmail_mailbox_LDADD=$(CHECK_LDADD)
 check_dbmail_mailbox_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_mailboxstate_SOURCES=check_dbmail_mailboxstate.c
+check_dbmail_mailboxstate_LDADD=$(CHECK_LDADD)
+check_dbmail_mailboxstate_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_imapd_SOURCES=$(IMAPD) check_dbmail_imapd.c
 check_dbmail_imapd_LDADD=$(CHECK_LDADD)

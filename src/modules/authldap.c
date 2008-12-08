@@ -884,7 +884,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 	int occurences = 0;
 	u64_t id, *uid;
 	char *endptr = NULL;
-	char query[AUTH_QUERY_SIZE];
+	char *query;
 	const char *fields[] = { 
 		_ldap_cfg.field_nid, 
 		_ldap_cfg.field_fwdtarget[0] ? _ldap_cfg.field_fwdtarget : NULL, 
@@ -919,7 +919,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 
 	t = g_list_join(l,")(");
 	g_string_printf(q,"(|(%s))", t->str);
-	snprintf(query, AUTH_QUERY_SIZE, q->str);
+	query = q->str;
 	g_string_free(t,TRUE);
 	g_string_free(q,FALSE);
 	g_list_foreach(l,(GFunc)g_free,NULL);
@@ -928,6 +928,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 	TRACE(TRACE_DEBUG, "searching with query [%s], checks [%d]", query, checks);
 
 	entlist = __auth_get_every_match(query, fields);
+	g_free(query);
 
 	if (g_list_length(entlist) < 1) {
 		if (checks > 0) {
