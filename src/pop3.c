@@ -246,7 +246,7 @@ void pop3_cb_read(void *arg)
 	l = ci_readln(session->ci, buffer);
 
 	if (l==0) { // error
-		client_session_bailout(session);
+		client_session_bailout(&session);
 		return;
 	}
 
@@ -265,7 +265,7 @@ void pop3_cb_write(void *arg)
 	switch (session->state) {
 		case POP3_QUIT_STATE:
 			db_session_cleanup(session);
-			client_session_bailout(session);
+			client_session_bailout(&session);
 			break;
 	}
 }
@@ -310,7 +310,7 @@ int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 
 	if (session->error_count >= MAX_ERRORS) {
 		ci_write(ci, "-ERR too many errors\r\n");
-		client_session_bailout(session);
+		client_session_bailout(&session);
 		return -3;
 	} else {
 		va_start(ap, formatstring);

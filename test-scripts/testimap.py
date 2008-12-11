@@ -138,7 +138,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(strip_crlf(result[1][0][1]),TESTMSG['strict822'].get_payload())
 
         result = self.o.fetch(id,"(FLAGS)")
-        expect = '1 (FLAGS (\\Flagged Userflag))'
+        expect = '1 (FLAGS (\\Seen \\Flagged Userflag))'
         self.assertEquals(result[1][0],expect)
 
     def testCheck(self):

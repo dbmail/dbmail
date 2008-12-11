@@ -141,6 +141,7 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 			g_free(buf);
 		break;
 		case DBMAIL_MESSAGE_FILTER_FULL:
+			outcnt = C->size;
 			Mem_rewind(C->memdump);
 			Mem_rewind(C->tmpdump);
 			/* done */
@@ -148,8 +149,7 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 
 	}
 
-	
-	TRACE(TRACE_DEBUG,"C->size[%llu]", C->size);	
+	TRACE(TRACE_DEBUG,"C->size[%llu], outcnt[%llu]", C->size, outcnt);	
 
 	return outcnt;
 }

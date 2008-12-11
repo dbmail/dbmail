@@ -346,12 +346,14 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if (is_header && ((boundary = find_boundary(str)) != NULL)) {
 				got_boundary = TRUE;
 				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
+				if (blist[depth]) g_free(blist[depth]);
 				blist[depth] = boundary;
 			}
 
 			if (prevdepth > depth && blist[depth]) {
 				dprint("\n--%s at %d--\n", blist[depth], depth);
 				g_string_append_printf(m, "\n--%s--\n", blist[depth]);
+				g_free(blist[depth]);
 				blist[depth] = NULL;
 				finalized=TRUE;
 			}

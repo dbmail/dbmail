@@ -66,8 +66,8 @@ typedef struct {
 int drop_privileges(char *newuser, char *newgroup)
 {
 	/* will drop running program's priviledges to newuser and newgroup */
-	struct passwd *pwd;
-	struct group *grp;
+	struct passwd *pwd = NULL;
+	struct group *grp = NULL;
 
 	grp = getgrnam(newgroup);
 

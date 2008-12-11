@@ -80,22 +80,19 @@ static void lmtp_cb_read(void *arg)
 	if (r == -1) return;
 	
 	if (r == 0) {
-		client_session_bailout(session);
-		g_free(session);
+		client_session_bailout(&session);
 		return;
 	}
 		
 	if ((r = lmtp_tokenizer(session, buffer))) {
 		if (r == -3) {
-			client_session_bailout(session);
-			g_free(session);
+			client_session_bailout(&session);
 			return;
 		}
 
 		if (r > 0) {
 			if (lmtp(session) == -3) {
-				client_session_bailout(session);
-				g_free(session);
+				client_session_bailout(&session);
 				return;
 			}
 			client_session_reset_parser(session);
@@ -120,7 +117,7 @@ void lmtp_cb_write(void *arg)
 
 	switch (session->state) {
 		case QUIT:
-			client_session_bailout(session);
+			client_session_bailout(&session);
 			break;
 	}
 }

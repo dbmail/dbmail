@@ -102,16 +102,20 @@ void client_session_reset_parser(ClientSession_t *session)
 	}
 }
 
-void client_session_bailout(ClientSession_t *session)
+void client_session_bailout(ClientSession_t **session)
 {
-	if (! session) return;
-	TRACE(TRACE_DEBUG,"[%p]", session);
+	ClientSession_t *c = *session;
+
+	if (! c) return;
+	TRACE(TRACE_DEBUG,"[%p]", c);
 
 	// brute force:
 	if (server_conf->no_daemonize == 1) _exit(0);
 
-	client_session_reset(session);
-	ci_close(session->ci);
+	client_session_reset(c);
+	ci_close(c->ci);
+	g_free(c);
+	c = NULL;
 }
 
 void client_session_set_timeout(ClientSession_t *session, int timeout)
@@ -140,7 +144,7 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 
 		case IMAPCS_LOGOUT:
 		case IMAPCS_ERROR:
-			client_session_bailout(session);
+			client_session_bailout(&session);
 			break;
 
 		case IMAPCS_INITIAL_CONNECT:

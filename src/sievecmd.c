@@ -640,10 +640,7 @@ int do_list(u64_t user_idnr)
 			printf("  - ");
 		printf("%s\n", info->name);
 
-		g_free(info->name);
-		
-		if (! g_list_next(scriptlist))
-			break;
+		if (! g_list_next(scriptlist)) break;
 		scriptlist = g_list_next(scriptlist);
 	}
 

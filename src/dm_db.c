@@ -2448,6 +2448,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 						*message = "General error while subscribing";
 						skip_and_free = DM_EGENERAL;
 					}
+					MailboxState_setPermission(M, IMAPPERM_READWRITE);
 				}
 
 				/* If the PUBLIC user owns it, then the current user needs ACLs. */

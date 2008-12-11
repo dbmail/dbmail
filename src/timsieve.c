@@ -83,17 +83,17 @@ void tims_cb_read(void *arg)
 
 	l = ci_readln(session->ci, buffer);
 	if (l == 0) {
-		client_session_bailout(session);
+		client_session_bailout(&session);
 		return;
 	}
 
 	if ((l = tims_tokenizer(session, buffer))) {
 		if (l == -3) {
-			client_session_bailout(session);
+			client_session_bailout(&session);
 			return;
 		}
 		if (tims(session) == -3) {
-			client_session_bailout(session);
+			client_session_bailout(&session);
 			return;
 		}
 		client_session_reset_parser(session);
@@ -119,7 +119,7 @@ void tims_cb_write(void *arg)
 	ci_write(session->ci, NULL); //flush buffered data
 	switch(session->state) {
 		case QUIT:
-			client_session_bailout(session);
+			client_session_bailout(&session);
 			break;
 	}
 }
@@ -445,14 +445,16 @@ int tims(ClientSession_t *session)
 			return tims_error(session, "NO \"Script name required.\"\r\n");
 
 		ret = dm_sievescript_getbyname(session->useridnr, scriptname, &script);
-		if (ret == -3) {
+		if (script == NULL) {
 			return tims_error(session, "NO \"Script not found.\"\r\n");
-		} else if (ret != 0 || script == NULL) {
+		} else if (ret < 0) {
+			g_free(script);
 			return tims_error(session, "NO \"Internal error.\"\r\n");
 		} else {
 			ci_write(ci, "{%u+}\r\n", (unsigned int)strlen(script));
 			ci_write(ci, "%s\r\n", script);
 			ci_write(ci, "OK\r\n");
+			g_free(script);
 		}
 		return 1;
 		
@@ -511,8 +513,7 @@ int tims(ClientSession_t *session)
 				while (scriptlist) {
 					sievescript_info_t *info = (sievescript_info_t *) scriptlist->data;
 					ci_write(ci, "\"%s\"%s\r\n", info->name, (info-> active == 1 ?  " ACTIVE" : ""));
-					if (! g_list_next(scriptlist))
-						break;
+					if (! g_list_next(scriptlist)) break;
 					scriptlist = g_list_next(scriptlist);
 				}
 				ci_write(ci, "OK\r\n");

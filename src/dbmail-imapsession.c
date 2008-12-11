@@ -108,6 +108,12 @@ static u64_t dbmail_imap_session_message_load(ImapSession *self, int filter)
 		}
 		self->message = db_init_fetch(self->msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
 	}
+
+	if (! self->message) {
+		TRACE(TRACE_ERR,"message retrieval failed");
+		return 0;
+	}
+
 	return Cache_update(self->cache, self->message, filter);
 }
 
@@ -690,7 +696,9 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 	
 	if (self->fi->msgparse_needed) {
 
-		dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL);
+		if (! dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))
+			return 0;
+
 		if (bodyfetch->partspec[0]) {
 			if (bodyfetch->partspec[0] == '0') {
 				dbmail_imap_session_buff_printf(self, "\r\n%s BAD protocol error\r\n", self->tag);
@@ -1022,7 +1030,7 @@ int dbmail_imap_session_fetch_get_items(ImapSession *self)
 	if (! self->ids)
 		TRACE(TRACE_INFO, "[%p] self->ids is NULL", self);
 	else {
-		dbmail_imap_session_buff_clear(self);
+		dbmail_imap_session_buff_flush(self);
 		self->error = FALSE;
 		g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
 		if (self->error) return -1;
@@ -1206,8 +1214,8 @@ int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr)
 static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 {
 	u64_t *msn;
-	char *oldflags, *newflags;
-	MessageInfo *old, *new;
+	char *oldflags = NULL, *newflags = NULL;
+	MessageInfo *old = NULL, *new = NULL;
 
 	assert(uid);
 
@@ -1222,10 +1230,11 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 	old = g_tree_lookup(self->mailbox->msginfo, uid);
 
 	// FETCH
-	oldflags = imap_flags_as_string(self->mailbox->state, old);
+	if (old)
+		oldflags = imap_flags_as_string(self->mailbox->state, old);
 	newflags = imap_flags_as_string(self->mailbox->state, new);
 
-	if (! MATCH(oldflags,newflags)) {
+	if ((! oldflags) || (! MATCH(oldflags,newflags))) {
 		char *t = NULL;
 		if (self->use_uid) t = g_strdup_printf(" UID %llu", *uid);
 		dbmail_imap_session_buff_printf(self,"* %llu FETCH (FLAGS %s%s)\r\n", *msn, newflags, t?t:"");
@@ -1235,7 +1244,7 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 		if (t) g_free(t);
 	}
 
-	g_free(oldflags);
+	if (oldflags) g_free(oldflags);
 	g_free(newflags);
 }
 
