@@ -252,6 +252,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 	}
 
 	if (done) TRACE(TRACE_INFO, "[%p] C < [%d:%s]", self, result, buffer);
+	TRACE(TRACE_DEBUG,"[%p] read [%ld]", self, result);
 
 	return result;
 }

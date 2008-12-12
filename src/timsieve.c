@@ -82,6 +82,8 @@ void tims_cb_read(void *arg)
 	event_del(session->ci->rev);
 
 	l = ci_readln(session->ci, buffer);
+	if (l == -1) return; // retry
+
 	if (l == 0) {
 		client_session_bailout(&session);
 		return;
