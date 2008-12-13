@@ -93,7 +93,6 @@ static void imap_session_bailout(ImapSession *session)
 		return;
 	}
 
-	dbmail_imap_session_mailbox_update_recent(session);
 	ci_close(session->ci);
 	dbmail_imap_session_delete(session);
 }

@@ -215,7 +215,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 {
 	ssize_t t = 0;
 	char c = 0;
-	int done = FALSE, result = 0;
+	int loop = 0, result = 0;
 
 	assert(self->line_buffer);
 	memset(buffer, 0, MAX_LINESIZE);
@@ -223,7 +223,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 	if (self->line_buffer->len == 0)
 		self->len = 0;
 
-	while (self->len < MAX_LINESIZE) {
+	while (self->len < MAX_LINESIZE && loop < 2) {
 		if (self->ssl)
 			t = SSL_read(self->ssl, (void *)&c, 1);
 		else
@@ -233,26 +233,30 @@ int ci_readln(clientbase_t *self, char * buffer)
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
 				return e;
 			event_add(self->rev, self->timeout);
-		}
-
-		if (t != 1)
-			break;
-
-		result++;
-		self->len++;
-
-		if (c=='\r') continue;
-		g_string_append_c(self->line_buffer,c);
-		if (c=='\n') {
-			strncpy(buffer, self->line_buffer->str, MAX_LINESIZE);
-			g_string_printf(self->line_buffer,"%s", "");
-			done=TRUE;
 			break;
 		}
+
+		if (t == 1) {
+			loop = 0;
+			result++;
+			self->len++;
+
+			if (c=='\r') continue;
+
+			g_string_append_c(self->line_buffer,c);
+
+			if (c=='\n') { // done
+				strncpy(buffer, self->line_buffer->str, MAX_LINESIZE);
+				g_string_printf(self->line_buffer,"%s", ""); // reset
+				TRACE(TRACE_INFO, "[%p] C < [%s]", self, buffer);
+				break;
+			}
+		}
+
+		if (t == 0) loop++;
 	}
 
-	if (done) TRACE(TRACE_INFO, "[%p] C < [%d:%s]", self, result, buffer);
-	TRACE(TRACE_DEBUG,"[%p] read [%ld]", self, result);
+	TRACE(TRACE_DEBUG,"[%p] read [%ld]", self, self->len);
 
 	return result;
 }
