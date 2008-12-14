@@ -617,6 +617,7 @@ void dbmail_message_free(DbmailMessage *self)
 	g_tree_destroy(self->header_name);
 	g_tree_destroy(self->header_value);
 	
+	if (self->tmp) fclose(self->tmp);
 	self->id=0;
 	g_free(self);
 	self = NULL;
@@ -752,7 +753,6 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 	GMimeParser *parser;
 	gchar *buf, *from = NULL;
 	ssize_t getslen, putslen;
-	FILE *tmp;
 	int res = 0;
 	gboolean firstline=TRUE;
 
@@ -777,19 +777,19 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 
 			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
-			tmp = tmpfile(); 
-			if (! tmp) {
+			self->tmp = tmpfile(); 
+			if (! self->tmp) {
 				int serr = errno;
 				TRACE(TRACE_ERR, "opening tmpfile failed: %s", strerror(serr));
 				res = 1;
 				break;
 			}
 
-			mstream = g_mime_stream_file_new(tmp);
+			mstream = g_mime_stream_file_new(self->tmp);
 
 			assert(mstream);
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
-			g_mime_stream_file_set_owner((GMimeStreamFile *)mstream, TRUE);
+			g_mime_stream_file_set_owner((GMimeStreamFile *)mstream, FALSE);
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 			
@@ -828,6 +828,7 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 			
 			g_mime_stream_reset(mstream);
 			g_mime_parser_init_with_stream(parser, mstream);
+
 
 			g_object_unref(fstream);
 			g_object_unref(bstream);

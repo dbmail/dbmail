@@ -153,6 +153,7 @@ typedef struct {
 	int part_key;
 	int part_depth;
 	int part_order;
+	FILE *tmp;
 } DbmailMessage;
 
 /**********************************************************************
