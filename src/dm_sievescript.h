@@ -46,8 +46,8 @@ int dm_sievescript_getbyname(u64_t user_idnr, char *scriptname, char **script);
  * \param user_idnr user id
  * \return
  *        - -1 on error
- *        - 0 when user has an active script
- *        - 1 when user doesn't have an active script
+ *        - 1 when user has an active script
+ *        - 0 when user doesn't have an active script
  */
 int dm_sievescript_isactive(u64_t user_idnr);
 int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname);
