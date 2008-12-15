@@ -73,7 +73,7 @@ int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname)
 		}
 
 		r = db_stmt_query(s);
-		if (db_result_next(r)) t = FALSE;
+		if (! db_result_next(r)) t = FALSE;
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -268,7 +268,8 @@ int dm_sievescript_activate(u64_t user_idnr, char *scriptname)
 		db_stmt_set_str(s, 2, scriptname);
 		db_stmt_exec(s);
 
-		t = db_commit_transaction(c);
+		db_commit_transaction(c);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
