@@ -1374,8 +1374,6 @@ int _message_insert(DbmailMessage *self,
 
 	g_free(frag);
 
-	db_mailbox_seq_update(mailboxid);
-
 	return result;
 }
 

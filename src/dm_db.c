@@ -2872,6 +2872,8 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 
 	g_free(frag);
 
+	db_mailbox_seq_update(mailbox_to);
+
 	/* Copy the message keywords */
 	c = db_con_get();
 	TRY
