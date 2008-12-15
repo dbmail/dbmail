@@ -1946,11 +1946,9 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 
 	/* Sieve. */
 	config_get_value("SIEVE", "DELIVERY", val);
-	if (strcasecmp(val, "yes") == 0
-	&& dm_sievescript_isactive(useridnr) == 0) {
+	if (strcasecmp(val, "yes") == 0 && dm_sievescript_isactive(useridnr)) {
 		TRACE(TRACE_INFO, "Calling for a Sieve sort");
-		sort_result_t *sort_result;
-		sort_result = sort_process(useridnr, message);
+		sort_result_t *sort_result = sort_process(useridnr, message);
 		if (sort_result) {
 			cancelkeep = sort_get_cancelkeep(sort_result);
 			reject = sort_get_reject(sort_result);
