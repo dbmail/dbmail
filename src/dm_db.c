@@ -2311,17 +2311,15 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 				*errmsg = "Public user required for #Public folder access.";
 				goto egeneral;
 			}
-			if (! db_findmailbox(cpy, public, &mboxid)) {
-				*errmsg = "Internal database error while looking for mailbox";
-				goto equery;
-			}
+			db_findmailbox(cpy, public, &mboxid);
+
 		} else {
 			db_findmailbox(cpy, owner_idnr, &mboxid);
 		}
 
 		/* Prepend a mailbox struct onto the list. */
 		MailboxState_T M = MailboxState_new(mboxid);
-		MailboxState_setName(M, g_strdup(mailbox));
+		MailboxState_setName(M, g_strdup(cpy));
 		MailboxState_setIsUsers(M, is_users);
 		MailboxState_setIsPublic(M, is_public);
 
