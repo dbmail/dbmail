@@ -190,6 +190,8 @@ int tims_tokenizer(ClientSession_t *session, char *buffer)
 		command = buffer;
 
 		strip_crlf(command);
+		g_strstrip(command);
+		if (! strlen(command)) return FALSE; /* ignore empty commands */
 
 		value = strstr(command, " ");	/* look for the separator */
 
