@@ -206,7 +206,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		if (c == '\r') continue;
 		buffer[i++] = c;
 	}
-	TRACE(TRACE_DEBUG,"[%p] read [%ld]", self, self->len);
+	TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->len, buffer);
 
 	return self->len;
 }	

@@ -81,7 +81,13 @@ void tims_cb_read(void *arg)
 	ClientSession_t *session = (ClientSession_t *)arg;
 	event_del(session->ci->rev);
 
-	l = ci_readln(session->ci, buffer);
+	if (session->rbuff_size <= 0) {
+		l = ci_readln(session->ci, buffer);
+	} else {
+		int needed = (session->rbuff_size < (int)sizeof(buffer)) ? session->rbuff_size : (int)sizeof(buffer);
+		l = ci_read(session->ci, buffer, needed);
+	}
+
 	if (l == -1) return; // retry
 
 	if (l == 0) {
