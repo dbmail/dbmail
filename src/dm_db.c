@@ -877,7 +877,6 @@ static int dm_quota_user_validate(u64_t user_idnr, u64_t msg_size)
 		db_con_close(c);
 	END_TRY;
 
-	db_con_close(c);
 	return t;
 }
 
@@ -1037,8 +1036,6 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	FINALLY
 		db_con_close(c);
 	END_TRY;
-
-	db_con_close(c);
 
 	return t;
 }
@@ -1774,25 +1771,15 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_si
 	c = db_con_get();
 	TRY
 		r = db_query(c, query);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	END_TRY;
-	
-	if (t == DM_EQUERY) {
-		db_con_close(c);
-		return t;
-	}
-
-	TRY
 		if (db_result_next(r))
 			*mailbox_size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
-		*mailbox_size = 0;
+		LOG_SQLERROR;
+		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
-
+	
 	return t;
 }
 

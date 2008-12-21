@@ -531,7 +531,7 @@ void _ic_delete_enter(dm_thread_data *D)
 				db_commit_transaction(c);
 			CATCH(SQLException)
 				LOG_SQLERROR;
-			t = DM_EQUERY;
+				t = DM_EQUERY;
 			FINALLY
 				db_con_close(c);
 			END_TRY;

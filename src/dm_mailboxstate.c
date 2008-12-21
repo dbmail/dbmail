@@ -423,8 +423,6 @@ static int db_getmailbox_keywords(T M)
 		db_con_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY) return t;
-
 	return t;
 }
 

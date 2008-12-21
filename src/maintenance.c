@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
 
 static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
 {
-	C c; R r;
+	C c; R r; int t = DM_SUCCESS;
 	field_t to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
@@ -322,16 +322,18 @@ static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
 	char2date_str(lasttokeep, &to_date_str);
 
 	c = db_con_get();
-	if (! (r = db_query(c, "SELECT COUNT(*) FROM %spbsp WHERE since < %s", DBPFX, to_date_str))) {
+	TRY
+		r = db_query(c, "SELECT COUNT(*) FROM %spbsp WHERE since < %s", DBPFX, to_date_str);
+		if (db_result_next(r))
+			*rows = db_result_get_u64(r,0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
 		db_con_close(c);
-		return DM_EQUERY;
-	}
+	END_TRY
 
-	if (db_result_next(r))
-		*rows = db_result_get_u64(r,0);
-	db_con_close(c);
-
-	return DM_SUCCESS;
+	return t;
 }
 
 static int db_cleanup_iplog(timestring_t lasttokeep)
