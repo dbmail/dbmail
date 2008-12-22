@@ -1850,12 +1850,18 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 		if (self->args_idx == 2) {
 			/* decode and store the password */
 			size_t len;
-			self->args[self->args_idx++] = (char *)g_base64_decode((const gchar *)s, &len);
+			char *c = NULL, *p = (char *)g_base64_decode((const gchar *)s, &len);
+			c = g_strndup(p, len);
+			g_free(p);
+			self->args[self->args_idx++] = c;
 			goto finalize; // done
 		} else if (self->args_idx == 1) {
 			/* decode and store the username */
 			size_t len;
-			self->args[self->args_idx++] = (char *)g_base64_decode((const gchar *)s, &len);
+			char *c = NULL, *p = (char *)g_base64_decode((const gchar *)s, &len);
+			c = g_strndup(p, len);
+			g_free(p);
+			self->args[self->args_idx++] = c;
 			/* ask for password */
 			dbmail_imap_session_prompt(self,"password");
 			return 0;
