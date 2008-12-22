@@ -3324,7 +3324,7 @@ int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_userna
 	char clientsock[DM_SOCKADDR_LEN];
 	const char *userid = NULL, *sockok = NULL, *sockno = NULL, *login = NULL;
 	unsigned row = 0;
-	int result = FALSE;
+	int result = TRUE;
 	int score, bestscore = -1;
 	char *bestlogin = NULL, *bestuserid = NULL;
 	C c; R r; S s;

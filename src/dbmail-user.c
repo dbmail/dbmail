@@ -130,7 +130,7 @@ int do_password(const u64_t useridnr,
 		return 1;
 	}
 
-	if ((result = auth_change_password(useridnr, password, enctype)))
+	if (! (result = auth_change_password(useridnr, password, enctype)))
 		qerrorf("Error: could not change password.\n");
 
 	return result;

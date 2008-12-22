@@ -331,7 +331,7 @@ static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
-	END_TRY
+	END_TRY;
 
 	return t;
 }
