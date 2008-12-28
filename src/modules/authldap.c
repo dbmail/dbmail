@@ -39,6 +39,7 @@ typedef struct _ldap_cfg {
 	field_t field_maxmail, field_passwd;
 	field_t field_fwd, field_fwdsave, field_fwdtarget, fwdtargetprefix;
 	field_t field_members;
+	field_t query_string;
 	int scope_int, port_int, version_int;
 } _ldap_cfg_t;
 
@@ -79,6 +80,7 @@ static void __auth_get_config(void)
 	GETCONFIGVALUE("FIELD_QUOTA",		"LDAP", _ldap_cfg.field_maxmail);
 	GETCONFIGVALUE("FIELD_PASSWD",		"LDAP", _ldap_cfg.field_passwd);
 	GETCONFIGVALUE("FIELD_FWDTARGET",	"LDAP", _ldap_cfg.field_fwdtarget);
+	GETCONFIGVALUE("QUERY_STRING",		"LDAP", _ldap_cfg.query_string);
 	GETCONFIGVALUE("SCOPE",			"LDAP", _ldap_cfg.scope);
 
 	/* Store the port as an integer for later use. */
@@ -899,32 +901,46 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 	}
 
 	TRACE(TRACE_DEBUG, "checking user [%s] in alias table", address);
-
-	/* build a mail filter, with multiple attributes, if needed */
-	GString *f = g_string_new(_ldap_cfg.field_mail);
-	searchlist = g_string_split(f,",");
-	g_string_free(f,TRUE);
-	
-	GString *t = g_string_new("");
-	GString *q = g_string_new("");
-	GList *l = NULL;
-	searchlist = g_list_first(searchlist);
-	while(searchlist) {
-		g_string_printf(t,"%s=%s",(char *)searchlist->data,address);
-		l = g_list_append(l,g_strdup(t->str));
-		if(!g_list_next(searchlist))
-			break;
-		searchlist = g_list_next(searchlist);	
-	}
-
-	t = g_list_join(l,")(");
-	g_string_printf(q,"(|(%s))", t->str);
-	query = q->str;
-	g_string_free(t,TRUE);
-	g_string_free(q,FALSE);
-	g_list_foreach(l,(GFunc)g_free,NULL);
-	g_list_free(l);	
-	
+ 	if (strlen(_ldap_cfg.query_string)==0) {
+ 		/* build a mail filter, with multiple attributes, if needed */
+ 		GString *f = g_string_new(_ldap_cfg.field_mail);
+ 		searchlist = g_string_split(f,",");
+ 		g_string_free(f,TRUE);
+ 	
+ 		GString *t = g_string_new("");
+ 		GString *q = g_string_new("");
+ 		GList *l = NULL;
+ 		searchlist = g_list_first(searchlist);
+ 		while(searchlist) {
+ 			g_string_printf(t,"%s=%s",(char *)searchlist->data,address);
+ 			l = g_list_append(l,g_strdup(t->str));
+ 			if(!g_list_next(searchlist))
+ 				break;
+ 			searchlist = g_list_next(searchlist);	
+ 		}
+  
+ 		t = g_list_join(l,")(");
+ 		g_string_printf(q,"(|(%s))", t->str);
+ 		snprintf(query, AUTH_QUERY_SIZE, q->str);
+ 		g_string_free(t,TRUE);
+ 		g_string_free(q,FALSE);
+ 		g_list_foreach(l,(GFunc)g_free,NULL);
+ 		g_list_free(l);	
+ 	} else {
+ 		int i;
+ 		GString *q = g_string_new("");
+ 		for (i = 0; _ldap_cfg.query_string[i] != '\0'; i++) {
+ 			if (_ldap_cfg.query_string[i]=='%' && _ldap_cfg.query_string[i+1] && _ldap_cfg.query_string[i+1]=='s') {
+ 				g_string_append(q,address);
+ 				i++;
+ 			} else {
+ 				g_string_append_c(q,_ldap_cfg.query_string[i]);
+ 			}
+ 		}	
+ 		snprintf(query, AUTH_QUERY_SIZE, q->str);
+ 		g_string_free(q,TRUE);
+ 	}
+ 
 	TRACE(TRACE_DEBUG, "searching with query [%s], checks [%d]", query, checks);
 
 	entlist = __auth_get_every_match(query, fields);
