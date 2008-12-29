@@ -921,7 +921,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
   
  		t = g_list_join(l,")(");
  		g_string_printf(q,"(|(%s))", t->str);
- 		snprintf(query, AUTH_QUERY_SIZE, q->str);
+ 		query = q->str;
  		g_string_free(t,TRUE);
  		g_string_free(q,FALSE);
  		g_list_foreach(l,(GFunc)g_free,NULL);
@@ -937,8 +937,8 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
  				g_string_append_c(q,_ldap_cfg.query_string[i]);
  			}
  		}	
- 		snprintf(query, AUTH_QUERY_SIZE, q->str);
- 		g_string_free(q,TRUE);
+ 		query = q->str;
+ 		g_string_free(q,FALSE);
  	}
  
 	TRACE(TRACE_DEBUG, "searching with query [%s], checks [%d]", query, checks);
