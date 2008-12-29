@@ -487,6 +487,8 @@ START_TEST(test_imap_cleanup_address)
 	F("\"First Address\" <first@foo.com>, =?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>",
 		"\"First Address\" <first@foo.com>, \"=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=\" <over.there@hotmail.com>");
 
+	printf("[%s]\n", imap_cleanup_address("pr.latinnet <pr.latinnet@gmail.com>"));
+
 
 }
 END_TEST

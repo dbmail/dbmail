@@ -2319,3 +2319,14 @@ void strip_crlf(char *buffer)
 	}
 }
 
+// work around glib allocation bug
+char * dm_base64_decode(const gchar *s, size_t *len)
+{
+	char *r = NULL, *p = (char *)g_base64_decode((const gchar *)s, len);
+	r = g_strndup(p, *len);
+	g_free(p);
+	TRACE(TRACE_DEBUG,"[%lu][%s]->[%s]", *len, s, r);
+	return r;
+}
+
+

@@ -163,6 +163,7 @@ char **base64_decodev(char *in);
 /* return an allocated string containing the cryptographic checksum for buf */
 char * dm_get_hash_for_string(const char *buf);
 
+char * dm_base64_decode(const gchar *s, size_t *len);
 
 void strip_crlf(char *buffer);
 
