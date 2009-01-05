@@ -744,35 +744,36 @@ int _ic_list(struct ImapSession *self)
 			continue;
 
 		/* Enforce match of mailbox to pattern. */
-		if ((! listex_match(pattern, mb->name, MAILBOX_SEPARATOR, 0)) && (g_str_has_suffix(pattern,"%"))) {
-			/*
-			   If the "%" wildcard is the last character of a mailbox name argument, matching levels
-			   of hierarchy are also returned.  If these levels of hierarchy are not also selectable 
-			   mailboxes, they are returned with the \Noselect mailbox name attribute
-			 */
+		if (! listex_match(pattern, mb->name, MAILBOX_SEPARATOR, 0)) {
+			if (g_str_has_suffix(pattern,"%")) {
+				/*
+				   If the "%" wildcard is the last character of a mailbox name argument, matching levels
+				   of hierarchy are also returned.  If these levels of hierarchy are not also selectable 
+				   mailboxes, they are returned with the \Noselect mailbox name attribute
+				 */
 
-			TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mb->name, pattern);
-			char *m = NULL, **p = g_strsplit(mb->name,MAILBOX_SEPARATOR,0);
+				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mb->name, pattern);
+				char *m = NULL, **p = g_strsplit(mb->name,MAILBOX_SEPARATOR,0);
+				int l = g_strv_length(p);
+				while (l-- > 1) {
+					if (p[l]) {
+						g_free(p[l]);
+						p[l] = NULL;
+					}
+					m = g_strjoinv(MAILBOX_SEPARATOR,p);
 
-			int l = g_strv_length(p);
-			while (l-- > 1) {
-				if (p[l]) {
-					g_free(p[l]);
-					p[l] = NULL;
+					if (listex_match(pattern, m, MAILBOX_SEPARATOR, 0)) {
+						g_free(mb->name);
+						mb->name = m;
+						mb->no_select = 1;
+						mb->no_children = 0;
+						show = TRUE;
+						break;
+					}
+					g_free(m);
 				}
-				m = g_strjoinv(MAILBOX_SEPARATOR,p);
-
-				if (listex_match(pattern, m, MAILBOX_SEPARATOR, 0)) {
-					g_free(mb->name);
-					mb->name = m;
-					mb->no_select = 1;
-					mb->no_children = 0;
-					show = TRUE;
-					break;
-				}
-				g_free(m);
+				g_strfreev(p);
 			}
-			g_strfreev(p);
 		} else {
 			show = TRUE;
 		}
