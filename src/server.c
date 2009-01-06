@@ -508,8 +508,10 @@ void server_sig_cb(int fd, short event, void *arg)
 	TRACE(TRACE_DEBUG,"fd [%d], event [%d], signal [%d]", fd, event, EVENT_SIGNAL(ev));
 
 	switch (EVENT_SIGNAL(ev)) {
-		case SIGHUP:
+		case SIGHUP: // TODO: reload config
 			mainRestart = 1;
+		case SIGPIPE: // ignore
+		case SIGINT: // ignore
 		break;
 		default:
 			exit(0);
@@ -519,22 +521,13 @@ void server_sig_cb(int fd, short event, void *arg)
 
 static int server_set_sighandler(void)
 {
-
-	struct sigaction sa;
-	
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = SIG_IGN;
-	sa.sa_flags   = 0;
-
-	sigemptyset(&sa.sa_mask);
-	if (sigaction(SIGPIPE, &sa, 0) != 0)
-		perror("sigaction");
-
 	sig_int = g_new0(struct event, 1);
 	sig_hup = g_new0(struct event, 1);
+	sig_pipe = g_new0(struct event, 1);
 
 	signal_set(sig_int, SIGINT, server_sig_cb, sig_int); signal_add(sig_int, NULL);
 	signal_set(sig_hup, SIGHUP, server_sig_cb, sig_hup); signal_add(sig_hup, NULL);
+	signal_set(sig_pipe, SIGPIPE, server_sig_cb, sig_pipe); signal_add(sig_pipe, NULL);
 
 	TRACE(TRACE_INFO, "signal handler placed");
 
