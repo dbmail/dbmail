@@ -5,11 +5,6 @@ This is dbmail's GNU configure script.
 ])
 ])
 
-AC_DEFUN([DM_SET_VERSION], [dnl
-		dbmail_version=`cat VERSION`
-		AC_DEFINE_UNQUOTED([DBMAIL_VERSION], "$dbmail_version", [Includes the micro version])
-		])
-
 AC_DEFUN([DM_MSG_CONFIGURE_RESULTS], [dnl
 AC_MSG_RESULT([
 
