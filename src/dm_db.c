@@ -3545,7 +3545,6 @@ int db_user_delete(const char * username)
 		t = db_stmt_exec(s);
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
