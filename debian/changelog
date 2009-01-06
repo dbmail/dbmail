@@ -1,3 +1,9 @@
+dbmail (2.3.5-1) experimental; urgency=low
+
+  * upstream release
+
+ -- Paul Stevens <paul@nfg.nl>  Tue, 06 Jan 2009 12:51:28 +0100
+
 dbmail (2.3.2-1) experimental; urgency=low
 
   * upstream release
