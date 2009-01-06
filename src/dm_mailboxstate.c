@@ -441,16 +441,14 @@ static int db_getmailbox_seq(T M)
 		} else {
 			t = DM_EQUERY;
 		}
+		TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		M->seq = 0;
+		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
-
-	assert(M->name);
-
-	TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
 
 	return t;
 }
