@@ -511,7 +511,6 @@ void server_sig_cb(int fd, short event, void *arg)
 		case SIGHUP: // TODO: reload config
 			mainRestart = 1;
 		case SIGPIPE: // ignore
-		case SIGINT: // ignore
 		break;
 		default:
 			exit(0);
