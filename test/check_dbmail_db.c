@@ -155,7 +155,6 @@ START_TEST(test_db_stmt_set_str)
 	r = db_stmt_query(s);
 	fail_unless(r != NULL, "db_stmt_query failed");
 	fail_unless(db_result_next(r), "db_result_next failed");
-	printf("[%llu]\n", db_result_get_u64(r, 0));
 	db_con_close(c);
 
 }
@@ -1015,10 +1014,9 @@ START_TEST(test_db_delete_mailbox)
 
 	result = db_createmailbox("testdeletebox",testidnr, &mailbox_id);
 	fail_unless(result == DM_SUCCESS,"db_createmailbox failed");
-
-	result = db_delete_mailbox(mailbox_id,0,0);
+	result = db_delete_mailbox(mailbox_id,0,1);
 	fail_unless(result == DM_SUCCESS,"db_delete_mailbox failed");
-	
+
 }
 END_TEST
 
@@ -1224,6 +1222,7 @@ Suite *dbmail_db_suite(void)
 	TCase *tc_db = tcase_create("DB");
 	suite_add_tcase(s, tc_db);
 	tcase_add_checked_fixture(tc_db, setup, teardown);
+
 	tcase_add_test(tc_db, test_db_stmt_prepare);
 //	tcase_add_test(tc_db, test_db_stmt_set_int);
 //	tcase_add_test(tc_db, test_db_stmt_set_u64);
@@ -1241,7 +1240,6 @@ Suite *dbmail_db_suite(void)
 	tcase_add_test(tc_db, test_mailbox_match_new);
 	tcase_add_test(tc_db, test_db_findmailbox_by_regex);
 	tcase_add_test(tc_db, test_db_get_sql);
-	
 
 
 	return s;

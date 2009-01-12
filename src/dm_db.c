@@ -422,7 +422,10 @@ R db_stmt_query(S s)
 }
 int db_result_next(R r)
 {
-	return ResultSet_next(r);
+	if (r)
+		return ResultSet_next(r);
+	else
+		return FALSE;
 }
 unsigned db_num_fields(R r)
 {
@@ -1768,14 +1771,14 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_si
 			 "AND msg.status < %d",DBPFX,DBPFX, mailbox_idnr,
 			 MESSAGE_STATUS_DELETE);
 
+
 	c = db_con_get();
 	TRY
 		r = db_query(c, query);
 		if (db_result_next(r))
 			*mailbox_size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
+		; // pass
 	FINALLY
 		db_con_close(c);
 	END_TRY;
@@ -1789,6 +1792,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_siz
 	int result;
 	u64_t mailbox_size = 0;
 
+	TRACE(TRACE_DEBUG,"mailbox_idnr [%llu] only_empty [%d] update_curmail_size [%d]", mailbox_idnr, only_empty, update_curmail_size);
 	/* get the user_idnr of the owner of the mailbox */
 	result = db_get_mailbox_owner(mailbox_idnr, &user_idnr);
 	if (result == DM_EQUERY) {
