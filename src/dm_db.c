@@ -1274,19 +1274,18 @@ int db_icheck_messageblks(GList **lost)
 int db_icheck_physmessages(gboolean cleanup)
 {
 	C c; R r; int t = DM_SUCCESS;
-	int result = 0;
 
 	c = db_con_get();
 	TRY
 		if (cleanup) { 
-			db_exec(c, "DELETE FROM %sphysmessage WHERE id NOT IN "
+			t = db_exec(c, "DELETE FROM %sphysmessage WHERE id NOT IN "
 					"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
 		} else {
 			r = db_query(c, "SELECT COUNT(*) FROM %sphysmessage p "
 					"LEFT JOIN %smessages m ON p.id = m.physmessage_id "
 					"WHERE m.message_idnr IS NULL ", DBPFX, DBPFX);
 			if (db_result_next(r))
-				result = db_result_get_int(r, 0);
+				t = db_result_get_int(r, 0);
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1297,6 +1296,31 @@ int db_icheck_physmessages(gboolean cleanup)
 
 	return t;
 }
+
+int db_icheck_mimeparts(gboolean cleanup)
+{
+	C c; R r; int t = DM_SUCCESS;
+
+	c = db_con_get();
+	TRY
+		if (cleanup) { 
+			t = db_exec(c, "DELETE FROM %smimeparts WHERE id NOT IN (SELECT part_id FROM %spartlists)", DBPFX, DBPFX);
+		} else {
+			r = db_query(c, "SELECT COUNT(*) FROM %smimeparts p LEFT JOIN %spartlists l ON p.id = l.part_id "
+					"WHERE l.physmessage_id IS NULL", DBPFX, DBPFX);
+			if (db_result_next(r))
+				t = db_result_get_int(r, 0);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+}
+
 
 int db_icheck_messages(GList ** lost)
 {

@@ -649,8 +649,9 @@ int do_check_integrity(void)
 	/* This is what we do:
 	 1. Check for loose messageblks
 	 2. Check for loose physmessages
-	 3. Check for loose messages
-	 4. Check for loose mailboxes
+	 3. Check for loose mimeparts
+	 4. Check for loose messages
+	 5. Check for loose mailboxes
 	 */
 
 	/* first part */
@@ -719,6 +720,30 @@ int do_check_integrity(void)
 	time(&stop);
 	qverbosef("--- %s unconnected physmessages took %g seconds\n",
 		action, difftime(stop, start));
+	/* */
+	start = stop;
+	qprintf("\n%s DBMAIL mimeparts integrity...\n", action);
+	if ((count = db_icheck_mimeparts(FALSE)) < 0) {
+		qerrorf("Failed. An error occurred. Please check log.\n");
+		serious_errors = 1;
+		return -1;
+	}
+	if (count > 0) {
+		qerrorf("Ok. Found [%ld] unconnected mimeparts", count);
+		if (yes_to_all) {
+			if (! db_icheck_mimeparts(TRUE))
+				qerrorf("Warning: could not delete orphaned mimeparts. Check log.\n");
+			else
+				qerrorf("Ok. Orphaned mimeparts deleted.\n");
+		}
+	} else {
+		qprintf("Ok. Found [%ld] unconnected mimeparts.\n", count);
+	}
+
+	time(&stop);
+	qverbosef("--- %s unconnected mimeparts took %g seconds\n",
+		action, difftime(stop, start));
+
 
 	/* third part */
 	start = stop;

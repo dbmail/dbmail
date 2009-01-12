@@ -707,7 +707,16 @@ int do_empty(u64_t useridnr)
 {
 	int result = 0;
 
-	if (no_to_all) {
+	if (yes_to_all) {
+		qprintf("Emptying mailbox... ");
+		fflush(stdout);
+        
+		result = db_empty_mailbox(useridnr);
+		if (result != 0)
+			qerrorf("Error. Please check the log.\n");
+		else
+			qprintf("Ok.\n");
+	} else {
 		GList *children = NULL;
 		u64_t owner_idnr;
 		char mailbox[IMAP_MAX_MAILBOX_NAMELEN];
@@ -735,16 +744,6 @@ int do_empty(u64_t useridnr)
 
 		qprintf("please run again with -y to actually perform this action.\n");
 		return 1;
-	}
-	if (yes_to_all) {
-		qprintf("Emptying mailbox... ");
-		fflush(stdout);
-        
-		result = db_empty_mailbox(useridnr);
-		if (result != 0)
-			qerrorf("Error. Please check the log.\n");
-		else
-			qprintf("Ok.\n");
 	}
 
 	return result;
