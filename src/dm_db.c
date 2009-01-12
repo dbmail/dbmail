@@ -926,37 +926,25 @@ struct used_quota {
 int dm_quota_rebuild()
 {
 	C c; R r;
-	INIT_QUERY;
 
 	GList *quota = NULL;
 	struct used_quota *q;
 	int i = 0;
 	int result;
 
-	/* the following query looks really weird, with its 
-	 * NOT (... IS NOT NULL), but it must be like this, because
-	 * the normal query with IS NULL does not work on MySQL
-	 * for some reason.
-	 */
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT usr.user_idnr, sum(pm.messagesize), usr.curmail_size "
-		 "FROM %susers usr LEFT JOIN %smailboxes mbx "
-		 "ON mbx.owner_idnr = usr.user_idnr "
-		 "LEFT JOIN %smessages msg "
-		 "ON msg.mailbox_idnr = mbx.mailbox_idnr "
-		 "LEFT JOIN %sphysmessage pm "
-		 "ON pm.id = msg.physmessage_id "
-		 "AND msg.status < %d "
-		 "GROUP BY usr.user_idnr, usr.curmail_size "
-		 "HAVING ((SUM(pm.messagesize) <> usr.curmail_size) OR "
-		 "(NOT (SUM(pm.messagesize) IS NOT NULL) "
-		 "AND usr.curmail_size <> 0))", DBPFX,DBPFX,
-			DBPFX,DBPFX,MESSAGE_STATUS_DELETE);
-
 	c = db_con_get();
-
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT usr.user_idnr, sum(pm.messagesize), usr.curmail_size FROM %susers usr "
+				"LEFT JOIN %smailboxes mbx ON mbx.owner_idnr = usr.user_idnr "
+				"LEFT JOIN %smessages msg ON msg.mailbox_idnr = mbx.mailbox_idnr "
+				"LEFT JOIN %sphysmessage pm ON pm.id = msg.physmessage_id "
+				"AND msg.status < %d "
+				"GROUP BY usr.user_idnr, usr.curmail_size "
+				"HAVING ((SUM(pm.messagesize) <> usr.curmail_size) OR "
+				"(NOT (SUM(pm.messagesize) IS NOT NULL) "
+				"AND usr.curmail_size <> 0))", DBPFX,DBPFX,
+				DBPFX,DBPFX,MESSAGE_STATUS_DELETE);
+
 		while (db_result_next(r)) {
 			i++;
 			q = g_new0(struct used_quota,1);
@@ -1018,19 +1006,14 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 int db_get_reply_body(u64_t user_idnr, char **reply_body)
 {
 	C c; R r; int t = DM_SUCCESS;
-	INIT_QUERY;
 	*reply_body = NULL;
 
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT reply_body FROM %sauto_replies "
-		 "WHERE user_idnr = %llu "
-		 "AND (start_date IS NULL OR start_date <= %s) "
-		 "AND (stop_date IS NULL OR stop_date >= %s)", DBPFX,
-		 user_idnr, db_get_sql(SQL_CURRENT_TIMESTAMP), db_get_sql(SQL_CURRENT_TIMESTAMP));
-	
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT reply_body FROM %sauto_replies WHERE user_idnr = %llu "
+				"AND (start_date IS NULL OR start_date <= %s) "
+				"AND (stop_date IS NULL OR stop_date >= %s)", DBPFX,
+				user_idnr, db_get_sql(SQL_CURRENT_TIMESTAMP), db_get_sql(SQL_CURRENT_TIMESTAMP));
 		if (db_result_next(r))
 			*reply_body = g_strdup(db_result_get(r, 0));
 	CATCH(SQLException)
@@ -1256,23 +1239,17 @@ int db_icheck_messageblks(GList **lost)
 	C c; R r; int t = DM_SUCCESS;
 	u64_t messageblk_idnr, *idnr;
 	int i = 0;
-	INIT_QUERY;
 
-	/* get all lost message blocks. Instead of doing all kinds of 
-	 * nasty stuff here, we let the RDBMS handle all this. Problem
-	 * is that MySQL cannot handle subqueries. This is handled by
-	 * a left join select query.
+	/* get all lost message blocks.	 
 	 * This query will select all message block idnr that have no
 	 * associated physmessage in the physmessage table.
 	 */
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT mb.messageblk_idnr FROM %smessageblks mb "
-		 "LEFT JOIN %sphysmessage pm ON "
-		 "mb.physmessage_id = pm.id WHERE pm.id IS NULL",DBPFX,DBPFX);
-
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT mb.messageblk_idnr FROM %smessageblks mb "
+				"LEFT JOIN %sphysmessage pm ON "
+				"mb.physmessage_id = pm.id WHERE pm.id IS NULL",DBPFX,DBPFX);
+
 		while (db_result_next(r)) {
 			i++;
 			messageblk_idnr = db_result_get_u64(r, 0);
@@ -1298,25 +1275,19 @@ int db_icheck_physmessages(gboolean cleanup)
 {
 	C c; R r; int t = DM_SUCCESS;
 	int result = 0;
-	INIT_QUERY;
-
-	if (cleanup) {
-		snprintf(query, DEF_QUERYSIZE, 
-				"DELETE FROM %sphysmessage WHERE id NOT IN "
-				"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
-	} else {
-		snprintf(query, DEF_QUERYSIZE,
-				"SELECT COUNT(*) FROM %sphysmessage p "
-				"LEFT JOIN %smessages m ON p.id = m.physmessage_id "
-				"WHERE m.message_idnr IS NULL ", DBPFX, DBPFX);
-	}
 
 	c = db_con_get();
 	TRY
-		if (cleanup) db_exec(c, query);
-		r = db_query(c, query);
-		if (db_result_next(r))
-			result = db_result_get_int(r, 0);
+		if (cleanup) { 
+			db_exec(c, "DELETE FROM %sphysmessage WHERE id NOT IN "
+					"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
+		} else {
+			r = db_query(c, "SELECT COUNT(*) FROM %sphysmessage p "
+					"LEFT JOIN %smessages m ON p.id = m.physmessage_id "
+					"WHERE m.message_idnr IS NULL ", DBPFX, DBPFX);
+			if (db_result_next(r))
+				result = db_result_get_int(r, 0);
+		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -1333,17 +1304,13 @@ int db_icheck_messages(GList ** lost)
 	u64_t message_idnr;
 	u64_t *idnr;
 	int i = 0;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT msg.message_idnr FROM %smessages msg "
-		 "LEFT JOIN %smailboxes mbx ON "
-		 "msg.mailbox_idnr=mbx.mailbox_idnr "
-		 "WHERE mbx.mailbox_idnr IS NULL",DBPFX,DBPFX);
 
 	c = db_con_get();
 	TRY
-		r =  db_query(c, query);
+		r =  db_query(c, "SELECT msg.message_idnr FROM %smessages msg "
+				"LEFT JOIN %smailboxes mbx ON "
+				"msg.mailbox_idnr=mbx.mailbox_idnr "
+				"WHERE mbx.mailbox_idnr IS NULL",DBPFX,DBPFX);
 		while (db_result_next(r)) {
 			message_idnr = db_result_get_u64(r, 0);
 			idnr = g_new0(u64_t,1);
@@ -1369,17 +1336,12 @@ int db_icheck_mailboxes(GList **lost)
 	C c; R r; int t = DM_SUCCESS;
 	u64_t mailbox_idnr, *idnr;
 	int i = 0;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT mbx.mailbox_idnr FROM %smailboxes mbx "
-		 "LEFT JOIN %susers usr ON "
-		 "mbx.owner_idnr=usr.user_idnr "
-		 "WHERE usr.user_idnr is NULL",DBPFX,DBPFX);
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT mbx.mailbox_idnr FROM %smailboxes mbx "
+				"LEFT JOIN %susers usr ON mbx.owner_idnr=usr.user_idnr "
+				"WHERE usr.user_idnr is NULL",DBPFX,DBPFX);
 		while (db_result_next(r)) {
 			mailbox_idnr = db_result_get_u64(r, 0);
 			idnr = g_new0(u64_t,1);
@@ -1404,18 +1366,13 @@ int db_icheck_null_physmessages(GList **lost)
 	C c; R r; int t = DM_SUCCESS;
 	u64_t physmessage_id, *idnr;
 	unsigned i;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT pm.id FROM %sphysmessage pm "
-		 "LEFT JOIN %smessageblks mbk ON "
-		 "pm.id = mbk.physmessage_id "
-		 "WHERE mbk.physmessage_id is NULL",DBPFX,DBPFX);
 
 	i = 0;
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT pm.id FROM %sphysmessage pm "
+			"LEFT JOIN %smessageblks mbk ON pm.id = mbk.physmessage_id "
+			"WHERE mbk.physmessage_id is NULL",DBPFX,DBPFX);
 		while (db_result_next(r)) {
 			physmessage_id = db_result_get_u64(r, 0);
 			idnr = g_new0(u64_t,1);
@@ -1440,16 +1397,12 @@ int db_icheck_null_messages(GList **lost)
 	C c; R r; int t = DM_SUCCESS;
 	u64_t *idnr;
 	int i = 0;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT msg.message_idnr FROM %smessages msg "
-		 "LEFT JOIN %sphysmessage pm ON "
-		 "msg.physmessage_id = pm.id WHERE pm.id is NULL",DBPFX,DBPFX);
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT msg.message_idnr FROM %smessages msg "
+			"LEFT JOIN %sphysmessage pm ON "
+			"msg.physmessage_id = pm.id WHERE pm.id is NULL",DBPFX,DBPFX);
 		while (db_result_next(r)) {
 			idnr = g_new0(u64_t,1);
 			*idnr = db_result_get_u64(r, 0);
@@ -1500,16 +1453,11 @@ int db_set_isheader(GList *lost)
 int db_icheck_isheader(GList  **lost)
 {
 	C c; R r; int t = DM_SUCCESS;
-	INIT_QUERY;
-	snprintf(query, DEF_QUERYSIZE,
-			"SELECT MIN(messageblk_idnr),MAX(is_header) "
-			"FROM %smessageblks "
-			"GROUP BY physmessage_id HAVING MAX(is_header)=0",
-			DBPFX);
 	
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT MIN(messageblk_idnr),MAX(is_header) FROM %smessageblks "
+				"GROUP BY physmessage_id HAVING MAX(is_header)=0", DBPFX);
 		while (db_result_next(r))
 			*(GList **)lost = g_list_prepend(*(GList **)lost, g_strdup(db_result_get(r, 0)));
 	CATCH(SQLException)
@@ -1629,18 +1577,11 @@ int db_icheck_headercache(GList **lost)
 {
 	C c; R r; int t = DM_SUCCESS;
 	u64_t *id;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE,
-			"SELECT p.id FROM %sphysmessage p "
-			"LEFT JOIN %sheadervalue h "
-			"ON p.id = h.physmessage_id "
-			"WHERE h.physmessage_id IS NULL",
-			DBPFX, DBPFX);
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT p.id FROM %sphysmessage p LEFT JOIN %sheadervalue h ON p.id = h.physmessage_id "
+			"WHERE h.physmessage_id IS NULL", DBPFX, DBPFX);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
 			*id = db_result_get_u64(r, 0);
@@ -1692,18 +1633,11 @@ int db_icheck_envelope(GList **lost)
 {
 	C c; R r; int t = DM_SUCCESS;
 	u64_t *id;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE,
-			"SELECT p.id FROM %sphysmessage p "
-			"LEFT JOIN %senvelope e "
-			"ON p.id = e.physmessage_id "
-			"WHERE e.physmessage_id IS NULL",
-			DBPFX, DBPFX);
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT p.id FROM %sphysmessage p LEFT JOIN %senvelope e "
+			"ON p.id = e.physmessage_id WHERE e.physmessage_id IS NULL", DBPFX, DBPFX);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
 			*id = db_result_get_u64(r, 0);
@@ -1748,33 +1682,15 @@ static int mailbox_empty(u64_t mailbox_idnr)
 int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_size)
 {
 	C c; R r = NULL; volatile int t = DM_SUCCESS;
-	INIT_QUERY;
 	assert(mailbox_size != NULL);
-
 	*mailbox_size = 0;
-
-	if (only_deleted)
-		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT sum(pm.messagesize) FROM %smessages msg, "
-			 "%sphysmessage pm "
-			 "WHERE msg.physmessage_id = pm.id "
-			 "AND msg.mailbox_idnr = %llu "
-			 "AND msg.status < %d "
-			 "AND msg.deleted_flag = 1",DBPFX,DBPFX, mailbox_idnr,
-			 MESSAGE_STATUS_DELETE);
-	else
-		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT sum(pm.messagesize) FROM %smessages msg, "
-			 "%sphysmessage pm "
-			 "WHERE msg.physmessage_id = pm.id "
-			 "AND msg.mailbox_idnr = %llu "
-			 "AND msg.status < %d",DBPFX,DBPFX, mailbox_idnr,
-			 MESSAGE_STATUS_DELETE);
-
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT sum(pm.messagesize) FROM %smessages msg, %sphysmessage pm "
+				"WHERE msg.physmessage_id = pm.id AND msg.mailbox_idnr = %llu "
+				"AND msg.status < %d %s", DBPFX,DBPFX, mailbox_idnr, MESSAGE_STATUS_DELETE,
+				only_deleted?"AND msg.deleted_flag = 1":"");
 		if (db_result_next(r))
 			*mailbox_size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
@@ -1796,13 +1712,11 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_siz
 	/* get the user_idnr of the owner of the mailbox */
 	result = db_get_mailbox_owner(mailbox_idnr, &user_idnr);
 	if (result == DM_EQUERY) {
-		TRACE(TRACE_ERR, "cannot find owner of mailbox for "
-		      "mailbox [%llu]", mailbox_idnr);
+		TRACE(TRACE_ERR, "cannot find owner of mailbox for mailbox [%llu]", mailbox_idnr);
 		return DM_EQUERY;
 	}
 	if (result == 0) {
-		TRACE(TRACE_ERR, "unable to find owner of mailbox [%llu]",
-		      mailbox_idnr);
+		TRACE(TRACE_ERR, "unable to find owner of mailbox [%llu]", mailbox_idnr);
 		return DM_EGENERAL;
 	}
 
@@ -2798,16 +2712,12 @@ static u64_t message_get_size(u64_t message_idnr)
 {
 	C c; R r;
 	u64_t size = 0;
-	INIT_QUERY;
-	
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT pm.messagesize FROM %sphysmessage pm, %smessages msg "
-		 "WHERE pm.id = msg.physmessage_id "
-		 "AND message_idnr = %llu",DBPFX,DBPFX, message_idnr);
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT pm.messagesize FROM %sphysmessage pm, %smessages msg "
+				"WHERE pm.id = msg.physmessage_id "
+				"AND message_idnr = %llu",DBPFX,DBPFX, message_idnr);
 		if (db_result_next(r))
 			size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
@@ -2982,7 +2892,6 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	C c; R r;
 	char the_flag_name[DEF_QUERYSIZE / 2];	/* should be sufficient ;) */
 	int val = 0;
-	INIT_QUERY;
 
 	/* determine flag */
 	if (strcasecmp(flag_name, "seen") == 0)
@@ -3000,16 +2909,13 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	else
 		return DM_SUCCESS;	/* non-existent flag is not set */
 
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT %s FROM %smessages "
-		 "WHERE message_idnr=%llu AND status < %d "
-		 "AND mailbox_idnr=%llu",
-		 the_flag_name, DBPFX, msg_idnr, 
-		 MESSAGE_STATUS_DELETE, mailbox_idnr);
-	
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT %s FROM %smessages "
+				"WHERE message_idnr=%llu AND status < %d "
+				"AND mailbox_idnr=%llu",
+				the_flag_name, DBPFX, msg_idnr, 
+				MESSAGE_STATUS_DELETE, mailbox_idnr);
 		if (db_result_next(r))
 			val = db_result_get_int(r, 0);
 	CATCH(SQLException)
@@ -3234,17 +3140,13 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid)
 int db_acl_get_identifier(u64_t mboxid, GList **identifier_list)
 {
 	C c; R r; int t = TRUE;
-	INIT_QUERY;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT %susers.userid FROM %susers, %sacl "
-		 "WHERE %sacl.mailbox_id = %llu "
-		 "AND %susers.user_idnr = %sacl.user_id",DBPFX,DBPFX,DBPFX,
-		DBPFX,mboxid,DBPFX,DBPFX);
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, "SELECT %susers.userid FROM %susers, %sacl "
+				"WHERE %sacl.mailbox_id = %llu "
+				"AND %susers.user_idnr = %sacl.user_id",DBPFX,DBPFX,DBPFX,
+				DBPFX,mboxid,DBPFX,DBPFX);
 		while (db_result_next(r))
 			*(GList **)identifier_list = g_list_prepend(*(GList **)identifier_list, g_strdup(db_result_get(r, 0)));
 	CATCH(SQLException)
