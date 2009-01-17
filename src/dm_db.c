@@ -1278,8 +1278,12 @@ int db_icheck_physmessages(gboolean cleanup)
 	c = db_con_get();
 	TRY
 		if (cleanup) { 
-			t = db_exec(c, "DELETE FROM %sphysmessage WHERE id NOT IN "
-					"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
+			t = db_exec(c, "DELETE FROM %sphysmessage WHERE id IN ("
+					"SELECT id FROM %sphysmessage p "
+					"LEFT JOIN %smessages m ON p.id = m.physmessage_id "
+					"WHERE m.message_idnr IS NULL "
+					")", DBPFX, DBPFX, DBPFX);
+
 		} else {
 			r = db_query(c, "SELECT COUNT(*) FROM %sphysmessage p "
 					"LEFT JOIN %smessages m ON p.id = m.physmessage_id "
@@ -1304,9 +1308,15 @@ int db_icheck_mimeparts(gboolean cleanup)
 	c = db_con_get();
 	TRY
 		if (cleanup) { 
-			t = db_exec(c, "DELETE FROM %smimeparts WHERE id NOT IN (SELECT part_id FROM %spartlists)", DBPFX, DBPFX);
+			t = db_exec(c, "DELETE FROM %smimeparts WHERE id IN ("
+					"SELECT id FROM %smimeparts p "
+					"LEFT JOIN %spartlists l ON p.id = l.part_id "
+					"WHERE l.physmessage_id IS NULL"
+					")", DBPFX, DBPFX, DBPFX );
+
 		} else {
-			r = db_query(c, "SELECT COUNT(*) FROM %smimeparts p LEFT JOIN %spartlists l ON p.id = l.part_id "
+			r = db_query(c, "SELECT COUNT(*) FROM %smimeparts p "
+					"LEFT JOIN %spartlists l ON p.id = l.part_id "
 					"WHERE l.physmessage_id IS NULL", DBPFX, DBPFX);
 			if (db_result_next(r))
 				t = db_result_get_int(r, 0);
