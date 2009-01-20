@@ -169,7 +169,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		if ((e = self->cb_error(self->tx, errno, (void *)self)))
 			return e;
 	} else {
-		TRACE(TRACE_INFO, "[%p] S > [%s]", self, self->write_buffer->str);
+		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, self->write_buffer->str);
 		self->write_buffer = g_string_erase(self->write_buffer, 0, t);
 	}
 

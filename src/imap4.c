@@ -122,12 +122,12 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 						event_add(session->ci->rev, session->ci->timeout);
 					}
 
-				} else if ( (! session->parser_state) || session->command_state == TRUE) {
+				} else if ( (! session->parser_state) || ( session->command_state == TRUE && session->ci->write_buffer->len < 1 ) ) {
 					event_add(session->ci->rev, session->ci->timeout);
 				}
 			}
 
-			if (session->ci->wev)
+			if (session->ci->wev && session->ci->write_buffer->len > 0)
 				ci_write(session->ci,NULL);
 
 			break;
@@ -221,11 +221,17 @@ static void imap_handle_exit(ImapSession *session, int status)
 					ci_write(session->ci, session->buff->str);
 					dbmail_imap_session_buff_clear(session);
 				}
-				if (session->command_state == TRUE)
+				if (session->command_state == TRUE && session->ci->write_buffer->len < 1)
 					event_add(session->ci->rev, session->ci->timeout);
 			} else {
 				dbmail_imap_session_buff_clear(session);
 			}				
+			
+			if (session->ci->write_buffer->len > 0) {
+				TRACE(TRACE_DEBUG,"ci->write_buffer->len: %ld", session->ci->write_buffer->len);
+				ci_write(session->ci, NULL);
+			}
+
 
 			break;
 		case 1:
