@@ -860,35 +860,25 @@ int check_msg_set(const char *s)
  */
 char *date_sql2imap(const char *sqldate)
 {
-        struct tm tm_sql_date;
-	time_t ltime;
-        char *last;
+	struct tm tm_sql_date;
+	char *last;
 	char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
-	char t[IMAP_INTERNALDATE_LEN];
 	char q[IMAP_INTERNALDATE_LEN];
 
 	// bsd needs:
 	memset(&tm_sql_date, 0, sizeof(struct tm));
 	
-        last = strptime(sqldate,"%Y-%m-%d %H:%M:%S", &tm_sql_date);
-        if ( (last == NULL) || (*last != '\0') ) {
-                strcpy(_imapdate, IMAP_STANDARD_DATE);
-                return g_strdup(_imapdate);
-        }
-
-        strftime(q, sizeof(q), "%d-%b-%Y %H:%M:%S", &tm_sql_date);
-
-	ltime = mktime (&tm_sql_date);
-	localtime_r(&ltime, &tm_sql_date);
-	strftime(t, sizeof(t), "%z", &tm_sql_date);
-	if (t[0] != '%') {
-		snprintf(_imapdate,IMAP_INTERNALDATE_LEN, "%s %s", q, t);
+	last = strptime(sqldate,"%Y-%m-%d %H:%M:%S", &tm_sql_date);
+	if ( (last == NULL) || (*last != '\0') ) {
+		// Could not convert date - something went wrong - using default IMAP_STANDARD_DATE
+		strcpy(_imapdate, IMAP_STANDARD_DATE);
 		return g_strdup(_imapdate);
 	}
-	// oops, no %z on solaris (FIXME)
+
+	strftime(q, sizeof(q), "%d-%b-%Y %H:%M:%S", &tm_sql_date);
 	snprintf(_imapdate,IMAP_INTERNALDATE_LEN, "%s +0000", q);
 	
-        return g_strdup(_imapdate);
+	return g_strdup(_imapdate);
 }
 
 
