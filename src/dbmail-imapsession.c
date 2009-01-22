@@ -1437,6 +1437,8 @@ static void _get_mbxinfo(ImapSession *self)
 	GTree *old = NULL, *mbxinfo = NULL;
 	u64_t *id;
 	
+	TRACE(TRACE_DEBUG, "[%p]", self);
+
 	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
 	c = db_con_get();
 	TRY
@@ -1450,9 +1452,9 @@ static void _get_mbxinfo(ImapSession *self)
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
-		t = DM_EQUERY;
 	END_TRY;
 
 	if (t == DM_EQUERY) {
@@ -1477,6 +1479,8 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 {
 	MailboxState_T M = NULL;
 	u64_t *id;
+
+	TRACE(TRACE_DEBUG, "[%p] mailbox_id [%llu]", self, mailbox_id);
 
 	if (! self->mbxinfo) _get_mbxinfo(self);
 
