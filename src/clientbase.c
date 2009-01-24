@@ -23,28 +23,70 @@
  */
 
 #include "dbmail.h"
+#include <openssl/err.h>
+
 #define THIS_MODULE "clientbase"
 
 extern serverConfig_t *server_conf;
 extern SSL_CTX *tls_context;
 
+static void dm_tls_error(void)
+{
+	unsigned long e;
+	e = ERR_get_error();
+	if (e == 0) {
+		if (errno != 0) {
+			int se = errno;
+			switch (se) {
+				case EAGAIN:
+				case EINTR:
+					break;
+				default:
+					TRACE(TRACE_ERR, "%s", strerror(se));
+				break;
+			}
+		} else {
+			TRACE(TRACE_ERR, "Unknown error");
+		}
+		return;
+	}
+	TRACE(TRACE_ERR, "%s", ERR_error_string(e, NULL));
+}
+
 static int client_error_cb(int sock, int error, void *arg)
 {
 	int r = 0;
 	clientbase_t *client = (clientbase_t *)arg;
-	if (client->ssl)
-		error = SSL_get_error(client->ssl, error);
+	if (client->ssl) {
+		int sslerr = 0;
+		if (! (sslerr = SSL_get_error(client->ssl, error)))
+			return r;
+		
+		dm_tls_error();
+		switch (sslerr) {
+			case SSL_ERROR_WANT_READ:
+			case SSL_ERROR_WANT_WRITE:
+				break; // reschedule
+			default:
+				TRACE(TRACE_DEBUG,"[%p] %d %d, %p", client, sock, sslerr, arg);
+				//if (client->write_buffer)
+				//	client->write_buffer = g_string_truncate(client->write_buffer,0);
+				r = -1;
+				break;
+		}
 
-	switch (error) {
-		case EAGAIN:
-		case EINTR:
-			break; // reschedule
-		default:
-			TRACE(TRACE_DEBUG,"[%p] %d %s, %p", client, sock, strerror(error), arg);
-			if (client->write_buffer)
-				client->write_buffer = g_string_truncate(client->write_buffer,0);
-			r = -1;
-			break;
+	} else {
+		switch (error) {
+			case EAGAIN:
+			case EINTR:
+				break; // reschedule
+			default:
+				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
+				if (client->write_buffer)
+					client->write_buffer = g_string_truncate(client->write_buffer,0);
+				r = -1;
+				break;
+		}
 	}
 	return r;
 }
@@ -141,10 +183,14 @@ int ci_starttls(clientbase_t *self)
 	return DM_SUCCESS;
 }
 
+#define TLS_SEGMENT 32768
 int ci_write(clientbase_t *self, char * msg, ...)
 {
 	va_list ap, cp;
-	ssize_t t;
+	ssize_t t = 0;
+	int e = 0;
+	size_t n;
+
 	if (! (self && self->write_buffer)) {
 		TRACE(TRACE_DEBUG, "called while clientbase is stale");
 		return -1;
@@ -158,16 +204,28 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	}
 	
 	if (self->write_buffer->len < 1) return 0;
+	n = self->write_buffer->len;
 
-	if (self->ssl)
-		t = SSL_write(self->ssl, (gconstpointer)self->write_buffer->str, self->write_buffer->len);
-	else
-		t = write(self->tx, (gconstpointer)self->write_buffer->str, self->write_buffer->len);
+	if (self->ssl) {
+		if (self->tls_wbuf_n) {
+			assert( n >= self->tls_wbuf_n);
+			n = self->tls_wbuf_n;
+			self->tls_wbuf_n = 0;
+		}
+
+		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
+
+		t = SSL_write(self->ssl, (gconstpointer)self->write_buffer->str, n);
+		e = t;
+	} else {
+		t = write(self->tx, (gconstpointer)self->write_buffer->str, n);
+		e = errno;
+	}
 
 	if (t == -1) {
-		int e;
-		if ((e = self->cb_error(self->tx, errno, (void *)self)))
+		if ((e = self->cb_error(self->tx, e, (void *)self)))
 			return e;
+		self->tls_wbuf_n = n;
 	} else {
 		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, self->write_buffer->str);
 		self->write_buffer = g_string_erase(self->write_buffer, 0, t);
@@ -190,10 +248,11 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
 	self->len = 0;
 	while (self->len < n) {
-		if (self->ssl)
+		if (self->ssl) {
 			t = SSL_read(self->ssl, (void *)&c, 1);
-		else
+		} else {
 			t = read(self->rx, (void *)&c, 1);
+		}
 		if (t == -1) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
@@ -224,10 +283,11 @@ int ci_readln(clientbase_t *self, char * buffer)
 		self->len = 0;
 
 	while (self->len < MAX_LINESIZE) {
-		if (self->ssl)
+		if (self->ssl) {
 			t = SSL_read(self->ssl, (void *)&c, 1);
-		else
+		} else {
 			t = read(self->rx, (void *)&c, 1);
+		}
 		if (t == -1) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))

@@ -149,6 +149,7 @@ static int imap_session_printf(ImapSession * self, char * message, ...)
 {
         va_list ap, cp;
         size_t l;
+	int e = 0;
 
         assert(message);
         va_start(ap, message);
@@ -156,7 +157,11 @@ static int imap_session_printf(ImapSession * self, char * message, ...)
         g_string_vprintf(self->buff, message, cp);
         va_end(cp);
 
-	ci_write(self->ci, self->buff->str);
+	e = ci_write(self->ci, self->buff->str);
+	if (e < 0) {
+		dbmail_imap_session_set_state(self,IMAPCS_ERROR);
+		return e;
+	}
 
         l = self->buff->len;
 	self->buff = g_string_truncate(self->buff, 0);
@@ -218,7 +223,12 @@ static void imap_handle_exit(ImapSession *session, int status)
 			/* only do this in the main thread */
 			if (session->state < IMAPCS_LOGOUT) {
 				if (session->buff->len) {
-					ci_write(session->ci, session->buff->str);
+					int e = 0;
+					e = ci_write(session->ci, session->buff->str);
+					if (e < 0) {
+						dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+						return;
+					}
 					dbmail_imap_session_buff_clear(session);
 				}
 				if (session->command_state == TRUE && session->ci->write_buffer->len < 1)

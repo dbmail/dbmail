@@ -489,6 +489,7 @@ static void server_sock_ssl_cb(int sock, short event, void *arg)
 		c->ssl = NULL;
 		return;
 	}
+	SSL_set_mode(c->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
 
 	c->caddr = caddr;
 	TRACE(TRACE_INFO, "connection accepted");
