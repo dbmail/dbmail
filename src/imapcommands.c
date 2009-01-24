@@ -278,7 +278,6 @@ static int mailbox_check_acl(ImapSession *self, MailboxState_T S, ACLRight_t acl
 
 static gboolean mailbox_build_recent(u64_t *uid, MessageInfo *msginfo, ImapSession *self)
 {
-	TRACE(TRACE_DEBUG,"uid [%llu] recent [%d]", *uid, msginfo->flags[IMAP_FLAG_RECENT]);
 	if (msginfo->flags[IMAP_FLAG_RECENT])
 		self->recent = g_list_prepend(self->recent, g_strdup_printf("%llu", *uid));
 	return FALSE;

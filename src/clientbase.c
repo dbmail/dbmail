@@ -183,7 +183,6 @@ int ci_starttls(clientbase_t *self)
 	return DM_SUCCESS;
 }
 
-#define TLS_SEGMENT 32768
 int ci_write(clientbase_t *self, char * msg, ...)
 {
 	va_list ap, cp;
@@ -207,15 +206,13 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	n = self->write_buffer->len;
 
 	if (self->ssl) {
-		if (self->tls_wbuf_n) {
-			assert( n >= self->tls_wbuf_n);
-			n = self->tls_wbuf_n;
-			self->tls_wbuf_n = 0;
+		if (! self->tls_wbuf_n) {
+			if (n > TLS_SEGMENT) n = TLS_SEGMENT;
+			strncpy(self->tls_wbuf, self->write_buffer->str, n);
+			self->tls_wbuf_n = n;
 		}
 
-		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
-
-		t = SSL_write(self->ssl, (gconstpointer)self->write_buffer->str, n);
+		t = SSL_write(self->ssl, (gconstpointer)self->tls_wbuf, self->tls_wbuf_n);
 		e = t;
 	} else {
 		t = write(self->tx, (gconstpointer)self->write_buffer->str, n);
@@ -225,10 +222,13 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	if (t == -1) {
 		if ((e = self->cb_error(self->tx, e, (void *)self)))
 			return e;
-		self->tls_wbuf_n = n;
 	} else {
 		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, self->write_buffer->str);
 		self->write_buffer = g_string_erase(self->write_buffer, 0, t);
+		if (self->ssl) {
+			memset(self->tls_wbuf, '\0', TLS_SEGMENT);
+			self->tls_wbuf_n = 0;
+		}
 	}
 
 	event_add(self->wev, NULL);
