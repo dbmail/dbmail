@@ -114,7 +114,7 @@ void mailbox_match_free(struct mailbox_match *m)
 
 
 /** list of tables used in dbmail */
-#define DB_NTABLES 24
+#define DB_NTABLES 25
 const char *DB_TABLENAMES[DB_NTABLES] = {
 	"users", 
 	"aliases", 
@@ -127,6 +127,7 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 	"pbsp",
 	"auto_notifications", 
 	"auto_replies",
+	"headernamevalue",
 	"headername", 
 	"headervalue",
 	"subjectfield", 
@@ -720,6 +721,8 @@ int db_check_version(void)
 					"and run dbmail-util -by");
 		if (! db_query(c, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX))
 			TRACE(TRACE_EMERG, "2.2 database incompatible.");
+		if ( ! db_query(c, "SELECT 1=1 FROM %sheadernamevalue LIMIT 1 OFFSET 0", DBPFX))
+			TRACE(TRACE_EMERG, "2.3.5 database incompatible - Experimental single instance header storage missing.");
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1604,7 +1607,9 @@ int db_icheck_headercache(GList **lost)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT p.id FROM %sphysmessage p LEFT JOIN %sheadervalue h ON p.id = h.physmessage_id "
+		r = db_query(c, "SELECT p.id "
+			"FROM %sphysmessage p "
+			"LEFT JOIN %sheadernamevalue h ON p.id = h.physmessage_id "
 			"WHERE h.physmessage_id IS NULL", DBPFX, DBPFX);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
@@ -2707,16 +2712,18 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 	g_return_val_if_fail(messageid!=NULL,0);
 
 	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), EXPIRE_DAYS);
-	snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
+	snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.value");
 	snprintf(query, DEF_QUERYSIZE,
-		"SELECT message_idnr FROM %smessages m "
+		"SELECT m.message_idnr "
+		"FROM %smessages m "
 		"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-		"JOIN %sheadervalue v ON v.physmessage_id=p.id "
-		"JOIN %sheadername n ON v.headername_id=n.id "
+		"JOIN %sheadernamevalue h ON p.id=h.physmessage_id "
+		"JOIN %sheadername n ON h.name_id=n.name_id "
+		"JOIN %sheadervalue v ON h.value_id=v.value_id "
 		"WHERE m.mailbox_idnr=? "
-		"AND n.headername IN ('resent-message-id','message-id') "
-		"AND %s=? " 
-		"AND p.internal_date > %s", DBPFX, DBPFX, DBPFX, DBPFX, 
+		"AND n.name IN ('resent-message-id','message-id') "
+		"AND %s=? "
+		"AND p.internal_date > %s", DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
 		partial, expire);
 	
 	c = db_con_get();

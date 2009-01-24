@@ -621,14 +621,15 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 		snprintf(range,DEF_FRAGSIZE,"BETWEEN %llu AND %llu", self->msg_idnr, self->hi);
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %llu:%llu ceiling %llu [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
-	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
-			"FROM %sheadervalue v "
-			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
-			"JOIN %sheadername n ON v.headername_id=n.id "
+	g_string_printf(q,"SELECT m.message_idnr , n.name, v.value "
+			"FROM %sheadernamevalue h "
+			"JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
+			"JOIN %sheadername n ON h.name_id=n.name_id "
+			"JOIN %sheadervalue v ON h.value_id=v.value_id "
 			"WHERE m.mailbox_idnr = %llu "
-			"AND message_idnr %s "
-			"AND lower(headername) %s IN ('%s')",
-			DBPFX, DBPFX, DBPFX,
+			"AND m.message_idnr %s "
+			"AND lower(n.name) %s IN ('%s')",
+			DBPFX, DBPFX, DBPFX, DBPFX,
 			self->mailbox->id, range, 
 			not?"NOT":"", bodyfetch->hdrnames);
 

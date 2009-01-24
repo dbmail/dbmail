@@ -233,6 +233,7 @@
 #define ISDOT(a) ((char)(a)=='.')
 
 #define LOG_SQLERROR TRACE(TRACE_ERR,"SQLException: %s", Connection_getLastError(c))
+#define LOG_SQLERROR_CON(x) TRACE(TRACE_ERR,"SQLException: %s", Connection_getLastError(x))
 #define DISPATCH(f,a) \
 	{ \
 		GError *err = NULL; \

@@ -1428,8 +1428,8 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 		return 1;
 	}
 
-	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
-	frag = db_returning("id");
+	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"name");
+	frag = db_returning("name_id");
 	tmp = g_new0(u64_t,1);
 
 	c = db_con_get();
@@ -1437,7 +1437,7 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 	TRY
 		*tmp = 0;
 
-		s = db_stmt_prepare(c, "SELECT id FROM %sheadername WHERE %s=?", DBPFX, case_header);
+		s = db_stmt_prepare(c, "SELECT name_id FROM %sheadername WHERE %s=?", DBPFX, case_header);
 		db_stmt_set_str(s,1,safe_header);
 		r = db_stmt_query(s);
 
@@ -1445,7 +1445,7 @@ static int _header_get_id(const DbmailMessage *self, const char *header, u64_t *
 			*tmp = db_result_get_u64(r,0);
 		} else {
 			db_con_clear(c);
-			s = db_stmt_prepare(c, "INSERT %s INTO %sheadername (headername) VALUES (?) %s", 
+			s = db_stmt_prepare(c, "INSERT %s INTO %sheadername (name) VALUES (?) %s",
 					db_get_sql(SQL_IGNORE), DBPFX, frag);
 			db_stmt_set_str(s,1,safe_header);
 			r = db_stmt_query(s);
@@ -1479,10 +1479,12 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	u64_t id;
 	DbmailMessage *self = (DbmailMessage *)user_data;
 	GTuples *values;
+	gchar *frag;
 	unsigned char *raw;
 	unsigned i;
 	volatile gboolean isaddr = 0;
-	C c; S s; volatile gboolean t = FALSE;
+	C c1; C c2; R r; S s1; S s2;
+	volatile gboolean t = FALSE;
 	const char *charset = dbmail_message_get_charset(self);
 
 	/* skip headernames with spaces like From_ */
@@ -1507,11 +1509,14 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 	values = g_relation_select(self->headers,header,0);
 
-	c = db_con_get();
+	c1 = db_con_get();
+	c2 = db_con_get();
 	TRY
-		s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) VALUES (?,?,?)", DBPFX);
-		db_stmt_set_u64(s, 1, id);
-		db_stmt_set_u64(s, 2, self->physid);
+		frag = db_returning("value_id");
+		s1 = db_stmt_prepare(c1, "INSERT INTO %sheadervalue (value) VALUES (?) %s", DBPFX, frag);
+		s2 = db_stmt_prepare(c2, "INSERT INTO %sheadernamevalue (physmessage_id, name_id, value_id) VALUES (?,?,?)", DBPFX);
+		db_stmt_set_u64(s2, 1, self->physid);
+		db_stmt_set_u64(s2, 2, id);
 
 		for (i=0; i<values->len;i++) {
 			char *value = NULL;
@@ -1524,17 +1529,25 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 				if (value) g_free(value);
 				continue;
 			}
-	 
-			db_stmt_set_blob(s, 3, value, strlen(value));
-			db_stmt_exec(s);
+
+			/* Insert header value */
+			db_stmt_set_blob(s1, 1, value, strlen(value));
+			r = db_stmt_query(s1);
+
+			/* Insert relation between physmessage, header name and header value */
+			db_stmt_set_u64(s2, 3, db_insert_result(c1, r));
+			db_stmt_exec(s2);
 			g_free(value);
 
 		}
 	CATCH(SQLException)
-		LOG_SQLERROR;
+		/* FIXME: There might need to be a check on which connection failed (???) */
+		LOG_SQLERROR_CON(c1);
+		LOG_SQLERROR_CON(c2);
 		t = TRUE;
 	FINALLY
-		db_con_close(c);
+		db_con_close(c1);
+		db_con_close(c2);
 	END_TRY;
 
 	g_tuples_destroy(values);
