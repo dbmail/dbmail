@@ -355,7 +355,10 @@ int lmtp(ClientSession_t * session)
 			return 1;
 		arg = (char *)session->args->data;
 
-		find_bounded(arg, '<', '>', &tmpaddr, &tmplen, &tmppos);
+		if (find_bounded(arg, '<', '>', &tmpaddr, &tmplen, &tmppos) < 0) {
+			ci_write(ci, "500 No address found. Missing <> boundries.\r\n");
+			return 1;
+		}
 
 		/* Second look for a BODY keyword.
 		 * See if it has an argument, and if we
@@ -372,10 +375,6 @@ int lmtp(ClientSession_t * session)
 				tmpbody++;
 
 		/* This is all a bit nested now... */
-		if (! (tmplen && tmpaddr)) {
-			ci_write(ci, "500 No address found.\r\n");
-			return 1;
-		}
 		if (tmpbody) {
 			if (MATCH(tmpbody, "8BITMIME")) {   // RFC1652
 				ci_write(ci, "500 Please use 7BIT MIME only.\r\n");
@@ -405,12 +404,11 @@ int lmtp(ClientSession_t * session)
 			return 1;
 		arg = (char *)session->args->data;
 
-		find_bounded(arg, '<', '>', &tmpaddr, &tmplen, &tmppos);
-
-		if (tmplen < 1) {
-			ci_write(ci, "500 No address found.\r\n");
+		if (find_bounded(arg, '<', '>', &tmpaddr, &tmplen, &tmppos) < 0 || tmplen < 1) {
+			ci_write(ci, "500 No address found. Missing <> boundries or address is null.\r\n");
 			return 1;
 		}
+
 		deliver_to_user_t *dsnuser = g_new0(deliver_to_user_t,1);
 
 		dsnuser_init(dsnuser);

@@ -264,9 +264,8 @@ const char *mailbox_remove_namespace(const char *name, char **namespace, char **
  * Allocates and fills retchar with the string.
  *
  * Return values are:
- *   0 on success (found and allocated)
- *   -1 on failure (not found)
- *   -2 on memory error (found but allocation failed)
+ *   0 or greater (size of item found inbounds)
+ *   -1 on failure (bounds not found)
  *
  * The caller is responsible for free()ing *retchar.
  * */
@@ -286,14 +285,14 @@ int find_bounded(const char * const value, char left, char right,
 		tmpright--;
 
 	if (tmpleft[0] != left || tmpright[0] != right) {
-		TRACE(TRACE_INFO, "Found nothing between '%c' and '%c'", left, right);
+		TRACE(TRACE_INFO, "Missing part or all of our bounding points");
 		*retchar = NULL;
 		*retsize = 0;
 		*retlast = 0;
 		return -1;
 	} 
 	/* else */
-	/* Step left up to skip the actual left thinger */
+	/* Step left up to skip the actual left bound */
 	if (tmpright != tmpleft)
 		tmpleft++;
 
@@ -305,7 +304,7 @@ int find_bounded(const char * const value, char left, char right,
 	*retlast = tmpright - value;
 	TRACE(TRACE_INFO, "Found [%s] of length [%zu] between '%c' and '%c' so next skip [%zu]", *retchar, *retsize, left,
 	      right, *retlast);
-	return 0;
+	return *retlast;
 }
 
 int zap_between(const char * const instring, signed char left, signed char right,
