@@ -26,6 +26,45 @@
 #ifndef _DBMAIL_H
 #define _DBMAIL_H
 
+/* Include mhash.h first as on FreeBSD, mhash headers have VERSION, PACKAGE_* defined */
+#include <mhash.h>
+
+#ifdef VERSION
+#undef VERSION
+#endif
+
+#ifdef PACKAGE
+#undef PACKAGE
+#endif
+
+#ifdef PACKAGE_VERSION
+#undef PACKAGE_VERSION
+#endif
+
+#ifdef PACKAGE_NAME
+#undef PACKAGE_NAME
+#endif
+
+#ifdef PACKAGE_STRING
+#undef PACKAGE_STRING
+#endif
+
+#ifdef PACKAGE_TARNAME
+#undef PACKAGE_TARNAME
+#endif
+
+#ifdef PACKAGE_TARNAME
+#undef PACKAGE_TARNAME
+#endif
+
+#ifdef PACKAGE_BUGREPORT
+#undef PACKAGE_BUGREPORT
+#endif
+
+#ifdef _GNU_SOURCE
+#undef _GNU_SOURCE
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -72,7 +111,6 @@
 #include <time.h>
 #include <termios.h>
 #include <unistd.h>
-#include <mhash.h>
 #include <event.h>
 #include <math.h>
 #include <openssl/ssl.h>
