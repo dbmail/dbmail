@@ -108,6 +108,8 @@ gchar *get_crlf_encoded_opt(const char *in, int dots)
 	char prev = 0, curr = 0, *t, *out;
 	const char *p = in;
 	int i=0, nl = 0;
+	assert(in);
+
 	while (*p != '\0') {
 		if ISLF(*p) nl++;
 		p++; i++;

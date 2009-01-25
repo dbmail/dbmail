@@ -1812,9 +1812,14 @@ char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
 	g_free(raw);
 
 	/* send requested body lines */	
-	raw = get_crlf_encoded_dots(buf);
+	if (buf) {
+		raw = get_crlf_encoded_dots(buf);
+		g_free(buf);
+	} else {
+		raw = g_strdup("");
+	}
+
 	t = g_string_new(raw);
-	g_free(buf);
 	
 	if (lines > 0) {
 		while (raw[pos] && n < lines) {
