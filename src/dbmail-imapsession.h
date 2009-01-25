@@ -49,6 +49,7 @@ typedef struct {
 	u64_t userid;		/* userID of client in dbase */
 
 	GTree *ids;
+	GTree *physids;		// cache physmessage_ids for uids 
 	GTree *envelopes;
 	GTree *mbxinfo; // cache MailboxState_T 
 	GList *recent;

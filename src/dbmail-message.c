@@ -1878,25 +1878,6 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 }
 
 
-/* old stuff moved here from dbmsgbuf.c */
-
-DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
-{
-	DbmailMessage *msg;
-
-	int result;
-	u64_t physid = 0;
-	if ((result = db_get_physmessage_id(msg_idnr, &physid)) != DM_SUCCESS) {
-		TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%llu]", msg_idnr);
-		return NULL;
-	}
-	msg = dbmail_message_new();
-	if (! (msg = dbmail_message_retrieve(msg, physid, filter)))
-		return NULL;
-
-	return msg;
-}
-
 /* moved here from sort.c */
 
 /* Figure out where to deliver the message, then deliver it.

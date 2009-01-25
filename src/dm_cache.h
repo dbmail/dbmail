@@ -34,7 +34,6 @@ extern T     Cache_new(void);
 extern u64_t Cache_set_dump(T C, char *buf, int dumptype);
 extern void  Cache_clear(T C);
 extern u64_t Cache_update(T C, DbmailMessage *message, int filter);
-extern u64_t Cache_get_id(T C);
 extern u64_t Cache_get_size(T C);
 extern void  Cache_set_memdump(T C, Mem_T M);
 extern Mem_T Cache_get_memdump(T C);

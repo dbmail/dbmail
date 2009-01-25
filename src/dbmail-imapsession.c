@@ -93,6 +93,7 @@ ImapSession * dbmail_imap_session_new(void)
 	self->fi = g_new0(fetch_items_t,1);
 	self->mutex = g_mutex_new();
 	self->cache = Cache_new();
+	self->physids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 
 	assert(self->cache);
  
@@ -101,15 +102,36 @@ ImapSession * dbmail_imap_session_new(void)
 
 static u64_t dbmail_imap_session_message_load(ImapSession *self, int filter)
 {
+	u64_t *physid = NULL;
+
+	if (! (physid = g_tree_lookup(self->physids, &(self->msg_idnr)))) {
+		u64_t *uid;
+		physid = g_new0(u64_t,1);
+			
+		if ((db_get_physmessage_id(self->msg_idnr, physid)) != DM_SUCCESS) {
+			TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%llu]", self->msg_idnr);
+			g_free(physid);
+			return 0;
+		}
+		uid = g_new0(u64_t, 1);
+		*uid = self->msg_idnr;
+		g_tree_insert(self->physids, uid, physid);
+	}
+		
 	if (self->message && GMIME_IS_MESSAGE(self->message->content)) {
-		if (Cache_get_id(self->cache) != self->message->id) {
+		if (*physid != self->message->id) {
 			dbmail_message_free(self->message);
 			self->message = NULL;
 		}
 	}
 
-	if (! self->message)
-		self->message = db_init_fetch(self->msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
+	assert(physid);
+
+	if (! self->message) {
+		DbmailMessage *msg = dbmail_message_new();
+		if ((msg = dbmail_message_retrieve(msg, *physid, filter)) != NULL)
+			self->message = msg;
+	}
 
 	if (! self->message) {
 		TRACE(TRACE_ERR,"message retrieval failed");
@@ -173,6 +195,10 @@ void dbmail_imap_session_delete(ImapSession * self)
 	if (self->message) {
 		dbmail_message_free(self->message);
 		self->message = NULL;
+	}
+	if (self->physids) {
+		g_tree_destroy(self->physids);
+		self->physids = NULL;
 	}
 
 	dbmail_imap_session_fetch_free(self);
