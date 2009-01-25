@@ -27,7 +27,7 @@ CREATE TABLE dbmail_headervalue (
         value   TEXT NOT NULL DEFAULT '',
         PRIMARY KEY (value_id)
 );
-CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue(value);
+CREATE UNIQUE INDEX dbmail_headervalue_1 ON dbmail_headervalue(value);
 
 CREATE TABLE dbmail_headernamevalue (
         physmessage_id      INT8 NOT NULL
