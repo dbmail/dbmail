@@ -101,13 +101,15 @@ ImapSession * dbmail_imap_session_new(void)
 
 static u64_t dbmail_imap_session_message_load(ImapSession *self, int filter)
 {
-	if ((! self->message) || (self->msg_idnr != self->message->id)) {
-		if (self->message && GMIME_IS_MESSAGE(self->message->content)) {
+	if (self->message && GMIME_IS_MESSAGE(self->message->content)) {
+		if (Cache_get_id(self->cache) != self->message->id) {
 			dbmail_message_free(self->message);
 			self->message = NULL;
 		}
-		self->message = db_init_fetch(self->msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
 	}
+
+	if (! self->message)
+		self->message = db_init_fetch(self->msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
 
 	if (! self->message) {
 		TRACE(TRACE_ERR,"message retrieval failed");

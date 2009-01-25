@@ -162,6 +162,12 @@ void Cache_set_memdump(T C, Mem_T M)
 	C->memdump = M;
 }
 
+u64_t Cache_get_id(T C)
+{
+	assert(C);
+	return C->id;
+}
+
 u64_t Cache_get_size(T C)
 {
 	assert(C);

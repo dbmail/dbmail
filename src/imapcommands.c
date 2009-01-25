@@ -1631,12 +1631,6 @@ static void _ic_fetch_enter(dm_thread_data *D)
 	LOCK_SESSION;
 	int result, state, setidx;
 
-	/* check if the user has the right to fetch messages in this mailbox */
-	if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_READ))) {
-		D->status = result;
-		NOTIFY_DONE(D);
-	}
-
 	if (self->fi) {
 		dbmail_imap_session_bodyfetch_free(self);
 		g_free(self->fi);
