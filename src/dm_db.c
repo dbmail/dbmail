@@ -1581,7 +1581,7 @@ int db_set_headercache(GList *lost)
 			TRACE(TRACE_WARNING, "error retrieving physmessage: [%llu]", pmsgid);
 			fprintf(stderr,"E");
 		} else {
-			if (dbmail_message_cache_headers(msg) != 1) {
+			if (dbmail_message_cache_headers(msg) != 0) {
 				TRACE(TRACE_WARNING,"error caching headers for physmessage: [%llu]", 
 					pmsgid);
 				fprintf(stderr,"E");
