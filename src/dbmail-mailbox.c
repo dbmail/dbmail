@@ -1366,7 +1366,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 				"JOIN %sheader h ON h.physmessage_id=p.id "
 				"JOIN %sheadername n ON h.headername_id=n.id "
 				"JOIN %sheadervalue v ON h.headervalue_id=v.id "
-				"WHERE n.headername % ? AND %s %s ? "
+				"WHERE n.headername %s ? AND %s %s ? "
 				"ORDER BY message_idnr",
 				 DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
 				 db_get_sql(SQL_INSENSITIVE_LIKE),
