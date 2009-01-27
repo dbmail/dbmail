@@ -127,7 +127,7 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 	"pbsp",
 	"auto_notifications", 
 	"auto_replies",
-	"headernamevalue",
+	"header",
 	"headername", 
 	"headervalue",
 	"subjectfield", 
@@ -721,8 +721,8 @@ int db_check_version(void)
 					"and run dbmail-util -by");
 		if (! db_query(c, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX))
 			TRACE(TRACE_EMERG, "2.2 database incompatible.");
-		if ( ! db_query(c, "SELECT 1=1 FROM %sheadernamevalue LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_EMERG, "2.3.5 database incompatible - Experimental single instance header storage missing.");
+		if ( ! db_query(c, "SELECT 1=1 FROM %sheader LIMIT 1 OFFSET 0", DBPFX))
+			TRACE(TRACE_EMERG, "2.3.5 database incompatible - single instance header storage missing.");
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1609,7 +1609,7 @@ int db_icheck_headercache(GList **lost)
 	TRY
 		r = db_query(c, "SELECT p.id "
 			"FROM %sphysmessage p "
-			"LEFT JOIN %sheadernamevalue h ON p.id = h.physmessage_id "
+			"LEFT JOIN %sheader h ON p.id = h.physmessage_id "
 			"WHERE h.physmessage_id IS NULL", DBPFX, DBPFX);
 		while (db_result_next(r)) {
 			id = g_new0(u64_t,1);
@@ -2717,11 +2717,11 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 		"SELECT m.message_idnr "
 		"FROM %smessages m "
 		"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-		"JOIN %sheadernamevalue h ON p.id=h.physmessage_id "
-		"JOIN %sheadername n ON h.name_id=n.name_id "
-		"JOIN %sheadervalue v ON h.value_id=v.value_id "
+		"JOIN %sheader h ON p.id=h.physmessage_id "
+		"JOIN %sheadername n ON h.headername_id=n.id "
+		"JOIN %sheadervalue v ON h.headervalue_id=v.id "
 		"WHERE m.mailbox_idnr=? "
-		"AND n.name IN ('resent-message-id','message-id') "
+		"AND n.headername IN ('resent-message-id','message-id') "
 		"AND %s=? "
 		"AND p.internal_date > %s", DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
 		partial, expire);

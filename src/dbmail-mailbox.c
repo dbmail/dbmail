@@ -1363,10 +1363,10 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.value");
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 				"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-				"JOIN %sheadernamevalue h ON h.physmessage_id=p.id "
-				"JOIN %sheadername n ON h.name_id=n.name_id "
-				"JOIN %sheadervalue v ON h.name_id=v.value_id "
-				"WHERE n.name % ? AND %s %s ? "
+				"JOIN %sheader h ON h.physmessage_id=p.id "
+				"JOIN %sheadername n ON h.headername_id=n.id "
+				"JOIN %sheadervalue v ON h.headervalue_id=v.id "
+				"WHERE n.headername % ? AND %s %s ? "
 				"ORDER BY message_idnr",
 				 DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
 				 db_get_sql(SQL_INSENSITIVE_LIKE),
@@ -1392,8 +1392,8 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"FROM %smimeparts k "
 					"JOIN %spartlists l ON k.id=l.part_id "
 					"JOIN %sphysmessage p ON l.physmessage_id=p.id "
-					"JOIN %sheadernamevalue h ON h.physmessage_id=p.id "
-					"JOIN %sheadervalue v ON h.value_id=v.value_id "
+					"JOIN %sheader h ON h.physmessage_id=p.id "
+					"JOIN %sheadervalue v ON h.headervalue_id=v.id "
 					"JOIN %smessages m ON m.physmessage_id=p.id "
 					"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
 					"GROUP BY m.message_idnr, v.value, k.data "

@@ -1428,16 +1428,14 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 		return 1;
 	}
 
-	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"name");
-	frag = db_returning("name_id");
+	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
 	tmp = g_new0(u64_t,1);
 
 	c = db_con_get();
 
 	TRY
 		*tmp = 0;
-
-		s = db_stmt_prepare(c, "SELECT name_id FROM %sheadername WHERE %s=?", DBPFX, case_header);
+		s = db_stmt_prepare(c, "SELECT id FROM %sheadername WHERE %s=?", DBPFX, case_header);
 		db_stmt_set_str(s,1,safe_header);
 		r = db_stmt_query(s);
 
@@ -1445,8 +1443,12 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 			*tmp = db_result_get_u64(r,0);
 		} else {
 			db_con_clear(c);
-			s = db_stmt_prepare(c, "INSERT %s INTO %sheadername (name) VALUES (?) %s",
+
+			frag = db_returning("id");
+			s = db_stmt_prepare(c, "INSERT %s INTO %sheadername (headername) VALUES (?) %s",
 					db_get_sql(SQL_IGNORE), DBPFX, frag);
+			g_free(frag);
+
 			db_stmt_set_str(s,1,safe_header);
 			r = db_stmt_query(s);
 			*tmp = db_insert_result(c, r);
@@ -1460,7 +1462,6 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 		db_con_close(c);
 	END_TRY;
 
-	g_free(frag);
 	g_free(case_header);
 
 	if (t == DM_EQUERY) {
@@ -1474,55 +1475,93 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 	return 1;
 }
 
-static int _header_value_get_id(const char *value, u64_t *id)
+static u64_t _header_value_exists(const char *value, const char *hash)
 {
-	u64_t *tmp = NULL;
-	gchar *frag;
 	C c; R r; S s;
-	int t = FALSE;
+	u64_t id = 0; const char *data; size_t buflen;
 
-	tmp = g_new0(u64_t,1);
+	buflen = strlen(value);
 
 	c = db_con_get();
-
 	TRY
-		*tmp = 0;
-
-		s = db_stmt_prepare(c, "SELECT value_id FROM %sheadervalue WHERE value=?", DBPFX);
-		db_stmt_set_str(s,1,value);
+		s = db_stmt_prepare(c, "SELECT id,headervalue FROM %sheadervalue WHERE hash=?", DBPFX);
+		db_stmt_set_str(s,1,hash);
 		r = db_stmt_query(s);
 
-		if (db_result_next(r)) {
-			*tmp = db_result_get_u64(r,0);
-		} else {
-			db_con_clear(c);
-
-			frag = db_returning("value_id");
-			s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (value) VALUES (?) %s",
-					DBPFX, frag);
-			db_stmt_set_blob(s, 1, value, strlen(value));
-			r = db_stmt_query(s);
-			*tmp = db_insert_result(c, r);
-
-			g_free(frag);
+		while (db_result_next(r)) {
+			u64_t i = db_result_get_u64(r,0);
+			data = (char *)db_result_get(r,1);
+			assert(data);
+			if (memcmp((gconstpointer)value, (gconstpointer)data, buflen)==0) {
+				id = i;
+				break;
+			}
 		}
-		t = TRUE;
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
+	return id;
 
-	if (t == DM_EQUERY) {
-		g_free(tmp);
-		return t;
+}
+
+static u64_t _header_value_insert(const char *value, const char *hash)
+{
+	C c; R r; S s;
+	u64_t id = 0;
+	char *frag;
+
+	c = db_con_get();
+
+	TRY
+
+		frag = db_returning("id");
+		s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue) VALUES (?,?) %s", DBPFX, frag);
+		g_free(frag);
+
+		db_stmt_set_str(s, 1, hash);
+		db_stmt_set_blob(s, 2, value, strlen(value));
+
+		r = db_stmt_query(s);
+		id = db_insert_result(c, r);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return id;
+}
+
+static int _header_value_get_id(const char *value, u64_t *id)
+{
+	u64_t tmp = 0;
+	char *hash;
+
+	hash = dm_get_hash_for_string(value);
+	if (! hash) return FALSE;
+
+	if ((tmp = _header_value_exists(value, (const char *)hash)) != 0) {
+		g_free(hash);
+		*id = tmp;
+		return TRUE;
 	}
 
-	*id = *tmp;
-	return 1;
+	if ((tmp = _header_value_insert(value, (const char *)hash)) != 0) {
+		g_free(hash);
+		*id = tmp;
+		return TRUE;
+	}
+
+	g_free(hash);
+
+	// should never happen
+	assert(FALSE);
+
+	return FALSE;
 }
 
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
@@ -1561,7 +1600,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 	c = db_con_get();
 	TRY
-		s = db_stmt_prepare(c, "INSERT INTO %sheadernamevalue (physmessage_id, name_id, value_id) VALUES (?,?,?)", DBPFX);
+		s = db_stmt_prepare(c, "INSERT INTO %sheader (physmessage_id, headername_id, headervalue_id) VALUES (?,?,?)", DBPFX);
 		db_stmt_set_u64(s, 1, self->physid);
 		db_stmt_set_u64(s, 2, headername_id);
 
