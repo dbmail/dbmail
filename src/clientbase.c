@@ -128,6 +128,8 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl)
 		/* make streams */
 		client->rx = client->tx = socket;
 		client->ssl = ssl;
+		if (ssl)
+			client->ssl_state = TRUE;
 	}
 
 	client->write_buffer = g_string_new("");
@@ -171,7 +173,7 @@ int ci_starttls(clientbase_t *self)
 				break;
 			}
 
-			TRACE(TRACE_ERR, "Error in TLS handshake");
+			dm_tls_error();
 			SSL_free(self->ssl);
 			self->ssl = NULL;
 			return DM_EGENERAL;
@@ -253,7 +255,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		} else {
 			t = read(self->rx, (void *)&c, 1);
 		}
-		if (t == -1) {
+		if (t < 0) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
 				return e;
