@@ -261,11 +261,13 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 				return e;
 			break;
 		}
-		if (t != 1)
-			break;
-		self->len++;
-		if (c == '\r') continue;
-		buffer[i++] = c;
+		if (t == 0) break;
+
+		if (t == 1) {
+			self->len++;
+			if (c == '\r') continue;
+			buffer[i++] = c;
+		}
 	}
 	TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->len, buffer);
 
@@ -290,7 +292,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 		} else {
 			t = read(self->rx, (void *)&c, 1);
 		}
-		if (t == -1) {
+		if (t < 0) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
 				return e;
