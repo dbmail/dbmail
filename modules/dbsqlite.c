@@ -267,8 +267,7 @@ void db_free_result()
 {
 	if (lastq) {
 		if (lastq->resp) sqlite3_free_table(lastq->resp);
-		lastq->resp = 0;
-		lastq->rows = lastq->cols = 0;
+		free(lastq);
 	}
 	lastq = 0;
 
@@ -306,14 +305,11 @@ int db_query(const char *the_query)
 	char *errmsg;
 	int res, retry=0;
 
-	if (lastq) {
-		if (lastq->resp) sqlite3_free_table(lastq->resp);
-	} else {
-		lastq = (struct qtmp *)malloc(sizeof(struct qtmp));
-		if (!lastq) {
-			TRACE(TRACE_ERROR, "malloc failed: %s", strerror(errno));
-			return -1;
-		}
+	db_free_result();
+	lastq = (struct qtmp *)malloc(sizeof(struct qtmp));
+	if (!lastq) {
+		TRACE(TRACE_ERROR, "malloc failed: %s", strerror(errno));
+		return -1;
 	}
 	TRACE(TRACE_DEBUG,"%s", the_query);
 
@@ -333,6 +329,7 @@ int db_query(const char *the_query)
 
 		TRACE(TRACE_ERROR, "sqlite3_get_table failed: %s", errmsg);
 		sqlite3_free(errmsg);
+		db_free_result();
 		return -1;
 	}
 
@@ -392,6 +389,5 @@ void *db_get_result_set()
 
 void db_set_result_set(void *the_result_set)
 {
-	db_free_result();
 	lastq = (struct qtmp *)the_result_set;
 }
