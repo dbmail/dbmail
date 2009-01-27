@@ -232,23 +232,27 @@ CREATE TABLE dbmail_headername (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
 
 DROP TABLE IF EXISTS dbmail_headervalue;
-CREATE TABLE dbmail_headervalue (
-	headername_id	BIGINT NOT NULL,
-        physmessage_id	BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	headervalue	TEXT NOT NULL,
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
-	UNIQUE (physmessage_id, headername_id, headervalue(255)),
-	INDEX (headername_id),
-	INDEX (physmessage_id),
-	FOREIGN KEY (headername_id)
-		REFERENCES dbmail_headername(id) ON UPDATE CASCADE ON DELETE CASCADE,
-	FOREIGN KEY (physmessage_id)
-		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
-	
-		
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+CREATE TABLE `dbmail_headervalue` (
+  `id` bigint(20) NOT NULL auto_increment,
+  `hash` char(255) NOT NULL,
+  `headervalue` text NOT NULL,
+  PRIMARY KEY  (`id`),
+  KEY `hash` (`hash`),
+  KEY `headervalue` (`headervalue`(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `dbmail_header`;
+CREATE TABLE `dbmail_header` (
+  `physmessage_id` bigint(20) NOT NULL,
+  `headername_id` bigint(20) NOT NULL,
+  `headervalue_id` bigint(20) NOT NULL,
+  PRIMARY KEY  (`physmessage_id`,`headername_id`,`headervalue_id`),
+  KEY `headername_id` (`headername_id`),
+  KEY `headervalue_id` (`headervalue_id`),
+  CONSTRAINT `dbmail_header_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `dbmail_header_ibfk_2` FOREIGN KEY (`headername_id`) REFERENCES `dbmail_headername` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `dbmail_header_ibfk_3` FOREIGN KEY (`headervalue_id`) REFERENCES `dbmail_headervalue` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 # Provide separate storage of commonly used headers
 

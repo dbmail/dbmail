@@ -189,31 +189,37 @@ INSERT INTO dbmail_users (userid, passwd, encryption_type)
 	VALUES ('__public__', '', 'md5');
 
  
+CREATE SEQUENCE dbmail_headervalue_id_seq;
+CREATE TABLE dbmail_headervalue (
+        id INT8 NOT NULL DEFAULT nextval('dbmail_headervalue_id_seq'),
+	hash character(256) NOT NULL,
+        headervalue   TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (id)
+);
 
+CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue(substring(headervalue,0,255));
+CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (hash);
 
-CREATE SEQUENCE dbmail_headername_idnr_seq;
+CREATE SEQUENCE dbmail_headername_id_seq;
 CREATE TABLE dbmail_headername (
-	id		INT8 DEFAULT nextval('dbmail_headername_idnr_seq'),
-	headername	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (id)
+        id  INT8 NOT NULL DEFAULT nextval('dbmail_headername_id_seq'),
+        headername    VARCHAR(100) NOT NULL DEFAULT 'BROKEN_HEADER',
+        PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername(lower(headername));
 
-CREATE SEQUENCE dbmail_headervalue_idnr_seq;
-CREATE TABLE dbmail_headervalue (
-	headername_id	INT8 NOT NULL
-		REFERENCES dbmail_headername(id)
-		ON UPDATE CASCADE ON DELETE CASCADE,
-        physmessage_id	INT8 NOT NULL
+CREATE TABLE dbmail_header (
+        physmessage_id      INT8 NOT NULL
 		REFERENCES dbmail_physmessage(id)
-		ON UPDATE CASCADE ON DELETE CASCADE,
-	id		INT8 DEFAULT nextval('dbmail_headervalue_idnr_seq'),
-	headervalue	TEXT NOT NULL DEFAULT '',
-	PRIMARY KEY (id)
+                ON UPDATE CASCADE ON DELETE CASCADE,
+        headername_id  INT8 NOT NULL
+                REFERENCES dbmail_headername(id)
+                ON UPDATE CASCADE ON DELETE RESTRICT,
+        headervalue_id      INT8 NOT NULL
+                REFERENCES dbmail_headervalue(id)
+                ON UPDATE CASCADE ON DELETE RESTRICT,
+        PRIMARY KEY (physmessage_id,headername_id,headervalue_id)
 );
-CREATE UNIQUE INDEX dbmail_headervalue_1 ON dbmail_headervalue(physmessage_id, id);
-CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue(physmessage_id);
-CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue(substring(headervalue,0,255));
 
 CREATE SEQUENCE dbmail_subjectfield_idnr_seq;
 CREATE TABLE dbmail_subjectfield (

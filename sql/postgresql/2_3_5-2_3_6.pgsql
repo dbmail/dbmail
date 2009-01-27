@@ -8,9 +8,6 @@ DROP INDEX dbmail_headervalue_2;
 DROP INDEX dbmail_headervalue_1;
 DROP TABLE dbmail_headervalue CASCADE;
 
-DROP INDEX dbmail_headername_1;
-DROP TABLE dbmail_headername CASCADE;
-
 CREATE SEQUENCE dbmail_headervalue_id_seq;
 CREATE TABLE dbmail_headervalue (
         id INT8 NOT NULL DEFAULT nextval('dbmail_headervalue_id_seq'),
@@ -21,15 +18,6 @@ CREATE TABLE dbmail_headervalue (
 
 CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue(substring(headervalue,0,255));
 CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (hash);
-
-CREATE SEQUENCE dbmail_headername_id_seq;
-CREATE TABLE dbmail_headername (
-        id  INT8 NOT NULL DEFAULT nextval('dbmail_headername_id_seq'),
-        headername    VARCHAR(100) NOT NULL DEFAULT 'BROKEN_HEADER',
-        PRIMARY KEY (id)
-);
-CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername(lower(headername));
-
 
 CREATE TABLE dbmail_header (
         physmessage_id      INT8 NOT NULL
@@ -49,7 +37,6 @@ COMMIT;
 begin;
 delete from dbmail_ccfield;
 delete from dbmail_datefield;
-delete from dbmail_envelope;
 delete from dbmail_fromfield;
 delete from dbmail_referencesfield;
 delete from dbmail_replycache;

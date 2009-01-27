@@ -1,0 +1,41 @@
+
+
+drop table if exists dbmail_header;
+DROP TABLE if exists dbmail_headervalue;
+
+CREATE TABLE dbmail_headervalue (
+ 	id		BIGINT NOT NULL AUTO_INCREMENT,
+	hash 		char(255) NOT NULL,
+        headervalue   	TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (id),
+	INDEX (hash),
+	INDEX (headervalue(255))
+) engine=innodb charset=utf8;
+
+CREATE TABLE dbmail_header (
+        physmessage_id      BIGINT NOT NULL,
+	headername_id       BIGINT NOT NULL,
+        headervalue_id      BIGINT NOT NULL,
+        PRIMARY KEY (physmessage_id,headername_id,headervalue_id),
+	FOREIGN KEY (physmessage_id)
+		REFERENCES dbmail_physmessage(id)
+                ON UPDATE CASCADE ON DELETE CASCADE,
+	FOREIGN KEY (headername_id)
+                REFERENCES dbmail_headername(id)
+                ON UPDATE CASCADE ON DELETE CASCADE,
+	FOREIGN KEY (headervalue_id)
+                REFERENCES dbmail_headervalue(id)
+                ON UPDATE CASCADE ON DELETE CASCADE
+) engine=innodb charset=utf8;
+
+
+BEGIN;
+delete from dbmail_ccfield;
+delete from dbmail_datefield;
+delete from dbmail_fromfield;
+delete from dbmail_referencesfield;
+delete from dbmail_replycache;
+delete from dbmail_replytofield;
+delete from dbmail_subjectfield;
+delete from dbmail_tofield;
+commit;
