@@ -1545,7 +1545,7 @@ int db_update_rfcsize(GList *lost)
 		} else {
 			TRY
 				db_begin_transaction(c);
-				db_exec(c, "UPDATE %sphysmessage SET rfcsize = %llu " "WHERE id = %llu", 
+				db_exec(c, "UPDATE %sphysmessage SET rfcsize = %llu WHERE id = %llu", 
 					DBPFX, (u64_t)dbmail_message_get_size(msg,TRUE), *pmsid);
 				db_commit_transaction(c);
 				fprintf(stderr,".");
