@@ -621,7 +621,7 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 		snprintf(range,DEF_FRAGSIZE,"BETWEEN %llu AND %llu", self->msg_idnr, self->hi);
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %llu:%llu ceiling %llu [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
-	g_string_printf(q,"SELECT m.message_idnr , n.name, v.value "
+	g_string_printf(q,"SELECT m.message_idnr, n.headername, v.headervalue "
 			"FROM %sheader h "
 			"JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
 			"JOIN %sheadername n ON h.headername_id=n.id "
