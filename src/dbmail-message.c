@@ -1479,6 +1479,7 @@ static u64_t _header_value_exists(const char *value, const char *hash)
 {
 	C c; R r; S s;
 	u64_t id = 0; const char *data; size_t buflen;
+	int l;
 
 	buflen = strlen(value);
 
@@ -1490,7 +1491,7 @@ static u64_t _header_value_exists(const char *value, const char *hash)
 
 		while (db_result_next(r)) {
 			u64_t i = db_result_get_u64(r,0);
-			data = (char *)db_result_get(r,1);
+			data = (char *)db_result_get_blob(r, 1, &l);
 			assert(data);
 			if (memcmp((gconstpointer)value, (gconstpointer)data, buflen)==0) {
 				id = i;
