@@ -781,7 +781,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	config_get_value("TIMEOUT", service, val);
 	if (strlen(val) == 0) {
 		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
-		config->timeout = 0;
+		config->timeout = 300;
 	} else if ((config->timeout = atoi(val)) <= 30)
 		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]", config->timeout);
 
