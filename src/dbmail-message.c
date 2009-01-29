@@ -138,6 +138,7 @@ static u64_t blob_exists(const char *buf, const char *hash)
 {
 	u64_t id = 0;
 	size_t buflen;
+	int l;
 	char *data;
 	assert(buf);
 	C c; S s; R r;
@@ -145,16 +146,19 @@ static u64_t blob_exists(const char *buf, const char *hash)
 	buflen = strlen(buf);
 	c = db_con_get();
 	TRY
-		s = db_stmt_prepare(c,"SELECT id,data FROM %smimeparts WHERE hash= ? ", DBPFX);
+		s = db_stmt_prepare(c,"SELECT id,size,data FROM %smimeparts WHERE hash= ? ", DBPFX);
 		db_stmt_set_str(s,1,hash);
 		r = db_stmt_query(s);
 		while (db_result_next(r)) {
-			u64_t i = db_result_get_u64(r,0);
-			data = (char *)db_result_get(r,1);
-			assert(data);
-			if (memcmp((gconstpointer)buf, (gconstpointer)data, buflen)==0) {
-				id = i;
-				break;
+			u64_t i,j = db_result_get_u64(r,0);
+			i = db_result_get_u64(r,1);
+			if (i == buflen) {
+				data = (char *)db_result_get_blob(r,2,&l);
+				assert(data);
+				if (memcmp((gconstpointer)buf, (gconstpointer)data, buflen)==0) {
+					id = j;
+					break;
+				}
 			}
 		}
 	CATCH(SQLException)

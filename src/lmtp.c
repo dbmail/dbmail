@@ -80,6 +80,10 @@ static void lmtp_cb_read(void *arg)
 	if (r == -1) return;
 	
 	if (r == 0) {
+		if (session->ci->ssl && session->ci->ssl_state) {
+			event_add(session->ci->rev, session->ci->timeout);
+			return;
+		}
 		client_session_bailout(&session);
 		return;
 	}
