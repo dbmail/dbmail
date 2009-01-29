@@ -40,6 +40,7 @@ typedef struct _ldap_cfg {
 	field_t field_fwd, field_fwdsave, field_fwdtarget, fwdtargetprefix;
 	field_t field_members;
 	field_t query_string;
+	field_t referrals;
 	int scope_int, port_int, version_int;
 } _ldap_cfg_t;
 
@@ -82,6 +83,7 @@ static void __auth_get_config(void)
 	GETCONFIGVALUE("FIELD_FWDTARGET",	"LDAP", _ldap_cfg.field_fwdtarget);
 	GETCONFIGVALUE("QUERY_STRING",		"LDAP", _ldap_cfg.query_string);
 	GETCONFIGVALUE("SCOPE",			"LDAP", _ldap_cfg.scope);
+	GETCONFIGVALUE("REFERRALS",		"LDAP", _ldap_cfg.referrals);
 
 	/* Store the port as an integer for later use. */
 	_ldap_cfg.port_int = atoi(_ldap_cfg.port);
@@ -218,6 +220,11 @@ static int authldap_connect(void)
 	}
 
 	ldap_set_option(_ldap_conn, LDAP_OPT_PROTOCOL_VERSION, &version);
+
+	/* Turn off referrals */
+	if (strncasecmp(_ldap_cfg.referrals, "no", 2) == 0) {
+		ldap_set_option(_ldap_conn, LDAP_OPT_REFERRALS, 0);
+	}
 
 	g_private_set(ldap_conn_key, _ldap_conn);
 
