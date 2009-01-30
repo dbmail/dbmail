@@ -2580,12 +2580,56 @@ static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
  *   - 0 on success
  *   - -1 on full failure
  */
+static char *get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, const char *mailbox)
+{
+	u64_t anyone = 0;
+	C c; R r;
+	char *mbox = NULL;
+			
+	TRACE(TRACE_INFO, "default mailbox [%s]", mailbox);
+	
+	if (mailbox != NULL)
+		return (char *)mailbox;
+
+	auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone);
+
+	c = db_con_get();
+
+	TRY
+		r = db_query(c, "SELECT f.mailbox,f.headername,f.headervalue FROM %sfilters f "
+			"JOIN %sheadername n ON f.headername=n.headername "
+			"JOIN %sheader h ON h.headername_id = n.id "
+			"join %sheadervalue v on v.id=h.headervalue_id "
+			"WHERE v.headervalue %s f.headervalue "
+			"AND h.physmessage_id=%llu "
+			"AND f.user_id in (%llu,%llu)", 
+			DBPFX, DBPFX, DBPFX, DBPFX,
+			db_get_sql(SQL_INSENSITIVE_LIKE),
+			dbmail_message_get_physid(message), anyone, useridnr);
+		if (db_result_next(r)) {
+			const char *hn, *hv;
+			mbox = g_strdup(db_result_get(r,0));
+			hn = db_result_get(r,1);
+			hv = db_result_get(r,2);
+			TRACE(TRACE_DEBUG, "match [%s: %s] use mailbox [%s]", hn, hv, mbox);
+		}
+
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return mbox;
+}
+
 int insert_messages(DbmailMessage *message, GList *dsnusers)
 {
 	u64_t bodysize, rfcsize;
 	u64_t tmpid;
 	u64_t msgsize;
 	int result=0;
+	char *mailbox;
 
  	delivery_status_t final_dsn;
 
@@ -2623,9 +2667,11 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 		userids = g_list_first(delivery->userids);
 		while (userids) {
 			u64_t *useridnr = (u64_t *) userids->data;
-			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%llu]", *useridnr);
 
-			switch (sort_and_deliver(message, delivery->address, *useridnr, delivery->mailbox, delivery->source)) {
+			mailbox = get_mailbox_from_filters(message, *useridnr, delivery->mailbox);				
+
+			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%llu]", *useridnr);
+			switch (sort_and_deliver(message, delivery->address, *useridnr, mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
 				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%llu]", *useridnr);
 				has_2 = 1;
@@ -2644,6 +2690,9 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 				has_4 = 1;
 				break;
 			}
+
+			if (mailbox != delivery->mailbox)
+				g_free(mailbox);
 
 			/* Automatic reply and notification */
 			if (execute_auto_ran(message, *useridnr) < 0)

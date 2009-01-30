@@ -5,6 +5,13 @@ BEGIN TRANSACTION;
 DROP TABLE IF EXISTS dbmail_header;
 DROP TABLE IF EXISTS dbmail_headervalue;
 
+CREATE TRIGGER fk_insert_headervalue_headername_id
+
+CREATE TRIGGER fk_update1_headervalue_headername_id
+CREATE TRIGGER fk_update2_headervalue_headername_id
+CREATE TRIGGER fk_delete_headervalue_headername_id
+
+
 CREATE TABLE dbmail_headervalue (
  	id		INTEGER NOT NULL PRIMARY KEY,
 	hash 		TEXT NOT NULL,

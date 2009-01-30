@@ -1,0 +1,40 @@
+
+README.filters
+
+DBMail support simple SQL bases filter rules. These can be assigned
+per user, or globally by assigning them to the 'anyone' user.
+
+
+The dbmail_filters table contains the following fields:
+
+	id           BIGINT NOT NULL AUTO_INCREMENT
+	user_id      BIGINT NOT NULL
+	headername   varchar(128) NOT NULL
+	headervalue  varchar(255) NOT NULL	
+	mailbox      varchar(100) NOT NULL	
+
+Headernames in this table must be lower-cased since they are joined 
+on the dbmail_headernames table which only contains lower-cased values.
+
+Headervalues are matched as case-insensitive LIKE. They may contain LIKE-style
+match expressions.
+
+So:
+
+If a message's headers look like:
+
+From: Foo Bar <foobar@dot.com>
+Subject: this is a test
+
+Rules would match as follows:
+
+   | headername   | headervalue              | match?
+---+--------------+--------------------------+-------
+   | from         | foobar@dot.com           | no
+   | from         | Foo Bar <foobar@dot.com> | yes
+   | from         | %foobar@dot.com%         | yes
+   | subject      | test                     | no
+   | subject      | test%                    | yes
+---+--------------+--------------------------+-------
+
+
