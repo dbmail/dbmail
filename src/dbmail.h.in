@@ -37,7 +37,9 @@
 #endif
 
 #define __EXTENSIONS__ /* solaris */
+#define _FILE_OFFSET_BITS 64
 
+#include <features.h>
 #include <assert.h>
 #include <arpa/inet.h>
 #include <ctype.h>
