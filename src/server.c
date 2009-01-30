@@ -470,23 +470,27 @@ static void server_sock_ssl_cb(int sock, short event, void *arg)
                                 TRACE(TRACE_ERR, "%s", strerror(serr));
                                 break;
                 }
+                event_add(ev, NULL);
                 return;
         }
 	
 	if (! (c->ssl = SSL_new(tls_context))) {
 		TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
+                event_add(ev, NULL);
 		return;
 	}
 	if ( !SSL_set_fd(c->ssl, c->sock)) {
 		TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
 		SSL_free(c->ssl);
 		c->ssl = NULL;
+		event_add(ev, NULL);
 		return;
 	}
 	if (SSL_accept(c->ssl) != 1) {
 		TRACE(TRACE_ERR, "Error in TLS handshake: %s", tls_get_error());
 		SSL_free(c->ssl);
 		c->ssl = NULL;
+		event_add(ev, NULL);
 		return;
 	}
 
