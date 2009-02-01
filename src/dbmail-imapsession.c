@@ -66,14 +66,14 @@ static void send_data(ImapSession *self, Mem_T M, int cnt)
 	while (cnt >= SEND_BUF_SIZE) {
 		memset(buf,0,sizeof(buf));
 		l = Mem_read(M, buf, SEND_BUF_SIZE-1);
-		dbmail_imap_session_buff_printf(self, "%s", (l>0)?buf:"");
+		if (l>0) dbmail_imap_session_buff_printf(self, "%s", buf);
 		cnt -= l;
 	}
 
 	if (cnt > 0) {
 		memset(buf,0,sizeof(buf));
 		l = Mem_read(M, buf, cnt);
-		dbmail_imap_session_buff_printf(self, "%s", (l>0)?buf:"");
+		if (l>0) dbmail_imap_session_buff_printf(self, "%s", buf);
 		cnt -= l;
 	}
 	got = want - cnt;
@@ -992,6 +992,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 		SEND_SPACE;
 
+		// FIXME
 		tmpdumpsize = dbmail_imap_session_message_load(self,DBMAIL_MESSAGE_FILTER_BODY);
 		dbmail_imap_session_buff_printf(self, "RFC822.TEXT {%llu}\r\n", tmpdumpsize);
 		send_data(self, Cache_get_tmpdump(self->cache), tmpdumpsize);

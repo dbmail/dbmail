@@ -1380,14 +1380,7 @@ int _ic_append(ImapSession *self)
 static void _ic_check_enter(dm_thread_data *D)
 {
 	LOCK_SESSION;
-	int result;
-	if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_READ))) {
-		D->status=result;
-		NOTIFY_DONE(D);
-	}
-
 	dbmail_imap_session_mailbox_status(self, TRUE);
-	
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
 }
