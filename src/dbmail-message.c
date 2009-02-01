@@ -1355,6 +1355,9 @@ int _message_insert(DbmailMessage *self,
 		g_free(internal_date);
 		return -1;
 	}
+	
+	assert(physmessage_id);
+
 	g_free(internal_date);
 
 	dbmail_message_set_physid(self, physmessage_id);
@@ -1565,6 +1568,29 @@ static int _header_value_get_id(const char *value, u64_t *id)
 	return FALSE;
 }
 
+static gboolean _header_insert(u64_t physmessage_id, u64_t headername_id, u64_t headervalue_id)
+{
+
+	C c; S s; volatile gboolean t = TRUE;
+
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "INSERT INTO %sheader (physmessage_id, headername_id, headervalue_id) VALUES (?,?,?)", DBPFX);
+		db_stmt_set_u64(s, 1, physmessage_id);
+		db_stmt_set_u64(s, 2, headername_id);
+		db_stmt_set_u64(s, 3, headervalue_id);
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = FALSE;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	
+	return t;
+}
+
+	
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {
 	u64_t headername_id;
@@ -1573,8 +1599,8 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	GTuples *values;
 	unsigned char *raw;
 	unsigned i;
+	volatile gboolean t = TRUE;
 	volatile gboolean isaddr = 0;
-	C c; S s; volatile gboolean t = FALSE;
 	const char *charset = dbmail_message_get_charset(self);
 
 	/* skip headernames with spaces like From_ */
@@ -1599,42 +1625,31 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 	values = g_relation_select(self->headers,header,0);
 
-	c = db_con_get();
-	TRY
-		s = db_stmt_prepare(c, "INSERT INTO %sheader (physmessage_id, headername_id, headervalue_id) VALUES (?,?,?)", DBPFX);
-		db_stmt_set_u64(s, 1, self->physid);
-		db_stmt_set_u64(s, 2, headername_id);
 
-		for (i=0; i<values->len;i++) {
-			char *value = NULL;
-			raw = (unsigned char *)g_tuples_index(values,i,1);
-			TRACE(TRACE_DEBUG,"raw header value [%s]", raw);
-	  
-			value = dbmail_iconv_decode_field((const char *)raw, charset, isaddr);
-	 
-			if ((! value) || (strlen(value) == 0)) {
-				if (value) g_free(value);
-				continue;
-			}
+	for (i=0; i<values->len;i++) {
+		char *value = NULL;
+		raw = (unsigned char *)g_tuples_index(values,i,1);
+		TRACE(TRACE_DEBUG,"raw header value [%s]", raw);
 
-			/* Fetch header value id if exists, else insert, and return new id */
-			_header_value_get_id(value, &headervalue_id);
+		value = dbmail_iconv_decode_field((const char *)raw, charset, isaddr);
 
-			/* Insert relation between physmessage, header name and header value */
-			db_stmt_set_u64(s, 3, headervalue_id);
-			db_stmt_exec(s);
-			g_free(value);
-			headervalue_id=0;
-
+		if ((! value) || (strlen(value) == 0)) {
+			if (value) g_free(value);
+			continue;
 		}
-	CATCH(SQLException)
-		/* FIXME: There might need to be a check on which connection failed (???) */
-		LOG_SQLERROR;
-		t = TRUE;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
 
+		/* Fetch header value id if exists, else insert, and return new id */
+		_header_value_get_id(value, &headervalue_id);
+
+		g_free(value);
+
+		/* Insert relation between physmessage, header name and header value */
+		_header_insert(self->physid, headername_id, headervalue_id);
+
+		headervalue_id=0;
+
+	}
+	
 	g_tuples_destroy(values);
 	return t;
 }
@@ -1678,7 +1693,6 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		db_rollback_transaction(c);
 		TRACE(TRACE_ERR, "insert %sfield failed [%s] [%s]", field, name, addr);
 	FINALLY
 		db_con_close(c);

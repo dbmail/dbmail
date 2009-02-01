@@ -1074,7 +1074,7 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t *
 	char *frag;
 	INIT_QUERY;
 	assert(physmessage_id != NULL);
-	*physmessage_id = 0;
+	volatile u64_t id = 0;
 	
 	frag = db_returning("id");
 	if (internal_date != NULL) {
@@ -1094,12 +1094,20 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t *
 	c = db_con_get();
 	TRY
 		r = db_query(c, query);
-		*physmessage_id = db_insert_result(c, r);
+		id = db_insert_result(c, r);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
+
+	if (! id) {
+		TRACE(TRACE_ERR,"no physmessage_id [%llu]", id);
+		return DM_EQUERY;
+	} else {
+		*physmessage_id = id;
+		TRACE(TRACE_DEBUG,"new physmessage_id [%llu]", *physmessage_id);
+	}
 
 	return 1;
 }
@@ -2987,7 +2995,6 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 			}
 			db_commit_transaction(c);
 		CATCH(SQLException)
-			db_rollback_transaction(c);
 			t = DM_EQUERY;
 		FINALLY
 			db_con_close(c);
@@ -3024,7 +3031,6 @@ static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, 
 		CATCH(SQLException)
 			LOG_SQLERROR;
 			t = DM_EQUERY;
-			db_rollback_transaction(c);
 		FINALLY
 			db_con_close(c);
 		END_TRY;
