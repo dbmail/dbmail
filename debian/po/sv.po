@@ -1,0 +1,311 @@
+# translation of dbmail.po to swedish
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the dbmail package.
+#
+# Martin Bagge <brother@bsnet.se>, 2009.
+msgid ""
+msgstr ""
+"Project-Id-Version: dbmail\n"
+"Report-Msgid-Bugs-To: paul@nfg.nl\n"
+"POT-Creation-Date: 2007-02-28 18:17+0100\n"
+"PO-Revision-Date: 2009-01-31 03:59+0100\n"
+"Last-Translator: Martin Bagge <brother@bsnet.se>\n"
+"Language-Team: swedish <debian-l10n-swedish@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.11.4\n"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:1001
+msgid "Use debconf to manage dbmail configuration?"
+msgstr "Ska debconf användas för att göra inställningar för dbmail?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:1001
+msgid ""
+"Please confirm if you want to allow debconf to manage some parts of your "
+"dbmail configuration. Notice that changes you make to dbmail.conf by hand "
+"will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
+"dbmail."
+msgstr ""
+"Acceptera här om du vill att debconf ska hantera delar av dina dbmail-"
+"inställningar. Kom ihåg att förändringar i dina dbmail-inställningar som du "
+"gör manuellt kommer INTE att skrivas över om du kör \"dphg-reconfigure dbmail"
+"\" vid senare tillfälle."
+
+#. Type: select
+#. Description
+#: ../dbmail.templates:2001
+msgid "Authentication driver to activate:"
+msgstr "Rutin för identifiering som ska användas:"
+
+#. Type: select
+#. Description
+#: ../dbmail.templates:2001
+msgid ""
+"Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
+"instead."
+msgstr ""
+"Dbmail använder som standard en SQL-baserad identifieringsrutin. Du kan även "
+"använda LDAP."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid "Postmaster's email address:"
+msgstr "E-postadress för \"postmaster\":"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid ""
+"Please choose a valid email address read by the person responsible for this "
+"email server."
+msgstr ""
+"Ange en fungerande e-post-adress som läses av den person som är ansvarig för "
+"e-post-servern."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid "Example: postmaster@yourdomain.tld"
+msgstr "Exempel: postmaster@yourdomain.tld"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:4001
+msgid "Hostname of the SQL database server:"
+msgstr "Värdnamn för databasserver:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:4001
+msgid ""
+"Please mention the server where a database to hold dbmail's tables will be "
+"created. You should grant full read/write permissions on this database to "
+"the dbmail user."
+msgstr ""
+"Ange värdnamnet på den server som databasen för dbmails tabeller ska skapas "
+"på. Du ska ge dbmail-användaren kompletta rättigheter att läsa och skriva på "
+"den hör databasen."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "The name of the database:"
+msgstr "Namn på databasen:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "Please mention the name of the database that holds the dbmail tables."
+msgstr "Ange namnet på den databs som innehåller dbmails tabeller."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "If you're using sqlite, this should be the path to the database file."
+msgstr "Om du använder sqlite är detta sökvägen till databasfilen."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:6001
+msgid "Database user:"
+msgstr "Databasanvändare:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:6001
+msgid ""
+"Please mention the username dbmail will use to connect to the database "
+"server."
+msgstr ""
+"Ange namnet på den användare som dbmail ska använda för att ansluta till "
+"databasservern."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:7001
+msgid "Password for the database connection:"
+msgstr "Lösenord för databasanslutningen:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:7001
+msgid ""
+"Please mention the password dbmail will use to connect to the database "
+"server."
+msgstr ""
+"Ange lösenordet som dbmail ska använda för att ansluta till databasservern."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001
+msgid "Start the IMAP server after reboot?"
+msgstr "Starta IMAP-server efter systemets omstart?"
+
+#. Type: boolean
+#. Description
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001 ../dbmail.templates:10001
+msgid ""
+"Dbmail supports both IMAP and POP3 services. You can choose to run either "
+"one or both services."
+msgstr ""
+"Dbmail stödjer tjänsterna IMAP och POP3. Du kan ange att köra bara en av dem "
+"eller båda samtidigt."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:9001
+msgid "Start the LMTP server after reboot?"
+msgstr "Ska LMTP-servern startas efter systemets omstart?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:9001
+msgid ""
+"Please choose whether the LMTP server should be started after rebooting. "
+"This is only needed when you like to feed the email to Dbmail by LMTP."
+msgstr ""
+"Ange om LMTP-server ska startas när systemet startas om. Detta behövs bara "
+"om du vill kunna hämta mail till Dbmail med LMTP."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:10001
+msgid "Start the POP3 server after reboot?"
+msgstr "Start POP3-servern efter systemets omstart?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:11001
+msgid "Start the timsieve server after reboot?"
+msgstr "Starta timesieve-servern efter systemets omstart?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:11001
+msgid ""
+"Please choose whether the timsieve server should be started after rebooting. "
+"This is only needed if you want to allow users to manage their sieve scripts "
+"using a compatible client such as kmail, horde/ingo or squirrelmail/"
+"avelsieve."
+msgstr ""
+"Ange om timesieve-servern ska startas när systemet startats om. Detta behövs "
+"bara om du vill kunna tillåta användare att hantera sina sieveskript via en "
+"kompatibel klient, exempelvis kmail, horde/ingo eller squirrelmail/avelsieve."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:12001
+msgid "Port used by the LDAP server:"
+msgstr "Port för LDAP-server:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:12001
+msgid ""
+"Please enter the port which your LDAP server is listening on. The default "
+"port is 389."
+msgstr "Ange porten som din LDAP-server lyssnar på. Standardvärde är port 389."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:13001
+msgid "Hostname of the LDAP server:"
+msgstr "Värdnamn för LDAP-server:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:13001
+msgid "Please enter the name of the host your LDAP server is running at."
+msgstr "Ange värdnamnet där din LDAP-server körs."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:14001
+msgid "LDAP base DN:"
+msgstr "Bassökväg (DN för LDAP:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:14001
+msgid ""
+"Please enter the DN where Dbmail should start searching for user accounts."
+msgstr "Ange basnamnet (DN) som Dbmail ska använda för att söka efter konton:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:15001
+msgid "Field which contains the user login name of the user:"
+msgstr "Fält med användarnamn för användaren:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:15001
+msgid ""
+"Please enter the LDAP attribute that will contain the username. The standard "
+"account uses uid."
+msgstr ""
+"Ange LDAP-attributet som innehåller användarnamnet. Standardvärdet är uid."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:16001
+msgid "Field which contains the group id number of the user:"
+msgstr "Fält som innehåller gruppid för användaren:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:16001
+msgid ""
+"Please enter the LDAP attribute that will contain the group id number. The "
+"standard account uses gidNumber."
+msgstr ""
+"Ange LDAP-attributet som innehåller gruppid. Standardvärdet är gidNumber."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:17001
+msgid "Use an anonymous connection to the LDAP server?"
+msgstr "Använd anonym anslutning mot LDAP-servern?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:17001
+msgid ""
+"Please choose this option if the LDAP server does not require authentication "
+"to search the LDAP tree."
+msgstr ""
+"Ange detta alternativ om LDAP-servern inte kräver någon identifiering för "
+"sökningar i LDAP-trädet."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:18001
+msgid "DN used to bind to the LDAP server:"
+msgstr "Sökväg (DN) för att knyta anslutning till LDAP-server:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:18001
+msgid "Please enter the DN which should be used to connect to the LDAP server."
+msgstr "Ange sökvägen (DN) som ska användas för att ansluta till LDAP-servern."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:19001
+msgid "Password to bind to the LDAP server:"
+msgstr "Lösenord för att knyta anslutning till LDAP-servern:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:19001
+msgid ""
+"Please enter the password which should be used to connect to the LDAP server."
+msgstr "Ange lösenordet som ska användas för att ansluta till LDAP-servern:"
