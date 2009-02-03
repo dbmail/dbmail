@@ -446,4 +446,14 @@ CREATE TABLE dbmail_keywords (
 	CONSTRAINT dbmail_keywords_ibfk_1 FOREIGN KEY (message_idnr) REFERENCES dbmail_messages (message_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+DROP TABLE IF EXISTS dbmail_filters;
+CREATE TABLE dbmail_filters (
+	user_id      BIGINT NOT NULL,
+	id           BIGINT NOT NULL AUTO_INCREMENT,
+	headername   varchar(128) NOT NULL,
+	headervalue  varchar(255) NOT NULL,	
+	mailbox      varchar(100) NOT NULL,	
+	PRIMARY KEY (user_id, id),
+	FOREIGN KEY (user_id) REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

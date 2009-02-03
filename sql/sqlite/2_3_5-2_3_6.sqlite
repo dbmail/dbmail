@@ -173,3 +173,60 @@ delete from dbmail_tofield;
 
 commit;
 
+BEGIN TRANSACTION;
+
+DROP TABLE IF EXISTS dbmail_filters;
+
+CREATE TABLE dbmail_filters (
+	id           INTEGER PRIMARY KEY,
+	user_id      INTEGER NOT NULL,
+	headername   TEXT NOT NULL,
+	headervalue  TEXT NOT NULL,	
+	mailbox      TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX dbmail_filters_index_1 ON dbmail_filters(user_id, id);
+
+
+--
+-- table_a.key_a references table_b(key_b) 
+--   on update cascade 
+--   on delete cascade
+--
+DROP TRIGGER IF EXISTS fk_insert_filters_users_user_idnr;
+CREATE TRIGGER fk_insert_filters_users_user_idnr
+	BEFORE INSERT ON dbmail_filters
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_filters" violates foreign key constraint "fk_insert_filters_users_user_idnr"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update_filters_users_user_idnr;
+CREATE TRIGGER fk_update_filters_users_user_idnr
+	BEFORE UPDATE ON dbmail_filters
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_filters" violates foreign key constraint "fk_update_filters_users_user_idnr"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update2_filters_users_user_idnr;
+CREATE TRIGGER fk_update2_filters_users_user_idnr
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_filters SET user_id = new.user_idnr WHERE user_id = OLD.user_idnr;
+	END;
+
+DROP TRIGGER IF EXISTS fk_delete_filters_users_user_idnr;
+CREATE TRIGGER fk_delete_filters_users_user_idnr
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_filters WHERE user_id = OLD.user_idnr;
+	END;
+
+COMMIT;
