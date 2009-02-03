@@ -313,8 +313,9 @@ gboolean db_exec(C c, const char *q, ...)
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
 		gettimeofday(&before, NULL);
-		result = Connection_execute(c, query);
+		Connection_execute(c, query);
 		gettimeofday(&after, NULL);
+		result = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		TRACE(TRACE_ERR,"failed query [%s]", query);
@@ -396,26 +397,31 @@ S db_stmt_prepare(C c, const char *q, ...)
 int db_stmt_set_str(S s, int index, const char *x)
 {
 	TRACE(TRACE_DATABASE,"[%p] %d:[%s]", s, index, x);
-	return PreparedStatement_setString(s, index, x);
+	PreparedStatement_setString(s, index, x);
+	return TRUE;
 }
 int db_stmt_set_int(S s, int index, int x)
 {
 	TRACE(TRACE_DATABASE,"[%p] %d:[%d]", s, index, x);
-	return PreparedStatement_setInt(s, index, x);
+	PreparedStatement_setInt(s, index, x);
+	return TRUE;
 }
 int db_stmt_set_u64(S s, int index, u64_t x)
 {	
 	TRACE(TRACE_DATABASE,"[%p] %d:[%llu]", s, index, x);
-	return PreparedStatement_setLLong(s, index, (long long)x);
+	PreparedStatement_setLLong(s, index, (long long)x);
+	return TRUE;
 }
 int db_stmt_set_blob(S s, int index, const void *x, int size)
 {
 //	TRACE(TRACE_DATABASE,"[%p] %d:[%s]", s, index, (const char *)x);
-	return PreparedStatement_setBlob(s, index, x, size);
+	PreparedStatement_setBlob(s, index, x, size);
+	return TRUE;
 }
 gboolean db_stmt_exec(S s)
 {
-	return PreparedStatement_execute(s);
+	PreparedStatement_execute(s);
+	return TRUE;
 }
 R db_stmt_query(S s)
 {
@@ -478,18 +484,14 @@ u64_t db_insert_result(C c, R r)
 int db_begin_transaction(C c)
 {
 	TRACE(TRACE_DATABASE,"BEGIN");
-	if (! Connection_beginTransaction(c))
-		return DM_EQUERY;
+	Connection_beginTransaction(c);
 	return DM_SUCCESS;
 }
 
 int db_commit_transaction(C c)
 {
 	TRACE(TRACE_DATABASE,"COMMIT");
-	if (! Connection_commit(c)) {
-		db_rollback_transaction(c);
-		return DM_EQUERY;
-	}
+	Connection_commit(c);
 	return DM_SUCCESS;
 }
 
@@ -497,8 +499,7 @@ int db_commit_transaction(C c)
 int db_rollback_transaction(C c)
 {
 	TRACE(TRACE_DATABASE,"ROLLBACK");
-	if (! Connection_rollback(c))
-		return DM_EQUERY;
+	Connection_rollback(c);
 	return DM_SUCCESS;
 }
 
