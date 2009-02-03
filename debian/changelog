@@ -1,8 +1,10 @@
 dbmail (2.2.11-1) unstable; urgency=low
 
   * upstream release
+  * add swedish PO file (Closes: #513652)
+  * fix ftbfs on hurd (Closes: #481268)
 
- -- Paul J Stevens <paul@nfg.nl>  Mon, 02 Feb 2009 15:21:31 +0100
+ -- Paul J Stevens <paul@nfg.nl>  Mon, 02 Feb 2009 16:33:50 +0100
 
 dbmail (2.2.10-1) unstable; urgency=low
 

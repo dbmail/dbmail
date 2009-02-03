@@ -1,2 +1,4 @@
 usr/lib
 usr/share/dbmail
+var/log/dbmail
+var/run/dbmail

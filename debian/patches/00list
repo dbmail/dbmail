@@ -2,6 +2,7 @@
 # 
 # paths and effective user/group
 00-dbmail_conf
+01-sa-siginfo-undeclared
 
 # etch
 #00-etch

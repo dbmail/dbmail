@@ -1,0 +1,128 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 01-sa-siginfo-undeclared.dpatch by  <paul@nfg.nl>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: fix FTBFS on Hurd due to missing SA_SIGINFO
+
+@DPATCH@
+diff -urNad dbmail-2.2.11~/server.c dbmail-2.2.11/server.c
+--- dbmail-2.2.11~/server.c	2009-02-02 15:21:55.000000000 +0100
++++ dbmail-2.2.11/server.c	2009-02-02 16:32:12.000000000 +0100
+@@ -44,7 +44,7 @@
+ ChildInfo_t childinfo;
+ 
+ /* some extra prototypes (defintions are below) */
+-static void ParentSigHandler(int sig, siginfo_t * info, void *data);
++static void ParentSigHandler(int sig);
+ static int SetParentSigHandler(void);
+ static int server_setup(serverConfig_t *conf);
+ 
+@@ -59,11 +59,11 @@
+ 
+ 	act.sa_sigaction = ParentSigHandler;
+ 	sigemptyset(&act.sa_mask);
+-	act.sa_flags = SA_SIGINFO;
++	act.sa_flags = 0;
+ 
+ 	sact.sa_sigaction = ParentSigHandler;
+ 	sigemptyset(&sact.sa_mask);
+-	sact.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
++	sact.sa_flags = SA_NOCLDSTOP;
+ 
+ 	sigaction(SIGCHLD,	&sact, 0);
+ 	sigaction(SIGINT,	&sact, 0);
+@@ -329,7 +329,7 @@
+ 	return result;
+ }
+ 
+-void ParentSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
++void ParentSigHandler(int sig)
+ {
+ 	int saved_errno = errno;
+ 	Restart = 0;
+diff -urNad dbmail-2.2.11~/serverchild.c dbmail-2.2.11/serverchild.c
+--- dbmail-2.2.11~/serverchild.c	2009-02-02 15:21:55.000000000 +0100
++++ dbmail-2.2.11/serverchild.c	2009-02-02 16:32:12.000000000 +0100
+@@ -68,13 +68,13 @@
+ 	connected = 0;
+ }
+ 
+-void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
++void noop_child_sig_handler(int sig)
+ {
+ 	if (sig == SIGSEGV)
+ 		_exit(0);
+ }
+ 
+-void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
++void active_child_sig_handler(int sig)
+ {
+ 	int saved_errno = errno;
+ 	
+@@ -122,11 +122,11 @@
+ 
+ 	act.sa_sigaction = active_child_sig_handler;
+ 	sigemptyset(&act.sa_mask);
+-	act.sa_flags = SA_SIGINFO;
++	act.sa_flags = 0;
+ 
+ 	rstact.sa_sigaction = active_child_sig_handler;
+ 	sigemptyset(&rstact.sa_mask);
+-	rstact.sa_flags = SA_SIGINFO | SA_RESETHAND;
++	rstact.sa_flags = SA_RESETHAND;
+ 
+ 	sigaddset(&act.sa_mask, SIGINT);
+ 	sigaddset(&act.sa_mask, SIGQUIT);
+@@ -162,7 +162,7 @@
+ 
+ 	act.sa_sigaction = noop_child_sig_handler;
+ 	sigemptyset(&act.sa_mask);
+-	act.sa_flags = SA_SIGINFO;
++	act.sa_flags = 0;
+ 
+ 	sigaction(SIGINT,	&act, 0);
+ 	sigaction(SIGQUIT,	&act, 0);
+diff -urNad dbmail-2.2.11~/serverchild.h dbmail-2.2.11/serverchild.h
+--- dbmail-2.2.11~/serverchild.h	2009-02-02 15:21:55.000000000 +0100
++++ dbmail-2.2.11/serverchild.h	2009-02-02 16:32:12.000000000 +0100
+@@ -30,8 +30,8 @@
+ 
+ #include "dbmail.h"
+ 
+-void active_child_sig_handler(int sig, siginfo_t *info, void *data);
+-void noop_child_sig_handler(int sig, siginfo_t *info, void *data);
++void active_child_sig_handler(int sig);
++void noop_child_sig_handler(int sig);
+ int SetChildSigHandler(void);
+ int DelChildSigHandler(void);
+ pid_t CreateChild(ChildInfo_t * info);
+diff -urNad dbmail-2.2.11~/serverparent.c dbmail-2.2.11/serverparent.c
+--- dbmail-2.2.11~/serverparent.c	2009-02-02 15:21:55.000000000 +0100
++++ dbmail-2.2.11/serverparent.c	2009-02-02 16:32:12.000000000 +0100
+@@ -47,7 +47,7 @@
+ int quiet = 0;
+ 
+ static int SetMainSigHandler(void);
+-static void MainSigHandler(int sig, siginfo_t * info, void *data);
++static void MainSigHandler(int sig);
+ static void ClearConfig(serverConfig_t * conf);
+ static void DoConfig(serverConfig_t * conf, const char * const service);
+ static void LoadServerConfig(serverConfig_t * config, const char * const service);
+@@ -182,7 +182,7 @@
+ 	return 0;
+ }
+ 
+-void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
++void MainSigHandler(int sig)
+ {
+ 	mainSig = sig;
+ 
+@@ -203,7 +203,7 @@
+ 
+ 	act.sa_sigaction = MainSigHandler;
+ 	sigemptyset(&act.sa_mask);
+-	act.sa_flags = SA_SIGINFO;
++	act.sa_flags = 0;
+ 
+ 	sigaction(SIGINT, &act, 0);
+ 	sigaction(SIGQUIT, &act, 0);

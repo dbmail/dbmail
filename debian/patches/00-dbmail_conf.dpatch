@@ -2,7 +2,7 @@
 ## 00-dbmail_conf.dpatch by  <paul@nfg.nl>
 ##
 ## All lines beginning with `## DP:' are a description of the patch.
-## DP: No description.
+## DP: prepare a sane debian compliant config file
 
 @DPATCH@
 diff -urNad dbmail-2.2.5~/dbmail.conf dbmail-2.2.5/dbmail.conf
