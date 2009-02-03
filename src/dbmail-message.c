@@ -1599,13 +1599,14 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	GTuples *values;
 	unsigned char *raw;
 	unsigned i;
-	volatile gboolean t = TRUE;
 	volatile gboolean isaddr = 0;
 	const char *charset = dbmail_message_get_charset(self);
 
 	/* skip headernames with spaces like From_ */
 	if (strchr(header, ' '))
 		return FALSE;
+
+	TRACE(TRACE_DEBUG,"headername [%s]", header);
 
 	if ((_header_name_get_id(self, header, &headername_id) < 0))
 		return TRUE;
@@ -1624,7 +1625,6 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		isaddr=1;
 
 	values = g_relation_select(self->headers,header,0);
-
 
 	for (i=0; i<values->len;i++) {
 		char *value = NULL;
@@ -1651,7 +1651,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	}
 	
 	g_tuples_destroy(values);
-	return t;
+	return FALSE;
 }
 
 static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist, const DbmailMessage *self)
