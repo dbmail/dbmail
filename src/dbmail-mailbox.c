@@ -1360,7 +1360,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_HDR:
 			
 			memset(partial,0,sizeof(partial));
-			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.value");
+			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 				"JOIN %sphysmessage p ON m.physmessage_id=p.id "
 				"JOIN %sheader h ON h.physmessage_id=p.id "
@@ -1387,8 +1387,8 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 
 			memset(partial,0,sizeof(partial));
 			g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "k.data");
-			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.value");
-			g_string_printf(q,"SELECT m.message_idnr, v.value, k.data "
+			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
+			g_string_printf(q,"SELECT m.message_idnr, v.headervalue, k.data "
 					"FROM %smimeparts k "
 					"JOIN %spartlists l ON k.id=l.part_id "
 					"JOIN %sphysmessage p ON l.physmessage_id=p.id "
@@ -1396,7 +1396,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"JOIN %sheadervalue v ON h.headervalue_id=v.id "
 					"JOIN %smessages m ON m.physmessage_id=p.id "
 					"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
-					"GROUP BY m.message_idnr, v.value, k.data "
+					"GROUP BY m.message_idnr, v.headervalue, k.data "
 					"HAVING %s %s ? OR %s %s ? "
 					"ORDER BY m.message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,

@@ -2721,7 +2721,7 @@ int db_mailbox_has_message_id(u64_t mailbox_idnr, const char *messageid)
 	g_return_val_if_fail(messageid!=NULL,0);
 
 	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), EXPIRE_DAYS);
-	snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.value");
+	snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT m.message_idnr "
 		"FROM %smessages m "
