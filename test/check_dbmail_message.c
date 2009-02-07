@@ -108,32 +108,45 @@ START_TEST(test_dbmail_message_get_class)
 	dbmail_message_free(m);
 }
 END_TEST
+static char * showdiff(const char *a, const char *b)
+{
+	assert(a && b);
+	while (*a++ == *b++)
+		;
+	if (--a && --b)
+		return g_strdup_printf("[%s]\n[%s]\n", a, b);
+	return NULL;
+}
 
 FILE *i;
 #define COMPARE(a,b) \
-	unlink("/tmp/test1.txt"); unlink("/tmp/test2.txt"); \
-	i = fopen("/tmp/test1.txt","w"); \
-	fputs((char *)(a), i); \
-	fclose(i);\
-	i = fopen("/tmp/test2.txt","w"); \
-	fputs((char *)(b), i); \
-	fclose(i); \
-	fail_unless(strcmp((a),(b)) == 0, "store store/retrieve failed. run: \n diff -y /tmp/test1.txt /tmp/test2.txt");
+	{ \
+	int d; size_t l;\
+	l = strlen(a); \
+	d = memcmp((a),(b),l); \
+	fail_unless(d == 0, "store store/retrieve failed\n%s\n\n", showdiff(a,b)); \
+	}
 
-
-START_TEST(test_dbmail_message_store)
+static DbmailMessage  * message_init(const char *message)
 {
-	DbmailMessage *m, *n;
-	u64_t physid;
 	GString *s;
-	char *t;
-	char *expect;
+	DbmailMessage *m;
 
-	s = g_string_new(multipart_message);
+	s = g_string_new(message);
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, s);
-	expect = dbmail_message_to_string(m);
+	g_string_free(s,TRUE);
+
 	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
+
+	return m;
+
+}
+static char *store_and_retrieve(DbmailMessage *m)
+{
+	u64_t physid;
+	DbmailMessage *n;
+	char *t;
 
 	dbmail_message_store(m);
 	physid = dbmail_message_get_physid(m);
@@ -146,122 +159,113 @@ START_TEST(test_dbmail_message_store)
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
-
-	COMPARE(expect,t);
-
 	dbmail_message_free(n);
-	g_string_free(s,TRUE);
-	g_free(t);
+	return t;
+}
 
-	return;
-	//
+START_TEST(test_dbmail_message_store)
+{
+	DbmailMessage *m;
+	char *t, *e;
+
 	//-----------------------------------------
-	//
-	s = g_string_new(simple);
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, s);
-	expect = dbmail_message_to_string(m);
-	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
-
-	dbmail_message_store(m);
-	physid = dbmail_message_get_physid(m);
-	dbmail_message_free(m);
-
-	n = dbmail_message_new();
-	dbmail_message_set_physid(n, physid);
-	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_FULL);
-	fail_unless(n != NULL, "_mime_retrieve failed");
-	
-	t = dbmail_message_to_string(n);
-	COMPARE(expect,t);
-
-	dbmail_message_free(n);
-	g_string_free(s,TRUE);
-	g_free(expect);
+	m = message_init(simple);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
 	g_free(t);
-
-
-	//
 	//-----------------------------------------
-	//
-	s = g_string_new(rfc822);
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, s);
-	expect = dbmail_message_to_string(m);
-	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
-
-	dbmail_message_store(m);
-	physid = dbmail_message_get_physid(m);
-	dbmail_message_free(m);
-
-	n = dbmail_message_new();
-	dbmail_message_set_physid(n, physid);
-	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_FULL);
-	fail_unless(n != NULL, "_mime_retrieve failed");
-		
-	t = dbmail_message_to_string(n);
-	COMPARE(expect,t);
-
-	dbmail_message_free(n);
-	g_string_free(s,TRUE);
-	g_free(expect);
+	m = message_init(rfc822);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
 	g_free(t);
-
-	//
 	//-----------------------------------------
-	//
-	s = g_string_new(multipart_mixed);
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, s);
-	expect = dbmail_message_to_string(m);
-	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
-
-	dbmail_message_store(m);
-	physid = dbmail_message_get_physid(m);
-	dbmail_message_free(m);
-
-	n = dbmail_message_new();
-	dbmail_message_set_physid(n, physid);
-	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_FULL);
-	fail_unless(n != NULL, "_mime_retrieve failed");
-	
-	t = dbmail_message_to_string(n);
-
-	COMPARE(expect,t);
-	
-	dbmail_message_free(n);
-	g_string_free(s,TRUE);
-	g_free(expect);
+	m = message_init(multipart_message);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
 	g_free(t);
-	//
 	//-----------------------------------------
-	//
-	//
-	s = g_string_new(broken_message);
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, s);
-	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
-
-	expect = dbmail_message_to_string(m);
-
-	dbmail_message_store(m);
-	physid = dbmail_message_get_physid(m);
-	dbmail_message_free(m);
-
-	n = dbmail_message_new();
-	dbmail_message_set_physid(n, physid);
-	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_FULL);
-	fail_unless(n != NULL, "_mime_retrieve failed");
-		
-	t = dbmail_message_to_string(n);
-
+	m = message_init(multipart_message2);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(multipart_mixed);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(broken_message);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
 	//COMPARE(expect,t);
-
-	dbmail_message_free(n);
-	g_string_free(s,TRUE);
-	g_free(expect);
+	g_free(e);
 	g_free(t);
-
+	//-----------------------------------------
+	m = message_init(encoded_message_latin_1);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(encoded_message_latin_2);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(encoded_message_utf8);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(encoded_message_koi);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(raw_message_koi);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(multipart_alternative);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(outlook_multipart);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
+	m = message_init(multipart_alternative2);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
 }
 END_TEST
 
@@ -866,7 +870,6 @@ Suite *dbmail_message_suite(void)
 	suite_add_tcase(s, tc_message);
 	tcase_add_checked_fixture(tc_message, setup, teardown);
 	
-
 	tcase_add_test(tc_message, test_dbmail_message_new);
 	tcase_add_test(tc_message, test_dbmail_message_new_from_stream);
 	tcase_add_test(tc_message, test_dbmail_message_set_class);

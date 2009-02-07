@@ -367,7 +367,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if (depth>0 && blist[depth-1])
 				boundary = (char *)blist[depth-1];
 
-			if (is_header && (!prev_header|| prev_boundary)) {
+			if (is_header && (!prev_header || prev_boundary)) {
 				dprint("\n--%s\n", boundary);
 				g_string_append_printf(m, "\n--%s\n", boundary);
 			}
