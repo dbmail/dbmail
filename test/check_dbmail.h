@@ -450,10 +450,10 @@ char *encoded_message_koi = "From: =?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=
 
 char *raw_message_koi = "From: test@test\n"
 	"To: test@foo.com\n"
-	"Subject: проверка koi8-r текста\n"
+	"Subject: ц░ц▓ц▐ц≈ц┘ц▓ц▀ц│ koi8-r ц■ц┘ц▀ц⌠ц■ц│\n"
 	"Message-Id: <1199706209l.3020l.6l@(none)>\n"
 	"\n"
-	"Привет всем\n"
+	"ц╟ц▓ц┴ц≈ц┘ц■ ц≈ц⌠ц┘ц█\n"
 	"\n";
 
 char *encoded_message_latin_1 = "From: =?iso-8859-1?Q?B=BA_V._F._Z=EAzere?= <nobody@nowhere.org>\n"
@@ -487,6 +487,22 @@ char *encoded_message_utf8 = "From: nobody@nowhere.org\n"
 	"\n"
 	"test\n\n";
 
+char *encoded_message_utf8_2 = "X-Mozilla-Status: 0001\n"
+	"X-Mozilla-Status2: 00800000\n"
+	"X-Mozilla-Keys:                                                                                 \n"
+	"Message-ID: <49772E96.2000304@hidden.ru>\n"
+	"Date: Wed, 21 Jan 2009 17:17:58 +0300\n"
+	"From: =?UTF-8?B?0JzQsNC60YHQuNC8INCf0L7QtNC+0YDQvtCy?=\n"
+	" <podorov@hidden.ru>\n"
+	"User-Agent: Thunderbird 2.0.0.19 (Windows/20081209)\n"
+	"MIME-Version: 1.0\n"
+	"To: =?UTF-8?B?0JzQsNC60YHQuNC8INCf0L7QtNC+0YDQvtCy?= <podorov@hidden.ru>\n"
+	"Subject: =?UTF-8?B?0YLQtdGB0YI=?=\n"
+	"Content-Type: text/plain; charset=UTF-8; format=flowed\n"
+	"Content-Transfer-Encoding: 8bit\n"
+	"\n"
+	"я┌п╣я│я┌\n"
+	"\n";
 
 char *multipart_mixed = "Received: from RAIVO (raivo.kisise [192.168.111.49])\n"
 	"	by test.kisise (Postfix) with ESMTP id 5C4981214C\n"

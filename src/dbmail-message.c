@@ -856,7 +856,7 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 			// adding a header will prime the gmime message structure, but we want
 			// to add an innocuous header
-			dbmail_message_set_header(self,"MIME-Version","1.0"); 
+//			dbmail_message_set_header(self,"MIME-Version","1.0"); 
 			if (from) {
 				dbmail_message_set_internal_date(self, from);
 				g_free(from);
@@ -894,8 +894,8 @@ static void _map_headers(DbmailMessage *self)
 		char *type = NULL;
 
 		// this is needed to correctly initialize gmime's mime iterator
-		if (GMIME_MESSAGE(self->content)->mime_part)
-			g_mime_header_set_raw (GMIME_MESSAGE(self->content)->mime_part->headers, NULL);
+//		if (GMIME_MESSAGE(self->content)->mime_part)
+//			g_mime_header_set_raw (GMIME_MESSAGE(self->content)->mime_part->headers, NULL);
 
 		/* make sure the message has a message-id, else threading breaks */
 		if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {

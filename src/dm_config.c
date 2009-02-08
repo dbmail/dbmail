@@ -330,10 +330,11 @@ void GetDBParams(void)
 
 	/* check if port_string holds a value */
 	if (strlen(port_string) != 0) {
+		errno = 0;
 		_db_params.port =
 		    (unsigned int) strtoul(port_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			TRACE(TRACE_EMERG, "wrong value for sqlport in config file");
+			TRACE(TRACE_EMERG, "wrong value for sqlport in config file [%s]", strerror(errno));
 	} else
 		_db_params.port = 0;
 
