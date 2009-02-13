@@ -30,15 +30,20 @@
 #include "config.h"
 #endif
 
-#ifdef __FreeBSD__
-#define _XOPEN_SOURCE
-#else
-#define _XOPEN_SOURCE	500
-#endif
-
 #define __EXTENSIONS__ /* solaris */
 
+#if defined(__FreeBSD__) || defined(__APPLE__)
+
+#define _XOPEN_SOURCE
+
+#else
+
+#define _XOPEN_SOURCE	500
 #include <features.h>
+
+#endif
+
+
 #include <assert.h>
 #include <arpa/inet.h>
 #include <ctype.h>
