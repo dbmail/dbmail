@@ -80,7 +80,9 @@ void cmd_free(cmd_t *cmd)
 	D->session->command_state = TRUE; \
 	g_mutex_unlock(D->session->mutex); \
 	g_async_queue_push(queue, (gpointer)D); \
-	if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1); \
+	if (selfpipe[1] > -1) { \
+		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } \
+	} \
 	return;
 
 #define IC_DONE_OK \
