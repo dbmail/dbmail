@@ -271,6 +271,16 @@ fi
 ])
 
 AC_DEFUN([DM_CHECK_ZDB], [dnl
+
+	AC_ARG_WITH(zdb,[  --with-zdb=PATH	  path to libzdb base directory (e.g. /usr/local or /usr)],
+		[lookforzdb="$withval"],[lookforzdb="no"])
+
+	if test [ "x$lookforzdb" = "xno" ] ; then
+		CFLAGS="$CFLAGS -I${prefix}/include/zdb"
+	else
+		CFLAGS="$CFLAGS -I${lookforzdb}/include/zdb"
+	fi
+
 	AC_CHECK_HEADERS([URL.h ResultSet.h PreparedStatement.h Connection.h ConnectionPool.h SQLException.h],
 		[ZDBLIB="-lzdb"], 
 		[ZDBLIB="failed"],
@@ -408,7 +418,7 @@ else
 		LDFLAGS="$LDFLAGS $ac_gmime_libs"
         	AC_MSG_RESULT([$ac_gmime_libs])
 	fi
-	ac_gmime_minvers="2.2.22"
+	ac_gmime_minvers="2.2.21"
 	AC_MSG_CHECKING([GMime version >= $ac_gmime_minvers])
 	ac_gmime_vers=`${gmimeconfig}  --atleast-version=$ac_gmime_minvers gmime-2.0 && echo yes`
 	if test -z "$ac_gmime_vers"
