@@ -1073,28 +1073,25 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t *
 {
 	C c; R r;
 	char *frag;
-	INIT_QUERY;
 	assert(physmessage_id != NULL);
 	volatile u64_t id = 0;
 	
-	frag = db_returning("id");
-	if (internal_date != NULL) {
-		field_t to_date_str;
-		char2date_str(internal_date, &to_date_str);
-		snprintf(query, DEF_QUERYSIZE,
-			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
-			 "VALUES (0, %s) %s", DBPFX,to_date_str, frag);
-	} else {
-		snprintf(query, DEF_QUERYSIZE,
-			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
-			 "VALUES (0, %s) %s", 
-			DBPFX,db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
-	}
-	g_free(frag);	
-
 	c = db_con_get();
 	TRY
-		r = db_query(c, query);
+		frag = db_returning("id");
+		if (internal_date != NULL) {
+			field_t to_date_str;
+			char2date_str(internal_date, &to_date_str);
+			r = db_query(c, "INSERT INTO %sphysmessage (messagesize, internal_date) "
+				 "VALUES (0, %s) %s", 
+				DBPFX, to_date_str, frag);
+		} else {
+			r = db_query(c, "INSERT INTO %sphysmessage (messagesize, internal_date) "
+				 "VALUES (0, %s) %s", 
+				DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
+		}
+		g_free(frag);	
+
 		id = db_insert_result(c, r);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -2017,7 +2014,6 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 	int n_rows = 0;
 	S stmt;
 	int prml;
-	INIT_QUERY;
 	
 	assert(mailboxes != NULL);
 	*mailboxes = NULL;
@@ -2765,6 +2761,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	u64_t msgsize;
 	char *frag;
 	int valid=FALSE;
+	char unique_id[UID_SIZE];
 
 	/* Get the size of the message to be copied. */
 	if (! (msgsize = message_get_size(msg_idnr))) {
@@ -2783,9 +2780,10 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 
 	/* Copy the message table entry of the message. */
 	frag = db_returning("message_idnr");
+	memset(unique_id,0,sizeof(unique_id));
+
 	c = db_con_get();
 	TRY
-		char unique_id[UID_SIZE];
 		create_unique_id(unique_id, msg_idnr);
 		r = db_query(c, "INSERT INTO %smessages ("
 			"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"

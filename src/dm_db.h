@@ -41,9 +41,7 @@
 #define CONFIG_EMPTY 0
 
 #define INIT_QUERY \
-       static int bufno; \
-       static char qbuffer[8][DEF_QUERYSIZE]; \
-       char *query = qbuffer[7 & ++bufno]; \
+       char query[DEF_QUERYSIZE]; \
        memset(query,0,DEF_QUERYSIZE)
 
 #define P ConnectionPool_T

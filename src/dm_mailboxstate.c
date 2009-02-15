@@ -438,10 +438,11 @@ static int db_getmailbox_seq(T M)
 			if (! M->name)
 				M->name = g_strdup(db_result_get(r, 0));
 			M->seq = db_result_get_u64(r,1);
+			TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
 		} else {
+			TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%llu]", M->id);
 			t = DM_EQUERY;
 		}
-		TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		M->seq = 0;

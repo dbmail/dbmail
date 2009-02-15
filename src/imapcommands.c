@@ -849,65 +849,66 @@ void _ic_list_enter(dm_thread_data *D)
 		gboolean show = FALSE;
 
 		u64_t mailbox_id = *(u64_t *)children->data;
-		M = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id);
+		if ((M = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id)) != NULL) {
 
-		/* Enforce match of mailbox to pattern. */
-		if (! listex_match(pattern, MailboxState_getName(M), MAILBOX_SEPARATOR, 0)) {
-			if (g_str_has_suffix(pattern,"%")) {
-				/*
-				   If the "%" wildcard is the last character of a mailbox name argument, matching levels
-				   of hierarchy are also returned.  If these levels of hierarchy are not also selectable 
-				   mailboxes, they are returned with the \Noselect mailbox name attribute
-				 */
+			/* Enforce match of mailbox to pattern. */
+			if (! listex_match(pattern, MailboxState_getName(M), MAILBOX_SEPARATOR, 0)) {
+				if (g_str_has_suffix(pattern,"%")) {
+					/*
+					   If the "%" wildcard is the last character of a mailbox name argument, matching levels
+					   of hierarchy are also returned.  If these levels of hierarchy are not also selectable 
+					   mailboxes, they are returned with the \Noselect mailbox name attribute
+					 */
 
-				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", MailboxState_getName(M), pattern);
-				char *m = NULL, **p = g_strsplit(MailboxState_getName(M),MAILBOX_SEPARATOR,0);
-				int l = g_strv_length(p);
-				while (l > 1) {
-					if (p[l]) {
-						g_free(p[l]);
-						p[l] = NULL;
+					TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", MailboxState_getName(M), pattern);
+					char *m = NULL, **p = g_strsplit(MailboxState_getName(M),MAILBOX_SEPARATOR,0);
+					int l = g_strv_length(p);
+					while (l > 1) {
+						if (p[l]) {
+							g_free(p[l]);
+							p[l] = NULL;
+						}
+						m = g_strjoinv(MAILBOX_SEPARATOR,p);
+						TRACE(TRACE_DEBUG,"test if [%s] matches [%s]", m, pattern);
+						if (listex_match(pattern, m, MAILBOX_SEPARATOR, 0)) {
+							MailboxState_setName(M, m);
+							MailboxState_setNoSelect(M, TRUE);
+							MailboxState_setNoChildren(M, FALSE);
+							show = TRUE;
+							break;
+						}
+						g_free(m);
+						l--;
 					}
-					m = g_strjoinv(MAILBOX_SEPARATOR,p);
-					TRACE(TRACE_DEBUG,"test if [%s] matches [%s]", m, pattern);
-					if (listex_match(pattern, m, MAILBOX_SEPARATOR, 0)) {
-						MailboxState_setName(M, m);
-						MailboxState_setNoSelect(M, TRUE);
-						MailboxState_setNoChildren(M, FALSE);
-						show = TRUE;
-						break;
-					}
-					g_free(m);
-					l--;
+					g_strfreev(p);
 				}
-				g_strfreev(p);
+			} else {
+				show = TRUE;
 			}
-		} else {
-			show = TRUE;
-		}
 
-		if (show && MailboxState_getName(M) && (! g_tree_lookup(shown, MailboxState_getName(M)))) {
-			char *s = g_strdup(MailboxState_getName(M));
-			TRACE(TRACE_DEBUG,"[%s]", s);
-			g_tree_insert(shown, s, s);
-		
-			plist = NULL;
-			if (MailboxState_noSelect(M))
-				plist = g_list_append(plist, g_strdup("\\noselect"));
-			if (MailboxState_noInferiors(M))
-				plist = g_list_append(plist, g_strdup("\\noinferiors"));
-			if (MailboxState_noChildren(M))
-				plist = g_list_append(plist, g_strdup("\\hasnochildren"));
-			else
-				plist = g_list_append(plist, g_strdup("\\haschildren"));
+			if (show && MailboxState_getName(M) && (! g_tree_lookup(shown, MailboxState_getName(M)))) {
+				char *s = g_strdup(MailboxState_getName(M));
+				TRACE(TRACE_DEBUG,"[%s]", s);
+				g_tree_insert(shown, s, s);
 			
-			/* show */
-			pstring = dbmail_imap_plist_as_string(plist);
-			dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", self->command, 
-					pstring, MAILBOX_SEPARATOR, MailboxState_getName(M));
-			
-			g_list_destroy(plist);
-			g_free(pstring);
+				plist = NULL;
+				if (MailboxState_noSelect(M))
+					plist = g_list_append(plist, g_strdup("\\noselect"));
+				if (MailboxState_noInferiors(M))
+					plist = g_list_append(plist, g_strdup("\\noinferiors"));
+				if (MailboxState_noChildren(M))
+					plist = g_list_append(plist, g_strdup("\\hasnochildren"));
+				else
+					plist = g_list_append(plist, g_strdup("\\haschildren"));
+				
+				/* show */
+				pstring = dbmail_imap_plist_as_string(plist);
+				dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", self->command, 
+						pstring, MAILBOX_SEPARATOR, MailboxState_getName(M));
+				
+				g_list_destroy(plist);
+				g_free(pstring);
+			}
 		}
 
 		if (! g_list_next(children)) break;

@@ -1478,64 +1478,48 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 	return 1;
 }
 
-static u64_t _header_value_exists(const char *value, const char *hash)
+static u64_t _header_value_exists(C c, const char *value, const char *hash)
 {
-	C c; R r; S s;
+	R r;
 	u64_t id = 0; const char *data; size_t buflen;
 	int l;
 
 	buflen = strlen(value);
 
-	c = db_con_get();
-	TRY
-		s = db_stmt_prepare(c, "SELECT id,headervalue FROM %sheadervalue WHERE hash=?", DBPFX);
-		db_stmt_set_str(s,1,hash);
-		r = db_stmt_query(s);
-
-		while (db_result_next(r)) {
-			u64_t i = db_result_get_u64(r,0);
-			data = (char *)db_result_get_blob(r, 1, &l);
-			assert(data);
-			if (memcmp((gconstpointer)value, (gconstpointer)data, buflen)==0) {
-				id = i;
-				break;
-			}
+	r = db_query(c, "SELECT id,headervalue FROM %sheadervalue WHERE hash='%s'", DBPFX, hash);
+	while (db_result_next(r)) {
+		u64_t i = db_result_get_u64(r,0);
+		data = (char *)db_result_get_blob(r, 1, &l);
+		assert(data);
+		if (memcmp((gconstpointer)value, (gconstpointer)data, buflen)==0) {
+			id = i;
+			break;
 		}
-
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
+	}
 
 	return id;
 
 }
 
-static u64_t _header_value_insert(const char *value, const char *hash)
+static u64_t _header_value_insert(C c, const char *value, const char *hash)
 {
-	C c; R r; S s;
+	R r; S s;
 	u64_t id = 0;
 	char *frag;
 
-	c = db_con_get();
+	db_con_clear(c);
 
-	TRY
+	frag = db_returning("id");
+	s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue) VALUES (?,?) %s", DBPFX, frag);
+	g_free(frag);
 
-		frag = db_returning("id");
-		s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue) VALUES (?,?) %s", DBPFX, frag);
-		g_free(frag);
+	db_stmt_set_str(s, 1, hash);
+	db_stmt_set_blob(s, 2, value, strlen(value));
 
-		db_stmt_set_str(s, 1, hash);
-		db_stmt_set_blob(s, 2, value, strlen(value));
+	r = db_stmt_query(s);
+	id = db_insert_result(c, r);
 
-		r = db_stmt_query(s);
-		id = db_insert_result(c, r);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
+	TRACE(TRACE_DATABASE,"new headervalue.id [%llu]", id);
 
 	return id;
 }
@@ -1545,27 +1529,27 @@ static int _header_value_get_id(const char *value, u64_t *id)
 	u64_t tmp = 0;
 	char *hash;
 
+	C c;
 	hash = dm_get_hash_for_string(value);
 	if (! hash) return FALSE;
 
-	if ((tmp = _header_value_exists(value, (const char *)hash)) != 0) {
-		g_free(hash);
-		*id = tmp;
-		return TRUE;
-	}
+	c = db_con_get();
+	TRY
+		if ((tmp = _header_value_exists(c, value, (const char *)hash)) != 0)
+			*id = tmp;
+		else if ((tmp = _header_value_insert(c, value, (const char *)hash)) != 0)
+			*id = tmp;
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	if ((tmp = _header_value_insert(value, (const char *)hash)) != 0) {
-		g_free(hash);
-		*id = tmp;
-		return TRUE;
-	}
+	assert(*id);
 
 	g_free(hash);
 
-	// should never happen
-	assert(FALSE);
-
-	return FALSE;
+	return TRUE;
 }
 
 static gboolean _header_insert(u64_t physmessage_id, u64_t headername_id, u64_t headervalue_id)

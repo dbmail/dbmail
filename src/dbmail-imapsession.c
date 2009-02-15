@@ -1525,7 +1525,11 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 		*id = mailbox_id;
 		M = MailboxState_new(mailbox_id);
 		_get_mailbox(0,M,(gpointer)self);
-		g_tree_insert(self->mbxinfo, id, M);
+		if (MailboxState_getName(M)) {
+			g_tree_insert(self->mbxinfo, id, M);
+		} else {
+			MailboxState_free(&M);
+		}
 	}
 
 	return M;
