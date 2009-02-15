@@ -329,13 +329,7 @@ int main(int argc, char *argv[])
 	case 'd':
 	case 'e':
 		/* Verify the existence of this user */
-		if (auth_user_exists(user, &useridnr) == -1) {
-			qerrorf("Error: cannot verify existence of user [%s].\n",
-			     user);
-			result = -1;
-			goto freeall;
-		}
-		if (useridnr == 0) {
+		if (! auth_user_exists(user, &useridnr)) {
 			qerrorf("Error: user [%s] does not exist.\n",
 				     user);
 			result = -1;

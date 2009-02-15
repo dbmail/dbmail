@@ -87,10 +87,7 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right)
 		return TRUE;
 
 	/* else check the 'anyone' user */
-	test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone_userid);
-	if (test == DM_EQUERY) 
-		return DM_EQUERY;
-	if (test)
+	if (auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone_userid))
 		return db_acl_has_right(S, anyone_userid, right_flag);
 	
 	return FALSE;
@@ -316,7 +313,7 @@ int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid, char *rights
 	assert(rightsstring);
 	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
 	
-	if (auth_user_exists(identifier, &userid) < 0) {
+	if (! auth_user_exists(identifier, &userid)) {
 		TRACE(TRACE_ERR, "error finding user id for user with name [%s]", identifier);
 		return -1;
 	}

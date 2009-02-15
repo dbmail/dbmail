@@ -47,7 +47,7 @@ extern int reallyquiet;
 void setup(void)
 {
 	reallyquiet = 1;
-	configure_debug(255,0);
+	configure_debug(511,0);
 	config_read(configFile);
 	GetDBParams();
 	db_connect();

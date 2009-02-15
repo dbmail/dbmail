@@ -170,12 +170,7 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 	int result = 0;
 
 	/* Verify the existence of this user */
-	if (auth_user_exists(user, &user_idnr) == -1) {
-		qerrorf("Error: cannot verify existence of user [%s].\n", user);
-		result = -1;
-		goto cleanup;
-	}
-	if (user_idnr == 0) {
+	if (! auth_user_exists(user, &user_idnr)) {
 		qerrorf("Error: user [%s] does not exist.\n", user);
 		result = -1;
 		goto cleanup;

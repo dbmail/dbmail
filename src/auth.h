@@ -60,7 +60,6 @@ int auth_disconnect(void);
  * \param username 
  * \param user_idnr will hold user_idnr after call. May not be NULL on call
  * \return 
- *    - -1 on database error
  *    -  0 if user not found
  *    -  1 otherwise
  */

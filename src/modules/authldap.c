@@ -1315,9 +1315,8 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 			return DM_EQUERY;
 	}
 
-	if (auth_user_exists(real_username, user_idnr) != 1) {
+	if (! auth_user_exists(real_username, user_idnr))
 		return 0;
-	}
 	
 	if (! (ldap_dn = dm_ldap_user_getdn(*user_idnr))) {
 		TRACE(TRACE_ERR,"unable to determine DN for user");

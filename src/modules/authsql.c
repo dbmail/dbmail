@@ -307,7 +307,7 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 
 	if (username == NULL || password == NULL) {
 		TRACE(TRACE_DEBUG, "username or password is NULL");
-		return 0;
+		return FALSE;
 	}
 
 	/* the shared mailbox user should not log in! */
@@ -323,7 +323,8 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 	}
 	
 	/* lookup the user_idnr */
-	if (auth_user_exists(real_username, user_idnr) == DM_EQUERY) return DM_EQUERY;
+	if (! auth_user_exists(real_username, user_idnr)) 
+		return FALSE;
 
 	c = db_con_get();
 	TRY
@@ -431,7 +432,7 @@ u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username,
 	int t = FALSE;
 
 	/* lookup the user_idnr */
-	if (auth_user_exists(username, &user_idnr) == DM_EQUERY)
+	if (! auth_user_exists(username, &user_idnr))
 		return DM_EQUERY;
 
 	c = db_con_get();

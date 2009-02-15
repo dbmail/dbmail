@@ -2122,11 +2122,7 @@ static int imap_acl_pre_administer(const char *mailboxname,
 	if (! db_findmailbox(mailboxname, executing_userid, mboxid))
 		return FALSE;
 
-	result = auth_user_exists(username, target_userid);
-	if (result < 1)
-		return result;
-
-	return 1;
+	return auth_user_exists(username, target_userid);
 }
 
 static void _ic_setacl_enter(dm_thread_data *D)

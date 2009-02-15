@@ -795,8 +795,8 @@ static int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
 	if (delivery_user_idnr_looked_up == 0) {
 		u64_t idnr;
 		TRACE(TRACE_DEBUG, "looking up user_idnr for [%s]", DBMAIL_DELIVERY_USERNAME);
-		if (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &idnr) < 0) {
-			TRACE(TRACE_ERR, "error looking up user_idnr for DBMAIL_DELIVERY_USERNAME");
+		if (! auth_user_exists(DBMAIL_DELIVERY_USERNAME, &idnr)) {
+			TRACE(TRACE_ERR, "error looking up user_idnr for %s", DBMAIL_DELIVERY_USERNAME);
 			return DM_EQUERY;
 		}
 		g_static_mutex_lock(&mutex);
@@ -1990,14 +1990,7 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 
 	if (username) {
 		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
-		result = auth_user_exists(username, &owner_idnr);
-		if (result < 0) {
-			TRACE(TRACE_ERR, "error checking id of user.");
-			g_free(mbox);
-			g_free(username);
-			return FALSE;
-		}
-		if (result == 0) {
+		if (! auth_user_exists(username, &owner_idnr)) {
 			TRACE(TRACE_INFO, "user [%s] not found.", username);
 			g_free(mbox);
 			g_free(username);
@@ -2039,7 +2032,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 	}
 	if (username) {
 		/* Replace the value of search_user_idnr with the namespace user. */
-		if (auth_user_exists(username, &search_user_idnr) < 1) {
+		if (! auth_user_exists(username, &search_user_idnr)) {
 			TRACE(TRACE_NOTICE, "cannot search namespace because user [%s] does not exist", username);
 			g_free(username);
 			return DM_SUCCESS;
@@ -2190,12 +2183,7 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 
 	if (username) {
 		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
-		result = auth_user_exists(username, &owner_idnr);
-		if (result < 0) {
-			TRACE(TRACE_ERR, "error checking id of user.");
-			goto equery;
-		}
-		if (result == 0) {
+		if (! auth_user_exists(username, &owner_idnr)) {
 			TRACE(TRACE_INFO, "user [%s] not found.", username);
 			goto egeneral;
 		}
@@ -2251,11 +2239,7 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 
 		/* Only the PUBLIC user is allowed to own #Public itself. */
 		if (i == 0 && is_public) {
-			int test = auth_user_exists(PUBLIC_FOLDER_USER, &public);
-			if (test < 0) {
-				*errmsg = "Internal database error while looking up Public user.";
-				goto equery;
-			} else if (test == 0) {
+			if (! auth_user_exists(PUBLIC_FOLDER_USER, &public)) {
 				*errmsg = "Public user required for #Public folder access.";
 				goto egeneral;
 			}
@@ -3378,7 +3362,7 @@ int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_userna
 }
 int db_user_exists(const char *username, u64_t * user_idnr) 
 {
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s;
 
 	assert(username);
 	assert(user_idnr);
@@ -3393,12 +3377,9 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 			*user_idnr = db_result_get_u64(r, 0);
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
-
-	if (t == DM_EQUERY) return t;
 
 	return (*user_idnr) ? 1 : 0;
 }

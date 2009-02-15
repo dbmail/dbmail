@@ -594,11 +594,7 @@ int do_show(const char * const name)
 		}
 		g_list_free(g_list_first(aliases));
 	} else {
-		if (auth_user_exists(name, &useridnr) == -1) {
-			qerrorf("Error while verifying user [%s].\n", name);
-			return -1;
-		}
-
+		auth_user_exists(name, &useridnr);
 		if (useridnr == 0) {
 			show_alias(name, 0);
 		} else {

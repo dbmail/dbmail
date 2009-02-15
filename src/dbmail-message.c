@@ -1277,7 +1277,7 @@ int dbmail_message_store(DbmailMessage *self)
 	u64_t hdrs_size, body_size, rfcsize;
 	int i=1, retry=10, delay=200;
 	
-	if (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr) <= 0) {
+	if (! auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
 		TRACE(TRACE_ERR, "unable to find user_idnr for user [%s]. Make sure this system user is in the database!", DBMAIL_DELIVERY_USERNAME);
 		return DM_EQUERY;
 	}
@@ -2006,7 +2006,8 @@ static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, cons
 
 	memset(into,0,sizeof(into));
 
-	auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone);
+	if (! auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone))
+		return t;
 
 	c = db_con_get();
 

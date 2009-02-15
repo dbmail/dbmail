@@ -224,14 +224,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* Retrieve the user ID number */
-	switch (auth_user_exists(user_name, &user_idnr)) {
-	case 0:
+	if (! auth_user_exists(user_name, &user_idnr)) {
 		qerrorf("User [%s] does not exist!\n", user_name);
-		res = -1;
-		goto mainend;
-		break;
-	case -1:
-		qerrorf("Error retrieving User ID Number\n");
 		res = -1;
 		goto mainend;
 	}

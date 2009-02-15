@@ -271,7 +271,6 @@ static int address_has_alias_mailbox(deliver_to_user_t *delivery)
 
 static int address_is_username_mailbox(deliver_to_user_t *delivery)
 {
-	int user_exists;
 	u64_t userid, *uid;
 	char *newaddress;
 	size_t newaddress_len, zapped_len;
@@ -283,16 +282,7 @@ static int address_is_username_mailbox(deliver_to_user_t *delivery)
 			&newaddress_len, &zapped_len) != 0)
 		return 0;
 
-	user_exists = auth_user_exists(newaddress, &userid);
-
-	if (user_exists < 0) {
-		/* An error occurred. */
-		TRACE(TRACE_ERR, "error checking user [%s]", newaddress);
-		g_free(newaddress);
-		return -1;
-	}
-
-	if (user_exists == 0) {
+	if (! auth_user_exists(newaddress, &userid)) {
 		/* User does not exist. */
 		TRACE(TRACE_INFO, "username not found [%s]", newaddress);
 		g_free(newaddress);
@@ -311,21 +301,12 @@ static int address_is_username_mailbox(deliver_to_user_t *delivery)
 
 static int address_is_username(deliver_to_user_t *delivery)
 {
-	int user_exists;
 	u64_t userid, *uid;
 
 	if (!delivery->address)
 		return 0;
 
-	user_exists = auth_user_exists(delivery->address, &userid);
-
-	if (user_exists < 0) {
-		/* An error occurred. */
-		TRACE(TRACE_ERR, "error checking user [%s]", delivery->address);
-		return -1;
-	}
-
-	if (user_exists == 0) {
+	if (! auth_user_exists(delivery->address, &userid)) {
 		/* User does not exist. */
 		TRACE(TRACE_INFO, "username not found [%s]", delivery->address);
 		return 0;

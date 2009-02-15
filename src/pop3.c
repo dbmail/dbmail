@@ -745,7 +745,7 @@ int pop3(ClientSession_t *session, char *buffer)
 		 * note that if the user does not exist it is not noted
 		 * by db_getencryption()
 		 */
-		if (auth_user_exists(session->username, &user_idnr) == -1) {
+		if (! auth_user_exists(session->username, &user_idnr)) {
 			TRACE(TRACE_ERR, "error finding if user exists. username = [%s]", 
 					session->username);
 			return -1;
