@@ -132,6 +132,7 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl)
 			client->ssl_state = TRUE;
 	}
 
+	client->read_buffer = g_string_new("");
 	client->write_buffer = g_string_new("");
 	client->rev = g_new0(struct event, 1);
 	client->wev = g_new0(struct event, 1);
@@ -238,41 +239,72 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	return 0;
 }
 
-int ci_read(clientbase_t *self, char *buffer, size_t n)
+#define IBUFLEN 4096
+int ci_read_cb(clientbase_t *self)
 {
 	ssize_t t = 0;
-	size_t i = 0;
-	char c;
+	char ibuf[IBUFLEN];
 
-	assert(buffer);
-	memset(buffer, 0, sizeof(buffer));
-
-	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
-	self->len = 0;
-	while (self->len < n) {
+	while (TRUE) {
+		memset(ibuf, 0, sizeof(ibuf));
 		if (self->ssl) {
-			t = SSL_read(self->ssl, (void *)&c, 1);
+			t = SSL_read(self->ssl, (void *)ibuf, IBUFLEN);
 		} else {
-			t = read(self->rx, (void *)&c, 1);
+			t = read(self->rx, (void *)ibuf, IBUFLEN);
 		}
 		if (t < 0) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
-				return e;
+				t = e;
 			break;
 		}
 		if (t == 0) break;
 
-		if (t == 1) {
-			self->len++;
-			if (c == '\r') continue;
-			buffer[i++] = c;
-		}
+		if (t > 0) g_string_append(self->read_buffer, ibuf);
 	}
-	TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->len, buffer);
 
-	return self->len;
-}	
+	TRACE(TRACE_DEBUG,"[%p] return [%ld]", self, t);
+	return t;
+}
+
+
+int ci_read(clientbase_t *self, char *buffer, size_t n)
+{
+	ssize_t t = 0;
+	char c;
+
+	assert(buffer);
+
+	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
+	self->len = 0;
+
+	if ((t = ci_read_cb(self)) == 0) {
+		TRACE(TRACE_DEBUG,"[%p] return [%ld]", self, t);
+		return t;
+	}
+
+	if (self->read_buffer->len >= n) {
+		size_t j,k = 0;
+		char *s = self->read_buffer->str;
+
+		memset(buffer, 0, sizeof(buffer));
+		for (j=0; j<n; j++) {
+			c = s[j];
+			if (c == '\r') continue;
+			buffer[k++] = c;
+		}
+		g_string_erase(self->read_buffer, 0, n);
+		self->len += n;
+	}
+
+	if (self->len) {
+		TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->len, buffer);
+		return self->len;
+	} else {
+		TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->read_buffer->len, self->read_buffer->str);
+		return self->read_buffer->len;
+	}
+}
 
 int ci_readln(clientbase_t *self, char * buffer)
 {
@@ -349,6 +381,7 @@ void ci_close(clientbase_t *self)
 	self->rx = -1;
 
 	g_string_free(self->line_buffer, TRUE);
+	g_string_free(self->read_buffer, TRUE);
 	g_string_free(self->write_buffer, TRUE);
 
 	g_free(self->timeout);
