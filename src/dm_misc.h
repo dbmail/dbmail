@@ -165,6 +165,8 @@ char * dm_get_hash_for_string(const char *buf);
 
 char * dm_base64_decode(const gchar *s, size_t *len);
 
+size_t stridx(const char *s, char c);
+
 void strip_crlf(char *buffer);
 
 #endif

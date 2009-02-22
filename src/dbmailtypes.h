@@ -243,7 +243,6 @@ typedef struct {
 	size_t len;			/* octets read during last ci_read/ci_readln */
 	char tls_wbuf[TLS_SEGMENT];	/* buffer to write during tls session */
 	size_t tls_wbuf_n;		/* number of octets to write during tls session */
-	GString *line_buffer;		/* buffer for ci_readln */
 	GString *read_buffer;		/* input buffer */
 	GString *write_buffer;		/* output buffer */
 	GAsyncQueue *queue;		/* inter-thread message pipe */

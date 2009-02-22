@@ -2318,3 +2318,11 @@ char * dm_base64_decode(const gchar *s, size_t *len)
 }
 
 
+size_t stridx(const char *s, char c)
+{
+	size_t i;
+	for (i = 0; s[i] && s[i] != c; i++);
+	return i;
+}
+
+

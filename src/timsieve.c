@@ -74,6 +74,7 @@ static void send_greeting(ClientSession_t *session)
 	ci_write(session->ci, "\"SIEVE\" \"%s\"\r\n", sieve_extensions);
 	ci_write(session->ci, "OK\r\n");
 }
+
 void tims_cb_read(void *arg)
 {
 	int l = 0;

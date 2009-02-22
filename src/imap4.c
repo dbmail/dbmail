@@ -411,14 +411,6 @@ void dbmail_imap_session_reset(ImapSession *session)
 	return;
 }
 
-static size_t stridx(const char *s, char c)
-{
-	size_t i;
-	for (i = 0; s[i] && s[i] != c; i++);
-	return i;
-}
-
-
 int imap4_tokenizer (ImapSession *session, char *buffer)
 {
 	char *tag = NULL, *cpy, *command;

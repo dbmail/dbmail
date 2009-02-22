@@ -228,37 +228,58 @@ static void pop3_close(ClientSession_t *session)
 
 
 /* the default pop3 read handler */
-void pop3_cb_read(void *arg)
+
+static void pop3_handle_input(ClientSession_t *session)
 {
-	int l = 0;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
-	ClientSession_t *session = (ClientSession_t *)arg;
-	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
-	
-	event_del(session->ci->rev);
+	int l;
 
-	if (session->ci->ssl && session->ci->ssl_state == FALSE) {
-		ci_starttls(session->ci);
-		event_add(session->ci->rev, session->ci->timeout);
-		return;
-	}
+	while (TRUE) {
+		memset(buffer, 0, sizeof(buffer));
 
-	l = ci_readln(session->ci, buffer);
+		l = ci_readln(session->ci, buffer);
 
-	if (l==0) {
-		if (session->ci->ssl && session->ci->ssl_state) {
+		if (l==0) {
 			event_add(session->ci->rev, session->ci->timeout);
 			return;
 		}
-		// error
-		client_session_bailout(&session);
-		return;
-	}
 
-	if (pop3(session, buffer) != -3)
-		event_add(session->ci->rev, session->ci->timeout);
+		if (pop3(session, buffer) == -3) {
+			client_session_bailout(&session);
+			break;
+		}
+	}
 }
 
+
+void pop3_cb_read(void *arg)
+{
+	ClientSession_t *session = (ClientSession_t *)arg;
+	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
+	
+	// disable read events until we're done
+	event_del(session->ci->rev);
+	ci_read_cb(session->ci);
+	switch(session->ci->client_state) {
+		case CLIENT_OK:
+		case CLIENT_AGAIN:
+		break;
+		default:
+		case CLIENT_ERR:
+			client_session_bailout(&session);
+			return;
+			break;
+		case CLIENT_EOF:
+			TRACE(TRACE_NOTICE,"reached EOF");
+			if (session->ci->read_buffer->len < 1) {
+				client_session_bailout(&session);
+				return;
+			}
+		break;
+	}
+
+	pop3_handle_input(session);
+}
 
 void pop3_cb_write(void *arg)
 {

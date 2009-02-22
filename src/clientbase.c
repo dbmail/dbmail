@@ -96,7 +96,6 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl)
 	clientbase_t *client	= g_new0(clientbase_t, 1);
 
 	client->timeout       = g_new0(struct timeval,1);
-	client->line_buffer	= g_string_new("");
 
 	if (g_thread_supported())
 		client->queue           = g_async_queue_new();
@@ -242,16 +241,20 @@ int ci_write(clientbase_t *self, char * msg, ...)
 #define IBUFLEN 4096
 void ci_read_cb(clientbase_t *self)
 {
+	/* 
+	 * read all available data on the input stream
+	 * and store in in read_buffer
+	 */
 	ssize_t t = 0;
 	char ibuf[IBUFLEN];
 
 	while (TRUE) {
 		memset(ibuf, 0, sizeof(ibuf));
-		if (self->ssl) {
+		if (self->ssl)
 			t = SSL_read(self->ssl, (void *)ibuf, IBUFLEN);
-		} else {
+		else
 			t = read(self->rx, (void *)ibuf, IBUFLEN);
-		}
+
 		if (t < 0) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
@@ -259,13 +262,12 @@ void ci_read_cb(clientbase_t *self)
 			else
 				self->client_state |= CLIENT_AGAIN;
 			break;
-		}
-		if (t == 0) {
+
+		} else if (t == 0) {
 			self->client_state |= CLIENT_EOF;
 			break;
-		}
 
-		if (t > 0) {
+		} else {
 			self->client_state = CLIENT_OK; 
 			g_string_append(self->read_buffer, ibuf);
 		}
@@ -277,9 +279,6 @@ void ci_read_cb(clientbase_t *self)
 
 int ci_read(clientbase_t *self, char *buffer, size_t n)
 {
-	ssize_t t = 0;
-	char c;
-
 	assert(buffer);
 
 	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
@@ -287,7 +286,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 
 	if (self->read_buffer->len >= n) {
 		size_t j,k = 0;
-		char *s = self->read_buffer->str;
+		char c, *s = self->read_buffer->str;
 
 		memset(buffer, 0, sizeof(buffer));
 		for (j=0; j<n; j++) {
@@ -312,12 +311,9 @@ int ci_readln(clientbase_t *self, char * buffer)
 {
 	char *nl;
 
-	assert(self->line_buffer);
-
 	assert(buffer);
 
 	self->len = 0;
-
 	if ((nl = g_strstr_len(self->read_buffer->str, -1, "\n"))) {
 		char c = 0;
 		size_t j, k = 0, l;
@@ -328,14 +324,14 @@ int ci_readln(clientbase_t *self, char * buffer)
 			self->client_state = CLIENT_ERR;
 			return 0;
 		}
-		memset(buffer, 0, sizeof(buffer));
 		for (j=0; j<=l; j++) {
 			c = s[j];
 			if (c == '\r') continue;
 			buffer[k++] = c;
 		}
+		buffer[k] = '\0';
 		g_string_erase(self->read_buffer, 0, k);
-		self->len += k;
+		self->len = k;
 		TRACE(TRACE_INFO, "[%p] C < [%s]", self, buffer);
 	}
 
@@ -365,7 +361,6 @@ void ci_close(clientbase_t *self)
 	self->tx = -1;
 	self->rx = -1;
 
-	g_string_free(self->line_buffer, TRUE);
 	g_string_free(self->read_buffer, TRUE);
 	g_string_free(self->write_buffer, TRUE);
 
