@@ -216,10 +216,16 @@ typedef struct  {
 //
 
 #define TLS_SEGMENT 32768
+#define CLIENT_OK	0
+#define CLIENT_AGAIN	1
+#define CLIENT_ERR	2
+#define CLIENT_EOF	4
+
 typedef struct {
 	int rx, tx;			/* read and write filehandles */
 	SSL *ssl;                       /* SSL/TLS context for this client */
 	gboolean ssl_state;		/* SSL_accept done or not */
+	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
 	struct event *pev;		/* self-pipe event */
 	void (*cb_pipe) (void *);	/* callback for self-pipe events */
 	struct event *rev, *wev;  	/* read event, write event */

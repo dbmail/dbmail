@@ -2295,7 +2295,6 @@ char * dm_get_hash_for_string(const char *buf)
 
 	return digest;
 }
-
 void strip_crlf(char *buffer)
 {
 	if (! (buffer && buffer[0])) return;

@@ -240,7 +240,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 }
 
 #define IBUFLEN 4096
-int ci_read_cb(clientbase_t *self)
+void ci_read_cb(clientbase_t *self)
 {
 	ssize_t t = 0;
 	char ibuf[IBUFLEN];
@@ -255,16 +255,23 @@ int ci_read_cb(clientbase_t *self)
 		if (t < 0) {
 			int e;
 			if ((e = self->cb_error(self->rx, errno, (void *)self)))
-				t = e;
+				self->client_state |= CLIENT_ERR;
+			else
+				self->client_state |= CLIENT_AGAIN;
 			break;
 		}
-		if (t == 0) break;
+		if (t == 0) {
+			self->client_state |= CLIENT_EOF;
+			break;
+		}
 
-		if (t > 0) g_string_append(self->read_buffer, ibuf);
+		if (t > 0) {
+			self->client_state = CLIENT_OK; 
+			g_string_append(self->read_buffer, ibuf);
+		}
 	}
 
-	TRACE(TRACE_DEBUG,"[%p] return [%ld]", self, t);
-	return t;
+	TRACE(TRACE_DEBUG,"[%p] state [%x]", self, self->client_state);
 }
 
 
@@ -278,11 +285,6 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
 	self->len = 0;
 
-	if ((t = ci_read_cb(self)) == 0) {
-		TRACE(TRACE_DEBUG,"[%p] return [%ld]", self, t);
-		return t;
-	}
-
 	if (self->read_buffer->len >= n) {
 		size_t j,k = 0;
 		char *s = self->read_buffer->str;
@@ -294,67 +296,50 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 			buffer[k++] = c;
 		}
 		g_string_erase(self->read_buffer, 0, n);
-		self->len += n;
+		self->len += k;
 	}
 
 	if (self->len) {
 		TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->len, buffer);
 		return self->len;
 	} else {
-		TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->read_buffer->len, self->read_buffer->str);
+		TRACE(TRACE_DEBUG,"[%p] needed [%ld] read [%ld][%s]", self, n, self->read_buffer->len, self->read_buffer->str);
 		return self->read_buffer->len;
 	}
 }
 
 int ci_readln(clientbase_t *self, char * buffer)
 {
-	ssize_t t = 0;
-	char c = 0;
-	int result = 0;
+	char *nl;
 
 	assert(self->line_buffer);
-	memset(buffer, 0, MAX_LINESIZE);
 
-	if (self->line_buffer->len == 0)
-		self->len = 0;
+	assert(buffer);
 
-	while (self->len < MAX_LINESIZE) {
-		if (self->ssl) {
-			t = SSL_read(self->ssl, (void *)&c, 1);
-		} else {
-			t = read(self->rx, (void *)&c, 1);
+	self->len = 0;
+
+	if ((nl = g_strstr_len(self->read_buffer->str, -1, "\n"))) {
+		char c = 0;
+		size_t j, k = 0, l;
+		char *s = self->read_buffer->str;
+		l = stridx(s, '\n');
+		if (l >= MAX_LINESIZE) {
+			TRACE(TRACE_ERR, "insane line-length [%ld]", l);
+			self->client_state = CLIENT_ERR;
+			return 0;
 		}
-		if (t < 0) {
-			int e;
-			if ((e = self->cb_error(self->rx, errno, (void *)self)))
-				return e;
-			event_add(self->rev, self->timeout);
-			break;
+		memset(buffer, 0, sizeof(buffer));
+		for (j=0; j<=l; j++) {
+			c = s[j];
+			if (c == '\r') continue;
+			buffer[k++] = c;
 		}
-
-		if (t == 0) break; // EOF
-
-		if (t == 1) {
-			result++;
-			self->len++;
-
-			if (c=='\r') continue;
-
-			g_string_append_c(self->line_buffer,c);
-
-			if (c=='\n') { // done
-				strncpy(buffer, self->line_buffer->str, MAX_LINESIZE);
-				g_string_printf(self->line_buffer,"%s", ""); // reset
-				TRACE(TRACE_INFO, "[%p] C < [%s]", self, buffer);
-				break;
-			}
-		}
-
+		g_string_erase(self->read_buffer, 0, k);
+		self->len += k;
+		TRACE(TRACE_INFO, "[%p] C < [%s]", self, buffer);
 	}
 
-	TRACE(TRACE_DEBUG,"[%p] read [%ld]", self, self->len);
-
-	return result;
+	return self->len;
 }
 
 

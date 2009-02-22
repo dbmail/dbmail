@@ -121,9 +121,6 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 					} else if (session->command_state == TRUE)  { // IDLE is done
 						event_add(session->ci->rev, session->ci->timeout);
 					}
-
-				} else if ( (! session->parser_state) || ( session->command_state == TRUE && session->ci->write_buffer->len < 1 ) ) {
-					event_add(session->ci->rev, session->ci->timeout);
 				}
 			}
 
@@ -201,13 +198,6 @@ static int checktag(const char *s)
 	return 1;
 }
 
-static size_t stridx(const char *s, char c)
-{
-	size_t i;
-	for (i = 0; s[i] && s[i] != c; i++);
-	return i;
-}
-
 static void imap_handle_exit(ImapSession *session, int status)
 {
 	TRACE(TRACE_DEBUG, "[%p] state [%d] command_status [%d] [%s] returned with status [%d]", 
@@ -231,8 +221,9 @@ static void imap_handle_exit(ImapSession *session, int status)
 					}
 					dbmail_imap_session_buff_clear(session);
 				}
-				if (session->command_state == TRUE && session->ci->write_buffer->len < 1)
-					event_add(session->ci->rev, session->ci->timeout);
+				if (session->command_state == TRUE && session->ci->write_buffer->len < 1) {
+					dbmail_imap_session_reset(session);
+				}
 			} else {
 				dbmail_imap_session_buff_clear(session);
 			}				
@@ -248,6 +239,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 			session->command_state = TRUE;
 			dbmail_imap_session_buff_flush(session);
 			session->error_count++;	/* server returned BAD or NO response */
+			dbmail_imap_session_reset(session);
 			event_add(session->ci->rev, session->ci->timeout);
 			break;
 
@@ -259,22 +251,89 @@ static void imap_handle_exit(ImapSession *session, int status)
 	}
 }
 
+static void imap_handle_input(ImapSession *session)
+{
+	char buffer[MAX_LINESIZE];
+	int l, result;
+	// Drain input buffer else return to wait for more.
+	// Read in a line at a time if we don't have a string literal size defined
+	// Otherwise read in sizeof(buffer) [64KB] or the remaining rbuff_size if less
+	while (TRUE) {
+
+		memset(buffer, 0, sizeof(buffer));
+
+		if (session->rbuff_size <= 0) {
+			l = ci_readln(session->ci, buffer);
+		} else {
+			int needed = (session->rbuff_size < (int)sizeof(buffer)) ? session->rbuff_size : (int)sizeof(buffer);
+			l = ci_read(session->ci, buffer, needed);
+		}
+
+		TRACE(TRACE_DEBUG,"[%p] ci_read(ln) returned [%d]", session, l);
+		if (l == 0) {
+			event_add(session->ci->rev, session->ci->timeout);
+			break; // done
+		}
+
+		if (session->error_count >= MAX_FAULTY_RESPONSES) {
+			imap_session_printf(session, "* BYE [TRY RFC]\r\n");
+			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+			break;
+		}
+
+		if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop
+			TRACE(TRACE_DEBUG,"read [%s] while in IDLE loop", buffer);
+			session->command_state = FALSE;
+			dm_thread_data *D = g_new0(dm_thread_data,1);
+			D->data = (gpointer)g_strdup(buffer);
+			g_async_queue_push(session->ci->queue, (gpointer)D);
+			break;
+		}
+
+		if (! imap4_tokenizer(session, buffer))
+			continue;
+
+		if (session->parser_state) {
+			if ((result = imap4(session))) 
+				imap_handle_exit(session, result);
+			TRACE(TRACE_DEBUG,"imap4 returned [%d]", result);
+			break;
+		}
+
+		if (session->state == IMAPCS_ERROR) {
+			TRACE(TRACE_NOTICE, "session->state: ERROR. abort");
+			break;
+		}
+	}
+
+	return;
+}
 
 void imap_cb_read(void *arg)
 {
 	ImapSession *session = (ImapSession *) arg;
-	char buffer[MAX_LINESIZE];
-	int result;
-	int l;
 
 	// disable read events until we're done
 	event_del(session->ci->rev);
-
-	if (session->state == IMAPCS_ERROR) {
-		TRACE(TRACE_NOTICE, "session->state: ERROR. abort");
-		return;
+	ci_read_cb(session->ci);
+	switch(session->ci->client_state) {
+		case CLIENT_OK:
+		case CLIENT_AGAIN:
+		break;
+		default:
+		case CLIENT_ERR:
+			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+			return;
+			break;
+		case CLIENT_EOF:
+			TRACE(TRACE_NOTICE,"reached EOF");
+			if (session->ci->read_buffer->len < 1) {
+				imap_session_bailout(session);
+				return;
+			}
+		break;
 	}
-	if (session->command_state==TRUE) dbmail_imap_session_reset(session);
+
 
 	if (session->ci->ssl && session->ci->ssl_state == FALSE) {
 		if (ci_starttls(session->ci) == DM_SUCCESS)
@@ -283,65 +342,8 @@ void imap_cb_read(void *arg)
 		return;
 	}
 
-	// Drain input buffer else return to wait for more.
-	// Read in a line at a time if we don't have a string literal size defined
-	// Otherwise read in sizeof(buffer) [64KB] or the remaining rbuff_size if less
-	memset(buffer, 0, sizeof(buffer));	// have seen dirty buffers with out this
-
-	if (session->rbuff_size <= 0) {
-		l = ci_readln(session->ci, buffer);
-	} else {
-		int needed = (session->rbuff_size < (int)sizeof(buffer)) ? session->rbuff_size : (int)sizeof(buffer);
-		l = ci_read(session->ci, buffer, needed);
-	}
-
-	if (l == 0) {
-		if (session->ci->ssl && session->ci->ssl_state) {
-			event_add(session->ci->rev, session->ci->timeout);
-			return;
-		}
-		TRACE(TRACE_NOTICE,"empty read on possibly stale socket (still needed [%d])", session->rbuff_size);
-		imap_session_bailout(session);
-		return;
-	}
-
-	if (l < 0) {
-		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
-		return;
-	}
-
-	if (session->error_count >= MAX_FAULTY_RESPONSES) {
-		imap_session_printf(session, "* BYE [TRY RFC]\r\n");
-		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
-		return;
-	}
-
-	if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop
-		TRACE(TRACE_DEBUG,"read [%s] while in IDLE loop", buffer);
-		session->command_state = FALSE;
-		dm_thread_data *D = g_new0(dm_thread_data,1);
-		D->data = (gpointer)g_strdup(buffer);
-		g_async_queue_push(session->ci->queue, (gpointer)D);
-		return;
-	}
-
-	if (! imap4_tokenizer(session, buffer)) {
-		event_add(session->ci->rev, session->ci->timeout);
-		return;
-	}
-
-	if (! session->parser_state)
-		return;
-
-	if ((result = imap4(session))) {
-		imap_handle_exit(session, result);
-	}
-
-	return;
-
-	
+	imap_handle_input(session);
 }
-
 void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, int timeout)
 {
 	if (r) session->ci->cb_read = r;
@@ -408,6 +410,14 @@ void dbmail_imap_session_reset(ImapSession *session)
 	
 	return;
 }
+
+static size_t stridx(const char *s, char c)
+{
+	size_t i;
+	for (i = 0; s[i] && s[i] != c; i++);
+	return i;
+}
+
 
 int imap4_tokenizer (ImapSession *session, char *buffer)
 {
@@ -480,6 +490,7 @@ void _ic_cb_leave(gpointer data)
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;
 	imap_handle_exit(session, D->status);
+	imap_handle_input(session);
 }
 
 

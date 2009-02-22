@@ -1150,7 +1150,8 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	self->buff = g_string_new("");
 
         g_async_queue_push(queue, (gpointer)D);
-        if (selfpipe[1] > -1) write(selfpipe[1], "Q", 1);
+        if (selfpipe[1] > -1)
+		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
 }
 
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
@@ -1913,7 +1914,7 @@ int build_args_array_ext(ImapSession *self, const char *originalString)
 
 			if (! self->rbuff) self->rbuff = g_new0(char, self->rbuff_size+1);
 
-			strncat(buff, &s[i], sizeof(buff));
+			strncat(buff, &s[i], sizeof(buff)-1);
 			r = strlen(buff);
 			
 			strncat(self->rbuff, buff, r);
