@@ -251,33 +251,9 @@ static void pop3_handle_input(ClientSession_t *session)
 	}
 }
 
-
 void pop3_cb_read(void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
-	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
-	
-	// disable read events until we're done
-	event_del(session->ci->rev);
-	ci_read_cb(session->ci);
-	switch(session->ci->client_state) {
-		case CLIENT_OK:
-		case CLIENT_AGAIN:
-		break;
-		default:
-		case CLIENT_ERR:
-			client_session_bailout(&session);
-			return;
-			break;
-		case CLIENT_EOF:
-			TRACE(TRACE_NOTICE,"reached EOF");
-			if (session->ci->read_buffer->len < 1) {
-				client_session_bailout(&session);
-				return;
-			}
-		break;
-	}
-
 	pop3_handle_input(session);
 }
 

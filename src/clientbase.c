@@ -329,10 +329,9 @@ int ci_readln(clientbase_t *self, char * buffer)
 			if (c == '\r') continue;
 			buffer[k++] = c;
 		}
-		buffer[k] = '\0';
 		g_string_erase(self->read_buffer, 0, k);
 		self->len = k;
-		TRACE(TRACE_INFO, "[%p] C < [%s]", self, buffer);
+		TRACE(TRACE_INFO, "[%p] C < %llu:[%s]", self, self->len, buffer);
 	}
 
 	return self->len;

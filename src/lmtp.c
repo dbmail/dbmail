@@ -67,49 +67,48 @@ static void lmtp_cb_time(void *arg)
 	ci_write(session->ci, "221 Connection timeout BYE\r\n");
 	session->state = QUIT;
 }
-
-static void lmtp_cb_read(void *arg)
-{
-	int r;
-	char buffer[MAX_LINESIZE];	/* connection buffer */
-	ClientSession_t *session = (ClientSession_t *)arg;
-
-	event_del(session->ci->rev);
-
-	r = ci_readln(session->ci, buffer);
-	if (r == -1) return;
-	
-	if (r == 0) {
-		if (session->ci->ssl && session->ci->ssl_state) {
-			event_add(session->ci->rev, session->ci->timeout);
-			return;
-		}
-		client_session_bailout(&session);
-		return;
-	}
 		
-	if ((r = lmtp_tokenizer(session, buffer))) {
-		if (r == -3) {
-			client_session_bailout(&session);
-			return;
-		}
+static void lmtp_handle_input(ClientSession_t *session)
+{
+	int l;
+	char buffer[MAX_LINESIZE];	/* connection buffer */
+	while (TRUE) {
+		memset(buffer, 0, sizeof(buffer));
 
-		if (r > 0) {
-			if (lmtp(session) == -3) {
+		l = ci_readln(session->ci, buffer);
+
+		if (l==0) break;
+
+		if ((l = lmtp_tokenizer(session, buffer))) {
+			if (l == -3) {
 				client_session_bailout(&session);
 				return;
 			}
-			client_session_reset_parser(session);
-		}
 
-		if (r < 0) {
-			client_session_reset_parser(session);
+			if (l > 0) {
+				if (lmtp(session) == -3) {
+					client_session_bailout(&session);
+					return;
+				}
+				client_session_reset_parser(session);
+			}
+
+			if (l < 0) {
+				client_session_reset_parser(session);
+			}
 		}
 	}
 	
-	event_add(session->ci->rev, session->ci->timeout);
+	if (session->state < QUIT)
+		event_add(session->ci->rev, session->ci->timeout);
 
 	TRACE(TRACE_DEBUG,"[%p] done", session);
+}
+
+static void lmtp_cb_read(void *arg)
+{
+	ClientSession_t *session = (ClientSession_t *)arg;
+	lmtp_handle_input(session);
 }
 
 void lmtp_cb_write(void *arg)
@@ -125,7 +124,6 @@ void lmtp_cb_write(void *arg)
 			break;
 	}
 }
-
 
 static void reset_callbacks(ClientSession_t *session)
 {
@@ -194,6 +192,8 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 
 		command = buffer;
 		strip_crlf(command);
+		g_strstrip(command);
+		if (! strlen(command)) return FALSE; /* ignore empty commands */
 
 		value = strstr(command, " ");	/* look for the separator */
 

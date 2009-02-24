@@ -75,46 +75,37 @@ static void send_greeting(ClientSession_t *session)
 	ci_write(session->ci, "OK\r\n");
 }
 
-void tims_cb_read(void *arg)
+static void tims_handle_input(ClientSession_t *session)
 {
 	int l = 0;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
-	ClientSession_t *session = (ClientSession_t *)arg;
-	event_del(session->ci->rev);
 
-	if (session->rbuff_size <= 0) {
+	while (TRUE) {
+		memset(buffer, 0, sizeof(buffer));
 		l = ci_readln(session->ci, buffer);
-	} else {
-		int needed = (session->rbuff_size < (int)sizeof(buffer)) ? session->rbuff_size : (int)sizeof(buffer);
-		l = ci_read(session->ci, buffer, needed);
-	}
 
-	if (l == -1) return; // retry
+		if (l == 0) break;
 
-	if (l == 0) {
-		if (session->ci->ssl && session->ci->ssl_state) {
-			event_add(session->ci->rev, session->ci->timeout);
-			return;
+		if ((l = tims_tokenizer(session, buffer))) {
+			if (l == -3) {
+				client_session_bailout(&session);
+				return;
+			}
+			if (tims(session) == -3) {
+				client_session_bailout(&session);
+				return;
+			}
+			client_session_reset_parser(session);
 		}
-		client_session_bailout(&session);
-		return;
 	}
-
-	if ((l = tims_tokenizer(session, buffer))) {
-		if (l == -3) {
-			client_session_bailout(&session);
-			return;
-		}
-		if (tims(session) == -3) {
-			client_session_bailout(&session);
-			return;
-		}
-		client_session_reset_parser(session);
-	}
-
 	if (session->state < QUIT)
 		event_add(session->ci->rev, session->ci->timeout);
+}
 
+void tims_cb_read(void *arg)
+{
+	ClientSession_t *session = (ClientSession_t *)arg;
+	tims_handle_input(session);
 }
 
 void tims_cb_time(void * arg)
