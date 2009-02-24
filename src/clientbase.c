@@ -273,7 +273,7 @@ void ci_read_cb(clientbase_t *self)
 		}
 	}
 
-	TRACE(TRACE_DEBUG,"[%p] state [%x]", self, self->client_state);
+	TRACE(TRACE_DEBUG,"[%p] state [%x] read_buffer->len[%llu]", self, self->client_state, self->read_buffer->len);
 }
 
 
@@ -295,16 +295,16 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 			buffer[k++] = c;
 		}
 		g_string_erase(self->read_buffer, 0, n);
-		self->len += k;
+		self->len += j;
 	}
 
 	if (self->len) {
 		TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->len, buffer);
-		return self->len;
 	} else {
 		TRACE(TRACE_DEBUG,"[%p] needed [%ld] read [%ld][%s]", self, n, self->read_buffer->len, self->read_buffer->str);
-		return self->read_buffer->len;
 	}
+
+	return self->len;
 }
 
 int ci_readln(clientbase_t *self, char * buffer)
@@ -329,7 +329,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 			if (c == '\r') continue;
 			buffer[k++] = c;
 		}
-		g_string_erase(self->read_buffer, 0, k);
+		g_string_erase(self->read_buffer, 0, l+1);
 		self->len = k;
 		TRACE(TRACE_INFO, "[%p] C < %llu:[%s]", self, self->len, buffer);
 	}
