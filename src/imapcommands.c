@@ -811,7 +811,7 @@ void _ic_list_enter(dm_thread_data *D)
 	GList *plist = NULL, *children = NULL;
 	GTree *shown = NULL;
 	char *pstring;
-	MailboxState_T M = NULL;
+	MailboxState_T N = NULL, M = NULL;
 	size_t slen;
 	unsigned i;
 	char *pattern;
@@ -851,11 +851,13 @@ void _ic_list_enter(dm_thread_data *D)
 
 	while ((! D->status) && children) {
 		gboolean show = FALSE;
+		N = NULL;
 
 		u64_t mailbox_id = *(u64_t *)children->data;
 		if ((M = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id)) != NULL) {
 
 			/* Enforce match of mailbox to pattern. */
+			TRACE(TRACE_DEBUG,"test if [%s] matches [%s]", MailboxState_getName(M), pattern);
 			if (! listex_match(pattern, MailboxState_getName(M), MAILBOX_SEPARATOR, 0)) {
 				if (g_str_has_suffix(pattern,"%")) {
 					/*
@@ -873,8 +875,11 @@ void _ic_list_enter(dm_thread_data *D)
 							p[l] = NULL;
 						}
 						m = g_strjoinv(MAILBOX_SEPARATOR,p);
-						TRACE(TRACE_DEBUG,"test if [%s] matches [%s]", m, pattern);
 						if (listex_match(pattern, m, MAILBOX_SEPARATOR, 0)) {
+							TRACE(TRACE_DEBUG,"[%s] matches [%s]", m, pattern);
+							N = M;
+							M = MailboxState_new(0);
+							
 							MailboxState_setName(M, m);
 							MailboxState_setNoSelect(M, TRUE);
 							MailboxState_setNoChildren(M, FALSE);
@@ -913,6 +918,10 @@ void _ic_list_enter(dm_thread_data *D)
 				g_list_destroy(plist);
 				g_free(pstring);
 			}
+		}
+		if (N) {
+			MailboxState_free(&M);
+			M = N;
 		}
 
 		if (! g_list_next(children)) break;
