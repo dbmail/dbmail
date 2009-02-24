@@ -273,7 +273,7 @@ void ci_read_cb(clientbase_t *self)
 		}
 	}
 
-	TRACE(TRACE_DEBUG,"[%p] state [%x] read_buffer->len[%llu]", self, self->client_state, self->read_buffer->len);
+	TRACE(TRACE_DEBUG,"[%p] state [%x] read_buffer->len[%ld]", self, self->client_state, self->read_buffer->len);
 }
 
 
@@ -284,9 +284,10 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
 	self->len = 0;
 
-	if (self->read_buffer->len >= n) {
+	char *s = self->read_buffer->str + self->read_buffer_offset;
+	if ((self->read_buffer->len - self->read_buffer_offset) >= n) {
 		size_t j,k = 0;
-		char c, *s = self->read_buffer->str;
+		char c;
 
 		memset(buffer, 0, sizeof(buffer));
 		for (j=0; j<n; j++) {
@@ -294,15 +295,16 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 			if (c == '\r') continue;
 			buffer[k++] = c;
 		}
-		g_string_erase(self->read_buffer, 0, n);
+		self->read_buffer_offset += n;
 		self->len += j;
+		if (self->read_buffer_offset == self->read_buffer->len) {
+			g_string_truncate(self->read_buffer,0);
+			self->read_buffer_offset = 0;
+		}
 	}
 
-	if (self->len) {
+	if (self->len)
 		TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->len, buffer);
-	} else {
-		TRACE(TRACE_DEBUG,"[%p] needed [%ld] read [%ld][%s]", self, n, self->read_buffer->len, self->read_buffer->str);
-	}
 
 	return self->len;
 }
@@ -314,10 +316,10 @@ int ci_readln(clientbase_t *self, char * buffer)
 	assert(buffer);
 
 	self->len = 0;
-	if ((nl = g_strstr_len(self->read_buffer->str, -1, "\n"))) {
+	char *s = self->read_buffer->str + self->read_buffer_offset;
+	if ((nl = g_strstr_len(s, -1, "\n"))) {
 		char c = 0;
 		size_t j, k = 0, l;
-		char *s = self->read_buffer->str;
 		l = stridx(s, '\n');
 		if (l >= MAX_LINESIZE) {
 			TRACE(TRACE_ERR, "insane line-length [%ld]", l);
@@ -329,10 +331,17 @@ int ci_readln(clientbase_t *self, char * buffer)
 			if (c == '\r') continue;
 			buffer[k++] = c;
 		}
-		g_string_erase(self->read_buffer, 0, l+1);
+		self->read_buffer_offset += l+1;
 		self->len = k;
-		TRACE(TRACE_INFO, "[%p] C < %llu:[%s]", self, self->len, buffer);
+		TRACE(TRACE_INFO, "[%p] C < %ld:[%s]", self, self->len, buffer);
+
+		if (self->read_buffer_offset == self->read_buffer->len) {
+			g_string_truncate(self->read_buffer,0);
+			self->read_buffer_offset = 0;
+		}
 	}
+
+	TRACE(TRACE_DEBUG,"remaining [%lu][%ld]", self->read_buffer->len, self->read_buffer_offset);
 
 	return self->len;
 }
