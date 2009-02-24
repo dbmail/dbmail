@@ -41,6 +41,14 @@ char *simple_with_from = "From nobody@pacific.net.sg Tue Dec 04 19:52:17 2007\n"
 	"This line gets truncated\n"
 	"This other line get truncated too\n";
 
+char *simple_groups = "From user@domain  Fri Feb 22 17:06:23 2008\n"
+	"Date: Thu, 15 Feb 2007 01:02:03 +0200\n"
+	"From: user@domain (Real Name)\n"
+	"To: group: g1@d1.org, g2@d2.org;, group2: g3@d3.org;\n"
+	"\n"
+	"body\n"
+	"\n";
+
 char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n" 
 	"Content-Type: text/plain; charset=\"us-ascii\"\n"
 	"MIME-Version: 1.0\n"

@@ -266,7 +266,7 @@ START_TEST(test_imap_get_structure)
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL \"7BIT\" 16 1 NIL (\"inline\" NIL) NIL NIL)"
-			"(\"text\" \"plain\" (\"name\" \"testfile\" \"charset\" \"us-ascii\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
+			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
 			" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s] !=\n[%s]\n", expect, result);
 	g_free(result);
@@ -297,21 +297,26 @@ END_TEST
 
 START_TEST(test_internet_address_parse_string)
 {
-	char * trythese [] = { "undisclosed-recipients", "undisclosed-recipients;",
-		"undisclosed-recipients:", "undisclosed-recipients:;",
-		"undisclosed-recipients: ;", NULL };
+	char * trythese [][2] = { 
+		{ "undisclosed-recipients", "((NIL NIL \"undisclosed-recipients\" NIL))"},
+		{ "undisclosed-recipients;", "((NIL NIL \"undisclosed-recipients\" NIL))"},
+		{ "undisclosed-recipients:", "((NIL NIL \"undisclosed-recipients\" NIL)(NIL NIL NIL NIL))"}, 
+		{ "undisclosed-recipients:;", "((NIL NIL \"undisclosed-recipients\" NIL)(NIL NIL NIL NIL))"},
+		{ "undisclosed-recipients: ;", "((NIL NIL \"undisclosed-recipients\" NIL)(NIL NIL NIL NIL))"},
+		{ NULL, NULL }
+		};
 	int i;
 
-	for (i = 0; trythese[i] != NULL; i++) {
+	for (i = 0; trythese[i][0] != NULL; i++) {
 
-		char *result = trythese[i];
+		char *input = trythese[i][0];
+		char *expect = trythese[i][1];
+		char *t, *result;
 
-		char *t;
 		InternetAddressList *alist;
-		char *expect = "((NIL NIL \"undisclosed-recipients\" NIL))";
 		GList *list = NULL;
 
-		t = imap_cleanup_address(result);
+		t = imap_cleanup_address(input);
 		alist = internet_address_parse_string(t);
 		g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
@@ -320,7 +325,8 @@ START_TEST(test_internet_address_parse_string)
 
 		result = dbmail_imap_plist_as_string(list);
 
-		fail_unless(strcmp(result,expect)==0, "internet_address_parse_string failed to generate correct undisclosed-recipients plist, expected [%s] got [%s]", expect, result);
+		fail_unless(strcmp(result,expect)==0, "internet_address_parse_string failed to generate correct undisclosed-recipients plist "
+			"for [%s], expected\n[%s] got\n[%s]", input, expect, result);
 
 		g_list_destroy(list);
 		g_free(result);
@@ -329,14 +335,14 @@ START_TEST(test_internet_address_parse_string)
 
 	char * testlist[][2] = {
 		{ "<i_am_not@broken.org>", "((NIL NIL \"i_am_not\" \"broken.org\"))" },
-		{ "Break me: <foo@bar.org>", "((NIL NIL \"Break me\" NIL)(NIL NIL \"foo\" \"bar.org\"))" },
+		{ "Break me: <foo@bar.org>", "((NIL NIL \"Break me\" NIL)(NIL NIL \"foo\" \"bar.org\")(NIL NIL NIL NIL))" },
 		{ "Joe's Friends: mary@joe.com, joe@joe.com, jane@joe.com;",
 			"((NIL NIL \"Joe's Friends\" NIL)(NIL NIL \"mary\" \"joe.com\")"
-			"(NIL NIL \"joe\" \"joe.com\")(NIL NIL \"jane\" \"joe.com\"))" },
+			"(NIL NIL \"joe\" \"joe.com\")(NIL NIL \"jane\" \"joe.com\")(NIL NIL NIL NIL))" },
 		// These have the wrong separator; ms lookout style.
 		{ "one@my.dom;two@my.dom", "((NIL NIL \"one\" \"my.dom\")(NIL NIL \"two\" \"my.dom\"))" },
 		{ "one@my.dom; two@my.dom", "((NIL NIL \"one\" \"my.dom\")(NIL NIL \"two\" \"my.dom\"))" },
-		{ "Group: one@my.dom;, two@my.dom", "((NIL NIL \"Group\" NIL)(NIL NIL \"one\" \"my.dom\")(NIL NIL \"two\" \"my.dom\"))" },
+		{ "Group: one@my.dom;, two@my.dom", "((NIL NIL \"Group\" NIL)(NIL NIL \"one\" \"my.dom\")(NIL NIL NIL NIL)(NIL NIL \"two\" \"my.dom\"))" },
 		{ NULL, NULL }
 	};
 
@@ -403,9 +409,24 @@ START_TEST(test_imap_get_envelope)
 	g_free(result);
 	result = NULL;
 
+	/* bare bones message with group addresses*/
+	message = dbmail_message_new();
+	s = g_string_new(simple_groups);
+	message = dbmail_message_init_with_string(message, s);
+	g_string_free(s,TRUE);
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	strncpy(expect,"(\"Thu, 15 Feb 2007 01:02:03 +0200\" NIL ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((NIL NIL \"group\" NIL)(NIL NIL \"g1\" \"d1.org\")(NIL NIL \"g2\" \"d2.org\")(NIL NIL NIL NIL)(NIL NIL \"group2\" NIL)(NIL NIL \"g3\" \"d3.org\")(NIL NIL NIL NIL)) NIL NIL NIL NIL)", 1024);
+
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
+
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
+	//
 	g_free(expect);
 	expect = NULL;
-
 }
 END_TEST
 

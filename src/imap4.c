@@ -74,6 +74,7 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 
 static int imap4_tokenizer(ImapSession *, char *);
 static int imap4(ImapSession *);
+static void imap_handle_input(ImapSession *);
 
 static void imap_session_bailout(ImapSession *session)
 {
@@ -118,6 +119,7 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 						// continuation '+' to the client
 						session->command_state = IDLE;
 						event_add(session->ci->rev, NULL);
+						imap_handle_input(session);
 					} else if (session->command_state == TRUE)  { // IDLE is done
 						event_add(session->ci->rev, session->ci->timeout);
 					}
@@ -251,7 +253,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 	}
 }
 
-static void imap_handle_input(ImapSession *session)
+void imap_handle_input(ImapSession *session)
 {
 	char buffer[MAX_LINESIZE];
 	int l, result;

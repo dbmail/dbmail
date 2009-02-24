@@ -1707,7 +1707,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			t = NULL;
 
 			/* Address list ending. */
-			// p = g_list_append_printf(p, "(NIL NIL NIL NIL)", ia->name);
+			p = g_list_append_printf(p, "(NIL NIL NIL NIL)");
 
 			break;
 
