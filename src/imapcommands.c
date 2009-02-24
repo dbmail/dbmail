@@ -497,6 +497,8 @@ void _ic_delete_enter(dm_thread_data *D)
 	if (nchildren > 0) {
 		TRACE(TRACE_DEBUG, "mailbox has children [%d]", nchildren);
 		/* mailbox has inferior names; error if \noselect specified */
+
+
 		result = db_isselectable(mailbox_idnr);
 		if (result == FALSE) {
 			dbmail_imap_session_buff_printf(self, "%s NO mailbox is non-selectable\r\n", self->tag);
@@ -512,6 +514,7 @@ void _ic_delete_enter(dm_thread_data *D)
 		{
 			C c; int t = DM_SUCCESS;
 			u64_t mailbox_size;
+			MailboxState_T S = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
 
 			if (! mailbox_is_writable(mailbox_idnr)) {
 				D->status=DM_EQUERY;
@@ -542,6 +545,7 @@ void _ic_delete_enter(dm_thread_data *D)
 				NOTIFY_DONE(D);
 			}
 
+			MailboxState_setNoSelect(S, TRUE);
 			db_mailbox_seq_update(mailbox_idnr);
 			if (! dm_quota_user_dec(self->userid, mailbox_size)) {
 				D->status=DM_EQUERY;
