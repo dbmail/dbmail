@@ -223,9 +223,8 @@ static void imap_handle_exit(ImapSession *session, int status)
 					}
 					dbmail_imap_session_buff_clear(session);
 				}
-				if (session->command_state == TRUE && session->ci->write_buffer->len < 1) {
+				if (session->command_state == TRUE)
 					dbmail_imap_session_reset(session);
-				}
 			} else {
 				dbmail_imap_session_buff_clear(session);
 			}				
