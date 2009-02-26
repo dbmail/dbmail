@@ -250,6 +250,12 @@ static void imap_handle_exit(ImapSession *session, int status)
 			imap_session_printf(session, "* BYE\r\n");
 			imap_session_printf(session, "%s OK LOGOUT completed\r\n", session->tag);
 			break;
+
+		case 3:
+			/* returning from starttls */
+			dbmail_imap_session_reset(session);
+			break;
+
 	}
 }
 
@@ -336,16 +342,9 @@ void imap_cb_read(void *arg)
 		break;
 	}
 
-
-	if (session->ci->ssl && session->ci->ssl_state == FALSE) {
-		if (ci_starttls(session->ci) == DM_SUCCESS)
-			dbmail_imap_session_reset(session);
-		event_add(session->ci->rev, session->ci->timeout);
-		return;
-	}
-
 	imap_handle_input(session);
 }
+
 void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, int timeout)
 {
 	if (r) session->ci->cb_read = r;

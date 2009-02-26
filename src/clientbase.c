@@ -167,20 +167,15 @@ int ci_starttls(clientbase_t *self)
 	}
 	if (! self->ssl_state) {
 		if ((e = SSL_accept(self->ssl)) != 1) {
-			int e2 = SSL_get_error(self->ssl, e);
-			switch (e2) {
-				case SSL_ERROR_WANT_READ:
-				case SSL_ERROR_WANT_WRITE:
-					// try again later
-					event_add(self->rev, self->timeout);
-					return e;
-				break;
+			int e2;
+			if ((e2 = self->cb_error(self->rx, e, (void *)self))) {
+				SSL_free(self->ssl);
+				self->ssl = NULL;
+				return DM_EGENERAL;
+			} else {
+				event_add(self->rev, self->timeout);
+				return e;
 			}
-
-			dm_tls_error();
-			SSL_free(self->ssl);
-			self->ssl = NULL;
-			return DM_EGENERAL;
 		}
 		self->ssl_state = TRUE;
 	}
@@ -195,6 +190,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	ssize_t t = 0;
 	int e = 0;
 	size_t n;
+	char *s;
 
 	if (! (self && self->write_buffer)) {
 		TRACE(TRACE_DEBUG, "called while clientbase is stale");
@@ -209,12 +205,14 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	}
 	
 	if (self->write_buffer->len < 1) return 0;
-	n = self->write_buffer->len;
+
+	s = self->write_buffer->str + self->write_buffer_offset;
+	n = self->write_buffer->len - self->write_buffer_offset;
 
 	if (self->ssl) {
 		if (! self->tls_wbuf_n) {
 			if (n > TLS_SEGMENT) n = TLS_SEGMENT;
-			strncpy(self->tls_wbuf, self->write_buffer->str, n);
+			strncpy(self->tls_wbuf, s, n);
 			self->tls_wbuf_n = n;
 		}
 
@@ -229,11 +227,15 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		if ((e = self->cb_error(self->tx, e, (void *)self)))
 			return e;
 	} else {
-		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, self->write_buffer->str);
-		self->write_buffer = g_string_erase(self->write_buffer, 0, t);
+		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
+		self->write_buffer_offset += t;
 		if (self->ssl) {
 			memset(self->tls_wbuf, '\0', TLS_SEGMENT);
 			self->tls_wbuf_n = 0;
+		}
+		if (self->write_buffer_offset == self->write_buffer->len) {
+			g_string_truncate(self->write_buffer,0);
+			self->write_buffer_offset = 0;
 		}
 	}
 
@@ -251,6 +253,12 @@ void ci_read_cb(clientbase_t *self)
 	 */
 	ssize_t t = 0;
 	char ibuf[IBUFLEN];
+
+	if (self->ssl && self->ssl_state == FALSE) {
+		ci_starttls(self);
+		event_add(self->rev, self->timeout);
+		return;
+	}
 
 	while (TRUE) {
 		memset(ibuf, 0, sizeof(ibuf));

@@ -113,7 +113,10 @@ int _ic_starttls(ImapSession *self)
 	}
 	ci_write(self->ci, "%s OK Begin TLS now\r\n", self->tag);
 	i = ci_starttls(self->ci);
-	if (i < 0) return 0;
+	if (i < 0) i = 0;
+
+	if (i == 0) return 3; /* done */
+
 	return i;
 }
 /*

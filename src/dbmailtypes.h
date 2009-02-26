@@ -215,7 +215,7 @@ typedef struct  {
 
 //
 
-#define TLS_SEGMENT 32768
+#define TLS_SEGMENT  4096
 #define CLIENT_OK	0
 #define CLIENT_AGAIN	1
 #define CLIENT_ERR	2
@@ -246,6 +246,7 @@ typedef struct {
 	GString *read_buffer;		/* input buffer */
 	size_t read_buffer_offset;	/* input buffer offset */
 	GString *write_buffer;		/* output buffer */
+	size_t write_buffer_offset;	/* output buffer offset */
 	GAsyncQueue *queue;		/* inter-thread message pipe */
 } clientbase_t;
 
