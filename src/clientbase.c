@@ -69,8 +69,10 @@ static int client_error_cb(int sock, int error, void *arg)
 				break; // reschedule
 			default:
 				TRACE(TRACE_DEBUG,"[%p] %d %d, %p", client, sock, sslerr, arg);
-				//if (client->write_buffer)
-				//	client->write_buffer = g_string_truncate(client->write_buffer,0);
+				if (client->write_buffer)
+					client->write_buffer = g_string_truncate(client->write_buffer,0);
+				if (client->read_buffer)
+					client->read_buffer = g_string_truncate(client->read_buffer,0);
 				r = -1;
 				break;
 		}
@@ -84,6 +86,8 @@ static int client_error_cb(int sock, int error, void *arg)
 				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
 				if (client->write_buffer)
 					client->write_buffer = g_string_truncate(client->write_buffer,0);
+				if (client->read_buffer)
+					client->read_buffer = g_string_truncate(client->read_buffer,0);
 				r = -1;
 				break;
 		}
@@ -269,7 +273,8 @@ void ci_read_cb(clientbase_t *self)
 
 		} else {
 			self->client_state = CLIENT_OK; 
-			g_string_append(self->read_buffer, ibuf);
+			g_string_append_len(self->read_buffer, ibuf, t);
+			TRACE(TRACE_DEBUG,"read [%ld:%s]", t, ibuf);
 		}
 	}
 
@@ -340,8 +345,6 @@ int ci_readln(clientbase_t *self, char * buffer)
 			self->read_buffer_offset = 0;
 		}
 	}
-
-	TRACE(TRACE_DEBUG,"remaining [%lu][%ld]", self->read_buffer->len, self->read_buffer_offset);
 
 	return self->len;
 }

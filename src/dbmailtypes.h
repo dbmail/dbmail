@@ -244,7 +244,7 @@ typedef struct {
 	char tls_wbuf[TLS_SEGMENT];	/* buffer to write during tls session */
 	size_t tls_wbuf_n;		/* number of octets to write during tls session */
 	GString *read_buffer;		/* input buffer */
-	ssize_t read_buffer_offset;	/* input buffer offset */
+	size_t read_buffer_offset;	/* input buffer offset */
 	GString *write_buffer;		/* output buffer */
 	GAsyncQueue *queue;		/* inter-thread message pipe */
 } clientbase_t;
