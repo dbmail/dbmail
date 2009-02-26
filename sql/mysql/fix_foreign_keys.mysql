@@ -42,8 +42,9 @@ SET FOREIGN_KEY_CHECKS=0;
 alter table dbmail_mailboxes drop foreign key owner_idnr_fk;
 alter table dbmail_mailboxes drop foreign key dbmail_mailboxes_ibfk;
 alter table dbmail_mailboxes drop foreign key dbmail_mailboxes_ibfk_1;
-alter table dbmail_mailboxes add FOREIGN KEY owner_idnr_fk (owner_idnr) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_mailboxes drop foreign key dbmail_mailboxes_ibfk_2;
+alter table dbmail_mailboxes add CONSTRAINT dbmail_mailboxes_ibfk_1 
+	FOREIGN KEY (`owner_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 
 alter table dbmail_subscription drop foreign key user_id_fk;
@@ -51,10 +52,10 @@ alter table dbmail_subscription drop foreign key mailbox_id_fk;
 alter table dbmail_subscription drop foreign key dbmail_subscription_ibfk_1;
 alter table dbmail_subscription drop foreign key dbmail_subscription_ibfk_2;
 alter table dbmail_subscription drop foreign key dbmail_subscription_ibfk_3;
-alter table dbmail_subscription add FOREIGN KEY user_id_fk (user_id) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
-alter table dbmail_subscription add FOREIGN KEY mailbox_id_fk (mailbox_id) 
-		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_subscription add CONSTRAINT dbmail_subscription_ibfk_1 
+	FOREIGN KEY (`user_id`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_subscription add CONSTRAINT dbmail_subscription_ibfk_2
+	FOREIGN KEY (`mailbox_id`) REFERENCES `dbmail_mailboxes` (`mailbox_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 
 alter table dbmail_acl drop foreign key user_id_fk;
@@ -62,10 +63,10 @@ alter table dbmail_acl drop foreign key mailbox_id_fk;
 alter table dbmail_acl drop foreign key dbmail_acl_ibfk_1;
 alter table dbmail_acl drop foreign key dbmail_acl_ibfk_2;
 alter table dbmail_acl drop foreign key dbmail_acl_ibfk_3;
-alter table dbmail_acl add FOREIGN KEY user_id_fk (user_id) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
-alter table dbmail_acl add FOREIGN KEY mailbox_id_fk (mailbox_id) 
-		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_acl add CONSTRAINT dbmail_acl_ibfk_1 
+	FOREIGN KEY (`user_id`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_acl add CONSTRAINT dbmail_acl_ibfk_2
+	FOREIGN KEY (`mailbox_id`) REFERENCES `dbmail_mailboxes` (`mailbox_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 	
 alter table dbmail_messages drop foreign key physmessage_id_fk;
@@ -73,174 +74,96 @@ alter table dbmail_messages drop foreign key mailbox_idnr_fk;
 alter table dbmail_messages drop foreign key dbmail_messages_ibfk_1;
 alter table dbmail_messages drop foreign key dbmail_messages_ibfk_2;
 alter table dbmail_messages drop foreign key dbmail_messages_ibfk_3;
-alter table dbmail_messages add FOREIGN KEY physmessage_id_fk (physmessage_id) 
-		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE;
-alter table dbmail_messages add FOREIGN KEY mailbox_idnr_fk (mailbox_idnr) 
-		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_messages add CONSTRAINT dbmail_messages_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_messages add CONSTRAINT dbmail_messages_ibfk_2 
+	FOREIGN KEY (`mailbox_idnr`) REFERENCES `dbmail_mailboxes` (`mailbox_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 	
 alter table dbmail_messageblks drop foreign key physmessage_id_fk;
 alter table dbmail_messageblks drop foreign key dbmail_messageblks_ibfk_1;
 alter table dbmail_messageblks drop foreign key dbmail_messageblks_ibfk_2;
-alter table dbmail_messageblks add FOREIGN KEY physmessage_id_fk (physmessage_id) 
-		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_messageblks add CONSTRAINT dbmail_messageblks_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 
 alter table dbmail_auto_notifications drop foreign key physmessage_id_fk;
 alter table dbmail_auto_notifications drop foreign key dbmail_auto_notifications_ibfk_1;
 alter table dbmail_auto_notifications drop foreign key dbmail_auto_notifications_ibfk_2;
-alter table dbmail_auto_notifications add FOREIGN KEY user_idnr_fk (user_idnr) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_auto_notifications add CONSTRAINT dbmail_messageblks_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 
 alter table dbmail_auto_replies drop foreign key physmessage_id_fk;
 alter table dbmail_auto_replies drop foreign key dbmail_auto_replies_ibfk_1;
 alter table dbmail_auto_replies drop foreign key dbmail_auto_replies_ibfk_2;
-alter table dbmail_auto_replies add FOREIGN KEY user_idnr_fk (user_idnr) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_auto_replies add CONSTRAINT dbmail_auto_replies_ibfk_1
+	FOREIGN KEY (`user_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 
 alter table dbmail_sievescripts drop foreign key physmessage_id_fk;
 alter table dbmail_sievescripts drop foreign key dbmail_sievescripts_ibfk_1;
 alter table dbmail_sievescripts drop foreign key dbmail_sievescripts_ibfk_2;
-alter table dbmail_sievescripts add FOREIGN KEY owner_idnr_fk (owner_idnr) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_sievescripts add CONSTRAINT dbmail_sievescripts_ibfk_1
+	FOREIGN KEY (`owner_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 
-DROP TABLE IF EXISTS dbmail_headervalue;
-CREATE TABLE dbmail_headervalue (
-	headername_id	BIGINT NOT NULL,
-        physmessage_id	BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	headervalue	TEXT NOT NULL,
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
-	UNIQUE (physmessage_id, headername_id, headervalue(255)),
-	INDEX (headername_id),
-	INDEX (physmessage_id),
-	FOREIGN KEY (headername_id)
-		REFERENCES dbmail_headername(id) ON UPDATE CASCADE ON DELETE CASCADE,
-	FOREIGN KEY (physmessage_id)
-		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+alter table dbmail_header drop foreign key dbmail_header_ibfk_1;
+alter table dbmail_header drop foreign key dbmail_header_ibfk_2;
+alter table dbmail_header drop foreign key dbmail_header_ibfk_3;
+alter table dbmail_header drop foreign key dbmail_header_ibfk_4;
+alter table dbmail_header add CONSTRAINT `dbmail_header_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_header add CONSTRAINT `dbmail_header_ibfk_2` FOREIGN KEY (`headername_id`) REFERENCES `dbmail_headername` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+alter table dbmail_header add CONSTRAINT `dbmail_header_ibfk_3` FOREIGN KEY (`headervalue_id`) REFERENCES `dbmail_headervalue` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-# Provide separate storage of commonly used headers
 
-# These fields will typically be preparsed as specified by 
-# http://www.ietf.org/internet-drafts/draft-ietf-imapext-sort-17.txt
+alter table dbmail_subjectfield drop foreign key dbmail_subjectfield_ibfk_1;
+alter table dbmail_subjectfield drop foreign key dbmail_subjectfield_ibfk_2;
+alter table dbmail_subjectfield add CONSTRAINT dbmail_subjectfield_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-# Threading
 
-# support fast threading by breaking out In-Reply-To/References headers
-# these fields contain zero or more Message-Id values that determine the message
-# threading
+alter table dbmail_datefield drop foreign key dbmail_datefield_ibfk_1;
+alter table dbmail_datefield drop foreign key dbmail_datefield_ibfk_2;
+alter table dbmail_datefield add CONSTRAINT dbmail_datefield_ibfk_1 
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-DROP TABLE IF EXISTS dbmail_subjectfield;
-CREATE TABLE dbmail_subjectfield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	subjectfield	VARCHAR(255) NOT NULL DEFAULT '',
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, subjectfield),
-	FOREIGN KEY (physmessage_id)
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
 
-DROP TABLE IF EXISTS dbmail_datefield;
-CREATE TABLE dbmail_datefield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	datefield	DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00',
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, datefield),
-	FOREIGN KEY (physmessage_id)
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+alter table dbmail_referencesfield drop foreign key dbmail_referencesfield_ibfk_1;
+alter table dbmail_referencesfield drop foreign key dbmail_referencesfield_ibfk_2;
+alter table dbmail_referencesfield add CONSTRAINT dbmail_referencesfield_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-DROP TABLE IF EXISTS dbmail_referencesfield;
-CREATE TABLE dbmail_referencesfield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	referencesfield	VARCHAR(255) NOT NULL DEFAULT '',
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, referencesfield),
-	FOREIGN KEY (physmessage_id)
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
 
-# Searching and Sorting
+alter table dbmail_fromfield drop foreign key dbmail_fromfield_ibfk_1;
+alter table dbmail_fromfield drop foreign key dbmail_fromfield_ibfk_2;
+alter table dbmail_fromfield add CONSTRAINT dbmail_fromfield_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-# support fast sorting by breaking out and preparsing the fields most commonly used
-# in searching and sorting: Subject, From, To, Reply-To, Cc. 
 
-DROP TABLE IF EXISTS dbmail_fromfield;
-CREATE TABLE dbmail_fromfield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	fromname	VARCHAR(100) NOT NULL DEFAULT '',
-	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
-	FOREIGN KEY (physmessage_id)
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+alter table dbmail_tofield drop foreign key dbmail_tofield_ibfk_1;
+alter table dbmail_tofield drop foreign key dbmail_tofield_ibfk_2;
+alter table dbmail_tofield add CONSTRAINT dbmail_tofield_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-DROP TABLE IF EXISTS dbmail_tofield;
-CREATE TABLE dbmail_tofield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	toname		VARCHAR(100) NOT NULL DEFAULT '',
-	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
-	FOREIGN KEY (physmessage_id)
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
 
-DROP TABLE IF EXISTS dbmail_replytofield;
-CREATE TABLE dbmail_replytofield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
-	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
-	FOREIGN KEY (physmessage_id)
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
+alter table dbmail_replytofield drop foreign key dbmail_replytofield_ibfk_1;
+alter table dbmail_replytofield drop foreign key dbmail_replytofield_ibfk_2;
+alter table dbmail_replytofield add CONSTRAINT dbmail_replytofield_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-DROP TABLE IF EXISTS dbmail_ccfield;
-CREATE TABLE dbmail_ccfield (
-        physmessage_id  BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	ccname		VARCHAR(100) NOT NULL DEFAULT '',
-	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
-	FOREIGN KEY (physmessage_id)
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB ;
 
-COMMIT;
+alter table dbmail_ccfield drop foreign key dbmail_datefield_ibfk_1;
+alter table dbmail_ccfield drop foreign key dbmail_datefield_ibfk_2;
+alter table dbmail_ccfield add CONSTRAINT dbmail_datefield_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-DROP TABLE IF EXISTS dbmail_envelope;
-CREATE TABLE dbmail_envelope (
-	physmessage_id	BIGINT NOT NULL,
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-	envelope	TEXT NOT NULL,
-	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
-	FOREIGN KEY (physmessage_id)
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB;
+
+alter table dbmail_envelope drop foreign key dbmail_envelope_ibfk_1;
+alter table dbmail_envelope drop foreign key dbmail_envelope_ibfk_2;
+alter table dbmail_envelope add CONSTRAINT dbmail_envelope_ibfk_1
+	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
 
 SET FOREIGN_KEY_CHECKS=1;
 
