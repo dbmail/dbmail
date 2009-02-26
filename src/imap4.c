@@ -284,8 +284,8 @@ void imap_handle_input(ImapSession *session)
 		}
 
 		if (session->error_count >= MAX_FAULTY_RESPONSES) {
-			imap_session_printf(session, "* BYE [TRY RFC]\r\n");
 			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+			imap_session_printf(session, "* BYE [TRY RFC]\r\n");
 			break;
 		}
 
@@ -300,6 +300,12 @@ void imap_handle_input(ImapSession *session)
 
 		if (! imap4_tokenizer(session, buffer))
 			continue;
+
+		if (session->parser_state < 0) {
+			imap_session_printf(session, "%s BAD parse error\r\n", session->tag);
+			imap_handle_exit(session, 1);
+			break;
+		}
 
 		if (session->parser_state) {
 			if ((result = imap4(session))) 

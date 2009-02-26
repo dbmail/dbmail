@@ -1998,7 +1998,7 @@ int _ic_uid(ImapSession *self)
 		return 1;
 	}
 
-	if (!self->args[0]) {
+	if (! (self->args[0] && self->args[self->args_idx]) ) {
 		dbmail_imap_session_buff_printf(self, "%s BAD missing argument(s) to UID\r\n", self->tag);
 		return 1;
 	}
