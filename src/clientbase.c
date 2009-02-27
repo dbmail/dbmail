@@ -53,6 +53,43 @@ static void dm_tls_error(void)
 	TRACE(TRACE_ERR, "%s", ERR_error_string(e, NULL));
 }
 
+static void client_wbuf_clear(clientbbase_t *client)
+{
+	if (client->write_buffer)
+		client->write_buffer = g_string_truncate(client->write_buffer,0);
+
+}
+
+static void client_rbuf_clear(clientbbase_t *client)
+{
+	if (client->read_buffer)
+		client->read_buffer = g_string_truncate(client->read_buffer,0);
+
+}
+
+static void client_rbuff_scale(client_base_t *self)
+{
+	if (self->read_buffer_offset == self->read_buffer->len) {
+		g_string_truncate(self->read_buffer,0);
+		self->read_buffer_offset = 0;
+	} else if (self->read_buffer_offset >= WATERMARK) {
+		g_string_erase(self->read_buffer,0, WATERMARK);
+		self->read_buffer_offset -= WATERMARK;
+	}
+}
+
+static void client_wbuff_scale(client_base_t *self)
+{
+	if (self->write_buffer_offset == self->write_buffer->len) {
+		g_string_truncate(self->write_buffer,0);
+		self->write_buffer_offset = 0;
+	} else if (self->write_buffer_offset >= WATERMARK) {
+		g_string_erase(self->write_buffer,0, WATERMARK);
+		self->write_buffer_offset -= WATERMARK;
+	}
+}
+
+
 static int client_error_cb(int sock, int error, void *arg)
 {
 	int r = 0;
@@ -69,10 +106,8 @@ static int client_error_cb(int sock, int error, void *arg)
 				break; // reschedule
 			default:
 				TRACE(TRACE_DEBUG,"[%p] %d %d, %p", client, sock, sslerr, arg);
-				if (client->write_buffer)
-					client->write_buffer = g_string_truncate(client->write_buffer,0);
-				if (client->read_buffer)
-					client->read_buffer = g_string_truncate(client->read_buffer,0);
+				client_wbuf_clear(client);
+				client_wbuf_clear(client);
 				r = -1;
 				break;
 		}
@@ -84,10 +119,8 @@ static int client_error_cb(int sock, int error, void *arg)
 				break; // reschedule
 			default:
 				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
-				if (client->write_buffer)
-					client->write_buffer = g_string_truncate(client->write_buffer,0);
-				if (client->read_buffer)
-					client->read_buffer = g_string_truncate(client->read_buffer,0);
+				client_wbuf_clear(client);
+				client_wbuf_clear(client);
 				r = -1;
 				break;
 		}
@@ -183,7 +216,6 @@ int ci_starttls(clientbase_t *self)
 	TRACE(TRACE_DEBUG,"[%p] ssl initialized", self);
 	return DM_SUCCESS;
 }
-
 int ci_write(clientbase_t *self, char * msg, ...)
 {
 	va_list ap, cp;
@@ -209,13 +241,13 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	s = self->write_buffer->str + self->write_buffer_offset;
 	n = self->write_buffer->len - self->write_buffer_offset;
 
+	if (n > TLS_SEGMENT) n = TLS_SEGMENT;
+
 	if (self->ssl) {
 		if (! self->tls_wbuf_n) {
-			if (n > TLS_SEGMENT) n = TLS_SEGMENT;
 			strncpy(self->tls_wbuf, s, n);
 			self->tls_wbuf_n = n;
 		}
-
 		t = SSL_write(self->ssl, (gconstpointer)self->tls_wbuf, self->tls_wbuf_n);
 		e = t;
 	} else {
@@ -228,15 +260,14 @@ int ci_write(clientbase_t *self, char * msg, ...)
 			return e;
 	} else {
 		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
-		self->write_buffer_offset += t;
+
+
 		if (self->ssl) {
 			memset(self->tls_wbuf, '\0', TLS_SEGMENT);
 			self->tls_wbuf_n = 0;
 		}
-		if (self->write_buffer_offset == self->write_buffer->len) {
-			g_string_truncate(self->write_buffer,0);
-			self->write_buffer_offset = 0;
-		}
+		self->write_buffer_offset += t;
+		client_wbuff_scale(self);
 	}
 
 	event_add(self->wev, NULL);
@@ -289,7 +320,6 @@ void ci_read_cb(clientbase_t *self)
 	TRACE(TRACE_DEBUG,"[%p] state [%x] read_buffer->len[%ld]", self, self->client_state, self->read_buffer->len);
 }
 
-
 int ci_read(clientbase_t *self, char *buffer, size_t n)
 {
 	assert(buffer);
@@ -298,7 +328,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	self->len = 0;
 
 	char *s = self->read_buffer->str + self->read_buffer_offset;
-	if ((self->read_buffer->len - self->read_buffer_offset) >= n) {
+	if ((self->read_buffer_offset + n) <= self->read_buffer->len) {
 		size_t j,k = 0;
 		char c;
 
@@ -310,10 +340,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		}
 		self->read_buffer_offset += n;
 		self->len += j;
-		if (self->read_buffer_offset == self->read_buffer->len) {
-			g_string_truncate(self->read_buffer,0);
-			self->read_buffer_offset = 0;
-		}
+		client_rbuff_scale(self);
 	}
 
 	if (self->len)
