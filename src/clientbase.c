@@ -264,7 +264,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		t = SSL_write(self->ssl, (gconstpointer)self->tls_wbuf, self->tls_wbuf_n);
 		e = t;
 	} else {
-		t = write(self->tx, (gconstpointer)self->write_buffer->str, n);
+		t = write(self->tx, (gconstpointer)s, n);
 		e = errno;
 	}
 
