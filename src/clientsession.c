@@ -93,8 +93,10 @@ void client_session_reset_parser(ClientSession_t *session)
 {
 	session->parser_state = FALSE;
 	session->command_type = FALSE;
-	if (session->rbuff)
-		g_string_printf(session->rbuff,"%s","");
+	if (session->rbuff) {
+		g_string_truncate(session->rbuff,0);
+		g_string_maybe_shrink(session->rbuff);
+	}
 
 	if (session->args) {
 		g_list_destroy(session->args);
@@ -121,8 +123,6 @@ void client_session_bailout(ClientSession_t **session)
 static gboolean client_session_read(ClientSession_t *session)
 {
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
-	// disable read events until we're done
-	event_del(session->ci->rev);
 	ci_read_cb(session->ci);
 	switch(session->ci->client_state) {
 		case CLIENT_OK:

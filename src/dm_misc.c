@@ -63,6 +63,14 @@ typedef struct {
 	int condition;
 } tree_merger_t;
 
+void g_string_maybe_shrink(GString *s)
+{
+	if (s->len+1 < s->allocated_len) {
+		s->str = g_realloc(s->str, s->len+1);
+		s->allocated_len = s->len+1;
+	}
+}
+
 int drop_privileges(char *newuser, char *newgroup)
 {
 	/* will drop running program's priviledges to newuser and newgroup */

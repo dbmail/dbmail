@@ -25,6 +25,13 @@
 
 #define BUFLEN 2048
  
+/*
+ * Resize the allocated size for a GString
+ *
+ * GLib never scales down the allocated space 
+ * for GString.
+ */
+void g_string_maybe_shrink(GString *s);
 
 /**
    \brief drop process privileges. Change change euid and egid to

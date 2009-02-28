@@ -1031,7 +1031,6 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 
 	dbmail_imap_session_buff_printf(self, ")\r\n");
-	dbmail_imap_session_buff_flush(self);
 
 	if (reportflags) {
 		char *t = NULL;
@@ -1056,6 +1055,8 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, ImapSession *self)
 		self->error = TRUE;
 		return TRUE;
 	}
+
+	dbmail_imap_session_buff_flush(self);
 
 	return FALSE;
 }
@@ -1133,6 +1134,7 @@ int check_state_and_args(ImapSession * self, int minargs, int maxargs, imap_cs_t
 void dbmail_imap_session_buff_clear(ImapSession *self)
 {
 	self->buff = g_string_truncate(self->buff, 0);
+	g_string_maybe_shrink(self->buff);
 }	
 
 void dbmail_imap_session_buff_flush(ImapSession *self)
@@ -1168,6 +1170,8 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
         va_end(cp);
 
         l = self->buff->len;
+
+	if (l > 4096) dbmail_imap_session_buff_flush(self);
 
         return (int)(l-j);
 }

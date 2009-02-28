@@ -53,40 +53,49 @@ static void dm_tls_error(void)
 	TRACE(TRACE_ERR, "%s", ERR_error_string(e, NULL));
 }
 
-static void client_wbuf_clear(clientbbase_t *client)
+#define WATERMARK TLS_SEGMENT*8
+
+static void client_wbuf_clear(clientbase_t *client)
 {
-	if (client->write_buffer)
+	if (client->write_buffer) {
 		client->write_buffer = g_string_truncate(client->write_buffer,0);
+		g_string_maybe_shrink(client->write_buffer);
+	}
 
 }
 
-static void client_rbuf_clear(clientbbase_t *client)
+static void client_rbuf_clear(clientbase_t *client)
 {
-	if (client->read_buffer)
+	if (client->read_buffer) {
 		client->read_buffer = g_string_truncate(client->read_buffer,0);
-
+		g_string_maybe_shrink(client->read_buffer);
+	}
 }
 
-static void client_rbuff_scale(client_base_t *self)
+static void client_rbuf_scale(clientbase_t *self)
 {
 	if (self->read_buffer_offset == self->read_buffer->len) {
 		g_string_truncate(self->read_buffer,0);
 		self->read_buffer_offset = 0;
-	} else if (self->read_buffer_offset >= WATERMARK) {
-		g_string_erase(self->read_buffer,0, WATERMARK);
-		self->read_buffer_offset -= WATERMARK;
+		g_string_maybe_shrink(self->read_buffer);
+	//} else if (self->read_buffer_offset >= WATERMARK) {
+	//	g_string_erase(self->read_buffer,0, WATERMARK);
+	//	self->read_buffer_offset -= WATERMARK;
 	}
+
 }
 
-static void client_wbuff_scale(client_base_t *self)
+static void client_wbuf_scale(clientbase_t *self)
 {
 	if (self->write_buffer_offset == self->write_buffer->len) {
 		g_string_truncate(self->write_buffer,0);
 		self->write_buffer_offset = 0;
-	} else if (self->write_buffer_offset >= WATERMARK) {
-		g_string_erase(self->write_buffer,0, WATERMARK);
-		self->write_buffer_offset -= WATERMARK;
+		g_string_maybe_shrink(self->write_buffer);
+	//} else if (self->write_buffer_offset >= WATERMARK) {
+	//	g_string_erase(self->write_buffer,0, WATERMARK);
+	//	self->write_buffer_offset -= WATERMARK;
 	}
+
 }
 
 
@@ -106,7 +115,7 @@ static int client_error_cb(int sock, int error, void *arg)
 				break; // reschedule
 			default:
 				TRACE(TRACE_DEBUG,"[%p] %d %d, %p", client, sock, sslerr, arg);
-				client_wbuf_clear(client);
+				client_rbuf_clear(client);
 				client_wbuf_clear(client);
 				r = -1;
 				break;
@@ -216,6 +225,7 @@ int ci_starttls(clientbase_t *self)
 	TRACE(TRACE_DEBUG,"[%p] ssl initialized", self);
 	return DM_SUCCESS;
 }
+
 int ci_write(clientbase_t *self, char * msg, ...)
 {
 	va_list ap, cp;
@@ -236,7 +246,10 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		va_end(cp);
 	}
 	
-	if (self->write_buffer->len < 1) return 0;
+	if (self->write_buffer->len < 1) { 
+		TRACE(TRACE_DEBUG, "write_buffer is empty [%d]", self->write_buffer->len);
+		return 0;
+	}
 
 	s = self->write_buffer->str + self->write_buffer_offset;
 	n = self->write_buffer->len - self->write_buffer_offset;
@@ -259,15 +272,16 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		if ((e = self->cb_error(self->tx, e, (void *)self)))
 			return e;
 	} else {
-		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
-
-
 		if (self->ssl) {
 			memset(self->tls_wbuf, '\0', TLS_SEGMENT);
 			self->tls_wbuf_n = 0;
 		}
 		self->write_buffer_offset += t;
-		client_wbuff_scale(self);
+
+		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
+
+		client_wbuf_scale(self);
+
 	}
 
 	event_add(self->wev, NULL);
@@ -340,7 +354,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		}
 		self->read_buffer_offset += n;
 		self->len += j;
-		client_rbuff_scale(self);
+		client_rbuf_scale(self);
 	}
 
 	if (self->len)
@@ -375,10 +389,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 		self->len = k;
 		TRACE(TRACE_INFO, "[%p] C < %ld:[%s]", self, self->len, buffer);
 
-		if (self->read_buffer_offset == self->read_buffer->len) {
-			g_string_truncate(self->read_buffer,0);
-			self->read_buffer_offset = 0;
-		}
+		client_rbuf_scale(self);
 	}
 
 	return self->len;

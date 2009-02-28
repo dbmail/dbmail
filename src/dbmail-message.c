@@ -91,8 +91,10 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	assert(s);
 
 	i = find_end_of_header(s);
-	if (i >= strlen(s))
+	if (i >= strlen(s)) {
+		g_free(s);
 		return NULL;
+	}
 	
 	b = s+i;
 	l = strlen(b);
@@ -1978,7 +1980,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 }
 
 
-static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, const char *mailbox, char *into)
+static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, const char *mailbox, char *into, size_t into_n)
 {
 	int t = FALSE;
 	u64_t anyone = 0;
@@ -1987,8 +1989,6 @@ static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, cons
 	TRACE(TRACE_INFO, "default mailbox [%s]", mailbox);
 	
 	if (mailbox != NULL) return t;
-
-	memset(into,0,sizeof(into));
 
 	if (! auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone))
 		return t;
@@ -2008,7 +2008,7 @@ static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, cons
 			dbmail_message_get_physid(message), anyone, useridnr);
 		if (db_result_next(r)) {
 			const char *hn, *hv;
-			strncpy(into, db_result_get(r,0), sizeof(into));
+			strncpy(into, db_result_get(r,0), into_n);
 			hn = db_result_get(r,1);
 			hv = db_result_get(r,2);
 			TRACE(TRACE_DEBUG, "match [%s: %s] file-into mailbox [%s]", hn, hv, into);
@@ -2049,7 +2049,9 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 	if (! mailbox) {
 		char into[1024];
 		
-		if (! (get_mailbox_from_filters(message, useridnr, mailbox, into))) {				
+		memset(into,0,sizeof(into));
+
+		if (! (get_mailbox_from_filters(message, useridnr, mailbox, into, sizeof(into)))) {				
 			mailbox = "INBOX";
 			source = BOX_DEFAULT;
 		} else {

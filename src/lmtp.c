@@ -448,7 +448,8 @@ int lmtp(ClientSession_t * session)
 		msg = dbmail_message_new();
 		dbmail_message_init_with_string(msg, session->rbuff);
 		dbmail_message_set_header(msg, "Return-Path", (char *)session->from->data);
-		g_string_printf(session->rbuff,"%s","");
+		g_string_truncate(session->rbuff,0);
+		g_string_maybe_shrink(session->rbuff);
 
 		if (insert_messages(msg, session->rcpt) == -1) {
 			ci_write(ci, "430 Message not received\r\n");
