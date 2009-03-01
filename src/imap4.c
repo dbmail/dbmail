@@ -129,12 +129,9 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 			}
 		
 			
-			if (session->ci->write_buffer->len > session->ci->write_buffer_offset) {
-				 ci_write(session->ci,NULL);
-			} else {
-				if (session->command_state == TRUE)
-					imap_handle_input(session);
-			}
+			ci_write_cb(session->ci);
+
+			imap_handle_input(session);
 
 			break;
 	}
@@ -269,10 +266,16 @@ static void imap_handle_exit(ImapSession *session, int status)
 void imap_handle_input(ImapSession *session)
 {
 	char buffer[MAX_LINESIZE];
-	int l, result;
+	int l, result, needed = 0;
+
+	if (session->ci->write_buffer->len) {
+		ci_write(session->ci, NULL);
+		return;
+	}
 
 	if (session->command_state == TRUE)
 		dbmail_imap_session_reset(session);
+
 
 	// Drain input buffer else return to wait for more.
 	// Read in a line at a time if we don't have a string literal size defined
@@ -282,17 +285,14 @@ void imap_handle_input(ImapSession *session)
 		memset(buffer, 0, sizeof(buffer));
 
 		if (session->rbuff_size <= 0) {
-
 			l = ci_readln(session->ci, buffer);
 		} else {
-			int needed = (session->rbuff_size < (int)sizeof(buffer)) ? session->rbuff_size : (int)sizeof(buffer);
+			needed = MIN(session->rbuff_size,(int)sizeof(buffer));
 			l = ci_read(session->ci, buffer, needed);
 		}
 
 		TRACE(TRACE_DEBUG,"[%p] ci_read(ln) returned [%d]", session, l);
-		if (l == 0) {
-			break; // done
-		}
+		if (l == 0) break; // done
 
 		if (session->error_count >= MAX_FAULTY_RESPONSES) {
 			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
@@ -312,13 +312,13 @@ void imap_handle_input(ImapSession *session)
 		if (! imap4_tokenizer(session, buffer))
 			continue;
 
-		if (session->parser_state < 0) {
+		if ( session->parser_state < 0 ) {
 			imap_session_printf(session, "%s BAD parse error\r\n", session->tag);
 			imap_handle_exit(session, 1);
 			break;
 		}
 
-		if (session->parser_state) {
+		if ( session->parser_state ) {
 			if ((result = imap4(session))) 
 				imap_handle_exit(session, result);
 			TRACE(TRACE_DEBUG,"imap4 returned [%d]", result);

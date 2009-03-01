@@ -226,6 +226,12 @@ int ci_starttls(clientbase_t *self)
 	return DM_SUCCESS;
 }
 
+void ci_write_cb(clientbase_t *self)
+{
+	if (self->write_buffer->len > self->write_buffer_offset)
+		ci_write(self,NULL);
+}
+
 int ci_write(clientbase_t *self, char * msg, ...)
 {
 	va_list ap, cp;

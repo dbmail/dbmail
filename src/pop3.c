@@ -232,28 +232,44 @@ static void pop3_close(ClientSession_t *session)
 static void pop3_handle_input(ClientSession_t *session)
 {
 	char buffer[MAX_LINESIZE];	/* connection buffer */
-	int l;
 
-	while (TRUE) {
-		memset(buffer, 0, sizeof(buffer));
-
-		l = ci_readln(session->ci, buffer);
-
-		if (l==0) {
-			event_add(session->ci->rev, session->ci->timeout);
-			return;
-		}
-
-		if (pop3(session, buffer) == -3) {
-			client_session_bailout(&session);
-			break;
-		}
+	if (session->ci->write_buffer->len) {
+		ci_write(session->ci, NULL);
+		return;
 	}
+
+	memset(buffer, 0, sizeof(buffer));
+	if (ci_readln(session->ci, buffer) == 0)
+		return;
+
+	if (pop3(session, buffer) == -3)
+		client_session_bailout(&session);
 }
 
 void pop3_cb_read(void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
+
+	ci_read_cb(session->ci);
+	switch(session->ci->client_state) {
+		case CLIENT_OK:
+		case CLIENT_AGAIN:
+		break;
+		default:
+		case CLIENT_ERR:
+			TRACE(TRACE_DEBUG,"client_state ERROR");
+			client_session_bailout(&session);
+			return;
+			break;
+		case CLIENT_EOF:
+			TRACE(TRACE_NOTICE,"reached EOF");
+			if (session->ci->read_buffer->len < 1) {
+				client_session_bailout(&session);
+				return;
+			}
+		break;
+	}
+
 	pop3_handle_input(session);
 }
 
@@ -262,12 +278,14 @@ void pop3_cb_write(void *arg)
 	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
-	ci_write(session->ci, NULL); //flush buffered data
-
 	switch (session->state) {
 		case POP3_QUIT_STATE:
 			db_session_cleanup(session);
 			client_session_bailout(&session);
+			break;
+		default:
+			ci_write_cb(session->ci);
+			pop3_handle_input(session);
 			break;
 	}
 }

@@ -116,11 +116,16 @@ void lmtp_cb_write(void *arg)
 	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
-	ci_write(session->ci, NULL); //flush buffered data
-
 	switch (session->state) {
 		case QUIT:
 			client_session_bailout(&session);
+			break;
+		default:
+			if (session->ci->write_buffer->len > session->ci->write_buffer_offset) {
+				ci_write(session->ci,NULL);
+				break;
+			}
+			lmtp_handle_input(session);
 			break;
 	}
 }

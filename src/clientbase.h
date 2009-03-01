@@ -27,10 +27,14 @@
  
 clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl);
 int ci_starttls(clientbase_t *self);
+
+void ci_write_cb(clientbase_t *self);
 int ci_write(clientbase_t *self, char * msg, ...);
+
 void ci_read_cb(clientbase_t *self);
 int ci_read(clientbase_t *self, char *buffer, size_t n);
 int ci_readln(clientbase_t *self, char * buffer);
+
 void ci_close(clientbase_t *self);
 
 #endif
