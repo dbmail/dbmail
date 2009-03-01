@@ -246,7 +246,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 
 	memset(query,0,sizeof(query));
 	snprintf(query, DEF_QUERYSIZE,
-		"SELECT message_idnr, keyword FROM %skeywords k "
+		"SELECT k.message_idnr, keyword FROM %skeywords k "
 		"JOIN %smessages m USING (message_idnr) "
 		"JOIN %smailboxes b USING (mailbox_idnr) "
 		"WHERE b.mailbox_idnr = %llu AND m.status < %d",
