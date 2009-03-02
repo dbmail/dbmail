@@ -492,7 +492,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 
 	}
 
-	session->parser_state = build_args_array_ext(session, cpy);	/* build argument array */
+	session->parser_state = imap4_tokenizer_main(session, cpy);	/* build argument array */
 
 	if (session->parser_state)
 		TRACE(TRACE_DEBUG,"parser_state: [%d]", session->parser_state);

@@ -1836,7 +1836,7 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self)
 #define NOPAR 0
 
 /*
- * build_args_array_ext()
+ * imap4_tokenizer_main()
  *
  * imap command tokenizer
  *
@@ -1864,7 +1864,7 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self)
  * Will return NULL upon errors.
  */
 
-int build_args_array_ext(ImapSession *self, const char *originalString)
+int imap4_tokenizer_main(ImapSession *self, const char *originalString)
 {
 	int inquote = 0, quotestart = 0;
 	int nnorm = 0, nsquare = 0, paridx = 0, argstart = 0;

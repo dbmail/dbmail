@@ -87,7 +87,7 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 	mb = dbmail_mailbox_new(mailbox_idnr);
 	if (search) {
 		s = dbmail_imap_session_new();
-		if (! (build_args_array_ext(s, search))) {
+		if (! (imap4_tokenizer_main(s, search))) {
 			qerrorf("error parsing search string");
 			dbmail_imap_session_delete(s);
 			dbmail_mailbox_free(mb);

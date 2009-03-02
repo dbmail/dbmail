@@ -226,8 +226,10 @@ typedef struct {
 	SSL *ssl;                       /* SSL/TLS context for this client */
 	gboolean ssl_state;		/* SSL_accept done or not */
 	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
+
 	struct event *pev;		/* self-pipe event */
 	void (*cb_pipe) (void *);	/* callback for self-pipe events */
+
 	struct event *rev, *wev;  	/* read event, write event */
 	void (*cb_read) (void *);	// pointers to event callbacks
 	void (*cb_time) (void *);
@@ -237,16 +239,20 @@ typedef struct {
 	char ip_src[IPNUM_LEN];		/* client IP-number */
 	int ip_src_port;		/* client source port number */
 	field_t clientname;		/* resolved client hostname */
+
 	struct timeval *timeout;		/**< timeout on socket */
+
 	int service_before_smtp;
 
-	size_t len;			/* octets read during last ci_read/ci_readln */
 	char tls_wbuf[TLS_SEGMENT];	/* buffer to write during tls session */
 	size_t tls_wbuf_n;		/* number of octets to write during tls session */
+
 	GString *read_buffer;		/* input buffer */
 	size_t read_buffer_offset;	/* input buffer offset */
+
 	GString *write_buffer;		/* output buffer */
 	size_t write_buffer_offset;	/* output buffer offset */
+
 	GAsyncQueue *queue;		/* inter-thread message pipe */
 } clientbase_t;
 
