@@ -1874,12 +1874,12 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	char *s, *lastchar;
 
 	assert(buffer);
-	TRACE(TRACE_DEBUG,"[%p] tokenize [%ld/%d] [%s]", self, self->ci->len, self->rbuff_size, buffer);
+	TRACE(TRACE_DEBUG,"[%p] tokenize [%ld/%ld] [%s]", self, self->ci->len, self->rbuff_size, buffer);
 
 	/* Check for zero length input */
 	if (! strlen(buffer)) goto finalize;
 
-	s = buffer;
+	s = (char *)buffer;
 
 	max = strlen(s);
 
@@ -1913,23 +1913,13 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	for (i = 0; i < max && s[i] && self->args_idx < MAX_ARGS - 1; i++) {
 		/* get bytes of string-literal */	
 		if (self->rbuff_size > 0) {
-			// make sure the read_buffer holds enough data:
-			// FIXME: clientbase_t really should be made opaque asap.
-			if (self->rbuff_size < (self->ci->read_buffer->len - self->read_buffer_offset)) {
-				
-				// the string-literal is complete
-				char *buffer = g_new0(char, self->rbuff_size + 1);
+			assert(strlen(buffer) == self->rbuff_size);
 
-				if (ci_read(self->ci, buffer, self->rbuff_size) == 0) {
-					TRACE(TRACE_NOTICE,"[%p] oops: ci_read failed unexpectedly", self);
-					g_free(buffer);
-					return 0; // we need more than currently in the read buffer
-				}
-
-				self->args[self->args_idx++] =  buffer;
-				i += self->rbuff_size;
-			}
-			continue; // tokenize the rest of this line
+			TRACE(TRACE_DEBUG,"string-literal complete [%ld:%s]", self->rbuff_size, buffer);
+			self->args[self->args_idx++] =  g_strdup(buffer);
+			i += self->rbuff_size;
+			self->rbuff_size = 0;
+			continue;
 		}
 
 		/* check quotes */
@@ -2055,7 +2045,7 @@ finalize:
 
 	TRACE(TRACE_DEBUG, "[%p] tag: [%s], command: [%s], [%llu] args", self, self->tag, self->command, self->args_idx);
 	self->args[self->args_idx] = NULL;	/* terminate */
-#if 0
+#if 1
 	for (i = 0; i<=self->args_idx && self->args[i]; i++) { 
 		TRACE(TRACE_DEBUG, "[%p] arg[%d]: '%s'\n", self, i, self->args[i]); 
 	}

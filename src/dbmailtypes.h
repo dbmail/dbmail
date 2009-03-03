@@ -253,6 +253,7 @@ typedef struct {
 	GString *write_buffer;		/* output buffer */
 	size_t write_buffer_offset;	/* output buffer offset */
 
+	size_t len;			/* crlf decoded octets read by last ci_read(ln) call */
 	GAsyncQueue *queue;		/* inter-thread message pipe */
 } clientbase_t;
 

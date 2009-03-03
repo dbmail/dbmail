@@ -142,6 +142,8 @@ void socket_read_cb(int fd UNUSED, short what, void *arg)
 	ImapSession *session = (ImapSession *)arg;
 	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
 	session->ci->cb_read(session);
+	// EV_PERSIST doesn't always persist, grrrr.
+	event_add(session->ci->rev, session->ci->timeout);
 }
 
 /* 
@@ -233,7 +235,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 					ci_write(session->ci, NULL);
 				} else if (session->command_state == TRUE) {
 					dbmail_imap_session_reset(session);
-					event_add(session->ci->rev, session->ci->timeout);
 				}
 			} else {
 				dbmail_imap_session_buff_clear(session);
@@ -246,7 +247,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 			dbmail_imap_session_buff_flush(session);
 			session->error_count++;	/* server returned BAD or NO response */
 			dbmail_imap_session_reset(session);
-			event_add(session->ci->rev, session->ci->timeout);
 			break;
 
 		case 2:
@@ -272,6 +272,8 @@ void imap_handle_input(ImapSession *session)
 		ci_write(session->ci, NULL);
 		return;
 	}
+	if (session->ci->read_buffer->len == 0) 
+		return;
 
 	if (session->command_state == TRUE)
 		dbmail_imap_session_reset(session);
@@ -396,7 +398,7 @@ int imap_handle_connection(client_sock *c)
 
 	dbmail_imap_session_set_state(session, IMAPCS_NON_AUTHENTICATED);
 
-	event_set(ci->rev, ci->rx, EV_READ, socket_read_cb, (void *)session);
+	event_set(ci->rev, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
 	event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
 
 	session->ci = ci;
@@ -419,11 +421,6 @@ void dbmail_imap_session_reset(ImapSession *session)
 	if (session->command) {
 		g_free(session->command);
 		session->command = NULL;
-	}
-
-	if (session->rbuff) {
-		g_free(session->rbuff); 
-		session->rbuff = NULL;
 	}
 
 	session->use_uid = 0;

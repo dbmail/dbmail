@@ -27,8 +27,8 @@ typedef struct {
 	u64_t msg_idnr;  // replace this with a GList
 
 	GString *buff; // output buffer
-	char *rbuff; // input buffer
-	int rbuff_size;
+
+	size_t rbuff_size; // size of string-literals
 
 	int parser_state;
 	char **args;
@@ -136,7 +136,7 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(ImapSession *self);
 int dbmail_imap_session_bodyfetch_set_octetcnt(ImapSession *self, guint64 octet);
 guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self);
 
-int build_args_array_ext(ImapSession *self, const char *originalString);
+int imap4_tokenizer_main(ImapSession *self, const char *buffer);
 
 
 /* threaded work queue */
