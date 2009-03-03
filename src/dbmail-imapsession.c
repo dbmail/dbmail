@@ -1864,26 +1864,26 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self)
  * Will return NULL upon errors.
  */
 
-int imap4_tokenizer_main(ImapSession *self, const char *originalString)
+int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 {
 	int inquote = 0, quotestart = 0;
 	int nnorm = 0, nsquare = 0, paridx = 0, argstart = 0;
 	unsigned int i;
 	size_t max;
 	char parlist[MAX_LINESIZE];
-	char s[MAX_LINESIZE];
-	char *lastchar;
+	char *s, *lastchar;
 
-	assert(originalString);
-	TRACE(TRACE_DEBUG,"[%p] tokenize [%ld/%d] [%s]", self, self->ci->len, self->rbuff_size, originalString);
+	assert(buffer);
+	TRACE(TRACE_DEBUG,"[%p] tokenize [%ld/%d] [%s]", self, self->ci->len, self->rbuff_size, buffer);
 
 	/* Check for zero length input */
-	if (! strlen(originalString)) goto finalize;
+	if (! strlen(buffer)) goto finalize;
 
-	/* Make a local copy of the string */
-	g_strlcpy(s, originalString, MAX_LINESIZE);
+	s = buffer;
 
 	max = strlen(s);
+
+	assert(max < MAX_LINESIZE);
 
 	/* find the arguments */
 	paridx = 0;
@@ -1891,8 +1891,9 @@ int imap4_tokenizer_main(ImapSession *self, const char *originalString)
 
 	inquote = 0;
 
-	if (self->rbuff_size <= 0)
-		g_strchomp(s); // unless we're fetch string-literals it's safe to strip NL
+	// if we're not fetching string-literals it's safe to strip NL
+	if (self->rbuff_size == 0)
+		g_strchomp(s); 
 
 	if (self->args[0] && MATCH(self->args[0],"LOGIN")) {
 		size_t len;
@@ -1912,27 +1913,22 @@ int imap4_tokenizer_main(ImapSession *self, const char *originalString)
 	for (i = 0; i < max && s[i] && self->args_idx < MAX_ARGS - 1; i++) {
 		/* get bytes of string-literal */	
 		if (self->rbuff_size > 0) {
-			size_t r;
-			char buff[MAX_LINESIZE];  // We only need a buffer as large as the largest line
-			memset(buff, 0, sizeof(buff));
+			// make sure the read_buffer holds enough data:
+			// FIXME: clientbase_t really should be made opaque asap.
+			if (self->rbuff_size < (self->ci->read_buffer->len - self->read_buffer_offset)) {
+				
+				// the string-literal is complete
+				char *buffer = g_new0(char, self->rbuff_size + 1);
 
-			if (! self->rbuff) self->rbuff = g_new0(char, self->rbuff_size+1);
+				if (ci_read(self->ci, buffer, self->rbuff_size) == 0) {
+					TRACE(TRACE_NOTICE,"[%p] oops: ci_read failed unexpectedly", self);
+					g_free(buffer);
+					return 0; // we need more than currently in the read buffer
+				}
 
-			strncat(buff, &s[i], sizeof(buff)-1);
-			r = strlen(buff);
-			
-			strncat(self->rbuff, buff, r);
-			self->rbuff_size -= self->ci->len;
-
-			if (self->rbuff_size > 0) {
-				event_add(self->ci->rev, self->ci->timeout); // reschedule cause we need more
-				return 0;
+				self->args[self->args_idx++] =  buffer;
+				i += self->rbuff_size;
 			}
-				
-			// the string-literal is complete
-			self->args[self->args_idx++] = self->rbuff;
-				
-			i+=r;
 			continue; // tokenize the rest of this line
 		}
 
