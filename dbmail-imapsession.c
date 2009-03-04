@@ -829,7 +829,9 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
-		dbmail_imap_session_buff_append(self, "INTERNALDATE \"%s\"", date_sql2imap(msginfo->internaldate));
+		char *s = date_sql2imap(msginfo->internaldate);
+		dbmail_imap_session_buff_append(self, "INTERNALDATE \"%s\"", s);
+		g_free(s);
 	}
 	if (self->fi->getSize) {
 		SEND_SPACE;
