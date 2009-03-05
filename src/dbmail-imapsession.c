@@ -1874,7 +1874,6 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	char *s, *lastchar;
 
 	assert(buffer);
-	TRACE(TRACE_DEBUG,"[%p] tokenize [%ld/%ld] [%s]", self, self->ci->len, self->rbuff_size, buffer);
 
 	/* Check for zero length input */
 	if (! strlen(buffer)) goto finalize;
@@ -1883,7 +1882,9 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 	max = strlen(s);
 
-	assert(max < MAX_LINESIZE);
+	TRACE(TRACE_DEBUG,"[%p] tokenize [%ld/%ld] [%s]", self, max, self->rbuff_size, buffer);
+
+	assert(max <= MAX_LINESIZE);
 
 	/* find the arguments */
 	paridx = 0;
@@ -1913,12 +1914,22 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	for (i = 0; i < max && s[i] && self->args_idx < MAX_ARGS - 1; i++) {
 		/* get bytes of string-literal */	
 		if (self->rbuff_size > 0) {
-			assert(strlen(buffer) == self->rbuff_size);
+			size_t got = strlen(buffer);
 
-			TRACE(TRACE_DEBUG,"string-literal complete [%ld:%s]", self->rbuff_size, buffer);
-			self->args[self->args_idx++] =  g_strdup(buffer);
-			i += self->rbuff_size;
-			self->rbuff_size = 0;
+			assert(got <= self->rbuff_size);
+
+			if (! self->args[self->args_idx])
+				self->args[self->args_idx] = g_new0(gchar, self->rbuff_size+1);
+
+			strncat(self->args[self->args_idx], buffer, got);
+			self->rbuff_size -= got;
+			if (self->rbuff_size <= 0) {
+				TRACE(TRACE_DEBUG,"string-literal complete [%ld:%s]", self->rbuff_size, buffer);
+				self->args_idx++;
+				i += got;
+			} else {
+				return 0;
+			}
 			continue;
 		}
 
