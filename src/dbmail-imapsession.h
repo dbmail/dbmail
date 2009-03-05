@@ -81,7 +81,6 @@ ImapSession * dbmail_imap_session_new(void);
 ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag);
 ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command);
 
-void dbmail_imap_session_set_callbacks(ImapSession *self, void *cb_r, void *cb_t, int timeout);
 void dbmail_imap_session_reset(ImapSession *session);
 
 void dbmail_imap_session_args_free(ImapSession *self, gboolean all);

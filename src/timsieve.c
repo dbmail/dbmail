@@ -26,34 +26,41 @@
 #define STRT 1
 #define AUTH 2
 #define QUIT 3
-
-#define TIMS_STRT 0		/* lower bound of array - 0 */
-#define TIMS_LOUT 0
-#define TIMS_STLS 1
-#define TIMS_CAPA 2
-#define TIMS_LIST 3
-#define TIMS_NOARGS 4		/* use with if( cmd < TIMS_NOARGS )... */
-#define TIMS_AUTH 4
-#define TIMS_DELS 5
-#define TIMS_GETS 6
-#define TIMS_SETS 7
-#define TIMS_ONEARG 8		/* use with if( cmd < TIMS_ONEARG )... */
-#define TIMS_SPAC 8
-#define TIMS_PUTS 9
-#define TIMS_END 10		/* upper bound of array + 1 */
-
-
-#define INCOMING_BUFFER_SIZE 512
-#define DEFAULT_SERVER_TIMEOUT 300
 #define MAX_ERRORS 3
-#define MAX_IN_BUFFER 255
 
 /* allowed timsieve commands */
 static const char *commands[] = {
-	"LOGOUT", "STARTTLS", "CAPABILITY", "LISTSCRIPTS",
-	"AUTHENTICATE", "DELETESCRIPT", "GETSCRIPT", "SETACTIVE",
-	"HAVESPACE", "PUTSCRIPT"
+	"LOGOUT", 
+	"STARTTLS", 
+	"CAPABILITY", 
+	"LISTSCRIPTS",
+	"AUTHENTICATE", 
+	"DELETESCRIPT", 
+	"GETSCRIPT", 
+	"SETACTIVE",
+	"HAVESPACE", 
+	"PUTSCRIPT",
+	NULL
 };
+
+typedef enum {
+	TIMS_STRT,
+	TIMS_LOUT,
+	TIMS_STLS,
+	TIMS_CAPA,
+	TIMS_LIST,
+	TIMS_NOARGS,
+	TIMS_AUTH,
+	TIMS_DELS,
+	TIMS_GETS,
+	TIMS_SETS,
+	TIMS_ONEARG,
+	TIMS_SPAC,
+	TIMS_PUTS,
+	TIMS_END
+} command_id;
+
+
 
 /* Defined in timsieved.c */
 extern const char *sieve_extensions;
@@ -98,14 +105,9 @@ static void tims_handle_input(ClientSession_t *session)
 			client_session_reset_parser(session);
 		}
 	}
+
 	if (session->state < QUIT)
 		event_add(session->ci->rev, session->ci->timeout);
-}
-
-void tims_cb_read(void *arg)
-{
-	ClientSession_t *session = (ClientSession_t *)arg;
-	tims_handle_input(session);
 }
 
 void tims_cb_time(void * arg)
@@ -129,7 +131,7 @@ void tims_cb_write(void *arg)
 				ci_write(session->ci,NULL);
 				break;
 			}
-			tims_handle_input(session);
+			session->handle_input(session);
 			break;
 	}
 }
@@ -137,8 +139,8 @@ void tims_cb_write(void *arg)
 static void reset_callbacks(ClientSession_t *session)
 {
         session->ci->cb_time = tims_cb_time;
-        session->ci->cb_read = tims_cb_read;
         session->ci->cb_write = tims_cb_write;
+	session->handle_input = tims_handle_input;
 
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);

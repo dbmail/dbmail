@@ -26,16 +26,11 @@
 #include "dbmail.h"
 #define THIS_MODULE "pop3"
 
-#define INCOMING_BUFFER_SIZE 512
 #define APOP_STAMP_SIZE 255
 #define MAX_USERID_SIZE 100
 
 /* max_errors defines the maximum number of allowed failures */
 #define MAX_ERRORS 3
-
-/* max_in_buffer defines the maximum number of bytes that are allowed to be
- * in the incoming buffer */
-#define MAX_IN_BUFFER 255
 
 const char ValidNetworkChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -43,7 +38,6 @@ const char ValidNetworkChars[] =
 
 extern serverConfig_t *server_conf;
 extern int pop_before_smtp;
-extern volatile sig_atomic_t alarm_occured;
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
@@ -229,9 +223,10 @@ static void pop3_close(ClientSession_t *session)
 
 /* the default pop3 read handler */
 
-static void pop3_handle_input(ClientSession_t *session)
+static void pop3_handle_input(void *arg)
 {
 	char buffer[MAX_LINESIZE];	/* connection buffer */
+	ClientSession_t *session = (ClientSession_t *)arg;
 
 	if (session->ci->write_buffer->len) {
 		ci_write(session->ci, NULL);
@@ -246,33 +241,6 @@ static void pop3_handle_input(ClientSession_t *session)
 		client_session_bailout(&session);
 }
 
-void pop3_cb_read(void *arg)
-{
-	ClientSession_t *session = (ClientSession_t *)arg;
-
-	ci_read_cb(session->ci);
-	switch(session->ci->client_state) {
-		case CLIENT_OK:
-		case CLIENT_AGAIN:
-		break;
-		default:
-		case CLIENT_ERR:
-			TRACE(TRACE_DEBUG,"client_state ERROR");
-			client_session_bailout(&session);
-			return;
-			break;
-		case CLIENT_EOF:
-			TRACE(TRACE_NOTICE,"reached EOF");
-			if (session->ci->read_buffer->len < 1) {
-				client_session_bailout(&session);
-				return;
-			}
-		break;
-	}
-
-	pop3_handle_input(session);
-}
-
 void pop3_cb_write(void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
@@ -285,7 +253,7 @@ void pop3_cb_write(void *arg)
 			break;
 		default:
 			ci_write_cb(session->ci);
-			pop3_handle_input(session);
+			session->handle_input(session);
 			break;
 	}
 }
@@ -302,8 +270,8 @@ void pop3_cb_time(void * arg)
 static void reset_callbacks(ClientSession_t *session)
 {
         session->ci->cb_time = pop3_cb_time;
-        session->ci->cb_read = pop3_cb_read;
         session->ci->cb_write = pop3_cb_write;
+	session->handle_input = pop3_handle_input;
 
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);

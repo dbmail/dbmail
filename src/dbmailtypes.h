@@ -231,7 +231,6 @@ typedef struct {
 	void (*cb_pipe) (void *);	/* callback for self-pipe events */
 
 	struct event *rev, *wev;  	/* read event, write event */
-	void (*cb_read) (void *);	// pointers to event callbacks
 	void (*cb_time) (void *);
 	void (*cb_write) (void *);
 	int (*cb_error) (int fd, int error, void *);
@@ -260,6 +259,7 @@ typedef struct {
 typedef struct {
 	clientbase_t *ci;
 	int state;			/**< session state */
+	void (*handle_input) (void *);
 
 	int error_count;		/**< number of errors that have occured */
 	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */

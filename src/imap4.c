@@ -136,13 +136,44 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 	}
 }
 
+void imap_cb_read(void *arg)
+{
+	ImapSession *session = (ImapSession *) arg;
+	TRACE(TRACE_DEBUG,"reading...");
+
+	ci_read_cb(session->ci);
+	switch(session->ci->client_state) {
+		case CLIENT_OK:
+		case CLIENT_AGAIN:
+			imap_handle_input(session);
+		break;
+		default:
+		case CLIENT_ERR:
+			TRACE(TRACE_DEBUG,"client_state ERROR");
+			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+			return;
+			break;
+		case CLIENT_EOF:
+			TRACE(TRACE_NOTICE,"reached EOF");
+			event_del(session->ci->rev);
+			if (session->ci->read_buffer->len < 1) {
+				imap_session_bailout(session);
+				return;
+			}
+		break;
+	}
+
+}
+
+
 void socket_read_cb(int fd UNUSED, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
-	session->ci->cb_read(session);
+	imap_cb_read(session);
 	// EV_PERSIST doesn't always persist, grrrr.
-	//event_add(session->ci->rev, session->ci->timeout);
+	if ((session->state != IMAPCS_LOGOUT) && (session->state != IMAPCS_ERROR))
+		event_add(session->ci->rev, session->ci->timeout);
 }
 
 /* 
@@ -272,17 +303,22 @@ void imap_handle_input(ImapSession *session)
 
 	// first flush the output buffer
 	if (session->ci->write_buffer->len) {
+		TRACE(TRACE_DEBUG,"[%p] write buffer not empty", session);
 		ci_write(session->ci, NULL);
 		return;
 	}
 
 	// nothing left to handle
-	if (session->ci->read_buffer->len == 0) 
+	if (session->ci->read_buffer->len == 0) {
+		TRACE(TRACE_DEBUG,"[%p] read buffer empty", session);
 		return;
+	}
 
 	// command in progress
-	if (session->command_state == FALSE && session->parser_state == TRUE) 
+	if (session->command_state == FALSE && session->parser_state == TRUE) {
+		TRACE(TRACE_DEBUG,"[%p] command in-progress", session);
 		return;
+	}
 
 	// reset if we're done with the previous command
 	if (session->command_state == TRUE)
@@ -344,53 +380,15 @@ void imap_handle_input(ImapSession *session)
 
 	return;
 }
-
-void imap_cb_read(void *arg)
+static void reset_callbacks(ImapSession *session)
 {
-	ImapSession *session = (ImapSession *) arg;
-	TRACE(TRACE_DEBUG,"reading...");
-
-	ci_read_cb(session->ci);
-	switch(session->ci->client_state) {
-		case CLIENT_OK:
-		case CLIENT_AGAIN:
-			imap_handle_input(session);
-		break;
-		default:
-		case CLIENT_ERR:
-			TRACE(TRACE_DEBUG,"client_state ERROR");
-			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
-			return;
-			break;
-		case CLIENT_EOF:
-			TRACE(TRACE_NOTICE,"reached EOF");
-			event_del(session->ci->rev);
-			if (session->ci->read_buffer->len < 1) {
-				imap_session_bailout(session);
-				return;
-			}
-		break;
-	}
-
-}
-
-void dbmail_imap_session_set_callbacks(ImapSession *session, void *r, void *t, int timeout)
-{
-	if (r) session->ci->cb_read = r;
-	if (t) session->ci->cb_time = t;
-	if (timeout>0) session->ci->timeout->tv_sec = (time_t)timeout;
-
-	assert(session->ci->cb_read);
-	assert(session->ci->cb_time);
-	assert(session->ci->timeout->tv_sec > 0);
-
-	TRACE(TRACE_DEBUG,"session [%p], cb_read [%p], cb_time [%p], timeout [%d]", 
-		session, session->ci->cb_read, session->ci->cb_time, (int)session->ci->timeout->tv_sec);
+	session->ci->cb_time = imap_cb_time;
+	session->ci->timeout->tv_sec = server_conf->login_timeout;
 
 	UNBLOCK(session->ci->rx);
 	UNBLOCK(session->ci->tx);
 
-	event_add(session->ci->rev, session->ci->timeout );
+	event_add(session->ci->rev, session->ci->timeout);
 	event_add(session->ci->wev, NULL);
 }
 
@@ -413,7 +411,7 @@ int imap_handle_connection(client_sock *c)
 
 	session->ci = ci;
 
-	dbmail_imap_session_set_callbacks(session, imap_cb_read, imap_cb_time, server_conf->login_timeout);
+	reset_callbacks(session);
 	
 	send_greeting(session);
 	

@@ -27,30 +27,6 @@
 
 #include "dbmail.h"
 
-/* processes */
-
-#define MAXCHILDREN 5
-#define DEFAULT_CHILDREN 5
-
-#define LMTP_DEF_MAXCONNECT 1500
-
-/* connection */
-
-#define LMTP_STRT 0		/* lower bound of array - 0 */
-#define LMTP_LHLO 0
-#define LMTP_QUIT 1
-#define LMTP_RSET 2
-#define LMTP_DATA 3
-#define LMTP_MAIL 4
-#define LMTP_VRFY 5
-#define LMTP_EXPN 6
-#define LMTP_HELP 7
-#define LMTP_NOOP 8
-#define LMTP_RCPT 9
-#define LMTP_END 10		/* upper bound of array + 1 */
-
-int lmtp(ClientSession_t *session);
-
 /* Help */
 static const char *const LMTP_HELP_TEXT[] = {
 /* LMTP_LHLO 0 */

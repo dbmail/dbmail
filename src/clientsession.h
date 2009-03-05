@@ -19,7 +19,10 @@
 */
 
 ClientSession_t * client_session_new(client_sock *c);
-int client_session_reset(ClientSession_t * session);
+
+void client_session_read(void *arg); // read event callback
+
+void client_session_reset(ClientSession_t * session);
 void client_session_reset_parser(ClientSession_t *session);
 void client_session_bailout(ClientSession_t **session);
 void client_session_set_timeout(ClientSession_t *session, int timeout);

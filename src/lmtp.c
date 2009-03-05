@@ -24,16 +24,9 @@
 
 #include "dbmail.h"
 
-#define INCOMING_BUFFER_SIZE 512
-
-/* max_errors defines the maximum number of allowed failures */
-#define MAX_ERRORS 3
-
-/* max_in_buffer defines the maximum number of bytes that are allowed to be
- * in the incoming buffer */
-#define MAX_IN_BUFFER 255
-
 #define THIS_MODULE "lmtp"
+
+#define MAX_ERRORS 3
 
 #define STRT 1
 #define AUTH 2
@@ -41,13 +34,37 @@
 
 extern serverConfig_t *server_conf;
 
-extern volatile sig_atomic_t alarm_occured;
-
 /* allowed lmtp commands */
 static const char *const commands[] = {
-	"LHLO", "QUIT", "RSET", "DATA", "MAIL",
-	"VRFY", "EXPN", "HELP", "NOOP", "RCPT"
+	"LHLO", 
+	"QUIT", 
+	"RSET", 
+	"DATA", 
+	"MAIL",
+	"VRFY", 
+	"EXPN", 
+	"HELP", 
+	"NOOP", 
+	"RCPT",
+	NULL
 };
+
+
+#define LMTP_STRT 0		/* lower bound of array - 0 */
+#define LMTP_LHLO 0
+#define LMTP_QUIT 1
+#define LMTP_RSET 2
+#define LMTP_DATA 3
+#define LMTP_MAIL 4
+#define LMTP_VRFY 5
+#define LMTP_EXPN 6
+#define LMTP_HELP 7
+#define LMTP_NOOP 8
+#define LMTP_RCPT 9
+#define LMTP_END 10		/* upper bound of array + 1 */
+
+int lmtp(ClientSession_t *session);
+
 
 static int lmtp_tokenizer(ClientSession_t *session, char *buffer);
 
@@ -99,16 +116,8 @@ static void lmtp_handle_input(ClientSession_t *session)
 		}
 	}
 	
-	if (session->state < QUIT)
-		event_add(session->ci->rev, session->ci->timeout);
 
 	TRACE(TRACE_DEBUG,"[%p] done", session);
-}
-
-static void lmtp_cb_read(void *arg)
-{
-	ClientSession_t *session = (ClientSession_t *)arg;
-	lmtp_handle_input(session);
 }
 
 void lmtp_cb_write(void *arg)
@@ -133,8 +142,8 @@ void lmtp_cb_write(void *arg)
 static void reset_callbacks(ClientSession_t *session)
 {
         session->ci->cb_time = lmtp_cb_time;
-        session->ci->cb_read = lmtp_cb_read;
         session->ci->cb_write = lmtp_cb_write;
+	session->handle_input = lmtp_handle_input;
 
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);

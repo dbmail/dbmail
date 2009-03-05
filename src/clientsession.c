@@ -24,8 +24,6 @@
 
 #include "dbmail.h"
 
-#define MAX_ERRORS 3
-
 #define THIS_MODULE "clientsession"
 
 extern serverConfig_t *server_conf;
@@ -52,14 +50,14 @@ ClientSession_t * client_session_new(client_sock *c)
 
         event_set(ci->rev, ci->rx, EV_READ, socket_read_cb, (void *)session);
         event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
-	session->ci = ci;
 
+	session->ci = ci;
 	session->rbuff = g_string_new("");
 
 	return session;
 }
 
-int client_session_reset(ClientSession_t * session)
+void client_session_reset(ClientSession_t * session)
 {
 	dsnuser_free_list(session->rcpt);
 	session->rcpt = NULL;
@@ -85,8 +83,6 @@ int client_session_reset(ClientSession_t * session)
 	session->state = IMAPCS_INITIAL_CONNECT;
 
 	client_session_reset_parser(session);
-
-	return 1;
 }
 
 void client_session_reset_parser(ClientSession_t *session)
@@ -120,28 +116,28 @@ void client_session_bailout(ClientSession_t **session)
 	c = NULL;
 }
 
-static gboolean client_session_read(ClientSession_t *session)
+void client_session_read(void *arg)
 {
+	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 	ci_read_cb(session->ci);
 	switch(session->ci->client_state) {
 		case CLIENT_OK:
 		case CLIENT_AGAIN:
+			session->handle_input(session);
 		break;
+
 		default:
 		case CLIENT_ERR:
 			client_session_bailout(&session);
-			return FALSE;
 			break;
 		case CLIENT_EOF:
 			TRACE(TRACE_NOTICE,"reached EOF");
-			if (session->ci->read_buffer->len < 1) {
+			event_del(session->ci->rev);
+			if (session->ci->read_buffer->len < 1)
 				client_session_bailout(&session);
-				return FALSE;
-			}
 		break;
 	}
-	return TRUE;
 }
 
 void client_session_set_timeout(ClientSession_t *session, int timeout)
@@ -152,8 +148,7 @@ void client_session_set_timeout(ClientSession_t *session, int timeout)
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
-	if (client_session_read(session)) // drain the read-event
-		session->ci->cb_read(session);
+	client_session_read(session); // drain the read-event handle
 }
 
 void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
@@ -161,16 +156,15 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
 
-	if (session->ci->cb_write) {
+	if (session->ci->cb_write)
 		session->ci->cb_write(session);
-		return;
-	}
 
 	switch(session->state) {
 
 		case IMAPCS_LOGOUT:
 		case IMAPCS_ERROR:
 			client_session_bailout(&session);
+			return;
 			break;
 
 		case IMAPCS_INITIAL_CONNECT:
@@ -184,5 +178,8 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 			client_session_set_timeout(session, server_conf->timeout);
 			break;
 	}
+
+	if (session->ci->rev)
+		event_add(session->ci->rev, session->ci->timeout);
 }
 
