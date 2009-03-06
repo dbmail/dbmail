@@ -44,18 +44,17 @@ static const char *commands[] = {
 };
 
 typedef enum {
-	TIMS_STRT,
 	TIMS_LOUT,
 	TIMS_STLS,
 	TIMS_CAPA,
-	TIMS_LIST,
-	TIMS_NOARGS,
+	TIMS_LIST, // no args
+
 	TIMS_AUTH,
 	TIMS_DELS,
 	TIMS_GETS,
 	TIMS_SETS,
-	TIMS_ONEARG,
-	TIMS_SPAC,
+
+	TIMS_SPAC, // one arg
 	TIMS_PUTS,
 	TIMS_END
 } command_id;
@@ -205,12 +204,12 @@ int tims_tokenizer(ClientSession_t *session, char *buffer)
 				value = NULL;	/* no value specified */
 		}
 
-		for (command_type = TIMS_STRT; command_type < TIMS_END; command_type++)
+		for (command_type = TIMS_LOUT; command_type < TIMS_END; command_type++)
 			if (strcasecmp(command, commands[command_type]) == 0)
 				break;
 
 		/* commands that are allowed to have no arguments */
-		if ((value == NULL) && !(command_type < TIMS_NOARGS) && (command_type < TIMS_END))
+		if ((value == NULL) && !(command_type <= TIMS_LIST) && (command_type < TIMS_END))
 			return tims_error(session, "NO \"This command requires an argument.\"\r\n");
 
 		TRACE (TRACE_DEBUG, "command [%s] value [%s]\n", command, value);
@@ -300,6 +299,7 @@ int tims(ClientSession_t *session)
 	sort_result_t *sort_result = NULL;
 	clientbase_t *ci = session->ci;
 
+	TRACE(TRACE_DEBUG,"[%p] [%d][%s]", session, session->command_type, commands[session->command_type]);
 	switch (session->command_type) {
 	case TIMS_LOUT:
 		ci_write(ci, "OK \"Bye.\"\r\n");
