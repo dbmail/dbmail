@@ -129,7 +129,6 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 		
 			
 			ci_write_cb(session->ci);
-
 			imap_handle_input(session);
 
 			break;
@@ -138,31 +137,24 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 
 void imap_cb_read(void *arg)
 {
+	int state;
 	ImapSession *session = (ImapSession *) arg;
 	TRACE(TRACE_DEBUG,"reading...");
 
 	ci_read_cb(session->ci);
-	switch(session->ci->client_state) {
-		case CLIENT_OK:
-		case CLIENT_AGAIN:
-			imap_handle_input(session);
-		break;
-		default:
-		case CLIENT_ERR:
-			TRACE(TRACE_DEBUG,"client_state ERROR");
-			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
-			return;
-			break;
-		case CLIENT_EOF:
-			TRACE(TRACE_NOTICE,"reached EOF");
-			event_del(session->ci->rev);
-			if (session->ci->read_buffer->len < 1) {
-				imap_session_bailout(session);
-				return;
-			}
-		break;
-	}
 
+	state = session->ci->client_state;
+	if (state & CLIENT_OK || state & CLIENT_AGAIN) {
+		imap_handle_input(session);
+	} else if (state & CLIENT_ERR) {
+		TRACE(TRACE_DEBUG,"client_state ERROR");
+		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+	} else if (state & CLIENT_EOF) {
+		TRACE(TRACE_NOTICE,"reached EOF");
+		event_del(session->ci->rev);
+		if (session->ci->read_buffer->len < 1)
+			imap_session_bailout(session);
+	}
 }
 
 
@@ -172,8 +164,8 @@ void socket_read_cb(int fd UNUSED, short what, void *arg)
 	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
 	imap_cb_read(session);
 	// EV_PERSIST doesn't always persist, grrrr.
-	if ((session->state != IMAPCS_LOGOUT) && (session->state != IMAPCS_ERROR))
-		event_add(session->ci->rev, session->ci->timeout);
+//	if (session->state < IMAPCS_LOGOUT && session->ci && session->ci->rev)
+//		event_add(session->ci->rev, session->ci->timeout);
 }
 
 /* 
@@ -307,6 +299,14 @@ void imap_handle_input(ImapSession *session)
 		ci_write(session->ci, NULL);
 		return;
 	}
+
+	// command in progress
+	/*
+	if ( session->command_state == FALSE && session->parser_state == FALSE) {
+		TRACE(TRACE_DEBUG,"[%p] wait for data", session);
+		event_add(session->ci->rev, session->ci->timeout);
+	}
+	*/
 
 	// nothing left to handle
 	if (session->ci->read_buffer->len == 0) {
@@ -454,7 +454,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 	/* fetch the tag and command */
 	if (! session->tag) {
 
-		if (strcmp(buffer,"\n")==0)
+		if (strcmp(buffer,"\n")==0 || strcmp(buffer,"\r\n")==0)
 			return 0;
 
 		session->parser_state = 0;
@@ -490,7 +490,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 		i = stridx(cpy, ' ');	/* find next space */
 
 		command = g_strndup(cpy,i);	/* set command */
-		if (command[i-1] == '\n') command[i-1] = '\0';
+		strip_crlf(command);
 		dbmail_imap_session_set_command(session,command);
 		g_free(command);
 

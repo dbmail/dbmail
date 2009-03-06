@@ -53,8 +53,6 @@ static void dm_tls_error(void)
 	TRACE(TRACE_ERR, "%s", ERR_error_string(e, NULL));
 }
 
-#define WATERMARK TLS_SEGMENT*8
-
 static void client_wbuf_clear(clientbase_t *client)
 {
 	if (client->write_buffer) {
@@ -78,9 +76,6 @@ static void client_rbuf_scale(clientbase_t *self)
 		g_string_truncate(self->read_buffer,0);
 		self->read_buffer_offset = 0;
 		g_string_maybe_shrink(self->read_buffer);
-	//} else if (self->read_buffer_offset >= WATERMARK) {
-	//	g_string_erase(self->read_buffer,0, WATERMARK);
-	//	self->read_buffer_offset -= WATERMARK;
 	}
 
 }
@@ -91,9 +86,6 @@ static void client_wbuf_scale(clientbase_t *self)
 		g_string_truncate(self->write_buffer,0);
 		self->write_buffer_offset = 0;
 		g_string_maybe_shrink(self->write_buffer);
-	//} else if (self->write_buffer_offset >= WATERMARK) {
-	//	g_string_erase(self->write_buffer,0, WATERMARK);
-	//	self->write_buffer_offset -= WATERMARK;
 	}
 
 }
@@ -355,7 +347,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		memset(buffer, 0, sizeof(buffer));
 		for (j=0; j<n; j++) {
 			c = s[j];
-			if (c == '\r') continue;
+	//		if (c == '\r') continue;
 			buffer[k++] = c;
 		}
 		self->read_buffer_offset += n;
@@ -388,7 +380,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 		}
 		for (j=0; j<=l; j++) {
 			c = s[j];
-			if (c == '\r') continue;
+	//		if (c == '\r') continue;
 			buffer[k++] = c;
 		}
 		self->read_buffer_offset += l+1;
