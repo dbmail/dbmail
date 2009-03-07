@@ -1171,7 +1171,7 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
 
         l = self->buff->len;
 
-	if (l > 4096) dbmail_imap_session_buff_flush(self);
+	if (l >= TLS_SEGMENT) dbmail_imap_session_buff_flush(self);
 
         return (int)(l-j);
 }
