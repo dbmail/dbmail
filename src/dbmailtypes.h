@@ -202,129 +202,6 @@ typedef enum {
 } Pop3State_t;
 
 
-// thread manager structures 
-//
-
-// client_thread
-typedef struct  {
-	int sock;
-	SSL *ssl;                       /* SSL/TLS context for this client */
-	struct sockaddr_in *caddr;
-	void (*cb_close) (void *);	/* termination callback */
-} client_sock;
-
-//
-
-#define TLS_SEGMENT  4096
-#define CLIENT_OK	0
-#define CLIENT_AGAIN	1
-#define CLIENT_ERR	2
-#define CLIENT_EOF	4
-
-typedef struct {
-	int rx, tx;			/* read and write filehandles */
-	SSL *ssl;                       /* SSL/TLS context for this client */
-	gboolean ssl_state;		/* SSL_accept done or not */
-	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
-
-	struct event *pev;		/* self-pipe event */
-	void (*cb_pipe) (void *);	/* callback for self-pipe events */
-
-	struct event *rev, *wev;  	/* read event, write event */
-	void (*cb_time) (void *);
-	void (*cb_write) (void *);
-	int (*cb_error) (int fd, int error, void *);
-
-	char ip_src[IPNUM_LEN];		/* client IP-number */
-	int ip_src_port;		/* client source port number */
-	field_t clientname;		/* resolved client hostname */
-
-	struct timeval *timeout;		/**< timeout on socket */
-
-	int service_before_smtp;
-
-	char tls_wbuf[TLS_SEGMENT];	/* buffer to write during tls session */
-	size_t tls_wbuf_n;		/* number of octets to write during tls session */
-
-	GString *read_buffer;		/* input buffer */
-	size_t read_buffer_offset;	/* input buffer offset */
-
-	GString *write_buffer;		/* output buffer */
-	size_t write_buffer_offset;	/* output buffer offset */
-
-	size_t len;			/* crlf decoded octets read by last ci_read(ln) call */
-	GAsyncQueue *queue;		/* inter-thread message pipe */
-} clientbase_t;
-
-typedef struct {
-	clientbase_t *ci;
-	int state;			/**< session state */
-	void (*handle_input) (void *);
-
-	int error_count;		/**< number of errors that have occured */
-	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */
-	int SessionResult;		/**< what happened during the session */
-
-	int parser_state;
-	int command_state;
-	int command_type;		/* command type */
-	GList *args;			/* command args (allocated char *) */
-
-	GString *rbuff;			/* input buffer */
-	size_t rbuff_size;		/* required number of octets (for string literal) */
-
-	char *username;
-	char *password;
-	char hostname[64];
-	char *apop_stamp;		/**< timestamp for APOP */
-
-	u64_t useridnr;			/**< Used by timsieved */
-	u64_t totalsize;		/**< total size of messages */
-	u64_t virtual_totalsize;
-	u64_t totalmessages; 		/**< number of messages */
-	u64_t virtual_totalmessages;
-
-	GList *messagelst;		/** list of messages */
-	GList *from;			// lmtp senders
-	GList *rcpt;			// lmtp recipients
-} ClientSession_t;
-
-typedef struct {
-	int no_daemonize;
-	int log_verbose;
-	char *pidFile;
-	int timeout;
-	int login_timeout;
-	char **iplist;                  // Allocated memory.
-	int ipcount;
-	int *listenSockets;             // Allocated memory.
-	int *ssl_listenSockets;         // Allocated memory.
-	int service_before_smtp;
-	int port;
-	int ssl_port;
-	gboolean ssl;
-	int backlog;
-	int resolveIP;
-	field_t service_name, process_name;
-	field_t serverUser;
-	field_t serverGroup;
-	field_t socket;
-	field_t log, error_log;
-	field_t pid_dir;
-        field_t tls_cafile;
-        field_t tls_cert;
-        field_t tls_key;
-        field_t tls_ciphers;
-	int (*ClientHandler) (client_sock *);
-} serverConfig_t;
-
-
-
-/**********************************************************************
- *                               IMAP
- *********************************************************************/
-
-
 /*
  * define some IMAP symbols
  */
@@ -422,6 +299,129 @@ enum BODY_FETCH_ITEM_TYPES {
 	BFIT_HEADER_FIELDS_NOT, 
 	BFIT_TEXT_SILENT
 };
+
+
+// thread manager structures 
+//
+
+// client_thread
+typedef struct  {
+	int sock;
+	SSL *ssl;                       /* SSL/TLS context for this client */
+	struct sockaddr_in *caddr;
+	void (*cb_close) (void *);	/* termination callback */
+} client_sock;
+
+//
+
+#define TLS_SEGMENT  4096
+#define CLIENT_OK	0
+#define CLIENT_AGAIN	1
+#define CLIENT_ERR	2
+#define CLIENT_EOF	4
+
+typedef struct {
+	int rx, tx;			/* read and write filehandles */
+	SSL *ssl;                       /* SSL/TLS context for this client */
+	gboolean ssl_state;		/* SSL_accept done or not */
+	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
+
+	struct event *pev;		/* self-pipe event */
+	void (*cb_pipe) (void *);	/* callback for self-pipe events */
+
+	struct event *rev, *wev;  	/* read event, write event */
+	void (*cb_time) (void *);
+	void (*cb_write) (void *);
+	int (*cb_error) (int fd, int error, void *);
+
+	char ip_src[IPNUM_LEN];		/* client IP-number */
+	int ip_src_port;		/* client source port number */
+	field_t clientname;		/* resolved client hostname */
+
+	struct timeval *timeout;		/**< timeout on socket */
+
+	int service_before_smtp;
+
+	char tls_wbuf[TLS_SEGMENT];	/* buffer to write during tls session */
+	size_t tls_wbuf_n;		/* number of octets to write during tls session */
+
+	GString *read_buffer;		/* input buffer */
+	size_t read_buffer_offset;	/* input buffer offset */
+
+	GString *write_buffer;		/* output buffer */
+	size_t write_buffer_offset;	/* output buffer offset */
+
+	size_t len;			/* crlf decoded octets read by last ci_read(ln) call */
+	GAsyncQueue *queue;		/* inter-thread message pipe */
+} clientbase_t;
+
+typedef struct {
+	clientbase_t *ci;
+	imap_cs_t state;			/**< session state */
+	void (*handle_input) (void *);
+
+	int error_count;		/**< number of errors that have occured */
+	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */
+	int SessionResult;		/**< what happened during the session */
+
+	int parser_state;
+	int command_state;
+	int command_type;		/* command type */
+	GList *args;			/* command args (allocated char *) */
+
+	GString *rbuff;			/* input buffer */
+	size_t rbuff_size;		/* required number of octets (for string literal) */
+
+	char *username;
+	char *password;
+	char hostname[64];
+	char *apop_stamp;		/**< timestamp for APOP */
+
+	u64_t useridnr;			/**< Used by timsieved */
+	u64_t totalsize;		/**< total size of messages */
+	u64_t virtual_totalsize;
+	u64_t totalmessages; 		/**< number of messages */
+	u64_t virtual_totalmessages;
+
+	GList *messagelst;		/** list of messages */
+	GList *from;			// lmtp senders
+	GList *rcpt;			// lmtp recipients
+} ClientSession_t;
+
+typedef struct {
+	int no_daemonize;
+	int log_verbose;
+	char *pidFile;
+	int timeout;
+	int login_timeout;
+	char **iplist;                  // Allocated memory.
+	int ipcount;
+	int *listenSockets;             // Allocated memory.
+	int *ssl_listenSockets;         // Allocated memory.
+	int service_before_smtp;
+	int port;
+	int ssl_port;
+	gboolean ssl;
+	int backlog;
+	int resolveIP;
+	field_t service_name, process_name;
+	field_t serverUser;
+	field_t serverGroup;
+	field_t socket;
+	field_t log, error_log;
+	field_t pid_dir;
+        field_t tls_cafile;
+        field_t tls_cert;
+        field_t tls_key;
+        field_t tls_ciphers;
+	int (*ClientHandler) (client_sock *);
+} serverConfig_t;
+
+
+
+/**********************************************************************
+ *                               IMAP
+ *********************************************************************/
 
 /* maximum size of a mailbox name */
 #define IMAP_MAX_MAILBOX_NAMELEN 255

@@ -412,6 +412,8 @@ void ci_close(clientbase_t *self)
 	g_string_free(self->write_buffer, TRUE);
 
 	g_free(self->timeout);
+	self->timeout = NULL;
+
 	g_free(self);
 	
 	self = NULL;

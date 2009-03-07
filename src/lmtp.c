@@ -49,22 +49,21 @@ static const char *const commands[] = {
 	NULL
 };
 
-
-#define LMTP_STRT 0		/* lower bound of array - 0 */
-#define LMTP_LHLO 0
-#define LMTP_QUIT 1
-#define LMTP_RSET 2
-#define LMTP_DATA 3
-#define LMTP_MAIL 4
-#define LMTP_VRFY 5
-#define LMTP_EXPN 6
-#define LMTP_HELP 7
-#define LMTP_NOOP 8
-#define LMTP_RCPT 9
-#define LMTP_END 10		/* upper bound of array + 1 */
+typedef enum {
+	LMTP_LHLO,
+	LMTP_QUIT,
+	LMTP_RSET,
+	LMTP_DATA,
+	LMTP_MAIL,
+	LMTP_VRFY,
+	LMTP_EXPN,
+	LMTP_HELP,
+	LMTP_NOOP,
+	LMTP_RCPT,
+	LMTP_END
+} command_t;
 
 int lmtp(ClientSession_t *session);
-
 
 static int lmtp_tokenizer(ClientSession_t *session, char *buffer);
 
@@ -116,7 +115,6 @@ static void lmtp_handle_input(void *arg)
 			}
 		}
 	}
-	
 
 	TRACE(TRACE_DEBUG,"[%p] done", session);
 }
@@ -219,7 +217,7 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 				value = NULL;	/* no value specified */
 		}
 
-		for (command_type = LMTP_STRT; command_type < LMTP_END; command_type++)
+		for (command_type = LMTP_LHLO; command_type < LMTP_END; command_type++)
 			if (strcasecmp(command, commands[command_type]) == 0)
 				break;
 
@@ -255,7 +253,7 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 			return FALSE;
 		}
 
-		if (strncmp(buffer,".\n",2)==0)
+		if (strncmp(buffer,".\n",2)==0 || strncmp(buffer,".\r\n",3)==0)
 			session->parser_state = TRUE;
 		else
 			g_string_append(session->rbuff, buffer);
@@ -324,7 +322,7 @@ int lmtp(ClientSession_t * session)
 		if (arg == NULL)
 			helpcmd = LMTP_END;
 		else
-			for (helpcmd = LMTP_STRT; helpcmd < LMTP_END; helpcmd++)
+			for (helpcmd = LMTP_LHLO; helpcmd < LMTP_END; helpcmd++)
 				if (strcasecmp (arg, commands[helpcmd]) == 0)
 					break;
 

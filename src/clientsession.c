@@ -48,7 +48,7 @@ ClientSession_t * client_session_new(client_sock *c)
 	create_unique_id(unique_id, 0);
 	session->apop_stamp = g_strdup_printf("<%s@%s>", unique_id, session->hostname);
 
-        event_set(ci->rev, ci->rx, EV_READ, socket_read_cb, (void *)session);
+        event_set(ci->rev, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
         event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
 
 	session->ci = ci;
@@ -142,7 +142,8 @@ void client_session_read(void *arg)
 
 void client_session_set_timeout(ClientSession_t *session, int timeout)
 {
-	session->ci->timeout->tv_sec = timeout;
+	if (session && (session->state > IMAPCS_ANY) && session->ci && session->ci->timeout)
+		session->ci->timeout->tv_sec = timeout;
 }
 
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
@@ -178,8 +179,5 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 			client_session_set_timeout(session, server_conf->timeout);
 			break;
 	}
-
-	if (session->ci->rev)
-		event_add(session->ci->rev, session->ci->timeout);
 }
 

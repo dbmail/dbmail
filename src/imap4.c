@@ -163,9 +163,6 @@ void socket_read_cb(int fd UNUSED, short what, void *arg)
 	ImapSession *session = (ImapSession *)arg;
 	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
 	imap_cb_read(session);
-	// EV_PERSIST doesn't always persist, grrrr.
-//	if (session->state < IMAPCS_LOGOUT && session->ci && session->ci->rev)
-//		event_add(session->ci->rev, session->ci->timeout);
 }
 
 /* 
