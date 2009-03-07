@@ -85,10 +85,11 @@ static void lmtp_cb_time(void *arg)
 	session->state = QUIT;
 }
 		
-static void lmtp_handle_input(ClientSession_t *session)
+static void lmtp_handle_input(void *arg)
 {
 	int l;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
+	ClientSession_t *session = (ClientSession_t *)arg;
 	while (TRUE) {
 		memset(buffer, 0, sizeof(buffer));
 

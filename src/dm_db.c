@@ -2165,11 +2165,9 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 	assert(errmsg);
 
 	GList *mailboxes = NULL;
-	char *cpy, **chunks = NULL;
+	char *namespace, *username, *cpy, **chunks = NULL;
 	const char *simple_name;
-	char *namespace, *username;
-	int i, ret = 0, result;
-	int is_users = 0, is_public = 0;
+	int i, is_users = 0, is_public = 0;
 	u64_t mboxid, public;
 
 	/* Scratch space as we build the mailbox names. */
@@ -2271,9 +2269,6 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 	g_free(cpy);
  
 	return mailboxes;
-
-equery:
-	ret = DM_EQUERY;
 
 egeneral:
 	mailboxes = g_list_first(mailboxes);

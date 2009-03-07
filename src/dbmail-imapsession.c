@@ -1882,7 +1882,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 	max = strlen(s);
 
-	TRACE(TRACE_DEBUG,"[%p] tokenize [%ld/%ld] [%s]", self, max, self->rbuff_size, buffer);
+	TRACE(TRACE_DEBUG,"[%p] tokenize [%u/%u] [%s]", self, max, self->rbuff_size, buffer);
 
 	assert(max <= MAX_LINESIZE);
 
@@ -1924,7 +1924,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			strncat(self->args[self->args_idx], buffer, got);
 			self->rbuff_size -= got;
 			if (self->rbuff_size <= 0) {
-				TRACE(TRACE_DEBUG,"string-literal complete [%ld:%s]", self->rbuff_size, buffer);
+				TRACE(TRACE_DEBUG,"string-literal complete [%u:%s]", self->rbuff_size, buffer);
 				self->args_idx++;
 				i += got;
 			} else {

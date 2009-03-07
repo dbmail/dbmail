@@ -2135,10 +2135,8 @@ static int imap_acl_pre_administer(const char *mailboxname,
 				   u64_t executing_userid,
 				   u64_t * mboxid, u64_t * target_userid)
 {
-	int result;
 	if (! db_findmailbox(mailboxname, executing_userid, mboxid))
 		return FALSE;
-
 	return auth_user_exists(username, target_userid);
 }
 

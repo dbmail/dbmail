@@ -81,10 +81,11 @@ static void send_greeting(ClientSession_t *session)
 	ci_write(session->ci, "OK\r\n");
 }
 
-static void tims_handle_input(ClientSession_t *session)
+static void tims_handle_input(void *arg)
 {
 	int l = 0;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
+	ClientSession_t *session = (ClientSession_t *)arg;
 
 	while (TRUE) {
 		memset(buffer, 0, sizeof(buffer));
@@ -226,7 +227,7 @@ int tims_tokenizer(ClientSession_t *session, char *buffer)
 			g_string_printf(session->rbuff,"%s","");
 			session->parser_state = TRUE;
 		}
-		TRACE(TRACE_DEBUG, "state [%d], size [%ld]", session->parser_state, session->rbuff_size);
+		TRACE(TRACE_DEBUG, "state [%d], size [%u]", session->parser_state, session->rbuff_size);
 		return session->parser_state;
 	}
 
@@ -380,7 +381,7 @@ int tims(ClientSession_t *session)
 		script = (char *)session->args->data;
 
 		scriptlen = strlen(script);
-		TRACE(TRACE_INFO, "Client sending script of length [%ld]", scriptlen);
+		TRACE(TRACE_INFO, "Client sending script of length [%u]", scriptlen);
 		if (scriptlen >= UINT_MAX)
 			return tims_error(session, "NO \"Invalid script length.\"\r\n");
 

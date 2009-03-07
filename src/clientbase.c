@@ -276,7 +276,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		}
 		self->write_buffer_offset += t;
 
-		TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
+		TRACE(TRACE_INFO, "[%p] S > [%u/%u:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
 
 		client_wbuf_scale(self);
 
@@ -325,38 +325,34 @@ void ci_read_cb(clientbase_t *self)
 		} else {
 			self->client_state = CLIENT_OK; 
 			g_string_append_len(self->read_buffer, ibuf, t);
-			TRACE(TRACE_DEBUG,"read [%ld:%s]", t, ibuf);
+			TRACE(TRACE_DEBUG,"read [%u:%s]", t, ibuf);
 		}
 	}
 
-	TRACE(TRACE_DEBUG,"[%p] state [%x] read_buffer->len[%ld]", self, self->client_state, self->read_buffer->len);
+	TRACE(TRACE_DEBUG,"[%p] state [%x] read_buffer->len[%u]", self, self->client_state, self->read_buffer->len);
 }
 
 int ci_read(clientbase_t *self, char *buffer, size_t n)
 {
 	assert(buffer);
 
-	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
+	TRACE(TRACE_DEBUG,"[%p] need [%u]", self, n);
 	self->len = 0;
 
 	char *s = self->read_buffer->str + self->read_buffer_offset;
 	if ((self->read_buffer_offset + n) <= self->read_buffer->len) {
 		size_t j,k = 0;
-		char c;
 
 		memset(buffer, 0, sizeof(buffer));
-		for (j=0; j<n; j++) {
-			c = s[j];
-	//		if (c == '\r') continue;
-			buffer[k++] = c;
-		}
+		for (j=0; j<n; j++)
+			buffer[k++] = s[j];
 		self->read_buffer_offset += n;
 		self->len += j;
 		client_rbuf_scale(self);
 	}
 
 	if (self->len)
-		TRACE(TRACE_DEBUG,"[%p] read [%ld][%s]", self, self->len, buffer);
+		TRACE(TRACE_DEBUG,"[%p] read [%u:%s]", self, self->len, buffer);
 
 	return self->len;
 }
@@ -370,22 +366,18 @@ int ci_readln(clientbase_t *self, char * buffer)
 	self->len = 0;
 	char *s = self->read_buffer->str + self->read_buffer_offset;
 	if ((nl = g_strstr_len(s, -1, "\n"))) {
-		char c = 0;
 		size_t j, k = 0, l;
 		l = stridx(s, '\n');
 		if (l >= MAX_LINESIZE) {
-			TRACE(TRACE_ERR, "insane line-length [%ld]", l);
+			TRACE(TRACE_ERR, "insane line-length [%u]", l);
 			self->client_state = CLIENT_ERR;
 			return 0;
 		}
-		for (j=0; j<=l; j++) {
-			c = s[j];
-	//		if (c == '\r') continue;
-			buffer[k++] = c;
-		}
+		for (j=0; j<=l; j++)
+			buffer[k++] = s[j];
 		self->read_buffer_offset += l+1;
 		self->len = k;
-		TRACE(TRACE_INFO, "[%p] C < %ld:[%s]", self, self->len, buffer);
+		TRACE(TRACE_INFO, "[%p] C < [%u:%s]", self, self->len, buffer);
 
 		client_rbuf_scale(self);
 	}
