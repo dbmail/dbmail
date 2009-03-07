@@ -18,19 +18,15 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* 
- *
- * implementation for lmtp commands according to RFC 1081 */
+/* implementation for lmtp commands according to RFC 1081 */
 
 #include "dbmail.h"
-
 #define THIS_MODULE "lmtp"
-
-#define MAX_ERRORS 3
 
 #define STRT 1
 #define AUTH 2
 #define QUIT 3
+#define MAX_ERRORS 3
 
 extern serverConfig_t *server_conf;
 
@@ -80,8 +76,8 @@ void send_greeting(ClientSession_t *session)
 static void lmtp_cb_time(void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
-	ci_write(session->ci, "221 Connection timeout BYE\r\n");
 	session->state = QUIT;
+	ci_write(session->ci, "221 Connection timeout BYE\r\n");
 }
 		
 static void lmtp_handle_input(void *arg)

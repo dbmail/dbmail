@@ -162,7 +162,11 @@ void socket_read_cb(int fd UNUSED, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
-	imap_cb_read(session);
+	if (what == EV_READ)
+		imap_cb_read(session);
+	else if (what == EV_TIMEOUT && session->ci->cb_time)
+		session->ci->cb_time(session);
+	
 }
 
 /* 
@@ -213,8 +217,8 @@ void imap_cb_time(void *arg)
 	ImapSession *session = (ImapSession *) arg;
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
-	imap_session_printf(session, "%s", IMAP_TIMEOUT_MSG);
 	dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+	imap_session_printf(session, "%s", IMAP_TIMEOUT_MSG);
 }
 
 static int checktag(const char *s)

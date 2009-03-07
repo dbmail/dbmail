@@ -18,32 +18,12 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* 
- *
- * implementation for pop3 commands according to RFC 1081 */
-
+/* implementation for pop3 commands according to RFC 1081 */
 
 #include "dbmail.h"
 #define THIS_MODULE "pop3"
 
-#define APOP_STAMP_SIZE 255
-#define MAX_USERID_SIZE 100
-
-/* max_errors defines the maximum number of allowed failures */
 #define MAX_ERRORS 3
-
-const char ValidNetworkChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    ",'\"?_.!|@#$%^&*()-+=~[]{}<>:;\\/ '";
-
-extern serverConfig_t *server_conf;
-extern int pop_before_smtp;
-
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
-
-int pop3(ClientSession_t *session, char *buffer);
-int pop3_error(ClientSession_t * session, const char *formatstring, ...) PRINTF_ARGS(2, 3);
 
 /* allowed pop3 commands */
 const char *commands[] = {
@@ -65,6 +45,15 @@ const char *commands[] = {
 	"stls"  /**< POP3_STLS */
 };
 
+const char ValidNetworkChars[] =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    ",'\"?_.!|@#$%^&*()-+=~[]{}<>:;\\/ '";
+
+extern serverConfig_t *server_conf;
+extern int pop_before_smtp;
+
+static int pop3(ClientSession_t *session, const char *buffer);
+
 static void send_greeting(ClientSession_t *session)
 {
 	field_t banner;
@@ -75,6 +64,9 @@ static void send_greeting(ClientSession_t *session)
 		ci_write(session->ci, "+OK DBMAIL pop3 server ready to rock %s\r\n", session->apop_stamp);
 	}
 }
+
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
 
 static int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
 {
@@ -261,10 +253,8 @@ void pop3_cb_write(void *arg)
 void pop3_cb_time(void * arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
-
-	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
-	ci_write(session->ci, "-ERR I'm leaving, you're too slow\r\n");
 	session->state = POP3_QUIT_STATE;
+	ci_write(session->ci, "-ERR I'm leaving, you're too slow\r\n");
 }
 
 static void reset_callbacks(ClientSession_t *session)
@@ -314,13 +304,13 @@ int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 	return 1;
 }
 
-int pop3(ClientSession_t *session, char *buffer)
+int pop3(ClientSession_t *session, const char *buffer)
 {
 	/* returns a 0  on a quit
 	 *           -1  on a failure
 	 *            1  on a success 
 	 */
-	char *command, *value, *searchptr, *enctype;
+	char *command, *value, *searchptr, *enctype, *s;
 	Pop3Cmd_t cmdtype;
 	int found = 0, indx = 0, validate_result;
 	u64_t result, top_lines, top_messageid, user_idnr;
@@ -329,18 +319,19 @@ int pop3(ClientSession_t *session, char *buffer)
 	clientbase_t *ci = session->ci;
 
 	char *client_ip = ci->ip_src;
+	s = (char *)buffer;
 
-	strip_crlf(buffer);
-	g_strstrip(buffer);
+	strip_crlf(s);
+	g_strstrip(s);
 
 	/* check for command issued */
-	while (strchr(ValidNetworkChars, buffer[indx++]))
+	while (strchr(ValidNetworkChars, s[indx++]))
 		;
 
-	TRACE(TRACE_DEBUG, "incoming buffer: [%s]", buffer);
-	if (! strlen(buffer)) return 1;
+	TRACE(TRACE_DEBUG, "incoming buffer: [%s]", s);
+	if (! strlen(s)) return 1;
 
-	command = buffer;
+	command = s;
 
 	value = strstr(command, " ");	/* look for the separator */
 
@@ -420,9 +411,6 @@ int pop3(ClientSession_t *session, char *buffer)
 		}
 
 		if (session->username == NULL) {
-			if (strlen(value) > MAX_USERID_SIZE)
-				return pop3_error(session, "-ERR userid is too long\r\n");
-
 			/* create memspace for username */
 			session->username = g_new0(char,strlen(value) + 1);
 			strncpy(session->username, value, strlen(value) + 1);
@@ -713,9 +701,6 @@ int pop3(ClientSession_t *session, char *buffer)
 
 		if (strlen(searchptr) != 32)
 			return pop3_error(session, "-ERR not a valid md5 hash\r\n");
-
-		if (strlen(value) > MAX_USERID_SIZE)
-			return pop3_error(session, "-ERR userid is too long\r\n");
 
 		md5_apop_he = g_new0(unsigned char,strlen(searchptr) + 1);
 		session->username = g_new0(char,strlen(value) + 1);

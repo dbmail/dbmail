@@ -149,7 +149,10 @@ void client_session_set_timeout(ClientSession_t *session, int timeout)
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
-	client_session_read(session); // drain the read-event handle
+	if (what == EV_READ)
+		client_session_read(session); // drain the read-event handle
+	else if (what == EV_TIMEOUT && session->ci->cb_time)
+		session->ci->cb_time(session);
 }
 
 void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)

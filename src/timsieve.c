@@ -48,12 +48,10 @@ typedef enum {
 	TIMS_STLS,
 	TIMS_CAPA,
 	TIMS_LIST, // no args
-
 	TIMS_AUTH,
 	TIMS_DELS,
 	TIMS_GETS,
 	TIMS_SETS,
-
 	TIMS_SPAC, // one arg
 	TIMS_PUTS,
 	TIMS_END
@@ -113,8 +111,8 @@ static void tims_handle_input(void *arg)
 void tims_cb_time(void * arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
-	ci_write(session->ci, "BYE \"Connection timed out.\"\r\n");
 	session->state = QUIT;
+	ci_write(session->ci, "BYE \"Connection timed out.\"\r\n");
 }
 
 void tims_cb_write(void *arg)
