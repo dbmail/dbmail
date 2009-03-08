@@ -1006,7 +1006,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	 * for db_get_msgflag()!
 	 */
 	int setSeenSet[IMAP_NFLAGS] = { 1, 0, 0, 0, 0, 0 };
-	if (self->fi->setseen && db_get_msgflag("seen", self->msg_idnr, MailboxState_getId(self->mailbox->state)) != 1) {
+	if (self->fi->setseen && db_get_msgflag("seen", self->msg_idnr) != 1) {
 		/* only if the user has an ACL which grants
 		   him rights to set the flag should the
 		   flag be set! */
@@ -1019,12 +1019,13 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		
 		if (result == 1) {
 			reportflags = TRUE;
-			result = db_set_msgflag(self->msg_idnr, MailboxState_getId(self->mailbox->state), setSeenSet, NULL, IMAPFA_ADD, msginfo);
+			result = db_set_msgflag(self->msg_idnr, setSeenSet, NULL, IMAPFA_ADD, msginfo);
 			if (result == -1) {
 				dbmail_imap_session_buff_clear(self);
 				dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 				return -1;
 			}
+			db_mailbox_seq_update(MailboxState_getId(self->mailbox->state));
 		}
 
 		self->fi->getFlags = 1;
@@ -1637,7 +1638,9 @@ int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
 		case IMAPCS_AUTHENTICATED:
 			// change from login_timeout to main timeout
 			assert(self->ci);
+			TRACE(TRACE_DEBUG,"[%p] set timeout to [%d]", self, server_conf->timeout);
 			self->ci->timeout->tv_sec = server_conf->timeout; 
+			event_add(self->ci->rev, self->ci->timeout);
 			break;
 
 		default:

@@ -1327,8 +1327,9 @@ void _ic_append_enter(dm_thread_data *D)
 		break;
 	case FALSE:
 		if (flagcount) {
-			if (db_set_msgflag(message_id, mboxid, flaglist, keywords, IMAPFA_ADD, NULL) < 0)
+			if (db_set_msgflag(message_id, flaglist, keywords, IMAPFA_ADD, NULL) < 0)
 				TRACE(TRACE_ERR, "[%p] error setting flags for message [%llu]", self, message_id);
+			db_mailbox_seq_update(mboxid);
 		}
 		break;
 	}
@@ -1722,7 +1723,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 	msn = g_tree_lookup(self->mailbox->ids, id);
 
 	if (MailboxState_getPermission(self->mailbox->state) == IMAPPERM_READWRITE) {
-		if (db_set_msgflag(*id, MailboxState_getId(self->mailbox->state), cmd->flaglist, cmd->keywords, cmd->action, msginfo) < 0) {
+		if (db_set_msgflag(*id, cmd->flaglist, cmd->keywords, cmd->action, msginfo) < 0) {
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 			return TRUE;
 		}
@@ -1888,6 +1889,7 @@ static void _ic_store_enter(dm_thread_data *D)
  			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
   	}	
 
+	db_mailbox_seq_update(MailboxState_getId(self->mailbox->state));
 
 	g_list_destroy(cmd->keywords);
 	g_free(cmd);

@@ -2908,8 +2908,7 @@ int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
 	return db_update("DELETE FROM %ssubscription WHERE user_id=%llu AND mailbox_id=%llu", DBPFX, user_idnr, mailbox_idnr);
 }
 
-int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
-		   u64_t mailbox_idnr)
+int db_get_msgflag(const char *flag_name, u64_t msg_idnr)
 {
 	C c; R r;
 	char the_flag_name[DEF_QUERYSIZE / 2];	/* should be sufficient ;) */
@@ -2933,11 +2932,8 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT %s FROM %smessages "
-				"WHERE message_idnr=%llu AND status < %d "
-				"AND mailbox_idnr=%llu",
-				the_flag_name, DBPFX, msg_idnr, 
-				MESSAGE_STATUS_DELETE, mailbox_idnr);
+		r = db_query(c, "SELECT %s FROM %smessages WHERE message_idnr=%llu AND status < %d ",
+				the_flag_name, DBPFX, msg_idnr, MESSAGE_STATUS_DELETE);
 		if (db_result_next(r))
 			val = db_result_get_int(r, 0);
 	CATCH(SQLException)
@@ -2949,77 +2945,52 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	return val;
 }
 
-static int db_set_msgkeywords(u64_t msg_idnr, GList *keywords, int action_type, MessageInfo *msginfo)
+static void db_set_msgkeywords(C c, u64_t msg_idnr, GList *keywords, int action_type, MessageInfo *msginfo)
 {
-	C c; S s; int t = DM_SUCCESS;
+	S s;
 	INIT_QUERY;
 
-	c = db_con_get();
-
 	if (action_type == IMAPFA_REMOVE) {
-		TRY
-			s = db_stmt_prepare(c, "DELETE FROM %skeywords WHERE message_idnr=? AND keyword=?",
-					DBPFX);
-			db_stmt_set_u64(s,1,msg_idnr);
+		s = db_stmt_prepare(c, "DELETE FROM %skeywords WHERE message_idnr=? AND keyword=?",
+				DBPFX);
+		db_stmt_set_u64(s,1,msg_idnr);
 
-			keywords = g_list_first(keywords);
-			db_begin_transaction(c);
-			while (keywords) {
-				db_stmt_set_str(s,2,(char *)keywords->data);
-				db_stmt_exec(s);
+		keywords = g_list_first(keywords);
+		while (keywords) {
+			db_stmt_set_str(s,2,(char *)keywords->data);
+			db_stmt_exec(s);
 
-				if (! g_list_next(keywords)) break;
-				keywords = g_list_next(keywords);
-			}
-			db_commit_transaction(c);
-		CATCH(SQLException)
-			t = DM_EQUERY;
-		FINALLY
-			db_con_close(c);
-		END_TRY;
-
-		return t;
+			if (! g_list_next(keywords)) break;
+			keywords = g_list_next(keywords);
+		}
 	}
 
 	else if (action_type == IMAPFA_ADD || action_type == IMAPFA_REPLACE) {
-		TRY
-			const char *ignore = db_get_sql(SQL_IGNORE);
-			db_begin_transaction(c);
-			if (action_type == IMAPFA_REPLACE) {
-				s = db_stmt_prepare(c, "DELETE FROM %skeywords WHERE message_idnr=?", DBPFX);
+		const char *ignore = db_get_sql(SQL_IGNORE);
+		if (action_type == IMAPFA_REPLACE) {
+			s = db_stmt_prepare(c, "DELETE FROM %skeywords WHERE message_idnr=?", DBPFX);
+			db_stmt_set_u64(s, 1, msg_idnr);
+			db_stmt_exec(s);
+		}
+
+		keywords = g_list_first(keywords);
+		while (keywords) {
+			if ((! msginfo) || (! g_list_find_custom(msginfo->keywords, 
+							(char *)keywords->data, 
+							(GCompareFunc)g_ascii_strcasecmp))) {
+				s = db_stmt_prepare(c, "INSERT %s INTO %skeywords (message_idnr,keyword) VALUES (?, ?)", 
+						ignore, DBPFX);
 				db_stmt_set_u64(s, 1, msg_idnr);
+				db_stmt_set_str(s, 2, (char *)keywords->data);
 				db_stmt_exec(s);
 			}
-
-			keywords = g_list_first(keywords);
-			while (keywords) {
-				if ((! msginfo) || (! g_list_find_custom(msginfo->keywords, 
-								(char *)keywords->data, 
-								(GCompareFunc)g_ascii_strcasecmp))) {
-					s = db_stmt_prepare(c, "INSERT %s INTO %skeywords (message_idnr,keyword) VALUES (?, ?)", 
-							ignore, DBPFX);
-					db_stmt_set_u64(s, 1, msg_idnr);
-					db_stmt_set_str(s, 2, (char *)keywords->data);
-					db_stmt_exec(s);
-				}
-				if (! g_list_next(keywords)) break;
-				keywords = g_list_next(keywords);
-			}
-			db_commit_transaction(c);
-		CATCH(SQLException)
-			LOG_SQLERROR;
-			t = DM_EQUERY;
-		FINALLY
-			db_con_close(c);
-		END_TRY;
-
-		if (t == DM_EQUERY) return DM_EQUERY;
+			if (! g_list_next(keywords)) break;
+			keywords = g_list_next(keywords);
+		}
 	}
-
-	return DM_SUCCESS;
 }
 
-int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo)
+int db_set_msgflag(u64_t msg_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo)
 {
 	C c; int t = DM_SUCCESS;
 	size_t i, pos = 0;
@@ -3030,9 +3001,6 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 	pos += snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET ", DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
-
-		// Skip recent_flag
-//		if (i == IMAP_FLAG_RECENT) continue;
 
 		switch (action_type) {
 		case IMAPFA_ADD:
@@ -3064,27 +3032,23 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywor
 	}
 
 	snprintf(query + pos, DEF_QUERYSIZE - pos,
-			" WHERE message_idnr = %llu"
-			" AND status < %d AND mailbox_idnr = %llu",
-			msg_idnr, MESSAGE_STATUS_DELETE, 
-			mailbox_idnr);
+			" WHERE message_idnr = %llu AND status < %d",
+			msg_idnr, MESSAGE_STATUS_DELETE);
 
-	if (seen) {
-		c = db_con_get();
-		TRY
-			db_exec(c, query);
-		CATCH(SQLException)
-			LOG_SQLERROR;
-			t = DM_EQUERY;
-		FINALLY
-			db_con_close(c);
-		END_TRY;
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		if (seen) db_exec(c, query);
+		db_set_msgkeywords(c, msg_idnr, keywords, action_type, msginfo);
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-		if (t == DM_EQUERY) return t;
-	}
-
-	db_set_msgkeywords(msg_idnr, keywords, action_type, msginfo);
-	db_mailbox_seq_update(mailbox_idnr);
+	if (t == DM_EQUERY) return t;
 
 	return DM_SUCCESS;
 }

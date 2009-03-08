@@ -111,8 +111,6 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 			imap_session_bailout(session);
 			break;
 		default:
-
-
 			if (session->ci->rev) {
 				if ( session->command_type == IMAP_COMM_IDLE ) {
 					if ( session->command_state == FALSE ) {
@@ -126,7 +124,6 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 					}
 				}
 			}
-		
 			
 			ci_write_cb(session->ci);
 			imap_handle_input(session);

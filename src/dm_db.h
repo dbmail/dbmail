@@ -785,18 +785,16 @@ int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr);
  * \brief get a flag for a message specified by flag_name.
  * \param flag_name name of flag
  * \param msg_idnr
- * \param mailbox_idnr
  * \return 
  * 		- -1 on failure
  * 		- 0 if flag is not set or a non-existent flag is asked.
  * 		- 1 if flag is set.
  */
-int db_get_msgflag(const char *flag_name, u64_t msg_idnr, u64_t mailbox_idnr);
+int db_get_msgflag(const char *flag_name, u64_t msg_idnr);
 
 /**
  * \brief set flags for a message
  * \param msg_idnr
- * \param mailbox_idnr
  * \param flags Array of IMAP_NFLAGS elements. See
  *               imapcommand.c for details.
  * \param action_type 
@@ -810,7 +808,8 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr, u64_t mailbox_idnr);
  * 		- -1 on failure
  * 		-  0 on success
  */
-int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo);
+int db_set_msgflag(u64_t msg_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo);
+
 /**
  * \brief set one right in an acl for a user
  * \param userid id of user
