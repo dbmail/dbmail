@@ -297,9 +297,11 @@ void ci_read_cb(clientbase_t *self)
 	ssize_t t = 0;
 	char ibuf[IBUFLEN];
 
+	TRACE(TRACE_DEBUG,"[%p] reset timeout [%ld]", self, self->timeout->tv_sec); 
+	event_add(self->rev, self->timeout);
+
 	if (self->ssl && self->ssl_state == FALSE) {
 		ci_starttls(self);
-		event_add(self->rev, self->timeout);
 		return;
 	}
 
