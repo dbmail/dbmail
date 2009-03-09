@@ -234,11 +234,10 @@ CREATE TABLE dbmail_headername (
 DROP TABLE IF EXISTS dbmail_headervalue;
 CREATE TABLE `dbmail_headervalue` (
   `id` bigint(20) NOT NULL auto_increment,
-  `hash` char(255) NOT NULL,
+  `hash` varchar(255) NOT NULL,
   `headervalue` text NOT NULL,
   PRIMARY KEY  (`id`),
-  KEY `hash` (`hash`),
-  KEY `headervalue` (`headervalue`(255))
+  KEY `hash` (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `dbmail_header`;

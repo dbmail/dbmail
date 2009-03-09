@@ -10,14 +10,13 @@ DROP TABLE dbmail_headervalue CASCADE;
 
 CREATE SEQUENCE dbmail_headervalue_id_seq;
 CREATE TABLE dbmail_headervalue (
-        id INT8 NOT NULL DEFAULT nextval('dbmail_headervalue_id_seq'),
-	hash character(256) NOT NULL,
+        id            INT8 NOT NULL DEFAULT nextval('dbmail_headervalue_id_seq'),
+	hash          varchar(256) NOT NULL,
         headervalue   TEXT NOT NULL DEFAULT '',
         PRIMARY KEY (id)
 );
 
-CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue(substring(headervalue,0,255));
-CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (hash);
+CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue USING btree (hash);
 
 CREATE TABLE dbmail_header (
         physmessage_id      INT8 NOT NULL
@@ -25,10 +24,10 @@ CREATE TABLE dbmail_header (
                 ON UPDATE CASCADE ON DELETE CASCADE,
         headername_id  INT8 NOT NULL
                 REFERENCES dbmail_headername(id)
-                ON UPDATE CASCADE ON DELETE RESTRICT,
+                ON UPDATE CASCADE ON DELETE CASCADE,
         headervalue_id      INT8 NOT NULL
                 REFERENCES dbmail_headervalue(id)
-                ON UPDATE CASCADE ON DELETE RESTRICT,
+                ON UPDATE CASCADE ON DELETE CASCADE,
         PRIMARY KEY (physmessage_id,headername_id,headervalue_id)
 );
 

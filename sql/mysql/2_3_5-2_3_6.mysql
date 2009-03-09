@@ -5,11 +5,10 @@ DROP TABLE if exists dbmail_headervalue;
 
 CREATE TABLE dbmail_headervalue (
  	id		BIGINT NOT NULL AUTO_INCREMENT,
-	hash 		char(255) NOT NULL,
+	hash 		varchar(255) NOT NULL,
         headervalue   	TEXT NOT NULL DEFAULT '',
         PRIMARY KEY (id),
-	INDEX (hash),
-	INDEX (headervalue(255))
+	INDEX (hash)
 ) engine=innodb charset=utf8;
 
 CREATE TABLE dbmail_header (
