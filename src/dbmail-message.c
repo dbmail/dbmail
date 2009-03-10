@@ -1482,22 +1482,17 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 
 static u64_t _header_value_exists(C c, const char *value, const char *hash)
 {
-	R r;
-	u64_t id = 0; const char *data; size_t buflen;
-	int l;
+	R r; S s;
+	u64_t id = 0;
 
-	buflen = strlen(value);
+	db_con_clear(c);
 
-	r = db_query(c, "SELECT id,headervalue FROM %sheadervalue WHERE hash='%s'", DBPFX, hash);
-	while (db_result_next(r)) {
-		u64_t i = db_result_get_u64(r,0);
-		data = (char *)db_result_get_blob(r, 1, &l);
-		assert(data);
-		if (memcmp((gconstpointer)value, (gconstpointer)data, buflen)==0) {
-			id = i;
-			break;
-		}
-	}
+	s = db_stmt_prepare(c, "SELECT id FROM %sheadervalue WHERE hash=? and headervalue=?", DBPFX);
+	db_stmt_set_str(s,1 , hash);
+	db_stmt_set_blob(s, 2, value, strlen(value));
+
+	if (db_result_next(r))
+		id = db_result_get_u64(r,0);
 
 	return id;
 
