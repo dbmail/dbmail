@@ -1491,6 +1491,7 @@ static u64_t _header_value_exists(C c, const char *value, const char *hash)
 	db_stmt_set_str(s,1 , hash);
 	db_stmt_set_blob(s, 2, value, strlen(value));
 
+	r = db_stmt_query(s);
 	if (db_result_next(r))
 		id = db_result_get_u64(r,0);
 
