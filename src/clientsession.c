@@ -144,7 +144,7 @@ void client_session_set_timeout(ClientSession_t *session, int timeout)
 {
 	if (session && (session->state > IMAPCS_ANY) && session->ci && session->ci->timeout) {
 		session->ci->timeout->tv_sec = timeout;
-		event_add(self->ci->rev, self->ci->timeout);
+		event_add(session->ci->rev, session->ci->timeout);
 	}
 }
 
