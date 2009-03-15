@@ -342,8 +342,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		if (strlen(value) == 0)
 			value = NULL;	/* no value specified */
 		else {
-			TRACE(TRACE_DEBUG, "command issued :cmd [%s], value [%s]\n",
-					command, value);
+			TRACE(TRACE_DEBUG, "state[%d], command issued :cmd [%s], value [%s]\n", session->state, command, value);
 		}
 	}
 
@@ -389,7 +388,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 0;
 		
 	case POP3_STLS:
-		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
+		if (session->state != CLIENTSTATE_INITIAL_CONNECT)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 		if (! server_conf->ssl)
 			return pop3_error(session, "-ERR server error\r\n");
@@ -401,7 +400,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_USER:
-		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
+		if (session->state != CLIENTSTATE_INITIAL_CONNECT)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		if (session->username != NULL) {
@@ -420,7 +419,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_PASS:
-		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
+		if (session->state != CLIENTSTATE_INITIAL_CONNECT)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		if (session->password != NULL) {
@@ -684,7 +683,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_APOP:
-		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
+		if (session->state != CLIENTSTATE_INITIAL_CONNECT)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		/* find out where the md5 hash starts */
@@ -783,7 +782,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_AUTH:
-		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
+		if (session->state != CLIENTSTATE_INITIAL_CONNECT)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 		return pop3_error(session, "-ERR no AUTH mechanisms supported\r\n");
 
