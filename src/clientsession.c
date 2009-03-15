@@ -40,7 +40,7 @@ ClientSession_t * client_session_new(client_sock *c)
 	else
 		ci = client_init(0, NULL, NULL);
 
-	session->state = IMAPCS_INITIAL_CONNECT;
+	session->state = CLIENTSTATE_INITIAL_CONNECT;
 
 	gethostname(session->hostname, sizeof(session->hostname));
 
@@ -80,7 +80,7 @@ void client_session_reset(ClientSession_t * session)
 		session->password = NULL;
 	}
 
-	session->state = IMAPCS_INITIAL_CONNECT;
+	session->state = CLIENTSTATE_INITIAL_CONNECT;
 
 	client_session_reset_parser(session);
 }
@@ -142,7 +142,7 @@ void client_session_read(void *arg)
 
 void client_session_set_timeout(ClientSession_t *session, int timeout)
 {
-	if (session && (session->state > IMAPCS_ANY) && session->ci && session->ci->timeout) {
+	if (session && (session->state > CLIENTSTATE_ANY) && session->ci && session->ci->timeout) {
 		session->ci->timeout->tv_sec = timeout;
 		event_add(session->ci->rev, session->ci->timeout);
 	}
@@ -166,23 +166,29 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 		session->ci->cb_write(session);
 
 	switch(session->state) {
-
-		case IMAPCS_LOGOUT:
-		case IMAPCS_ERROR:
-			client_session_bailout(&session);
-			return;
-			break;
-
-		case IMAPCS_INITIAL_CONNECT:
-		case IMAPCS_NON_AUTHENTICATED:
+		case CLIENTSTATE_INITIAL_CONNECT:
+		case CLIENTSTATE_NON_AUTHENTICATED:
 			TRACE(TRACE_DEBUG,"reset timeout [%d]", server_conf->login_timeout);
 			client_session_set_timeout(session, server_conf->login_timeout);
 			break;
 
-		default:
+		case CLIENTSTATE_AUTHENTICATED:
+		case CLIENTSTATE_SELECTED:
 			TRACE(TRACE_DEBUG,"reset timeout [%d]", server_conf->timeout);
 			client_session_set_timeout(session, server_conf->timeout);
 			break;
+
+		default:
+		case CLIENTSTATE_ANY:
+			break;
+
+		case CLIENTSTATE_LOGOUT:
+		case CLIENTSTATE_QUIT:
+		case CLIENTSTATE_ERROR:
+			client_session_bailout(&session);
+			break;
+
+
 	}
 }
 

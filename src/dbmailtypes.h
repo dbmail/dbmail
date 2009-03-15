@@ -192,16 +192,6 @@ struct message {
 	MessageStatus_t virtual_messagestatus;
 };
 
-/**
- * pop3 connection states */
-typedef enum {
-	POP3_AUTHORIZATION_STATE,
-	POP3_TRANSACTION_STATE,
-	POP3_UPDATE_STATE,
-	POP3_QUIT_STATE
-} Pop3State_t;
-
-
 /*
  * define some IMAP symbols
  */
@@ -250,15 +240,15 @@ enum IMAP_COMMAND_TYPES {
 
 
 typedef enum { 
-	IMAPCS_ANY 			= -1,
-	IMAPCS_INITIAL_CONNECT		= 0,
-	IMAPCS_NON_AUTHENTICATED	= 1,
-	IMAPCS_AUTHENTICATED		= 2,
-	IMAPCS_SELECTED			= 3,
-	IMAPCS_LOGOUT			= 4,
-	IMAPCS_ZOMBIE			= 5,
-	IMAPCS_ERROR			= 6
-} imap_cs_t;
+	CLIENTSTATE_ANY 			= -1,
+	CLIENTSTATE_INITIAL_CONNECT		= 0,
+	CLIENTSTATE_NON_AUTHENTICATED		= 1,
+	CLIENTSTATE_AUTHENTICATED		= 2,
+	CLIENTSTATE_SELECTED			= 3,
+	CLIENTSTATE_LOGOUT			= 4,
+	CLIENTSTATE_QUIT			= 5,
+	CLIENTSTATE_ERROR			= 6
+} clientstate_t;
 
 enum IMAP4_FLAGS { 
 	IMAPFLAG_SEEN		= 0x01, 
@@ -357,7 +347,7 @@ typedef struct {
 
 typedef struct {
 	clientbase_t *ci;
-	imap_cs_t state;			/**< session state */
+	clientstate_t state;			/**< session state */
 	void (*handle_input) (void *);
 
 	int error_count;		/**< number of errors that have occured */

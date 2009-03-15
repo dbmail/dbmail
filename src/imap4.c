@@ -86,7 +86,7 @@ static void imap_session_bailout(ImapSession *session)
 
 	if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop - need to exit the loop first
 		TRACE(TRACE_DEBUG, "[%p] Session is in an idle loop, exiting loop.", session);
-		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 		session->command_state = FALSE;
 		dm_thread_data *D = g_new0(dm_thread_data,1);
 		D->data = (gpointer)"DONE\n\0";
@@ -105,9 +105,9 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
 
 	switch(session->state) {
-		case IMAPCS_LOGOUT:
+		case CLIENTSTATE_LOGOUT:
 			event_del(session->ci->wev);
-		case IMAPCS_ERROR:
+		case CLIENTSTATE_ERROR:
 			imap_session_bailout(session);
 			break;
 		default:
@@ -145,7 +145,7 @@ void imap_cb_read(void *arg)
 		imap_handle_input(session);
 	} else if (state & CLIENT_ERR) {
 		TRACE(TRACE_DEBUG,"client_state ERROR");
-		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 	} else if (state & CLIENT_EOF) {
 		TRACE(TRACE_NOTICE,"reached EOF");
 		event_del(session->ci->rev);
@@ -184,7 +184,7 @@ static int imap_session_printf(ImapSession * self, char * message, ...)
 
 	if ((e = ci_write(self->ci, self->buff->str)) < 0) {
 		TRACE(TRACE_DEBUG, "ci_write failed [%s]", strerror(e));
-		dbmail_imap_session_set_state(self,IMAPCS_ERROR);
+		dbmail_imap_session_set_state(self,CLIENTSTATE_ERROR);
 		return e;
 	}
 
@@ -204,7 +204,7 @@ static void send_greeting(ImapSession *session)
 		imap_session_printf(session, "* OK %s\r\n", banner);
 	else
 		imap_session_printf(session, "* OK imap 4r1 server (dbmail %s)\r\n", VERSION);
-	dbmail_imap_session_set_state(session,IMAPCS_NON_AUTHENTICATED);
+	dbmail_imap_session_set_state(session,CLIENTSTATE_NON_AUTHENTICATED);
 }
 
 /*
@@ -214,7 +214,7 @@ void imap_cb_time(void *arg)
 	ImapSession *session = (ImapSession *) arg;
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
-	dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+	dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 	imap_session_printf(session, "%s", IMAP_TIMEOUT_MSG);
 }
 
@@ -234,18 +234,18 @@ static void imap_handle_exit(ImapSession *session, int status)
 
 	switch(status) {
 		case -1:
-			dbmail_imap_session_set_state(session,IMAPCS_ERROR);	/* fatal error occurred, kick this user */
+			dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);	/* fatal error occurred, kick this user */
 			imap_session_bailout(session);
 			break;
 
 		case 0:
 			/* only do this in the main thread */
-			if (session->state < IMAPCS_LOGOUT) {
+			if (session->state < CLIENTSTATE_LOGOUT) {
 				if (session->buff) {
 					int e = 0;
 					if ((e = ci_write(session->ci, session->buff->str)) < 0) {
 						TRACE(TRACE_DEBUG,"ci_write returned error [%s]", strerror(e));
-						dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+						dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 						return;
 					}
 					dbmail_imap_session_buff_clear(session);
@@ -340,7 +340,7 @@ void imap_handle_input(ImapSession *session)
 		if (l == 0) break; // done
 
 		if (session->error_count >= MAX_FAULTY_RESPONSES) {
-			dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+			dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 			imap_session_printf(session, "* BYE [TRY RFC]\r\n");
 			break;
 		}
@@ -370,7 +370,7 @@ void imap_handle_input(ImapSession *session)
 			break;
 		}
 
-		if (session->state == IMAPCS_ERROR) {
+		if (session->state == CLIENTSTATE_ERROR) {
 			TRACE(TRACE_NOTICE, "session->state: ERROR. abort");
 			break;
 		}
@@ -402,7 +402,7 @@ int imap_handle_connection(client_sock *c)
 
 	session = dbmail_imap_session_new();
 
-	dbmail_imap_session_set_state(session, IMAPCS_NON_AUTHENTICATED);
+	dbmail_imap_session_set_state(session, CLIENTSTATE_NON_AUTHENTICATED);
 
 	event_set(ci->rev, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
 	event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
@@ -521,7 +521,7 @@ int imap4(ImapSession *session)
 	int j = 0;
 	
 	if (! dm_db_ping()) {
-		dbmail_imap_session_set_state(session,IMAPCS_ERROR);
+		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 		return DM_EQUERY;
 	}
 

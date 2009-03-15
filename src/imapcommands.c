@@ -102,7 +102,7 @@ void cmd_free(cmd_t *cmd)
 int _ic_starttls(ImapSession *self)
 {
 	int i;
-	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_ANY)) return 1;
 	if (! server_conf->ssl) {
 		ci_write(self->ci, "%s NO TLS not available\r\n", self->tag);
 		return 1;
@@ -142,7 +142,7 @@ void _ic_capability_enter(dm_thread_data *D)
 
 int _ic_capability(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_ANY)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_capability_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -156,7 +156,7 @@ int _ic_capability(ImapSession *self)
 void _ic_noop_enter(dm_thread_data *D) 
 {
 	LOCK_SESSION;
-	if (self->state == IMAPCS_SELECTED)
+	if (self->state == CLIENTSTATE_SELECTED)
 		dbmail_imap_session_mailbox_status(self, TRUE);
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
@@ -165,7 +165,7 @@ void _ic_noop_enter(dm_thread_data *D)
 
 int _ic_noop(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_ANY)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_noop_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -177,8 +177,8 @@ int _ic_noop(ImapSession *self)
  */
 int _ic_logout(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_ANY)) return 1;
-	dbmail_imap_session_set_state(self, IMAPCS_LOGOUT);
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_ANY)) return 1;
+	dbmail_imap_session_set_state(self, CLIENTSTATE_LOGOUT);
 	TRACE(TRACE_NOTICE, "[%p] userid:[%llu]", self, self->userid);
 	return 2;
 }
@@ -219,7 +219,7 @@ void _ic_authenticate_enter(dm_thread_data *D)
 int _ic_authenticate(ImapSession *self)
 {
 	if (self->command_type == IMAP_COMM_AUTH) {
-		if (!check_state_and_args(self, 3, 3, IMAPCS_NON_AUTHENTICATED)) return 1;
+		if (!check_state_and_args(self, 3, 3, CLIENTSTATE_NON_AUTHENTICATED)) return 1;
 		/* check authentication method */
 		if (strcasecmp(self->args[self->args_idx], "login") != 0) {
 			dbmail_imap_session_buff_printf(self, "%s NO Invalid authentication mechanism specified\r\n", self->tag);
@@ -227,7 +227,7 @@ int _ic_authenticate(ImapSession *self)
 		}
 		self->args_idx++;
 	} else {
-		if (!check_state_and_args(self, 2, 2, IMAPCS_NON_AUTHENTICATED)) return 1;
+		if (!check_state_and_args(self, 2, 2, CLIENTSTATE_NON_AUTHENTICATED)) return 1;
 	}
 
 	dm_thread_data_push((gpointer)self, _ic_authenticate_enter, _ic_cb_leave, NULL);
@@ -256,7 +256,7 @@ static gboolean mailbox_first_unseen(gpointer key, gpointer value, gpointer data
 static int imap_session_mailbox_close(ImapSession *self)
 {
 	// flush recent messages from previous select
-	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
+	dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 	if (self->mailbox) {
 		dbmail_mailbox_free(self->mailbox);
 		self->mailbox = NULL;
@@ -317,7 +317,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 
 	/* check if user has right to select mailbox */
 	if (mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_READ) == 1) {
-		dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
+		dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 		return DM_EGENERAL;
 	}
 	
@@ -359,7 +359,7 @@ static void _ic_select_enter(dm_thread_data *D)
 		D->status = err;
 		NOTIFY_DONE(D);
 	}	
-	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
+	dbmail_imap_session_set_state(self,CLIENTSTATE_SELECTED);
 
 	dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(self->mailbox->state));
 	dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(self->mailbox->state));
@@ -398,7 +398,7 @@ static void _ic_select_enter(dm_thread_data *D)
 
 int _ic_select(ImapSession *self) 
 {
-	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_select_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -438,7 +438,7 @@ void _ic_create_enter(dm_thread_data *D)
 
 int _ic_create(ImapSession *self)
 {
-	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_create_enter, _ic_cb_leave, NULL);
 	return DM_SUCCESS;
 }
@@ -453,7 +453,7 @@ static int imap_session_mailbox_check_acl(ImapSession * self, u64_t idnr,  ACLRi
 	int result;
 	MailboxState_T S = dbmail_imap_session_mbxinfo_lookup(self, idnr);
 	if ((result = mailbox_check_acl(self, S, acl)) == 1)
-		dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
+		dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 	return result;
 }
 void _ic_delete_enter(dm_thread_data *D)
@@ -558,7 +558,7 @@ void _ic_delete_enter(dm_thread_data *D)
 
 		/* check if this was the currently selected mailbox */
 		if (self->mailbox && self->mailbox->state && (mailbox_idnr == MailboxState_getId(self->mailbox->state))) 
-			dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
+			dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 
 		/* ok done */
 		IC_DONE_OK;
@@ -574,7 +574,7 @@ void _ic_delete_enter(dm_thread_data *D)
 
 	/* check if this was the currently selected mailbox */
 	if (self->mailbox && self->mailbox->state && (mailbox_idnr == MailboxState_getId(self->mailbox->state))) 
-		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
+		dbmail_imap_session_set_state(self, CLIENTSTATE_AUTHENTICATED);
 
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
@@ -582,7 +582,7 @@ void _ic_delete_enter(dm_thread_data *D)
 
 int _ic_delete(ImapSession *self) 
 {
-	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_delete_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -744,7 +744,7 @@ void _ic_rename_enter(dm_thread_data *D)
 
 int _ic_rename(ImapSession *self)
 {
-	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 2, 2, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_rename_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -792,7 +792,7 @@ void _ic_subscribe_enter(dm_thread_data *D)
 }
 int _ic_subscribe(ImapSession *self)
 {
-	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_subscribe_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -943,7 +943,7 @@ void _ic_list_enter(dm_thread_data *D)
 int _ic_list(ImapSession *self)
 {
 
-	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 2, 2, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_list_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1060,7 +1060,7 @@ static void _ic_status_enter(dm_thread_data *D)
 
 int _ic_status(ImapSession *self)
 {
-	if (!check_state_and_args(self, 3, 0, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 3, 0, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_status_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1135,7 +1135,7 @@ void _ic_idle_enter(dm_thread_data *D)
 
 int _ic_idle(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_idle_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1334,7 +1334,7 @@ void _ic_append_enter(dm_thread_data *D)
 		break;
 	}
 
-	if (message_id && self->state == IMAPCS_SELECTED && self->mailbox->id == mboxid) {
+	if (message_id && self->state == CLIENTSTATE_SELECTED && self->mailbox->id == mboxid) {
 		//insert new Messageinfo struct into self->mailbox->msginfo
 		//
 		int j = 0;
@@ -1380,7 +1380,7 @@ void _ic_append_enter(dm_thread_data *D)
 
 int _ic_append(ImapSession *self)
 {
-	if (!check_state_and_args(self, 2, 0, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 2, 0, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_append_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1407,7 +1407,7 @@ static void _ic_check_enter(dm_thread_data *D)
 
 int _ic_check(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_SELECTED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_check_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1432,7 +1432,7 @@ static void _ic_close_enter(dm_thread_data *D)
 		if (MailboxState_getPermission(self->mailbox->state) == IMAPPERM_READWRITE)
 			dbmail_imap_session_mailbox_expunge(self);
 
-	dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
+	dbmail_imap_session_set_state(self, CLIENTSTATE_AUTHENTICATED);
 
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
@@ -1440,7 +1440,7 @@ static void _ic_close_enter(dm_thread_data *D)
 	
 int _ic_close(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_SELECTED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_close_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1460,7 +1460,7 @@ static void _ic_unselect_enter(dm_thread_data *D)
 
 int _ic_unselect(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_SELECTED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_unselect_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1493,7 +1493,7 @@ static void _ic_expunge_enter(dm_thread_data *D)
 
 int _ic_expunge(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_SELECTED)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_SELECTED)) return 1;
 
 	if (MailboxState_getPermission(self->mailbox->state) != IMAPPERM_READWRITE) {
 		dbmail_imap_session_buff_printf(self, "%s NO you do not have write permission on this folder\r\n", self->tag);
@@ -1586,7 +1586,7 @@ static void sorted_search_enter(dm_thread_data *D)
 
 static int sorted_search(ImapSession *self, search_order_t order)
 {
-	if (!check_state_and_args(self, 1, 0, IMAPCS_SELECTED)) return 1;
+	if (!check_state_and_args(self, 1, 0, CLIENTSTATE_SELECTED)) return 1;
 	search_order_t *data = g_new0(search_order_t,1);
 	*data = order;
 	dm_thread_data_push((gpointer)self, sorted_search_enter, _ic_cb_leave, (gpointer)data);
@@ -1692,7 +1692,7 @@ static void _ic_fetch_enter(dm_thread_data *D)
 
 int _ic_fetch(ImapSession *self)
 {
-	if (!check_state_and_args (self, 2, 0, IMAPCS_SELECTED)) return 1;
+	if (!check_state_and_args (self, 2, 0, CLIENTSTATE_SELECTED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_fetch_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1905,7 +1905,7 @@ static void _ic_store_enter(dm_thread_data *D)
 
 int _ic_store(ImapSession *self)
 {
-	if (!check_state_and_args (self, 2, 0, IMAPCS_SELECTED)) return 1;
+	if (!check_state_and_args (self, 2, 0, CLIENTSTATE_SELECTED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_store_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1981,7 +1981,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 
 int _ic_copy(ImapSession *self) 
 {
-	if (!check_state_and_args(self, 2, 2, IMAPCS_SELECTED)) return 1;
+	if (!check_state_and_args(self, 2, 2, CLIENTSTATE_SELECTED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_copy_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -1995,7 +1995,7 @@ int _ic_uid(ImapSession *self)
 {
 	int result;
 
-	if (self->state != IMAPCS_SELECTED) {
+	if (self->state != CLIENTSTATE_SELECTED) {
 		dbmail_imap_session_buff_printf(self, "%s BAD UID command received in invalid state\r\n", self->tag);
 		return 1;
 	}
@@ -2095,7 +2095,7 @@ static void _ic_getquotaroot_enter(dm_thread_data *D)
 
 int _ic_getquotaroot(ImapSession *self)
 {
-	if (! check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
+	if (! check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_getquotaroot_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -2126,7 +2126,7 @@ static void _ic_getquota_enter(dm_thread_data *D)
 
 int _ic_getquota(ImapSession *self)
 {
-	if (! check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
+	if (! check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_getquota_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -2181,7 +2181,7 @@ static void _ic_setacl_enter(dm_thread_data *D)
 
 int _ic_setacl(ImapSession *self)
 {
-	if (!check_state_and_args(self, 3, 3, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 3, 3, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_setacl_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -2221,7 +2221,7 @@ static void _ic_deleteacl_enter(dm_thread_data *D)
 
 int _ic_deleteacl(ImapSession *self)
 {
-	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 2, 2, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_deleteacl_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -2254,7 +2254,7 @@ static void _ic_getacl_enter(dm_thread_data *D)
 
 int _ic_getacl(ImapSession *self)
 {
-	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_getacl_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -2303,7 +2303,7 @@ static void _ic_listrights_enter(dm_thread_data *D)
 
 int _ic_listrights(ImapSession *self)
 {
-	if (!check_state_and_args(self, 2, 2, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 2, 2, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_listrights_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -2336,7 +2336,7 @@ static void _ic_myrights_enter(dm_thread_data *D)
 
 int _ic_myrights(ImapSession *self)
 {
-	if (!check_state_and_args(self, 1, 1, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_myrights_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -2355,7 +2355,7 @@ static void _ic_namespace_enter(dm_thread_data *D)
 
 int _ic_namespace(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, IMAPCS_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_namespace_enter, _ic_cb_leave, NULL);
 	return 0;
 }

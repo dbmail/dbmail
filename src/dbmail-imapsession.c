@@ -1080,7 +1080,7 @@ int dbmail_imap_session_fetch_get_items(ImapSession *self)
 
 int client_is_authenticated(ImapSession * self)
 {
-	return (self->state != IMAPCS_NON_AUTHENTICATED);
+	return (self->state != CLIENTSTATE_NON_AUTHENTICATED);
 }
 
 /*
@@ -1092,16 +1092,16 @@ int client_is_authenticated(ImapSession * self)
  *
  * returns 1 on succes, 0 on failure
  */
-int check_state_and_args(ImapSession * self, int minargs, int maxargs, imap_cs_t state)
+int check_state_and_args(ImapSession * self, int minargs, int maxargs, clientstate_t state)
 {
 	int i;
 
-	if (self->state == IMAPCS_ERROR) return 0;
+	if (self->state == CLIENTSTATE_ERROR) return 0;
 
 	/* check state */
-	if (state != IMAPCS_ANY) {
+	if (state != CLIENTSTATE_ANY) {
 		if (self->state != state) {
-			if (!  (state == IMAPCS_AUTHENTICATED && self->state == IMAPCS_SELECTED)) {
+			if (!  (state == CLIENTSTATE_AUTHENTICATED && self->state == CLIENTSTATE_SELECTED)) {
 				dbmail_imap_session_buff_printf(self, "%s BAD %s command received in invalid state [%d] != [%d]\r\n", 
 					self->tag, self->command, self->state, state);
 				return 0;
@@ -1141,7 +1141,7 @@ void dbmail_imap_session_buff_clear(ImapSession *self)
 void dbmail_imap_session_buff_flush(ImapSession *self)
 {
 	dm_thread_data *D;
-	if (self->state >= IMAPCS_LOGOUT) return;
+	if (self->state >= CLIENTSTATE_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
 	D = g_new0(dm_thread_data,1);
@@ -1211,7 +1211,7 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 			return -1;
 	}
 
-	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
+	dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 
 	return 0;
 
@@ -1374,7 +1374,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
         DbmailMailbox *mailbox = NULL;
 	gboolean showexists = FALSE, showrecent = FALSE, unhandled=FALSE, showflags=FALSE;
 
-	if (self->state != IMAPCS_SELECTED) return FALSE;
+	if (self->state != CLIENTSTATE_SELECTED) return FALSE;
 
 	if (update) {
 		MailboxState_T M;
@@ -1618,24 +1618,24 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 	return 0;
 }
 
-int dbmail_imap_session_set_state(ImapSession *self, imap_cs_t state)
+int dbmail_imap_session_set_state(ImapSession *self, clientstate_t state)
 {
 	TRACE(TRACE_DEBUG,"state [%d]", state);
-	if ( (self->state == state) || (self->state == IMAPCS_ERROR) ) {
+	if ( (self->state == state) || (self->state == CLIENTSTATE_ERROR) ) {
 		return 0;
 	}
 
 	switch (state) {
-		case IMAPCS_ERROR:
+		case CLIENTSTATE_ERROR:
 			assert(self->ci);
 			if (self->ci->wev) event_del(self->ci->wev);
 			// fall-through...
-		case IMAPCS_LOGOUT:
+		case CLIENTSTATE_LOGOUT:
 			assert(self->ci);
 			if (self->ci->rev) event_del(self->ci->rev);
 			break;
 
-		case IMAPCS_AUTHENTICATED:
+		case CLIENTSTATE_AUTHENTICATED:
 			// change from login_timeout to main timeout
 			assert(self->ci);
 			TRACE(TRACE_DEBUG,"[%p] set timeout to [%d]", self, server_conf->timeout);

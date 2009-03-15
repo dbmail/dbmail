@@ -209,7 +209,7 @@ static void pop3_close(ClientSession_t *session)
 		ci_write(ci, "+OK see ya later\r\n");
 	}
 	
-	session->state = POP3_QUIT_STATE;
+	session->state = CLIENTSTATE_QUIT;
 }
 
 
@@ -239,7 +239,7 @@ void pop3_cb_write(void *arg)
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
 	switch (session->state) {
-		case POP3_QUIT_STATE:
+		case CLIENTSTATE_QUIT:
 			db_session_cleanup(session);
 			client_session_bailout(&session);
 			break;
@@ -253,7 +253,7 @@ void pop3_cb_write(void *arg)
 void pop3_cb_time(void * arg)
 {
 	ClientSession_t *session = (ClientSession_t *)arg;
-	session->state = POP3_QUIT_STATE;
+	session->state = CLIENTSTATE_QUIT;
 	ci_write(session->ci, "-ERR I'm leaving, you're too slow\r\n");
 }
 
@@ -273,7 +273,7 @@ static void reset_callbacks(ClientSession_t *session)
 int pop3_handle_connection(client_sock *c)
 {
 	ClientSession_t *session = client_session_new(c);
-	session->state = POP3_AUTHORIZATION_STATE;
+	session->state = CLIENTSTATE_INITIAL_CONNECT;
 	client_session_set_timeout(session, server_conf->login_timeout);
         reset_callbacks(session);
         send_greeting(session);
@@ -383,13 +383,13 @@ int pop3(ClientSession_t *session, const char *buffer)
 		/* We return 0 here, and then pop3_handle_connection cleans up
 		 * the connection, commits all changes, and sends the final
 		 * "OK" message indicating that QUIT has completed. */
-		session->state = POP3_UPDATE_STATE;
+		session->state = CLIENTSTATE_LOGOUT;
 		session->SessionResult = 0;
 		pop3_close(session);
 		return 0;
 		
 	case POP3_STLS:
-		if (session->state != POP3_AUTHORIZATION_STATE)
+		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 		if (! server_conf->ssl)
 			return pop3_error(session, "-ERR server error\r\n");
@@ -401,7 +401,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_USER:
-		if (session->state != POP3_AUTHORIZATION_STATE)
+		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		if (session->username != NULL) {
@@ -420,7 +420,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_PASS:
-		if (session->state != POP3_AUTHORIZATION_STATE)
+		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		if (session->password != NULL) {
@@ -455,7 +455,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 
 		default:
 			/* user logged in OK */
-			session->state = POP3_TRANSACTION_STATE;
+			session->state = CLIENTSTATE_AUTHENTICATED;
 
 			client_session_set_timeout(session, server_conf->timeout);
 
@@ -485,7 +485,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_LIST:
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		session->messagelst = g_list_first(session->messagelst);
@@ -526,7 +526,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_STAT:
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		ci_write(ci, "+OK %llu %llu\r\n", 
@@ -538,7 +538,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 	case POP3_RETR:
 		TRACE(TRACE_DEBUG, "RETR command, retrieving message");
 
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		session->messagelst = g_list_first(session->messagelst);
@@ -564,7 +564,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return pop3_error(session, "-ERR [%s] no such message\r\n", value);
 
 	case POP3_DELE:
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		session->messagelst = g_list_first(session->messagelst);
@@ -587,7 +587,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return pop3_error(session, "-ERR [%s] no such message\r\n", value);
 
 	case POP3_RSET:
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		session->messagelst = g_list_first(session->messagelst);
@@ -609,7 +609,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_LAST:
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		session->messagelst = g_list_first(session->messagelst);
@@ -632,14 +632,14 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_NOOP:
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		ci_write(ci, "+OK\r\n");
 		return 1;
 
 	case POP3_UIDL:
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		session->messagelst = g_list_first(session->messagelst);
@@ -684,7 +684,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_APOP:
-		if (session->state != POP3_AUTHORIZATION_STATE)
+		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		/* find out where the md5 hash starts */
@@ -753,7 +753,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 
 		default:
 			/* user logged in OK */
-			session->state = POP3_TRANSACTION_STATE;
+			session->state = CLIENTSTATE_AUTHENTICATED;
 
 			client_session_set_timeout(session, server_conf->timeout);
 
@@ -783,12 +783,12 @@ int pop3(ClientSession_t *session, const char *buffer)
 		return 1;
 
 	case POP3_AUTH:
-		if (session->state != POP3_AUTHORIZATION_STATE)
+		if (session->state != CLIENTSTATE_NON_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 		return pop3_error(session, "-ERR no AUTH mechanisms supported\r\n");
 
 	case POP3_TOP:
-		if (session->state != POP3_TRANSACTION_STATE)
+		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
 		/* find out how many lines they want */

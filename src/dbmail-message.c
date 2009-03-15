@@ -283,11 +283,17 @@ static char * find_boundary(const char *s)
 		if ((g_strncasecmp(s, "Content-type: ", 14)) == 0)
 			rest = (char *)s;
 	}
-	if (! rest)
-		return NULL;
+	if (! rest) return NULL;
 
 	header = g_string_new("");
-	i = 13;
+
+	i = 0;
+	while (rest[i]) {
+		if (rest[i] == ':') break;
+		i++;
+	}
+	i++;
+
 	while (rest[i]) {
 		if (((rest[i] == '\n') || (rest[i] == '\r')) && (!isspace(rest[i+1]))) {
 			break;
