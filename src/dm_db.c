@@ -1082,13 +1082,9 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t *
 		if (internal_date != NULL) {
 			field_t to_date_str;
 			char2date_str(internal_date, &to_date_str);
-			r = db_query(c, "INSERT INTO %sphysmessage (messagesize, internal_date) "
-				 "VALUES (0, %s) %s", 
-				DBPFX, to_date_str, frag);
+			r = db_query(c, "INSERT INTO %sphysmessage (messagesize, internal_date) VALUES (0, %s) %s", DBPFX, to_date_str, frag);
 		} else {
-			r = db_query(c, "INSERT INTO %sphysmessage (messagesize, internal_date) "
-				 "VALUES (0, %s) %s", 
-				DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
+			r = db_query(c, "INSERT INTO %sphysmessage (messagesize, internal_date) VALUES (0, %s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
 		}
 		g_free(frag);	
 
@@ -1108,11 +1104,6 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t *
 	}
 
 	return 1;
-}
-
-int db_insert_physmessage(u64_t * physmessage_id)
-{
-	return db_insert_physmessage_with_internal_date(NULL, physmessage_id);
 }
 
 static int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size, u64_t rfc_size)

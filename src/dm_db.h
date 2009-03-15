@@ -308,17 +308,6 @@ int db_get_reply_body(u64_t user_idnr, char **body);
 u64_t db_get_useridnr(u64_t message_idnr);
 
 /**
- * \brief insert a new physmessage. This inserts only an new record in the
- * physmessage table with a timestamp
- * \param physmessage_id will hold the id of the physmessage on return. Must 
- * hold a valid pointer on call.
- * \return 
- *     - -1 on failure
- *     -  1 on success
- */
-int db_insert_physmessage(u64_t * physmessage_id);
-
-/**
  * \brief insert a physmessage with an internal date.
  * \param internal_date the internal date in "YYYY-MM-DD HH:Mi:SS"
  * \param physmessage_id will hold the id of the physmessage on return. Must
