@@ -141,9 +141,7 @@ void imap_cb_read(void *arg)
 	ci_read_cb(session->ci);
 
 	state = session->ci->client_state;
-	if (state & CLIENT_OK || state & CLIENT_AGAIN) {
-		imap_handle_input(session);
-	} else if (state & CLIENT_ERR) {
+	if (state & CLIENT_ERR) {
 		TRACE(TRACE_DEBUG,"client_state ERROR");
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 	} else if (state & CLIENT_EOF) {
@@ -151,6 +149,9 @@ void imap_cb_read(void *arg)
 		event_del(session->ci->rev);
 		if (session->ci->read_buffer->len < 1)
 			imap_session_bailout(session);
+	}
+	else if (state & CLIENT_OK || state & CLIENT_AGAIN) {
+		imap_handle_input(session);
 	}
 }
 
