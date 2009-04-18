@@ -229,8 +229,7 @@ static void pop3_handle_input(void *arg)
 	if (ci_readln(session->ci, buffer) == 0)
 		return;
 
-	if (pop3(session, buffer) == -3)
-		client_session_bailout(&session);
+	pop3(session, buffer);
 }
 
 void pop3_cb_write(void *arg)
@@ -347,7 +346,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 	}
 
 	/* find command that was issued */
-	for (cmdtype = POP3_QUIT; cmdtype <= POP3_CAPA; cmdtype++)
+	for (cmdtype = POP3_QUIT; cmdtype < POP3_FAIL; cmdtype++)
 		if (strcasecmp(command, commands[cmdtype]) == 0) {
 			session->was_apop = 1;
 			break;
