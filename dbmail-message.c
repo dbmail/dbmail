@@ -310,9 +310,6 @@ static int _set_content(struct DbmailMessage *self, const GString *content)
 		self->raw = NULL;
 	}
 
-	//self->raw = g_byte_array_new();
-	//self->raw = g_byte_array_append(self->raw,(guint8 *)content->str, content->len+1);
-	//stream = g_mime_stream_mem_new_with_byte_array(self->raw);
 	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
 	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_mime_stream_close(stream);
@@ -332,7 +329,6 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 	GMimeParser *parser;
 	gchar buf[MESSAGE_MAX_LINE_SIZE], *from = NULL;
 	ssize_t getslen, putslen;
-	FILE *tmp;
 	int res = 0;
 	gboolean firstline;
 
@@ -355,13 +351,20 @@ static int _set_content_from_stream(struct DbmailMessage *self, GMimeStream *str
 
 			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
-//			mstream = g_mime_stream_mem_new();
 
-			tmp = tmpfile();
+			FILE *tmp = tmpfile();
+			if (! tmp) {
+				int serr = errno;
+				TRACE(TRACE_ERROR, "opening tmpfile failed: %s", strerror(serr));
+				res = 1;
+				break;
+			}
+
 			mstream = g_mime_stream_file_new(tmp);
 
 			assert(mstream);
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
+			g_mime_stream_file_set_owner((GMimeStreamFile *)mstream, TRUE);
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 
