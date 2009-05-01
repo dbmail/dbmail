@@ -1317,14 +1317,60 @@ int dbmail_message_store(DbmailMessage *self)
 	return res;
 }
 
+static int insert_physmessage(DbmailMessage *self)
+{
+	C c; R r;
+	char *internal_date, *frag;
+	int thisyear;
+	volatile u64_t id = 0;
+	struct timeval tv;
+	struct tm gmt;
+
+	/* get the messages date, but override it if it's from the future */
+	gettimeofday(&tv, NULL);
+	localtime_r(&tv.tv_sec, &gmt);
+	thisyear = gmt.tm_year + 1900;
+	internal_date = dbmail_message_get_internal_date(self, thisyear);
+
+	c = db_con_get();
+	TRY
+		frag = db_returning("id");
+
+		if (internal_date != NULL) {
+			field_t to_date_str;
+			char2date_str(internal_date, &to_date_str);
+			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, &to_date_str, frag);
+			g_free(frag);	
+		} else {
+			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
+			g_free(frag);	
+		}
+		id = db_insert_result(c, r);
+
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (! id) {
+		TRACE(TRACE_ERR,"no physmessage_id [%llu]", id);
+		return DM_EQUERY;
+	} else {
+		dbmail_message_set_physid(self, id);
+		TRACE(TRACE_DEBUG,"new physmessage_id [%llu]", id);
+	}
+
+	return 1;
+}
+
 int _message_insert(DbmailMessage *self, 
 		u64_t user_idnr, 
 		const char *mailbox, 
 		const char *unique_id)
 {
 	u64_t mailboxid;
-	u64_t physmessage_id;
-	char *internal_date = NULL, *frag = NULL;
+	char *frag = NULL;
 	C c; R r;
 
 	assert(unique_id);
@@ -1338,38 +1384,22 @@ int _message_insert(DbmailMessage *self,
 		return -1;
 	}
 
-	/* get the messages date, but override it if it's from the future */
-	struct timeval tv;
-	struct tm gmt;
-	int thisyear;
-	gettimeofday(&tv, NULL);
-	localtime_r(&tv.tv_sec, &gmt);
-	thisyear = gmt.tm_year + 1900;
-	internal_date = dbmail_message_get_internal_date(self, thisyear);
-	int result = 0;
-
 	/* insert a new physmessage entry */
-	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1)  {
-		g_free(internal_date);
+	if (insert_physmessage(self) == -1)
 		return -1;
-	}
 	
-	assert(physmessage_id);
-
-	g_free(internal_date);
-
-	dbmail_message_set_physid(self, physmessage_id);
-	frag = db_returning("message_idnr");
-
 	/* now insert an entry into the messages table */
 	c = db_con_get();
 	TRY
+		frag = db_returning("message_idnr");
 		r = db_query(c, "INSERT INTO "
 				"%smessages(mailbox_idnr, physmessage_id, unique_id,"
 				"recent_flag, status) "
 				"VALUES (%llu, %llu, '%s', 1, %d) %s",
-				DBPFX, mailboxid, physmessage_id, unique_id,
+				DBPFX, mailboxid, dbmail_message_get_physid(self), unique_id,
 				MESSAGE_STATUS_INSERT, frag);
+		g_free(frag);
+
 		self->id = db_insert_result(c, r);
 		TRACE(TRACE_DEBUG,"new message_idnr [%llu]", self->id);
 
@@ -1379,9 +1409,7 @@ int _message_insert(DbmailMessage *self,
 		db_con_close(c);
 	END_TRY;
 
-	g_free(frag);
-
-	return result;
+	return 0;
 }
 
 int dbmail_message_cache_headers(const DbmailMessage *self)

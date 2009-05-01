@@ -198,7 +198,7 @@ int db_connect(void)
 	db_connected = 2;
 	
 	if (_db_params.max_db_connections > 0) {
-		if (_db_params.max_db_connections < ConnectionPool_getInitialConnections(pool))
+		if (_db_params.max_db_connections < (unsigned int)ConnectionPool_getInitialConnections(pool))
 			ConnectionPool_setInitialConnections(pool, _db_params.max_db_connections);
 		ConnectionPool_setMaxConnections(pool, _db_params.max_db_connections);
 		TRACE(TRACE_INFO,"database connection pool created with maximum connections of [%d]", _db_params.max_db_connections);
@@ -303,17 +303,17 @@ gboolean db_exec(C c, const char *q, ...)
 	struct timeval before, after;
 	gboolean result = FALSE;
 	va_list ap, cp;
-	INIT_QUERY;
+	char *query;
 
 	va_start(ap, q);
 	va_copy(cp, ap);
-        vsnprintf(query, DEF_QUERYSIZE, q, cp);
+        query = g_strdup_vprintf(q, cp);
         va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
 		gettimeofday(&before, NULL);
-		Connection_execute(c, query);
+		Connection_execute(c, (const char *)query, "");
 		gettimeofday(&after, NULL);
 		result = TRUE;
 	CATCH(SQLException)
@@ -322,6 +322,7 @@ gboolean db_exec(C c, const char *q, ...)
 	END_TRY;
 
 	if (result) log_query_time(query, before, after);
+	g_free(query);
 
 	return result;
 }
@@ -332,17 +333,19 @@ R db_query(C c, const char *q, ...)
 	R r = NULL;
 	gboolean result = FALSE;
 	va_list ap, cp;
-	INIT_QUERY;
+	char *query;
 
 	va_start(ap, q);
 	va_copy(cp, ap);
-        vsnprintf(query, DEF_QUERYSIZE, q, cp);
+        query = g_strdup_vprintf(q, cp);
         va_end(cp);
+
+	g_strstrip(query);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
 		gettimeofday(&before, NULL);
-		r = Connection_executeQuery(c, query);
+		r = Connection_executeQuery(c, (const char *)query, "");
 		gettimeofday(&after, NULL);
 		result = TRUE;
 	CATCH(SQLException)
@@ -351,6 +354,7 @@ R db_query(C c, const char *q, ...)
 	END_TRY;
 
 	if (result) log_query_time(query, before, after);
+	g_free(query);
 
 	return r;
 }
@@ -383,15 +387,15 @@ gboolean db_update(const char *q, ...)
 S db_stmt_prepare(C c, const char *q, ...)
 {
 	va_list ap, cp;
-	INIT_QUERY;
+	char *query;
 
 	va_start(ap, q);
 	va_copy(cp, ap);
-        vsnprintf(query, DEF_QUERYSIZE, q, cp);
+        query = g_strdup_vprintf(q, cp);
         va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
-	return Connection_prepareStatement(c, query);
+	return Connection_prepareStatement(c, (const char *)query, "");
 }
 
 int db_stmt_set_str(S s, int index, const char *x)
@@ -1067,43 +1071,6 @@ u64_t db_get_useridnr(u64_t message_idnr)
 		db_con_close(c);
 	END_TRY;
 	return user_idnr;
-}
-
-int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t * physmessage_id)
-{
-	C c; R r;
-	char *frag;
-	assert(physmessage_id != NULL);
-	volatile u64_t id = 0;
-	
-	c = db_con_get();
-	TRY
-		frag = db_returning("id");
-		if (internal_date != NULL) {
-			field_t to_date_str;
-			char2date_str(internal_date, &to_date_str);
-			r = db_query(c, "INSERT INTO %sphysmessage (messagesize, internal_date) VALUES (0, %s) %s", DBPFX, to_date_str, frag);
-		} else {
-			r = db_query(c, "INSERT INTO %sphysmessage (messagesize, internal_date) VALUES (0, %s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
-		}
-		g_free(frag);	
-
-		id = db_insert_result(c, r);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (! id) {
-		TRACE(TRACE_ERR,"no physmessage_id [%llu]", id);
-		return DM_EQUERY;
-	} else {
-		*physmessage_id = id;
-		TRACE(TRACE_DEBUG,"new physmessage_id [%llu]", *physmessage_id);
-	}
-
-	return 1;
 }
 
 static int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size, u64_t rfc_size)
@@ -2985,7 +2952,7 @@ int db_set_msgflag(u64_t msg_idnr, int *flags, GList *keywords, int action_type,
 {
 	C c; int t = DM_SUCCESS;
 	size_t i, pos = 0;
-	int seen = 0;
+	volatile int seen = 0;
 	INIT_QUERY;
 
 	memset(query,0,DEF_QUERYSIZE);
