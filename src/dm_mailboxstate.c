@@ -212,7 +212,7 @@ void MailboxState_free(T *M)
 
 static int db_getmailbox_flags(T M)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	g_return_val_if_fail(M->id,DM_EQUERY);
 	
 	c = db_con_get();
@@ -235,7 +235,7 @@ static int db_getmailbox_flags(T M)
 static int db_getmailbox_metadata(T M, u64_t user_idnr)
 {
 	/* query mailbox for LIST results */
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	char *mbxname, *name, *pattern;
 	struct mailbox_match *mailbox_like = NULL;
 	GString *fqname, *qs;
@@ -503,7 +503,7 @@ char * MailboxState_flags(T M)
 int db_acl_has_right(MailboxState_T M, u64_t userid, const char *right_flag)
 {
 	C c; R r;
-	int result = FALSE;
+	volatile int result = FALSE;
 	u64_t owner_id, mboxid;
 
 	mboxid = MailboxState_getId(M);
@@ -544,7 +544,8 @@ int db_acl_has_right(MailboxState_T M, u64_t userid, const char *right_flag)
 
 int db_acl_get_acl_map(MailboxState_T M, u64_t userid, struct ACLMap *map)
 {
-	int i, t = DM_SUCCESS;
+	int i;
+	volatile int t = DM_SUCCESS;
 	gboolean gotrow = FALSE;
 	u64_t anyone;
 	C c; R r; S s;

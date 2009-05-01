@@ -758,7 +758,7 @@ int db_use_usermap(void)
 
 int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	assert(physmessage_id != NULL);
 	*physmessage_id = 0;
 
@@ -862,7 +862,7 @@ int dm_quota_user_dec(u64_t user_idnr, u64_t size)
 static int dm_quota_user_validate(u64_t user_idnr, u64_t msg_size)
 {
 	u64_t maxmail_size;
-	C c; R r; gboolean t = TRUE;
+	C c; R r; volatile gboolean t = TRUE;
 
 	if (auth_getmaxmailsize(user_idnr, &maxmail_size) == -1) {
 		TRACE(TRACE_ERR, "auth_getmaxmailsize() failed\n");
@@ -893,7 +893,7 @@ static int dm_quota_user_validate(u64_t user_idnr, u64_t msg_size)
 
 int dm_quota_rebuild_user(u64_t user_idnr)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t quotum = 0;
 
 	c = db_con_get();
@@ -991,7 +991,7 @@ int dm_quota_rebuild()
 
 int db_get_notify_address(u64_t user_idnr, char **notify_address)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	assert(notify_address != NULL);
 	*notify_address = NULL;
 
@@ -1013,7 +1013,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 
 int db_get_reply_body(u64_t user_idnr, char **reply_body)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	*reply_body = NULL;
 
 	c = db_con_get();
@@ -1112,7 +1112,7 @@ int db_update_message(u64_t message_idnr, const char *unique_id, u64_t message_s
 
 int db_log_ip(const char *ip)
 {
-	C c; R r; S s; int t = DM_SUCCESS;
+	C c; R r; S s; volatile int t = DM_SUCCESS;
 	u64_t id = 0;
 	
 	c = db_con_get();
@@ -1154,7 +1154,7 @@ int db_cleanup(void)
 
 int db_empty_mailbox(u64_t user_idnr)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	GList *mboxids = NULL;
 	u64_t *id;
 	unsigned i = 0;
@@ -1203,7 +1203,7 @@ int db_empty_mailbox(u64_t user_idnr)
 
 int db_icheck_messageblks(GList **lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t messageblk_idnr, *idnr;
 	int i = 0;
 
@@ -1240,7 +1240,7 @@ int db_icheck_messageblks(GList **lost)
 
 int db_icheck_physmessages(gboolean cleanup)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 
 	c = db_con_get();
 	TRY
@@ -1266,7 +1266,7 @@ int db_icheck_physmessages(gboolean cleanup)
 
 int db_icheck_mimeparts(gboolean cleanup)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 
 	c = db_con_get();
 	TRY
@@ -1291,7 +1291,7 @@ int db_icheck_mimeparts(gboolean cleanup)
 
 int db_icheck_messages(GList ** lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t message_idnr;
 	u64_t *idnr;
 	int i = 0;
@@ -1324,7 +1324,7 @@ int db_icheck_messages(GList ** lost)
 
 int db_icheck_mailboxes(GList **lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t mailbox_idnr, *idnr;
 	int i = 0;
 
@@ -1354,7 +1354,7 @@ int db_icheck_mailboxes(GList **lost)
 
 int db_icheck_null_physmessages(GList **lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t physmessage_id, *idnr;
 	unsigned i;
 
@@ -1385,7 +1385,7 @@ int db_icheck_null_physmessages(GList **lost)
 
 int db_icheck_null_messages(GList **lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t *idnr;
 	int i = 0;
 
@@ -1414,7 +1414,7 @@ int db_icheck_null_messages(GList **lost)
 
 int db_set_isheader(GList *lost)
 {
-	C c; int t = DM_SUCCESS;
+	C c; volatile int t = DM_SUCCESS;
 	GList *slices = NULL;
 
 	if (! lost) return DM_SUCCESS;
@@ -1443,7 +1443,7 @@ int db_set_isheader(GList *lost)
 
 int db_icheck_isheader(GList  **lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	
 	c = db_con_get();
 	TRY
@@ -1463,7 +1463,7 @@ int db_icheck_isheader(GList  **lost)
 
 int db_icheck_rfcsize(GList  **lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t *id;
 	
 	c = db_con_get();
@@ -1566,7 +1566,7 @@ int db_set_headercache(GList *lost)
 		
 int db_icheck_headercache(GList **lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t *id;
 
 	c = db_con_get();
@@ -1624,7 +1624,7 @@ int db_set_envelope(GList *lost)
 		
 int db_icheck_envelope(GList **lost)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t *id;
 
 	c = db_con_get();
@@ -1813,7 +1813,7 @@ char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
 
 int db_update_pop(ClientSession_t * session_ptr)
 {
-	C c; int t = DM_SUCCESS;
+	C c; volatile int t = DM_SUCCESS;
 	GList *messagelst = NULL;
 	u64_t user_idnr = 0;
 	INIT_QUERY;
@@ -1863,7 +1863,7 @@ int db_update_pop(ClientSession_t * session_ptr)
 static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	struct mailbox_match *mailbox_like = NULL;
 	S stmt;
 	GString *qs;
@@ -1963,7 +1963,7 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 
 static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char * pattern, GList ** mailboxes)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t search_user_idnr = user_idnr;
 	const char *spattern;
 	char *namespace, *username;
@@ -2399,7 +2399,7 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 	char *frag;
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
-	int result = DM_SUCCESS;
+	volatile int result = DM_SUCCESS;
 	C c; R r; S s;
 	INIT_QUERY;
 
@@ -2509,7 +2509,7 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, GList ** children)
 {
 	struct mailbox_match *mailbox_like = NULL;
-	C c; R r; S s; int t = DM_SUCCESS;
+	C c; R r; S s; volatile int t = DM_SUCCESS;
 	GString *qs;
 	int prml;
 
@@ -2577,7 +2577,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, GList ** childre
 
 int db_isselectable(u64_t mailbox_idnr)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -2599,7 +2599,7 @@ int db_isselectable(u64_t mailbox_idnr)
 
 int db_noinferiors(u64_t mailbox_idnr)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -2620,7 +2620,7 @@ int db_noinferiors(u64_t mailbox_idnr)
 
 int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 {
-	C c; int t = DM_SUCCESS;
+	C c; volatile int t = DM_SUCCESS;
 	c = db_con_get();
 	TRY
 		db_exec(c, "UPDATE %smessages SET mailbox_idnr=%llu WHERE mailbox_idnr=%llu", 
@@ -2817,7 +2817,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 
 int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 {
-	C c; S s; int t = DM_SUCCESS;
+	C c; S s; volatile int t = DM_SUCCESS;
 
 	c = db_con_get();
 	TRY
@@ -2838,7 +2838,7 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 
 int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
-	C c; S s; R r; int t = TRUE;
+	C c; S s; R r; volatile int t = TRUE;
 	c = db_con_get();
 	TRY
 		s = db_stmt_prepare(c, "SELECT * FROM %ssubscription WHERE user_id=? and mailbox_id=?", DBPFX);
@@ -3013,7 +3013,7 @@ int db_set_msgflag(u64_t msg_idnr, int *flags, GList *keywords, int action_type,
 
 static int db_acl_has_acl(u64_t userid, u64_t mboxid)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -3081,7 +3081,7 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid)
 
 int db_acl_get_identifier(u64_t mboxid, GList **identifier_list)
 {
-	C c; R r; int t = TRUE;
+	C c; R r; volatile int t = TRUE;
 
 	c = db_con_get();
 	TRY
@@ -3103,7 +3103,7 @@ int db_acl_get_identifier(u64_t mboxid, GList **identifier_list)
 
 int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	assert(owner_id != NULL);
 	*owner_id = 0;
 
@@ -3127,7 +3127,7 @@ int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id)
 
 int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -3308,7 +3308,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 		 u64_t clientid, u64_t maxmail, u64_t * user_idnr) 
 {
 	INIT_QUERY;
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s; volatile int t = FALSE;
 	char *encoding = NULL, *frag;
 	u64_t id, existing_user_idnr = 0;
 
@@ -3382,7 +3382,7 @@ int db_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 
 int db_user_delete(const char * username)
 {
-	C c; S s; int t = FALSE;
+	C c; S s; volatile int t = FALSE;
 	c = db_con_get();
 	TRY
 		s = db_stmt_prepare(c, "DELETE FROM %susers WHERE userid = ?", DBPFX);
@@ -3398,7 +3398,7 @@ int db_user_delete(const char * username)
 
 int db_user_rename(u64_t user_idnr, const char *new_name) 
 {
-	C c; S s; gboolean t = FALSE;
+	C c; S s; volatile gboolean t = FALSE;
 	c = db_con_get();
 	TRY
 		s = db_stmt_prepare(c, "UPDATE %susers SET userid = ? WHERE user_idnr= ?", DBPFX);
@@ -3459,7 +3459,7 @@ int db_user_find_create(u64_t user_idnr)
 
 int db_replycache_register(const char *to, const char *from, const char *handle)
 {
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s; volatile int t = FALSE;
 	INIT_QUERY;
 
 	snprintf(query, DEF_QUERYSIZE, "SELECT lastseen FROM %sreplycache "
@@ -3519,7 +3519,7 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 
 int db_replycache_unregister(const char *to, const char *from, const char *handle)
 {
-	C c; S s; gboolean t = FALSE;
+	C c; S s; volatile gboolean t = FALSE;
 	INIT_QUERY;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -3553,7 +3553,7 @@ int db_replycache_validate(const char *to, const char *from,
 		const char *handle, int days)
 {
 	GString *tmp = g_string_new("");
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s; volatile int t = FALSE;
 	INIT_QUERY;
 
 	g_string_printf(tmp, db_get_sql(SQL_EXPIRE), days);
@@ -3609,7 +3609,7 @@ int db_message_mailbox_seq_update(u64_t message_id)
 int db_rehash_store(void)
 {
 	GList *ids = NULL;
-	C c; S s; R r; int t = FALSE;
+	C c; S s; R r; volatile int t = FALSE;
 	const char *buf;
 	char *hash;
 

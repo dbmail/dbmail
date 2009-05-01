@@ -515,7 +515,7 @@ void _ic_delete_enter(dm_thread_data *D)
 
 		/* mailbox has inferior names; remove all msgs and set noselect flag */
 		{
-			C c; int t = DM_SUCCESS;
+			C c; volatile int t = DM_SUCCESS;
 			u64_t mailbox_size;
 			MailboxState_T S = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
 

@@ -70,7 +70,7 @@ extern db_param_t _db_params;
 
 static int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	struct message *tmpmessage;
 	int message_counter = 0;
 	const char *query_result;

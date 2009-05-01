@@ -564,7 +564,7 @@ void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean no
 /* get headers or not */
 static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean not)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	GString *q = g_string_new("");
 	gchar *fld, *val, *old, *new = NULL;
 	u64_t *mid;
@@ -777,7 +777,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 /* get envelopes */
 static void _fetch_envelopes(ImapSession *self)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	GString *q;
 	gchar *s;
 	u64_t *mid;
@@ -1474,7 +1474,7 @@ static void mailboxstate_destroy(MailboxState_T M)
 
 static void _get_mbxinfo(ImapSession *self)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	GTree *old = NULL, *mbxinfo = NULL;
 	u64_t *id;
 	
@@ -1545,7 +1545,7 @@ static int db_update_recent(GList *slices)
 {
 	INIT_QUERY;
 	C c;
-	int t = FALSE;
+	volatile int t = FALSE;
 
 	if (! (slices = g_list_first(slices)))
 		return t;

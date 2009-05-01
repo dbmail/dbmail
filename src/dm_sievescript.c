@@ -30,7 +30,7 @@ extern db_param_t _db_params;
 
 int dm_sievescript_getbyname(u64_t user_idnr, char *scriptname, char **script)
 {
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s; volatile int t = FALSE;
 	assert(scriptname);
 				
 	c = db_con_get();
@@ -59,7 +59,7 @@ int dm_sievescript_isactive(u64_t user_idnr)
 
 int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname)
 {
-	C c; R r; S s; int t = TRUE;
+	C c; R r; S s; volatile int t = TRUE;
 
 	c = db_con_get();
 	TRY
@@ -87,7 +87,7 @@ int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname)
 
 int dm_sievescript_get(u64_t user_idnr, char **scriptname)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	assert(scriptname);
 	*scriptname = NULL;
 
@@ -109,7 +109,7 @@ int dm_sievescript_get(u64_t user_idnr, char **scriptname)
 
 int dm_sievescript_list(u64_t user_idnr, GList **scriptlist)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -133,7 +133,7 @@ int dm_sievescript_list(u64_t user_idnr, GList **scriptlist)
 int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname)
 {
 	int active = 0;
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s; volatile int t = FALSE;
 	assert(scriptname);
 
 	/* 
@@ -184,7 +184,7 @@ int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname)
 
 int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script)
 {
-	C c; R r; S s; int t = FALSE;
+	C c; R r; S s; volatile int t = FALSE;
 	assert(scriptname);
 
 	c = db_con_get();
@@ -230,7 +230,7 @@ int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script)
 
 int dm_sievescript_deactivate(u64_t user_idnr, char *scriptname)
 {
-	C c; S s; gboolean t = FALSE;
+	C c; S s; volatile gboolean t = FALSE;
 	assert(scriptname);
 
 	c = db_con_get();
@@ -250,7 +250,7 @@ int dm_sievescript_deactivate(u64_t user_idnr, char *scriptname)
 
 int dm_sievescript_activate(u64_t user_idnr, char *scriptname)
 {
-	C c; S s; gboolean t = FALSE;
+	C c; S s; volatile gboolean t = FALSE;
 	assert(scriptname);
 
 	c = db_con_get();
@@ -282,7 +282,7 @@ int dm_sievescript_activate(u64_t user_idnr, char *scriptname)
 
 int dm_sievescript_delete(u64_t user_idnr, char *scriptname)
 {
-	C c; S s; gboolean t = FALSE;
+	C c; S s; volatile gboolean t = FALSE;
 	assert(scriptname);
 
 	c = db_con_get();

@@ -379,7 +379,7 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 	u64_t msgid, physid, *id;
 	DbmailMessage *m;
 	int count = 0;
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	INIT_QUERY;
 
 	snprintf(query,DEF_QUERYSIZE,"SELECT id,message_idnr FROM %sphysmessage p "
@@ -1245,7 +1245,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 	GString *q;
 	u64_t tid, *id;
 	unsigned i;
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	search_key_t *s = (search_key_t *)node->data;
 	GTree *z;
 	

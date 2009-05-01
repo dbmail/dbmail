@@ -307,7 +307,8 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	char *str = NULL, *internal_date = NULL;
 	char *boundary = NULL;
 	char **blist = g_new0(char *,32);
-	int prevdepth, depth = 0, order, row = 0, key = 1, t = FALSE;
+	int prevdepth, depth = 0, order, row = 0, key = 1;
+	volatile int t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
 	GString *m = NULL;
 	const void *blob;
@@ -1447,7 +1448,7 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 	gpointer cacheid;
 	gchar *case_header, *safe_header, *frag;
 	C c; R r; S s;
-	int t = FALSE;
+	volatile int t = FALSE;
 
 	// rfc822 headernames are case-insensitive
 	safe_header = g_ascii_strdown(header,-1);

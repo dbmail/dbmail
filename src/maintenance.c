@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
 
 static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
 {
-	C c; R r; int t = DM_SUCCESS;
+	C c; R r; volatile int t = DM_SUCCESS;
 	field_t to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
@@ -345,7 +345,7 @@ static int db_cleanup_iplog(timestring_t lasttokeep)
 
 static int db_count_replycache(timestring_t lasttokeep, u64_t *rows)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	field_t to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
@@ -376,7 +376,7 @@ static int db_cleanup_replycache(timestring_t lasttokeep)
 
 static int db_count_deleted(u64_t * rows)
 {
-	C c; R r; int t = TRUE;
+	C c; R r; volatile int t = TRUE;
 	assert(rows != NULL); *rows = 0;
 
 	c = db_con_get();
@@ -406,7 +406,7 @@ static int db_deleted_purge(void)
 
 static int db_deleted_count(u64_t * rows)
 {
-	C c; R r; int t = FALSE;
+	C c; R r; volatile int t = FALSE;
 	assert(rows); *rows = 0;
 
 	c = db_con_get();
