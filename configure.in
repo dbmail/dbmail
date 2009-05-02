@@ -3,7 +3,6 @@
 
 AC_INIT([dbmail], [2.3.6], [dbmail@dbmail.org])
 AC_CONFIG_AUX_DIR(config)
-AC_CONFIG_MACRO_DIR([m4])
 AM_CONFIG_HEADER(config.h:config.in)
 
 # ---------------------------------------------
