@@ -41,28 +41,32 @@ authdriver=sql/ldap
   32 = Notice
   64 = Info
  128 = Debug
+ 255 = database queries (very verbose)
 
  Examples:   0 = Nothing
             31 = Emergency + Alert + Critical + Error + Warning
-           255 = Everything
+           511 = Everything
 
 FILE_LOGGING_LEVELS       = 7
 SYSLOG_LOGGING_LEVELS     = 31
 
 Schema Changes
 
-* Use the 2_2_5-2_3_0 script
+* Use the migration scripts
 
-Migration scripts from 1.2 to 2.0 and from 2.0 to 2.2 are provided in
+Migration scripts from the previous stable releases are provided in
 sql/mysql, sql/postgresql and sql/sqlite. Please test them first
 before applying them to your live database. Especially people who have
 modified their tables, and users using databases that go back to 2.0
 or earlier should take special care.
 
-The schema for 2.4 add new tables for single-instance storage of
+The schema for 2.4 adds new tables for single-instance storage of
 mimeparts, and for supporting user labels on messages in IMAP. No
 migration of old data is supported, but the old data will remain
 accessible, while new messages will be stored in the new schema.
+Also, the header caching tables have been revised. This means they
+will have to be dropped, re-created, and re-filled using:
+dbmail-util -by
 
 Server Changes
 
