@@ -58,7 +58,6 @@ stamps:
 	
 configure: stamps/configure
 stamps/configure: 
-	libtoolize
 	autoreconf -i
 	touch $@
 
