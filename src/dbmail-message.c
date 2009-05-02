@@ -1318,9 +1318,9 @@ int dbmail_message_store(DbmailMessage *self)
 	return res;
 }
 
-static int insert_physmessage(DbmailMessage *self)
+static void insert_physmessage(DbmailMessage *self, C c)
 {
-	C c; R r;
+	R r;
 	char *internal_date, *frag;
 	int thisyear;
 	volatile u64_t id = 0;
@@ -1333,36 +1333,25 @@ static int insert_physmessage(DbmailMessage *self)
 	thisyear = gmt.tm_year + 1900;
 	internal_date = dbmail_message_get_internal_date(self, thisyear);
 
-	c = db_con_get();
-	TRY
-		frag = db_returning("id");
+	frag = db_returning("id");
 
-		if (internal_date != NULL) {
-			field_t to_date_str;
-			char2date_str(internal_date, &to_date_str);
-			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, &to_date_str, frag);
-			g_free(frag);	
-		} else {
-			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
-			g_free(frag);	
-		}
-		id = db_insert_result(c, r);
-
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
+	if (internal_date != NULL) {
+		field_t to_date_str;
+		char2date_str(internal_date, &to_date_str);
+		r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, &to_date_str, frag);
+		g_free(frag);	
+	} else {
+		r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
+		g_free(frag);	
+	}
+	id = db_insert_result(c, r);
 
 	if (! id) {
 		TRACE(TRACE_ERR,"no physmessage_id [%llu]", id);
-		return DM_EQUERY;
 	} else {
 		dbmail_message_set_physid(self, id);
 		TRACE(TRACE_DEBUG,"new physmessage_id [%llu]", id);
 	}
-
-	return 1;
 }
 
 int _message_insert(DbmailMessage *self, 
@@ -1373,6 +1362,7 @@ int _message_insert(DbmailMessage *self,
 	u64_t mailboxid;
 	char *frag = NULL;
 	C c; R r;
+	volatile int t = 0;
 
 	assert(unique_id);
 	assert(mailbox);
@@ -1386,12 +1376,12 @@ int _message_insert(DbmailMessage *self,
 	}
 
 	/* insert a new physmessage entry */
-	if (insert_physmessage(self) == -1)
-		return -1;
 	
 	/* now insert an entry into the messages table */
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
+		insert_physmessage(self, c);
 		frag = db_returning("message_idnr");
 		r = db_query(c, "INSERT INTO "
 				"%smessages(mailbox_idnr, physmessage_id, unique_id,"
@@ -1404,13 +1394,17 @@ int _message_insert(DbmailMessage *self,
 		self->id = db_insert_result(c, r);
 		TRACE(TRACE_DEBUG,"new message_idnr [%llu]", self->id);
 
+		t = DM_SUCCESS;
+		db_commit_transaction(c);
+
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
-	return 0;
+	return t;
 }
 
 int dbmail_message_cache_headers(const DbmailMessage *self)
