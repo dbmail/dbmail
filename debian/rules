@@ -95,7 +95,7 @@ mrproper:
 	for file in Makefile config.h config.status libtool stamp-h .deps .libs; do \
 		rm -rf `find . -name $$file`; \
 	done
-	rm -rf config
+	rm -rf config m4
 
 # Build architecture-dependent files here.
 binary-common: build
