@@ -313,7 +313,7 @@ gboolean db_exec(C c, const char *q, ...)
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
 		gettimeofday(&before, NULL);
-		Connection_execute(c, (const char *)query, "");
+		Connection_execute(c, (const char *)query);
 		gettimeofday(&after, NULL);
 		result = TRUE;
 	CATCH(SQLException)
@@ -345,7 +345,7 @@ R db_query(C c, const char *q, ...)
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
 		gettimeofday(&before, NULL);
-		r = Connection_executeQuery(c, (const char *)query, "");
+		r = Connection_executeQuery(c, (const char *)query);
 		gettimeofday(&after, NULL);
 		result = TRUE;
 	CATCH(SQLException)
@@ -395,7 +395,7 @@ S db_stmt_prepare(C c, const char *q, ...)
         va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
-	return Connection_prepareStatement(c, (const char *)query, "");
+	return Connection_prepareStatement(c, (const char *)query);
 }
 
 int db_stmt_set_str(S s, int index, const char *x)
