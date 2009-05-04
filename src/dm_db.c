@@ -898,7 +898,7 @@ int dm_quota_rebuild_user(u64_t user_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT SUM(pm.messagesize) "
+		r = db_query(c, "SELECT COALESCE(SUM(pm.messagesize),0) "
 			 "FROM %sphysmessage pm, %smessages m, %smailboxes mb "
 			 "WHERE m.physmessage_id = pm.id "
 			 "AND m.mailbox_idnr = mb.mailbox_idnr "
@@ -942,7 +942,7 @@ int dm_quota_rebuild()
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT usr.user_idnr, sum(pm.messagesize), usr.curmail_size FROM %susers usr "
+		r = db_query(c, "SELECT usr.user_idnr, SUM(pm.messagesize), usr.curmail_size FROM %susers usr "
 				"LEFT JOIN %smailboxes mbx ON mbx.owner_idnr = usr.user_idnr "
 				"LEFT JOIN %smessages msg ON msg.mailbox_idnr = mbx.mailbox_idnr "
 				"LEFT JOIN %sphysmessage pm ON pm.id = msg.physmessage_id "
@@ -1680,7 +1680,7 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_si
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT sum(pm.messagesize) FROM %smessages msg, %sphysmessage pm "
+		r = db_query(c, "SELECT COALESCE(SUM(pm.messagesize),0) FROM %smessages msg, %sphysmessage pm "
 				"WHERE msg.physmessage_id = pm.id AND msg.mailbox_idnr = %llu "
 				"AND msg.status < %d %s", DBPFX,DBPFX, mailbox_idnr, MESSAGE_STATUS_DELETE,
 				only_deleted?"AND msg.deleted_flag = 1":"");
