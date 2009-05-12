@@ -30,6 +30,9 @@ extern db_param_t _db_params;
 #define DBMAIL_TEMPMBOX "INBOX"
 #define THIS_MODULE "message"
 
+/*
+ * used for debugging message de/re-construction
+ */
 //#define dprint(fmt, args...) printf(fmt, ##args)
 #define dprint(fmt, args...) 0
 
@@ -261,11 +264,12 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 	return 0;
 
 }
-static char * find_boundary(const char *s)
+
+static GMimeContentType *find_type(const char *s)
 {
 	GMimeContentType *type;
 	GString *header;
-	char *boundary, *rest, *h;
+	char *rest, *h;
 	int i=0;
 
 	rest = g_strcasestr(s, "\nContent-type: ");
@@ -293,10 +297,16 @@ static char * find_boundary(const char *s)
 	h = header->str;
 	g_strstrip(h);
 	type = g_mime_content_type_new_from_string(h);
+	g_string_free(header,TRUE);
+	return type;
+}
+
+static char * find_boundary(const char *s)
+{
+	gchar *boundary;
+	GMimeContentType *type = find_type(s);
 	boundary = g_strdup(g_mime_content_type_get_parameter(type,"boundary"));
         g_mime_content_type_destroy(type);
-	g_string_free(header,TRUE);
-	
 	return boundary;
 }
 
@@ -306,10 +316,12 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	C c; R r;
 	char *str = NULL, *internal_date = NULL;
 	char *boundary = NULL;
+	GMimeContentType *mimetype = NULL;
 	char **blist = g_new0(char *,32);
 	int prevdepth, depth = 0, order, row = 0, key = 1;
 	volatile int t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
+	gboolean prev_is_message = FALSE, is_message = FALSE;
 	GString *m = NULL;
 	const void *blob;
 	field_t frag;
@@ -344,7 +356,13 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			str 		= g_new0(char,l+1);
 			str		= strncpy(str,blob,l);
 
-			if (is_header) prev_boundary = got_boundary;
+			if (is_header) {
+				prev_boundary = got_boundary;
+				prev_is_message = is_message;
+				mimetype = find_type(str);
+				is_message = g_mime_content_type_is_type(mimetype, "message", "rfc822");
+				g_mime_content_type_destroy(mimetype);
+			}
 
 			got_boundary = FALSE;
 
@@ -366,7 +384,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if (depth>0 && blist[depth-1])
 				boundary = (char *)blist[depth-1];
 
-			if (is_header && (!prev_header || prev_boundary)) {
+			if (is_header && (!prev_header || prev_boundary || (prev_header && depth>0 && !prev_is_message))) {
 				dprint("\n--%s\n", boundary);
 				g_string_append_printf(m, "\n--%s\n", boundary);
 			}
