@@ -1437,12 +1437,6 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 
 	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
 	
-	dbmail_message_cache_tofield(self);
-	dbmail_message_cache_ccfield(self);
-	dbmail_message_cache_fromfield(self);
-	dbmail_message_cache_datefield(self);
-	dbmail_message_cache_replytofield(self);
-	dbmail_message_cache_subjectfield(self);
 	dbmail_message_cache_referencesfield(self);
 	dbmail_message_cache_envelope(self);
 
@@ -1450,8 +1444,8 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 }
 #define CACHE_WIDTH_VALUE 255
 #define CACHE_WIDTH_FIELD 255
-#define CACHE_WIDTH_ADDR 100
-#define CACHE_WIDTH_NAME 100
+#define CACHE_WIDTH_ADDR 255
+#define CACHE_WIDTH_NAME 255
 
 
 static int _header_name_get_id(const DbmailMessage *self, const char *header, u64_t *id)
@@ -1536,7 +1530,7 @@ static u64_t _header_value_exists(C c, const char *value, const char *hash)
 
 }
 
-static u64_t _header_value_insert(C c, const char *value, const char *hash)
+static u64_t _header_value_insert(C c, const char *value, const char *emailname, const char *emailaddr, const char *sortfield, const char *datefield, const char *hash)
 {
 	R r; S s;
 	u64_t id = 0;
@@ -1545,11 +1539,15 @@ static u64_t _header_value_insert(C c, const char *value, const char *hash)
 	db_con_clear(c);
 
 	frag = db_returning("id");
-	s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue) VALUES (?,?) %s", DBPFX, frag);
+	s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue, emailname, emailaddr, sortfield, datefield) VALUES (?,?,?,?,?,?) %s", DBPFX, frag);
 	g_free(frag);
 
 	db_stmt_set_str(s, 1, hash);
 	db_stmt_set_blob(s, 2, value, strlen(value));
+	db_stmt_set_str(s, 3, emailname);
+	db_stmt_set_str(s, 4, emailaddr);
+	db_stmt_set_str(s, 5, sortfield);
+	db_stmt_set_str(s, 6, datefield);
 
 	r = db_stmt_query(s);
 	id = db_insert_result(c, r);
@@ -1559,7 +1557,7 @@ static u64_t _header_value_insert(C c, const char *value, const char *hash)
 	return id;
 }
 
-static int _header_value_get_id(const char *value, u64_t *id)
+static int _header_value_get_id(const char *value, const char *emailname, const char *emailaddr, const char *sortfield, const char *datefield, u64_t *id)
 {
 	u64_t tmp = 0;
 	char *hash;
@@ -1572,7 +1570,7 @@ static int _header_value_get_id(const char *value, u64_t *id)
 	TRY
 		if ((tmp = _header_value_exists(c, value, (const char *)hash)) != 0)
 			*id = tmp;
-		else if ((tmp = _header_value_insert(c, value, (const char *)hash)) != 0)
+		else if ((tmp = _header_value_insert(c, value, emailname, emailaddr, sortfield, datefield, (const char *)hash)) != 0)
 			*id = tmp;
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1618,8 +1616,12 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	GTuples *values;
 	unsigned char *raw;
 	unsigned i;
-	volatile gboolean isaddr = 0;
+	time_t date;
+	volatile gboolean isaddr = 0, isdate = 0, issubject = 0;
 	const char *charset = dbmail_message_get_charset(self);
+	gchar *rname = NULL, *emailname = NULL, *emailaddr = NULL, *sortfield = NULL, *datefield = NULL;
+	InternetAddressList *emaillist;
+	InternetAddress *ia;
 
 	/* skip headernames with spaces like From_ */
 	if (strchr(header, ' '))
@@ -1643,6 +1645,12 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	else if (g_ascii_strcasecmp(header,"Return-path")==0)
 		isaddr=1;
 
+	if (g_ascii_strcasecmp(header,"Subject")==0)
+		issubject=1;
+
+	if (g_ascii_strcasecmp(header,"Date")==0)
+		isdate=1;
+
 	values = g_relation_select(self->headers,header,0);
 
 	for (i=0; i<values->len;i++) {
@@ -1657,8 +1665,48 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			continue;
 		}
 
+
+		// Generate additional fields for SORT optimization
+		if(isaddr) {
+			emaillist = internet_address_parse_string(value);
+			for (; emaillist != NULL && emaillist->address; emaillist = emaillist->next) {
+	                        ia = emaillist->address;
+				if(ia == NULL) break;
+	                        rname=dbmail_iconv_str_to_db(ia->name ? ia->name: "", charset);
+				if(strlen(rname)==0)
+					rname=g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
+
+        	                /* address fields are truncated to column width */
+				if(emailname != NULL)
+					emailname = g_strconcat(emailname, " | ", rname, NULL);
+				else
+	                	        emailname = g_strndup(rname, CACHE_WIDTH_ADDR);
+
+				if(emailaddr != NULL)
+					emailaddr = g_strconcat(emailaddr, " | ", g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR), NULL);
+				else
+					emailaddr = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
+			}
+			TRACE(TRACE_DEBUG,"emailname [%s], emailaddr [%s]", emailname, emailaddr);
+		}
+
+		if(issubject) {
+			sortfield = dbmail_iconv_str_to_db(dm_base_subject(value), charset);
+		}
+
+		if(isdate) {
+			date = g_mime_utils_header_decode_date(value,NULL);
+			if (date == (time_t)-1)
+				date = (time_t)0;
+
+			datefield = g_new0(gchar,20);
+			strftime(datefield,20,"%Y-%m-%d %H:%M:%S",gmtime(&date));
+			TRACE(TRACE_DEBUG,"Date is [%d], datefield [%s]",date,datefield);
+		}
+
+
 		/* Fetch header value id if exists, else insert, and return new id */
-		_header_value_get_id(value, &headervalue_id);
+		_header_value_get_id(value, emailname, emailaddr, sortfield, datefield, &headervalue_id);
 
 		g_free(value);
 
@@ -1667,6 +1715,13 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 		headervalue_id=0;
 
+		g_free(datefield);
+		emaillist=NULL;
+		rname=NULL;
+		emailname=NULL;
+		emailaddr=NULL;
+		date=NULL;
+		datefield=NULL;
 	}
 	
 	g_tuples_destroy(values);
@@ -1699,7 +1754,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 			/* address fields are truncated to column width */
 			name = g_strndup(rname, CACHE_WIDTH_ADDR);
 			addr = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
-			
+
 			db_stmt_set_str(s, 2, name);
 			db_stmt_set_str(s, 3, addr);
 			
@@ -1768,102 +1823,17 @@ static InternetAddressList * dm_message_get_addresslist(const DbmailMessage *sel
 	return list;
 }
 
-void dbmail_message_cache_tofield(const DbmailMessage *self)
-{
-	InternetAddressList *list;
-	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_TO)))
-		return;
-	insert_address_cache(self->physid, "to", list,self);
-	internet_address_list_destroy(list);
-}
-
-void dbmail_message_cache_ccfield(const DbmailMessage *self)
-{
-	InternetAddressList *list;
-	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_CC)))
-		return;
-	insert_address_cache(self->physid, "cc", list,self);
-	internet_address_list_destroy(list);
-
-}
-
-void dbmail_message_cache_fromfield(const DbmailMessage *self)
-{
-	InternetAddressList *list;
-	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_FROM)))
-		return;
-	insert_address_cache(self->physid, "from", list,self);
-	internet_address_list_destroy(list);
-}
-
-void dbmail_message_cache_replytofield(const DbmailMessage *self)
-{
-	InternetAddressList *list;
-	if (! (list = dm_message_get_addresslist(self, DM_ADDRESS_TYPE_REPL)))
-		return;
-	insert_address_cache(self->physid, "replyto", list,self);
-	internet_address_list_destroy(list);
-}
-
-
-void dbmail_message_cache_datefield(const DbmailMessage *self)
-{
-	char *value;
-	time_t date;
-
-	if (! (value = (char *)dbmail_message_get_header(self,"Date")))
-		date = (time_t)0;
-	else
-		date = g_mime_utils_header_decode_date(value,NULL);
-	
-	if (date == (time_t)-1)
-		date = (time_t)0;
-
-	value = g_new0(char,20);
-	strftime(value,20,"%Y-%m-%d %H:%M:%S",gmtime(&date));
-	insert_field_cache(self->physid, "date", value);
-	g_free(value);
-}
-
-void dbmail_message_cache_subjectfield(const DbmailMessage *self)
-{
-	char *value, *raw, *s, *tmp;
-	char *charset;
-	
-	charset = dbmail_message_get_charset((DbmailMessage *)self);
-
-	// g_mime_message_get_subject fails to get 8-bit header, so we use dbmail_message_get_header
-	raw = (char *)dbmail_message_get_header(self, "Subject");
-
-	if (! raw) {
-		TRACE(TRACE_NOTICE,"no subject field value [%llu]", self->physid);
-		return;
-	}
-
-
-	value = dbmail_iconv_str_to_utf8(raw, charset);
-	s = dm_base_subject(value);
-	
-	// dm_base_subject returns utf-8 string, convert it into database encoding
-	tmp = dbmail_iconv_str_to_db(s, charset);
-	insert_field_cache(self->physid, "subject", tmp);
-	g_free(tmp);
-	g_free(s);
-	
-	g_free(value);
-}
-
 void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 {
 	GMimeReferences *refs, *head;
 	GTree *tree;
-	const char *field;
+	const char *referencesfield, *inreplytofield, *field;
 
-	field = (char *)dbmail_message_get_header(self,"References");
-	if (! field)
-		field = dbmail_message_get_header(self,"In-Reply-to");
-	if (! field) 
-		return;
+	referencesfield = (char *)dbmail_message_get_header(self,"References");
+	inreplytofield = (char *)dbmail_message_get_header(self,"In-Reply-To");
+
+	// Some clients will put parent in the in-reply-to header only and the grandparents and older in references
+	field = g_strconcat(referencesfield, " ", inreplytofield, NULL);
 
 	refs = g_mime_references_decode(field);
 	if (! refs) {

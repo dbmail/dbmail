@@ -114,33 +114,30 @@ void mailbox_match_free(struct mailbox_match *m)
 
 
 /** list of tables used in dbmail */
-#define DB_NTABLES 25
+#define DB_NTABLES 22
 const char *DB_TABLENAMES[DB_NTABLES] = {
-	"users", 
-	"aliases", 
-	"mailboxes",
-	"messages", 
-	"physmessage", 
-	"messageblks",
-	"acl", 
-	"subscription", 
-	"pbsp",
-	"auto_notifications", 
+	"acl",
+	"aliases",
+	"auto_notifications",
 	"auto_replies",
+	"envelope",
 	"header",
-	"headername", 
+	"headername",
 	"headervalue",
-	"subjectfield", 
-	"datefield", 
+	"keywords",
+	"mailboxes",
+	"messageblks",
+	"messages",
+	"mimeparts",
+	"partlists",
+	"pbsp",
+	"physmessage",
 	"referencesfield",
-	"fromfield", 
-	"tofield", 
-	"replytofield",
-	"ccfield", 
-	"replycache", 
-	"usermap", 
-	"mimeparts", 
-	"partlists", 
+	"replycache",
+	"sievescripts",
+	"subscription",
+	"usermap",
+	"users"
 };
 
 GTree * global_cache = NULL;

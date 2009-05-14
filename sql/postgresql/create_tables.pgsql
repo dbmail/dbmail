@@ -194,10 +194,18 @@ CREATE TABLE dbmail_headervalue (
         id INT8 NOT NULL DEFAULT nextval('dbmail_headervalue_id_seq'),
 	hash varchar(256) NOT NULL,
         headervalue   TEXT NOT NULL DEFAULT '',
+        emailname     TEXT,
+        emailaddr     TEXT,
+        sortfield     TEXT,
+        datefield     TIMESTAMP WITHOUT TIME ZONE,
         PRIMARY KEY (id)
 );
 
 CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue USING btree (hash);
+CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (emailname);
+CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue USING btree (emailaddr);
+CREATE INDEX dbmail_headervalue_4 ON dbmail_headervalue USING btree (sortfield);
+CREATE INDEX dbmail_headervalue_5 ON dbmail_headervalue USING btree (datefield);
 
 CREATE SEQUENCE dbmail_headername_id_seq;
 CREATE TABLE dbmail_headername (

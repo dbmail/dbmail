@@ -1,52 +1,135 @@
+-- This script fixes the 2.3.5 database schema for use with 2.3.6
+-- Running this script will drop legacy caching tables,
+-- so backup your database before continuing!
 
+SET FOREIGN_KEY_CHECKS=0;
 
-drop table if exists dbmail_header;
-DROP TABLE if exists dbmail_headervalue;
+-- Make sure our database is set for utf8
+ALTER DATABASE CHARACTER SET utf8;
 
-CREATE TABLE dbmail_headervalue (
- 	id		BIGINT NOT NULL AUTO_INCREMENT,
-	hash 		varchar(255) NOT NULL,
-        headervalue   	TEXT NOT NULL DEFAULT '',
-        PRIMARY KEY (id),
-	INDEX (hash)
-) engine=innodb charset=utf8;
-
-CREATE TABLE dbmail_header (
-        physmessage_id      BIGINT NOT NULL,
-	headername_id       BIGINT NOT NULL,
-        headervalue_id      BIGINT NOT NULL,
-        PRIMARY KEY (physmessage_id,headername_id,headervalue_id),
-	FOREIGN KEY (physmessage_id)
-		REFERENCES dbmail_physmessage(id)
-                ON UPDATE CASCADE ON DELETE CASCADE,
-	FOREIGN KEY (headername_id)
-                REFERENCES dbmail_headername(id)
-                ON UPDATE CASCADE ON DELETE CASCADE,
-	FOREIGN KEY (headervalue_id)
-                REFERENCES dbmail_headervalue(id)
-                ON UPDATE CASCADE ON DELETE CASCADE
-) engine=innodb charset=utf8;
-
-
+-- Delete old cached data for the references and replycache
 BEGIN;
-delete from dbmail_ccfield;
-delete from dbmail_datefield;
-delete from dbmail_fromfield;
-delete from dbmail_referencesfield;
-delete from dbmail_replycache;
-delete from dbmail_replytofield;
-delete from dbmail_subjectfield;
-delete from dbmail_tofield;
-commit;
+DELETE FROM dbmail_referencesfield;
+DELETE FROM dbmail_replycache;
+COMMIT;
 
+-- Drop old legacy cache tables
+DROP TABLE IF EXISTS dbmail_ccfield;
+DROP TABLE IF EXISTS dbmail_datefield;
+DROP TABLE IF EXISTS dbmail_fromfield;
+DROP TABLE IF EXISTS dbmail_replytofield;
+DROP TABLE IF EXISTS dbmail_subjectfield;
+DROP TABLE IF EXISTS dbmail_tofield;
+
+-- Drop new cache tables because of move from legacy tables
+DROP TABLE IF EXISTS dbmail_header;
+DROP TABLE IF EXISTS dbmail_headername;
+DROP TABLE if EXISTS dbmail_headervalue;
+
+-- Make sure all bigint columns are size 20 to be consistent and varchars are proper size
+ALTER TABLE dbmail_acl MODIFY COLUMN user_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_acl MODIFY COLUMN mailbox_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_aliases MODIFY COLUMN alias_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_aliases MODIFY COLUMN client_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_auto_notifications MODIFY COLUMN user_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_auto_replies MODIFY COLUMN user_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_envelope MODIFY COLUMN physmessage_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_envelope MODIFY COLUMN id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_keywords MODIFY COLUMN message_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_mailboxes MODIFY COLUMN mailbox_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_mailboxes MODIFY COLUMN owner_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_mailboxes MODIFY COLUMN seq BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_messageblks MODIFY COLUMN messageblk_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_messageblks MODIFY COLUMN physmessage_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_messageblks MODIFY COLUMN blocksize BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_messages MODIFY COLUMN message_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_messages MODIFY COLUMN mailbox_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_messages MODIFY COLUMN physmessage_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_mimeparts MODIFY COLUMN id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_mimeparts MODIFY COLUMN size BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_partlists MODIFY COLUMN physmessage_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_partlists MODIFY COLUMN part_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_pbsp MODIFY COLUMN idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_physmessage MODIFY COLUMN id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_physmessage MODIFY COLUMN messagesize BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_physmessage MODIFY COLUMN rfcsize BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_referencesfield MODIFY COLUMN physmessage_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_referencesfield MODIFY COLUMN id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_sievescripts MODIFY COLUMN owner_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_subscription MODIFY COLUMN user_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_subscription MODIFY COLUMN mailbox_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN user_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN client_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN maxmail_size BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN curmail_size BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN maxsieve_size BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN cursieve_size BIGINT(20) DEFAULT 0 NOT NULL;
+
+ALTER TABLE dbmail_aliases MODIFY COLUMN  `alias` varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_aliases MODIFY COLUMN  `deliver_to` varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_auto_notifications MODIFY COLUMN  `notify_address` varchar(255) NOT NULL;
+ALTER TABLE dbmail_keywords MODIFY COLUMN  `keyword` varchar(255) NOT NULL;
+ALTER TABLE dbmail_replycache MODIFY COLUMN  `to_addr` varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_replycache MODIFY COLUMN  `from_addr` varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_replycache MODIFY COLUMN  `handle` varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_sievescripts MODIFY COLUMN  `name` varchar(255) NOT NULL;
+ALTER TABLE dbmail_usermap MODIFY COLUMN  `login` varchar(255) NOT NULL;
+ALTER TABLE dbmail_usermap MODIFY COLUMN  `sock_allow` varchar(255) NOT NULL;
+ALTER TABLE dbmail_usermap MODIFY COLUMN  `sock_deny` varchar(255) NOT NULL;
+ALTER TABLE dbmail_usermap MODIFY COLUMN  `userid` varchar(255) NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN  `userid` varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_users MODIFY COLUMN  `passwd` varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_users MODIFY COLUMN  `encryption_type` varchar(255) NOT NULL default '';
+
+
+-- Create new single instance header storage tables
+CREATE TABLE `dbmail_headername` (
+  `id` bigint(20) NOT NULL auto_increment,
+  `headername` varchar(255) NOT NULL default '',
+  PRIMARY KEY  (`id`),
+  UNIQUE KEY `headername` (`headername`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `dbmail_headervalue` (
+  `id` bigint(20) NOT NULL auto_increment,
+  `hash` varchar(255) NOT NULL,
+  `headervalue` text NOT NULL,
+  `emailname` text,
+  `emailaddr` text,
+  `sortfield` text,
+  `datefield` datetime default NULL,
+  PRIMARY KEY  (`id`),
+  KEY `hash` (`hash`),
+  KEY `headervalue` (`headervalue`(255)),
+  KEY `emailname` (`emailname`(255)),
+  KEY `emailaddr` (`emailaddr`(255)),
+  KEY `sortfield` (`sortfield`(255)),
+  KEY `datefield` (`datefield`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `dbmail_header` (
+  `physmessage_id` bigint(20) NOT NULL,
+  `headername_id` bigint(20) NOT NULL,
+  `headervalue_id` bigint(20) NOT NULL,
+  PRIMARY KEY  (`physmessage_id`,`headername_id`,`headervalue_id`),
+  KEY `headername_id` (`headername_id`),
+  KEY `headervalue_id` (`headervalue_id`),
+  CONSTRAINT `dbmail_header_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `dbmail_header_ibfk_2` FOREIGN KEY (`headername_id`) REFERENCES `dbmail_headername` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `dbmail_header_ibfk_3` FOREIGN KEY (`headervalue_id`) REFERENCES `dbmail_headervalue` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+-- Add new delivery sorting filters table
 DROP TABLE IF EXISTS dbmail_filters;
 CREATE TABLE dbmail_filters (
-	user_id      BIGINT NOT NULL,
-	id           BIGINT NOT NULL AUTO_INCREMENT,
-	headername   varchar(128) NOT NULL,
-	headervalue  varchar(255) NOT NULL,	
-	mailbox      varchar(100) NOT NULL,	
+	user_id      BIGINT(20) NOT NULL,
+	id           BIGINT(20) NOT NULL AUTO_INCREMENT,
+	headername   VARCHAR(255) NOT NULL,
+	headervalue  VARCHAR(255) NOT NULL,	
+	mailbox      VARCHAR(255) NOT NULL,	
 	PRIMARY KEY (id),
 	FOREIGN KEY (user_id) REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+SET FOREIGN_KEY_CHECKS=1;

@@ -36,7 +36,7 @@
 //#define DM_CLIENT_THREADS
 
 /** max length of search query */
-#define MAX_SEARCH_LEN 1024
+#define MAX_SEARCH_LEN 2048
 
 #define MIME_FIELD_MAX 128
 #define MIME_VALUE_MAX 4096

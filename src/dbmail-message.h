@@ -108,12 +108,6 @@ const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *h
 /* Get all instances of a header. */
 GTuples * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header);
 
-void dbmail_message_cache_tofield(const DbmailMessage *self);
-void dbmail_message_cache_ccfield(const DbmailMessage *self);
-void dbmail_message_cache_fromfield(const DbmailMessage *self);
-void dbmail_message_cache_replytofield(const DbmailMessage *self);
-void dbmail_message_cache_datefield(const DbmailMessage *self);
-void dbmail_message_cache_subjectfield(const DbmailMessage *self);
 void dbmail_message_cache_referencesfield(const DbmailMessage *self);
 void dbmail_message_cache_envelope(const DbmailMessage *self);
 

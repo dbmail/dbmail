@@ -479,11 +479,20 @@ static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * dat
 	return res;
 }
 
+static void _append_join_headervalue(char *join, char *headername)
+{
+	char *tmp;
+	TRACE(TRACE_DEBUG,"%s", headername);
+	tmp = g_strdup_printf("JOIN %sheadername hn%s ON hn%s.headername='%s' LEFT JOIN %sheader h%s ON (m.physmessage_id=h%s.physmessage_id AND h%s.headername_id=hn%s.id) LEFT JOIN %sheadervalue hv%s ON h%s.headervalue_id=hv%s.id ", DBPFX, headername, headername, headername, DBPFX, headername, headername, headername, headername, DBPFX, headername, headername, headername);
+	g_strlcat(join, tmp, MAX_SEARCH_LEN);
+	g_free(tmp);
+}
+
 char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 {
 	GList *sublist = NULL;
 	volatile u64_t i = 0, idnr = 0;
-	char *subj;
+	char *subj, *joinsub, *joindate;
 	char *res = NULL;
 	u64_t *id, *msn;
 	GTree *tree;
@@ -491,17 +500,22 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 	C c; R r; volatile int t = FALSE;
 	INIT_QUERY;
 	
+	joinsub=g_new0(char,MAX_SEARCH_LEN);
+	joindate=g_new0(char,MAX_SEARCH_LEN);
+	_append_join_headervalue(joinsub, "subject");
+	_append_join_headervalue(joindate, "date");
+
 	/* thread-roots (ordered) */
-	snprintf(query, DEF_QUERYSIZE, "SELECT min(message_idnr),subjectfield "
-			"FROM %smessages "
-			"JOIN %ssubjectfield USING (physmessage_id) "
-			"JOIN %sdatefield USING (physmessage_id) "
-			"WHERE mailbox_idnr=%llu "
-			"AND status IN (%d, %d) "
-			"GROUP BY subjectfield",
-			DBPFX, DBPFX, DBPFX,
+	snprintf(query, DEF_QUERYSIZE, "SELECT min(m.message_idnr),hvsubject.sortfield "
+			"FROM %smessages m "
+			"%s "
+			"%s "
+			"WHERE m.mailbox_idnr=%llu "
+			"AND m.status IN (%d,%d) "
+			"GROUP BY hvsubject.sortfield",
+			DBPFX, joinsub, joindate,
 			dbmail_mailbox_get_id(self),
-			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+			MESSAGE_STATUS_NEW,MESSAGE_STATUS_SEEN);
 
 	tree = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,(GDestroyNotify)g_free, NULL);
 
@@ -533,14 +547,14 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		
 	memset(query,0,DEF_QUERYSIZE);
 	/* full threads (unordered) */
-	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr,subjectfield "
-			"FROM %smessages "
-			"JOIN %ssubjectfield using (physmessage_id) "
-			"JOIN %sdatefield using (physmessage_id) "
-			"WHERE mailbox_idnr=%llu "
-			"AND status IN (%d,%d) "
-			"ORDER BY subjectfield,datefield", 
-			DBPFX, DBPFX, DBPFX,
+	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr,hvsubject.sortfield "
+			"FROM %smessages m "
+			"%s "
+			"%s "
+			"WHERE m.mailbox_idnr=%llu "
+			"AND m.status IN (%d,%d) "
+			"ORDER BY hvsubject.sortfield,hvdate.datefield",
+			DBPFX, joinsub, joindate,
 			dbmail_mailbox_get_id(self),
 			MESSAGE_STATUS_NEW,MESSAGE_STATUS_SEEN);
 		
@@ -582,6 +596,9 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 
 	g_string_free(threads,FALSE);
 	g_tree_destroy(tree);
+
+	g_free(joinsub);
+	g_free(joindate);
 
 	return res;
 }
@@ -683,15 +700,6 @@ static int append_search(DbmailMailbox *self, search_key_t *value, gboolean desc
 	return 0;
 }
 
-static void _append_join(char *join, char *table)
-{
-	char *tmp;
-	TRACE(TRACE_DEBUG,"%s", table);
-	tmp = g_strdup_printf("LEFT JOIN %s%s ON m.physmessage_id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
-	g_strlcat(join, tmp, MAX_SEARCH_LEN);
-	g_free(tmp);
-}
-
 static void _append_sort(char *order, char *field, gboolean reverse)
 {
 	char *tmp;
@@ -729,32 +737,32 @@ static int _handle_sort_args(DbmailMailbox *self, char **search_keys, search_key
 	} 
 	
 	else if ( MATCH(key, "from") ) {
-		_append_join(value->table, "fromfield");
-		_append_sort(value->order, "fromaddr", reverse);	
+		_append_join_headervalue(value->table, "from");
+		_append_sort(value->order, "hvfrom.emailaddr", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "subject") ) {
-		_append_join(value->table, "subjectfield");
-		_append_sort(value->order, "subjectfield", reverse);
+		_append_join_headervalue(value->table, "subject");
+		_append_sort(value->order, "hvsubject.headervalue", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "cc") ) {
-		_append_join(value->table, "ccfield");
-		_append_sort(value->order, "ccaddr", reverse);
+		_append_join_headervalue(value->table, "cc");
+		_append_sort(value->order, "hvcc.emailaddr", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "to") ) {
-		_append_join(value->table, "tofield");
-		_append_sort(value->order, "toaddr", reverse);
+		_append_join_headervalue(value->table, "to");
+		_append_sort(value->order, "hvto.emailaddr", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "date") ) {
-		_append_join(value->table, "datefield");
-		_append_sort(value->order, "datefield", reverse);
+		_append_join_headervalue(value->table, "date");
+		_append_sort(value->order, "hvdate.datefield", reverse);
 		(*idx)++;
 	}	
 
