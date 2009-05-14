@@ -871,15 +871,12 @@ Suite *dbmail_message_suite(void)
 	
 	suite_add_tcase(s, tc_message);
 	tcase_add_checked_fixture(tc_message, setup, teardown);
-/*
 	tcase_add_test(tc_message, test_dbmail_message_new);
 	tcase_add_test(tc_message, test_dbmail_message_new_from_stream);
 	tcase_add_test(tc_message, test_dbmail_message_set_class);
 	tcase_add_test(tc_message, test_dbmail_message_get_class);
 	tcase_add_test(tc_message, test_dbmail_message_get_internal_date);
-*/
 	tcase_add_test(tc_message, test_dbmail_message_store);
-/*
 	tcase_add_test(tc_message, test_dbmail_message_store2);
 	tcase_add_test(tc_message, test_dbmail_message_retrieve);
 	tcase_add_test(tc_message, test_dbmail_message_init_with_string);
@@ -901,7 +898,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_get_crlf_encoded_opt1);
 	tcase_add_test(tc_message, test_get_crlf_encoded_opt2);
 	tcase_add_test(tc_message, test_encoding);
-*/
+
 	return s;
 }
 

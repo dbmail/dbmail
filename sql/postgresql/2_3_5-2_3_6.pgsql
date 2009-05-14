@@ -1,13 +1,30 @@
 
-BEGIN;
+begin;
+drop table if exists dbmail_autoreplies;
+drop table if exists dbmail_auto_notifications;
+drop table if exists dbmail_ccfield;
+drop table if exists dbmail_datefield;
+drop table if exists dbmail_fromfield;
+drop table if exists dbmail_replytofield;
+drop table if exists dbmail_subjectfield;
+drop table if exists dbmail_tofield;
+delete from dbmail_referencesfield;
 
-ALTER TABLE ONLY dbmail_headervalue DROP CONSTRAINT dbmail_headervalue_physmessage_id_fkey;
-ALTER TABLE ONLY dbmail_headervalue DROP CONSTRAINT dbmail_headervalue_headername_id_fkey;
-DROP INDEX dbmail_headervalue_3;
-DROP INDEX dbmail_headervalue_2;
-DROP INDEX dbmail_headervalue_1;
-DROP TABLE dbmail_headervalue CASCADE;
 
+DROP TABLE if exists dbmail_headervalue CASCADE;
+DROP TABLE if exists dbmail_headername CASCADE;
+DROP TABLE if exists dbmail_header;
+
+DROP SEQUENCE IF EXISTS dbmail_headername_id_seq;
+CREATE SEQUENCE dbmail_headername_id_seq;
+CREATE TABLE dbmail_headername (
+        id  INT8 NOT NULL DEFAULT nextval('dbmail_headername_id_seq'),
+        headername    VARCHAR(100) NOT NULL DEFAULT 'BROKEN_HEADER',
+        PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername(lower(headername));
+
+DROP SEQUENCE IF EXISTS dbmail_headervalue_id_seq;
 CREATE SEQUENCE dbmail_headervalue_id_seq;
 CREATE TABLE dbmail_headervalue (
         id            INT8 NOT NULL DEFAULT nextval('dbmail_headervalue_id_seq'),
@@ -19,14 +36,11 @@ CREATE TABLE dbmail_headervalue (
         datefield     TIMESTAMP WITHOUT TIME ZONE,
         PRIMARY KEY (id)
 );
-
 CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue USING btree (hash);
 CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (emailname);
 CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue USING btree (emailaddr);
 CREATE INDEX dbmail_headervalue_4 ON dbmail_headervalue USING btree (sortfield);
 CREATE INDEX dbmail_headervalue_5 ON dbmail_headervalue USING btree (datefield);
-
-CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue USING btree (hash);
 
 CREATE TABLE dbmail_header (
         physmessage_id      INT8 NOT NULL
@@ -40,20 +54,11 @@ CREATE TABLE dbmail_header (
                 ON UPDATE CASCADE ON DELETE CASCADE,
         PRIMARY KEY (physmessage_id,headername_id,headervalue_id)
 );
-
 COMMIT;
 
-begin;
-delete from dbmail_ccfield;
-delete from dbmail_datefield;
-delete from dbmail_fromfield;
-delete from dbmail_referencesfield;
-delete from dbmail_replycache;
-delete from dbmail_replytofield;
-delete from dbmail_subjectfield;
-delete from dbmail_tofield;
-commit;
 BEGIN;
+DROP TABLE IF EXISTS dbmail_filters;
+DROP SEQUENCE IF EXISTS dbmail_filters_id_seq;
 CREATE SEQUENCE dbmail_filters_id_seq;
 CREATE TABLE dbmail_filters (
 	user_id      INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,

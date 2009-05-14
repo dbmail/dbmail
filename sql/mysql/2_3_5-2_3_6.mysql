@@ -7,10 +7,9 @@ SET FOREIGN_KEY_CHECKS=0;
 -- Make sure our database is set for utf8
 ALTER DATABASE CHARACTER SET utf8;
 
--- Delete old cached data for the references and replycache
+-- Delete old cached data for the references
 BEGIN;
 DELETE FROM dbmail_referencesfield;
-DELETE FROM dbmail_replycache;
 COMMIT;
 
 -- Drop old legacy cache tables
