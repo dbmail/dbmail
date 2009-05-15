@@ -3,6 +3,7 @@
 BEGIN TRANSACTION;
 
 DROP TABLE IF EXISTS dbmail_header;
+DROP TABLE IF EXISTS dbmail_headername;
 DROP TABLE IF EXISTS dbmail_headervalue;
 
 -- Drop old legacy cache tables
@@ -13,12 +14,18 @@ DROP TABLE IF EXISTS dbmail_replytofield;
 DROP TABLE IF EXISTS dbmail_subjectfield;
 DROP TABLE IF EXISTS dbmail_tofield;
 
-CREATE TRIGGER fk_insert_headervalue_headername_id
+DELETE FROM dbmail_referencesfield;
 
-CREATE TRIGGER fk_update1_headervalue_headername_id
-CREATE TRIGGER fk_update2_headervalue_headername_id
-CREATE TRIGGER fk_delete_headervalue_headername_id
+--CREATE TRIGGER fk_insert_headervalue_headername_id
+--CREATE TRIGGER fk_update1_headervalue_headername_id
+--CREATE TRIGGER fk_update2_headervalue_headername_id
+--CREATE TRIGGER fk_delete_headervalue_headername_id
 
+CREATE TABLE dbmail_headername (
+	id		INTEGER PRIMARY KEY,
+	headername	TEXT NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername (headername);
 
 CREATE TABLE dbmail_headervalue (
  	id		INTEGER NOT NULL PRIMARY KEY,
@@ -178,14 +185,6 @@ CREATE TRIGGER fk_delete_header_headervalue_id
 	END;
 
 
-delete from dbmail_ccfield;
-delete from dbmail_datefield;
-delete from dbmail_fromfield;
-delete from dbmail_referencesfield;
-delete from dbmail_replycache;
-delete from dbmail_replytofield;
-delete from dbmail_subjectfield;
-delete from dbmail_tofield;
 
 commit;
 
