@@ -483,7 +483,7 @@ static void _append_join_headervalue(char *join, char *headername)
 {
 	char *tmp;
 	TRACE(TRACE_DEBUG,"%s", headername);
-	tmp = g_strdup_printf("JOIN %sheadername hn%s ON hn%s.headername='%s' LEFT JOIN %sheader h%s ON (m.physmessage_id=h%s.physmessage_id AND h%s.headername_id=hn%s.id) LEFT JOIN %sheadervalue hv%s ON h%s.headervalue_id=hv%s.id ", DBPFX, headername, headername, headername, DBPFX, headername, headername, headername, headername, DBPFX, headername, headername, headername);
+	tmp = g_strdup_printf("JOIN %sheadername hn%s ON hn%s.headername=lower('%s') LEFT JOIN %sheader h%s ON (m.physmessage_id=h%s.physmessage_id AND h%s.headername_id=hn%s.id) LEFT JOIN %sheadervalue hv%s ON h%s.headervalue_id=hv%s.id ", DBPFX, headername, headername, headername, DBPFX, headername, headername, headername, headername, DBPFX, headername, headername, headername);
 	g_strlcat(join, tmp, MAX_SEARCH_LEN);
 	g_free(tmp);
 }
@@ -1310,7 +1310,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 }
 static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 {
-	char *qs, *date, *field, *d;
+	char *qs, *date, *field, *d, *joinhdr;
 	u64_t *k, *v, *w;
 	u64_t id;
 	char gt_lt = 0;
@@ -1351,12 +1351,15 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			g_free(date);
 			g_free(field);
 			
+			joinhdr=g_new0(char,MAX_SEARCH_LEN);
+			_append_join_headervalue(joinhdr, "date");
+
 			g_string_printf(q,"SELECT message_idnr FROM %smessages m "
 				"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-				"JOIN %sdatefield d ON d.physmessage_id=p.id "
-				"WHERE mailbox_idnr= ? AND status IN (?,?) "
+				"%s "
+				"WHERE mailbox_idnr=? AND status IN (?,?) "
 				"AND %s "
-				"ORDER BY message_idnr", DBPFX, DBPFX, DBPFX, t->str);
+				"ORDER BY message_idnr", DBPFX, DBPFX, joinhdr, t->str);
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
@@ -1367,35 +1370,28 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 				
 			case IST_HDR:
 			
-			memset(partial,0,sizeof(partial));
-			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
+			joinhdr=g_new0(char,MAX_SEARCH_LEN);
+			_append_join_headervalue(joinhdr, s->hdrfld);
+
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 				"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-				"JOIN %sheader h ON h.physmessage_id=p.id "
-				"JOIN %sheadername n ON h.headername_id=n.id "
-				"JOIN %sheadervalue v ON h.headervalue_id=v.id "
-				"WHERE n.headername %s ? AND %s %s ? "
+				"%s "
+				"WHERE mailbox_idnr=? AND status IN (?,?) AND hv%s.headervalue %s ? "
 				"ORDER BY message_idnr",
-				 DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
-				 db_get_sql(SQL_INSENSITIVE_LIKE),
-				 partial, db_get_sql(SQL_INSENSITIVE_LIKE));
+				DBPFX, DBPFX, joinhdr,
+				s->hdrfld, db_get_sql(SQL_INSENSITIVE_LIKE));
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
 			db_stmt_set_int(st, 2, MESSAGE_STATUS_NEW);
 			db_stmt_set_int(st, 3, MESSAGE_STATUS_SEEN);
 			db_stmt_set_str(st, 4, s->hdrfld);
-			memset(partial,0,sizeof(partial));
-			snprintf(partial, DEF_FRAGSIZE, "%%%s%%", s->search);
-			db_stmt_set_str(st, 5, partial);
+			db_stmt_set_str(st, 5, s->search);
 
 			break;
 
 			case IST_DATA_TEXT:
 
-			memset(partial,0,sizeof(partial));
-			g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "k.data");
-			snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
 			g_string_printf(q,"SELECT m.message_idnr, v.headervalue, k.data "
 					"FROM %smimeparts k "
 					"JOIN %spartlists l ON k.id=l.part_id "
@@ -1405,11 +1401,10 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"JOIN %smessages m ON m.physmessage_id=p.id "
 					"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
 					"GROUP BY m.message_idnr, v.headervalue, k.data "
-					"HAVING %s %s ? OR %s %s ? "
+					"HAVING v.headervalue %s ? OR k.data %s ? "
 					"ORDER BY m.message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
-					partial, db_get_sql(SQL_INSENSITIVE_LIKE),
-					t->str, db_get_sql(SQL_INSENSITIVE_LIKE));
+					db_get_sql(SQL_INSENSITIVE_LIKE), db_get_sql(SQL_INSENSITIVE_LIKE));
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
