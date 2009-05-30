@@ -19,27 +19,16 @@
 -- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 -- 
 
+
 -- Make sure our database is set for utf8
 ALTER DATABASE CHARACTER SET utf8;
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-
+SET FOREIGN_KEY_CHECKS=0;
 --
 -- Table structure for table `dbmail_acl`
 --
 
 DROP TABLE IF EXISTS `dbmail_acl`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_acl` (
   `user_id` bigint(20) NOT NULL default '0',
   `mailbox_id` bigint(20) NOT NULL default '0',
@@ -58,17 +47,14 @@ CREATE TABLE `dbmail_acl` (
   CONSTRAINT `dbmail_acl_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `dbmail_acl_ibfk_2` FOREIGN KEY (`mailbox_id`) REFERENCES `dbmail_mailboxes` (`mailbox_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_aliases`
 --
 
 DROP TABLE IF EXISTS `dbmail_aliases`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_aliases` (
-  `alias_idnr` bigint(20) NOT NULL default '0',
+  `alias_idnr` bigint(20) NOT NULL auto_increment,
   `alias` varchar(255) NOT NULL default '',
   `deliver_to` varchar(255) NOT NULL default '',
   `client_idnr` bigint(20) NOT NULL default '0',
@@ -76,67 +62,29 @@ CREATE TABLE `dbmail_aliases` (
   KEY `alias_index` (`alias`),
   KEY `client_idnr_index` (`client_idnr`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
-
---
--- Table structure for table `dbmail_auto_notifications`
---
-
-DROP TABLE IF EXISTS `dbmail_auto_notifications`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
-CREATE TABLE `dbmail_auto_notifications` (
-  `user_idnr` bigint(20) NOT NULL default '0',
-  `notify_address` varchar(255) NOT NULL,
-  KEY `user_idnr_index` (`user_idnr`),
-  CONSTRAINT `dbmail_auto_notifications_ibfk_1` FOREIGN KEY (`user_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
-
---
--- Table structure for table `dbmail_auto_replies`
---
-
-DROP TABLE IF EXISTS `dbmail_auto_replies`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
-CREATE TABLE `dbmail_auto_replies` (
-  `user_idnr` bigint(20) NOT NULL default '0',
-  `start_date` datetime NOT NULL,
-  `stop_date` datetime NOT NULL,
-  `reply_body` mediumtext,
-  KEY `user_idnr_index` (`user_idnr`),
-  CONSTRAINT `dbmail_auto_replies_ibfk_1` FOREIGN KEY (`user_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_envelope`
 --
 
 DROP TABLE IF EXISTS `dbmail_envelope`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_envelope` (
+  `id` bigint(20) NOT NULL auto_increment,
   `physmessage_id` bigint(20) NOT NULL default '0',
-  `id` bigint(20) NOT NULL default '0',
   `envelope` text NOT NULL,
   PRIMARY KEY  (`id`),
   UNIQUE KEY `physmessage_id` (`physmessage_id`,`id`),
   CONSTRAINT `dbmail_envelope_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_filters`
 --
 
 DROP TABLE IF EXISTS `dbmail_filters`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_filters` (
-  `user_id` bigint(20) NOT NULL,
   `id` bigint(20) NOT NULL auto_increment,
+  `user_id` bigint(20) NOT NULL,
   `headername` varchar(255) NOT NULL,
   `headervalue` varchar(255) NOT NULL,
   `mailbox` varchar(255) NOT NULL,
@@ -144,15 +92,12 @@ CREATE TABLE `dbmail_filters` (
   KEY `user_id` (`user_id`),
   CONSTRAINT `dbmail_filters_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_header`
 --
 
 DROP TABLE IF EXISTS `dbmail_header`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_header` (
   `physmessage_id` bigint(20) NOT NULL,
   `headername_id` bigint(20) NOT NULL,
@@ -164,30 +109,24 @@ CREATE TABLE `dbmail_header` (
   CONSTRAINT `dbmail_header_ibfk_2` FOREIGN KEY (`headername_id`) REFERENCES `dbmail_headername` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `dbmail_header_ibfk_3` FOREIGN KEY (`headervalue_id`) REFERENCES `dbmail_headervalue` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_headername`
 --
 
 DROP TABLE IF EXISTS `dbmail_headername`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_headername` (
   `id` bigint(20) NOT NULL auto_increment,
   `headername` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`id`),
   UNIQUE KEY `headername` (`headername`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_headervalue`
 --
 
 DROP TABLE IF EXISTS `dbmail_headervalue`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_headervalue` (
   `id` bigint(20) NOT NULL auto_increment,
   `hash` varchar(255) NOT NULL,
@@ -204,32 +143,26 @@ CREATE TABLE `dbmail_headervalue` (
   KEY `sortfield` (`sortfield`(255)),
   KEY `datefield` (`datefield`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_keywords`
 --
 
 DROP TABLE IF EXISTS `dbmail_keywords`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_keywords` (
   `message_idnr` bigint(20) NOT NULL default '0',
   `keyword` varchar(255) NOT NULL,
   PRIMARY KEY  (`message_idnr`,`keyword`),
   CONSTRAINT `dbmail_keywords_ibfk_1` FOREIGN KEY (`message_idnr`) REFERENCES `dbmail_messages` (`message_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_mailboxes`
 --
 
 DROP TABLE IF EXISTS `dbmail_mailboxes`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_mailboxes` (
-  `mailbox_idnr` bigint(20) NOT NULL default '0',
+  `mailbox_idnr` bigint(20) NOT NULL auto_increment,
   `owner_idnr` bigint(20) NOT NULL default '0',
   `name` varchar(255) NOT NULL default '',
   `seen_flag` tinyint(1) NOT NULL default '0',
@@ -249,17 +182,14 @@ CREATE TABLE `dbmail_mailboxes` (
   KEY `seq_index` (`seq`),
   CONSTRAINT `dbmail_mailboxes_ibfk_1` FOREIGN KEY (`owner_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_messageblks`
 --
 
 DROP TABLE IF EXISTS `dbmail_messageblks`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_messageblks` (
-  `messageblk_idnr` bigint(20) NOT NULL default '0',
+  `messageblk_idnr` bigint(20) NOT NULL auto_increment,
   `physmessage_id` bigint(20) NOT NULL default '0',
   `messageblk` longblob NOT NULL,
   `blocksize` bigint(20) NOT NULL default '0',
@@ -269,17 +199,14 @@ CREATE TABLE `dbmail_messageblks` (
   KEY `physmessage_id_is_header_index` (`physmessage_id`,`is_header`),
   CONSTRAINT `dbmail_messageblks_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_messages`
 --
 
 DROP TABLE IF EXISTS `dbmail_messages`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_messages` (
-  `message_idnr` bigint(20) NOT NULL default '0',
+  `message_idnr` bigint(20) NOT NULL auto_increment,
   `mailbox_idnr` bigint(20) NOT NULL default '0',
   `physmessage_id` bigint(20) NOT NULL default '0',
   `seen_flag` tinyint(1) NOT NULL default '0',
@@ -300,32 +227,26 @@ CREATE TABLE `dbmail_messages` (
   CONSTRAINT `dbmail_messages_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `dbmail_messages_ibfk_2` FOREIGN KEY (`mailbox_idnr`) REFERENCES `dbmail_mailboxes` (`mailbox_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_mimeparts`
 --
 
 DROP TABLE IF EXISTS `dbmail_mimeparts`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_mimeparts` (
-  `id` bigint(20) NOT NULL default '0',
+  `id` bigint(20) NOT NULL auto_increment,
   `hash` char(128) NOT NULL,
   `data` longblob NOT NULL,
   `size` bigint(20) NOT NULL default '0',
   PRIMARY KEY  (`id`),
   KEY `hash` (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_partlists`
 --
 
 DROP TABLE IF EXISTS `dbmail_partlists`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_partlists` (
   `physmessage_id` bigint(20) NOT NULL default '0',
   `is_header` tinyint(1) NOT NULL default '0',
@@ -338,65 +259,53 @@ CREATE TABLE `dbmail_partlists` (
   CONSTRAINT `dbmail_partlists_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `dbmail_partlists_ibfk_2` FOREIGN KEY (`part_id`) REFERENCES `dbmail_mimeparts` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_pbsp`
 --
 
 DROP TABLE IF EXISTS `dbmail_pbsp`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_pbsp` (
-  `idnr` bigint(20) NOT NULL default '0',
+  `idnr` bigint(20) NOT NULL auto_increment,
   `since` datetime NOT NULL default '0000-00-00 00:00:00',
   `ipnumber` varchar(40) NOT NULL,
   PRIMARY KEY  (`idnr`),
   UNIQUE KEY `ipnumber_index` (`ipnumber`),
   KEY `since_index` (`since`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_physmessage`
 --
 
 DROP TABLE IF EXISTS `dbmail_physmessage`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_physmessage` (
-  `id` bigint(20) NOT NULL default '0',
+  `id` bigint(20) NOT NULL auto_increment,
   `messagesize` bigint(20) NOT NULL default '0',
   `rfcsize` bigint(20) NOT NULL default '0',
   `internal_date` datetime NOT NULL default '0000-00-00 00:00:00',
   PRIMARY KEY  (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_referencesfield`
 --
 
 DROP TABLE IF EXISTS `dbmail_referencesfield`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_referencesfield` (
+  `id` bigint(20) NOT NULL auto_increment,
   `physmessage_id` bigint(20) NOT NULL default '0',
-  `id` bigint(20) NOT NULL default '0',
   `referencesfield` varchar(255) NOT NULL default '',
   PRIMARY KEY  (`id`),
   UNIQUE KEY `physmessage_id` (`physmessage_id`,`referencesfield`),
   CONSTRAINT `dbmail_referencesfield_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_replycache`
 --
 
 DROP TABLE IF EXISTS `dbmail_replycache`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_replycache` (
   `to_addr` varchar(255) NOT NULL default '',
   `from_addr` varchar(255) NOT NULL default '',
@@ -404,15 +313,12 @@ CREATE TABLE `dbmail_replycache` (
   `lastseen` datetime NOT NULL default '0000-00-00 00:00:00',
   UNIQUE KEY `replycache_1` (`to_addr`,`from_addr`,`handle`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_sievescripts`
 --
 
 DROP TABLE IF EXISTS `dbmail_sievescripts`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_sievescripts` (
   `owner_idnr` bigint(20) NOT NULL default '0',
   `name` varchar(255) NOT NULL,
@@ -423,15 +329,12 @@ CREATE TABLE `dbmail_sievescripts` (
   KEY `owner_idnr` (`owner_idnr`),
   CONSTRAINT `dbmail_sievescripts_ibfk_1` FOREIGN KEY (`owner_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_subscription`
 --
 
 DROP TABLE IF EXISTS `dbmail_subscription`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_subscription` (
   `user_id` bigint(20) NOT NULL default '0',
   `mailbox_id` bigint(20) NOT NULL default '0',
@@ -441,15 +344,12 @@ CREATE TABLE `dbmail_subscription` (
   CONSTRAINT `dbmail_subscription_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `dbmail_subscription_ibfk_2` FOREIGN KEY (`mailbox_id`) REFERENCES `dbmail_mailboxes` (`mailbox_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_usermap`
 --
 
 DROP TABLE IF EXISTS `dbmail_usermap`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_usermap` (
   `login` varchar(255) NOT NULL,
   `sock_allow` varchar(255) NOT NULL,
@@ -457,17 +357,14 @@ CREATE TABLE `dbmail_usermap` (
   `userid` varchar(255) NOT NULL,
   UNIQUE KEY `usermap_idx_1` (`login`,`sock_allow`,`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `dbmail_users`
 --
 
 DROP TABLE IF EXISTS `dbmail_users`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
 CREATE TABLE `dbmail_users` (
-  `user_idnr` bigint(20) NOT NULL default '0',
+  `user_idnr` bigint(20) NOT NULL auto_increment,
   `userid` varchar(255) NOT NULL default '',
   `passwd` varchar(255) NOT NULL default '',
   `client_idnr` bigint(20) NOT NULL default '0',
@@ -480,17 +377,10 @@ CREATE TABLE `dbmail_users` (
   PRIMARY KEY  (`user_idnr`),
   UNIQUE KEY `userid_index` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-SET character_set_client = @saved_cs_client;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Create the required built-in users for the delivery chain, anyone acls, and #public mailboxes
-INSERT INTO dbmail_users (userid, passwd, encryption_type) VALUES ('__@!internal_delivery_user!@__', '', 'md5'),('anyone', '', 'md5'),('__public__', '', 'md5');
+INSERT INTO dbmail_users (userid, passwd, encryption_type) VALUES 
+	('__@!internal_delivery_user!@__', '', 'md5'),
+	('anyone', '', 'md5'),
+	('__public__', '', 'md5');
 
