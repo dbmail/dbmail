@@ -33,8 +33,6 @@ ALTER TABLE dbmail_acl ADD COLUMN expunge_flag TINYINT(1) NOT NULL DEFAULT '0';
 UPDATE dbmail_acl SET deleted_flag=delete_flag, expunge_flag=delete_flag;
 ALTER TABLE dbmail_aliases MODIFY COLUMN alias_idnr BIGINT(20) AUTO_INCREMENT NOT NULL;
 ALTER TABLE dbmail_aliases MODIFY COLUMN client_idnr BIGINT(20) DEFAULT 0 NOT NULL;
-ALTER TABLE dbmail_auto_notifications MODIFY COLUMN user_idnr BIGINT(20) DEFAULT 0 NOT NULL;
-ALTER TABLE dbmail_auto_replies MODIFY COLUMN user_idnr BIGINT(20) DEFAULT 0 NOT NULL;
 ALTER TABLE dbmail_envelope MODIFY COLUMN physmessage_id BIGINT(20) DEFAULT 0 NOT NULL;
 ALTER TABLE dbmail_envelope MODIFY COLUMN id BIGINT(20) AUTO_INCREMENT NOT NULL;
 ALTER TABLE dbmail_keywords MODIFY COLUMN message_idnr BIGINT(20) DEFAULT 0 NOT NULL;
@@ -69,7 +67,6 @@ ALTER TABLE dbmail_users MODIFY COLUMN cursieve_size BIGINT(20) DEFAULT 0 NOT NU
 
 ALTER TABLE dbmail_aliases MODIFY COLUMN  `alias` varchar(255) NOT NULL default '';
 ALTER TABLE dbmail_aliases MODIFY COLUMN  `deliver_to` varchar(255) NOT NULL default '';
-ALTER TABLE dbmail_auto_notifications MODIFY COLUMN  `notify_address` varchar(255) NOT NULL;
 ALTER TABLE dbmail_keywords MODIFY COLUMN  `keyword` varchar(255) NOT NULL;
 ALTER TABLE dbmail_replycache MODIFY COLUMN  `to_addr` varchar(255) NOT NULL default '';
 ALTER TABLE dbmail_replycache MODIFY COLUMN  `from_addr` varchar(255) NOT NULL default '';

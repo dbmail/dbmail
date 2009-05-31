@@ -1,6 +1,6 @@
 
 begin;
-drop table if exists dbmail_autoreplies;
+drop table if exists dbmail_auto_replies;
 drop table if exists dbmail_auto_notifications;
 drop table if exists dbmail_ccfield;
 drop table if exists dbmail_datefield;

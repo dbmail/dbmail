@@ -156,20 +156,6 @@ CREATE INDEX dbmail_messageblks_physmessage_idx
 CREATE INDEX dbmail_messageblks_physmessage_is_header_idx 
 	ON dbmail_messageblks(physmessage_id, is_header);
 
-CREATE TABLE dbmail_auto_notifications (
-   user_idnr INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
-   notify_address VARCHAR(100),
-   PRIMARY KEY (user_idnr)
-);
-
-CREATE TABLE dbmail_auto_replies (
-   user_idnr INT8 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
-   start_date timestamp without time zone not null,
-   stop_date timestamp without time zone not null,
-   reply_body TEXT,
-   PRIMARY KEY (user_idnr)
-);
-
 CREATE SEQUENCE dbmail_seq_pbsp_id;
 CREATE TABLE dbmail_pbsp (
   idnr INT8 NOT NULL DEFAULT NEXTVAL('dbmail_seq_pbsp_id'),
