@@ -1530,7 +1530,7 @@ static u64_t _header_value_exists(C c, const char *value, const char *hash)
 
 }
 
-static u64_t _header_value_insert(C c, const char *value, const char *emailname, const char *emailaddr, const char *sortfield, const char *datefield, const char *hash)
+static u64_t _header_value_insert(C c, const char *value, const char *sortfield, const char *datefield, const char *hash)
 {
 	R r; S s;
 	u64_t id = 0;
@@ -1539,15 +1539,13 @@ static u64_t _header_value_insert(C c, const char *value, const char *emailname,
 	db_con_clear(c);
 
 	frag = db_returning("id");
-	s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue, emailname, emailaddr, sortfield, datefield) VALUES (?,?,?,?,?,?) %s", DBPFX, frag);
+	s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue, sortfield, datefield) VALUES (?,?,?,?) %s", DBPFX, frag);
 	g_free(frag);
 
 	db_stmt_set_str(s, 1, hash);
 	db_stmt_set_blob(s, 2, value, strlen(value));
-	db_stmt_set_str(s, 3, emailname);
-	db_stmt_set_str(s, 4, emailaddr);
-	db_stmt_set_str(s, 5, sortfield);
-	db_stmt_set_str(s, 6, datefield);
+	db_stmt_set_str(s, 3, sortfield);
+	db_stmt_set_str(s, 4, datefield);
 
 	r = db_stmt_query(s);
 	id = db_insert_result(c, r);
@@ -1557,7 +1555,7 @@ static u64_t _header_value_insert(C c, const char *value, const char *emailname,
 	return id;
 }
 
-static int _header_value_get_id(const char *value, const char *emailname, const char *emailaddr, const char *sortfield, const char *datefield, u64_t *id)
+static int _header_value_get_id(const char *value, const char *sortfield, const char *datefield, u64_t *id)
 {
 	u64_t tmp = 0;
 	char *hash;
@@ -1570,7 +1568,7 @@ static int _header_value_get_id(const char *value, const char *emailname, const 
 	TRY
 		if ((tmp = _header_value_exists(c, value, (const char *)hash)) != 0)
 			*id = tmp;
-		else if ((tmp = _header_value_insert(c, value, emailname, emailaddr, sortfield, datefield, (const char *)hash)) != 0)
+		else if ((tmp = _header_value_insert(c, value, sortfield, datefield, (const char *)hash)) != 0)
 			*id = tmp;
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1619,7 +1617,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	time_t date;
 	volatile gboolean isaddr = 0, isdate = 0, issubject = 0;
 	const char *charset = dbmail_message_get_charset(self);
-	gchar *rname = NULL, *emailname = NULL, *emailaddr = NULL, *sortfield = NULL, *datefield = NULL;
+	gchar *sortfield = NULL, *datefield = NULL;
 	InternetAddressList *emaillist;
 	InternetAddress *ia;
 
@@ -1644,11 +1642,9 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		isaddr=1;
 	else if (g_ascii_strcasecmp(header,"Return-path")==0)
 		isaddr=1;
-
-	if (g_ascii_strcasecmp(header,"Subject")==0)
+	else if (g_ascii_strcasecmp(header,"Subject")==0)
 		issubject=1;
-
-	if (g_ascii_strcasecmp(header,"Date")==0)
+	else if (g_ascii_strcasecmp(header,"Date")==0)
 		isdate=1;
 
 	values = g_relation_select(self->headers,header,0);
@@ -1672,32 +1668,13 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			for (; emaillist != NULL && emaillist->address; emaillist = emaillist->next) {
 	                        ia = emaillist->address;
 				if(ia == NULL) break;
-	                        rname=dbmail_iconv_str_to_db(ia->name ? ia->name: "", charset);
-				if(strlen(rname)==0)
-					rname=g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
 
-        	                /* address fields are truncated to column width */
-				if(emailname != NULL) {
-					// Add additional recipient names
-					emailname = g_strconcat(emailname, " | ", rname, NULL);
-				}
-				else {
-					// First recipient name
-	                	        emailname = g_strndup(rname, CACHE_WIDTH_ADDR);
-				}
-
-				if(emailaddr != NULL) {
-					// Add additional recipients
-					emailaddr = g_strconcat(emailaddr, " | ", g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR), NULL);
-				}
-				else {
+				if(sortfield == NULL) {
 					// Only the first email recipient is to be used for sorting - so save it now.
 					sortfield = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
-					// First recipient address
-					emailaddr = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
 				}
 			}
-			TRACE(TRACE_DEBUG,"emailname [%s], emailaddr [%s]", emailname, emailaddr);
+			internet_address_list_destroy(emaillist);
 		}
 
 		if(issubject) {
@@ -1711,12 +1688,14 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 			datefield = g_new0(gchar,20);
 			strftime(datefield,20,"%Y-%m-%d %H:%M:%S",gmtime(&date));
-			TRACE(TRACE_DEBUG,"Date is [%d], datefield [%s]",date,datefield);
+			TRACE(TRACE_DEBUG,"Date is [%ld], datefield [%s]",date,datefield);
 		}
 
+		if (! sortfield)
+			sortfield = g_strndup(value, CACHE_WIDTH_ADDR);
 
 		/* Fetch header value id if exists, else insert, and return new id */
-		_header_value_get_id(value, emailname, emailaddr, sortfield, datefield, &headervalue_id);
+		_header_value_get_id(value, sortfield, datefield, &headervalue_id);
 
 		g_free(value);
 
@@ -1725,62 +1704,14 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 		headervalue_id=0;
 
-		g_free(datefield);
+		g_free(sortfield); sortfield = NULL;
+		g_free(datefield); datefield = NULL;
 		emaillist=NULL;
-		rname=NULL;
-		emailname=NULL;
-		emailaddr=NULL;
-		date=NULL;
-		datefield=NULL;
+		date=0;
 	}
 	
 	g_tuples_destroy(values);
 	return FALSE;
-}
-
-static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist, const DbmailMessage *self)
-{
-	InternetAddress *ia;
-	C c; S s;
-	
-	g_return_if_fail(ialist != NULL);
-
-	gchar *name = NULL, *rname;
-	gchar *addr = NULL;
-	char *charset = dbmail_message_get_charset((DbmailMessage *)self);
-
-	c = db_con_get();
-	TRY
-		db_begin_transaction(c);
-		s = db_stmt_prepare(c, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) VALUES (?,?,?)", DBPFX, field, field, field);
-		db_stmt_set_u64(s, 1, physid);
-
-		for (; ialist != NULL && ialist->address; ialist = ialist->next) {
-			
-			ia = ialist->address;
-			g_return_if_fail(ia != NULL);
-
-			rname=dbmail_iconv_str_to_db(ia->name ? ia->name: "", charset);
-			/* address fields are truncated to column width */
-			name = g_strndup(rname, CACHE_WIDTH_ADDR);
-			addr = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
-
-			db_stmt_set_str(s, 2, name);
-			db_stmt_set_str(s, 3, addr);
-			
-			db_stmt_exec(s);
-
-			g_free(rname);
-			g_free(name);
-			g_free(addr);
-		}
-		db_commit_transaction(c);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		TRACE(TRACE_ERR, "insert %sfield failed [%s] [%s]", field, name, addr);
-	FINALLY
-		db_con_close(c);
-	END_TRY;
 }
 
 static void insert_field_cache(u64_t physid, const char *field, const char *value)
@@ -1813,25 +1744,6 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 #define DM_ADDRESS_TYPE_CC "Cc"
 #define DM_ADDRESS_TYPE_FROM "From"
 #define DM_ADDRESS_TYPE_REPL "Reply-to"
-
-static InternetAddressList * dm_message_get_addresslist(const DbmailMessage *self, const char * type)
-{
-	const char *addr = NULL;
-	char *charset = NULL;
-	char *value = NULL;
-	InternetAddressList *list;
-
-	if (! (addr = (char *)dbmail_message_get_header(self, type)))
-		return NULL;
-
-	charset = dbmail_message_get_charset((DbmailMessage *)self);
-	value = dbmail_iconv_decode_field(addr, charset, TRUE);
-	list = internet_address_parse_string(value);
-
-	g_free(value);
-
-	return list;
-}
 
 void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 {

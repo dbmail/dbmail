@@ -103,7 +103,7 @@ static u64_t get_mailbox_id(const char *name)
 
 void setup(void)
 {
-	configure_debug(255,0);
+	configure_debug(511,511);
 	config_read(configFile);
 	GetDBParams();
 	db_connect();

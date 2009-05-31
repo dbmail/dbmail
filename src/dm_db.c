@@ -385,6 +385,7 @@ S db_stmt_prepare(C c, const char *q, ...)
 {
 	va_list ap, cp;
 	char *query;
+	S s;
 
 	va_start(ap, q);
 	va_copy(cp, ap);
@@ -392,7 +393,9 @@ S db_stmt_prepare(C c, const char *q, ...)
         va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
-	return Connection_prepareStatement(c, (const char *)query);
+	s = Connection_prepareStatement(c, (const char *)query);
+	g_free(query);
+	return s;
 }
 
 int db_stmt_set_str(S s, int index, const char *x)
