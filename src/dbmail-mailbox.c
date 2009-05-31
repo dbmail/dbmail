@@ -483,7 +483,12 @@ static void _append_join_headervalue(char *join, char *headername)
 {
 	char *tmp;
 	TRACE(TRACE_DEBUG,"%s", headername);
-	tmp = g_strdup_printf("JOIN %sheadername hn%s ON hn%s.headername=lower('%s') LEFT JOIN %sheader h%s ON (m.physmessage_id=h%s.physmessage_id AND h%s.headername_id=hn%s.id) LEFT JOIN %sheadervalue hv%s ON h%s.headervalue_id=hv%s.id ", DBPFX, headername, headername, headername, DBPFX, headername, headername, headername, headername, DBPFX, headername, headername, headername);
+	tmp = g_strdup_printf("JOIN %sheadername hn%s ON hn%s.headername=lower('%s') "
+		"LEFT JOIN %sheader h%s ON (m.physmessage_id=h%s.physmessage_id AND h%s.headername_id=hn%s.id) "
+		"LEFT JOIN %sheadervalue hv%s ON h%s.headervalue_id=hv%s.id ", 
+			DBPFX, headername, headername, headername, 
+			DBPFX, headername, headername, headername, headername, 
+			DBPFX, headername, headername, headername);
 	g_strlcat(join, tmp, MAX_SEARCH_LEN);
 	g_free(tmp);
 }
@@ -1385,8 +1390,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
 			db_stmt_set_int(st, 2, MESSAGE_STATUS_NEW);
 			db_stmt_set_int(st, 3, MESSAGE_STATUS_SEEN);
-			db_stmt_set_str(st, 4, s->hdrfld);
-			db_stmt_set_str(st, 5, s->search);
+			db_stmt_set_str(st, 4, s->search);
 
 			break;
 
