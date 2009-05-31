@@ -32,19 +32,15 @@ DROP SEQUENCE IF EXISTS dbmail_headervalue_id_seq;
 CREATE SEQUENCE dbmail_headervalue_id_seq;
 CREATE TABLE dbmail_headervalue (
         id            INT8 NOT NULL DEFAULT nextval('dbmail_headervalue_id_seq'),
-        hash          varchar(256) NOT NULL,
+        hash          VARCHAR(256) NOT NULL,
         headervalue   TEXT NOT NULL DEFAULT '',
-        emailname     TEXT,
-        emailaddr     TEXT,
-        sortfield     TEXT,
+        sortfield     VARCHAR(255) DEFAULT NULL,
         datefield     TIMESTAMP WITHOUT TIME ZONE,
         PRIMARY KEY (id)
 );
 CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue USING btree (hash);
-CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (substring(emailname,0,255));
-CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue USING btree (substring(emailaddr,0,255));
-CREATE INDEX dbmail_headervalue_4 ON dbmail_headervalue USING btree (substring(sortfield,0,255));
-CREATE INDEX dbmail_headervalue_5 ON dbmail_headervalue USING btree (datefield);
+CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (sortfield);
+CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue USING btree (datefield);
 
 CREATE TABLE dbmail_header (
         physmessage_id      INT8 NOT NULL

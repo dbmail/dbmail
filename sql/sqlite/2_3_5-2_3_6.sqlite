@@ -39,16 +39,12 @@ CREATE TABLE dbmail_headervalue (
  	id		INTEGER NOT NULL PRIMARY KEY,
 	hash 		TEXT NOT NULL,
         headervalue   	BLOB NOT NULL,
-	emailname	TEXT NOT NULL,
-	emailaddr	TEXT NOT NULL,
 	sortfield	TEXT NOT NULL,
 	datefield	DATETIME
 );
 CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue(hash);
-CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue(emailname);
-CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue(emailaddr);
-CREATE INDEX dbmail_headervalue_4 ON dbmail_headervalue(sortfield);
-CREATE INDEX dbmail_headervalue_5 ON dbmail_headervalue(datefield);
+CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue(sortfield);
+CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue(datefield);
 
 CREATE TABLE dbmail_header (
         physmessage_id      INTEGER NOT NULL,
