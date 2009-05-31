@@ -180,27 +180,6 @@ START_TEST(test_imap_session_new)
 	dbmail_imap_session_delete(s);
 }
 END_TEST
-//ImapSession * dbmail_imap_session_setTag(ImapSession * self, char * tag);
-//ImapSession * dbmail_imap_session_setCommand(ImapSession * self, char * command);
-//ImapSession * dbmail_imap_session_setArgs(ImapSession * self, char ** args);
-//ImapSession * dbmail_imap_session_setMsginfo(ImapSession * self, MessageInfo * msginfo);
-//ImapSession * dbmail_imap_session_resetFi(ImapSession * self);
-//void dbmail_imap_session_delete(ImapSession * self);
-//int dbmail_imap_session_readln(ImapSession * self, char * buffer);
-//int dbmail_imap_session_discard_to_eol(ImapSession *self);
-//int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...);
-//int dbmail_imap_session_set_state(ImapSession *self, int state);
-//int check_state_and_args(ImapSession * self, const char * command, int minargs, int maxargs, int state);
-//int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password);
-//int dbmail_imap_session_prompt(ImapSession * self, char * prompt, char * value);
-//u64_t dbmail_imap_session_mailbox_get_idnr(ImapSession * self, char * mailbox);
-//int dbmail_imap_session_mailbox_check_acl(ImapSession * self, u64_t idnr, ACLRight_t right);
-//int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
-//int dbmail_imap_session_mailbox_show_info(ImapSession * self);
-//int dbmail_imap_session_mailbox_open(ImapSession * self, char * mailbox);
-
-
-//dbmail_imap_session_handle_auth(self, const char *username, const char *password);
 
 START_TEST(test_imap_bodyfetch)
 {
