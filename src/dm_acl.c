@@ -20,7 +20,7 @@
 
 #include "dbmail.h"
 
-#define NR_ACL_FLAGS 9
+#define NR_ACL_FLAGS 13	// Need enough space for our 11 real rights and the old RFC 2086 virtual c and d rights
 #define THIS_MODULE "acl"
 
 static const char *acl_right_strings[] = {
@@ -32,11 +32,15 @@ static const char *acl_right_strings[] = {
 	"post_flag",
 	"create_flag",
 	"delete_flag",
-	"administer_flag"
+	"deleted_flag",
+	"expunge_flag",
+	"administer_flag",
+	"create_flag",
+	"delete_flag"
 };
 
-static const char acl_right_chars[] = "lrswipcda";
-//{'l','r','s','w','i','p','c','d','a'};
+static const char acl_right_chars[] = "lrswipkxteacd";
+//{'l','r','s','w','i','p','k','x','t','e','a','c','d'};
 
 /* local functions */
 static ACLRight_t acl_get_right_from_char(char right_char);
@@ -65,6 +69,8 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right)
 		case ACL_RIGHT_POST:
 		case ACL_RIGHT_CREATE:
 		case ACL_RIGHT_DELETE:
+		case ACL_RIGHT_DELETED:
+		case ACL_RIGHT_EXPUNGE:
 		case ACL_RIGHT_ADMINISTER:
 
 			if (MailboxState_getPermission(S) != IMAPPERM_READWRITE)
@@ -117,10 +123,14 @@ ACLRight_t acl_get_right_from_char(char right_char)
 		return ACL_RIGHT_INSERT;
 	case 'p':
 		return ACL_RIGHT_POST;
-	case 'c':
+	case 'k':
 		return ACL_RIGHT_CREATE;
-	case 'd':
+	case 'x':
 		return ACL_RIGHT_DELETE;
+	case 't':
+		return ACL_RIGHT_DELETED;
+	case 'e':
+		return ACL_RIGHT_EXPUNGE;
 	case 'a':
 		return ACL_RIGHT_ADMINISTER;
 	default:
@@ -138,21 +148,38 @@ acl_change_rights(u64_t userid, u64_t mboxid, const char *rightsstring,
 
 	for (i = 1; i < strlen(rightsstring); i++) {
 		rightchar = rightsstring[i];
-		if (acl_set_one_right(userid, mboxid,
-				      acl_get_right_from_char(rightchar),
-				      set) < 0)
-			return -1;
+		switch (rightchar) {
+			case 'c': // Old RFC 2086 - maps to k in RFC 4314
+				if (acl_set_one_right(userid, mboxid, acl_get_right_from_char('k'), set) < 0) return -1;
+				break;
+			case 'd': // Old RFC 2086 - maps to x, t, and e in RFC 4314
+				if (acl_set_one_right(userid, mboxid, acl_get_right_from_char('x'), set) < 0) return -1;
+				if (acl_set_one_right(userid, mboxid, acl_get_right_from_char('t'), set) < 0) return -1;
+				if (acl_set_one_right(userid, mboxid, acl_get_right_from_char('e'), set) < 0) return -1;
+				break;
+			default:
+				if (acl_set_one_right(userid, mboxid, acl_get_right_from_char(rightchar), set) < 0) return -1;
+				break;
+		}
 	}
 	return 1;
 }
 
 int
-acl_replace_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
+acl_replace_rights(u64_t userid, u64_t mboxid, const char *rights)
 {
 	unsigned i;
 	int set;
+	gchar *rightsstring = NULL;
+
+	rightsstring = g_strndup(rights, 256);
 
 	TRACE(TRACE_DEBUG, "replacing rights for user [%llu], mailbox [%llu] to %s", userid, mboxid, rightsstring);
+
+	// RFC 2086 to RFC 4314 mapping
+	if (strchr(rightsstring, (int) 'c')) rightsstring = g_strconcat(rightsstring, "k\0", NULL);
+	if (strchr(rightsstring, (int) 'd')) rightsstring = g_strconcat(rightsstring, "xte\0", NULL);
+
 	for (i = ACL_RIGHT_LOOKUP; i < ACL_RIGHT_NONE; i++) {
 
 		if (strchr(rightsstring, (int) acl_right_chars[i]))
@@ -280,7 +307,7 @@ char *acl_listrights(u64_t userid, u64_t mboxid)
 		/* user is not owner. User will never be granted any right
 		   by default, but may be granted any right by setting the
 		   right ACL */
-		return g_strdup("\"\" l r s w i p c d a");
+		return g_strdup("\"\" l r s w i p k x t e a c d");
 	}
 
 	/* user is owner, User will always be granted all rights */
@@ -361,12 +388,21 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 	if (map.post_flag)
 		g_strlcat(rightsstring,"p", NR_ACL_FLAGS+1);
 	if (map.create_flag)
-		g_strlcat(rightsstring,"c", NR_ACL_FLAGS+1);
+		g_strlcat(rightsstring,"k", NR_ACL_FLAGS+1);
 	if (map.delete_flag)
-		g_strlcat(rightsstring,"d", NR_ACL_FLAGS+1);
+		g_strlcat(rightsstring,"x", NR_ACL_FLAGS+1);
+	if (map.deleted_flag)
+		g_strlcat(rightsstring,"t", NR_ACL_FLAGS+1);
+	if (map.expunge_flag)
+		g_strlcat(rightsstring,"e", NR_ACL_FLAGS+1);
 	if (map.administer_flag)
 		g_strlcat(rightsstring,"a", NR_ACL_FLAGS+1);
-	
+
+	// RFC 4314 backwords compatible RFC 2086 virtual c and d rights
+	if (map.create_flag)
+		g_strlcat(rightsstring,"c", NR_ACL_FLAGS+1);
+	if (map.delete_flag || map.deleted_flag || map.expunge_flag)
+		g_strlcat(rightsstring,"d", NR_ACL_FLAGS+1);
+
 	return 1;
 }
-

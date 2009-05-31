@@ -28,6 +28,9 @@ DROP TABLE if EXISTS dbmail_headervalue;
 -- Make sure all bigint columns are size 20 to be consistent and varchars are proper size
 ALTER TABLE dbmail_acl MODIFY COLUMN user_id BIGINT(20) DEFAULT 0 NOT NULL;
 ALTER TABLE dbmail_acl MODIFY COLUMN mailbox_id BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_acl ADD COLUMN deleted_flag TINYINT(1) NOT NULL DEFAULT '0';
+ALTER TABLE dbmail_acl ADD COLUMN expunge_flag TINYINT(1) NOT NULL DEFAULT '0';
+UPDATE dbmail_acl SET deleted_flag=delete_flag, expunge_flag=delete_flag;
 ALTER TABLE dbmail_aliases MODIFY COLUMN alias_idnr BIGINT(20) AUTO_INCREMENT NOT NULL;
 ALTER TABLE dbmail_aliases MODIFY COLUMN client_idnr BIGINT(20) DEFAULT 0 NOT NULL;
 ALTER TABLE dbmail_auto_notifications MODIFY COLUMN user_idnr BIGINT(20) DEFAULT 0 NOT NULL;
@@ -111,8 +114,12 @@ CREATE TABLE `dbmail_header` (
   `headername_id` bigint(20) NOT NULL,
   `headervalue_id` bigint(20) NOT NULL,
   PRIMARY KEY  (`physmessage_id`,`headername_id`,`headervalue_id`),
+  KEY `physmessage_id` (`physmessage_id`),
   KEY `headername_id` (`headername_id`),
   KEY `headervalue_id` (`headervalue_id`),
+  KEY `physmessage_id_headername_id` (`physmessage_id`,`headername_id`),
+  KEY `physmessage_id_headervalue_id` (`physmessage_id`,`headervalue_id`),
+  KEY `headername_id_headervalue_id` (`headername_id`,`headervalue_id`),
   CONSTRAINT `dbmail_header_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `dbmail_header_ibfk_2` FOREIGN KEY (`headername_id`) REFERENCES `dbmail_headername` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `dbmail_header_ibfk_3` FOREIGN KEY (`headervalue_id`) REFERENCES `dbmail_headervalue` (`id`) ON DELETE CASCADE ON UPDATE CASCADE

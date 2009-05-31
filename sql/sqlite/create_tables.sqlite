@@ -168,6 +168,8 @@ CREATE TABLE dbmail_acl (
 	post_flag BOOLEAN default '0' not null,
 	create_flag BOOLEAN default '0' not null,	
 	delete_flag BOOLEAN default '0' not null,	
+	deleted_flag BOOLEAN default '0' not null,	
+	expunge_flag BOOLEAN default '0' not null,	
 	administer_flag BOOLEAN default '0' not null
 );
 CREATE INDEX dbmail_acl_1 ON dbmail_acl(user_id);

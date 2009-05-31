@@ -100,6 +100,8 @@ CREATE TABLE dbmail_acl (
     post_flag INT2 DEFAULT '0' NOT NULL,
     create_flag INT2 DEFAULT '0' NOT NULL,
     delete_flag INT2 DEFAULT '0' NOT NULL,
+    deleted_flag INT2 DEFAULT '0' NOT NULL,
+    expunge_flag INT2 DEFAULT '0' NOT NULL,
     administer_flag INT2 DEFAULT '0' NOT NULL,
     PRIMARY KEY (user_id, mailbox_id)
 );
@@ -202,9 +204,9 @@ CREATE TABLE dbmail_headervalue (
 );
 
 CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue USING btree (hash);
-CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (emailname);
-CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue USING btree (emailaddr);
-CREATE INDEX dbmail_headervalue_4 ON dbmail_headervalue USING btree (sortfield);
+CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (substring(emailname,0,255));
+CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue USING btree (substring(emailaddr,0,255));
+CREATE INDEX dbmail_headervalue_4 ON dbmail_headervalue USING btree (substring(sortfield,0,255));
 CREATE INDEX dbmail_headervalue_5 ON dbmail_headervalue USING btree (datefield);
 
 CREATE SEQUENCE dbmail_headername_id_seq;

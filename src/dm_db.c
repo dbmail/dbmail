@@ -2329,7 +2329,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 				/* If the PUBLIC user owns it, then the current user needs ACLs. */
 				if (MailboxState_isPublic(M)) {
-					result = acl_set_rights(owner_idnr, created_mboxid, "lrswipcda");
+					result = acl_set_rights(owner_idnr, created_mboxid, "lrswipkxteacd");
 					if (result == DM_EQUERY) {
 						*message = "Database error while setting rights";
 						skip_and_free = DM_EQUERY;

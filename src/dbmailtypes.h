@@ -576,15 +576,17 @@ typedef struct sort_action {
 } sort_action_t;
 
 typedef enum {
-	ACL_RIGHT_LOOKUP,
-	ACL_RIGHT_READ,
-	ACL_RIGHT_SEEN,
-	ACL_RIGHT_WRITE,
-	ACL_RIGHT_INSERT,
-	ACL_RIGHT_POST,
-	ACL_RIGHT_CREATE,
-	ACL_RIGHT_DELETE,
-	ACL_RIGHT_ADMINISTER,
+	ACL_RIGHT_LOOKUP, // l
+	ACL_RIGHT_READ, // r
+	ACL_RIGHT_SEEN, // s
+	ACL_RIGHT_WRITE, // w
+	ACL_RIGHT_INSERT, // i
+	ACL_RIGHT_POST, // p
+	ACL_RIGHT_CREATE, // k - also set with c
+	ACL_RIGHT_DELETE, // x - also set with d
+	ACL_RIGHT_DELETED, // t - also set with d
+	ACL_RIGHT_EXPUNGE, // e - also set with d
+	ACL_RIGHT_ADMINISTER, // a
 	ACL_RIGHT_NONE
 } ACLRight_t;
 
@@ -597,6 +599,8 @@ struct  ACLMap {
 	int post_flag;
 	int create_flag;
 	int delete_flag;
+	int deleted_flag;
+	int expunge_flag;
 	int administer_flag;
 };
 

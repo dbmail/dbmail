@@ -559,7 +559,7 @@ int db_acl_get_acl_map(MailboxState_T M, u64_t userid, struct ACLMap *map)
 	TRY
 		s = db_stmt_prepare(c, "SELECT lookup_flag,read_flag,seen_flag,"
 			"write_flag,insert_flag,post_flag,"
-			"create_flag,delete_flag,administer_flag "
+			"create_flag,delete_flag,deleted_flag,expunge_flag,administer_flag "
 			"FROM %sacl "
 			"WHERE mailbox_id = ? AND user_id = ?",DBPFX);
 		db_stmt_set_u64(s, 1, MailboxState_getId(M));
@@ -585,6 +585,8 @@ int db_acl_get_acl_map(MailboxState_T M, u64_t userid, struct ACLMap *map)
 			map->post_flag		= db_result_get_bool(r,i++);
 			map->create_flag	= db_result_get_bool(r,i++);
 			map->delete_flag	= db_result_get_bool(r,i++);
+			map->deleted_flag	= db_result_get_bool(r,i++);
+			map->expunge_flag	= db_result_get_bool(r,i++);
 			map->administer_flag	= db_result_get_bool(r,i++);
 		}
 	CATCH(SQLException)

@@ -917,7 +917,7 @@ void _ic_list_enter(dm_thread_data *D)
 				pstring = dbmail_imap_plist_as_string(plist);
 				dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", self->command, 
 						pstring, MAILBOX_SEPARATOR, MailboxState_getName(M));
-				
+
 				g_list_destroy(plist);
 				g_free(pstring);
 			}
@@ -1266,7 +1266,7 @@ void _ic_append_enter(dm_thread_data *D)
 		}
 	}
 	if (flaglist[IMAP_FLAG_DELETED] == 1) {
-		if ((result = mailbox_check_acl(self, M, ACL_RIGHT_DELETE))) {
+		if ((result = mailbox_check_acl(self, M, ACL_RIGHT_DELETED))) {
 			D->status = result;
 			NOTIFY_DONE(D);
 		}
@@ -1421,7 +1421,7 @@ int _ic_check(ImapSession *self)
 static void _ic_close_enter(dm_thread_data *D)
 {
 	LOCK_SESSION;
-	int result = acl_has_right(self->mailbox->state, self->userid, ACL_RIGHT_DELETE);
+	int result = acl_has_right(self->mailbox->state, self->userid, ACL_RIGHT_EXPUNGE);
 	if (result < 0) {
 		dbmail_imap_session_buff_printf(self, "* BYE Internal database error\r\n");
 		D->status=result;
@@ -1476,7 +1476,7 @@ static void _ic_expunge_enter(dm_thread_data *D)
 	int result;
 	LOCK_SESSION;
 
-	if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_DELETE))) {
+	if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_EXPUNGE))) {
 		D->status = result;
 		NOTIFY_DONE(D);
 	}
@@ -1852,7 +1852,7 @@ static void _ic_store_enter(dm_thread_data *D)
 		}
 	}
 	if (cmd->flaglist[IMAP_FLAG_DELETED] == 1) {
-		if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_DELETE))) {
+		if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_DELETED))) {
 			D->status = result;
 			g_list_destroy(cmd->keywords);
 			g_free(cmd);

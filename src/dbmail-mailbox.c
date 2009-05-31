@@ -738,7 +738,7 @@ static int _handle_sort_args(DbmailMailbox *self, char **search_keys, search_key
 	
 	else if ( MATCH(key, "from") ) {
 		_append_join_headervalue(value->table, "from");
-		_append_sort(value->order, "hvfrom.emailaddr", reverse);
+		_append_sort(value->order, "hvfrom.sortfield", reverse);
 		(*idx)++;
 	} 
 	
@@ -750,13 +750,13 @@ static int _handle_sort_args(DbmailMailbox *self, char **search_keys, search_key
 	
 	else if ( MATCH(key, "cc") ) {
 		_append_join_headervalue(value->table, "cc");
-		_append_sort(value->order, "hvcc.emailaddr", reverse);
+		_append_sort(value->order, "hvcc.sortfield", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "to") ) {
 		_append_join_headervalue(value->table, "to");
-		_append_sort(value->order, "hvto.emailaddr", reverse);
+		_append_sort(value->order, "hvto.sortfield", reverse);
 		(*idx)++;
 	} 
 	

@@ -1677,15 +1677,25 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 					rname=g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
 
         	                /* address fields are truncated to column width */
-				if(emailname != NULL)
+				if(emailname != NULL) {
+					// Add additional recipient names
 					emailname = g_strconcat(emailname, " | ", rname, NULL);
-				else
+				}
+				else {
+					// First recipient name
 	                	        emailname = g_strndup(rname, CACHE_WIDTH_ADDR);
+				}
 
-				if(emailaddr != NULL)
+				if(emailaddr != NULL) {
+					// Add additional recipients
 					emailaddr = g_strconcat(emailaddr, " | ", g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR), NULL);
-				else
+				}
+				else {
+					// Only the first email recipient is to be used for sorting - so save it now.
+					sortfield = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
+					// First recipient address
 					emailaddr = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
+				}
 			}
 			TRACE(TRACE_DEBUG,"emailname [%s], emailaddr [%s]", emailname, emailaddr);
 		}

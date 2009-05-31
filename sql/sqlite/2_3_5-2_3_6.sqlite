@@ -2,6 +2,14 @@
 
 BEGIN TRANSACTION;
 
+ALTER TABLE dbmail_acl ADD COLUMN deleted_flag TINYINT(1) NOT NULL DEFAULT '0';
+ALTER TABLE dbmail_acl ADD COLUMN expunge_flag TINYINT(1) NOT NULL DEFAULT '0';
+UPDATE dbmail_acl SET deleted_flag=delete_flag, expunge_flag=delete_flag;
+
+COMMIT;
+
+BEGIN TRANSACTION;
+
 DROP TABLE IF EXISTS dbmail_header;
 DROP TABLE IF EXISTS dbmail_headername;
 DROP TABLE IF EXISTS dbmail_headervalue;

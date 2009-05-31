@@ -11,6 +11,10 @@ drop table if exists dbmail_tofield;
 delete from dbmail_referencesfield;
 
 
+ALTER TABLE dbmail_acl ADD COLUMN deleted_flag INT2 DEFAULT '0' NOT NULL;
+ALTER TABLE dbmail_acl ADD COLUMN expunge_flag INT2 DEFAULT '0' NOT NULL;
+UPDATE dbmail_acl SET deleted_flag=delete_flag, expunge_flag=delete_flag;
+
 DROP TABLE if exists dbmail_headervalue CASCADE;
 DROP TABLE if exists dbmail_headername CASCADE;
 DROP TABLE if exists dbmail_header;
@@ -37,9 +41,9 @@ CREATE TABLE dbmail_headervalue (
         PRIMARY KEY (id)
 );
 CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue USING btree (hash);
-CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (emailname);
-CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue USING btree (emailaddr);
-CREATE INDEX dbmail_headervalue_4 ON dbmail_headervalue USING btree (sortfield);
+CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue USING btree (substring(emailname,0,255));
+CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue USING btree (substring(emailaddr,0,255));
+CREATE INDEX dbmail_headervalue_4 ON dbmail_headervalue USING btree (substring(sortfield,0,255));
 CREATE INDEX dbmail_headervalue_5 ON dbmail_headervalue USING btree (datefield);
 
 CREATE TABLE dbmail_header (
