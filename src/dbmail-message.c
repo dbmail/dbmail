@@ -1759,7 +1759,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 
 	refs = g_mime_references_decode(field);
 	if (! refs) {
-		TRACE(TRACE_NOTICE, "reference_decode failed [%llu]", self->physid);
+		TRACE(TRACE_DEBUG, "reference_decode failed [%llu]", self->physid);
 		return;
 	}
 	
