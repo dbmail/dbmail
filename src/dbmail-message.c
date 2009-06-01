@@ -2456,76 +2456,6 @@ static int send_reply(DbmailMessage *message, const char *body)
 	return result;
 }
 
-
-/* Yeah, RAN. That's Reply And Notify ;-) */
-static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
-{
-	field_t val;
-	int do_auto_notify = 0, do_auto_reply = 0;
-	char *reply_body = NULL;
-	char *notify_address = NULL;
-
-	/* message has been succesfully inserted, perform auto-notification & auto-reply */
-	if (config_get_value("AUTO_NOTIFY", "DELIVERY", val) < 0) {
-		TRACE(TRACE_ERR, "error getting config value for AUTO_NOTIFY");
-		return -1;
-	}
-
-	if (strcasecmp(val, "yes") == 0)
-		do_auto_notify = 1;
-
-	if (config_get_value("AUTO_REPLY", "DELIVERY", val) < 0) {
-		TRACE(TRACE_ERR, "error getting config value for AUTO_REPLY");
-		return -1;
-	}
-
-	if (strcasecmp(val, "yes") == 0)
-		do_auto_reply = 1;
-
-	if (do_auto_notify != 0) {
-		TRACE(TRACE_DEBUG, "starting auto-notification procedure");
-
-		if (db_get_notify_address(useridnr, &notify_address) != 0)
-			TRACE(TRACE_ERR, "error fetching notification address");
-		else {
-			if (notify_address == NULL)
-				TRACE(TRACE_DEBUG, "no notification address specified, skipping");
-			else {
-				TRACE(TRACE_DEBUG, "sending notifcation to [%s]", notify_address);
-				if (send_notification(message, notify_address) < 0) {
-					TRACE(TRACE_ERR, "error in call to send_notification.");
-					g_free(notify_address);
-					return -1;
-				}
-				g_free(notify_address);
-			}
-		}
-	}
-
-	if (do_auto_reply != 0) {
-		TRACE(TRACE_DEBUG, "starting auto-reply procedure");
-
-		if (db_get_reply_body(useridnr, &reply_body) != 0)
-			TRACE(TRACE_ERR, "error fetching reply body");
-		else {
-			if (reply_body == NULL || reply_body[0] == '\0')
-				TRACE(TRACE_DEBUG, "no reply body specified, skipping");
-			else {
-				if (send_reply(message, reply_body) < 0) {
-					TRACE(TRACE_ERR, "error in call to send_reply");
-					g_free(reply_body);
-					return -1;
-				}
-				g_free(reply_body);
-				
-			}
-		}
-	}
-
-	return 0;
-}
-
-
 /* Here's the real *meat* of this source file!
  *
  * Function: insert_messages()
@@ -2621,10 +2551,6 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 				has_4 = 1;
 				break;
 			}
-
-			/* Automatic reply and notification */
-			if (execute_auto_ran(message, *useridnr) < 0)
-				TRACE(TRACE_ERR, "error in execute_auto_ran(), but continuing delivery normally.");
 
 			if (! g_list_next(userids))
 				break;

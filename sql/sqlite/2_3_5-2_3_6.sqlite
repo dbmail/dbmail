@@ -22,6 +22,10 @@ DROP TABLE IF EXISTS dbmail_replytofield;
 DROP TABLE IF EXISTS dbmail_subjectfield;
 DROP TABLE IF EXISTS dbmail_tofield;
 
+-- Drop auto tables
+DROP TABLE IF EXISTS dbmail_auto_replies;
+DROP TABLE IF EXISTS dbmail_auto_notifications;
+
 DELETE FROM dbmail_referencesfield;
 
 --CREATE TRIGGER fk_insert_headervalue_headername_id

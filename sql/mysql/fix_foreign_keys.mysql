@@ -87,20 +87,6 @@ alter table dbmail_messageblks add CONSTRAINT dbmail_messageblks_ibfk_1
 	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 
-alter table dbmail_auto_notifications drop foreign key physmessage_id_fk;
-alter table dbmail_auto_notifications drop foreign key dbmail_auto_notifications_ibfk_1;
-alter table dbmail_auto_notifications drop foreign key dbmail_auto_notifications_ibfk_2;
-alter table dbmail_auto_notifications add CONSTRAINT dbmail_messageblks_ibfk_1
-	FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-
-alter table dbmail_auto_replies drop foreign key physmessage_id_fk;
-alter table dbmail_auto_replies drop foreign key dbmail_auto_replies_ibfk_1;
-alter table dbmail_auto_replies drop foreign key dbmail_auto_replies_ibfk_2;
-alter table dbmail_auto_replies add CONSTRAINT dbmail_auto_replies_ibfk_1
-	FOREIGN KEY (`user_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-
 alter table dbmail_sievescripts drop foreign key physmessage_id_fk;
 alter table dbmail_sievescripts drop foreign key dbmail_sievescripts_ibfk_1;
 alter table dbmail_sievescripts drop foreign key dbmail_sievescripts_ibfk_2;

@@ -20,6 +20,10 @@ DROP TABLE IF EXISTS dbmail_replytofield;
 DROP TABLE IF EXISTS dbmail_subjectfield;
 DROP TABLE IF EXISTS dbmail_tofield;
 
+-- Drop auto tables
+DROP TABLE IF EXISTS dbmail_auto_replies;
+DROP TABLE IF EXISTS dbmail_auto_notifications;
+
 -- Drop new cache tables because of move from legacy tables
 DROP TABLE IF EXISTS dbmail_header;
 DROP TABLE IF EXISTS dbmail_headername;

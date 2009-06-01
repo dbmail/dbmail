@@ -275,29 +275,6 @@ int dm_quota_rebuild(void);
 int dm_quota_rebuild_user(u64_t user_idnr);
 
 /**
- * \brief get auto-notification address for a user
- * \param user_idnr user id
- * \param notify_address pointer to string that will hold the address
- * \return
- *        - -2 on failure of allocating memory for string
- *        - -1 on database failure
- *        - 0 on success
- * \attention caller should free deliver_to address
- */
-int db_get_notify_address(u64_t user_idnr, char **notify_address);
-/** 
- * \brief get reply body for auto-replies
- * \param user_idnr user idnr 
- * \param body pointer to string that will hold reply body
- * \return 
- *        - -2 on failure of allocating memory for string
- *        - -1 on database failure
- *        - 0 on success
- * \attention caller should free reply_body
- */
-int db_get_reply_body(u64_t user_idnr, char **body);
-
-/**
  * \brief get user idnr of a message. 
  * \param message_idnr idnr of message
  * \return 

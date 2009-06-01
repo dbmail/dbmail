@@ -114,12 +114,10 @@ void mailbox_match_free(struct mailbox_match *m)
 
 
 /** list of tables used in dbmail */
-#define DB_NTABLES 22
+#define DB_NTABLES 20
 const char *DB_TABLENAMES[DB_NTABLES] = {
 	"acl",
 	"aliases",
-	"auto_notifications",
-	"auto_replies",
 	"envelope",
 	"header",
 	"headername",
@@ -987,51 +985,6 @@ int dm_quota_rebuild()
 	g_list_destroy(quota);
 
 	return result;
-}
-
-int db_get_notify_address(u64_t user_idnr, char **notify_address)
-{
-	C c; R r; volatile int t = DM_SUCCESS;
-	assert(notify_address != NULL);
-	*notify_address = NULL;
-
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT notify_address FROM %sauto_notifications WHERE user_idnr = %llu", 
-				DBPFX,user_idnr);
-		if (db_result_next(r))
-			*notify_address = g_strdup(db_result_get(r, 0));
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);	
-	END_TRY;
-
-	return t;
-}
-
-int db_get_reply_body(u64_t user_idnr, char **reply_body)
-{
-	C c; R r; volatile int t = DM_SUCCESS;
-	*reply_body = NULL;
-
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT reply_body FROM %sauto_replies WHERE user_idnr = %llu "
-				"AND (start_date IS NULL OR start_date <= %s) "
-				"AND (stop_date IS NULL OR stop_date >= %s)", DBPFX,
-				user_idnr, db_get_sql(SQL_CURRENT_TIMESTAMP), db_get_sql(SQL_CURRENT_TIMESTAMP));
-		if (db_result_next(r))
-			*reply_body = g_strdup(db_result_get(r, 0));
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
 }
 
 u64_t db_get_mailbox_from_message(u64_t message_idnr)
