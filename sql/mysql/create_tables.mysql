@@ -137,16 +137,12 @@ CREATE TABLE `dbmail_headervalue` (
   `id` bigint(20) NOT NULL auto_increment,
   `hash` varchar(255) NOT NULL,
   `headervalue` text NOT NULL,
-  `emailname` text,
-  `emailaddr` text,
-  `sortfield` text,
+  `sortfield` varchar(255) default NULL,
   `datefield` datetime default NULL,
   PRIMARY KEY  (`id`),
   KEY `hash` (`hash`),
   KEY `headervalue` (`headervalue`(255)),
-  KEY `emailname` (`emailname`(255)),
-  KEY `emailaddr` (`emailaddr`(255)),
-  KEY `sortfield` (`sortfield`(255)),
+  KEY `sortfield` (`sortfield`),
   KEY `datefield` (`datefield`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
