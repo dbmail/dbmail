@@ -479,25 +479,11 @@ static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * dat
 	return res;
 }
 
-static void _append_join_headervalue(char *join, char *headername)
-{
-	char *tmp;
-	TRACE(TRACE_DEBUG,"%s", headername);
-	tmp = g_strdup_printf("JOIN %sheadername hn%s ON hn%s.headername=lower('%s') "
-		"LEFT JOIN %sheader h%s ON (m.physmessage_id=h%s.physmessage_id AND h%s.headername_id=hn%s.id) "
-		"LEFT JOIN %sheadervalue hv%s ON h%s.headervalue_id=hv%s.id ", 
-			DBPFX, headername, headername, headername, 
-			DBPFX, headername, headername, headername, headername, 
-			DBPFX, headername, headername, headername);
-	g_strlcat(join, tmp, MAX_SEARCH_LEN);
-	g_free(tmp);
-}
-
 char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 {
 	GList *sublist = NULL;
 	volatile u64_t i = 0, idnr = 0;
-	char *subj, *joinsub, *joindate;
+	char *subj;
 	char *res = NULL;
 	u64_t *id, *msn;
 	GTree *tree;
@@ -505,22 +491,18 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 	C c; R r; volatile int t = FALSE;
 	INIT_QUERY;
 	
-	joinsub=g_new0(char,MAX_SEARCH_LEN);
-	joindate=g_new0(char,MAX_SEARCH_LEN);
-	_append_join_headervalue(joinsub, "subject");
-	_append_join_headervalue(joindate, "date");
-
 	/* thread-roots (ordered) */
-	snprintf(query, DEF_QUERYSIZE, "SELECT min(m.message_idnr),hvsubject.sortfield "
+	snprintf(query, DEF_QUERYSIZE, "SELECT min(m.message_idnr),v.sortfield "
 			"FROM %smessages m "
-			"%s "
-			"%s "
+			"JOIN %sheader h USING (physmessage_id) "
+			"JOIN %sheadername n ON h.headername_id = n.id "
+			"JOIN %sheadervalue v ON h.headervalue_id = v.id "
 			"WHERE m.mailbox_idnr=%llu "
-			"AND m.status IN (%d,%d) "
-			"GROUP BY hvsubject.sortfield",
-			DBPFX, joinsub, joindate,
+			"AND n.headername = 'subject' AND m.status IN (%d,%d) "
+			"GROUP BY v.sortfield",
+			DBPFX, DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self),
-			MESSAGE_STATUS_NEW,MESSAGE_STATUS_SEEN);
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	tree = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,(GDestroyNotify)g_free, NULL);
 
@@ -552,16 +534,17 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		
 	memset(query,0,DEF_QUERYSIZE);
 	/* full threads (unordered) */
-	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr,hvsubject.sortfield "
+	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr,v.sortfield "
 			"FROM %smessages m "
-			"%s "
-			"%s "
-			"WHERE m.mailbox_idnr=%llu "
-			"AND m.status IN (%d,%d) "
-			"ORDER BY hvsubject.sortfield,hvdate.datefield",
-			DBPFX, joinsub, joindate,
+			"JOIN %sheader h USING (physmessage_id) "
+			"JOIN %sheadername n ON h.headername_id = n.id "
+			"JOIN %sheadervalue v ON h.headervalue_id = v.id "
+			"WHERE m.mailbox_idnr = %llu "
+			"AND n.headername = 'subject' AND m.status IN (%d,%d) "
+			"ORDER BY v.sortfield, v.datefield",
+			DBPFX, DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self),
-			MESSAGE_STATUS_NEW,MESSAGE_STATUS_SEEN);
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 		
 	TRY
 		i=0;
@@ -601,9 +584,6 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 
 	g_string_free(threads,FALSE);
 	g_tree_destroy(tree);
-
-	g_free(joinsub);
-	g_free(joindate);
 
 	return res;
 }
@@ -742,32 +722,27 @@ static int _handle_sort_args(DbmailMailbox *self, char **search_keys, search_key
 	} 
 	
 	else if ( MATCH(key, "from") ) {
-		_append_join_headervalue(value->table, "from");
-		_append_sort(value->order, "hvfrom.sortfield", reverse);
+		_append_sort(value->order, "v.sortfield", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "subject") ) {
-		_append_join_headervalue(value->table, "subject");
-		_append_sort(value->order, "hvsubject.headervalue", reverse);
+		_append_sort(value->order, "v.headervalue", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "cc") ) {
-		_append_join_headervalue(value->table, "cc");
-		_append_sort(value->order, "hvcc.sortfield", reverse);
+		_append_sort(value->order, "v.sortfield", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "to") ) {
-		_append_join_headervalue(value->table, "to");
-		_append_sort(value->order, "hvto.sortfield", reverse);
+		_append_sort(value->order, "v.sortfield", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "date") ) {
-		_append_join_headervalue(value->table, "date");
-		_append_sort(value->order, "hvdate.datefield", reverse);
+		_append_sort(value->order, "v.datefield", reverse);
 		(*idx)++;
 	}	
 
@@ -1315,7 +1290,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 }
 static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 {
-	char *qs, *date, *field, *d, *joinhdr;
+	char *qs, *date, *field, *d;
 	u64_t *k, *v, *w;
 	u64_t id;
 	char gt_lt = 0;
@@ -1356,15 +1331,15 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			g_free(date);
 			g_free(field);
 			
-			joinhdr=g_new0(char,MAX_SEARCH_LEN);
-			_append_join_headervalue(joinhdr, "date");
-
 			g_string_printf(q,"SELECT message_idnr FROM %smessages m "
-				"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-				"%s "
-				"WHERE mailbox_idnr=? AND status IN (?,?) "
-				"AND %s "
-				"ORDER BY message_idnr", DBPFX, DBPFX, joinhdr, t->str);
+					"JOIN %sheader h USING (physmessage_id) "
+					"JOIN %sheadername n ON h.headername_id = n.id "
+					"JOIN %sheadervalue v ON h.headervalue_id = v.id "
+					"WHERE m.mailbox_idnr=? AND m.status IN (?,?) "
+					"AND n.headername = 'date' "
+					"AND %s ORDER BY message_idnr", 
+					DBPFX, DBPFX, DBPFX, DBPFX,
+					t->str);
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
@@ -1375,22 +1350,23 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 				
 			case IST_HDR:
 			
-			joinhdr=g_new0(char,MAX_SEARCH_LEN);
-			_append_join_headervalue(joinhdr, s->hdrfld);
-
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
-				"JOIN %sphysmessage p ON m.physmessage_id=p.id "
-				"%s "
-				"WHERE mailbox_idnr=? AND status IN (?,?) AND hv%s.headervalue %s ? "
-				"ORDER BY message_idnr",
-				DBPFX, DBPFX, joinhdr,
-				s->hdrfld, db_get_sql(SQL_INSENSITIVE_LIKE));
+					"JOIN %sheader h USING (physmessage_id) "
+					"JOIN %sheadername n ON h.headername_id = n.id "
+					"JOIN %sheadervalue v ON h.headervalue_id = v.id "
+					"WHERE mailbox_idnr=? AND status IN (?,?) "
+					"AND n.headername = lower('%s') AND v.headervalue %s ? "
+					"ORDER BY message_idnr",
+					DBPFX, DBPFX, DBPFX, DBPFX,
+					s->hdrfld, db_get_sql(SQL_INSENSITIVE_LIKE));
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
 			db_stmt_set_int(st, 2, MESSAGE_STATUS_NEW);
 			db_stmt_set_int(st, 3, MESSAGE_STATUS_SEEN);
-			db_stmt_set_str(st, 4, s->search);
+			memset(partial,0,sizeof(partial));
+			snprintf(partial, DEF_FRAGSIZE, "%%%s%%", s->search);
+			db_stmt_set_str(st, 4, partial);
 
 			break;
 
@@ -1423,10 +1399,10 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 				
 			case IST_IDATE:
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
-				 "JOIN %sphysmessage p ON m.physmessage_id=p.id "
-				 "WHERE mailbox_idnr = ? AND status IN (?,?) AND p.%s "
-				 "ORDER BY message_idnr", 
-				 DBPFX, DBPFX, s->search);
+					"JOIN %sphysmessage p ON m.physmessage_id=p.id "
+					"WHERE mailbox_idnr = ? AND status IN (?,?) AND p.%s "
+					"ORDER BY message_idnr", 
+					DBPFX, DBPFX, s->search);
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
@@ -1437,15 +1413,15 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_DATA_BODY:
 			g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "p.data");
 			g_string_printf(q,"SELECT m.message_idnr,p.data FROM %smimeparts p "
-				"JOIN %spartlists l ON p.id=l.part_id "
-				"JOIN %sphysmessage s ON l.physmessage_id=s.id "
-				"JOIN %smessages m ON m.physmessage_id=s.id "
-				"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
-				"WHERE b.mailbox_idnr=? AND m.status IN (?,?) "
-				"AND (l.part_key > 1 OR l.is_header=0) "
-				"GROUP BY m.message_idnr,p.data HAVING %s %s ?;",
-				DBPFX,DBPFX,DBPFX,DBPFX,DBPFX,
-				t->str, db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
+					"JOIN %spartlists l ON p.id=l.part_id "
+					"JOIN %sphysmessage s ON l.physmessage_id=s.id "
+					"JOIN %smessages m ON m.physmessage_id=s.id "
+					"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
+					"WHERE b.mailbox_idnr=? AND m.status IN (?,?) "
+					"AND (l.part_key > 1 OR l.is_header=0) "
+					"GROUP BY m.message_idnr,p.data HAVING %s %s ?",
+					DBPFX,DBPFX,DBPFX,DBPFX,DBPFX,
+					t->str, db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
