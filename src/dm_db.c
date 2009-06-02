@@ -1876,12 +1876,12 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 
 	mailbox_like = mailbox_match_new(name); 
 	qs = g_string_new("");
-	g_string_printf(qs, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr= ? ", DBPFX);
+	g_string_printf(qs, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr = ? ", DBPFX);
 
 	if (mailbox_like->insensitive)
-		g_string_append_printf(qs, " AND name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
+		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
 	if (mailbox_like->sensitive)
-		g_string_append_printf(qs, " AND name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
+		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
 
 	p=1;
 	TRY

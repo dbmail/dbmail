@@ -1177,11 +1177,6 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
         return (int)(l-j);
 }
 
-int dbmail_imap_session_readln(ImapSession *self, char * buffer)
-{
-	return (int) ci_readln(self->ci, buffer);
-}
-	
 int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password)
 {
 	u64_t userid = 0;

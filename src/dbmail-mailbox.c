@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
+  Copyright (c) 2004-2009 NFG Net Facilities Group BV support@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -173,14 +173,14 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 	k = 0;
 	date2char_str("internal_date", &frag);
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
-		 "FROM %smessages msg, %sphysmessage pm "
-		 "WHERE pm.id = msg.physmessage_id "
-		 "AND mailbox_idnr = %llu AND status IN (%d,%d) "
-		 "ORDER BY message_idnr ASC",
-		 frag ,DBPFX,DBPFX, self->id,
-		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
+			"draft_flag, recent_flag, %s, rfcsize, message_idnr "
+			"FROM %smessages m "
+			"JOIN %sphysmessage p ON p.id = m.physmessage_id "
+			"AND mailbox_idnr = %llu AND status IN (%d,%d) "
+			"ORDER BY message_idnr ASC",
+			frag ,DBPFX,DBPFX, self->id,
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	mailbox_uid_msn_new(self);
 	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,NULL,(GDestroyNotify)g_free);
@@ -1244,12 +1244,13 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 	if (s->searched) return FALSE;
 
 	q = g_string_new("");
-	g_string_printf(q, "SELECT message_idnr FROM %smessages m "
-			 "LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
-			 "%s"
-			 "WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) " 
-			 "ORDER BY %smessage_idnr", DBPFX, DBPFX, s->table,
-			 dbmail_mailbox_get_id(self), MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, s->order);
+        g_string_printf(q, "SELECT message_idnr FROM %smessages m "
+                "JOIN %sheader h USING (physmessage_id) "
+                "JOIN %sheadername n ON h.headername_id = n.id "
+                "JOIN %sheadervalue v ON h.headervalue_id = v.id "
+                "WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) " 
+                "ORDER BY %smessage_idnr", DBPFX, DBPFX, DBPFX, DBPFX,
+                dbmail_mailbox_get_id(self), MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, s->order);
 
         if (self->sorted) {
                 g_list_destroy(self->sorted);

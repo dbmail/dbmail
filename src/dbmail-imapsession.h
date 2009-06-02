@@ -87,9 +87,6 @@ void dbmail_imap_session_args_free(ImapSession *self, gboolean all);
 void dbmail_imap_session_fetch_free(ImapSession *self);
 void dbmail_imap_session_delete(ImapSession * self);
 
-int dbmail_imap_session_readln(ImapSession * self, char * buffer);
-int dbmail_imap_session_discard_to_eol(ImapSession *self);
-
 void dbmail_imap_session_buff_clear(ImapSession *self);
 void dbmail_imap_session_buff_flush(ImapSession *self);
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...);
