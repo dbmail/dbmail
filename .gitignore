@@ -1,2 +1,4 @@
 cscope.out
 *.swp
+*.o
+*.lo

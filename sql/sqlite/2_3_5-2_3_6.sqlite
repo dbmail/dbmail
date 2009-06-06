@@ -188,6 +188,37 @@ CREATE TRIGGER fk_delete_header_headervalue_id
 		DELETE FROM dbmail_header WHERE headervalue_id = OLD.id;
 	END;
 
+CREATE VIEW dbmail_fromfield AS
+        SELECT physmessage_id,sortfield AS fromfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='from';
+
+CREATE VIEW dbmail_ccfield AS
+        SELECT physmessage_id,sortfield AS ccfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='cc';
+
+CREATE VIEW dbmail_tofield AS
+        SELECT physmessage_id,sortfield AS tofield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='to';
+
+CREATE VIEW dbmail_subjectfield AS
+        SELECT physmessage_id,headervalue AS subjectfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='subject';
 
 
 commit;

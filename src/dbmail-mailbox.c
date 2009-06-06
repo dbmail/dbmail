@@ -685,6 +685,15 @@ static int append_search(DbmailMailbox *self, search_key_t *value, gboolean desc
 	return 0;
 }
 
+static void _append_join(char *join, char *table)
+{
+        char *tmp;
+        TRACE(TRACE_DEBUG,"%s", table);
+        tmp = g_strdup_printf("LEFT JOIN %s%s ON m.physmessage_id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
+        g_strlcat(join, tmp, MAX_SEARCH_LEN);
+        g_free(tmp);
+}
+
 static void _append_sort(char *order, char *field, gboolean reverse)
 {
 	char *tmp;
@@ -722,22 +731,26 @@ static int _handle_sort_args(DbmailMailbox *self, char **search_keys, search_key
 	} 
 	
 	else if ( MATCH(key, "from") ) {
-		_append_sort(value->order, "v.sortfield", reverse);
+		_append_join(value->table, "fromfield");
+		_append_sort(value->order, "fromfield", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "subject") ) {
-		_append_sort(value->order, "v.headervalue", reverse);
+		_append_join(value->table, "subjectfield");
+		_append_sort(value->order, "subjectfield", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "cc") ) {
-		_append_sort(value->order, "v.sortfield", reverse);
+		_append_join(value->table, "ccfield");
+		_append_sort(value->order, "ccfield", reverse);
 		(*idx)++;
 	} 
 	
 	else if ( MATCH(key, "to") ) {
-		_append_sort(value->order, "v.sortfield", reverse);
+		_append_join(value->table, "tofield");
+		_append_sort(value->order, "tofield", reverse);
 		(*idx)++;
 	} 
 	
@@ -1244,13 +1257,12 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 	if (s->searched) return FALSE;
 
 	q = g_string_new("");
-        g_string_printf(q, "SELECT message_idnr FROM %smessages m "
-                "JOIN %sheader h USING (physmessage_id) "
-                "JOIN %sheadername n ON h.headername_id = n.id "
-                "JOIN %sheadervalue v ON h.headervalue_id = v.id "
-                "WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) " 
-                "ORDER BY %smessage_idnr", DBPFX, DBPFX, DBPFX, DBPFX,
-                dbmail_mailbox_get_id(self), MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, s->order);
+	g_string_printf(q, "SELECT message_idnr FROM %smessages m "
+			"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
+			"%s"
+			"WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) "
+			"ORDER BY %smessage_idnr", DBPFX, DBPFX, s->table,
+			dbmail_mailbox_get_id(self), MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, s->order);
 
         if (self->sorted) {
                 g_list_destroy(self->sorted);

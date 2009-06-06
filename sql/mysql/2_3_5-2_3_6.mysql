@@ -118,6 +118,39 @@ CREATE TABLE `dbmail_header` (
   CONSTRAINT `dbmail_header_ibfk_3` FOREIGN KEY (`headervalue_id`) REFERENCES `dbmail_headervalue` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+-- views for IMAP sort
+
+CREATE VIEW dbmail_fromfield AS 
+	SELECT physmessage_id,sortfield AS fromfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='from';
+
+CREATE VIEW dbmail_ccfield AS 
+	SELECT physmessage_id,sortfield AS ccfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='cc';
+
+CREATE VIEW dbmail_tofield AS 
+	SELECT physmessage_id,sortfield AS tofield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='to';
+
+CREATE VIEW dbmail_subjectfield AS 
+	SELECT physmessage_id,headervalue AS subjectfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='subject';
 
 -- Add new delivery sorting filters table
 DROP TABLE IF EXISTS dbmail_filters;

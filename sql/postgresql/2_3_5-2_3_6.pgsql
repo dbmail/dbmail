@@ -1,19 +1,25 @@
-
-begin;
-drop table if exists dbmail_auto_replies;
-drop table if exists dbmail_auto_notifications;
-drop table if exists dbmail_ccfield;
-drop table if exists dbmail_datefield;
-drop table if exists dbmail_fromfield;
-drop table if exists dbmail_replytofield;
-drop table if exists dbmail_subjectfield;
-drop table if exists dbmail_tofield;
-delete from dbmail_referencesfield;
-
-
+BEGIN;
 ALTER TABLE dbmail_acl ADD COLUMN deleted_flag INT2 DEFAULT '0' NOT NULL;
 ALTER TABLE dbmail_acl ADD COLUMN expunge_flag INT2 DEFAULT '0' NOT NULL;
 UPDATE dbmail_acl SET deleted_flag=delete_flag, expunge_flag=delete_flag;
+COMMIT;
+
+BEGIN;
+DROP TABLE IF EXISTS dbmail_auto_replies;
+DROP TABLE IF EXISTS dbmail_auto_notifications;
+DROP TABLE IF EXISTS dbmail_ccfield;
+DROP SEQUENCE IF EXISTS dbmail_ccfield_idnr_seq;
+DROP TABLE IF EXISTS dbmail_datefield;
+DROP SEQUENCE IF EXISTS dbmail_datefield_idnr_seq;
+DROP TABLE IF EXISTS dbmail_fromfield;
+DROP SEQUENCE IF EXISTS dbmail_fromfield_idnr_seq;
+DROP TABLE IF EXISTS dbmail_replytofield;
+DROP SEQUENCE IF EXISTS dbmail_replytofield_idnr_seq;
+DROP TABLE IF EXISTS dbmail_subjectfield;
+DROP SEQUENCE IF EXISTS dbmail_subjectfield_idnr_seq;
+DROP TABLE IF EXISTS dbmail_tofield;
+DROP SEQUENCE IF EXISTS dbmail_tofield_idnr_seq;
+DELETE FROM dbmail_referencesfield;
 
 DROP TABLE if exists dbmail_headervalue CASCADE;
 DROP TABLE if exists dbmail_headername CASCADE;
@@ -54,6 +60,39 @@ CREATE TABLE dbmail_header (
                 ON UPDATE CASCADE ON DELETE CASCADE,
         PRIMARY KEY (physmessage_id,headername_id,headervalue_id)
 );
+
+CREATE VIEW dbmail_fromfield AS
+        SELECT physmessage_id,sortfield AS fromfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='from';
+
+CREATE VIEW dbmail_ccfield AS
+        SELECT physmessage_id,sortfield AS ccfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='cc';
+
+CREATE VIEW dbmail_tofield AS
+        SELECT physmessage_id,sortfield AS tofield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='to';
+
+CREATE VIEW dbmail_subjectfield AS
+        SELECT physmessage_id,headervalue AS subjectfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='subject';
+
 COMMIT;
 
 BEGIN;
