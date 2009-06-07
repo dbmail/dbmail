@@ -755,6 +755,12 @@ static int _handle_sort_args(DbmailMailbox *self, char **search_keys, search_key
 	} 
 	
 	else if ( MATCH(key, "date") ) {
+		char *tmp = g_strdup_printf("JOIN %sheader h USING (physmessage_id) "
+				"JOIN %sheadername n ON h.headername_id = n.id "
+				"JOIN %sheadervalue v ON h.headervalue_id = v.id ",
+				DBPFX, DBPFX, DBPFX);
+		g_strlcat(value->table, tmp, MAX_SEARCH_LEN);
+		g_free(tmp);
 		_append_sort(value->order, "v.datefield", reverse);
 		(*idx)++;
 	}	
