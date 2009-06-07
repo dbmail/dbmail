@@ -982,12 +982,12 @@ int do_header_cache(void)
 		serious_errors = 1;
 		return -1;
 	}
-
+/*
 	if (do_is_header()) {
 		serious_errors = 1;
 		return -1;
 	}
-	
+*/	
 	if (do_envelope()) {
 		serious_errors = 1;
 		return -1;
