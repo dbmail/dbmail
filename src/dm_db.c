@@ -184,6 +184,10 @@ int db_connect(void)
 				g_string_append_printf(dsn,"&charset=%s", _db_params.encoding);
 		}
 	}
+
+	if (_db_params.sock && strlen((const char *)_db_params.sock))
+		g_string_append_printf(dsn,"&unix-socket=%s", _db_params.sock);
+
 	TRACE(TRACE_DATABASE, "db at url: [%s]", dsn->str);
 	url = URL_new(dsn->str);
 	db_connected = 1;
