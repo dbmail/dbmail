@@ -2396,66 +2396,6 @@ static int send_notification(DbmailMessage *message UNUSED, const char *to)
 }
 
 
-	
-/*
- * Send an automatic reply.
- */
-#define REPLY_DAYS 7
-static int send_reply(DbmailMessage *message, const char *body)
-{
-	const char *from, *to, *subject;
-	const char *x_dbmail_reply;
-	int result;
-
-	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
-	if (x_dbmail_reply) {
-		TRACE(TRACE_NOTICE, "reply loop detected [%s]", x_dbmail_reply);
-		return 0;
-	}
-	
-	subject = dbmail_message_get_header(message, "Subject");
-
-	from = dbmail_message_get_header(message, "Delivered-To");
-	if (!from)
-		from = message->envelope_recipient->str;
-	if (!from)
-		from = ""; // send_mail will change this to DEFAULT_POSTMASTER
-
-	to = dbmail_message_get_header(message, "Reply-To");
-	if (!to)
-		to = dbmail_message_get_header(message, "Return-Path");
-	if (!to) {
-		TRACE(TRACE_ERR, "no address to send to");
-		return 0;
-	}
-	if (!valid_sender(to)) {
-		TRACE(TRACE_DEBUG, "sender invalid. skip auto-reply.");
-		return 0;
-	}
-
-	if (db_replycache_validate(to, from, "replycache", REPLY_DAYS) != DM_SUCCESS) {
-		TRACE(TRACE_DEBUG, "skip auto-reply");
-		return 0;
-	}
-
-	char *newsubject = g_strconcat("Re: ", subject, NULL);
-
-	DbmailMessage *new_message = dbmail_message_new();
-	new_message = dbmail_message_construct(new_message, from, to, newsubject, body);
-	dbmail_message_set_header(new_message, "X-DBMail-Reply", from);
-
-	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
-
-	if (result == 0) {
-		db_replycache_register(to, from, "replycache");
-	}
-
-	g_free(newsubject);
-	dbmail_message_free(new_message);
-
-	return result;
-}
-
 /* Here's the real *meat* of this source file!
  *
  * Function: insert_messages()
