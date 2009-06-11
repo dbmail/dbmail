@@ -542,10 +542,48 @@ CREATE TRIGGER fk_delete_header_headervalue_id
 	END;
 
 
--- Provide separate storage of commonly used headers
 
--- These fields will typically be preparsed as specified by 
--- http://www.ietf.org/internet-drafts/draft-ietf-imapext-sort-17.txt
+CREATE VIEW dbmail_fromfield AS
+        SELECT physmessage_id,sortfield AS fromfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='from';
+
+CREATE VIEW dbmail_ccfield AS
+        SELECT physmessage_id,sortfield AS ccfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='cc';
+
+CREATE VIEW dbmail_tofield AS
+        SELECT physmessage_id,sortfield AS tofield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='to';
+
+CREATE VIEW dbmail_subjectfield AS
+        SELECT physmessage_id,headervalue AS subjectfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='subject';
+
+CREATE VIEW dbmail_datefield AS
+        SELECT physmessage_id,datefield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='date';
+
+
 
 -- Threading
 

@@ -93,6 +93,15 @@ CREATE VIEW dbmail_subjectfield AS
         JOIN dbmail_headervalue v ON h.headervalue_id = v.id
 WHERE n.headername='subject';
 
+CREATE VIEW dbmail_datefield AS
+        SELECT physmessage_id,datefield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='date';
+
+
 COMMIT;
 
 BEGIN;

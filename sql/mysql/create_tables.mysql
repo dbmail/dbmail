@@ -147,6 +147,52 @@ CREATE TABLE `dbmail_headervalue` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
+-- views for IMAP sort
+--
+
+CREATE VIEW dbmail_fromfield AS 
+	SELECT physmessage_id,sortfield AS fromfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='from';
+
+CREATE VIEW dbmail_ccfield AS 
+	SELECT physmessage_id,sortfield AS ccfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='cc';
+
+CREATE VIEW dbmail_tofield AS 
+	SELECT physmessage_id,sortfield AS tofield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='to';
+
+CREATE VIEW dbmail_subjectfield AS 
+	SELECT physmessage_id,headervalue AS subjectfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='subject';
+
+CREATE VIEW dbmail_datefield AS 
+	SELECT physmessage_id,datefield
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='date';
+
+
+
+--
 -- Table structure for table `dbmail_keywords`
 --
 
@@ -183,23 +229,6 @@ CREATE TABLE `dbmail_mailboxes` (
   KEY `owner_idnr_index` (`owner_idnr`),
   KEY `seq_index` (`seq`),
   CONSTRAINT `dbmail_mailboxes_ibfk_1` FOREIGN KEY (`owner_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
---
--- Table structure for table `dbmail_messageblks`
---
-
-DROP TABLE IF EXISTS `dbmail_messageblks`;
-CREATE TABLE `dbmail_messageblks` (
-  `messageblk_idnr` bigint(20) NOT NULL auto_increment,
-  `physmessage_id` bigint(20) NOT NULL default '0',
-  `messageblk` longblob NOT NULL,
-  `blocksize` bigint(20) NOT NULL default '0',
-  `is_header` tinyint(1) NOT NULL default '0',
-  PRIMARY KEY  (`messageblk_idnr`),
-  KEY `physmessage_id_index` (`physmessage_id`),
-  KEY `physmessage_id_is_header_index` (`physmessage_id`,`is_header`),
-  CONSTRAINT `dbmail_messageblks_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --

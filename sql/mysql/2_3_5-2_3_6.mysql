@@ -124,6 +124,7 @@ CREATE TABLE `dbmail_header` (
 
 -- views for IMAP sort
 
+DROP VIEW IF EXISTS dbmail_fromfield;
 CREATE VIEW dbmail_fromfield AS 
 	SELECT physmessage_id,sortfield AS fromfield 
 	FROM dbmail_messages m 
@@ -132,6 +133,7 @@ CREATE VIEW dbmail_fromfield AS
 	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
 WHERE n.headername='from';
 
+DROP VIEW IF EXISTS dbmail_ccfield;
 CREATE VIEW dbmail_ccfield AS 
 	SELECT physmessage_id,sortfield AS ccfield 
 	FROM dbmail_messages m 
@@ -140,6 +142,7 @@ CREATE VIEW dbmail_ccfield AS
 	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
 WHERE n.headername='cc';
 
+DROP VIEW IF EXISTS dbmail_tofield;
 CREATE VIEW dbmail_tofield AS 
 	SELECT physmessage_id,sortfield AS tofield 
 	FROM dbmail_messages m 
@@ -148,6 +151,7 @@ CREATE VIEW dbmail_tofield AS
 	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
 WHERE n.headername='to';
 
+DROP VIEW IF EXISTS dbmail_subjectfield;
 CREATE VIEW dbmail_subjectfield AS 
 	SELECT physmessage_id,headervalue AS subjectfield 
 	FROM dbmail_messages m 
@@ -155,6 +159,17 @@ CREATE VIEW dbmail_subjectfield AS
 	JOIN dbmail_headername n ON h.headername_id = n.id 
 	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
 WHERE n.headername='subject';
+
+DROP VIEW IF EXISTS dbmail_datefield;
+CREATE VIEW dbmail_datefield AS 
+	SELECT physmessage_id,datefield
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='date';
+
+
 
 -- Add new delivery sorting filters table
 DROP TABLE IF EXISTS dbmail_filters;
