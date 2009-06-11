@@ -203,12 +203,12 @@ int db_connect(void)
 		TRACE(TRACE_INFO,"database connection pool created with maximum connections of [%d]", _db_params.max_db_connections);
 	}
 
+	ConnectionPool_setReaper(pool, sweepInterval);
+	TRACE(TRACE_DATABASE, "run a database connection reaper thread every [%d] seconds", sweepInterval);
+
 	ConnectionPool_start(pool);
 	TRACE(TRACE_DATABASE, "database connection pool started with [%d] connections, max [%d]", 
 		ConnectionPool_getInitialConnections(pool), ConnectionPool_getMaxConnections(pool));
-
-	ConnectionPool_setReaper(pool, sweepInterval);
-	TRACE(TRACE_DATABASE, "run a database connection reaper thread every [%d] seconds", sweepInterval);
 
 	if (! (c = ConnectionPool_getConnection(pool))) {
 		db_con_close(c);
