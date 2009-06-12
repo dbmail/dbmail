@@ -316,6 +316,7 @@ gboolean db_exec(C c, const char *q, ...)
 		gettimeofday(&after, NULL);
 		result = TRUE;
 	CATCH(SQLException)
+		result = FALSE;
 		LOG_SQLERROR;
 		TRACE(TRACE_ERR,"failed query [%s]", query);
 	END_TRY;

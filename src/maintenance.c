@@ -61,6 +61,7 @@ static int do_check_iplog(const char *timespec);
 static int do_check_replycache(const char *timespec);
 static int do_vacuum_db(void);
 static int do_rehash(void);
+static int do_migrate(int migrate_limit);
 
 int do_showhelp(void) {
 	printf("*** dbmail-util ***\n");
@@ -82,6 +83,8 @@ int do_showhelp(void) {
 	"     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
 	"               the time syntax is [<hours>h][<minutes>m]\n"
 	"               valid examples: 72h, 4h5m, 10m\n"
+	"     -M        migrate legacy 2.2.x messageblks to mimeparts table\n"
+	"     -m limit  limit migration to [limit] number of physmessages. Default 10000 per run\n"
 	"\nCommon options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
 	"     -q        quietly skip interactive prompts\n"
@@ -106,6 +109,7 @@ int main(int argc, char *argv[])
 	int show_help = 0;
 	int do_nothing = 1;
 	int is_header = 0;
+	int migrate = 0, migrate_limit = 10000;
 	static struct option long_options[] = {
 		{ "rehash", 0, 0, 0 },
 		{ 0, 0, 0, 0 }
@@ -119,7 +123,7 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt_long(argc, argv, "-acbtl:r:puds" "i" "f:qnyvVh", long_options, &opt_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, "-acbtl:r:pudsMm:" "i" "f:qnyvVh", long_options, &opt_index)) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
@@ -187,6 +191,15 @@ int main(int argc, char *argv[])
 			do_nothing = 0;
 			if (optarg)
 				timespec_replycache = g_strdup(optarg);
+			break;
+
+		case 'M':
+			migrate = 1;
+			do_nothing = 0;
+			break;
+		case 'm':
+			if (optarg)
+				migrate_limit = atoi(optarg);
 			break;
 
 		case 'i':
@@ -278,6 +291,7 @@ int main(int argc, char *argv[])
 	if (check_replycache) do_check_replycache(timespec_replycache);
 	if (vacuum_db) do_vacuum_db();
 	if (rehash) do_rehash();
+	if (migrate) do_migrate(migrate_limit);
 
 	if (!has_errors && !serious_errors) {
 		qprintf("\nMaintenance done. No errors found.\n");
@@ -1134,6 +1148,55 @@ int do_rehash(void)
 
 	return 0;
 
+}
+
+int do_migrate(int migrate_limit)
+{
+	C c; R r;
+	int id = 0;
+	int count = 0;
+	DbmailMessage *m;
+	
+	qprintf ("Mirgrate legacy 2.2.x messageblks to mimeparts...\n");
+	if (!yes_to_all) {
+		qprintf ("\tmigration skipped. Use -y option to perform mirgration.\n");
+		return 0;
+	}
+	qprintf ("Preparing to migrate %d physmessages.\n", migrate_limit);
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT DISTINCT(physmessage_id) FROM %smessageblks LIMIT %d", DBPFX, migrate_limit);
+		qprintf ("Migrating physmessages...\n", migrate_limit);
+		while (db_result_next(r))
+		{
+			count++;
+			id = db_result_get_u64(r,0);
+			if(verbose) qprintf ("migrating physmessage_id %d ",id);
+			m = dbmail_message_new();
+			m = dbmail_message_retrieve(m, id, DBMAIL_MESSAGE_FILTER_FULL);
+			if(!dm_message_store(m))
+			{
+				if(verbose) qprintf ("ok\n",id);
+				db_update("DELETE FROM %smessageblks WHERE physmessage_id = %d", DBPFX, id);
+			}
+			else
+			{
+				if(!verbose) qprintf ("migrating physmessage_id %d ",id);
+				qprintf ("failed\n");
+				return -1;
+			}
+			dbmail_message_free(m);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		return -1;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	
+	qprintf ("Migration complete. Migrated %d physmessages.\n", count);
+	return 0;
 }
 
 /* Makes a date/time string: YYYY-MM-DD HH:mm:ss

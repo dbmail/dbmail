@@ -61,6 +61,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 
 int dbmail_message_store(DbmailMessage *message);
 int dbmail_message_cache_headers(const DbmailMessage *message);
+gboolean dm_message_store(DbmailMessage *m);
 
 DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int filter);
 

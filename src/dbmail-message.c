@@ -436,30 +436,33 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 static gboolean store_mime_object(GMimeObject *object, DbmailMessage *m);
 
-static void store_head(GMimeObject *object, DbmailMessage *m)
+static int store_head(GMimeObject *object, DbmailMessage *m)
 {
+	int r;
 	char *head = g_mime_object_get_headers(object);
-	store_blob(m, head, 1);
+	r = store_blob(m, head, 1);
 	g_free(head);
+	return r;
 }
 
-static void store_body(GMimeObject *object, DbmailMessage *m)
+static int store_body(GMimeObject *object, DbmailMessage *m)
 {
+	int r;
 	char *text = g_mime_object_get_body(object);
 	if (! text)
 		return;
 
-	store_blob(m, text, 0);
+	r = store_blob(m, text, 0);
 	g_free(text);
+	return r;
 }
 
 
 static gboolean store_mime_text(GMimeObject *object, DbmailMessage *m, gboolean skiphead)
 {
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
-
-	if (! skiphead) store_head(object, m);
-	store_body(object, m);
+	if (! skiphead && store_head(object, m) < 0) return TRUE;
+	if(store_body(object, m) < 0) return TRUE;
 
 	return FALSE;
 }
@@ -473,10 +476,10 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 
 	boundary = g_mime_content_type_get_parameter(content_type,"boundary");
 
-	if (! skiphead) store_head(object,m);
+	if (! skiphead && store_head(object,m) < 0) return TRUE;
 
-	if (g_mime_content_type_is_type(content_type, "multipart", "*"))
-		store_blob(m, g_mime_multipart_get_preface((GMimeMultipart *)object), 0);
+	if (g_mime_content_type_is_type(content_type, "multipart", "*") &&
+		store_blob(m, g_mime_multipart_get_preface((GMimeMultipart *)object), 0) < 0) return TRUE;
 
 	if (boundary) {
 		m->part_depth++;
@@ -492,27 +495,28 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 		m->part_order=n;
 	}
 
-	if (g_mime_content_type_is_type(content_type, "multipart", "*"))
-		store_blob(m, g_mime_multipart_get_postface((GMimeMultipart *)object), 0);
+	if (g_mime_content_type_is_type(content_type, "multipart", "*") &&
+		store_blob(m, g_mime_multipart_get_postface((GMimeMultipart *)object), 0) < 0) return TRUE;
 
 	return FALSE;
 }
 
 static gboolean store_mime_message(GMimeObject * object, DbmailMessage *m, gboolean skiphead)
 {
+	gboolean r;
 	GMimeMessage *m2;
 
-	if (! skiphead) store_head(object, m);
+	if (! skiphead && store_head(object, m) < 0) return TRUE;
 
 	m2 = g_mime_message_part_get_message(GMIME_MESSAGE_PART(object));
 
 	g_return_val_if_fail(GMIME_IS_MESSAGE(m2), TRUE);
 
-	store_mime_object(GMIME_OBJECT(m2), m);
+	r = store_mime_object(GMIME_OBJECT(m2), m);
 
 	g_object_unref(m2);
 	
-	return FALSE;
+	return r;
 	
 }
 
@@ -528,7 +532,7 @@ gboolean store_mime_object(GMimeObject *object, DbmailMessage *m)
 	if (GMIME_IS_MESSAGE(object)) {
 		dprint("\n<message>\n");
 
-		store_head(object,m);
+		if(store_head(object,m) < 0) return TRUE;
 
 		// we need to skip the first (post-rfc822) mime-headers
 		// of the mime_part because they are already included as
@@ -550,8 +554,9 @@ gboolean store_mime_object(GMimeObject *object, DbmailMessage *m)
 
 	else if (g_mime_content_type_is_type(content_type, "text","*"))
 		if (GMIME_IS_MESSAGE(object))
-			store_body(object,m);
-		else
+		{
+			if(store_body(object,m) < 0) r = TRUE;
+		} else
 			r = store_mime_text((GMimeObject *)mime_part, m, skiphead);
 	else
 		r = store_mime_text((GMimeObject *)mime_part, m, skiphead);
@@ -565,7 +570,7 @@ gboolean store_mime_object(GMimeObject *object, DbmailMessage *m)
 }
 
 
-static gboolean _dm_message_store(DbmailMessage *m)
+gboolean dm_message_store(DbmailMessage *m)
 {
 	gboolean r;
 	r = store_mime_object((GMimeObject *)m->content, m);
@@ -1311,7 +1316,7 @@ int dbmail_message_store(DbmailMessage *self)
 		hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
 		body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
 
-		if ((res = _dm_message_store(self))) {
+		if ((res = dm_message_store(self))) {
 			TRACE(TRACE_WARNING,"Failed to store mimeparts");
 			usleep(delay*i);
 			continue;
