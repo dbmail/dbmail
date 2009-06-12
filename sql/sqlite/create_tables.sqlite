@@ -738,6 +738,7 @@ CREATE TABLE dbmail_partlists (
 
 CREATE INDEX dbmail_partlists_1 ON dbmail_partlists(physmessage_id);
 CREATE INDEX dbmail_partlists_2 ON dbmail_partlists(part_id);
+CREATE UNIQUE INDEX message_parts ON dbmail_partlists(physmessage_id, part_key, part_depth, part_order);
 
 -- ALTER TABLE ONLY dbmail_partlists
 --    ADD CONSTRAINT dbmail_partlists_part_id_fkey FOREIGN KEY (part_id) REFERENCES dbmail_mimeparts(id) ON UPDATE CASCADE ON DELETE CASCADE;

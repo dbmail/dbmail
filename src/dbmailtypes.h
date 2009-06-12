@@ -305,7 +305,7 @@ typedef struct  {
 
 //
 
-#define TLS_SEGMENT  4096
+#define TLS_SEGMENT	262144
 #define CLIENT_OK	0
 #define CLIENT_AGAIN	1
 #define CLIENT_ERR	2

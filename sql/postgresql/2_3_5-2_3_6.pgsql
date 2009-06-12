@@ -118,3 +118,6 @@ CREATE TABLE dbmail_filters (
 );
 COMMIT;
 
+BEGIN;
+CREATE UNIQUE INDEX message_parts ON dbmail_partlists(physmessage_id, part_key, part_depth, part_order);
+COMMIT;

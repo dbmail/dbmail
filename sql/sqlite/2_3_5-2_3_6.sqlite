@@ -291,3 +291,8 @@ CREATE TRIGGER fk_delete_filters_users_user_idnr
 	END;
 
 COMMIT;
+
+BEGIN TRANSACTION;
+CREATE UNIQUE INDEX message_parts ON dbmail_partlists(physmessage_id, part_key, part_depth, part_order);
+COMMIT;
+
