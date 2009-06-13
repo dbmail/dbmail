@@ -213,47 +213,6 @@ CREATE TABLE dbmail_header (
 );
 
 
-CREATE VIEW dbmail_fromfield AS
-        SELECT physmessage_id,sortfield AS fromfield
-        FROM dbmail_messages m
-        JOIN dbmail_header h USING (physmessage_id)
-        JOIN dbmail_headername n ON h.headername_id = n.id
-        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
-WHERE n.headername='from';
-
-CREATE VIEW dbmail_ccfield AS
-        SELECT physmessage_id,sortfield AS ccfield
-        FROM dbmail_messages m
-        JOIN dbmail_header h USING (physmessage_id)
-        JOIN dbmail_headername n ON h.headername_id = n.id
-        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
-WHERE n.headername='cc';
-
-CREATE VIEW dbmail_tofield AS
-        SELECT physmessage_id,sortfield AS tofield
-        FROM dbmail_messages m
-        JOIN dbmail_header h USING (physmessage_id)
-        JOIN dbmail_headername n ON h.headername_id = n.id
-        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
-WHERE n.headername='to';
-
-CREATE VIEW dbmail_subjectfield AS
-        SELECT physmessage_id,headervalue AS subjectfield
-        FROM dbmail_messages m
-        JOIN dbmail_header h USING (physmessage_id)
-        JOIN dbmail_headername n ON h.headername_id = n.id
-        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
-WHERE n.headername='subject';
-
-CREATE VIEW dbmail_datefield AS
-        SELECT physmessage_id,datefield
-        FROM dbmail_messages m
-        JOIN dbmail_header h USING (physmessage_id)
-        JOIN dbmail_headername n ON h.headername_id = n.id
-        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
-WHERE n.headername='date';
-
-
 CREATE SEQUENCE dbmail_referencesfield_idnr_seq;
 CREATE TABLE dbmail_referencesfield (
         physmessage_id  INT8 NOT NULL
@@ -348,4 +307,46 @@ CREATE TABLE dbmail_filters (
 	mailbox      varchar(100) NOT NULL,	
 	PRIMARY KEY (user_id, id)
 );
+
+CREATE VIEW dbmail_fromfield AS
+        SELECT physmessage_id,sortfield AS fromfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='from';
+
+CREATE VIEW dbmail_ccfield AS
+        SELECT physmessage_id,sortfield AS ccfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='cc';
+
+CREATE VIEW dbmail_tofield AS
+        SELECT physmessage_id,sortfield AS tofield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='to';
+
+CREATE VIEW dbmail_subjectfield AS
+        SELECT physmessage_id,headervalue AS subjectfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='subject';
+
+CREATE VIEW dbmail_datefield AS
+        SELECT physmessage_id,datefield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='date';
+
+
 COMMIT;
