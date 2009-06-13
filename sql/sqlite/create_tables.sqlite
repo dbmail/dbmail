@@ -30,6 +30,26 @@ CREATE TABLE dbmail_aliases (
 CREATE INDEX dbmail_aliases_index_1 ON dbmail_aliases(alias);
 CREATE INDEX dbmail_aliases_index_2 ON dbmail_aliases(client_idnr);
 
+CREATE TABLE dbmail_authlog (
+  id INTEGER PRIMARY KEY,
+  userid TEXT,
+  service TEXT,
+  login_time DATETIME,
+  logout_time DATETIME,
+  ip_address TEXT,
+  src_port INTEGER,
+  session_id TEXT,
+  session_status TEXT DEFAULT 'active',
+  bytes_rx INTEGER DEFAULT '0' NOT NULL,
+  bytes_tx INTEGER DEFAULT '0' NOT NULL,
+);
+
+CREATE INDEX userid_1 ON dbmail_authlog(userid);
+CREATE INDEX ip_address_1 ON dbmail_authlog(ip_address);
+CREATE INDEX src_port_1 ON dbmail_authlog(src_port);
+CREATE INDEX session_id_1 ON dbmail_authlog (session_id);
+CREATE INDEX session_status_1 ON dbmail_authlog(session_status);
+
 CREATE TABLE dbmail_users (
    user_idnr INTEGER PRIMARY KEY,
    userid TEXT NOT NULL,

@@ -121,3 +121,27 @@ COMMIT;
 BEGIN;
 CREATE UNIQUE INDEX message_parts ON dbmail_partlists(physmessage_id, part_key, part_depth, part_order);
 COMMIT;
+
+BEGIN;
+DROP TABLE IF EXISTS dbmail_authlog;
+CREATE SEQUENCE dbmail_authlog_id_seq;
+CREATE TABLE dbmail_authlog (
+  id INT8 DEFAULT nextval('dbmail_authlog_id_seq'),
+  userid VARCHAR(100),
+  service VARCHAR(32),
+  login_time TIMESTAMP WITHOUT TIME ZONE,
+  logout_time TIMESTAMP WITHOUT TIME ZONE,
+  ip_address VARCHAR(16),
+  src_port INT8,
+  session_id VARCHAR(32),
+  session_status VARCHAR(32) DEFAULT 'active',
+  bytes_rx INT8 DEFAULT '0' NOT NULL,
+  bytes_tx INT8 DEFAULT '0' NOT NULL,
+);
+
+CREATE INDEX userid_1 ON dbmail_authlog(userid);
+CREATE INDEX ip_address_1 ON dbmail_authlog(ip_address);
+CREATE INDEX src_port_1 ON dbmail_authlog(src_port);
+CREATE INDEX session_id_1 ON dbmail_authlog (session_id);
+CREATE INDEX session_status_1 ON dbmail_authlog(session_status);
+COMMIT;

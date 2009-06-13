@@ -313,6 +313,8 @@ typedef struct  {
 
 typedef struct {
 	int rx, tx;			/* read and write filehandles */
+	u64_t bytes_rx;			/* read byte counter */
+	u64_t bytes_tx;			/* write byte counter */
 	SSL *ssl;                       /* SSL/TLS context for this client */
 	gboolean ssl_state;		/* SSL_accept done or not */
 	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
@@ -350,6 +352,7 @@ typedef struct {
 	clientbase_t *ci;
 	clientstate_t state;			/**< session state */
 	void (*handle_input) (void *);
+	void (*session_cleanup) (void *);	/* session cleanup */
 
 	int error_count;		/**< number of errors that have occured */
 	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */

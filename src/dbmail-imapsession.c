@@ -163,6 +163,9 @@ void dbmail_imap_session_delete(ImapSession * self)
 	TRACE(TRACE_DEBUG,"[%p]", self);
 	Cache_free(&self->cache);
 
+	db_update("UPDATE %sauthlog SET logout_time=NOW(), session_status='closed', bytes_rx='%d', bytes_tx='%d' WHERE ip_address='%s' AND src_port='%d' AND session_status='active' AND session_id='%p'",
+		DBPFX, (int *)self->ci->bytes_rx, (int *)self->ci->bytes_tx, (char *)self->ci->ip_src, (int *)self->ci->ip_src_port, self);
+
 	if (self->fi) {
 		dbmail_imap_session_bodyfetch_free(self);
 		g_free(self->fi);
@@ -1192,12 +1195,18 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 
 		case 0:
 			sleep(2);	/* security */
+			db_update("INSERT INTO %sauthlog (userid, service, login_time, logout_time, ip_address, src_port, session_id, session_status)"
+				" VALUES ('%s', 'imap', NOW(), NOW(), '%s', '%d', '%p', 'auth_failed')",
+				DBPFX, (char *)username, (char *)self->ci->ip_src, (int *)self->ci->ip_src_port, self);
 			dbmail_imap_session_buff_printf(self, "%s NO login rejected\r\n", self->tag);
 			TRACE(TRACE_NOTICE, "[%p] login rejected: user [%s] from [%s:%d]", self, username, self->ci->ip_src, self->ci->ip_src_port);
 			return 1;
 
 		case 1:
 			self->userid = userid;
+			db_update("INSERT INTO %sauthlog (userid, service, login_time, ip_address, src_port, session_id)"
+				" VALUES ('%s', 'imap', NOW(), '%s', '%d', '%p')",
+					DBPFX, (char *)username, (char *)self->ci->ip_src, (int *)self->ci->ip_src_port, self);
 			TRACE(TRACE_NOTICE, "[%p] login accepted: user [%s] from [%s:%d]", self, username, self->ci->ip_src, self->ci->ip_src_port);
 			break;
 

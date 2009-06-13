@@ -28,6 +28,30 @@ SET FOREIGN_KEY_CHECKS=0;
 -- Table structure for table `dbmail_acl`
 --
 
+CREATE TABLE `dbmail_authlog` (
+  `id` bigint(20) NOT NULL auto_increment,
+  `userid` varchar(100) default NULL,
+  `service` varchar(32) default NULL,
+  `login_time` datetime default NULL,
+  `logout_time` datetime default NULL,
+  `ip_address` varchar(16) default NULL,
+  `src_port` int(11) default NULL,
+  `session_id` varchar(32) default NULL,
+  `session_status` varchar(32) default 'active',
+  `bytes_rx` bigint(20) NOT NULL default '0',
+  `bytes_tx` bigint(20) NOT NULL default '0',
+  PRIMARY KEY  (`id`),
+  KEY `userid` (`userid`),
+  KEY `ip_address` (`ip_address`),
+  KEY `src_port` (`src_port`),
+  KEY `session_id` (`session_id`),
+  KEY `session_status` (`session_status`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+
+--
+-- Table structure for table `dbmail_acl`
+--
+
 DROP TABLE IF EXISTS `dbmail_acl`;
 CREATE TABLE `dbmail_acl` (
   `user_id` bigint(20) NOT NULL default '0',

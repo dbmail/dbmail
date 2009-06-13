@@ -107,6 +107,9 @@ void client_session_bailout(ClientSession_t **session)
 	if (! c) return;
 	TRACE(TRACE_DEBUG,"[%p]", c);
 
+	// Run registered cleanup function call
+	if(c->session_cleanup) c->session_cleanup(c);
+
 	// brute force:
 	if (server_conf->no_daemonize == 1) _exit(0);
 
@@ -118,25 +121,23 @@ void client_session_bailout(ClientSession_t **session)
 
 void client_session_read(void *arg)
 {
+	int state;
 	ClientSession_t *session = (ClientSession_t *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 	ci_read_cb(session->ci);
-	switch(session->ci->client_state) {
-		case CLIENT_OK:
-		case CLIENT_AGAIN:
-			session->handle_input(session);
-		break;
-
-		default:
-		case CLIENT_ERR:
+		
+	state = session->ci->client_state;
+	if (state & CLIENT_ERR) {
+		TRACE(TRACE_DEBUG,"client_state ERROR");
+		client_session_bailout(&session);
+	} else if (state & CLIENT_EOF) {
+		TRACE(TRACE_NOTICE,"reached EOF");
+		event_del(session->ci->rev);
+		if (session->ci->read_buffer->len < 1)
 			client_session_bailout(&session);
-			break;
-		case CLIENT_EOF:
-			TRACE(TRACE_NOTICE,"reached EOF");
-			event_del(session->ci->rev);
-			if (session->ci->read_buffer->len < 1)
-				client_session_bailout(&session);
-		break;
+	}
+	else if (state & CLIENT_OK || state & CLIENT_AGAIN) {
+		session->handle_input(session);
 	}
 }
 

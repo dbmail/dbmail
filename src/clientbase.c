@@ -139,6 +139,10 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl)
 		client->queue           = g_async_queue_new();
 	client->cb_error        = client_error_cb;
 
+	/* set byte counters to 0 */
+	client->bytes_rx = 0;
+	client->bytes_tx = 0;
+
 	/* make streams */
 	if (socket == 0 && caddr == NULL) {
 		client->rx		= STDIN_FILENO;
@@ -270,6 +274,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		if ((e = self->cb_error(self->tx, e, (void *)self)))
 			return e;
 	} else {
+		self->bytes_tx += t;	// Update our byte counter
 		if (self->ssl) {
 			memset(self->tls_wbuf, '\0', TLS_SEGMENT);
 			self->tls_wbuf_n = 0;
@@ -325,6 +330,7 @@ void ci_read_cb(clientbase_t *self)
 			break;
 
 		} else {
+			self->bytes_rx += t;	// Update our byte counter
 			self->client_state = CLIENT_OK; 
 			g_string_append_len(self->read_buffer, ibuf, t);
 			TRACE(TRACE_DEBUG,"read [%u:%s]", t, ibuf);
