@@ -309,7 +309,7 @@ CREATE TABLE dbmail_authlog (
   session_id TEXT,
   session_status TEXT DEFAULT 'active',
   bytes_rx INTEGER DEFAULT '0' NOT NULL,
-  bytes_tx INTEGER DEFAULT '0' NOT NULL,
+  bytes_tx INTEGER DEFAULT '0' NOT NULL
 );
 
 CREATE INDEX userid_1 ON dbmail_authlog(userid);
