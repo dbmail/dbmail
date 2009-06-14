@@ -399,7 +399,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 
 void ci_authlog_init(clientbase_t *self, const char *service, const char *username, const char *status)
 {
-	
+	if (! server_conf->authlog) return;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	db_update("INSERT INTO %sauthlog (userid, service, login_time, logout_time, ip_address, src_port, session_id, session_status)"
 			" VALUES ('%s', '%s', %s, %s, '%s', %d, '%p', '%s')",
@@ -408,6 +408,7 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 
 static void ci_authlog_close(clientbase_t *self)
 {
+	if (! server_conf->authlog) return;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	db_update("UPDATE %sauthlog SET logout_time=%s, session_status='closed', bytes_rx=%llu, bytes_tx=%llu "
 		"WHERE ip_address='%s' AND src_port=%d AND session_status='active' AND session_id='%p'",

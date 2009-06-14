@@ -392,6 +392,7 @@ typedef struct {
 	int *listenSockets;             // Allocated memory.
 	int *ssl_listenSockets;         // Allocated memory.
 	int service_before_smtp;
+	gboolean authlog;
 	int port;
 	int ssl_port;
 	gboolean ssl;

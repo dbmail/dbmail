@@ -862,26 +862,24 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	config_get_value("RESOLVE_IP", service, val);
 	if (strlen(val) == 0)
 		TRACE(TRACE_DEBUG, "no value for RESOLVE_IP in config file");
-
 	config->resolveIP = (strcasecmp(val, "yes") == 0);
-
-	TRACE(TRACE_DEBUG, "%sresolving client IP",
-	      config->resolveIP ? "" : "not ");
+	TRACE(TRACE_DEBUG, "%sresolving client IP", config->resolveIP ? "" : "not ");
 
 	/* read items: service-BEFORE-SMTP */
 	char *service_before_smtp = g_strconcat(service, "_BEFORE_SMTP", NULL);
 	config_get_value(service_before_smtp, service, val);
 	g_free(service_before_smtp);
-
 	if (strlen(val) == 0)
-		TRACE(TRACE_DEBUG, "no value for %s_BEFORE_SMTP  in config file",
-		      service);
-
+		TRACE(TRACE_DEBUG, "no value for %s_BEFORE_SMTP  in config file", service);
 	config->service_before_smtp = (strcasecmp(val, "yes") == 0);
+	TRACE(TRACE_DEBUG, "%s %s-before-SMTP", config->service_before_smtp ? "Enabling" : "Disabling", service);
 
-	TRACE(TRACE_DEBUG, "%s %s-before-SMTP",
-	      config->service_before_smtp ? "Enabling" : "Disabling", service);
-
+	/* read items: authlog */
+	config_get_value("authlog", service, val);
+	if (strlen(val) == 0)
+		TRACE(TRACE_DEBUG, "no value for AUTHLOG in config file");
+	config->authlog = (strcasecmp(val, "yes") == 0);
+	TRACE(TRACE_DEBUG, "%s %s Authentication logging", config->authlog ? "Enabling" : "Disabling", service);
 
 	/* read items: EFFECTIVE-USER */
 	config_get_value("EFFECTIVE_USER", service, val);
