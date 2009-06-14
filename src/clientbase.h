@@ -28,6 +28,7 @@
 clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl);
 int ci_starttls(clientbase_t *self);
 
+void ci_authlog_init(clientbase_t *self, const char *service, const char *username, const char *status);
 void ci_write_cb(clientbase_t *self);
 int ci_write(clientbase_t *self, char * msg, ...);
 

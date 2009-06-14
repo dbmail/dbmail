@@ -107,9 +107,6 @@ void client_session_bailout(ClientSession_t **session)
 	if (! c) return;
 	TRACE(TRACE_DEBUG,"[%p]", c);
 
-	// Run registered cleanup function call
-	if(c->session_cleanup) c->session_cleanup(c);
-
 	// brute force:
 	if (server_conf->no_daemonize == 1) _exit(0);
 

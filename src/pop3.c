@@ -167,21 +167,49 @@ static void db_session_cleanup(ClientSession_t * session_ptr)
 	g_list_destroy(session_ptr->messagelst);
 }
 
+
 static void pop3_close(ClientSession_t *session)
 {
 	clientbase_t *ci = session->ci;
-	switch (pop3_session_cleanup(session)) {
-		case 1:
-			ci_write(ci, "+OK see ya later\r\n");
-			break;
-		case -1:
-			ci_write(ci, "-ERR I'm leaving, you're too slow\r\n");
-			break;
+	TRACE(TRACE_DEBUG,"[%p] sessionResult [%d]", session, session->SessionResult);
+
+	if (session->username != NULL && (session->was_apop || session->password != NULL)) {
+
+		switch (session->SessionResult) {
 		case 0:
-		default:
-			ci_write(ci, "-ERR some deleted messages not removed\r\n");
+			TRACE(TRACE_NOTICE, "user %s logging out [messages=%llu, octets=%llu]", 
+					session->username, 
+					session->virtual_totalmessages, 
+					session->virtual_totalsize);
+
+			/* if everything went well, write down everything and do a cleanup */
+			if (db_update_pop(session) == DM_SUCCESS)
+				ci_write(ci, "+OK see ya later\r\n");
+			else
+				ci_write(ci, "-ERR some deleted messages not removed\r\n");
 			break;
+
+		case 1:
+			ci_write(ci, "-ERR I'm leaving, you're too slow\r\n");
+			TRACE(TRACE_ERR, "client timed out, connection closed");
+			break;
+
+		case 2:
+			TRACE(TRACE_ERR, "alert! possible flood attempt, closing connection");
+			break;
+
+		case 3:
+			TRACE(TRACE_ERR, "authorization layer failure");
+			break;
+		case 4:
+			TRACE(TRACE_ERR, "storage layer failure");
+			break;
+		}
+	} else {
+		ci_write(ci, "+OK see ya later\r\n");
 	}
+	
+	session->state = CLIENTSTATE_QUIT;
 }
 
 
@@ -191,8 +219,6 @@ static void pop3_handle_input(void *arg)
 {
 	char buffer[MAX_LINESIZE];	/* connection buffer */
 	ClientSession_t *session = (ClientSession_t *)arg;
-
-	TRACE(TRACE_DEBUG,"handling [%p]",arg);
 
 	if (session->ci->write_buffer->len) {
 		ci_write(session->ci, NULL);
@@ -230,58 +256,11 @@ void pop3_cb_time(void * arg)
 	ci_write(session->ci, "-ERR I'm leaving, you're too slow\r\n");
 }
 
-int pop3_session_cleanup(void * arg)
-{
-	ClientSession_t *session = (ClientSession_t *)arg;
-	int r = 0;
-
-	TRACE(TRACE_DEBUG,"[%p] sessionResult [%d]", session, session->SessionResult);
-
-	if (session->username != NULL && (session->was_apop || session->password != NULL)) {
-		TRACE(TRACE_NOTICE, "user %s logging out [messages=%llu, octets=%llu]", 
-			session->username, 
-			session->virtual_totalmessages, 
-			session->virtual_totalsize);
-
-		db_update("UPDATE %sauthlog SET logout_time=NOW(), session_status='closed', bytes_rx='%d', bytes_tx='%d' WHERE ip_address='%s' AND src_port='%d' AND session_status='active' AND session_id='%p'",
-			DBPFX, (int *)session->ci->bytes_rx, (int *)session->ci->bytes_tx, (char *)session->ci->ip_src, (int *)session->ci->ip_src_port, session);
-
-		switch (session->SessionResult) {
-		case 0:
-			/* if everything went well, write down everything and do a cleanup */
-			if (db_update_pop(session) == DM_SUCCESS) r = 1;
-			break;
-
-		case 1:
-			r = -1;
-			TRACE(TRACE_ERR, "client timed out, connection closed");
-			break;
-
-		case 2:
-			TRACE(TRACE_ERR, "alert! possible flood attempt, closing connection");
-			break;
-
-		case 3:
-			TRACE(TRACE_ERR, "authorization layer failure");
-			break;
-		case 4:
-			TRACE(TRACE_ERR, "storage layer failure");
-			break;
-		}
-	} else {
-		r = 1;
-	}
-	
-	session->state = CLIENTSTATE_QUIT;
-	return r;
-}
-
 static void reset_callbacks(ClientSession_t *session)
 {
         session->ci->cb_time = pop3_cb_time;
         session->ci->cb_write = pop3_cb_write;
 	session->handle_input = pop3_handle_input;
-	session->session_cleanup = pop3_session_cleanup;
 
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
@@ -461,9 +440,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 			session->SessionResult = 3;
 			return -1;
 		case 0:
-			db_update("INSERT INTO %sauthlog (userid, service, login_time, logout_time, ip_address, src_port, session_id, session_status)"
-				" VALUES ('%s', 'pop', NOW(), NOW(), '%s', '%d', '%p', 'auth_failed')",
-				DBPFX, (char *)session->username, (char *)ci->ip_src, (int *)ci->ip_src_port, session);
+			ci_authlog_init(ci, "pop3", (const char *)session->username, "failed");
 			TRACE(TRACE_ERR, "user [%s] coming from [%s] tried to login with wrong password", 
 				session->username, ci->ip_src);
 
@@ -477,10 +454,9 @@ int pop3(ClientSession_t *session, const char *buffer)
 
 		default:
 			/* user logged in OK */
+			ci_authlog_init(ci, "pop3", (const char *)session->username, "active");
 			session->state = CLIENTSTATE_AUTHENTICATED;
-			db_update("INSERT INTO %sauthlog (userid, service, login_time, ip_address, src_port, session_id)"
-				" VALUES ('%s', 'pop', NOW(), '%s', '%d', '%p')",
-				DBPFX, (char *)session->username, (char *)ci->ip_src, (int *)ci->ip_src_port, session);
+
 			client_session_set_timeout(session, server_conf->timeout);
 
 			/* now we're going to build up a session for this user */

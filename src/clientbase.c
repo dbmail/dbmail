@@ -27,6 +27,9 @@
 
 #define THIS_MODULE "clientbase"
 
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
+
 extern serverConfig_t *server_conf;
 extern SSL_CTX *tls_context;
 
@@ -394,6 +397,20 @@ int ci_readln(clientbase_t *self, char * buffer)
 }
 
 
+void ci_authlog_init(clientbase_t *self, const char *service, const char *username, const char *status)
+{
+	db_update("INSERT INTO %sauthlog (userid, service, login_time, logout_time, ip_address, src_port, session_id, session_status)"
+			" VALUES ('%s', '%s', NOW(), NOW(), '%s', %d, '%p', '%s')",
+			DBPFX, username, service, (char *)self->ip_src, self->ip_src_port, self, status);
+}
+
+static void ci_authlog_close(clientbase_t *self)
+{
+	db_update("UPDATE %sauthlog SET logout_time=NOW(), session_status='closed', bytes_rx=%llu, bytes_tx=%llu "
+		"WHERE ip_address='%s' AND src_port=%d AND session_status='active' AND session_id='%p'",
+		DBPFX, self->bytes_rx, self->bytes_tx, (char *)self->ip_src, self->ip_src_port, self);
+}
+
 void ci_close(clientbase_t *self)
 {
 	assert(self);
@@ -413,6 +430,7 @@ void ci_close(clientbase_t *self)
 		close(self->rx);
 	}
 
+	ci_authlog_close(self);
 	self->tx = -1;
 	self->rx = -1;
 

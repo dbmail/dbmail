@@ -346,6 +346,8 @@ int tims(ClientSession_t *session)
 			 * Between them are NULLs, which are conveniently encoded
 			 * by the base64 process... */
 			if (auth_validate(ci, tmp64[1], tmp64[2], &useridnr) == 1) {
+				ci_authlog_init(ci, "timsieve", tmp64[1], "active");
+
 				ci_write(ci, "OK\r\n");
 				session->state = AUTH;
 				session->useridnr = useridnr;
@@ -355,6 +357,8 @@ int tims(ClientSession_t *session)
 				client_session_set_timeout(session, server_conf->timeout);
 
 			} else
+				ci_authlog_init(ci, "timsieve", tmp64[1], "failed");
+
 				return tims_error(session, "NO \"Username or password incorrect.\"\r\n");
 			g_strfreev(tmp64);
 		} else

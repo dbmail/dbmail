@@ -352,7 +352,6 @@ typedef struct {
 	clientbase_t *ci;
 	clientstate_t state;			/**< session state */
 	void (*handle_input) (void *);
-	void (*session_cleanup) (void *);	/* session cleanup */
 
 	int error_count;		/**< number of errors that have occured */
 	int was_apop;			/**< 1 if session was  session was apop (no plaintext password) */
