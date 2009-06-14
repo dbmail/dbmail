@@ -440,7 +440,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 			session->SessionResult = 3;
 			return -1;
 		case 0:
-			ci_authlog_init(ci, "pop3", (const char *)session->username, "failed");
+			ci_authlog_init(ci, THIS_MODULE, (const char *)session->username, "failed");
 			TRACE(TRACE_ERR, "user [%s] coming from [%s] tried to login with wrong password", 
 				session->username, ci->ip_src);
 
@@ -454,7 +454,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 
 		default:
 			/* user logged in OK */
-			ci_authlog_init(ci, "pop3", (const char *)session->username, "active");
+			ci_authlog_init(ci, THIS_MODULE, (const char *)session->username, "active");
 			session->state = CLIENTSTATE_AUTHENTICATED;
 
 			client_session_set_timeout(session, server_conf->timeout);
