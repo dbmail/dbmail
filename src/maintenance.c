@@ -857,7 +857,7 @@ int do_check_integrity(void)
 	
 	return 0;
 }
-
+#if 0
 static int do_is_header(void)
 {
 	time_t start, stop;
@@ -899,6 +899,7 @@ static int do_is_header(void)
 	
 	return 0;
 }
+#endif
 
 static int do_rfc_size(void)
 {
@@ -1167,22 +1168,21 @@ int do_migrate(int migrate_limit)
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT DISTINCT(physmessage_id) FROM %smessageblks LIMIT %d", DBPFX, migrate_limit);
-		qprintf ("Migrating physmessages...\n", migrate_limit);
+		qprintf ("Migrating %d physmessages...\n", migrate_limit);
 		while (db_result_next(r))
 		{
 			count++;
 			id = db_result_get_u64(r,0);
-			if(verbose) qprintf ("migrating physmessage_id %d ",id);
 			m = dbmail_message_new();
 			m = dbmail_message_retrieve(m, id, DBMAIL_MESSAGE_FILTER_FULL);
 			if(!dm_message_store(m))
 			{
-				if(verbose) qprintf ("ok\n",id);
+				if(verbose) qprintf ("%d ",id);
 				db_update("DELETE FROM %smessageblks WHERE physmessage_id = %d", DBPFX, id);
 			}
 			else
 			{
-				if(!verbose) qprintf ("migrating physmessage_id %d ",id);
+				if(!verbose) qprintf ("migrating physmessage_id: %d\n",id);
 				qprintf ("failed\n");
 				return -1;
 			}

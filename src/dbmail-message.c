@@ -449,9 +449,7 @@ static int store_body(GMimeObject *object, DbmailMessage *m)
 {
 	int r;
 	char *text = g_mime_object_get_body(object);
-	if (! text)
-		return;
-
+	if (! text) return 0;
 	r = store_blob(m, text, 0);
 	g_free(text);
 	return r;
@@ -2146,22 +2144,6 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		return DSN_CLASS_OK;
 	}
 }
-// from dm_pipe.c
-
-static int valid_sender(const char *addr) 
-{
-	int ret = 1;
-	char *testaddr;
-	testaddr = g_ascii_strdown(addr, -1);
-	if (strstr(testaddr, "mailer-daemon@"))
-		ret = 0;
-	else if (strstr(testaddr, "daemon@"))
-		ret = 0;
-	else if (strstr(testaddr, "postmaster@"))
-		ret = 0;
-	g_free(testaddr);
-	return ret;
-}
 
 static int parse_and_escape(const char *in, char **out)
 {
@@ -2356,46 +2338,6 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 		targets = g_list_next(targets);
 
 	}
-
-	return result;
-}
-
-/* 
- * Send an automatic notification.
- */
-static int send_notification(DbmailMessage *message UNUSED, const char *to)
-{
-	field_t from;
-	field_t subject;
-	int result;
-
-	memset(from,0,sizeof(from));
-	memset(subject,0,sizeof(subject));
-
-	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
-		TRACE(TRACE_NOTICE, "no config value for POSTMASTER");
-	}
-
-	if (config_get_value("AUTO_NOTIFY_SENDER", "DELIVERY", from) < 0) {
-		TRACE(TRACE_NOTICE, "no config value for AUTO_NOTIFY_SENDER");
-	}
-
-	if (config_get_value("AUTO_NOTIFY_SUBJECT", "DELIVERY", subject) < 0) {
-		TRACE(TRACE_NOTICE, "no config value for AUTO_NOTIFY_SUBJECT");
-	}
-
-	if (strlen(from) < 1)
-		g_strlcpy(from, AUTO_NOTIFY_SENDER, FIELDSIZE);
-
-	if (strlen(subject) < 1)
-		g_strlcpy(subject, AUTO_NOTIFY_SUBJECT, FIELDSIZE);
-
-	DbmailMessage *new_message = dbmail_message_new();
-	new_message = dbmail_message_construct(new_message, to, from, subject, "");
-
-	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
-
-	dbmail_message_free(new_message);
 
 	return result;
 }
