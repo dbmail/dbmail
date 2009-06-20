@@ -327,9 +327,13 @@ typedef struct {
 	void (*cb_write) (void *);
 	int (*cb_error) (int fd, int error, void *);
 
-	char ip_src[IPNUM_LEN];		/* client IP-number */
-	int ip_src_port;		/* client source port number */
-	field_t clientname;		/* resolved client hostname */
+	u64_t authlog_id;
+	char src_ip[IPNUM_LEN];		/* client IP-number */
+	int src_port;		        /* client port number */
+	field_t clientname;             /* resolved client name */
+
+	char dst_ip[IPNUM_LEN];		/* server IP-number */
+	int dst_port;		        /* server port number */
 
 	struct timeval *timeout;		/**< timeout on socket */
 

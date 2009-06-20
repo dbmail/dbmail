@@ -1194,13 +1194,13 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 			sleep(2);	/* security */
 			ci_authlog_init(self->ci, THIS_MODULE, username, "failed");
 			dbmail_imap_session_buff_printf(self, "%s NO login rejected\r\n", self->tag);
-			TRACE(TRACE_NOTICE, "[%p] login rejected: user [%s] from [%s:%d]", self, username, self->ci->ip_src, self->ci->ip_src_port);
+			TRACE(TRACE_NOTICE, "[%p] login rejected: user [%s] from [%s:%d]", self, username, self->ci->src_ip, self->ci->src_port);
 			return 1;
 
 		case 1:
 			self->userid = userid;
 			ci_authlog_init(self->ci, THIS_MODULE, username, "active");
-			TRACE(TRACE_NOTICE, "[%p] login accepted: user [%s] from [%s:%d]", self, username, self->ci->ip_src, self->ci->ip_src_port);
+			TRACE(TRACE_NOTICE, "[%p] login accepted: user [%s] from [%s:%d]", self, username, self->ci->src_ip, self->ci->src_port);
 			break;
 
 		default:

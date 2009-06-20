@@ -34,19 +34,16 @@ CREATE TABLE `dbmail_authlog` (
   `service` varchar(32) default NULL,
   `login_time` datetime default NULL,
   `logout_time` datetime default NULL,
-  `ip_address` varchar(16) default NULL,
+  `src_ip` varchar(16) default NULL,
   `src_port` int(11) default NULL,
-  `session_id` varchar(32) default NULL,
-  `session_status` varchar(32) default 'active',
+  `dst_ip` varchar(16) default NULL,
+  `dst_port` int(11) default NULL,
+  `status` varchar(32) default 'active',
   `bytes_rx` bigint(20) NOT NULL default '0',
   `bytes_tx` bigint(20) NOT NULL default '0',
-  PRIMARY KEY  (`id`),
-  KEY `userid` (`userid`),
-  KEY `ip_address` (`ip_address`),
-  KEY `src_port` (`src_port`),
-  KEY `session_id` (`session_id`),
-  KEY `session_status` (`session_status`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+  PRIMARY KEY  (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 
 --
 -- Table structure for table `dbmail_acl`

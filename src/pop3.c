@@ -317,7 +317,6 @@ int pop3(ClientSession_t *session, const char *buffer)
 	struct message *msg;
 	clientbase_t *ci = session->ci;
 
-	char *client_ip = ci->ip_src;
 	s = (char *)buffer;
 
 	strip_crlf(s);
@@ -442,7 +441,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		case 0:
 			ci_authlog_init(ci, THIS_MODULE, (const char *)session->username, "failed");
 			TRACE(TRACE_ERR, "user [%s] coming from [%s] tried to login with wrong password", 
-				session->username, ci->ip_src);
+				session->username, ci->src_ip);
 
 			g_free(session->username);
 			session->username = NULL;
@@ -465,7 +464,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 
 			/* if pop_before_smtp is active, log this ip */
 			if (pop_before_smtp)
-				db_log_ip(client_ip);
+				db_log_ip(ci->src_ip);
 
 			result = db_createsession(result, session);
 			if (result == 1) {
@@ -763,7 +762,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 
 			/* if pop_before_smtp is active, log this ip */
 			if (pop_before_smtp)
-				db_log_ip(client_ip);
+				db_log_ip(ci->src_ip);
 
 			result = db_createsession(result, session);
 			if (result == 1) {

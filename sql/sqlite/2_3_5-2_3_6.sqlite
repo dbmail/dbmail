@@ -304,17 +304,13 @@ CREATE TABLE dbmail_authlog (
   service TEXT,
   login_time DATETIME,
   logout_time DATETIME,
-  ip_address TEXT,
+  src_ip TEXT,
   src_port INTEGER,
-  session_id TEXT,
-  session_status TEXT DEFAULT 'active',
+  dst_ip TEXT,
+  dst_port INTEGER,
+  status TEXT DEFAULT 'active',
   bytes_rx INTEGER DEFAULT '0' NOT NULL,
   bytes_tx INTEGER DEFAULT '0' NOT NULL
 );
 
-CREATE INDEX userid_1 ON dbmail_authlog(userid);
-CREATE INDEX ip_address_1 ON dbmail_authlog(ip_address);
-CREATE INDEX src_port_1 ON dbmail_authlog(src_port);
-CREATE INDEX session_id_1 ON dbmail_authlog (session_id);
-CREATE INDEX session_status_1 ON dbmail_authlog(session_status);
 COMMIT;

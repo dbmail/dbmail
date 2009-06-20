@@ -210,7 +210,7 @@ void _ic_authenticate_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 	if (imap_before_smtp) 
-		db_log_ip(self->ci->ip_src);
+		db_log_ip(self->ci->src_ip);
 
 	IC_DONE_OK;
 	NOTIFY_DONE(D);

@@ -3145,9 +3145,9 @@ int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_userna
 		/* get the socket the client is connecting on */
 		sa_family = dm_get_client_sockaddr(ci, &saddr);
 		if (sa_family == AF_INET) {
-			snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%d", 
-					inet_ntoa(((struct sockaddr_in *)(&saddr))->sin_addr),
-					ntohs(((struct sockaddr_in *)(&saddr))->sin_port));
+			strncpy(ci->dst_ip,inet_ntoa(((struct sockaddr_in *)(&saddr))->sin_addr), sizeof(ci->dst_ip));
+			ci->dst_port = ntohs(((struct sockaddr_in *)(&saddr))->sin_port);
+			snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%d", ci->dst_ip, ci->dst_port);
 			TRACE(TRACE_DEBUG, "client on inet socket [%s]", clientsock);
 		}	
 		if (sa_family == AF_UNIX) {

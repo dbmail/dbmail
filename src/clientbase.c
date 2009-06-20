@@ -151,22 +151,21 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl)
 		client->rx		= STDIN_FILENO;
 		client->tx		= STDOUT_FILENO;
 	} else {
-		strncpy((char *)client->ip_src, inet_ntoa(caddr->sin_addr), sizeof(client->ip_src));
-		client->ip_src_port = ntohs(caddr->sin_port);
+		strncpy((char *)client->src_ip, inet_ntoa(caddr->sin_addr), sizeof(client->src_ip));
+		client->src_port = ntohs(caddr->sin_port);
 
 		if (server_conf->resolveIP) {
-			struct hostent *clientHost;
-			clientHost = gethostbyaddr((gpointer) &(caddr->sin_addr), sizeof(caddr->sin_addr), caddr->sin_family);
+			struct hostent *clientHost = gethostbyaddr((gpointer) &(caddr->sin_addr), sizeof(caddr->sin_addr), caddr->sin_family);
 
 			if (clientHost && clientHost->h_name)
 				strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
 
-			TRACE(TRACE_NOTICE, "incoming connection from [%s:%d (%s)] by pid [%d]",
-					client->ip_src, client->ip_src_port,
-					client->clientname[0] ? client->clientname : "Lookup failed", getpid());
+			TRACE(TRACE_NOTICE, "incoming connection from [%s:%d (%s)]",
+					client->src_ip, client->src_port,
+					client->clientname[0] ? client->clientname : "Lookup failed");
 		} else {
-			TRACE(TRACE_NOTICE, "incoming connection from [%s:%d] by pid [%d]",
-					client->ip_src, client->ip_src_port, getpid());
+			TRACE(TRACE_NOTICE, "incoming connection from [%s:%d]",
+					client->src_ip, client->src_port);
 		}
 
 		/* make streams */
@@ -400,19 +399,33 @@ int ci_readln(clientbase_t *self, char * buffer)
 void ci_authlog_init(clientbase_t *self, const char *service, const char *username, const char *status)
 {
 	if (! server_conf->authlog) return;
+	C c; R r;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	db_update("INSERT INTO %sauthlog (userid, service, login_time, logout_time, ip_address, src_port, session_id, session_status)"
-			" VALUES ('%s', '%s', %s, %s, '%s', %d, '%p', '%s')",
-			DBPFX, username, service, now, now, (char *)self->ip_src, self->ip_src_port, self, status);
+	char *frag = db_returning("id");
+	c = db_con_get();
+	TRY
+		r = db_query(c, "INSERT INTO %sauthlog (userid, service, login_time, logout_time, src_ip, src_port, dst_ip, dst_port, status)"
+				" VALUES ('%s', '%s', %s, %s, "
+				"'%s', %d, '%s', %d, '%s') %s",
+				DBPFX, username, service, now, now, 
+				(char *)self->src_ip, self->src_port, (char *)self->dst_ip, self->dst_port, 
+				status, frag);
+		self->authlog_id = db_insert_result(c, r);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
 }
 
 static void ci_authlog_close(clientbase_t *self)
 {
 	if (! server_conf->authlog) return;
+	if (! self->authlog_id) return;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	db_update("UPDATE %sauthlog SET logout_time=%s, session_status='closed', bytes_rx=%llu, bytes_tx=%llu "
-		"WHERE ip_address='%s' AND src_port=%d AND session_status='active' AND session_id='%p'",
-		DBPFX, now, self->bytes_rx, self->bytes_tx, (char *)self->ip_src, self->ip_src_port, self);
+	db_update("UPDATE %sauthlog SET logout_time=%s, status='closed', bytes_rx=%llu, bytes_tx=%llu "
+		"WHERE id=%llu", DBPFX, now, self->bytes_rx, self->bytes_tx, self->authlog_id);
 }
 
 void ci_close(clientbase_t *self)
