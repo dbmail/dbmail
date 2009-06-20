@@ -398,7 +398,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 
 void ci_authlog_init(clientbase_t *self, const char *service, const char *username, const char *status)
 {
-	if (! server_conf->authlog) return;
+	if ((! server_conf->authlog) || server_conf->no_daemonize) return;
 	C c; R r;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	char *frag = db_returning("id");
@@ -421,11 +421,11 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 
 static void ci_authlog_close(clientbase_t *self)
 {
-	if (! server_conf->authlog) return;
+	if ((! server_conf->authlog) || server_conf->no_daemonize) return;
 	if (! self->authlog_id) return;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	db_update("UPDATE %sauthlog SET logout_time=%s, status='closed', bytes_rx=%llu, bytes_tx=%llu "
-		"WHERE id=%llu", DBPFX, now, self->bytes_rx, self->bytes_tx, self->authlog_id);
+	db_update("UPDATE %sauthlog SET logout_time=%s, status=%s, bytes_rx=%llu, bytes_tx=%llu "
+		"WHERE id=%llu", DBPFX, now, AUTHLOG_FIN, self->bytes_rx, self->bytes_tx, self->authlog_id);
 }
 
 void ci_close(clientbase_t *self)

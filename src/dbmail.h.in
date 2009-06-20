@@ -236,6 +236,10 @@
 #define ISLF(a) ((char)(a)=='\n')
 #define ISDOT(a) ((char)(a)=='.')
 
+#define AUTHLOG_ERR "'failed'"
+#define AUTHLOG_ACT "'active'"
+#define AUTHLOG_FIN "'closed'"
+
 #define LOG_SQLERROR TRACE(TRACE_ERR,"SQLException: %s", Exception_frame.message)
 #define DISPATCH(f,a) \
 	{ \
