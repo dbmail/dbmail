@@ -678,10 +678,16 @@ int _ic_unsubscribe(struct ImapSession *self)
  *
  * executes a list command
  */
+static int dm_strcmpdata(gconstpointer a, gconstpointer b, gpointer data UNUSED)
+{
+        return strcmp((const char *)a, (const char *)b);
+}
+
 int _ic_list(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t *children = NULL;
+	GTree *shown = NULL;
 	int result;
 	size_t slen;
 	unsigned i;
@@ -738,6 +744,8 @@ int _ic_list(struct ImapSession *self)
 
 	mb = g_new0(mailbox_t,1);
 
+	shown = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,(GDestroyNotify)g_free,NULL);
+
 	for (i = 0; i < nchildren; i++) {
 		gboolean show = FALSE;
 		if ((db_getmailbox_list_result(children[i], ud->userid, mb) != 0))
@@ -778,30 +786,35 @@ int _ic_list(struct ImapSession *self)
 			show = TRUE;
 		}
 
-		if (! show) continue;
-	
-		plist = NULL;
-		if (mb->no_select)
-			plist = g_list_append(plist, g_strdup("\\noselect"));
-		if (mb->no_inferiors)
-			plist = g_list_append(plist, g_strdup("\\noinferiors"));
-		if (mb->no_children)
-			plist = g_list_append(plist, g_strdup("\\hasnochildren"));
-		else
-			plist = g_list_append(plist, g_strdup("\\haschildren"));
-		
-		/* show */
-		pstring = dbmail_imap_plist_as_string(plist);
-		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", thisname, 
-				pstring, MAILBOX_SEPARATOR, mb->name);
-		
-		g_list_destroy(plist);
-		g_free(pstring);
+		if (show && (! g_tree_lookup(shown, mb->name))) {
+			char *s = g_strdup(mb->name);
+			g_tree_insert(shown, s, s);
+			plist = NULL;
+			if (mb->no_select)
+				plist = g_list_append(plist, g_strdup("\\noselect"));
+			if (mb->no_inferiors)
+				plist = g_list_append(plist, g_strdup("\\noinferiors"));
+			if (mb->no_children)
+				plist = g_list_append(plist, g_strdup("\\hasnochildren"));
+			else
+				plist = g_list_append(plist, g_strdup("\\haschildren"));
+			
+			/* show */
+			pstring = dbmail_imap_plist_as_string(plist);
+			dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", thisname, 
+					pstring, MAILBOX_SEPARATOR, mb->name);
+			
+			g_list_destroy(plist);
+			g_free(pstring);
+		}
 	}
 
 
 	if (children)
 		g_free(children);
+
+	if (shown)
+		g_tree_destroy(shown);
 
 	g_free(pattern);
 	g_free(mb);
