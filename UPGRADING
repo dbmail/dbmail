@@ -2,7 +2,7 @@ Upgrading from DBMail 2.2 to DBMail 2.4
 
 Dependencies
 
-* Database: MySQL 5.1+ with innodb support, PostgreSQL 8.3+, or SQLite3
+* Database: MySQL 5.0, PostgreSQL 8.3+, or SQLite3
 * Glib: (>= 2.8.0)
 * GMime: (>= 2.2.0)
 * Optional: libSieve (>= 2.2.1)
