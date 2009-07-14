@@ -1461,7 +1461,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 static gboolean _get_mailbox(u64_t UNUSED *id, MailboxState_T M, gpointer data)
 {
 	ImapSession *self = (ImapSession *)data;
-	return MailboxState_reload(M, self->userid);
+	return MailboxState_preload(M, self->userid);
 }
 
 static void mailboxstate_destroy(MailboxState_T M)

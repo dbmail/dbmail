@@ -454,6 +454,15 @@ static int db_getmailbox_seq(T M)
 	return t;
 }
 
+int MailboxState_preload(T M, u64_t userid)
+{
+	int res;
+	if ((res = db_getmailbox_metadata(M, userid)) != DM_SUCCESS)
+		return res;
+
+	return DM_SUCCESS;
+}
+
 int MailboxState_reload(T M, u64_t userid)
 {
 	int res;

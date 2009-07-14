@@ -29,6 +29,7 @@ typedef struct T *T;
 
 extern T            MailboxState_new(u64_t id);
 
+extern int          MailboxState_preload(T, u64_t);
 extern int          MailboxState_reload(T, u64_t);
 extern void         MailboxState_setId(T, u64_t);
 extern u64_t        MailboxState_getId(T);
