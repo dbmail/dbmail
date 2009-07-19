@@ -356,10 +356,11 @@ int tims(ClientSession_t *session)
 
 				client_session_set_timeout(session, server_conf->timeout);
 
-			} else
+			} else {
 				ci_authlog_init(ci, THIS_MODULE, tmp64[1], "failed");
-
+				g_strfreev(tmp64);
 				return tims_error(session, "NO \"Username or password incorrect.\"\r\n");
+			}
 			g_strfreev(tmp64);
 		} else
 			return tims_error(session, "NO \"Authentication scheme not supported.\"\r\n");
