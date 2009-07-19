@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2005-2006 NFG Net Facilities Group BV, support@nfg.nl
+ Copyright (c) 2004-2009 NFG Net Facilities Group BV support@nfg.nl
  Copyright (C) 2007 Aaron Stone aaron@serendity.cx
 
  This program is free software; you can redistribute it and/or 

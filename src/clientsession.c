@@ -1,6 +1,6 @@
 /*
  Copyright (C) 2004 IC & S dbmail@ic-s.nl
- Copyright (C) 2008 NFG Net Facilities Group BV, support@nfg.nl
+ Copyright (c) 2004-2009 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
