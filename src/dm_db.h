@@ -373,6 +373,7 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_si
 */
 int db_icheck_messageblks(GList **lost);
 
+int db_icheck_partlists(gboolean cleanup);
 int db_icheck_mimeparts(gboolean cleanup);
 int db_icheck_physmessages(gboolean cleanup);
 

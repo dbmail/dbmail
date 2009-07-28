@@ -656,110 +656,67 @@ int do_check_integrity(void)
 	else
 		action = "Checking";
 
-	qprintf("\n%s DBMAIL messageblocks integrity...\n", action);
+	qprintf("\n%s DBMAIL message integrity...\n", action);
 
-	time(&start);
 
 	/* This is what we do:
-	 1. Check for loose messageblks
-	 2. Check for loose physmessages
-	 3. Check for loose mimeparts
-	 4. Check for loose messages
-	 5. Check for loose mailboxes
+	 1. Check for loose mailboxes
+	 2. Check for loose messages
+	 3. Check for loose physmessages
+	 4. Check for loose partlists
+	 5. Check for loose mimeparts
+	 6. Check for loose messageblks
 	 */
 
-	/* first part */
-	if (db_icheck_messageblks(&lost) < 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
+	/* part 1 */
+	time(&start);
+	qprintf("\n%s DBMAIL mailbox integrity...\n", action);
+
+	if (db_icheck_mailboxes(&lost) < 0) {
+		qerrorf ("Failed. An error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
 	count = g_list_length(lost);
-
 	if (count > 0) {
-		qerrorf("Ok. Found [%ld] unconnected messageblks:\n", count);
-
-		lost = g_list_first(lost);
-
-		while (lost) {
-			id = (u64_t *) lost->data;
-			if (no_to_all) {
-				qerrorf("%llu ", *id);
-			} else if (yes_to_all) {
-				if (! db_delete_messageblk(*id))
-					qerrorf ("Warning: could not delete messageblock #%llu. Check log.\n", *id);
-				else
-					qerrorf ("%llu (removed from dbase)\n", *id);
-			}
-
-			if (! g_list_next(lost))
-				break;
-
-			lost = g_list_next(lost);
-		}
-
-		qerrorf("\n");
 		has_errors = 1;
+		qerrorf("Ok. Found [%ld] unconnected mailboxes.\n", count);
 	} else {
-		qprintf("Ok. Found [%ld] unconnected messageblks.\n", count);
+		qprintf("Ok. Found [%ld] unconnected mailboxes.\n", count);
+	}
+
+	if (yes_to_all) {
+		if (count > 0) {
+        
+			lost = g_list_first(lost);
+			while (lost) {
+				id = (u64_t *) lost->data;
+        
+				if (no_to_all) {
+					qerrorf("%llu ", *id);
+				} else if (yes_to_all) {
+					if (db_delete_mailbox(*id, 0, 0))
+						qerrorf("Warning: could not delete mailbox #%llu. Check log.\n", *id);
+					else
+						qerrorf("%llu (removed from dbase)\n", *id);
+				}
+				if (! g_list_next(lost))
+					break;
+				lost = g_list_next(lost);
+			}
+			qerrorf("\n");
+		}
 	}
 
 	g_list_destroy(lost);
-	lost = NULL;
 
 	time(&stop);
-	qverbosef("--- %s block integrity took %g seconds\n", action, difftime(stop, start));
-
-	/* second part */
-	start = stop;
-	qprintf("\n%s DBMAIL physmessage integrity...\n", action);
-	if ((count = db_icheck_physmessages(FALSE)) < 0) {
-		qerrorf("Failed. An error occurred. Please check log.\n");
-		serious_errors = 1;
-		return -1;
-	}
-	if (count > 0) {
-		qerrorf("Ok. Found [%ld] unconnected physmessages", count);
-		if (yes_to_all) {
-			if (! db_icheck_physmessages(TRUE))
-				qerrorf("Warning: could not delete orphaned physmessages. Check log.\n");
-			else
-				qerrorf("Ok. Orphaned physmessages deleted.\n");
-		}
-	} else {
-		qprintf("Ok. Found [%ld] unconnected physmessages.\n", count);
-	}
-
-	time(&stop);
-	qverbosef("--- %s unconnected physmessages took %g seconds\n",
-		action, difftime(stop, start));
-	/* */
-	start = stop;
-	qprintf("\n%s DBMAIL mimeparts integrity...\n", action);
-	if ((count = db_icheck_mimeparts(FALSE)) < 0) {
-		qerrorf("Failed. An error occurred. Please check log.\n");
-		serious_errors = 1;
-		return -1;
-	}
-	if (count > 0) {
-		qerrorf("Ok. Found [%ld] unconnected mimeparts", count);
-		if (yes_to_all) {
-			if (! db_icheck_mimeparts(TRUE))
-				qerrorf("Warning: could not delete orphaned mimeparts. Check log.\n");
-			else
-				qerrorf("Ok. Orphaned mimeparts deleted.\n");
-		}
-	} else {
-		qprintf("Ok. Found [%ld] unconnected mimeparts.\n", count);
-	}
-
-	time(&stop);
-	qverbosef("--- %s unconnected mimeparts took %g seconds\n",
-		action, difftime(stop, start));
-
-
-	/* third part */
+	qverbosef("--- %s mailbox integrity took %g seconds\n",
+	       action, difftime(stop, start));
+	/* end part 1 */
+	
+	/* part 2 */
 	start = stop;
 	qprintf("\n%s DBMAIL message integrity...\n", action);
 
@@ -807,54 +764,129 @@ int do_check_integrity(void)
 	time(&stop);
 	qverbosef("--- %s message integrity took %g seconds\n",
 	       action, difftime(stop, start));
+	/* end part 2 */
 
-	/* fourth part */
-	qprintf("\n%s DBMAIL mailbox integrity...\n", action);
+	/* part 3 */
 	start = stop;
+	qprintf("\n%s DBMAIL physmessage integrity...\n", action);
+	if ((count = db_icheck_physmessages(FALSE)) < 0) {
+		qerrorf("Failed. An error occurred. Please check log.\n");
+		serious_errors = 1;
+		return -1;
+	}
+	if (count > 0) {
+		qerrorf("Ok. Found [%ld] unconnected physmessages.\n", count);
+		if (yes_to_all) {
+			if (! db_icheck_physmessages(TRUE))
+				qerrorf("Warning: could not delete orphaned physmessages. Check log.\n");
+			else
+				qerrorf("Ok. Orphaned physmessages deleted.\n");
+		}
+	} else {
+		qprintf("Ok. Found [%ld] unconnected physmessages.\n", count);
+	}
 
-	if (db_icheck_mailboxes(&lost) < 0) {
-		qerrorf ("Failed. An error occured. Please check log.\n");
+	time(&stop);
+	qverbosef("--- %s unconnected physmessages took %g seconds\n",
+		action, difftime(stop, start));
+	/* end part 3 */
+
+	/* part 4 */
+	start = stop;
+	qprintf("\n%s DBMAIL partlists integrity...\n", action);
+	if ((count = db_icheck_partlists(FALSE)) < 0) {
+		qerrorf("Failed. An error occurred. Please check log.\n");
+		serious_errors = 1;
+		return -1;
+	}
+	if (count > 0) {
+		qerrorf("Ok. Found [%ld] unconnected partlists.\n", count);
+		if (yes_to_all) {
+			if (! db_icheck_partlists(TRUE))
+				qerrorf("Warning: could not delete orphaned partlists. Check log.\n");
+			else
+				qerrorf("Ok. Orphaned partlists deleted.\n");
+		}
+	} else {
+		qprintf("Ok. Found [%ld] unconnected partlists.\n", count);
+	}
+
+	time(&stop);
+	qverbosef("--- %s unconnected partlists took %g seconds\n",
+		action, difftime(stop, start));
+	/* end part 4 */
+
+	/*  part 5 */
+	start = stop;
+	qprintf("\n%s DBMAIL mimeparts integrity...\n", action);
+	if ((count = db_icheck_mimeparts(FALSE)) < 0) {
+		qerrorf("Failed. An error occurred. Please check log.\n");
+		serious_errors = 1;
+		return -1;
+	}
+	if (count > 0) {
+		qerrorf("Ok. Found [%ld] unconnected mimeparts.\n", count);
+		if (yes_to_all) {
+			if (! db_icheck_mimeparts(TRUE))
+				qerrorf("Warning: could not delete orphaned mimeparts. Check log.\n");
+			else
+				qerrorf("Ok. Orphaned mimeparts deleted.\n");
+		}
+	} else {
+		qprintf("Ok. Found [%ld] unconnected mimeparts.\n", count);
+	}
+
+	time(&stop);
+	qverbosef("--- %s unconnected mimeparts took %g seconds\n",
+		action, difftime(stop, start));
+	/* end part 5 */
+
+	/* part 6 */
+	start = stop;
+	qprintf("\n%s DBMAIL legacy messageblks integrity...\n", action);
+	if (db_icheck_messageblks(&lost) < 0) {
+		qerrorf("Failed. An error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
 	count = g_list_length(lost);
-	if (count > 0) {
-		has_errors = 1;
-		qerrorf("Ok. Found [%ld] unconnected mailboxes.\n", count);
-	} else {
-		qprintf("Ok. Found [%ld] unconnected mailboxes.\n", count);
-	}
 
-	if (yes_to_all) {
-		if (count > 0) {
-        
-			lost = g_list_first(lost);
-			while (lost) {
-				id = (u64_t *) lost->data;
-        
-				if (no_to_all) {
-					qerrorf("%llu ", *id);
-				} else if (yes_to_all) {
-					if (db_delete_mailbox(*id, 0, 0))
-						qerrorf("Warning: could not delete mailbox #%llu. Check log.\n", *id);
-					else
-						qerrorf("%llu (removed from dbase)\n", *id);
-				}
-				if (! g_list_next(lost))
-					break;
-				lost = g_list_next(lost);
+	if (count > 0) {
+		qerrorf("Ok. Found [%ld] unconnected messageblks:\n", count);
+
+		lost = g_list_first(lost);
+
+		while (lost) {
+			id = (u64_t *) lost->data;
+			if (no_to_all) {
+				qerrorf("%llu ", *id);
+			} else if (yes_to_all) {
+				if (! db_delete_messageblk(*id))
+					qerrorf ("Warning: could not delete messageblock #%llu. Check log.\n", *id);
+				else
+					qerrorf ("%llu (removed from dbase)\n", *id);
 			}
-			qerrorf("\n");
+
+			if (! g_list_next(lost))
+				break;
+
+			lost = g_list_next(lost);
 		}
+
+		qerrorf("\n");
+		has_errors = 1;
+	} else {
+		qprintf("Ok. Found [%ld] unconnected messageblks.\n", count);
 	}
 
 	g_list_destroy(lost);
+	lost = NULL;
 
 	time(&stop);
-	qverbosef("--- %s mailbox integrity took %g seconds\n",
-	       action, difftime(stop, start));
-	
+	qverbosef("--- %s block integrity took %g seconds\n", action, difftime(stop, start));
+	/* end part 6 */
+
 	return 0;
 }
 #if 0

@@ -28,6 +28,9 @@ char *configFile = DEFAULT_CONFIG_FILE;
 
 #define PNAME "dbmail/export"
 
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
+
 /* UI policy */
 int quiet = 0;
 int reallyquiet = 0;
@@ -235,7 +238,9 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 				qerrorf("error exporting mailbox %s -> %s\n", mailbox, dumpfile);
 				goto cleanup;
 			}
-			
+
+			if (delete_after_dump) db_update("UPDATE %smailboxes SET seq=seq+1 WHERE mailbox_idnr=%d",DBPFX,mailbox_idnr);
+
 			if (basedir) {
 				g_free(dir);
 				g_free(dumpfile);
