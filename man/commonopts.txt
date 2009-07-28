@@ -6,6 +6,7 @@ COMMON OPTIONS
  hardcoded to use /etc/dbmail.conf for their configs, and will
  halt if the config file cannot be found. Use the -f configfile
  option to specify your system's preferred config file location.
+ Debian is patched to have /etc/dbmail/dbmail.conf as the default.
 
 -q::
  Quietly skip interactive prompts and helpful status messages

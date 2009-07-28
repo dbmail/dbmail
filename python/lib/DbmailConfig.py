@@ -6,7 +6,7 @@ unimplementedError = 'Dbmail unimplemented'
 configError = 'Dbmail configuration error'
 
 class DbmailConfig:
-    _file="/etc/dbmail/dbmail.conf"
+    _file="/etc/dbmail.conf"
     _config={}
     _prefix='dbmail_'
     

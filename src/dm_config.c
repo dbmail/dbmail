@@ -361,12 +361,12 @@ void GetDBParams(void)
 
 }
 
-void config_get_logfiles(serverConfig_t *config)
+void config_get_logfiles(serverConfig_t *config, const char * const service)
 {
 	field_t val;
 
 	/* logfile */
-	config_get_value("logfile", "DBMAIL", val);
+	config_get_value("logfile", service, val);
 	if (! strlen(val))
 		g_strlcpy(config->log,DEFAULT_LOG_FILE, FIELDSIZE);
 	else
@@ -374,7 +374,7 @@ void config_get_logfiles(serverConfig_t *config)
 	assert(config->log);
 
 	/* errorlog */
-	config_get_value("errorlog", "DBMAIL", val);
+	config_get_value("errorlog", service, val);
 	if (! strlen(val))
 		g_strlcpy(config->error_log,DEFAULT_ERROR_LOG, FIELDSIZE);
 	else
@@ -382,7 +382,7 @@ void config_get_logfiles(serverConfig_t *config)
 	assert(config->error_log);
 
 	/* pid directory */
-	config_get_value("pid_directory", "DBMAIL", val);
+	config_get_value("pid_directory", service, val);
 	if (! strlen(val))
 		g_strlcpy(config->pid_dir, DEFAULT_PID_DIR, FIELDSIZE);
 	else

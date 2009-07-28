@@ -784,7 +784,7 @@ void server_config_load(serverConfig_t * config, const char * const service)
 		configure_debug(5,5);
 	}
 
-	config_get_logfiles(config);
+	config_get_logfiles(config, service);
 
 	/* read items: TIMEOUT */
 	config_get_value("TIMEOUT", service, val);
