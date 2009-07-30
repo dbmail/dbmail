@@ -138,6 +138,8 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 	"users"
 };
 
+#define REPLYCACHE_WIDTH 100
+
 GTree * global_cache = NULL;
 /////////////////////////////////////////////////////////////////////////////
 
@@ -3371,8 +3373,15 @@ int db_user_find_create(u64_t user_idnr)
 
 int db_replycache_register(const char *to, const char *from, const char *handle)
 {
+	char *tmp_to = NULL;
+	char *tmp_from = NULL;
+	char *tmp_handle = NULL;
 	C c; R r; S s; volatile int t = FALSE;
 	INIT_QUERY;
+
+	tmp_to = g_strndup(to, REPLYCACHE_WIDTH);
+	tmp_from = g_strndup(from, REPLYCACHE_WIDTH);
+	tmp_handle = g_strndup(handle, REPLYCACHE_WIDTH);
 
 	snprintf(query, DEF_QUERYSIZE, "SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = ? AND from_addr = ? AND handle = ? ", DBPFX);
@@ -3380,9 +3389,9 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	c = db_con_get();
 	TRY
 		s = db_stmt_prepare(c, query);
-		db_stmt_set_str(s, 1, to);
-		db_stmt_set_str(s, 2, from);
-		db_stmt_set_str(s, 3, handle);
+		db_stmt_set_str(s, 1, tmp_to);
+		db_stmt_set_str(s, 2, tmp_from);
+		db_stmt_set_str(s, 3, tmp_handle);
 
 		r = db_stmt_query(s);
 		if (db_result_next(r)) 
@@ -3415,15 +3424,18 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	db_con_clear(c);
 	TRY
 		s = db_stmt_prepare(c, query);
-		db_stmt_set_str(s, 1, to);
-		db_stmt_set_str(s, 2, from);
-		db_stmt_set_str(s, 3, handle);
+		db_stmt_set_str(s, 1, tmp_to);
+		db_stmt_set_str(s, 2, tmp_from);
+		db_stmt_set_str(s, 3, tmp_handle);
 		t = db_stmt_exec(s);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
+		g_free(tmp_to);
+		g_free(tmp_from);
+		g_free(tmp_handle);
 	END_TRY;
 
 	return t;
