@@ -410,7 +410,8 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 				DBPFX, username, service, now, now, 
 				(char *)self->src_ip, self->src_port, (char *)self->dst_ip, self->dst_port, 
 				status, frag);
-		self->authlog_id = db_insert_result(c, r);
+		
+		if(strcmp(AUTHLOG_ERR,status)!=0) self->authlog_id = db_insert_result(c, r);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
@@ -424,7 +425,7 @@ static void ci_authlog_close(clientbase_t *self)
 	if ((! server_conf->authlog) || server_conf->no_daemonize) return;
 	if (! self->authlog_id) return;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	db_update("UPDATE %sauthlog SET logout_time=%s, status=%s, bytes_rx=%llu, bytes_tx=%llu "
+	db_update("UPDATE %sauthlog SET logout_time=%s, status='%s', bytes_rx=%llu, bytes_tx=%llu "
 		"WHERE id=%llu", DBPFX, now, AUTHLOG_FIN, self->bytes_rx, self->bytes_tx, self->authlog_id);
 }
 

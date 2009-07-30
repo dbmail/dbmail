@@ -111,6 +111,7 @@ void client_session_bailout(ClientSession_t **session)
 	if (server_conf->no_daemonize == 1) _exit(0);
 
 	client_session_reset(c);
+	c->state = CLIENTSTATE_ANY;
 	ci_close(c->ci);
 	g_free(c);
 	c = NULL;
