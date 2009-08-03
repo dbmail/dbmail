@@ -414,7 +414,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		finalized=1;
 	}
 
-	if (row > 2 && depth > 0 && blist[0] && !finalized) {
+	if (row > 2 && depth > 0 && boundary && blist[0] && !finalized) {
 		if (strcmp(blist[0],boundary)!=0) {
 			dprint("\n--%s-- final\n", blist[0]);
 			g_string_append_printf(m, "\n--%s--\n\n", blist[0]);
