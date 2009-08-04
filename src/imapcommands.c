@@ -86,7 +86,7 @@ void cmd_free(cmd_t *cmd)
 	return;
 
 #define IC_DONE_OK \
-	dbmail_imap_session_buff_printf(self, "%s OK %s%s completed\r\n", self->tag, self->use_uid ? "UID " : "", self->command)
+	if (self->state != CLIENTSTATE_ERROR) dbmail_imap_session_buff_printf(self, "%s OK %s%s completed\r\n", self->tag, self->use_uid ? "UID " : "", self->command)
 /*
  * RETURN VALUES _ic_ functions:
  *
@@ -1081,10 +1081,16 @@ int imap_idle_loop(ImapSession *self, int timeout)
 		g_get_current_time(&end_time);
 		g_time_val_add(&end_time, 1000000*timeout);
 		data = g_async_queue_timed_pop(self->ci->queue, &end_time);
+		if(self->state == CLIENTSTATE_ERROR) {
+			TRACE(TRACE_DEBUG, "[%p] idle loop exiting due to client error.", self);
+			g_free(data);
+			return -1;
+		}
 		if (data) {
 			dm_thread_data *D = (gpointer)data;
 			message = (char *)D->data;
 			if (strlen(message) > 4 && strncasecmp(message,"DONE",4)==0) {
+				TRACE(TRACE_DEBUG, "[%p] DONE recieved", self);
 				g_free(D->data);
 				g_free(D);
 				return 0;

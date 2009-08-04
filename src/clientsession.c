@@ -113,6 +113,7 @@ void client_session_bailout(ClientSession_t **session)
 	client_session_reset(c);
 	c->state = CLIENTSTATE_ANY;
 	ci_close(c->ci);
+	c->ci = NULL;
 	g_free(c);
 	c = NULL;
 }

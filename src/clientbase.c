@@ -432,6 +432,7 @@ static void ci_authlog_close(clientbase_t *self)
 void ci_close(clientbase_t *self)
 {
 	assert(self);
+	TRACE(TRACE_DEBUG, "closing clientbase [%p]", self);
 
 	if (self->queue) g_async_queue_unref(self->queue);
 	event_del(self->rev);

@@ -97,6 +97,7 @@ ImapSession * dbmail_imap_session_new(void)
 
 	assert(self->cache);
  
+	TRACE(TRACE_DEBUG,"imap session [%p] created", self);
 	return self;
 }
 
@@ -163,11 +164,21 @@ void dbmail_imap_session_delete(ImapSession * self)
 	TRACE(TRACE_DEBUG,"[%p]", self);
 	Cache_free(&self->cache);
 
+	if (self->ci) {
+		ci_close(self->ci);
+		self->ci = NULL;
+	}
+
+	dbmail_imap_session_args_free(self, TRUE);
+
 	if (self->fi) {
 		dbmail_imap_session_bodyfetch_free(self);
 		g_free(self->fi);
 		self->fi = NULL;
 	}
+
+	dbmail_imap_session_fetch_free(self);
+
 	if (self->tag) {
 		g_free(self->tag);
 		self->tag = NULL;
@@ -184,10 +195,6 @@ void dbmail_imap_session_delete(ImapSession * self)
 		g_tree_destroy(self->mbxinfo);
 		self->mbxinfo = NULL;
 	}
-	if (self->ids) {
-		g_tree_destroy(self->ids);
-		self->ids = NULL;
-	}
 	if (self->recent) {
 		g_list_destroy(self->recent);
 		self->recent = NULL;
@@ -200,14 +207,12 @@ void dbmail_imap_session_delete(ImapSession * self)
 		g_tree_destroy(self->physids);
 		self->physids = NULL;
 	}
-
-	dbmail_imap_session_fetch_free(self);
-	dbmail_imap_session_args_free(self, TRUE);
 	
 	g_string_free(self->buff,TRUE);
 
 	g_mutex_free(self->mutex);
 	g_free(self);
+	TRACE(TRACE_DEBUG,"imap session [%p] deleted", self);
 	self = NULL;
 }
 

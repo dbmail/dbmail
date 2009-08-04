@@ -89,12 +89,13 @@ static void imap_session_bailout(ImapSession *session)
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 		session->command_state = FALSE;
 		dm_thread_data *D = g_new0(dm_thread_data,1);
-		D->data = (gpointer)"DONE\n\0";
+		D->data = NULL;
 		g_async_queue_push(session->ci->queue, (gpointer)D);
 		return;
 	}
 
 	ci_close(session->ci);
+	session->ci = NULL;
 	dbmail_imap_session_delete(session);
 }
 
@@ -236,6 +237,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 	switch(status) {
 		case -1:
 			dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);	/* fatal error occurred, kick this user */
+			dbmail_imap_session_reset(session);
 			imap_session_bailout(session);
 			break;
 
@@ -509,6 +511,7 @@ void _ic_cb_leave(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;
+	TRACE(TRACE_DEBUG,"handling imap session [%p]",session);
 	imap_handle_exit(session, D->status);
 }
 
