@@ -1303,69 +1303,6 @@ int db_icheck_mimeparts(gboolean cleanup)
 	return t;
 }
 
-int db_icheck_messages(GList ** lost)
-{
-	C c; R r; volatile int t = DM_SUCCESS;
-	u64_t message_idnr;
-	u64_t *idnr;
-	int i = 0;
-
-	c = db_con_get();
-	TRY
-		r =  db_query(c, "SELECT msg.message_idnr FROM %smessages msg "
-				"LEFT JOIN %smailboxes mbx ON "
-				"msg.mailbox_idnr=mbx.mailbox_idnr "
-				"WHERE mbx.mailbox_idnr IS NULL",DBPFX,DBPFX);
-		while (db_result_next(r)) {
-			message_idnr = db_result_get_u64(r, 0);
-			idnr = g_new0(u64_t,1);
-			*idnr = message_idnr;
-			*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) return t;
-
-	if (! i) TRACE(TRACE_DEBUG, "no lost messages");
-
-	return t;
-}
-
-int db_icheck_mailboxes(GList **lost)
-{
-	C c; R r; volatile int t = DM_SUCCESS;
-	u64_t mailbox_idnr, *idnr;
-	int i = 0;
-
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT mbx.mailbox_idnr FROM %smailboxes mbx "
-				"LEFT JOIN %susers usr ON mbx.owner_idnr=usr.user_idnr "
-				"WHERE usr.user_idnr is NULL",DBPFX,DBPFX);
-		while (db_result_next(r)) {
-			mailbox_idnr = db_result_get_u64(r, 0);
-			idnr = g_new0(u64_t,1);
-			*idnr = mailbox_idnr;
-			*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) return t;
-	if (! i) TRACE(TRACE_DEBUG, "no lost mailboxes");
-
-	return t;
-}
-
 int db_icheck_null_physmessages(GList **lost)
 {
 	C c; R r; volatile int t = DM_SUCCESS;
@@ -1393,35 +1330,6 @@ int db_icheck_null_physmessages(GList **lost)
 
 	if (! i)
 		TRACE(TRACE_DEBUG, "no null physmessages");
-
-	return t;
-}
-
-int db_icheck_null_messages(GList **lost)
-{
-	C c; R r; volatile int t = DM_SUCCESS;
-	u64_t *idnr;
-	int i = 0;
-
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT msg.message_idnr FROM %smessages msg "
-			"LEFT JOIN %sphysmessage pm ON "
-			"msg.physmessage_id = pm.id WHERE pm.id is NULL",DBPFX,DBPFX);
-		while (db_result_next(r)) {
-			idnr = g_new0(u64_t,1);
-			*idnr = db_result_get_u64(r, 0);
-			*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (! i)
-		TRACE(TRACE_DEBUG, "no null messages");
 
 	return t;
 }

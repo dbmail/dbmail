@@ -52,7 +52,6 @@ int serious_errors = 0;
 
 static int find_time(const char *timespec, timestring_t *timestring);
 static int do_check_integrity(void);
-static int do_null_messages(void);
 static int do_purge_deleted(void);
 static int do_set_deleted(void);
 static int do_dangling_aliases(void);
@@ -74,7 +73,6 @@ int do_showhelp(void) {
 	"     -a        perform all checks (in this release: -ctubpds)\n"
 	"     -c        clean up database (optimize/vacuum)\n"
 	"     -t        test for message integrity\n"
-	"     -u        null message check\n"
 	"     -b        body/header/envelope cache check\n"
 	"     -p        purge messages have the DELETE status set\n"
 	"     -d        set DELETE status for deleted messages\n"
@@ -104,7 +102,6 @@ int main(int argc, char *argv[])
 	int check_integrity = 0;
 	int check_iplog = 0, check_replycache = 0;
 	char *timespec_iplog = NULL, *timespec_replycache = NULL;
-	int null_messages = 0;
 	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0, rehash = 0;
 	int show_help = 0;
 	int do_nothing = 1;
@@ -139,7 +136,6 @@ int main(int argc, char *argv[])
 			set_deleted = 1;
 			dangling_aliases = 1;
 			check_integrity = 1;
-			null_messages = 1;
 			is_header = 1;
 			do_nothing = 0;
 			break;
@@ -175,8 +171,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'u':
-			null_messages = 1;
-			do_nothing = 0;
+			/* deprecated */
 			break;
 
 		case 'l':
@@ -282,7 +277,6 @@ int main(int argc, char *argv[])
 	qverbosef("Ok. Connected.\n");
 
 	if (check_integrity) do_check_integrity();
-	if (null_messages) do_null_messages();
 	if (purge_deleted) do_purge_deleted();
 	if (is_header) do_header_cache();
 	if (set_deleted) do_set_deleted();
@@ -585,59 +579,6 @@ int do_dangling_aliases(void)
 	return result;
 }
 
-int do_null_messages(void)
-{
-	time_t start, stop;
-	GList *lost = NULL;
-	u64_t *id;
-	long count;
-
-	if (no_to_all)
-		qprintf("\nChecking DBMAIL for NULL messages...\n");
-	if (yes_to_all)
-		qprintf("\nRepairing DBMAIL for NULL messages...\n");
-
-	time(&start);
-
-	if (db_icheck_null_messages(&lost) < 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
-		g_list_destroy(lost);
-		serious_errors = 1;
-		return -1;
-	}
-
-	count = g_list_length(lost);
-	if (count > 0)
-		qerrorf("Ok. Found [%ld] NULL messages.\n", count);
-	else
-		qprintf("Ok. Found [%ld] NULL messages.\n", count);
-
-	if (yes_to_all) {
-		if (count > 0) {
-			lost = g_list_first(lost);
-			while (lost) {
-				id = (u64_t *)lost->data;
-				if (! db_set_message_status(*id, MESSAGE_STATUS_ERROR))
-					qerrorf("Warning: could not set status on message [%llu]. Check log.\n", *id);
-				else
-					qverbosef("[%llu] set to MESSAGE_STATUS_ERROR)\n", *id);
-        
-				if (! g_list_next(lost))
-					break;
-				lost = g_list_next(lost);
-			}
-		}
-	}
-
-	g_list_destroy(lost);
-	lost = NULL;
-
-	time(&stop);
-	qverbosef("--- checking NULL messages took %g seconds\n", difftime(stop, start));
-	
-	return 0;
-}
-
 static int db_delete_messageblk(u64_t messageblk_idnr)
 {
 	return db_update("DELETE FROM %smessageblks WHERE messageblk_idnr = %llu", DBPFX, messageblk_idnr);
@@ -658,113 +599,12 @@ int do_check_integrity(void)
 
 	qprintf("\n%s DBMAIL message integrity...\n", action);
 
-
 	/* This is what we do:
-	 1. Check for loose mailboxes
-	 2. Check for loose messages
 	 3. Check for loose physmessages
 	 4. Check for loose partlists
 	 5. Check for loose mimeparts
 	 6. Check for loose messageblks
 	 */
-
-	/* part 1 */
-	time(&start);
-	qprintf("\n%s DBMAIL mailbox integrity...\n", action);
-
-	if (db_icheck_mailboxes(&lost) < 0) {
-		qerrorf ("Failed. An error occured. Please check log.\n");
-		serious_errors = 1;
-		return -1;
-	}
-
-	count = g_list_length(lost);
-	if (count > 0) {
-		has_errors = 1;
-		qerrorf("Ok. Found [%ld] unconnected mailboxes.\n", count);
-	} else {
-		qprintf("Ok. Found [%ld] unconnected mailboxes.\n", count);
-	}
-
-	if (yes_to_all) {
-		if (count > 0) {
-        
-			lost = g_list_first(lost);
-			while (lost) {
-				id = (u64_t *) lost->data;
-        
-				if (no_to_all) {
-					qerrorf("%llu ", *id);
-				} else if (yes_to_all) {
-					if (db_delete_mailbox(*id, 0, 0))
-						qerrorf("Warning: could not delete mailbox #%llu. Check log.\n", *id);
-					else
-						qerrorf("%llu (removed from dbase)\n", *id);
-				}
-				if (! g_list_next(lost))
-					break;
-				lost = g_list_next(lost);
-			}
-			qerrorf("\n");
-		}
-	}
-
-	g_list_destroy(lost);
-
-	time(&stop);
-	qverbosef("--- %s mailbox integrity took %g seconds\n",
-	       action, difftime(stop, start));
-	/* end part 1 */
-	
-	/* part 2 */
-	start = stop;
-	qprintf("\n%s DBMAIL message integrity...\n", action);
-
-	if (db_icheck_messages(&lost) < 0) {
-		qerrorf ("Failed. An error occured. Please check log.\n");
-		serious_errors = 1;
-		return -1;
-	}
-
-	count = g_list_length(lost);
-
-	if (count > 0) {
-		has_errors = 1;
-		qerrorf("Ok. Found [%ld] unconnected messages:\n", count);
-	} else {
-		qprintf("Ok. Found [%ld] unconnected messages.\n", count);
-	}
-
-	if (yes_to_all) {
-		if (count > 0) {
-			lost = g_list_first(lost);
-			
-			while (lost) {
-				id = (u64_t *) lost->data;
-        
-				if (no_to_all) {
-					qerrorf("%llu ", *id);
-				} else if (yes_to_all) {
-					if (! db_delete_message(*id))
-						qerrorf ("Warning: could not delete message #%llu. Check log.\n", *id);
-					else
-						qerrorf ("%llu (removed from dbase)\n", *id);
-				}
-        
-				if (! g_list_next(lost))
-					break;
-				lost = g_list_next(lost);
-			}
-			qerrorf("\n");
-		}
-	}
-	g_list_destroy(lost);
-	lost = NULL;
-
-	time(&stop);
-	qverbosef("--- %s message integrity took %g seconds\n",
-	       action, difftime(stop, start));
-	/* end part 2 */
 
 	/* part 3 */
 	start = stop;
@@ -889,49 +729,6 @@ int do_check_integrity(void)
 
 	return 0;
 }
-#if 0
-static int do_is_header(void)
-{
-	time_t start, stop;
-	GList *lost = NULL;
-
-	if (no_to_all) {
-		qprintf("\nChecking DBMAIL for incorrect is_header flags...\n");
-	}
-	if (yes_to_all) {
-		qprintf("\nRepairing DBMAIL for incorrect is_header flags...\n");
-	}
-	time(&start);
-
-	if (db_icheck_isheader(&lost) < 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
-		serious_errors = 1;
-		return -1;
-	}
-
-	if (g_list_length(lost) > 0) {
-		qerrorf("Ok. Found [%d] incorrect is_header flags.\n", g_list_length(lost));
-		has_errors = 1;
-	} else {
-		qprintf("Ok. Found [%d] incorrect is_header flags.\n", g_list_length(lost));
-	}
-
-	if (yes_to_all) {
-		if (db_set_isheader(lost) < 0) {
-			qerrorf("Error setting the is_header flags");
-			has_errors = 1;
-		}
-	}
-
-	g_list_free(g_list_first(lost));
-
-	time(&stop);
-	qverbosef("--- checking is_header flags took %g seconds\n",
-	       difftime(stop, start));
-	
-	return 0;
-}
-#endif
 
 static int do_rfc_size(void)
 {

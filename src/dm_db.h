@@ -378,47 +378,6 @@ int db_icheck_mimeparts(gboolean cleanup);
 int db_icheck_physmessages(gboolean cleanup);
 
 /**
- * \brief check for all messages that are not connected to
- *        mailboxes
- * \param lost_list pointer to a list which will contain all lost messages
- *        this list needs to be empty on call to this function.
- * \return 
- *      - -2 on memory error
- *      - -1 on database error
- *      - 0 on success
- * \attention caller should free this memory
- */
-int db_icheck_messages(GList **lost);
-
-/**
- * \brief check for all mailboxes that are not connected to
- *        users
- * \param lost_list pointer to a list which will contain all lost mailboxes
- *        this list needs to be empty on call to this function.
- * \return 
- *      - -2 on memory error
- *      - -1 on database error
- *      - 0 on success
- * \attention caller should free this memory
- */
-int db_icheck_mailboxes(GList **lost);
-
-/**
- * \brief check for all messages that are not connected to physmessage
- * records. This function is not nessecary when using foreign key
- * constraints. 
- * \param lost_list pointer to a list which will contain all message_idnr
- *        of messages that are not connected to physmessage records.
- *        this list needs to be empty on call to this function.
- * \return 
- *      - -2 on memory error
- *      - -1 on database error
- *      - 0 on success
- * \attention caller should free this memory
- */
-int db_icheck_null_messages(GList **lost);
-
-/**
  * \brief check for all physmessage records that have no messageblks 
  * associated with them.
  * \param null_list pointer to a list which will contain all physmessage_ids
