@@ -170,13 +170,6 @@ void dbmail_imap_session_delete(ImapSession * self)
 	}
 
 	dbmail_imap_session_args_free(self, TRUE);
-
-	if (self->fi) {
-		dbmail_imap_session_bodyfetch_free(self);
-		g_free(self->fi);
-		self->fi = NULL;
-	}
-
 	dbmail_imap_session_fetch_free(self);
 
 	if (self->tag) {
@@ -230,8 +223,11 @@ void dbmail_imap_session_fetch_free(ImapSession *self)
 		g_list_free(g_list_first(self->ids_list));
 		self->ids_list = NULL;
 	}
-	if (self->fi) 
+	if (self->fi) {
 		dbmail_imap_session_bodyfetch_free(self);
+		g_free(self->fi);
+		self->fi = NULL;
+	}
 }
 
 void dbmail_imap_session_args_free(ImapSession *self, gboolean all)
