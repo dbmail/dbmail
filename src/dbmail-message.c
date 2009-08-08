@@ -1445,10 +1445,8 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 
 	return DM_SUCCESS;
 }
-#define CACHE_WIDTH_VALUE 255
-#define CACHE_WIDTH_FIELD 255
-#define CACHE_WIDTH_ADDR 255
-#define CACHE_WIDTH_NAME 255
+
+#define CACHE_WIDTH 255
 
 
 static int _header_name_get_id(const DbmailMessage *self, const char *header, u64_t *id)
@@ -1664,7 +1662,6 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			continue;
 		}
 
-
 		// Generate additional fields for SORT optimization
 		if(isaddr) {
 			emaillist = internet_address_parse_string(value);
@@ -1674,7 +1671,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 				if(sortfield == NULL) {
 					// Only the first email recipient is to be used for sorting - so save it now.
-					sortfield = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
+					sortfield = g_strndup(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH);
 				}
 			}
 			internet_address_list_destroy(emaillist);
@@ -1695,7 +1692,14 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		}
 
 		if (! sortfield)
-			sortfield = g_strndup(value, CACHE_WIDTH_ADDR);
+			sortfield = g_strndup(value, CACHE_WIDTH);
+
+		/* avoid column overflow */
+		if (strlen(value) > CACHE_WIDTH)
+			value[CACHE_WIDTH-1] = '\0';
+
+		if (strlen(sortfield) > CACHE_WIDTH)
+			sortfield[CACHE_WIDTH-1] = '\0';
 
 		/* Fetch header value id if exists, else insert, and return new id */
 		_header_value_get_id(value, sortfield, datefield, &headervalue_id);
@@ -1725,7 +1729,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 	g_return_if_fail(value != NULL);
 
 	/* field values are truncated to 255 bytes */
-	clean_value = g_strndup(value,CACHE_WIDTH_FIELD);
+	clean_value = g_strndup(value,CACHE_WIDTH);
 
 	c = db_con_get();
 	TRY
