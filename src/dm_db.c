@@ -1198,29 +1198,26 @@ int db_icheck_messageblks(GList **lost)
 int db_icheck_physmessages(gboolean cleanup)
 {
 	C c; R r; volatile int t = DM_SUCCESS;
-	unsigned int x = 0;
-	int id = 0;
-	GSList *ids = NULL;
+	GList *ids = NULL;
 
 	c = db_con_get();
 	TRY
-		t = 0;
 		r = db_query(c, "SELECT p.id FROM %sphysmessage p LEFT JOIN %smessages m ON p.id = m.physmessage_id "
 				"WHERE m.physmessage_id IS NULL", DBPFX, DBPFX);
-		while(db_result_next(r))
-		{
-			t++;
-			ids = g_slist_append(ids, GUINT_TO_POINTER(db_result_get_int(r, 0)));
+		while(db_result_next(r)) {
+			u64_t *id = g_new0(u64_t, 1);
+			*id = db_result_get_u64(r, 0);
+			ids = g_list_prepend(ids, id);
 		}
-		if (cleanup && t > 0) {
-			while(x < g_slist_length(ids))
-			{
-				id = GPOINTER_TO_INT(g_slist_nth_data(ids, x));
-				x++;
-				db_exec(c, "DELETE FROM %sphysmessage WHERE id = %d", DBPFX, id);
+
+		if (cleanup) {
+			while(ids) {
+				db_exec(c, "DELETE FROM %sphysmessage WHERE id = %llu", DBPFX, *(u64_t *)ids->data);
+				if (! g_list_next(ids)) break;
+				ids = g_list_next(ids);
 			}
 		}
-		g_slist_free(ids);
+		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -1234,29 +1231,26 @@ int db_icheck_physmessages(gboolean cleanup)
 int db_icheck_partlists(gboolean cleanup)
 {
 	C c; R r; volatile int t = DM_SUCCESS;
-	unsigned int x = 0;
-	int id = 0;
-	GSList *ids = NULL;
+	GList *ids = NULL;
 
 	c = db_con_get();
 	TRY
-		t = 0;
 		r = db_query(c, "SELECT COUNT(*), l.physmessage_id FROM %spartlists l LEFT JOIN %sphysmessage p ON p.id = l.physmessage_id "
 				"WHERE p.id IS NULL GROUP BY l.physmessage_id", DBPFX, DBPFX);
-		while(db_result_next(r))
-		{
-			t += db_result_get_u64(r, 0);
-			ids = g_slist_append(ids, GUINT_TO_POINTER(db_result_get_int(r, 1)));
+
+		while(db_result_next(r)) {
+			u64_t *id = g_new0(u64_t, 1);
+			*id = db_result_get_u64(r, 0);
+			ids = g_list_prepend(ids, id);
 		}
-		if (cleanup && t > 0) {
-			while(x < g_slist_length(ids))
-			{
-				id = GPOINTER_TO_INT(g_slist_nth_data(ids, x));
-				x++;
-				db_exec(c, "DELETE FROM %spartlists WHERE physmessage_id = %d", DBPFX, id);
+		if (cleanup) {
+			while(ids) {
+				db_exec(c, "DELETE FROM %spartlists WHERE physmessage_id = %llu", DBPFX, *(u64_t *)ids->data);
+				if (! g_list_next(ids)) break;
+				ids = g_list_next(ids);
 			}
 		}
-		g_slist_free(ids);
+		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -1270,29 +1264,25 @@ int db_icheck_partlists(gboolean cleanup)
 int db_icheck_mimeparts(gboolean cleanup)
 {
 	C c; R r; volatile int t = DM_SUCCESS;
-	unsigned int x = 0;
-	int id = 0;
-	GSList *ids = NULL;
+	GList *ids = NULL;
 
 	c = db_con_get();
 	TRY
-		t = 0;
 		r = db_query(c, "SELECT p.id FROM %smimeparts p LEFT JOIN %spartlists l ON p.id = l.part_id "
 				"WHERE l.part_id IS NULL", DBPFX, DBPFX);
-		while(db_result_next(r))
-		{
-			t++;
-			ids = g_slist_append(ids, GUINT_TO_POINTER(db_result_get_int(r, 0)));
+		while(db_result_next(r)) {
+			u64_t *id = g_new0(u64_t, 1);
+			*id = db_result_get_u64(r, 0);
+			ids = g_list_prepend(ids, id);
 		}
-		if (cleanup && t > 0) {
-			while(x < g_slist_length(ids))
-			{
-				id = GPOINTER_TO_INT(g_slist_nth_data(ids, x));
-				x++;
-				db_exec(c, "DELETE FROM %smimeparts WHERE id = %d", DBPFX, id);
+		if (cleanup) {
+			while(ids) {
+				db_exec(c, "DELETE FROM %smimeparts WHERE id = %llu", DBPFX, *(u64_t *)ids->data);
+				if (! g_list_next(ids)) break;
+				ids = g_list_next(ids);
 			}
 		}
-		g_slist_free(ids);
+		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
