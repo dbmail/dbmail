@@ -491,7 +491,7 @@ static void server_sock_ssl_cb(int sock, short event, void *arg)
 		event_add(ev, NULL);
 		return;
 	}
-	if (SSL_accept(c->ssl) != 1) {
+	if (SSL_accept(c->ssl) <= 0) {
 		TRACE(TRACE_ERR, "Error in TLS handshake: %s", tls_get_error());
 		SSL_free(c->ssl);
 		c->ssl = NULL;
