@@ -392,13 +392,13 @@ typedef struct {
 	int timeout;
 	int login_timeout;
 	char **iplist;                  // Allocated memory.
+	field_t port;
+	field_t ssl_port;
 	int ipcount;
 	int *listenSockets;             // Allocated memory.
 	int *ssl_listenSockets;         // Allocated memory.
 	int service_before_smtp;
 	gboolean authlog;
-	int port;
-	int ssl_port;
 	gboolean ssl;
 	int backlog;
 	int resolveIP;

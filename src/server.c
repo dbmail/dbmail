@@ -295,31 +295,20 @@ pid_t server_daemonize(serverConfig_t *conf)
 	return getsid(0);
 }
 
-static int dm_socket(int domain)
-{
-	int sock, err;
-	if ((sock = socket(domain, SOCK_STREAM, 0)) == -1) {
-		err = errno;
-		TRACE(TRACE_EMERG, "%s", strerror(err));
-	}
-	return sock;
-}
-
 static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, int backlog)
 {
 	int err;
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
 		err = errno;
-		TRACE(TRACE_EMERG, "%s", strerror(err));
+		TRACE(TRACE_EMERG, "bind::error [%s]", strerror(err));
 	}
 
 	if ((listen(sock, backlog)) == -1) {
 		err = errno;
-		TRACE(TRACE_EMERG, "%s", strerror(err));
+		TRACE(TRACE_EMERG, "listen::error [%s]", strerror(err));
 	}
 	
-	TRACE(TRACE_DEBUG, "done");
 	return 0;
 	
 }
@@ -327,53 +316,58 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 static int create_unix_socket(serverConfig_t * conf)
 {
 	int sock;
-	struct sockaddr_un saServer;
+	struct sockaddr_un un;
 
 	conf->resolveIP=0;
 
-	sock = dm_socket(PF_UNIX);
+	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) == -1) {
+		int err = errno;
+		TRACE(TRACE_EMERG, "%s", strerror(err));
+	}
 
 	/* setup sockaddr_un */
-	memset(&saServer, 0, sizeof(saServer));
-	saServer.sun_family = AF_UNIX;
-	strncpy(saServer.sun_path,conf->socket, sizeof(saServer.sun_path));
+	memset(&un, 0, sizeof(un));
+	un.sun_family = AF_UNIX;
+	strncpy(un.sun_path,conf->socket, sizeof(un.sun_path));
 
 	TRACE(TRACE_DEBUG, "create socket [%s] backlog [%d]", conf->socket, conf->backlog);
 
 	// any error in dm_bind_and_listen is fatal
-	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), conf->backlog);
+	dm_bind_and_listen(sock, (struct sockaddr *)&un, sizeof(un), conf->backlog);
 	
 	chmod(conf->socket, 02777);
 
 	return sock;
 }
 
-static int create_inet_socket(const char * const ip, int port, int backlog)
+static int create_inet_socket(const char * const ip, const char * port, int backlog)
 {
-	int sock;
-	struct sockaddr_in saServer;
-	int so_reuseaddress = 1;
+	struct addrinfo hints, *res, *ressave;
+	int sock, n;
 
-	sock = dm_socket(PF_INET);
-	
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_flags     = AI_PASSIVE;
+	hints.ai_family    = AF_UNSPEC;
+	hints.ai_socktype  = SOCK_STREAM;
 
-	/* setup sockaddr_in */
-	memset(&saServer, 0, sizeof(saServer));
-	saServer.sin_family	= AF_INET;
-	saServer.sin_port	= htons(port);
-
-	TRACE(TRACE_DEBUG, "create socket [%s:%d] backlog [%d]", ip, port, backlog);
-	
-	if (ip[0] == '*') {
-		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
-	} else if (! (inet_aton(ip, &saServer.sin_addr))) {
-		if (sock > 0) close(sock);
-		TRACE(TRACE_EMERG, "IP invalid [%s]", ip);
+	n = getaddrinfo(ip, port, &hints, &res);
+	if (n < 0) {
+		TRACE(TRACE_EMERG, "getaddrinfo::error [%s]", gai_strerror(n));
+		return -1;
 	}
 
+	ressave = res;
+	if ((sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
+		int serr = errno;
+		freeaddrinfo(ressave);
+		TRACE(TRACE_EMERG, "%s", strerror(serr));
+	}	
+
+	TRACE(TRACE_DEBUG, "create socket [%s:%s] backlog [%d]", ip, port, backlog);
+	
 	// any error in dm_bind_and_listen is fatal
-	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), backlog);
+	dm_bind_and_listen(sock, res->ai_addr, res->ai_addrlen, backlog);
+	freeaddrinfo(ressave);
 
 	UNBLOCK(sock);
 
@@ -400,12 +394,12 @@ static void server_create_sockets(serverConfig_t * conf)
 		tls_load_certs(conf);
 		if (conf->ssl)
 			tls_load_ciphers(conf);
-		if (conf->port > 0) {
+		if (conf->port) {
 			for (i = 0; i < conf->ipcount; i++)
 				conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
 		}
 
-		if (conf->ssl && conf->ssl_port > 0) {
+		if (conf->ssl && conf->ssl_port) {
 			conf->ssl_listenSockets = g_new0(int, conf->ipcount);
 			for (i = 0; i < conf->ipcount; i++)
 				conf->ssl_listenSockets[i] = create_inet_socket(conf->iplist[i], conf->ssl_port, conf->backlog);
@@ -608,14 +602,14 @@ int server_run(serverConfig_t *conf)
 
 	if (server_setup(conf)) return -1;
 
-	if (conf->port > 0) {
+	if (conf->port) {
 		evsock = g_new0(struct event, server_conf->ipcount + 1);
 		for (ip = 0; ip < server_conf->ipcount; ip++) {
 			event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, server_sock_cb, &evsock[ip]);
 			event_add(&evsock[ip], NULL);
 		}
 	}
-	if (conf->ssl && conf->ssl_port > 0) {
+	if (conf->ssl && conf->ssl_port) {
 		evssl = g_new0(struct event, server_conf->ipcount + 1);
 		for (ip = 0; ip < server_conf->ipcount; ip++) {
 			event_set(&evssl[ip], server_conf->ssl_listenSockets[ip], EV_READ, server_sock_ssl_cb, &evssl[ip]);
@@ -817,18 +811,17 @@ void server_config_load(serverConfig_t * config, const char * const service)
 	/* read items: PORT */
 	config_get_value("PORT", service, val);
 	config_get_value("TLS_PORT", service, val_ssl);
+
 	if ((strlen(val) == 0) && (strlen(val_ssl) == 0))
 		TRACE(TRACE_EMERG, "no value for PORT or TLS_PORT in config file");
 
-	if ((strlen(val) > 0) && ((config->port = atoi(val)) <= 0))
-		TRACE(TRACE_EMERG, "value for PORT is invalid: [%d]", config->port);
-	if (config->port > 0)
-		TRACE(TRACE_DEBUG, "binding to PORT [%d]", config->port);
+	strncpy(config->port, val, FIELDSIZE);
+	TRACE(TRACE_DEBUG, "binding to PORT [%s]", config->port);
 
-	if ((strlen(val_ssl) > 0) && ((config->ssl_port = atoi(val_ssl)) <= 0))
-		TRACE(TRACE_EMERG, "value for SSL_PORT is invalid: [%d]", config->ssl_port);
-	if (config->ssl_port > 0)
-		TRACE(TRACE_DEBUG, "binding to SSL_PORT [%d]", config->ssl_port);
+	if (strlen(val_ssl) > 0) {
+		strncpy(config->ssl_port, val_ssl, FIELDSIZE);
+		TRACE(TRACE_DEBUG, "binding to SSL_PORT [%s]", config->ssl_port);
+	}
 
 	/* read items: BINDIP */
 	config_get_value("BINDIP", service, val);
