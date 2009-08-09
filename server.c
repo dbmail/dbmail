@@ -437,41 +437,41 @@ static int create_unix_socket(serverConfig_t * conf)
 
 static int create_inet_socket(const char * const ip, int port, int backlog)
 {
-	int sock, err, flags;
-	struct sockaddr_in saServer;
+        struct addrinfo hints, *res, *ressave;
+        int sock, n, flags;
 	int so_reuseaddress = 1;
+	field_t service;
 
-	sock = dm_socket(PF_INET);
-	
+        memset(&hints, 0, sizeof(struct addrinfo));
+        hints.ai_flags     = AI_PASSIVE;
+        hints.ai_family    = AF_UNSPEC;
+        hints.ai_socktype  = SOCK_STREAM;
+
+	memset(service, 0, sizeof(field_t));
+	snprintf(service, sizeof(field_t), "%d", port);
+
+        n = getaddrinfo(ip, service, &hints, &res);
+        if (n < 0) {
+                TRACE(TRACE_FATAL, "getaddrinfo::error [%s]", gai_strerror(n));
+                return -1;
+        }
+
+        ressave = res;
+        if ((sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
+                int serr = errno;
+                freeaddrinfo(ressave);
+                TRACE(TRACE_FATAL, "%s", strerror(serr));
+        }
+
+        TRACE(TRACE_DEBUG, "create socket [%s:%d] backlog [%d]", ip, port, backlog);
+
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 
-	/* setup sockaddr_in */
-	memset(&saServer, 0, sizeof(saServer));
-	saServer.sin_family	= AF_INET;
-	saServer.sin_port	= htons(port);
+        // any error in dm_bind_and_listen is fatal
+        dm_bind_and_listen(sock, res->ai_addr, res->ai_addrlen, backlog);
+        freeaddrinfo(ressave);
 
-	TRACE(TRACE_DEBUG, "creating socket on [%s:%d] with backlog [%d]",
-			ip, port, backlog);
-	
-	if (ip[0] == '*') {
-		
-		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
-		
-	} else if (! (inet_aton(ip, &saServer.sin_addr))) {
-		
-		close(sock);
-		TRACE(TRACE_FATAL, "IP invalid [%s]", ip);
-	}
-
-	err = dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), backlog);
-	if (err != 0) {
-		close(sock);
-		TRACE(TRACE_FATAL, "Fatal error, could not bind to [%s:%d] %s",
-			ip, port, strerror(err));
-	}
-
-	// man 2 accept says that if the connection disappears during the accept call 
-	// accept will block forever unless it is set non-blocking with fcntl
+	// unblock
 	flags = fcntl(sock, F_GETFL);
 	fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 
