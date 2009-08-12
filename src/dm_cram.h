@@ -1,5 +1,6 @@
 /*
- Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+  
+ Copyright (c) 2008 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -15,20 +16,25 @@
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
- $Id: md5.h 1891 2005-10-03 10:01:21Z paul $
 */
 
-#ifndef _DM_DIGEST_H
-#define _DM_DIGEST_H
+#ifndef CRAM_H
+#define CRAM_H
 
-char *dm_digest(const unsigned char * hash, hashid type);
-char *dm_tiger(const char * const s);
-char *dm_sha1(const char * const s);
-char *dm_sha256(const char * const s);
-char *dm_sha512(const char * const s);
-char *dm_whirlpool(const char * const s);
-char *dm_md5(const char * const s);
-char *dm_md5_base64(const char * const s);
+#include <glib.h>
+
+#define T Cram_T
+
+typedef struct T *T;
+
+extern T               Cram_new(void);
+extern void            Cram_setChallenge(T, const char *);
+extern const gchar *   Cram_getChallenge(T);
+extern const gchar *   Cram_getUsername(T);
+extern gboolean        Cram_decode(T, const char *); 
+extern gboolean        Cram_verify(T, const char *);
+extern void            Cram_free(T *);
+
+#undef T
 
 #endif

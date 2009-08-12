@@ -327,6 +327,7 @@ typedef struct {
 	void (*cb_write) (void *);
 	int (*cb_error) (int fd, int error, void *);
 
+	Cram_T auth;                    /* authentication context for cram-md5 */
 	u64_t authlog_id;
 	char src_ip[IPNUM_LEN];		/* client IP-number */
 	int src_port;		        /* client port number */

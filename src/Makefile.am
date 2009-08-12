@@ -39,6 +39,7 @@ COMMON = dbmail-user.c \
 	dbmail-message.c \
 	dbmail-mailbox.c \
 	dm_mailboxstate.c \
+	dm_cram.c \
 	dm_config.c \
 	dm_debug.c \
 	dm_list.c \
@@ -71,48 +72,45 @@ AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 
 INCLUDES = -I$(top_srcdir)
 
+if SHARED
+AM_LDFLAGS = -export-dynamic @CRYPTLIB@
+STATIC_MODULES =
+else
+STATIC_MODULES = @SORTLTLIB@ @AUTHLTLIB@
+endif
 
 dbmail_deliver_SOURCES = main.c
-dbmail_deliver_LDADD = libdbmail.la
+dbmail_deliver_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_pop3d_SOURCES = pop3.c pop3d.c
-dbmail_pop3d_LDADD = libdbmail.la
+dbmail_pop3d_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_imapd_SOURCES = $(IMAPD) imapd.c 
-dbmail_imapd_LDADD = libdbmail.la
+dbmail_imapd_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_util_SOURCES = maintenance.c
-dbmail_util_LDADD = libdbmail.la
+dbmail_util_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_users_SOURCES = user.c
-dbmail_users_LDADD = libdbmail.la
+dbmail_users_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_export_SOURCES = $(IMAPD) export.c
-dbmail_export_LDADD = libdbmail.la
+dbmail_export_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
-dbmail_lmtpd_LDADD = libdbmail.la
+dbmail_lmtpd_LDADD = $(STATIC_MODULES) libdbmail.la
   
 if SIEVE
 dbmail_sievecmd_SOURCES = sievecmd.c 
-dbmail_sievecmd_LDADD = libdbmail.la
+dbmail_sievecmd_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_timsieved_SOURCES = timsieve.c timsieved.c
-dbmail_timsieved_LDADD = libdbmail.la
+dbmail_timsieved_LDADD = $(STATIC_MODULES) libdbmail.la
 endif
-
 
 pkglib_LTLIBRARIES = libdbmail.la
 
-
-if SHARED
-AM_LDFLAGS = -export-dynamic @CRYPTLIB@
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(MODULES)
-else
-libdbmail_la_SOURCES = $(COMMON) $(SERVER)
-libdbmail_la_LIBADD = @SORTLTLIB@ @AUTHLTLIB@
-endif
-
 libdbmail_la_LDFLAGS = $(AM_LDFLAGS) @SOCKETLIB@
 libdbmail_la_CFLAGS = $(AM_CFLAGS)
 

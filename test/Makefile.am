@@ -5,7 +5,13 @@ INCLUDES = -I$(top_srcdir)/src
 
 if WITHCHECK
 
-CHECK_LDADD= $(top_srcdir)/src/libdbmail.la @CHECK_LIBS@
+if SHARED
+STATIC_MODULES=
+else
+STATIC_MODULES=$(top_srcdir)/src/@SORTLTLIB@ $(top_srcdir)/src/@AUTHLTLIB@ 
+endif
+
+CHECK_LDADD= $(STATIC_MODULES) $(top_srcdir)/src/libdbmail.la @CHECK_LIBS@
 
 TESTS=check_dbmail_common \
 	check_dbmail_server \

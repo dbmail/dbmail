@@ -95,6 +95,7 @@
 #include <ConnectionPool.h>
 #include <SQLException.h>
 
+#include "dm_cram.h"
 #include "dbmailtypes.h"
 #include "dm_list.h"
 #include "dm_debug.h"
@@ -197,7 +198,7 @@
 #define DEFAULT_LOG_FILE "@DM_LOGDIR@/dbmail.log"
 #define DEFAULT_ERROR_LOG "@DM_LOGDIR@/dbmail.err"
 
-#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS"
+#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS"
 #define IMAP_TIMEOUT_MSG "* BYE dbmail IMAP4 server signing off due to timeout\r\n"
 /** prefix for #Users namespace */
 #define NAMESPACE_USER "#Users"

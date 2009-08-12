@@ -1897,18 +1897,28 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	if (self->rbuff_size == 0)
 		g_strchomp(s); 
 
-	if (self->args[0] && MATCH(self->args[0],"LOGIN")) {
-		size_t len;
-		if (self->args_idx == 2) {
-			/* decode and store the password */
-			self->args[self->args_idx++] = dm_base64_decode(s, &len);
-			goto finalize; // done
-		} else if (self->args_idx == 1) {
-			/* decode and store the username */
-			self->args[self->args_idx++] = dm_base64_decode(s, &len);
-			/* ask for password */
-			dbmail_imap_session_prompt(self,"password");
-			return 0;
+	if (self->args[0]) {
+		if (MATCH(self->args[0],"LOGIN")) {
+			size_t len;
+			if (self->args_idx == 2) {
+				/* decode and store the password */
+				self->args[self->args_idx++] = dm_base64_decode(s, &len);
+				goto finalize; // done
+			} else if (self->args_idx == 1) {
+				/* decode and store the username */
+				self->args[self->args_idx++] = dm_base64_decode(s, &len);
+				/* ask for password */
+				dbmail_imap_session_prompt(self,"password");
+				return 0;
+			}
+		} else if (MATCH(self->args[0],"CRAM-MD5")) {
+			if (self->args_idx == 1) {
+				/* decode and store the response */
+				Cram_decode(self->ci->auth, s);
+				self->args_idx++;
+				goto finalize; // done
+			}
+
 		}
 	}
 
@@ -2047,12 +2057,25 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	}
 
 finalize:
-	if ((self->args_idx == 1) && MATCH(self->args[0],"LOGIN") ) {
-		TRACE(TRACE_DEBUG, "[%p] prompt for authenticate tokens", self);
+	if (self->args_idx == 1) {
+		if (MATCH(self->args[0],"LOGIN")) {
+			TRACE(TRACE_DEBUG, "[%p] prompt for authenticate tokens", self);
 
-		/* ask for username */
-		dbmail_imap_session_prompt(self,"username");
-		return 0;
+			/* ask for username */
+			dbmail_imap_session_prompt(self,"username");
+			return 0;
+		} else if (MATCH(self->args[0],"CRAM-MD5")) {
+			const gchar *s;
+			gchar *t;
+			self->ci->auth = Cram_new();
+			s = Cram_getChallenge(self->ci->auth);
+			t = (char *)g_base64_encode((const guchar *)s, strlen(s));
+			dbmail_imap_session_buff_printf(self, "+ %s\r\n", t);
+			dbmail_imap_session_buff_flush(self);
+			g_free(t);
+	
+			return 0;
+		}
 	}
 
 	TRACE(TRACE_DEBUG, "[%p] tag: [%s], command: [%s], [%llu] args", self, self->tag, self->command, self->args_idx);

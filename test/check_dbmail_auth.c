@@ -34,6 +34,7 @@
 
 #include <check.h>
 #include "check_dbmail.h"
+#include "dm_cram.h"
 
 extern char *configFile;
 extern int quiet;
@@ -157,6 +158,31 @@ START_TEST(test_auth_change_password_raw)
 }
 END_TEST
 
+START_TEST(test_auth_cram_md5)
+{
+	Cram_T c;
+	const char *challenge = "<1896.697170952@postoffice.reston.mci.net>";
+	const char *response = "dGltIGI5MTNhNjAyYzdlZGE3YTQ5NWI0ZTZlNzMzNGQzODkw";
+	const char *expect = "PDE4OTYuNjk3MTcwOTUyQHBvc3RvZmZpY2UucmVzdG9uLm1jaS5uZXQ+";
+	const char *secret = "tanstaaftanstaaf";
+	char *ch, *r;
+
+	c = Cram_new();
+	Cram_setChallenge(c, challenge);
+
+	ch = Cram_getChallenge(c);
+	r = g_base64_encode((guchar *)ch, strlen(ch));
+	fail_unless(strcmp(r, expect)==0, "%s\n%s\n", r, expect);
+	g_free(r);
+
+	fail_unless(Cram_decode(c, response) == TRUE);
+	fail_unless(Cram_verify(c, secret) == TRUE);
+
+	Cram_free(&c);
+}
+END_TEST
+
+
 Suite *dbmail_common_suite(void)
 {
 	Suite *s = suite_create("Dbmail Auth");
@@ -168,6 +194,7 @@ Suite *dbmail_common_suite(void)
 	tcase_add_test(tc_auth, test_auth_validate);
 	tcase_add_test(tc_auth, test_auth_change_password);
 	tcase_add_test(tc_auth, test_auth_change_password_raw);
+	tcase_add_test(tc_auth, test_auth_cram_md5);
 	
 	return s;
 }

@@ -219,9 +219,10 @@ void _ic_authenticate_enter(dm_thread_data *D)
 int _ic_authenticate(ImapSession *self)
 {
 	if (self->command_type == IMAP_COMM_AUTH) {
-		if (!check_state_and_args(self, 3, 3, CLIENTSTATE_NON_AUTHENTICATED)) return 1;
+		if (!check_state_and_args(self, 1, 3, CLIENTSTATE_NON_AUTHENTICATED)) return 1;
 		/* check authentication method */
-		if (strcasecmp(self->args[self->args_idx], "login") != 0) {
+		if ( (! MATCH(self->args[self->args_idx], "login")) && \
+			(! MATCH(self->args[self->args_idx], "cram-md5")) ) {
 			dbmail_imap_session_buff_printf(self, "%s NO Invalid authentication mechanism specified\r\n", self->tag);
 			return 1;
 		}

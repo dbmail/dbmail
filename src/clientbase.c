@@ -459,6 +459,13 @@ void ci_close(clientbase_t *self)
 	g_free(self->timeout);
 	self->timeout = NULL;
 
+	if (self->auth) {
+		Cram_T c = self->auth;
+		Cram_free(&c);
+		self->auth = NULL;
+	}
+
+
 	g_free(self);
 	
 	self = NULL;

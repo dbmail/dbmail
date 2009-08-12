@@ -23,7 +23,7 @@
 
 static const char hex[] = "0123456789abcdef";
 
-static char * dm_digest(const unsigned char * hash, hashid type)
+char * dm_digest(const unsigned char * hash, hashid type)
 {
 	char *buffer = g_new0(char,256);
 	char *buf = buffer;

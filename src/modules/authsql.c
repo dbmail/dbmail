@@ -294,7 +294,7 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 {
 	int is_validated = 0;
 	char salt[13], cryptres[35], real_username[DM_USERNAME_LEN];
-	char *hashstr, *dbpass = NULL, *encode = NULL;
+	char *tuser, *hashstr, *dbpass = NULL, *encode = NULL;
 	int result, t = FALSE;
 	C c; R r;
 
@@ -305,17 +305,22 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
 
-	if (username == NULL || password == NULL) {
-		TRACE(TRACE_DEBUG, "username or password is NULL");
-		return FALSE;
+	tuser = username;
+	if (tuser == NULL || password == NULL) {
+		if (ci && ci->auth) { // CRAM-MD5
+			tuser = (char *)Cram_getUsername(ci->auth);
+		} else {
+			TRACE(TRACE_DEBUG, "username or password is NULL");
+			return FALSE;
+		}
 	}
 
 	/* the shared mailbox user should not log in! */
-	if (strcmp(username, PUBLIC_FOLDER_USER) == 0) return 0;
+	if (strcmp(tuser, PUBLIC_FOLDER_USER) == 0) return 0;
 
-	strncpy(real_username, username, DM_USERNAME_LEN);
+	strncpy(real_username, tuser, DM_USERNAME_LEN);
 	if (db_use_usermap()) {  /* use usermap */
-		result = db_usermap_resolve(ci, username, real_username);
+		result = db_usermap_resolve(ci, tuser, real_username);
 		if (result == DM_EGENERAL)
 			return 0;
 		if (result == DM_EQUERY)
@@ -353,7 +358,10 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 
 	if (strcasecmp(encode, "") == 0) {
 		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
-		is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
+		if (ci && ci->auth) // CRAM-MD5
+			is_validated = Cram_verify(ci->auth, dbpass);
+		else
+			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
 	} else if (strcasecmp(encode, "crypt") == 0) {
 		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
 		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
