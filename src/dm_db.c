@@ -124,7 +124,6 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 	"headervalue",
 	"keywords",
 	"mailboxes",
-	"messageblks",
 	"messages",
 	"mimeparts",
 	"partlists",
@@ -1160,43 +1159,6 @@ int db_empty_mailbox(u64_t user_idnr)
 	return result;
 }
 
-int db_icheck_messageblks(GList **lost)
-{
-	C c; R r; volatile int t = DM_SUCCESS;
-	u64_t messageblk_idnr, *idnr;
-	int i = 0;
-
-	/* get all lost message blocks.	 
-	 * This query will select all message block idnr that have no
-	 * associated physmessage in the physmessage table.
-	 */
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT mb.messageblk_idnr FROM %smessageblks mb "
-				"LEFT JOIN %sphysmessage pm ON "
-				"mb.physmessage_id = pm.id WHERE pm.id IS NULL",DBPFX,DBPFX);
-
-		while (db_result_next(r)) {
-			i++;
-			messageblk_idnr = db_result_get_u64(r, 0);
-			idnr = g_new0(u64_t,1);
-			*idnr = messageblk_idnr;
-			*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) return t;
-
-	if (! i) TRACE(TRACE_DEBUG, "no lost messageblocks");
-
-	return t;
-}
-
 int db_icheck_physmessages(gboolean cleanup)
 {
 	C c; R r; volatile int t = DM_SUCCESS;
@@ -1285,86 +1247,6 @@ int db_icheck_mimeparts(gboolean cleanup)
 			}
 		}
 		g_list_destroy(ids);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
-}
-
-int db_icheck_null_physmessages(GList **lost)
-{
-	C c; R r; volatile int t = DM_SUCCESS;
-	u64_t physmessage_id, *idnr;
-	unsigned i;
-
-	i = 0;
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT pm.id FROM %sphysmessage pm "
-			"LEFT JOIN %smessageblks mbk ON pm.id = mbk.physmessage_id "
-			"WHERE mbk.physmessage_id is NULL",DBPFX,DBPFX);
-		while (db_result_next(r)) {
-			physmessage_id = db_result_get_u64(r, 0);
-			idnr = g_new0(u64_t,1);
-			*idnr = physmessage_id;
-			*(GList **)lost = g_list_prepend(*(GList **)lost, idnr);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (! i)
-		TRACE(TRACE_DEBUG, "no null physmessages");
-
-	return t;
-}
-
-int db_set_isheader(GList *lost)
-{
-	C c; volatile int t = DM_SUCCESS;
-	GList *slices = NULL;
-
-	if (! lost) return DM_SUCCESS;
-
-	c = db_con_get();
-	TRY
-		slices = g_list_slices(lost,80);
-		slices = g_list_first(slices);
-		while(slices) {
-			db_exec(c, "UPDATE %smessageblks SET is_header = 1 WHERE messageblk_idnr IN (%s)", DBPFX, (gchar *)slices->data);
-
-			if (! g_list_next(slices)) break;
-			slices = g_list_next(slices);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	g_list_destroy(slices);
-
-	return t;
-}
-
-int db_icheck_isheader(GList  **lost)
-{
-	C c; R r; volatile int t = DM_SUCCESS;
-	
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT MIN(messageblk_idnr),MAX(is_header) FROM %smessageblks "
-				"GROUP BY physmessage_id HAVING MAX(is_header)=0", DBPFX);
-		while (db_result_next(r))
-			*(GList **)lost = g_list_prepend(*(GList **)lost, g_strdup(db_result_get(r, 0)));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;

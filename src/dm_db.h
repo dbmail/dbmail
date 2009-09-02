@@ -371,32 +371,10 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t * mailbox_si
 *      - 0 on success
 * \attention caller should free this memory
 */
-int db_icheck_messageblks(GList **lost);
 
 int db_icheck_partlists(gboolean cleanup);
 int db_icheck_mimeparts(gboolean cleanup);
 int db_icheck_physmessages(gboolean cleanup);
-
-/**
- * \brief check for all physmessage records that have no messageblks 
- * associated with them.
- * \param null_list pointer to a list which will contain all physmessage_ids
- * of messages that are not connected to physmessage records.
- * this list needs to be empty on call to this function.
- * \return
- *     - -2 on memory error
- *     - -1 on database error
- *     -  0 on success.
- * \attention caller should free this memory
- */
-int db_icheck_null_physmessages(GList **lost);
-
-/**
- * \brief check for is_header flag on messageblks
- *
- */
-int db_icheck_isheader(GList  **lost);
-int db_set_isheader(GList *lost);
 
 /** 
  * \brief check for cached header values

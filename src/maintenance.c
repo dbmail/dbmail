@@ -579,18 +579,12 @@ int do_dangling_aliases(void)
 	return result;
 }
 
-static int db_delete_messageblk(u64_t messageblk_idnr)
-{
-	return db_update("DELETE FROM %smessageblks WHERE messageblk_idnr = %llu", DBPFX, messageblk_idnr);
-}
-
 int do_check_integrity(void)
 {
 	time_t start, stop;
 	GList *lost = NULL;
 	const char *action;
 	long count = 0;
-	u64_t *id;
 
 	if (yes_to_all)
 		action = "Repairing";
@@ -603,7 +597,6 @@ int do_check_integrity(void)
 	 3. Check for loose physmessages
 	 4. Check for loose partlists
 	 5. Check for loose mimeparts
-	 6. Check for loose messageblks
 	 */
 
 	/* part 3 */
@@ -680,45 +673,6 @@ int do_check_integrity(void)
 	qverbosef("--- %s unconnected mimeparts took %g seconds\n",
 		action, difftime(stop, start));
 	/* end part 5 */
-
-	/* part 6 */
-	start = stop;
-	qprintf("\n%s DBMAIL legacy messageblks integrity...\n", action);
-	if (db_icheck_messageblks(&lost) < 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
-		serious_errors = 1;
-		return -1;
-	}
-
-	count = g_list_length(lost);
-
-	if (count > 0) {
-		qerrorf("Ok. Found [%ld] unconnected messageblks:\n", count);
-
-		lost = g_list_first(lost);
-
-		while (lost) {
-			id = (u64_t *) lost->data;
-			if (no_to_all) {
-				qerrorf("%llu ", *id);
-			} else if (yes_to_all) {
-				if (! db_delete_messageblk(*id))
-					qerrorf ("Warning: could not delete messageblock #%llu. Check log.\n", *id);
-				else
-					qerrorf ("%llu (removed from dbase)\n", *id);
-			}
-
-			if (! g_list_next(lost))
-				break;
-
-			lost = g_list_next(lost);
-		}
-
-		qerrorf("\n");
-		has_errors = 1;
-	} else {
-		qprintf("Ok. Found [%ld] unconnected messageblks.\n", count);
-	}
 
 	g_list_destroy(lost);
 	lost = NULL;
@@ -826,12 +780,6 @@ int do_header_cache(void)
 		serious_errors = 1;
 		return -1;
 	}
-/*
-	if (do_is_header()) {
-		serious_errors = 1;
-		return -1;
-	}
-*/	
 	if (do_envelope()) {
 		serious_errors = 1;
 		return -1;
