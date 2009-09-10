@@ -332,7 +332,9 @@ static int db_getmailbox_count(T M)
 {
 	C c; R r; 
 	volatile int t;
-	unsigned exists = 0, seen = 0, recent = 0;
+	unsigned result[3];
+
+	result[0] = result[1] = result[2] = 0;
 
 	g_return_val_if_fail(M->id,DM_EQUERY);
 
@@ -340,18 +342,21 @@ static int db_getmailbox_count(T M)
  	t = FALSE;
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+		r = db_query(c, "SELECT 0,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
 				"AND (status < %d) UNION "
-				"SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+				"SELECT 1,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
 				"AND (status < %d) AND seen_flag=1 UNION "
-				"SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
-				"AND (status < %d) AND recent_flag=1", 
+				"SELECT 2,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+				"AND (status < %d) AND recent_flag=1",
 				DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
 				DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
 				DBPFX, M->id, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-		if (db_result_next(r)) exists = (unsigned)db_result_get_int(r,1);
-		if (db_result_next(r)) seen   = (unsigned)db_result_get_int(r,1);
-		if (db_result_next(r)) recent = (unsigned)db_result_get_int(r,1);
+		if (db_result_next(r))
+			result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
+		if (db_result_next(r))
+			result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
+		if (db_result_next(r))
+			result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
 		db_con_clear(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -363,9 +368,9 @@ static int db_getmailbox_count(T M)
 	if (t == DM_EQUERY)
 		return t;
 
- 	M->exists = exists;
- 	M->unseen = exists - seen;
- 	M->recent = recent;
+	M->exists = result[0];
+	M->unseen = result[0] - result[1];
+	M->recent = result[2];
  
 	TRACE(TRACE_DEBUG, "exists [%d] unseen [%d] recent [%d]", M->exists, M->unseen, M->recent);
 	/* now determine the next message UID 
