@@ -79,7 +79,10 @@ void tls_load_certs(serverConfig_t *conf)
 		e = TRUE;
 	}
 
-	if (! e) conf->ssl = TRUE;
+	if (e) 
+		conf->ssl = FALSE;
+	else
+		conf->ssl = TRUE;
 }
 
 /* load the ciphers into the context */

@@ -665,6 +665,7 @@ static void server_config_free(serverConfig_t * config)
 		g_free(config->ssl_listenSockets);
 
 	config->listenSockets = NULL;
+	config->ssl = FALSE;
 	config->ssl_listenSockets = NULL;
 	config->iplist = NULL;
 
