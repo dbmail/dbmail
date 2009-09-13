@@ -2128,7 +2128,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	// Ok, we have the ACL right, time to deliver the message.
 	switch (db_copymsg(message->id, mboxidnr, useridnr, &newmsgidnr)) {
 	case -2:
-		TRACE(TRACE_DEBUG, "error copying message to user [%llu],"
+		TRACE(TRACE_ERR, "error copying message to user [%llu],"
 				"maxmail exceeded", useridnr);
 		return DSN_CLASS_QUOTA;
 	case -1:
