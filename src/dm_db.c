@@ -728,7 +728,7 @@ int db_check_version(void)
 			TRACE(TRACE_EMERG, "2.1 database incompatible. You need to add the envelopes table "
 					"and run dbmail-util -by");
 		if (! db_query(c, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_EMERG, "2.2 database incompatible.");
+			TRACE(TRACE_EMERG, "2.3 database incompatible.");
 		if ( ! db_query(c, "SELECT 1=1 FROM %sheader LIMIT 1 OFFSET 0", DBPFX))
 			TRACE(TRACE_EMERG, "2.3.5 database incompatible - single instance header storage missing.");
 
