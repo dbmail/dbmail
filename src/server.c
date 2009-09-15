@@ -343,6 +343,7 @@ static int create_unix_socket(serverConfig_t * conf)
 static int create_inet_socket(const char * const ip, const char * port, int backlog)
 {
 	struct addrinfo hints, *res, *ressave;
+	int so_reuseaddress = 1;
 	int sock, n;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -362,6 +363,8 @@ static int create_inet_socket(const char * const ip, const char * port, int back
 		freeaddrinfo(ressave);
 		TRACE(TRACE_EMERG, "%s", strerror(serr));
 	}	
+
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 
 	TRACE(TRACE_DEBUG, "create socket [%s:%s] backlog [%d]", ip, port, backlog);
 	
