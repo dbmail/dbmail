@@ -367,7 +367,7 @@ static int create_inet_socket(const char * ip, const char * port, int backlog, i
 		setsockopt(s[nsock], SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 		dm_bind_and_listen(s[nsock], res->ai_addr, res->ai_addrlen, backlog);
 		UNBLOCK(s[nsock]);
-		if (getnameinfo(res->ai_addr, res->ai_addr->sa_len, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
+		if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
 			TRACE(TRACE_DEBUG, "could not get numeric hostname");
 		}
 		TRACE(TRACE_DEBUG, "created socket [%d] on [%s:%s]", s[nsock], hbuf, sbuf);
