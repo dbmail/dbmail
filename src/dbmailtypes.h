@@ -41,6 +41,8 @@
 #define MIME_FIELD_MAX 128
 #define MIME_VALUE_MAX 4096
 
+#define MAXSOCKETS 256
+
 #define UID_SIZE 70
 #define IPNUM_LEN 32
 #define IPLEN 32
@@ -299,7 +301,7 @@ enum BODY_FETCH_ITEM_TYPES {
 typedef struct  {
 	int sock;
 	SSL *ssl;                       /* SSL/TLS context for this client */
-	struct sockaddr_in *caddr;
+	struct sockaddr *caddr;
 	void (*cb_close) (void *);	/* termination callback */
 } client_sock;
 
@@ -396,6 +398,8 @@ typedef struct {
 	field_t port;
 	field_t ssl_port;
 	int ipcount;
+	int socketcount;
+	int ssl_socketcount;
 	int *listenSockets;             // Allocated memory.
 	int *ssl_listenSockets;         // Allocated memory.
 	int service_before_smtp;

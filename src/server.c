@@ -340,56 +340,66 @@ static int create_unix_socket(serverConfig_t * conf)
 	return sock;
 }
 
-static int create_inet_socket(const char * const ip, const char * port, int backlog)
+static int create_inet_socket(const char * ip, const char * port, int backlog, int *s, int nsock)
 {
-	struct addrinfo hints, *res, *ressave;
+	struct addrinfo hints, *res, *res0;
+	int error = 0;
 	int so_reuseaddress = 1;
-	int sock, n;
+	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
 
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_flags     = AI_PASSIVE;
-	hints.ai_family    = AF_UNSPEC;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family    = PF_UNSPEC;
 	hints.ai_socktype  = SOCK_STREAM;
-
-	n = getaddrinfo(ip, port, &hints, &res);
-	if (n < 0) {
-		TRACE(TRACE_EMERG, "getaddrinfo::error [%s]", gai_strerror(n));
-		return -1;
-	}
-
-	ressave = res;
-	if ((sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
-		int serr = errno;
-		freeaddrinfo(ressave);
-		TRACE(TRACE_EMERG, "%s", strerror(serr));
-	}	
-
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
-
-	TRACE(TRACE_DEBUG, "create socket [%s:%s] backlog [%d]", ip, port, backlog);
+	hints.ai_flags     = AI_PASSIVE;
+	error = getaddrinfo(ip, port, &hints, &res0);
+	if (error) {
+		TRACE(TRACE_ERR, "getaddrinfo error [%d] %s", error, gai_strerror(error));
+		return nsock;
+		/*NOTREACHED*/
+        }
 	
-	// any error in dm_bind_and_listen is fatal
-	dm_bind_and_listen(sock, res->ai_addr, res->ai_addrlen, backlog);
-	freeaddrinfo(ressave);
+	for (res = res0; res && nsock < MAXSOCKETS; res = res->ai_next) {
+		s[nsock] = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (s[nsock] < 0) {
+			TRACE(TRACE_ERR, "could not create a socket of family [%d], socktype[%d], protocol [%d]", res->ai_family, res->ai_socktype, res->ai_protocol);
+			continue;
+		}
+		setsockopt(s[nsock], SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
+		dm_bind_and_listen(s[nsock], res->ai_addr, res->ai_addrlen, backlog);
+		UNBLOCK(s[nsock]);
+		if (getnameinfo(res->ai_addr, res->ai_addr->sa_len, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
+			TRACE(TRACE_DEBUG, "could not get numeric hostname");
+		}
+		TRACE(TRACE_DEBUG, "created socket [%d] on [%s:%s]", s[nsock], hbuf, sbuf);
+		nsock++;
+ 	}
 
-	UNBLOCK(sock);
+	freeaddrinfo(res0);
 
-	return sock;	
+	return nsock;
 }
 
 static void server_close_sockets(serverConfig_t *conf)
 {
 	int i;
-	for (i = 0; i < conf->ipcount; i++)
+	for (i = 0; i < conf->socketcount; i++)
 		if (conf->listenSockets[i] > 0)
 			close(conf->listenSockets[i]);
+	conf->socketcount=0;
+
+	for (i = 0; i < conf->ssl_socketcount; i++)
+		if (conf->ssl_listenSockets[i] > 0)
+			close(conf->ssl_listenSockets[i]);
+	conf->ssl_socketcount=0;
 }
 
 static void server_create_sockets(serverConfig_t * conf)
 {
 	int i;
+	char *ip = NULL;
 
-	conf->listenSockets = g_new0(int, conf->ipcount);
+	conf->listenSockets = g_new0(int, MAXSOCKETS);
+	conf->ssl_listenSockets = g_new0(int, MAXSOCKETS);
 
 	if (strlen(conf->socket) > 0) {
 		conf->listenSockets[0] = create_unix_socket(conf);
@@ -398,14 +408,20 @@ static void server_create_sockets(serverConfig_t * conf)
 		if (conf->ssl)
 			tls_load_ciphers(conf);
 		if (conf->port) {
-			for (i = 0; i < conf->ipcount; i++)
-				conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
+			for (i = 0; i < conf->ipcount; i++) {
+				ip=strdup(conf->iplist[i]);
+				TRACE(TRACE_DEBUG, "creating plain inet socket [%d/%d], bindip [%s], port [%s]", i+1, conf->ipcount, ip, conf->port);
+				conf->socketcount=create_inet_socket(ip, conf->port, conf->backlog, conf->listenSockets, conf->socketcount);
+				free(ip);
+			}
 		}
-
 		if (conf->ssl && conf->ssl_port) {
-			conf->ssl_listenSockets = g_new0(int, conf->ipcount);
-			for (i = 0; i < conf->ipcount; i++)
-				conf->ssl_listenSockets[i] = create_inet_socket(conf->iplist[i], conf->ssl_port, conf->backlog);
+			for (i = 0; i < conf->ipcount; i++) {
+				ip=strdup(conf->iplist[i]);
+				TRACE(TRACE_DEBUG, "creating ssl inet socket [%d/%d], bindip [%s], ssl_port [%s]", i+1, conf->ipcount, ip, conf->ssl_port);
+				conf->ssl_socketcount=create_inet_socket(ip, conf->ssl_port, conf->backlog, conf->ssl_listenSockets, conf->ssl_socketcount);
+				free(ip);
+			}
 		}
 	}
 }
@@ -413,7 +429,7 @@ static void server_create_sockets(serverConfig_t * conf)
 static void server_sock_cb(int sock, short event, void *arg)
 {
 	client_sock *c = g_new0(client_sock,1);
-	struct sockaddr_in *caddr = g_new0(struct sockaddr_in, 1);
+	struct sockaddr *caddr = g_new0(struct sockaddr, 1);
 	struct event *ev = (struct event *)arg;
 
 	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
@@ -452,7 +468,7 @@ static void server_sock_cb(int sock, short event, void *arg)
 static void server_sock_ssl_cb(int sock, short event, void *arg)
 {
 	client_sock *c = g_new0(client_sock,1);
-	struct sockaddr_in *caddr = g_new0(struct sockaddr_in, 1);
+	struct sockaddr *caddr = g_new0(struct sockaddr, 1);
 	struct event *ev = (struct event *)arg;
 
 	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
@@ -574,7 +590,7 @@ static void server_pidfile(serverConfig_t *conf)
 
 int server_run(serverConfig_t *conf)
 {
-	int ip;
+	int i;
 	struct event *evsock;
 	struct event *evssl;
 
@@ -606,17 +622,19 @@ int server_run(serverConfig_t *conf)
 	if (server_setup(conf)) return -1;
 
 	if (conf->port) {
-		evsock = g_new0(struct event, server_conf->ipcount + 1);
-		for (ip = 0; ip < server_conf->ipcount; ip++) {
-			event_set(&evsock[ip], server_conf->listenSockets[ip], EV_READ, server_sock_cb, &evsock[ip]);
-			event_add(&evsock[ip], NULL);
+		evsock = g_new0(struct event, server_conf->socketcount);
+		for (i = 0; i < server_conf->socketcount; i++) {
+			TRACE(TRACE_DEBUG, "Adding event for plain inet socket [%d] [%d/%d]", server_conf->listenSockets[i], i+1, server_conf->socketcount);
+			event_set(&evsock[i], server_conf->listenSockets[i], EV_READ, server_sock_cb, &evsock[i]);
+			event_add(&evsock[i], NULL);
 		}
 	}
 	if (conf->ssl && conf->ssl_port) {
-		evssl = g_new0(struct event, server_conf->ipcount + 1);
-		for (ip = 0; ip < server_conf->ipcount; ip++) {
-			event_set(&evssl[ip], server_conf->ssl_listenSockets[ip], EV_READ, server_sock_ssl_cb, &evssl[ip]);
-			event_add(&evssl[ip], NULL);
+		evssl = g_new0(struct event, server_conf->ssl_socketcount);
+		for (i = 0; i < server_conf->ssl_socketcount; i++) {
+			TRACE(TRACE_DEBUG, "Adding event for ssl inet socket [%d] [%d/%d]", server_conf->ssl_listenSockets[i], i+1, server_conf->ssl_socketcount);
+			event_set(&evssl[i], server_conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, &evssl[i]);
+			event_add(&evssl[i], NULL);
 		}
 	}
 
@@ -628,7 +646,6 @@ int server_run(serverConfig_t *conf)
 	}
 	
 	server_pidfile(conf);
-
 
 	TRACE(TRACE_DEBUG,"dispatching event loop...");
 	event_dispatch();
@@ -664,8 +681,7 @@ static void server_config_free(serverConfig_t * config)
 
 	g_strfreev(config->iplist);
 	g_free(config->listenSockets);
-	if (config->ssl_listenSockets)
-		g_free(config->ssl_listenSockets);
+	g_free(config->ssl_listenSockets);
 
 	config->listenSockets = NULL;
 	config->ssl = FALSE;
