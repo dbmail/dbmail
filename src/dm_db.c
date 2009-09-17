@@ -301,7 +301,7 @@ void log_query_time(char *query, struct timeval before, struct timeval after)
 gboolean db_exec(C c, const char *q, ...)
 {
 	struct timeval before, after;
-	gboolean result = FALSE;
+	gboolean volatile result = FALSE;
 	va_list ap, cp;
 	char *query;
 
@@ -331,7 +331,7 @@ R db_query(C c, const char *q, ...)
 {
 	struct timeval before, after;
 	R r = NULL;
-	gboolean result = FALSE;
+	gboolean volatile result = FALSE;
 	va_list ap, cp;
 	char *query;
 
@@ -363,7 +363,7 @@ R db_query(C c, const char *q, ...)
 
 gboolean db_update(const char *q, ...)
 {
-	C c; gboolean result = FALSE;
+	C c; gboolean volatile result = FALSE;
 	va_list ap, cp;
 	INIT_QUERY;
 

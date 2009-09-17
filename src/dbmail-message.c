@@ -141,7 +141,7 @@ gchar *get_crlf_encoded_opt(const char *in, int dots)
 
 static u64_t blob_exists(const char *buf, const char *hash)
 {
-	u64_t id = 0;
+	u64_t volatile id = 0;
 	size_t l;
 	assert(buf);
 	C c; S s; R r;
@@ -169,7 +169,7 @@ static u64_t blob_insert(const char *buf, const char *hash)
 {
 	C c; R r; S s;
 	size_t l;
-	u64_t id = 0;
+	u64_t volatile id = 0;
 	char *frag = db_returning("id");
 
 	assert(buf);
@@ -197,7 +197,7 @@ static u64_t blob_insert(const char *buf, const char *hash)
 
 static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 {
-	C c; gboolean t = FALSE;
+	C c; gboolean volatile t = FALSE;
 	c = db_con_get();
 	TRY
 		t = db_exec(c, 
@@ -449,7 +449,9 @@ static int store_body(GMimeObject *object, DbmailMessage *m)
 {
 	int r;
 	char *text = g_mime_object_get_body(object);
-	if (! text) return 0;
+	if (! text) 
+		return 0;
+
 	r = store_blob(m, text, 0);
 	g_free(text);
 	return r;
@@ -544,20 +546,22 @@ gboolean store_mime_object(GMimeObject *object, DbmailMessage *m)
 
 	content_type = g_mime_object_get_content_type(mime_part);
 
-	if (g_mime_content_type_is_type(content_type, "multipart", "*"))
+	if (g_mime_content_type_is_type(content_type, "multipart", "*")) {
 		r = store_mime_multipart((GMimeObject *)mime_part, m, content_type, skiphead);
 
-	else if (g_mime_content_type_is_type(content_type, "message","*"))
+	} else if (g_mime_content_type_is_type(content_type, "message","*")) {
 		r = store_mime_message((GMimeObject *)mime_part, m, skiphead);
 
-	else if (g_mime_content_type_is_type(content_type, "text","*"))
-		if (GMIME_IS_MESSAGE(object))
-		{
+	} else if (g_mime_content_type_is_type(content_type, "text","*")) {
+		if (GMIME_IS_MESSAGE(object)) {
 			if(store_body(object,m) < 0) r = TRUE;
-		} else
+		} else {
 			r = store_mime_text((GMimeObject *)mime_part, m, skiphead);
-	else
+		}
+
+	} else {
 		r = store_mime_text((GMimeObject *)mime_part, m, skiphead);
+	}
 
 	if (GMIME_IS_MESSAGE(object)) {
 		g_object_unref(mime_part);
@@ -570,9 +574,7 @@ gboolean store_mime_object(GMimeObject *object, DbmailMessage *m)
 
 gboolean dm_message_store(DbmailMessage *m)
 {
-	gboolean r;
-	r = store_mime_object((GMimeObject *)m->content, m);
-	return r;
+	return store_mime_object((GMimeObject *)m->content, m);
 }
 
 
