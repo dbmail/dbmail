@@ -392,16 +392,33 @@ START_TEST(test_imap_get_envelope)
 	message = dbmail_message_new();
 	s = g_string_new(simple_groups);
 	message = dbmail_message_init_with_string(message, s);
-	g_string_free(s,TRUE);
+	g_string_free(s,true);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
-	strncpy(expect,"(\"Thu, 15 Feb 2007 01:02:03 +0200\" NIL ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((NIL NIL \"group\" NIL)(NIL NIL \"g1\" \"d1.org\")(NIL NIL \"g2\" \"d2.org\")(NIL NIL NIL NIL)(NIL NIL \"group2\" NIL)(NIL NIL \"g3\" \"d3.org\")(NIL NIL NIL NIL)) NIL NIL NIL NIL)", 1024);
+	strncpy(expect,"(\"Thu, 15 feb 2007 01:02:03 +0200\" NIL ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((NIL NIL \"group\" NIL)(NIL NIL \"g1\" \"d1.org\")(NIL NIL \"g2\" \"d2.org\")(NIL NIL NIL NIL)(NIL NIL \"group2\" NIL)(NIL NIL \"g3\" \"d3.org\")(NIL NIL NIL NIL)) NIL NIL NIL NIL)", 1024);
 
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
 
 	dbmail_message_free(message);
 	g_free(result);
 	result = NULL;
+
+	/* bare message with broken From address*/
+	message = dbmail_message_new();
+	s = g_string_new(broken_message3);
+	message = dbmail_message_init_with_string(message, s);
+	g_string_free(s,true);
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	printf("%s\n", result);
+	//strncpy(expect,"(\"thu, 15 feb 2dd007 01:02:03 +0200\" nil ((\"real name\" nil \"user\" \"domain\")) ((\"real name\" nil \"user\" \"domain\")) ((\"real name\" nil \"user\" \"domain\")) ((nil nil \"group\" nil)(nil nil \"g1\" \"d1.org\")(nil nil \"g2\" \"d2.org\")(nil nil nil nil)(nil nil \"group2\" nil)(nil nil \"g3\" \"d3.org\")(nil nil nil nil)) nil nil nil nil)", 1024);
+
+	//fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
+
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
 
 	//
 	g_free(expect);

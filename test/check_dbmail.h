@@ -1026,3 +1026,12 @@ char * broken_message2 = "Received: from localhost (localhost [127.0.0.1])\n"
 	"http://www.cndomenchegi.cn\n"
 	"\n";
 
+char * broken_message3 = "Message-ID: <002001ca32fe$dc7668b0$9600000a@ricardo>\n"
+	"From: =?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\n"
+	"To: Foo Bar <foo@bar.pt>\n"
+	"References: <!&!AAAAAAAAAAAYAAAAAAAAALIBw+cUC6NIoR34W54CL4kihwAAEAAAAK3v73Q74D9LjVgWzPP6pgIBAAAAAA==@bar.pt>\n"
+	"Subject: Re: Anexo II para RO\n"
+	"Date: Fri, 11 Sep 2009 17:42:32 +0100\n"
+	"Return-Path: nobody@mail.foo.pt\n"
+	"MIME-Version: 1.0\n\n"
+	"\ntest\n";
