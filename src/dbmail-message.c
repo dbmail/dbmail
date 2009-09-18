@@ -510,7 +510,7 @@ static gboolean store_mime_message(GMimeObject * object, DbmailMessage *m, gbool
 
 	m2 = g_mime_message_part_get_message(GMIME_MESSAGE_PART(object));
 
-	g_return_val_if_fail(GMIME_IS_MESSAGE(m2), TRUE);
+	g_return_val_if_fail(GMIME_IS_MESSAGE(m2), FALSE);
 
 	r = store_mime_object(GMIME_OBJECT(m2), m);
 
