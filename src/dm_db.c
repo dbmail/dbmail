@@ -1173,7 +1173,6 @@ int db_icheck_physmessages(gboolean cleanup)
 			*id = db_result_get_u64(r, 0);
 			ids = g_list_prepend(ids, id);
 		}
-
 		if (cleanup) {
 			while(ids) {
 				db_exec(c, "DELETE FROM %sphysmessage WHERE id = %llu", DBPFX, *(u64_t *)ids->data);
@@ -1181,6 +1180,7 @@ int db_icheck_physmessages(gboolean cleanup)
 				ids = g_list_next(ids);
 			}
 		}
+		t = g_list_length(ids);
 		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1214,6 +1214,7 @@ int db_icheck_partlists(gboolean cleanup)
 				ids = g_list_next(ids);
 			}
 		}
+		t = g_list_length(ids);
 		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1246,6 +1247,7 @@ int db_icheck_mimeparts(gboolean cleanup)
 				ids = g_list_next(ids);
 			}
 		}
+		t = g_list_length(ids);
 		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
