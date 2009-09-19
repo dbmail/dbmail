@@ -19,9 +19,9 @@
 */
 
 /*
- * memblock.c
+ * dm_memblock.c
  *
- * implementations of functions declared in memblock.h
+ * implementations of functions declared in dm_memblock.h
  */
 
 #include <glib.h>
@@ -31,7 +31,6 @@
 #include "dm_memblock.h"
 
 #define MEMBLOCK_SIZE (512ul*1024ul)
-#define MAX_ERROR_SIZE 128
 
 #define T Mem_T
 
