@@ -30,6 +30,7 @@ What do you need?
 - libSieve for Sieve support (libsieve.sf.net).
 - Any standard libldap for LDAP support (only tested with OpenLDAP, however).
 - mhash
+- openssl
 - libzdb (http://www.tildeslash.com/libzdb/)
 - libevent
 

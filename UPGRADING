@@ -7,6 +7,7 @@ Dependencies
 * GMime: (>= 2.2.0)
 * Optional: libSieve (>= 2.2.1)
 * Optional: LDAP such as OpenLDAP or ActiveDirectory.
+* openssl
 * libmhash
 * libzdb (http://www.tildeslash.com/libzdb/)
 * libevent
