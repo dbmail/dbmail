@@ -141,7 +141,7 @@ gchar *get_crlf_encoded_opt(const char *in, int dots)
 
 static u64_t blob_exists(const char *buf, const char *hash)
 {
-	u64_t volatile id = 0;
+	volatile u64_t id = 0;
 	size_t l;
 	assert(buf);
 	C c; S s; R r;
@@ -169,7 +169,7 @@ static u64_t blob_insert(const char *buf, const char *hash)
 {
 	C c; R r; S s;
 	size_t l;
-	u64_t volatile id = 0;
+	volatile u64_t id = 0;
 	char *frag = db_returning("id");
 
 	assert(buf);
@@ -197,7 +197,7 @@ static u64_t blob_insert(const char *buf, const char *hash)
 
 static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 {
-	C c; gboolean volatile t = FALSE;
+	C c; volatile gboolean t = FALSE;
 	c = db_con_get();
 	TRY
 		t = db_exec(c, 
