@@ -28,6 +28,7 @@ SET FOREIGN_KEY_CHECKS=0;
 -- Table structure for table `dbmail_acl`
 --
 
+DROP TABLE IF EXISTS `dbmail_authlog`;
 CREATE TABLE `dbmail_authlog` (
   `id` bigint(20) NOT NULL auto_increment,
   `userid` varchar(100) default NULL,
