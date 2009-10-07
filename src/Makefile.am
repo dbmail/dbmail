@@ -53,13 +53,12 @@ COMMON = dbmail-user.c \
 	dm_iconv.c \
 	dm_dsn.c $(DM_GETOPT)
 	
+
 SERVER = server.c \
 	clientsession.c \
 	clientbase.c \
 	dm_tls.c \
 	dm_cidr.c
-
-MODULES = authmodule.c sortmodule.c
 
 IMAPD = dm_quota.c \
 	dm_memblock.c \
@@ -72,10 +71,13 @@ AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 
 INCLUDES = -I$(top_srcdir)
 
-if SHARED
 AM_LDFLAGS = -export-dynamic @CRYPTLIB@
+
+if SHARED
+MODULES = authmodule.c sortmodule.c
 STATIC_MODULES =
 else
+MODULES =
 STATIC_MODULES = @SORTLTLIB@ @AUTHLTLIB@
 endif
 
@@ -108,9 +110,14 @@ dbmail_timsieved_SOURCES = timsieve.c timsieved.c
 dbmail_timsieved_LDADD = $(STATIC_MODULES) libdbmail.la
 endif
 
+if SHARED
 pkglib_LTLIBRARIES = libdbmail.la
+else
+noinst_LTLIBRARIES = libdbmail.la
+endif
 
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(MODULES)
+libdbmail_la_LIBADD = $(STATIC_MODULES)
 libdbmail_la_LDFLAGS = $(AM_LDFLAGS) @SOCKETLIB@
 libdbmail_la_CFLAGS = $(AM_CFLAGS)
 

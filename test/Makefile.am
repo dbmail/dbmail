@@ -1,9 +1,10 @@
 
+if WITHCHECK
+
 AM_CFLAGS = @SIEVEINC@ @LDAPINC@
+AM_LDFLAGS = -uCram_getUsername 
 
 INCLUDES = -I$(top_srcdir)/src
-
-if WITHCHECK
 
 if SHARED
 STATIC_MODULES=
