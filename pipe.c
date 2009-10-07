@@ -130,7 +130,7 @@ static int send_mail(struct DbmailMessage *message,
 			TRACE(TRACE_MESSAGE, "could not prepare 'from' address.");
 			return 1;
 		}
-		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
+		sendmail_command = g_strconcat(sendmail, " -i -f ", escaped_from, " ", escaped_to, NULL);
 		g_free(escaped_to);
 		g_free(escaped_from);
 		if (!sendmail_command) {
@@ -156,9 +156,7 @@ static int send_mail(struct DbmailMessage *message,
 		// This is a hack so forwards can give a From line.
 		if (preoutput)
 			fprintf(mailpipe, "%s\n", preoutput);
-		// This function will dot-stuff the message.
-		db_send_message_lines(mailpipe, message->id, -2, 1);
-		break;
+		// fall-through
 	case SENDMESSAGE:
 		message_string = dbmail_message_to_string(message);
 		fprintf(mailpipe, "%s", message_string);
