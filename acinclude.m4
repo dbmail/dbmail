@@ -19,7 +19,7 @@ AC_MSG_RESULT([
  LDAP:                      $LDAPINC$LDAPLIB
  SHARED:                    $enable_shared
  STATIC:                    $enable_static
- CHECK:                     $with_check
+ CHECK:                     $CHECK_LIBS
  SOCKETS:                   $SOCKETLIB
  MATH:                      $MATHLIB
  MHASH:                     $MHASHLIB
