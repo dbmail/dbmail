@@ -60,7 +60,7 @@ CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail 
 	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
-stamps/build: stamps patch $(PACKAGES)
+stamps/build: stamps patch configure $(PACKAGES)
 	touch $@
 
 stamps:

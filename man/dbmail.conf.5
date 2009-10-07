@@ -1,11 +1,11 @@
 .\"     Title: dbmail.conf
 .\"    Author: 
-.\" Generator: DocBook XSL Stylesheets v1.71.0 <http://docbook.sf.net/>
-.\"      Date: 10/16/2007
+.\" Generator: DocBook XSL Stylesheets v1.73.2 <http://docbook.sf.net/>
+.\"      Date: 10/07/2009
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "DBMAIL.CONF" "5" "10/16/2007" "" ""
+.TH "DBMAIL\&.CONF" "5" "10/07/2009" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -13,173 +13,396 @@
 .SH "NAME"
 dbmail.conf \- configuration file for DBMail, the Database Mailer.
 .SH "SYNOPSIS"
-There are 8 sections: DBMAIL, SMTP, LMTP, POP, IMAP, SIEVE, LDAP, DELIVERY. The default config file already has documentation for all of the settings.
+There are 8 sections: DBMAIL, SMTP, LMTP, POP, IMAP, SIEVE, LDAP, DELIVERY\&. The default config file already has documentation for all of the settings\&.
 .SH "DESCRIPTION"
 .sp
-.RS 3n
+.RS 4
 .nf
-[DBMAIL]
-# Database settings
-driver=pgsql            # Supported drivers are mysql, pgsql, sqlite.
-authdriver=sql          # Supported drivers are sql, ldap.
-host=                   # Host for database, set to localhost if database is on
-                        #   the same host as dbmail and you want to use a local
-                        #   socket for connecting.
-sqlport=                # If you want to use TCP/IP for connecting to the database,
-                        #   and have the database running on a non\-standard port.
-sqlsocket=              # When using a local socket connection to the database, fill
-                        #   in the path to the socket here (e.g. /var/run/mysql.sock).
-user=dbmail             # Database username.
-pass=                   # Database password.
-db=dbmail               # Database name.
-table_prefix=dbmail_    # Table prefix. Defaults to "dbmail_" if not specified.
-encoding=utf8           # Encoding to match database/table encoding, e.g., latin1, utf8
-default_msg_encoding=utf8     # Default for messages without a known encoding, e.g., iso8859\-1, utf8
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-postmaster=             # Postmaster's email address for use in bounce messages.
-sendmail=/usr/sbin/sendmail   # Sendmail executable for forwards, replies, notifies, vacations.
-                              # You may use pipes (|) in this command, for example:
-                              # dos2unix|/usr/sbin/sendmail  will work well with Qmail.
-                              # You may use quotes (") for executables with unusual names.
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-# The following items can be overridden in the service\-specific sections.
-TRACE_SYSLOG=5          # Trace level to send to syslog. Default is 2 (messages, errors, fatals).
-TRACE_STDERR=2          # Trace level to send to stderr. Default is 0 (fatals).
-EFFECTIVE_USER=nobody   # Root privs are used to open a port, then privs
-EFFECTIVE_GROUP=nogroup #   are dropped down to the user/group specified here.
-BINDIP=*                # The IP address the services will bind to.
-                        #   Use * for all local interfaces.
-                        #   Use 127.0.0.1 for localhost only.
-                        #   Multiple addresses may be separated by commas.
-                        #   IPv6 addresses are not yet supported.
-NCHILDREN=2             # Default number of child processes to start.
-MAXCHILDREN=10          # Maximum number of child processes allowed.
-MINSPARECHILDREN=2      # Unused children to always have availale.
-MAXSPARECHILDREN=4      # Maximum unused children allowed to be active.
-MAXCONNECTS=10000       # Child process is restarted after handling this many connections.
-MAX_ERRORS=500          # Child process will restart after this many connection errors.
-TIMEOUT=300             # Idle time allowed before a connection is shut off.
-RESOLVE_IP=yes          # If yes, resolves IP addresses to DNS names when logging.
-log=/var/log/dbmail.log       # logfile for stdout messages
-error_log=/var/log/dbmail.err # logfile for stderr messages
-pid_directory=/var/run        # directory for storing PID files
-state_directory=/var/run      # directory for storing the daemon statefiles
-library_directory=/usr/lib/dbmail # directory for locating libraries
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-[SMTP]
-                        # In fact, there isn't anything here by default.
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-[LMTP]
-PORT=24                 # Port to listen on.
-BANNER=Hello I am LMTP  # Override the LMTP banner to hide your DBMail version.
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-[POP]
-PORT=110                # Port to listen on.
-POP_BEFORE_SMTP=no      # If yes, allows SMTP access from the host IP connecting by POP3.
-BANNER=Hello I am POP3  # Override the POP3 banner to hide your DBMail version.
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-[IMAP]
-PORT=143                # Port to listen on.
-TIMEOUT=4000            # IMAP prefers a longer timeout than other services.
-IMAP_BEFORE_SMTP=no     # If yes, allows SMTP access from the host IP connecting by IMAP.
-BANNER=Hello I am IMAP  # Override the IMAP banner to hide your DBMail version.
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-[SIEVE]
-PORT=2000               # Port to listen on.
-BANNER=Hello I am SIEVE # Override the ManageSieve banner to hide your DBMail version.
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-[LDAP]
-PORT=389
-VERSION=3
-HOSTNAME=ldap
-BASE_DN=ou=People,dc=mydomain,dc=com
-BIND_DN=cn=admin,dc=mydomain,dc=com
-BIND_PW=password
-SCOPE=SubTree
-USER_OBJECTCLASS=top,account,dbmailUser
-FORW_OBJECTCLASS=top,account,dbmailForwardingAddress
-CN_STRING=uid
-FIELD_PASSWD=userPassword
-FIELD_UID=uid
-FIELD_NID=uidNumber
-MIN_NID=10000
-MAX_NID=15000
-FIELD_CID=gidNumber
-MIN_CID=10000
-MAX_CID=15000
-FIELD_MAIL=mail
-FIELD_QUOTA=mailQuota
-FIELD_FWDTARGET=mailForwardingAddress
-.fi
-.RE
-.sp
-.RS 3n
-.nf
-[DELIVERY]
-SIEVE=yes               # Run Sieve scripts as messages are delivered.
-SUBADDRESS=yes          # Use 'user+mailbox@domain' format to deliver to a mailbox.
-SIEVE_VACATION=yes      # Turn on/off the Sieve Vacation extension.
-SIEVE_NOTIFY=no         # Turn on/off the Sieve Notify extension (not supported).
-SIEVE_DEBUG=no          # Turn on/off additional Sieve debugging.
-AUTO_NOTIFY=no          # Use the auto_notify table to send email notifications.
-AUTO_REPLY=no           # Use the auto_reply table to send away messages.
-#AUTO_NOTIFY_SUBJECT    # Defaults to "NEW MAIL NOTIFICATION"
-#AUTO_NOTIFY_SENDER     # Defaults to POSTMASTER from the DBMAIL section.
+# (c) 2000\-2006 IC&S, The Netherlands
+ #
+ # Configuration file for DBMAIL
+
+ [DBMAIL]
+ #
+ # Database settings
+ #
+
+ #
+ # Supported drivers are mysql, pgsql, sqlite\&.
+ #
+ driver               =
+
+ #
+ # Supported drivers are sql, ldap\&.
+ #
+ authdriver           =
+
+ #
+ # Host for database, set to localhost if database is on
+ # the same host as dbmail and you want to use a local
+ # socket for connecting\&.
+ #
+ host                 =
+
+ #
+ # If you want to use TCP/IP for connecting to the database,
+ # and have the database running on a non\-standard port\&.
+ #
+ sqlport              =
+
+ #
+ # When using a local socket connection to the database, fill
+ # in the path to the socket here (e\&.g\&. /var/run/mysql\&.sock)\&.
+ #
+ sqlsocket            =
+
+ #
+ # Database username\&.
+ #
+ user                 = dbmail
+
+ #
+ # Database password\&.
+ #
+ pass                 =
+
+ #
+ # Database name\&.
+ #
+ db                   = dbmail
+
+ #
+ # Table prefix\&. Defaults to "dbmail_" if not specified\&.
+ #
+ table_prefix         = dbmail_
+
+ #
+ # encoding must match the database/table encoding\&.
+ # i\&.e\&. latin1, utf8
+ encoding             = utf8
+
+ #
+ # messages with unknown encoding will be assumed to have
+ # default_msg_encoding
+ # i\&.e\&. iso8859\-1, utf8
+ default_msg_encoding = utf8
+
+ #
+ # Postmaster\'s email address for use in bounce messages\&.
+ #
+ #postmaster           = DBMAIL\-MAILER
+
+ #
+ # Sendmail executable for forwards, replies, notifies, vacations\&.
+ # You may use pipes (|) in this command, for example:
+ # dos2unix|/usr/sbin/sendmail  works well with Qmail\&.
+ # You may use quotes (") for executables with unusual names\&.
+ #
+ sendmail              = /usr/sbin/sendmail
+
+ #
+ #
+ # The following items can be overridden in the service\-specific sections\&.
+ #
+ #
+
+ #
+ # Trace level to send to syslog\&. Default is 2 (messages, errors, fatals)\&.
+ #
+ TRACE_SYSLOG          = 3
+
+ #
+ # Trace level to send to stderr\&. Default is 0 (fatals)\&.
+ #
+ TRACE_STDERR          = 1
+
+ #
+ # Root privs are used to open a port, then privs
+ # are dropped down to the user/group specified here\&.
+ #
+ EFFECTIVE_USER        = dbmail
+ EFFECTIVE_GROUP       = dbmail
+
+ #
+ # The IP addresses the services will bind to\&.
+ # Use * for all local interfaces\&.
+ # Use 127\&.0\&.0\&.1 for localhost only\&.
+ # Separate multiple entries with spaces ( ) or commas (,)\&.
+ #
+ BINDIP                = *
+
+ #
+ # Default number of child processes to start\&.
+ #
+ NCHILDREN             = 2
+
+ #
+ # Maximum number of child processes allowed\&.
+ #
+ MAXCHILDREN           = 10
+
+ #
+ # Unused children to always have availale\&.
+ #
+ MINSPARECHILDREN      = 2
+
+ #
+ # Maximum unused children allowed to be active\&.
+ #
+ MAXSPARECHILDREN      = 4
+
+ #
+ # Child process is restarted after handling this many connections\&.
+ #
+ MAXCONNECTS           = 10000
+
+ #
+ # Child process will restart after this many connection errors\&.
+ #
+ MAX_ERRORS            = 500
+
+ #
+ # Idle time allowed before a connection is shut off\&.
+ #
+ TIMEOUT               = 300
+
+ #
+ # Idle time allowed before a connection is shut off if you have not logged in yet\&.
+ #
+ login_timeout         = 60
+
+ #
+ # If yes, resolves IP addresses to DNS names when logging\&.
+ #
+ RESOLVE_IP            = no
+
+ #
+ # logfile for stdout messages
+ #
+ logfile               = /var/log/dbmail/dbmail\&.log
+
+ #
+ # logfile for stderr messages
+ #
+ errorlog              = /var/log/dbmail/dbmail\&.err
+
+ #
+ # directory for storing PID files
+ #
+ pid_directory         = /var/run/dbmail
+
+ #
+ # directory for storing the daemon statefiles
+ #
+ state_directory       = /var/run/dbmail
+
+ #
+ # directory for locating libraries (normally has a sane default compiled\-in)
+ #
+ #library_directory       = /usr/lib/dbmail
+
+ #
+ # log slow queries at level INFO after n seconds
+ #
+ query_time_info       = 10
+
+ #
+ # log slow queries at level MESSAGE after n seconds
+ #
+ query_time_message    = 20
+
+ #
+ # log slow queries at level WARNING after n seconds
+ #
+ query_time_warning    = 30
+
+
+
+ [SMTP]
+ # In fact, there isn\'t anything here by default\&.
+
+
+ [LMTP]
+ #
+ # Port to bind to\&.
+ #
+ PORT                  = 24
+
+ [POP]
+ #
+ # Port to bind to\&.
+ #
+ PORT                  = 110
+
+ #
+ # If yes, allows SMTP access from the host IP connecting by POP3\&.
+ # This requires addition configuration of your MTA
+ #
+ POP_BEFORE_SMTP       = no
+
+ [IMAP]
+
+ #
+ # Port to bind to\&.
+ #
+ PORT                  = 143
+
+ #
+ # IMAP prefers a longer timeout than other services\&.
+ #
+ TIMEOUT               = 4000
+
+ #
+ # If yes, allows SMTP access from the host IP connecting by IMAP\&.
+ # This requires addition configuration of your MTA
+ #
+ IMAP_BEFORE_SMTP      = no
+
+ #
+ # during IDLE, how many seconds between checking the mailbox
+ # status (default: 30)
+ #
+ # idle_timeout          = 30
+
+ #
+ # Provide a CAPABILITY to override the default
+ #
+ # capability 		= IMAP4 IMAP4rev1 AUTH=LOGIN ACL NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE
+
+
+
+ [SIEVE]
+ #
+ # Port to bind to\&.
+ #
+ PORT                  = 2000
+
+ [LDAP]
+ PORT                  = 389
+ VERSION               = 3
+ HOSTNAME              = ldap
+ BASE_DN               = ou=People,dc=mydomain,dc=com
+
+ #
+ # If your LDAP library supports ldap_initialize(), then you can use the
+ # alternative LDAP server DSN like following\&.
+ #
+ # URI                = ldap://127\&.0\&.0\&.1:389
+ # URI                = ldapi://%2fvar%2frun%2fopenldap%2fldapi/
+
+ #
+ # Leave blank for anonymous bind\&.
+ # example: cn=admin,dc=mydomain,dc=com
+ #
+ BIND_DN               =
+
+ #
+ # Leave blank for anonymous bind\&.
+ #
+ BIND_PW               =
+ SCOPE                 = SubTree
+
+ #
+ # AD users may want to set this to \'no\' to disable
+ # ldap referrals if you are seeing \'Operations errors\'
+ # in your logs
+ #
+ REFERRALS             = yes
+
+ USER_OBJECTCLASS      = top,account,dbmailUser
+ FORW_OBJECTCLASS      = top,account,dbmailForwardingAddress
+ CN_STRING             = uid
+ FIELD_PASSWD          = userPassword
+ FIELD_UID             = uid
+ FIELD_NID             = uidNumber
+ MIN_NID               = 10000
+ MAX_NID               = 15000
+ FIELD_CID             = gidNumber
+ MIN_CID               = 10000
+ MAX_CID               = 15000
+ FIELD_MAIL            = mail
+ FIELD_QUOTA           = mailQuota
+ FIELD_FWDTARGET       = mailForwardingAddress
+
+ [DELIVERY]
+ #
+ # Run Sieve scripts as messages are delivered\&.
+ #
+ SIEVE                 = yes
+
+ #
+ # Use \'user+mailbox@domain\' format to deliver to a mailbox\&.
+ #
+ SUBADDRESS            = yes
+
+ #
+ # Turn on/off the Sieve Vacation extension\&.
+ #
+ SIEVE_VACATION        = yes
+
+ #
+ # Turn on/off the Sieve Notify extension
+ #
+ SIEVE_NOTIFY          = yes
+
+ #
+ # Turn on/off additional Sieve debugging\&.
+ #
+ SIEVE_DEBUG           = no
+
+ #
+ # Use the auto_notify table to send email notifications\&.
+ #
+ AUTO_NOTIFY           = no
+
+ #
+ # Use the auto_reply table to send away messages\&.
+ #
+ AUTO_REPLY            = no
+ #
+ # Defaults to "NEW MAIL NOTIFICATION"
+ #
+ #AUTO_NOTIFY_SUBJECT        =
+
+ #
+ # Defaults to POSTMASTER from the DBMAIL section\&.
+ #
+ #AUTO_NOTIFY_SENDER        =
+
+ #
+ # If you set this to \'yes\' dbmail will check for duplicate
+ # messages in the relevant mailbox during delivery using
+ # the Message\-ID header
+ #
+ suppress_duplicates	= no
+
+
+ # end of configuration file
 .fi
 .sp
 .RE
 .SH "BUGS"
-If you experience inexplicable problems with DBMail, please report the issue to the [1]\&\fIDBMail Bug Tracker\fR.
+If you experience inexplicable problems with DBMail, please report the issue to the \fIDBMail Bug Tracker\fR\&[1]\&.
 .SH "LICENSE"
-DBMail and its components are distributed under the terms of the GNU General Public License. Copyrights are held variously by the authors listed below.
+DBMail and its components are distributed under the terms of the GNU General Public License\&. Copyrights are held variously by the authors listed below\&.
 .SH "AUTHOR(S)"
-DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution.
+DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution\&.
 .sp
-.RS 3n
+.RS 4
 .nf
 Eelco van Beek      Aaron Stone            Paul J Stevens
 Roel Rozendaal      Open Source Engineer   NFG Net Facilities Group BV
-Ilja Booij          Palo Alto, CA USA      http://www.nfg.nl
-IC&S                http://hydricacid.com
+Ilja Booij          Palo Alto, CA USA      http://www\&.nfg\&.nl
+IC&S                http://hydricacid\&.com
 Koningsweg 4
 3582 GE Utrecht
-http://www.ic\-s.nl
+http://www\&.ic\-s\&.nl
 .fi
 .sp
 .RE
-.SH "REFERENCES"
-.TP 3
-1.\ DBMail Bug Tracker
+.SH "NOTES"
+.IP " 1." 4
+DBMail Bug Tracker
+.RS 4
 \%http://dbmail.org/index.php?page=bugs
+.RE
