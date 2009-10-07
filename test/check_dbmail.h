@@ -7,6 +7,7 @@
  */
 
 #include "dbmail.h"
+#include "dm_config.h"
 #define THIS_MODULE "check"
 
 char *configFile = "/etc/dbmail/dbmail-test.conf";

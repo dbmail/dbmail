@@ -21,6 +21,7 @@
 
 
 #include "dbmail.h"
+#include "dm_config.h"
 
 #define THIS_MODULE "iconv"
 
@@ -170,6 +171,9 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 /* work around a bug in gmime (< 2.2.10) where utf7 strings are not completely decoded */
 char * dbmail_iconv_decode_text(const char *in)
 {
+
+	return g_mime_utils_header_decode_text(in);
+#if 0
 	size_t i=0, l=0, r=0, len, wlen=0;
 	char p2=0, p = 0, c, n = 0;
 	char *res, *s;
@@ -225,7 +229,7 @@ char * dbmail_iconv_decode_text(const char *in)
 	g_string_free(str,FALSE);
 
 	return res;
-
+#endif
 }
 /*
  * dbmail_iconv_decode_address
