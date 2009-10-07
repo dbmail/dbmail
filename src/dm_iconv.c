@@ -21,7 +21,6 @@
 
 
 #include "dbmail.h"
-#include "dm_config.h"
 
 #define THIS_MODULE "iconv"
 
