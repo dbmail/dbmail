@@ -91,14 +91,16 @@ case "$1" in
 	oldmask=`umask`
 	umask 026
 	
-	gunzip ${CONFIG_EX}.gz 2>/dev/null || true
-	gunzip ${DEBIAN_CONFIG_EX}.gz 2>/dev/null || true
-	
-	ucf --debconf-ok $CONFIG_EX $CONFIG
-	ucf --debconf-ok $DEBIAN_CONFIG_EX $DEBIAN_CONFIG
+	if [ -e "${CONFIG_EX}.gz" ] && [ -e "${DEBIAN_CONFIG_EX}.gz" ]; then
+		gunzip ${CONFIG_EX}.gz 2>/dev/null || true
+		gunzip ${DEBIAN_CONFIG_EX}.gz 2>/dev/null || true
 		
-	# activate the sqlite driver by default 
-	sed -i 's/\(^driver\W*=\)\(\W*$\)/\1 sqlite/' $CONFIG
+		ucf --debconf-ok $CONFIG_EX $CONFIG
+		ucf --debconf-ok $DEBIAN_CONFIG_EX $DEBIAN_CONFIG
+			
+		# activate the sqlite driver by default 
+		sed -i 's/\(^driver\W*=\)\(\W*$\)/\1 sqlite/' $CONFIG
+	fi
 
 	if [ "$DO_DEBCONF" = "true" ] && [ -e "$CONFIG" ] && [ -e "$DEBIAN_CONFIG" ]; then
 		# edit the configs
