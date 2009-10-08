@@ -398,7 +398,7 @@ then
 	AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
 else
 	AC_MSG_CHECKING([GMime headers])
-	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.0`
+	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.4`
 	if test -z "$ac_gmime_cflags"
 	then
 		AC_MSG_RESULT([no])
@@ -409,7 +409,7 @@ else
 	fi
 	
         AC_MSG_CHECKING([GMime libraries])
-	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.0`
+	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.4`
 	if test -z "$ac_gmime_libs"
 	then
 		AC_MSG_RESULT([no])
@@ -418,9 +418,9 @@ else
 		LDFLAGS="$LDFLAGS $ac_gmime_libs"
         	AC_MSG_RESULT([$ac_gmime_libs])
 	fi
-	ac_gmime_minvers="2.2.21"
+	ac_gmime_minvers="2.4.6"
 	AC_MSG_CHECKING([GMime version >= $ac_gmime_minvers])
-	ac_gmime_vers=`${gmimeconfig}  --atleast-version=$ac_gmime_minvers gmime-2.0 && echo yes`
+	ac_gmime_vers=`${gmimeconfig}  --atleast-version=$ac_gmime_minvers gmime-2.4 && echo yes`
 	if test -z "$ac_gmime_vers"
 	then
 		AC_MSG_ERROR([At least GMime version $ac_gmime_minvers is required.])

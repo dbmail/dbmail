@@ -240,6 +240,8 @@ char * dbmail_iconv_decode_text(const char *in)
  */
 char * dbmail_iconv_decode_address(char *address)
 {
+	return g_mime_utils_header_decode_phrase(address);
+#if 0
 	InternetAddressList *l;
 	char *r = NULL, *t = NULL, *s = NULL;
 
@@ -248,7 +250,7 @@ char * dbmail_iconv_decode_address(char *address)
  	// first make the address rfc2047 compliant if it happens to 
  	// contain 8bit data
 	if ( (g_mime_utils_text_is_8bit((unsigned char *)address, strlen(address))) )
-		s = g_mime_utils_header_encode_text((const char *)address);
+		s = g_mime_utils_header_encode_phrase((const char *)address);
 	else
 		s = g_strdup(address);
 
@@ -257,13 +259,13 @@ char * dbmail_iconv_decode_address(char *address)
 
 	// feed the result to gmime's address parser and
 	// render it back to a hopefully now sane string
-	l = internet_address_parse_string(t); g_free(t);
-	s = internet_address_list_to_string(l, FALSE);
-	internet_address_list_destroy(l);
+	l = internet_address_list_parse_string(t); g_free(t);
+	s = internet_address_list_to_string(l, TRUE);
+	g_object_unref(l);
 
 	// now we're set to decode the rfc2047 address header
 	// into clean utf8
-	r = dbmail_iconv_decode_text(s); g_free(s);
+	r = g_mime_utils_header_decode_phrase(s); g_free(s);
 
 	// oops: if the rfc2047 encoded address names contain
 	// encoded double-quotes, imap_cleanup_address has added quotes that are now
@@ -271,6 +273,7 @@ char * dbmail_iconv_decode_address(char *address)
 	pack_char(r,'"');
 
 	return r;
+#endif
 }
 
 char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr)

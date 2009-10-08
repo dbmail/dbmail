@@ -146,7 +146,7 @@ int discard_client_input(clientbase_t *ci);
 
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
-GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList *ialist);
+GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialist);
 char * dbmail_imap_plist_collapse(const char *in);
 void dbmail_imap_plist_free(GList *l);
 

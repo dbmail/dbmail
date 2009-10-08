@@ -245,7 +245,7 @@ START_TEST(test_imap_get_structure)
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL \"7BIT\" 16 1 NIL (\"inline\" NIL) NIL NIL)"
-			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
+			"(\"text\" \"plain\" (\"name\" \"testfile\" \"charset\" \"us-ascii\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
 			" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s] !=\n[%s]\n", expect, result);
 	g_free(result);
@@ -274,7 +274,7 @@ START_TEST(test_imap_get_structure)
 }
 END_TEST
 
-START_TEST(test_internet_address_parse_string)
+START_TEST(test_internet_address_list_parse_string)
 {
 	char * trythese [][2] = { 
 		{ "undisclosed-recipients", "((NIL NIL \"undisclosed-recipients\" NIL))"},
@@ -296,15 +296,15 @@ START_TEST(test_internet_address_parse_string)
 		GList *list = NULL;
 
 		t = imap_cleanup_address(input);
-		alist = internet_address_parse_string(t);
+		alist = internet_address_list_parse_string(t);
 		g_free(t);
-		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
-		internet_address_list_destroy(alist);
+		list = dbmail_imap_append_alist_as_plist(list, alist);
+		g_object_unref(alist);
 		alist = NULL;
 
 		result = dbmail_imap_plist_as_string(list);
 
-		fail_unless(strcmp(result,expect)==0, "internet_address_parse_string failed to generate correct undisclosed-recipients plist "
+		fail_unless(strcmp(result,expect)==0, "internet_address_list_parse_string failed to generate correct undisclosed-recipients plist "
 			"for [%s], expected\n[%s] got\n[%s]", input, expect, result);
 
 		g_list_destroy(list);
@@ -337,14 +337,14 @@ START_TEST(test_internet_address_parse_string)
 		int res;
 		char *t;
 		t = imap_cleanup_address(input);
-		alist = internet_address_parse_string(t);
-		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
+		alist = internet_address_list_parse_string(t);
+		list = dbmail_imap_append_alist_as_plist(list, alist);
 		result = dbmail_imap_plist_as_string(list);
 		res = strcmp(result, expect);
 
 		fail_unless(res == 0, "dbmail_imap_append_alist_as_plist failed, expected:\n[%s]\ngot:\n[%s]\n", expect, result);
 
-		internet_address_list_destroy(alist);
+		g_object_unref(alist);
 		alist = NULL;
 		g_list_destroy(list);
 		g_free(result);
@@ -410,10 +410,9 @@ START_TEST(test_imap_get_envelope)
 	g_string_free(s,true);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
-	printf("%s\n", result);
-	//strncpy(expect,"(\"thu, 15 feb 2dd007 01:02:03 +0200\" nil ((\"real name\" nil \"user\" \"domain\")) ((\"real name\" nil \"user\" \"domain\")) ((\"real name\" nil \"user\" \"domain\")) ((nil nil \"group\" nil)(nil nil \"g1\" \"d1.org\")(nil nil \"g2\" \"d2.org\")(nil nil nil nil)(nil nil \"group2\" nil)(nil nil \"g3\" \"d3.org\")(nil nil nil nil)) nil nil nil nil)", 1024);
+	strncpy(expect,"(\"Fri, 11 Sep 2009 17:42:32 +0100\" \"Re: Anexo II para RO\" ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<002001ca32fe$dc7668b0$9600000a@ricardo>\")",1024);
 
-	//fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
 
 	dbmail_message_free(message);
 	g_free(result);
@@ -504,7 +503,8 @@ START_TEST(test_imap_cleanup_address)
 	F("\"First Address\" <first@foo.com>, =?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>",
 		"\"First Address\" <first@foo.com>, \"=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=\" <over.there@hotmail.com>");
 
-	printf("[%s]\n", imap_cleanup_address("pr.latinnet <pr.latinnet@gmail.com>"));
+	//printf("[%s]\n", imap_cleanup_address("pr.latinnet <pr.latinnet@gmail.com>"));
+	F("=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=","\"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\"");
 
 
 }
@@ -894,7 +894,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_cleanup_address);
-	tcase_add_test(tc_session, test_internet_address_parse_string);
+	tcase_add_test(tc_session, test_internet_address_list_parse_string);
 	tcase_add_test(tc_session, test_imap_get_envelope);
 	tcase_add_test(tc_session, test_imap_get_envelope_8bit_id);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);

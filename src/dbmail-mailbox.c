@@ -338,16 +338,17 @@ static size_t dump_message_to_stream(DbmailMessage *message, GMimeStream *ostrea
 	s = dbmail_message_to_string(message);
 
 	if (! strncmp(s,"From ",5)==0) {
-		ialist = internet_address_parse_string(g_mime_message_get_sender(GMIME_MESSAGE(message->content)));
+		ialist = internet_address_list_parse_string(g_mime_message_get_sender(GMIME_MESSAGE(message->content)));
 		sender = g_string_new("nobody@foo");
 		if (ialist) {
-			ia = ialist->address;
+			ia = internet_address_list_get_address(ialist,0);
 			if (ia) {
-				g_strstrip(g_strdelimit(ia->value.addr,"\"",' '));
-				g_string_printf(sender,"%s", ia->value.addr);
+				char *addr = (char *)internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
+				g_strstrip(g_strdelimit(addr,"\"",' '));
+				g_string_printf(sender,"%s", addr);
 			}
 		}
-		internet_address_list_destroy(ialist);
+		g_object_unref(ialist);
 		
 		d = dbmail_message_get_internal_date(message, 0);
 		date = g_string_new(d);
