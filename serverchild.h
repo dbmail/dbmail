@@ -30,8 +30,8 @@
 
 #include "dbmail.h"
 
-void active_child_sig_handler(int sig, siginfo_t *info, void *data);
-void noop_child_sig_handler(int sig, siginfo_t *info, void *data);
+void active_child_sig_handler(int sig);
+void noop_child_sig_handler(int sig);
 int SetChildSigHandler(void);
 int DelChildSigHandler(void);
 pid_t CreateChild(ChildInfo_t * info);

@@ -68,13 +68,13 @@ void disconnect_all(void)
 	connected = 0;
 }
 
-void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
+void noop_child_sig_handler(int sig)
 {
 	if (sig == SIGSEGV)
 		_exit(0);
 }
 
-void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+void active_child_sig_handler(int sig)
 {
 	int saved_errno = errno;
 	
@@ -122,11 +122,11 @@ int SetChildSigHandler()
 
 	act.sa_sigaction = active_child_sig_handler;
 	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO;
+	act.sa_flags = 0;
 
 	rstact.sa_sigaction = active_child_sig_handler;
 	sigemptyset(&rstact.sa_mask);
-	rstact.sa_flags = SA_SIGINFO | SA_RESETHAND;
+	rstact.sa_flags = SA_RESETHAND;
 
 	sigaddset(&act.sa_mask, SIGINT);
 	sigaddset(&act.sa_mask, SIGQUIT);
@@ -162,7 +162,7 @@ int DelChildSigHandler()
 
 	act.sa_sigaction = noop_child_sig_handler;
 	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO;
+	act.sa_flags = 0;
 
 	sigaction(SIGINT,	&act, 0);
 	sigaction(SIGQUIT,	&act, 0);

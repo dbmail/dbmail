@@ -44,7 +44,7 @@ pid_t ParentPID = 0;
 ChildInfo_t childinfo;
 
 /* some extra prototypes (defintions are below) */
-static void ParentSigHandler(int sig, siginfo_t * info, void *data);
+static void ParentSigHandler(int sig);
 static int SetParentSigHandler(void);
 static int server_setup(serverConfig_t *conf);
 
@@ -59,11 +59,11 @@ int SetParentSigHandler()
 
 	act.sa_sigaction = ParentSigHandler;
 	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO;
+	act.sa_flags = 0;
 
 	sact.sa_sigaction = ParentSigHandler;
 	sigemptyset(&sact.sa_mask);
-	sact.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
+	sact.sa_flags = SA_NOCLDSTOP;
 
 	sigaction(SIGCHLD,	&sact, 0);
 	sigaction(SIGINT,	&sact, 0);
@@ -329,7 +329,7 @@ int server_run(serverConfig_t *conf)
 	return result;
 }
 
-void ParentSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+void ParentSigHandler(int sig)
 {
 	int saved_errno = errno;
 	Restart = 0;

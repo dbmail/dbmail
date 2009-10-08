@@ -47,7 +47,7 @@ int reallyquiet = 0;
 int quiet = 0;
 
 static int SetMainSigHandler(void);
-static void MainSigHandler(int sig, siginfo_t * info, void *data);
+static void MainSigHandler(int sig);
 static void ClearConfig(serverConfig_t * conf);
 static void DoConfig(serverConfig_t * conf, const char * const service);
 static void LoadServerConfig(serverConfig_t * config, const char * const service);
@@ -182,7 +182,7 @@ int serverparent_mainloop(serverConfig_t *config, const char *service, const cha
 	return 0;
 }
 
-void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+void MainSigHandler(int sig)
 {
 	mainSig = sig;
 
@@ -203,7 +203,7 @@ int SetMainSigHandler()
 
 	act.sa_sigaction = MainSigHandler;
 	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO;
+	act.sa_flags = 0;
 
 	sigaction(SIGINT, &act, 0);
 	sigaction(SIGQUIT, &act, 0);
