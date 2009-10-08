@@ -1,12 +1,7 @@
 tags
 cscope.out
-cscope.out
 *.swp
+*~
 *.o
 *.lo
-*Makefile.in
-aclocal.m4
-config.in
-config/*
-configure
-buildtools/*
+autom4te.cache/
