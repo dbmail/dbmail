@@ -1,8 +1,14 @@
-dbmail (2.2.12-1) unstable; urgency=low
+dbmail (2.2.13-1) unstable; urgency=low
 
   * upstream release
+  * update autoconf files (Closes: #542080)
+  * fix misc debian issues (Closes: #482282):
+     - fix cron output due to missing files when in state "config-files"
+     - remove non-existing create_user call from postinst
+     - allow non-existence of /u/s/d/ in postinst
+     - remove empty prerm
 
- -- Paul J Stevens <paul@nfg.nl>  Wed, 07 Oct 2009 21:43:40 +0200
+ -- Paul J Stevens <paul@nfg.nl>  Thu, 08 Oct 2009 10:13:48 +0200
 
 dbmail (2.2.11-1) unstable; urgency=low
 
