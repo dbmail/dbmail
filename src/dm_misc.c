@@ -1828,6 +1828,7 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 		t = imap_cleanup_address(result_enc); g_free(result_enc);
 		alist = internet_address_list_parse_string(t);	g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, (InternetAddressList *)alist);
+		g_object_unref(alist);
 		alist = NULL;
 	} else {
 		list = g_list_append_printf(list,"NIL");

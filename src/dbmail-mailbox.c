@@ -922,6 +922,7 @@ static int _handle_search_args(DbmailMailbox *self, char **search_keys, u64_t *i
 		} \
 		strncpy(value->search, p, MAX_SEARCH_LEN); \
 		g_free(t); \
+		g_free(p); \
 		(*idx)++
 	
 	else if ( MATCH(key, "bcc") ) {

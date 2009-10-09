@@ -49,14 +49,11 @@ extern db_param_t _db_params;
 struct mailbox_match * mailbox_match_new(const char *mailbox)
 {
 	struct mailbox_match *res = g_new0(struct mailbox_match,1);
-	GString *like;
 	char *sensitive, *insensitive;
 	char ** tmparr;
 	size_t i, len;
 	int verbatim = 0, has_sensitive_part = 0;
 	char p = 0, c = 0;
-
-	like = g_string_new("");
 
 	tmparr = g_strsplit(mailbox, "_", -1);
 	sensitive = g_strjoinv("\\_",tmparr);

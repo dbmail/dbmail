@@ -121,10 +121,12 @@ static char * showdiff(const char *a, const char *b)
 FILE *i;
 #define COMPARE(a,b) \
 	{ \
-	int d; size_t l;\
+	int d; size_t l; char *s;\
 	l = strlen(a); \
 	d = memcmp((a),(b),l); \
-	fail_unless(d == 0, "store store/retrieve failed\n%s\n\n", showdiff(a,b)); \
+	s = showdiff(a,b); \
+	fail_unless(d == 0, "store store/retrieve failed\n%s\n\n", s); \
+	g_free(s); \
 	}
 
 static DbmailMessage  * message_init(const char *message)
@@ -579,6 +581,7 @@ START_TEST(test_dbmail_message_new_from_stream)
 	fd = tmpfile();
 	fprintf(fd, "%s", multipart_message);
 	fseek(fd,0,0);
+
 	m = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_PIPE);
 	t = dbmail_message_to_string(m);
 	whole_message_size = dbmail_message_get_size(m, FALSE);

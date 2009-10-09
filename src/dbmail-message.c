@@ -309,6 +309,7 @@ static char * find_boundary(const char *s)
 	gchar *boundary;
 	GMimeContentType *type = find_type(s);
 	boundary = g_strdup(g_mime_content_type_get_parameter(type,"boundary"));
+	g_object_unref(type);
 	return boundary;
 }
 
@@ -363,6 +364,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				prev_is_message = is_message;
 				mimetype = find_type(str);
 				is_message = g_mime_content_type_is_type(mimetype, "message", "rfc822");
+				g_object_unref(mimetype);
 			}
 
 			got_boundary = FALSE;
@@ -615,6 +617,7 @@ DbmailMessage * dbmail_message_new(void)
 
 	/* provide quick case-insensitive header name searches */
 	self->header_name = g_tree_new((GCompareFunc)g_ascii_strcasecmp);
+
 	/* provide quick case-sensitive header value searches */
 	self->header_value = g_tree_new((GCompareFunc)strcmp);
 	
@@ -637,6 +640,7 @@ void dbmail_message_free(DbmailMessage *self)
 		self->headers = NULL;
 	}
 	if (self->content) {
+		g_object_unref(self->content);
 		self->content = NULL;
 	}
 	if (self->charset) {
@@ -671,6 +675,7 @@ DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype)
 	message = dbmail_message_new();
 	stream = g_mime_stream_fs_new(dup(fileno(instream)));
 	retmessage = dbmail_message_init_with_stream(message, stream, streamtype);
+	g_object_unref(stream);
 
 	if (retmessage)
 		return retmessage;
@@ -803,8 +808,6 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 			
 			buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
 
-			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
-			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
 			self->tmp = tmpfile(); 
 			if (! self->tmp) {
 				int serr = errno;
@@ -813,14 +816,18 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 				break;
 			}
 
-			mstream = g_mime_stream_file_new(self->tmp);
+			// setup a filter pipeline:
+			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
 
-			assert(mstream);
+			mstream = g_mime_stream_file_new(self->tmp); assert(mstream);
 			fstream = g_mime_stream_filter_new(mstream);
 			g_mime_stream_file_set_owner((GMimeStreamFile *)mstream, FALSE);
+
 			filter = g_mime_filter_crlf_new(FALSE,TRUE);
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
+			g_object_unref(filter);
 			
+			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
 			while ((getslen = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) > 0) {
 				if (firstline && strncmp(buf,"From ",5)==0) {
 					from = g_strdup(buf);
@@ -846,6 +853,8 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 					break;
 				}
 			}
+			g_object_unref(bstream);
+			g_object_unref(fstream);
 
 			if (getslen < 0) {
 				TRACE(TRACE_ERR, "Read failed, did the client drop the connection?");
@@ -856,7 +865,7 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 			
 			g_mime_stream_reset(mstream);
 			g_mime_parser_init_with_stream(parser, mstream);
-
+			g_object_unref(mstream);
 
 		break;
 
@@ -885,6 +894,7 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 			break;
 	}
 
+	g_object_unref(parser);
 
 	return res;
 }
@@ -1056,7 +1066,7 @@ GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *
 		ia = internet_address_list_get_address(ialist, j);
 		result = g_list_append(result, g_strdup(internet_address_mailbox_get_addr((InternetAddressMailbox *)ia)));
 	}
-	
+	g_object_unref(ialist);
 
 	TRACE(TRACE_DEBUG, "mail address parser found [%d] email addresses", g_list_length(result));
 
@@ -1352,6 +1362,7 @@ static void insert_physmessage(DbmailMessage *self, C c)
 	if (internal_date != NULL) {
 		field_t to_date_str;
 		char2date_str(internal_date, &to_date_str);
+		g_free(internal_date);
 		r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, &to_date_str, frag);
 		g_free(frag);	
 	} else {
@@ -1670,10 +1681,13 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 					sortfield = g_strndup(addr ? addr : "", CACHE_WIDTH);
 				}
 			}
+			g_object_unref(emaillist);
 		}
 
 		if(issubject) {
-			sortfield = dbmail_iconv_str_to_db(dm_base_subject(value), charset);
+			char *t = dm_base_subject(value);
+			sortfield = dbmail_iconv_str_to_db(t, charset);
+			g_free(t);
 		}
 
 		if(isdate) {
@@ -1751,15 +1765,17 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 {
 	GMimeReferences *refs, *head;
 	GTree *tree;
-	const char *referencesfield, *inreplytofield, *field;
+	const char *referencesfield, *inreplytofield;
+	char *field;
 
 	referencesfield = (char *)dbmail_message_get_header(self,"References");
 	inreplytofield = (char *)dbmail_message_get_header(self,"In-Reply-To");
 
 	// Some clients will put parent in the in-reply-to header only and the grandparents and older in references
 	field = g_strconcat(referencesfield, " ", inreplytofield, NULL);
-
 	refs = g_mime_references_decode(field);
+	g_free(field);
+
 	if (! refs) {
 		TRACE(TRACE_DEBUG, "reference_decode failed [%llu]", self->physid);
 		return;
@@ -1852,24 +1868,26 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	switch(encoding) {
 		case GMIME_CONTENT_ENCODING_BASE64:
 			filter = g_mime_filter_basic_new(GMIME_CONTENT_ENCODING_BASE64, TRUE);
+			g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
+			g_object_unref(filter);
 			break;
 		case GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE:
 			filter = g_mime_filter_basic_new(GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE, TRUE);
+			g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
+			g_object_unref(filter);
 			break;
 		default:
 			break;
 	}
-
-	if (filter) {
-		g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
-	}
 	
 	// fill the stream and thus the mime-part
 	g_mime_stream_write_string(fstream,body);
+	g_object_unref(fstream);
+
 	content = g_mime_data_wrapper_new_with_stream(stream, encoding);
+	g_object_unref(stream);
 	g_mime_part_set_content_object(mime_part, content);
 	
-	// add the correct mime-headers
 	
 	// Content-Type
 	mime_type = g_mime_content_type_new("text","plain");
@@ -1893,6 +1911,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 
 	// attach the mime-part to the mime-message
 	g_mime_message_set_mime_part(message, (GMimeObject *)mime_part);
+	g_object_unref(mime_part);
 
 	// attach the message to the DbmailMessage struct
 	self->content = (GMimeObject *)message;
