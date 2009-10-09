@@ -239,7 +239,6 @@ START_TEST(test_dbmail_message_to_string)
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_to_string(m);
-	printf("[%s]\n", result);
 	fail_unless(strlen(result)==596,"test_dbmail_message_to_string failed. result size mismatch [%zd != 596]", strlen(result));
 	g_string_free(s,TRUE);
 	g_free(result);
@@ -251,7 +250,7 @@ START_TEST(test_dbmail_message_to_string)
 	m = dbmail_message_new();
 	m = dbmail_message_retrieve(m, id, DBMAIL_MESSAGE_FILTER_FULL);
 	result = dbmail_message_to_string(m);
-	printf("[%s]\n", result);
+	fail_unless(strlen(result)==596,"test_dbmail_message_to_string failed. result size mismatch [%zd != 596]", strlen(result));
 	dbmail_message_free(m);
 	g_free(result);
 

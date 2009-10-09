@@ -165,6 +165,7 @@ struct DbmailMessage * dbmail_message_new(void)
 {
 	struct DbmailMessage *self = g_new0(struct DbmailMessage,1);
 
+	self->internal_date = time(NULL);
 	self->envelope_recipient = g_string_new("");
 
 	/* provide quick case-insensitive header name searches */
@@ -501,8 +502,11 @@ u64_t dbmail_message_get_physid(const struct DbmailMessage *self)
 
 void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date)
 {
-	if (internal_date)
+	TRACE(TRACE_DEBUG,"[%s]", internal_date);
+	if (internal_date && strlen(internal_date))
 		self->internal_date = g_mime_utils_header_decode_date(internal_date, self->internal_date_gmtoff);
+	else
+		self->internal_date = time(NULL);
 }
 
 /* thisyear is a workaround for some broken gmime version. */
@@ -510,8 +514,7 @@ gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self, int t
 {
 	char *res;
 	struct tm gmt;
-	if (! self->internal_date)
-		return NULL;
+	assert(self->internal_date);
 
 	res = g_new0(char, TIMESTRING_SIZE+1);
 	memset(&gmt,'\0', sizeof(struct tm));

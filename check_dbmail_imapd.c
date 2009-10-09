@@ -379,9 +379,9 @@ START_TEST(test_imap_get_structure)
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL \"7BIT\" 16 1 NIL (\"inline\" NIL) NIL NIL)"
-			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
+			"(\"text\" \"plain\" (\"name\" \"testfile\" \"charset\" \"us-ascii\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
 			" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s] != \n[%s]\n", result, expect);
 	g_free(result);
 	dbmail_message_free(message);
 
@@ -969,13 +969,11 @@ START_TEST(test_dm_getguid)
 END_TEST
 
 /* this test will fail if you're not in the CET timezone */
-#define D(x,y) fail_unless(strncasecmp(date_sql2imap(x),y,IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed")
+#define D(x,y) fail_unless(strncasecmp(date_sql2imap(x),y,IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed\n[%s] !=\n[%s]\n", date_sql2imap(x), y)
 START_TEST(test_date_sql2imap)
 {
-//	printf("[%s]\n", date_sql2imap("2005-05-03 14:10:06"));
-//	printf("[%s]\n", date_sql2imap("2005-01-03 14:10:06"));
-        D("2005-05-03 14:10:06","03-May-2005 14:10:06 +0200");
-        D("2005-01-03 14:10:06","03-Jan-2005 14:10:06 +0100");
+        D("2005-05-03 14:10:06","03-May-2005 14:10:06 +0000");
+        D("2005-01-03 14:10:06","03-Jan-2005 14:10:06 +0000");
 }
 END_TEST
 
