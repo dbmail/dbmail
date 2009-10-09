@@ -20,7 +20,7 @@ Description: base package for the dbmail email solution
  .
  Supported client protocols are: POP3, IMAP4, LMTP.
  .
- This packages support Sqlite3 and LDAP authentication.
+ This package supports Sqlite3 and LDAP authentication.
 
 Package: dbmail-pgsql
 Architecture: any

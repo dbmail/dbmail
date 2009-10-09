@@ -7,8 +7,9 @@ dbmail (2.2.13-1) unstable; urgency=low
      - remove non-existing create_user call from postinst
      - allow non-existence of /u/s/d/ in postinst
      - remove empty prerm
+  * fix typo (Closes: #550259)
 
- -- Paul J Stevens <paul@nfg.nl>  Thu, 08 Oct 2009 10:13:48 +0200
+ -- Paul J Stevens <paul@nfg.nl>  Fri, 09 Oct 2009 14:41:47 +0200
 
 dbmail (2.2.11-1) unstable; urgency=low
 
