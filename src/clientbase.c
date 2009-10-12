@@ -273,8 +273,10 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	}
 
 	if (t == -1) {
-		if ((e = self->cb_error(self->tx, e, (void *)self)))
+		if ((e = self->cb_error(self->tx, e, (void *)self))) {
+			self->client_state |= CLIENT_ERR;
 			return e;
+		}
 	} else {
 		self->bytes_tx += t;	// Update our byte counter
 		if (self->ssl) {

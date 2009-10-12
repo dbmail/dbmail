@@ -292,9 +292,15 @@ void imap_handle_input(ImapSession *session)
 	char buffer[MAX_LINESIZE];
 	int l, result;
 
+	assert(session);
+
 	TRACE(TRACE_DEBUG, "[%p] parser_state [%d] command_state [%d]", session, session->parser_state, session->command_state);
 
+	assert(session->ci);
+
 	// first flush the output buffer
+	assert(session->ci->write_buffer);
+
 	if (session->ci->write_buffer->len) {
 		TRACE(TRACE_DEBUG,"[%p] write buffer not empty", session);
 		ci_write(session->ci, NULL);

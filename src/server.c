@@ -130,13 +130,14 @@ void dm_thread_data_free(gpointer data)
  * through the main thread async queue. This data
  * is written directly to the output event
  */
-void dm_thread_data_sendmessage(gpointer data)
+int dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
 	if (D->data && session && session->state < CLIENTSTATE_LOGOUT) {
-		ci_write(session->ci, "%s", (char *)D->data);
+		return ci_write(session->ci, "%s", (char *)D->data);
 	}
+	return 0;
 }
 
 /* 
@@ -185,7 +186,9 @@ static int server_setup(serverConfig_t *conf)
                 TRACE(TRACE_INFO,"thread pool created for idle imap clients");
 
 	// self-pipe used to push the event-loop
-	pipe(selfpipe);
+	if (pipe(selfpipe))
+		TRACE(TRACE_EMERG, "selfpipe setup failed");
+
 	UNBLOCK(selfpipe[0]);
 	UNBLOCK(selfpipe[1]);
 	
@@ -285,7 +288,9 @@ pid_t server_daemonize(serverConfig_t *conf)
 	setsid();
 	if (fork()) exit(0);
 
-	chdir("/");
+	if (chdir("/"))
+		TRACE(TRACE_EMERG, "chdir / failed");
+
 	umask(0077);
 
 	reopen_logs_fatal(conf);

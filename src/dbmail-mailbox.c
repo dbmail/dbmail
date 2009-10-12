@@ -130,7 +130,7 @@ static void uid_msn_map(DbmailMailbox *self)
 
 	g_list_free(g_list_first(ids));
 
-	if (self->state) MailboxState_setExists(self->state, g_tree_nnodes(self->ids));
+	if (self->mbstate) MailboxState_setExists(self->mbstate, g_tree_nnodes(self->ids));
 
 	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->ids));
 	TRACE(TRACE_DEBUG,"total [%d] MSNs", g_tree_nnodes(self->msn));
@@ -1541,14 +1541,14 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 
 	if (! uid) {
 		lo = 1;
-		if (self->state)
-			hi = MailboxState_getExists(self->state);
+		if (self->mbstate)
+			hi = MailboxState_getExists(self->mbstate);
 		else
 			hi = (u64_t)g_tree_nnodes(self->ids);
 
 		if (hi != (u64_t)g_tree_nnodes(self->ids))
-			TRACE(TRACE_WARNING, "mailbox info out of sync: exists [%llu] ids [%u]", 
-				hi, g_tree_nnodes(self->ids));
+			TRACE(TRACE_WARNING, "[%p] mailbox info out of sync: exists [%llu] ids [%u]", 
+				self->mbstate, hi, g_tree_nnodes(self->ids));
 	}
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);

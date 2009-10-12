@@ -28,7 +28,7 @@ struct DbmailIconv *ic;
 
 void dbmail_iconv_init(void)
 {
-	static gboolean initialized = FALSE;
+	static volatile gboolean initialized = FALSE;
 
 	if (initialized)
 		return;

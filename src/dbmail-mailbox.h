@@ -48,7 +48,7 @@ typedef struct {
 
 	GList *sorted;		// ordered list of UID values
 
-	MailboxState_T state;	// cache mailbox metadata;
+	MailboxState_T mbstate;	// cache mailbox metadata;
 	GTree *msginfo; 	// cache MessageInfo
 
 	GTree *found;		// search result (key: uid, value: msn)

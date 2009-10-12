@@ -313,35 +313,35 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
 
 	/* fetch mailbox metadata */
-	self->mailbox->state = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
-	MailboxState_reload(self->mailbox->state, self->userid);
+	self->mailbox->mbstate = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
+	MailboxState_reload(self->mailbox->mbstate, self->userid);
 
 	/* check if user has right to select mailbox */
-	if (mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_READ) == 1) {
+	if (mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_READ) == 1) {
 		dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 		return DM_EGENERAL;
 	}
 	
 	if (self->command_type == IMAP_COMM_SELECT) {
 		// SELECT
-		MailboxState_setPermission(self->mailbox->state,IMAPPERM_READWRITE);
+		MailboxState_setPermission(self->mailbox->mbstate,IMAPPERM_READWRITE);
 	} else {
 		// EXAMINE
-		MailboxState_setPermission(self->mailbox->state,IMAPPERM_READ);
+		MailboxState_setPermission(self->mailbox->mbstate,IMAPPERM_READ);
 	}
 
 	/* check if mailbox is selectable */
-	if (MailboxState_noSelect(self->mailbox->state)) return DM_EGENERAL;
+	if (MailboxState_noSelect(self->mailbox->mbstate)) return DM_EGENERAL;
 
 	/* build list of recent messages */
-        if (MailboxState_getPermission(self->mailbox->state) == IMAPPERM_READWRITE && self->mailbox->msginfo) {
+        if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE && self->mailbox->msginfo) {
 		g_tree_foreach(self->mailbox->msginfo, (GTraverseFunc)mailbox_build_recent, self);
 		TRACE(TRACE_DEBUG, "build list of [%d] [%d] recent messages...", g_tree_nnodes(self->mailbox->msginfo), g_list_length(self->recent));
 		dbmail_imap_session_mailbox_update_recent(self);
 	}
 
 	/* keep these in sync */
-	MailboxState_setExists(self->mailbox->state, g_tree_nnodes(self->mailbox->ids));
+	MailboxState_setExists(self->mailbox->mbstate, g_tree_nnodes(self->mailbox->ids));
 
 	return 0;
 }
@@ -362,24 +362,24 @@ static void _ic_select_enter(dm_thread_data *D)
 	}	
 	dbmail_imap_session_set_state(self,CLIENTSTATE_SELECTED);
 
-	dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(self->mailbox->state));
-	dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(self->mailbox->state));
+	dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(self->mailbox->mbstate));
+	dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(self->mailbox->mbstate));
 
 	/* flags */
-	flags = MailboxState_flags(self->mailbox->state);
+	flags = MailboxState_flags(self->mailbox->mbstate);
 	dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
 	dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
 	g_free(flags);
 
 	/* UIDNEXT */
 	dbmail_imap_session_buff_printf(self, "* OK [UIDNEXT %llu] Predicted next UID\r\n",
-		MailboxState_getUidnext(self->mailbox->state));
+		MailboxState_getUidnext(self->mailbox->mbstate));
 	
 	/* UID */
 	dbmail_imap_session_buff_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
-		MailboxState_getId(self->mailbox->state));
+		MailboxState_getId(self->mailbox->mbstate));
 
-	if (MailboxState_getExists(self->mailbox->state)) { 
+	if (MailboxState_getExists(self->mailbox->mbstate)) { 
 		/* show msn of first unseen msg (if present) */
 		u64_t key = 0, *msn = NULL;
 		g_tree_foreach(self->mailbox->msginfo, (GTraverseFunc)mailbox_first_unseen, &key);
@@ -558,7 +558,7 @@ void _ic_delete_enter(dm_thread_data *D)
 		}
 
 		/* check if this was the currently selected mailbox */
-		if (self->mailbox && self->mailbox->state && (mailbox_idnr == MailboxState_getId(self->mailbox->state))) 
+		if (self->mailbox && self->mailbox->mbstate && (mailbox_idnr == MailboxState_getId(self->mailbox->mbstate))) 
 			dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 
 		/* ok done */
@@ -574,7 +574,7 @@ void _ic_delete_enter(dm_thread_data *D)
 	}
 
 	/* check if this was the currently selected mailbox */
-	if (self->mailbox && self->mailbox->state && (mailbox_idnr == MailboxState_getId(self->mailbox->state))) 
+	if (self->mailbox && self->mailbox->mbstate && (mailbox_idnr == MailboxState_getId(self->mailbox->mbstate))) 
 		dbmail_imap_session_set_state(self, CLIENTSTATE_AUTHENTICATED);
 
 	IC_DONE_OK;
@@ -1430,7 +1430,7 @@ int _ic_check(ImapSession *self)
 static void _ic_close_enter(dm_thread_data *D)
 {
 	LOCK_SESSION;
-	int result = acl_has_right(self->mailbox->state, self->userid, ACL_RIGHT_EXPUNGE);
+	int result = acl_has_right(self->mailbox->mbstate, self->userid, ACL_RIGHT_EXPUNGE);
 	if (result < 0) {
 		dbmail_imap_session_buff_printf(self, "* BYE Internal database error\r\n");
 		D->status=result;
@@ -1438,7 +1438,7 @@ static void _ic_close_enter(dm_thread_data *D)
 	}
 	/* only perform the expunge if the user has the right to do it */
 	if (result == 1)
-		if (MailboxState_getPermission(self->mailbox->state) == IMAPPERM_READWRITE)
+		if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE)
 			dbmail_imap_session_mailbox_expunge(self);
 
 	dbmail_imap_session_set_state(self, CLIENTSTATE_AUTHENTICATED);
@@ -1485,7 +1485,7 @@ static void _ic_expunge_enter(dm_thread_data *D)
 	int result;
 	LOCK_SESSION;
 
-	if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_EXPUNGE))) {
+	if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_EXPUNGE))) {
 		D->status = result;
 		NOTIFY_DONE(D);
 	}
@@ -1504,7 +1504,7 @@ int _ic_expunge(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_SELECTED)) return 1;
 
-	if (MailboxState_getPermission(self->mailbox->state) != IMAPPERM_READWRITE) {
+	if (MailboxState_getPermission(self->mailbox->mbstate) != IMAPPERM_READWRITE) {
 		dbmail_imap_session_buff_printf(self, "%s NO you do not have write permission on this folder\r\n", self->tag);
 		return 1;
 	}
@@ -1533,7 +1533,7 @@ static void sorted_search_enter(dm_thread_data *D)
 
 	if (order == SEARCH_SORTED) sorted = 1;
 	
-	if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_READ))) {
+	if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_READ))) {
 		D->status = result;
 		NOTIFY_DONE(D);
 	}
@@ -1731,7 +1731,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 
 	msn = g_tree_lookup(self->mailbox->ids, id);
 
-	if (MailboxState_getPermission(self->mailbox->state) == IMAPPERM_READWRITE) {
+	if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE) {
 		if (db_set_msgflag(*id, cmd->flaglist, cmd->keywords, cmd->action, msginfo) < 0) {
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 			return TRUE;
@@ -1770,7 +1770,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 		char *uid = NULL;
 		if (self->use_uid)
 			uid = g_strdup_printf("UID %llu ", *id);
-		s = imap_flags_as_string(self->mailbox->state, msginfo);
+		s = imap_flags_as_string(self->mailbox->mbstate, msginfo);
 		dbmail_imap_session_buff_printf(self,"* %llu FETCH (%sFLAGS %s)\r\n", *msn, uid?uid:"", s);
 		if (uid) g_free(uid);
 		g_free(s);
@@ -1844,8 +1844,8 @@ static void _ic_store_enter(dm_thread_data *D)
 		if (j == IMAP_NFLAGS) {
 			char *kw = self->args[k+i];
 			cmd->keywords = g_list_append(cmd->keywords,g_strdup(kw));
-			if (! MailboxState_hasKeyword(self->mailbox->state, kw)) {
-				MailboxState_addKeyword(self->mailbox->state, kw);
+			if (! MailboxState_hasKeyword(self->mailbox->mbstate, kw)) {
+				MailboxState_addKeyword(self->mailbox->mbstate, kw);
 				update = TRUE;
 			}
 		}
@@ -1853,7 +1853,7 @@ static void _ic_store_enter(dm_thread_data *D)
 
 	/** check ACL's for STORE */
 	if (cmd->flaglist[IMAP_FLAG_SEEN] == 1) {
-		if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_SEEN))) {
+		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_SEEN))) {
 			D->status = result;
 			g_list_destroy(cmd->keywords);
 			g_free(cmd);
@@ -1861,7 +1861,7 @@ static void _ic_store_enter(dm_thread_data *D)
 		}
 	}
 	if (cmd->flaglist[IMAP_FLAG_DELETED] == 1) {
-		if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_DELETED))) {
+		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_DELETED))) {
 			D->status = result;
 			g_list_destroy(cmd->keywords);
 			g_free(cmd);
@@ -1872,7 +1872,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	    cmd->flaglist[IMAP_FLAG_FLAGGED] == 1 ||
 	    cmd->flaglist[IMAP_FLAG_DRAFT] == 1 ||
 	    g_list_length(cmd->keywords) > 0 ) {
-		if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_WRITE))) {
+		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_WRITE))) {
 			D->status = result;
 			g_list_destroy(cmd->keywords);
 			g_free(cmd);
@@ -1887,7 +1887,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	result = DM_SUCCESS;
 
 	if ( update ) {
-		char *flags = MailboxState_flags(self->mailbox->state);
+		char *flags = MailboxState_flags(self->mailbox->mbstate);
 		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
 		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
 		g_free(flags);
@@ -1898,7 +1898,7 @@ static void _ic_store_enter(dm_thread_data *D)
  			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
   	}	
 
-	db_mailbox_seq_update(MailboxState_getId(self->mailbox->state));
+	db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
 
 	g_list_destroy(cmd->keywords);
 	g_free(cmd);
@@ -1959,7 +1959,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 	// check if user has right to COPY from source mailbox
-	if ((result = mailbox_check_acl(self, self->mailbox->state, ACL_RIGHT_READ))) {
+	if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_READ))) {
 		D->status = result;
 		NOTIFY_DONE(D);
 	}

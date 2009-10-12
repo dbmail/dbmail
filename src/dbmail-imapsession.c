@@ -890,7 +890,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 	if (self->fi->getFlags) {
 		SEND_SPACE;
-		s = imap_flags_as_string(self->mailbox->state, msginfo);
+		s = imap_flags_as_string(self->mailbox->mbstate, msginfo);
 		dbmail_imap_session_buff_printf(self,"FLAGS %s",s);
 		g_free(s);
 
@@ -1011,7 +1011,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		/* only if the user has an ACL which grants
 		   him rights to set the flag should the
 		   flag be set! */
-		result = acl_has_right(self->mailbox->state, self->userid, ACL_RIGHT_SEEN);
+		result = acl_has_right(self->mailbox->mbstate, self->userid, ACL_RIGHT_SEEN);
 		if (result == -1) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n *BYE internal dbase error\r\n");
@@ -1026,7 +1026,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 				dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 				return -1;
 			}
-			db_mailbox_seq_update(MailboxState_getId(self->mailbox->state));
+			db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
 		}
 
 		self->fi->getFlags = 1;
@@ -1038,7 +1038,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		char *t = NULL;
 		if (self->use_uid)
 			t = g_strdup_printf("UID %llu ", *uid);
-		s = imap_flags_as_string(self->mailbox->state, msginfo);
+		s = imap_flags_as_string(self->mailbox->mbstate, msginfo);
 		dbmail_imap_session_buff_printf(self,"* %llu FETCH (%sFLAGS %s)\r\n", *id, t?t:"", s);
 		if (t) g_free(t);
 		g_free(s);
@@ -1270,8 +1270,8 @@ static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
 
 	// FETCH
 	if (old)
-		oldflags = imap_flags_as_string(self->mailbox->state, old);
-	newflags = imap_flags_as_string(self->mailbox->state, new);
+		oldflags = imap_flags_as_string(self->mailbox->mbstate, old);
+	newflags = imap_flags_as_string(self->mailbox->mbstate, new);
 
 	if ((! oldflags) || (! MATCH(oldflags,newflags))) {
 		char *t = NULL;
@@ -1312,7 +1312,7 @@ static gboolean notify_expunge(ImapSession *self, u64_t *uid)
 
 static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 {
-	u64_t *uid;
+	u64_t *uid, *id;
 	DbmailMailbox *old;
 	GList *ids;
 	if (! new) return;
@@ -1347,6 +1347,9 @@ static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 	// switch active mailbox view
 	old = self->mailbox;
 	self->mailbox = new;
+	id = g_new0(u64_t,1);
+	*id = MailboxState_getId(new->mbstate);
+	g_tree_replace(self->mbxinfo, id, new->mbstate);
 	dbmail_mailbox_free(old);
 }
 
@@ -1375,12 +1378,12 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	if (self->state != CLIENTSTATE_SELECTED) return FALSE;
 
 	if (update) {
-		MailboxState_T M;
+		MailboxState_T M, N;
 		unsigned oldseq, oldexists, oldrecent;
 		u64_t olduidnext;
-		const char *oldflags;
+		char *oldflags, *newflags;
 
-		M = self->mailbox->state;
+		M = self->mailbox->mbstate;
 		oldflags = MailboxState_flags(M);
 		oldseq = MailboxState_getSeq(M);
 		oldexists = MailboxState_getExists(M);
@@ -1388,29 +1391,35 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		olduidnext = MailboxState_getUidnext(M);
 
                 // re-read flags and counters
-		if ((res = MailboxState_reload(M, self->userid)) != DM_SUCCESS) return res;
+		N = MailboxState_new(MailboxState_getId(M));
 
-		if (oldseq != MailboxState_getSeq(M)) {
+		MailboxState_setOwner(N, self->userid);
+		if ((res = MailboxState_reload(N, self->userid)) != DM_SUCCESS) return res;
+
+		if (oldseq != MailboxState_getSeq(N)) {
 			// rebuild uid/msn trees
 			// ATTN: new messages shouldn't be visible in any way to a 
 			// client session until it has been announced with EXISTS
 			mailbox = dbmail_mailbox_new(self->mailbox->id);
-			mailbox->state = M;
+			mailbox->mbstate = N;
 
 			// EXISTS response may never decrease
-			if ((MailboxState_getUidnext(M) > olduidnext) && (MailboxState_getExists(M) > oldexists)) {
+			if ((MailboxState_getUidnext(N) > olduidnext) && (MailboxState_getExists(N) > oldexists)) {
 				showexists = TRUE;
 			} else {
-				MailboxState_setExists(M,oldexists);
+				MailboxState_setExists(N,oldexists);
 			}
 
 			// RECENT response only when changed
-			if (MailboxState_getRecent(M) != oldrecent)
+			if (MailboxState_getRecent(N) != oldrecent)
 				showrecent = TRUE;
 
-			if (! MATCH(MailboxState_flags(M),oldflags))
+			newflags = MailboxState_flags(N);
+			if (! MATCH(newflags,oldflags))
 				showflags = TRUE;
+			g_free(newflags);
 		}
+		g_free(oldflags);
 	}
 
 	// command specific overrides
@@ -1438,11 +1447,11 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	}
 
 	// never decrease without first sending expunge !!
-	if (showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(self->mailbox->state));
-	if (showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(self->mailbox->state));
+	if (mailbox && showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(mailbox->mbstate));
+	if (mailbox && showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(mailbox->mbstate));
 
-	if (showflags) {
-		char *flags = MailboxState_flags(self->mailbox->state);
+	if (mailbox && showflags) {
+		char *flags = MailboxState_flags(mailbox->mbstate);
 		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
 		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
 		g_free(flags);
@@ -1578,7 +1587,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 	gchar *uid = NULL;
 	u64_t id = 0;
 
-	if (self->mailbox && self->mailbox->state && MailboxState_getPermission(self->mailbox->state) != IMAPPERM_READWRITE) 
+	if (self->mailbox && self->mailbox->mbstate && MailboxState_getPermission(self->mailbox->mbstate) != IMAPPERM_READWRITE) 
 		return DM_SUCCESS;
 
 	recent = g_list_first(self->recent);
@@ -1607,8 +1616,8 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 		recent = g_list_next(recent);
 	}
 
-	if ( (self->mailbox->state) && (MailboxState_getId(self->mailbox->state)) )
-		db_mailbox_seq_update(MailboxState_getId(self->mailbox->state));
+	if ( (self->mailbox->mbstate) && (MailboxState_getId(self->mailbox->mbstate)) )
+		db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
 
 	g_list_destroy(self->recent);
 	self->recent = NULL;
