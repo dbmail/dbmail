@@ -1544,13 +1544,17 @@ static u64_t _header_value_insert(C c, const char *value, const char *sortfield,
 	db_con_clear(c);
 
 	frag = db_returning("id");
-	s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue, sortfield, datefield) VALUES (?,?,?,?) %s", DBPFX, frag);
+	if (datefield)
+		s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue, sortfield, datefield) VALUES (?,?,?,?) %s", DBPFX, frag);
+	else
+		s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue, sortfield) VALUES (?,?,?) %s", DBPFX, frag);
 	g_free(frag);
 
 	db_stmt_set_str(s, 1, hash);
 	db_stmt_set_blob(s, 2, value, strlen(value));
 	db_stmt_set_str(s, 3, sortfield);
-	db_stmt_set_str(s, 4, datefield);
+	if (datefield)
+		db_stmt_set_str(s, 4, datefield);
 
 	r = db_stmt_query(s);
 	id = db_insert_result(c, r);
