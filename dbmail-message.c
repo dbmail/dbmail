@@ -1068,6 +1068,11 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		ia = ialist->address;
 		g_return_if_fail(ia != NULL);
 
+		if (g_mime_utils_text_is_8bit((unsigned char *)ia->value.addr, strlen(ia->value.addr))) {
+			TRACE(TRACE_INFO, "skip 8bit address");
+			continue;
+		}
+ 
 		rname=dbmail_iconv_str_to_db(ia->name ? ia->name: "", charset);
 		/* address fields are truncated to column width */
 		name = dm_strnesc(rname, CACHE_WIDTH_ADDR);
