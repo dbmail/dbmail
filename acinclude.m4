@@ -501,6 +501,15 @@ dnl First we're looking for straight GLib
 		AC_MSG_ERROR([Unable to locate glib libaries])
 	fi
  
+        ac_glib_minvers="2.16"
+        AC_MSG_CHECKING([GLib version >= $ac_glib_minvers])
+        ac_glib_vers=`${glibconfig}  --atleast-version=$ac_glib_minvers glib-2.0 && echo yes`
+        if test -z "$ac_glib_vers"
+        then
+                AC_MSG_ERROR([At least GLib version $ac_glib_minvers is required.])
+        else
+                AC_MSG_RESULT([$ac_glib_vers])
+        fi
 
 	LDFLAGS="$LDFLAGS $ac_glib_libs"
         AC_MSG_RESULT([$ac_glib_libs])

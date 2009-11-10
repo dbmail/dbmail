@@ -18,7 +18,7 @@ What do you need?
   systems, make sure you install and use 'gmake'. 
 - Development files (libs, scripts and include files) for your database server.
   These will probably be provided by separate packages.
-- Glib (>= 2.8) development headers and libraries.
+- Glib (>= 2.16) development headers and libraries.
 - Gmime (>= 2.1.18) development headers and libraries.
 - libSieve for Sieve support (libsieve.sf.net).
 - Any standard libldap for LDAP support (only tested with OpenLDAP, however).
