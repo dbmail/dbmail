@@ -103,7 +103,7 @@ char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 	return subj;
 }
 
-/* convert not encoded field to database encoding */
+/* convert encoded field to database encoding */
 char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 {
 	char * subj=NULL;
@@ -167,113 +167,13 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 	return g_mime_utils_header_encode_text(str_in);
 }
 
-/* work around a bug in gmime (< 2.2.10) where utf7 strings are not completely decoded */
 char * dbmail_iconv_decode_text(const char *in)
 {
-
 	return g_mime_utils_header_decode_text(in);
-#if 0
-	size_t i=0, l=0, r=0, len, wlen=0;
-	char p2=0, p = 0, c, n = 0;
-	char *res, *s;
-	gboolean inchar = FALSE, inword = FALSE;
-	GString *buf = g_string_new("");
-	GString *str = g_string_new("");
-
-	len = strlen(in);
-	for (i = 0; i<len; i++)
-	{
-		c = in[i];
-		n = in[i+1];
-
-		if ((c == '=') && (n == '?') && (inword == FALSE) && (inchar == FALSE)) {
-			inchar = TRUE;
-			l = i;
- 		} else if (((p2 == 'q') || (p2 == 'Q') || (p2 == 'b') || (p2 == 'B')) && (p == '?') && inchar) {
-			inchar = FALSE;
-			inword = TRUE;
-			wlen = 0;
-		} else if ((p2 == '?') && (p == '=') && inword && wlen) {
-			inword = FALSE;
-			r = i;
-		} else if (inword) {
-			wlen++;
-		}
-
-		if (l < r) {
-			s = g_mime_utils_header_decode_text(buf->str);
-			g_string_append_printf(str, "%s", s);
-			g_free(s);
-			l = r;
-			i = r;
-			g_string_printf(buf,"%s","");
-			g_string_append_c(str, in[i]);
-		} else if (inword || inchar) {
-			g_string_append_c(buf, in[i]);
-		} else {
-			g_string_append_c(str, in[i]);
-		}
-
-		p2 = p;
-		p = c;
-	}
-	if (buf->len) {
-		s = g_mime_utils_header_decode_text(buf->str);
-		g_string_append_printf(str, "%s", s);
-		g_free(s);
-	}
-	g_string_free(buf,TRUE);
-
-	res = str->str;
-	g_string_free(str,FALSE);
-
-	return res;
-#endif
 }
-/*
- * dbmail_iconv_decode_address
- * \param address the raw address header value
- * \result allocated string containing a utf8 encoded representation
- * 		of the input address
- *
- * 	paranoia rulez here, since input is untrusted
- */
 char * dbmail_iconv_decode_address(char *address)
 {
 	return g_mime_utils_header_decode_phrase(address);
-#if 0
-	InternetAddressList *l;
-	char *r = NULL, *t = NULL, *s = NULL;
-
-	if (address == NULL) return NULL;
-
- 	// first make the address rfc2047 compliant if it happens to 
- 	// contain 8bit data
-	if ( (g_mime_utils_text_is_8bit((unsigned char *)address, strlen(address))) )
-		s = g_mime_utils_header_encode_phrase((const char *)address);
-	else
-		s = g_strdup(address);
-
-	// cleanup broken addresses before parsing
-	t = imap_cleanup_address((const char *)s); g_free(s);
-
-	// feed the result to gmime's address parser and
-	// render it back to a hopefully now sane string
-	l = internet_address_list_parse_string(t); g_free(t);
-	s = internet_address_list_to_string(l, TRUE);
-	g_object_unref(l);
-
-	// now we're set to decode the rfc2047 address header
-	// into clean utf8
-	r = g_mime_utils_header_decode_phrase(s); g_free(s);
-
-	// oops: if the rfc2047 encoded address names contain
-	// encoded double-quotes, imap_cleanup_address has added quotes that are now
-	// redundant. we need to strip those
-	pack_char(r,'"');
-
-	return r;
-#endif
 }
 
 char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr)
