@@ -331,14 +331,14 @@ typedef struct {
 
 	Cram_T auth;                    /* authentication context for cram-md5 */
 	u64_t authlog_id;
-	char src_ip[IPNUM_LEN];		/* client IP-number */
-	int src_port;		        /* client port number */
+	char src_ip[NI_MAXHOST];		/* client IP-number */
+	char src_port[NI_MAXSERV];		        /* client port number */
 	field_t clientname;             /* resolved client name */
 
-	char dst_ip[IPNUM_LEN];		/* server IP-number */
-	int dst_port;		        /* server port number */
+	char dst_ip[NI_MAXHOST];	/* server IP-number */
+	char dst_port[NI_MAXSERV];      /* server port number */
 
-	struct timeval *timeout;		/**< timeout on socket */
+	struct timeval *timeout;	/**< timeout on socket */
 
 	int service_before_smtp;
 

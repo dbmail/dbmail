@@ -178,13 +178,13 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 /* Strips off the #Users or #Public namespace, returning
  * the simple name, the namespace and username, if present. */
 
-const char *mailbox_remove_namespace(const char *name, char **namespace, char **username)
+char *mailbox_remove_namespace(const char *name, char **namespace, char **username)
 {
-	const char *temp = NULL, *user = NULL, *mbox = NULL;
+	char *temp = NULL, *user = NULL;
 	size_t ns_user_len = 0;
 	size_t ns_publ_len = 0;
 	size_t fq_name_len;
-	char *fq_name = (char *)name;
+	char *mbox = NULL, *fq_name = g_strdup(name);
 
 	ns_user_len = strlen(NAMESPACE_USER);
 	ns_publ_len = strlen(NAMESPACE_PUBLIC);
@@ -263,7 +263,7 @@ const char *mailbox_remove_namespace(const char *name, char **namespace, char **
 		if (fq_name[ns_publ_len] == '/')
 			return &fq_name[ns_publ_len+1]; 
 		// But if the slash wasn't there, it means we have #Public*, and that's OK.
-		return &fq_name[ns_publ_len]; 
+		return &fq_name[ns_publ_len]; // FIXME: leakage
 	}
 	
 	return fq_name;
@@ -637,24 +637,6 @@ u64_t dm_getguid(unsigned int serverid)
 
         snprintf(s,30,"%ld%06ld%02u", tv.tv_sec, tv.tv_usec,serverid);
         return (u64_t)strtoll(s,NULL,10);
-}
-
-sa_family_t dm_get_client_sockaddr(clientbase_t *ci, struct sockaddr *saddr)
-{
-	#define maxsocklen	128
-	union {
-		struct sockaddr sa;
-		char data[maxsocklen];
-	} un;
-
-	socklen_t len;
-	len = maxsocklen;
-
-	if (getsockname(ci->tx, (struct sockaddr *)un.data, &len) < 0)
-		return (sa_family_t) -1;
-
-	memcpy(saddr, &un.sa, sizeof(un.sa));
-	return (un.sa.sa_family);
 }
 
 int dm_sock_score(const char *base, const char *test)

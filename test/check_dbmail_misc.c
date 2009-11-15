@@ -143,7 +143,7 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	const char *u75 = "=?iso-8859-1?q?a?=";
 	const char *u76 = "=?utf-8?b?w6nDqcOp?=";
 	const char *u77 = "=?iso-8859-1?Q?ver_isto_=3D=3E_FW:_Envio_de_erro_da_aplica=E7=E3o_Decimal?=\n\t=?iso-8859-1?Q?Fire-Direc=E7=E3o?=";
-	const char *exp1 = "Neue Lösung für unsere Kunden";
+	const char *exp1 = "Neue Lösungfür unsere Kunden";
 	const char *exp2 = "Lösung";
 	const char *exp3 = "für";
 	const char *exp4 = "... Übergabe ...";
@@ -172,7 +172,7 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	// 
 	//
 	u8 = dbmail_iconv_decode_text(u71);
-	//fail_unless(strcmp(u8,exp1)==0, "decode failed [%s] != [%s]", u8, exp1);
+	fail_unless(strcmp(u8,exp1)==0, "decode failed [%s] != [%s]", u8, exp1);
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_text(u72);
@@ -205,7 +205,7 @@ END_TEST
 START_TEST(test_dbmail_iconv_decode_address)
 {
 	char *u71 = "=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>";
-	const char *ex1 = "\":: [ Arrty ] :: [ Roy (L) Stèphanie ]\" <over.there@hotmail.com>";
+	//const char *ex1 = "\":: [ Arrty ] :: [ Roy (L) Stèphanie ]\" <over.there@hotmail.com>";
 	char *u72 = "=?utf-8?Q?Jos=E9_M=2E_Mart=EDn?= <jmartin@onsager.ugr.es>"; // latin-1 masking as utf8
 	const char *ex2 = "Jos\351 M. Mart\355n <jmartin@onsager.ugr.es>";
 	char *u73 = "=?utf-8?B?Ik9ubGluZSBSZXplcnZhxI1uw60gU3lzdMOpbSBTTU9TSyI=?= <e@mail>";
@@ -391,7 +391,7 @@ Suite *dbmail_misc_suite(void)
 	
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_g_strcasestr);
-//	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
+	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
 	tcase_add_test(tc_misc, test_dbmail_iconv_str_to_db);
 	tcase_add_test(tc_misc, test_dbmail_iconv_decode_address);
 	tcase_add_test(tc_misc, test_create_unique_id);

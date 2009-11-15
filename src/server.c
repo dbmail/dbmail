@@ -366,13 +366,15 @@ static int create_inet_socket(const char * ip, const char * port, int backlog, i
 	for (res = res0; res && nsock < MAXSOCKETS; res = res->ai_next) {
 		s[nsock] = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 		if (s[nsock] < 0) {
-			TRACE(TRACE_ERR, "could not create a socket of family [%d], socktype[%d], protocol [%d]", res->ai_family, res->ai_socktype, res->ai_protocol);
+			TRACE(TRACE_ERR, "could not create a socket of family [%d], socktype[%d], protocol [%d]", 
+				res->ai_family, res->ai_socktype, res->ai_protocol);
 			continue;
 		}
 		setsockopt(s[nsock], SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 		dm_bind_and_listen(s[nsock], res->ai_addr, res->ai_addrlen, backlog);
 		UNBLOCK(s[nsock]);
-		if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
+		if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), 
+				NI_NUMERICHOST | NI_NUMERICSERV)) {
 			TRACE(TRACE_DEBUG, "could not get numeric hostname");
 		}
 		TRACE(TRACE_DEBUG, "created socket [%d] on [%s:%s]", s[nsock], hbuf, sbuf);

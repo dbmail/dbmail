@@ -81,7 +81,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
  *     - NULL on error
  *     - simple name of mailbox
  */
-const char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username);
+char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username);
 
 /**
  * \brief converts an IMAP date to a number (strictly ascending in date)
@@ -120,8 +120,6 @@ void dm_pack_spaces(char *in);
 char * dm_base_subject(const char *subject);
 int listex_match(const char *p, const char *s, const char *x, int flags);
 u64_t dm_getguid(unsigned int serverid);
-
-sa_family_t dm_get_client_sockaddr(clientbase_t *ci, struct sockaddr *saddr);
 
 int dm_sock_score(const char *base, const char *test);
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny);

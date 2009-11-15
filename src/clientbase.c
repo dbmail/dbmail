@@ -132,7 +132,7 @@ static int client_error_cb(int sock, int error, void *arg)
 	return r;
 }
 
-clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl)
+clientbase_t * client_init(int socket, struct sockaddr *caddr, SSL *ssl)
 {
 	clientbase_t *client	= g_new0(clientbase_t, 1);
 
@@ -151,20 +151,24 @@ clientbase_t * client_init(int socket, struct sockaddr_in *caddr, SSL *ssl)
 		client->rx		= STDIN_FILENO;
 		client->tx		= STDOUT_FILENO;
 	} else {
-		strncpy((char *)client->src_ip, inet_ntoa(caddr->sin_addr), sizeof(client->src_ip));
-		client->src_port = ntohs(caddr->sin_port);
+		int serr;
+		socklen_t len = sizeof (struct sockaddr);
+
+		if ((serr = getnameinfo(caddr, len, client->src_ip, NI_MAXHOST, client->src_port, NI_MAXSERV,
+			NI_NUMERICHOST | NI_NUMERICSERV))) {
+			TRACE(TRACE_EMERG, "getnameinfo:error [%s]", gai_strerror(serr));
+		} 
 
 		if (server_conf->resolveIP) {
-			struct hostent *clientHost = gethostbyaddr((gpointer) &(caddr->sin_addr), sizeof(caddr->sin_addr), caddr->sin_family);
+			if ((serr = getnameinfo(caddr, len, client->clientname, NI_MAXHOST, NULL, 0, NI_NAMEREQD))) {
+				TRACE(TRACE_INFO, "getnameinfo:error [%s]", gai_strerror(serr));
+			} 
 
-			if (clientHost && clientHost->h_name)
-				strncpy((char *)client->clientname, clientHost->h_name, FIELDSIZE);
-
-			TRACE(TRACE_NOTICE, "incoming connection from [%s:%d (%s)]",
+			TRACE(TRACE_NOTICE, "incoming connection from [%s:%s (%s)]",
 					client->src_ip, client->src_port,
 					client->clientname[0] ? client->clientname : "Lookup failed");
 		} else {
-			TRACE(TRACE_NOTICE, "incoming connection from [%s:%d]",
+			TRACE(TRACE_NOTICE, "incoming connection from [%s:%s]",
 					client->src_ip, client->src_port);
 		}
 

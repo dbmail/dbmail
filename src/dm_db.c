@@ -1709,8 +1709,7 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 
 int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
-	const char *simple_name;
-	char *mbox, *namespace, *username;
+	char *simple_name, *mbox, *namespace, *username;
 	int i, result;
 	size_t l;
 
@@ -1744,6 +1743,7 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 			TRACE(TRACE_INFO, "user [%s] not found.", username);
 			g_free(mbox);
 			g_free(username);
+			g_free(simple_name);
 			return FALSE;
 		}
 	}
@@ -1753,6 +1753,7 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 
 	g_free(mbox);
 	g_free(username);
+	g_free(simple_name);
 	return result;
 }
 
@@ -1760,7 +1761,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 {
 	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t search_user_idnr = user_idnr;
-	const char *spattern;
+	char *spattern;
 	char *namespace, *username;
 	struct mailbox_match *mailbox_like = NULL;
 	GString *qs;
@@ -1789,11 +1790,14 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		TRACE(TRACE_DEBUG, "searching namespace [%s] for user [%s] with pattern [%s]",
 			namespace, username, spattern);
 		g_free(username);
+		g_free(spattern);
 	}
 
 	/* If there's neither % nor *, don't match on mailbox name. */
 	if ( (! strchr(spattern, '%')) && (! strchr(spattern,'*')) )
 		mailbox_like = mailbox_match_new(spattern);
+
+	g_free(spattern);
 	
 	qs = g_string_new("");
 	g_string_printf(qs,
@@ -1919,7 +1923,7 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 
 	GList *mailboxes = NULL;
 	char *namespace, *username, *cpy, **chunks = NULL;
-	const char *simple_name;
+	char *simple_name;
 	int i, is_users = 0, is_public = 0;
 	u64_t mboxid, public;
 
@@ -2018,6 +2022,7 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 	*errmsg = "Everything is peachy keen";
 
 	g_strfreev(chunks);
+	g_free(simple_name);
 	g_free(username);
 	g_free(cpy);
  
@@ -2033,6 +2038,7 @@ egeneral:
 	}
 	g_list_free(g_list_first(mailboxes));
 	g_strfreev(chunks);
+	g_free(simple_name);
 	g_free(username);
 	g_free(cpy);
 	return NULL;
@@ -2190,7 +2196,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
-	const char *simple_name;
+	char *simple_name;
 	char *frag;
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
@@ -2238,6 +2244,7 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 		db_con_close(c);
 	END_TRY;
 
+	g_free(simple_name);
 	return result;
 }
 
@@ -2963,7 +2970,6 @@ int char2date_str(const char *date, field_t *frag)
 int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_username)
 {
 	struct sockaddr saddr;
-	sa_family_t sa_family;
 	char clientsock[DM_SOCKADDR_LEN];
 	const char *userid = NULL, *sockok = NULL, *sockno = NULL, *login = NULL;
 	unsigned row = 0;
@@ -2981,18 +2987,30 @@ int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_userna
 		strncpy(clientsock,"",1);
 	} else {
 		/* get the socket the client is connecting on */
-		sa_family = dm_get_client_sockaddr(ci, &saddr);
-		if (sa_family == AF_INET) {
-			strncpy(ci->dst_ip,inet_ntoa(((struct sockaddr_in *)(&saddr))->sin_addr), sizeof(ci->dst_ip));
-			ci->dst_port = ntohs(((struct sockaddr_in *)(&saddr))->sin_port);
-			snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%d", ci->dst_ip, ci->dst_port);
-			TRACE(TRACE_DEBUG, "client on inet socket [%s]", clientsock);
-		}	
-		if (sa_family == AF_UNIX) {
-			snprintf(clientsock, DM_SOCKADDR_LEN, "unix:%s",
-					((struct sockaddr_un *)(&saddr))->sun_path);
-			TRACE(TRACE_DEBUG, "client on unix socket [%s]", clientsock);
-		}		
+		int serr;
+		socklen_t len = sizeof(struct sockaddr);
+		char host[NI_MAXHOST], serv[NI_MAXSERV];
+
+		if (getsockname(ci->tx, &saddr, &len) < 0) {
+			serr = errno;
+			TRACE(TRACE_INFO, "getsockname::error [%s]", strerror(serr));
+			return DM_SUCCESS; // non-fatal 
+		}
+
+		memset(host, 0, NI_MAXHOST);
+		memset(serv, 0, NI_MAXSERV);
+
+		if ((serr = getnameinfo(&saddr, len, host, NI_MAXHOST, serv, NI_MAXSERV, 
+				NI_NUMERICHOST | NI_NUMERICSERV))) {
+			TRACE(TRACE_INFO, "getnameinfo::error [%s]", gai_strerror(serr));
+			return DM_SUCCESS; // non-fatal	
+		}
+
+		strncpy(ci->dst_ip, host, NI_MAXHOST);
+		strncpy(ci->dst_port, serv, NI_MAXSERV);
+
+		snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%s", ci->dst_ip, ci->dst_port);
+		TRACE(TRACE_DEBUG, "client on inet socket [%s]", clientsock);
 	}
 	
 	/* user_idnr not found, so try to get it from the usermap */
