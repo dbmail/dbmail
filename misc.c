@@ -2210,9 +2210,11 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 	return g_mime_utils_header_encode_text(str_in);
 }
 
-/* work around a bug in gmime (< 2.2.10) where utf7 strings are not completely decoded */
 char * dbmail_iconv_decode_text(const char *in)
 {
+	return g_mime_utils_header_decode_text(in);
+#if 0
+	/* work around a bug in gmime (< 2.2.10) where utf7 strings are not completely decoded */
 	size_t i=0, l=0, r=0, len, wlen=0;
 	char p2=0, p = 0, c, n = 0;
 	char *res, *s;
@@ -2268,7 +2270,7 @@ char * dbmail_iconv_decode_text(const char *in)
 	g_string_free(str,FALSE);
 
 	return res;
-
+#endif
 }
 /*
  * dbmail_iconv_decode_address
@@ -2280,6 +2282,8 @@ char * dbmail_iconv_decode_text(const char *in)
  */
 char * dbmail_iconv_decode_address(char *address)
 {
+	return g_mime_utils_header_decode_phrase(address);
+#if 0
 	InternetAddressList *l;
 	char *r = NULL, *t = NULL, *s = NULL;
 
@@ -2311,6 +2315,7 @@ char * dbmail_iconv_decode_address(char *address)
 	pack_char(r,'"');
 
 	return r;
+#endif
 }
 
 char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr)
@@ -2529,6 +2534,7 @@ char * imap_cleanup_address(const char *a)
 	
 	l = strlen(inptr);
 
+	TRACE(TRACE_DEBUG, "[%s]", inptr);
 	for (i = 0; i < l - 1; i++) {
 
 		next = inptr[i+1];
@@ -2596,6 +2602,7 @@ char * imap_cleanup_address(const char *a)
 
 	r = s->str;
 	g_string_free(s,FALSE);
+	TRACE(TRACE_DEBUG,"[%s]", r);
 	return r;
 }
 

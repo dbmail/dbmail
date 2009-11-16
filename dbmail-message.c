@@ -1322,7 +1322,7 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	// set basic headers
 	g_mime_message_set_sender(message, from);
 	g_mime_message_set_subject(message, subject);
-	g_mime_message_add_recipients_from_string(message, GMIME_RECIPIENT_TYPE_TO, to);
+	g_mime_message_set_header(message, "To", to);
 
 	// construct mime-part
 	mime_part = g_mime_part_new();

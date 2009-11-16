@@ -560,7 +560,7 @@ START_TEST(test_dbmail_message_construct)
 	struct DbmailMessage *message = dbmail_message_new();
 	message = dbmail_message_construct(message,recipient,sender,subject,body);
 	result = dbmail_message_to_string(message);
-	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n%s\n%s", expect, result);
+	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n[%s] != \n[%s]\n", expect, result);
 	dbmail_message_free(message);
 	g_free(body);
 	g_free(result);
@@ -580,8 +580,8 @@ START_TEST(test_encoding)
 	char *raw, *enc, *dec;
 
 	raw = g_strdup( "Kristoffer Br�nemyr");
-	enc = g_mime_utils_header_encode_phrase((unsigned char *)raw);
-	dec = g_mime_utils_header_decode_phrase((unsigned char *)enc);
+	enc = g_mime_utils_header_encode_phrase((const char *)raw);
+	dec = g_mime_utils_header_decode_phrase((const char *)enc);
 	fail_unless(MATCH(raw,dec),"decode/encode failed");
 	g_free(raw);
 	g_free(dec);

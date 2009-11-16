@@ -143,9 +143,11 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	const char *u74 = "... =?ISO-8859-1?Q?=DCbergabe?= ...";
 	const char *u75 = "=?iso-8859-1?q?a?=";
 	const char *u76 = "=?utf-8?b?w6nDqcOp?=";
-	const char *exp = "Neue Lösung für unsere Kunden";
+	const char *u77 = "=?utf-8?B?UmlrYXJkIMOFc2x1bmQgVHLDtmdlcg==?= <test@example.com>";
+	const char *exp = "Neue Lösungfür unsere Kunden";
 	const char *exp2 = "Lösung";
 	const char *exp3 = "für";
+	const char *exp7 = "Rikard Åslund Tröger <test@example.com>";
 
 	char *u8, *val2, *u82, *u83, *val3;
 
@@ -200,6 +202,12 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	g_free(u8);
 	g_free(u82);
 
+	u8 = g_mime_utils_header_decode_text(u77);
+	fail_unless(strcmp(u8,exp7)==0, "decode failed [%s] != [%s]", u8, exp7);
+	u82 = dbmail_iconv_decode_text(u77);
+	fail_unless(strcmp(u82,exp7)==0, "decode failed [%s] != [%s]", u82, exp7);
+	g_free(u8);
+	g_free(u82);
 
 
 }
@@ -208,9 +216,10 @@ END_TEST
 START_TEST(test_dbmail_iconv_decode_address)
 {
 	const char *u71 = "=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>";
-	const char *ex1 = "\":: [ Arrty ] :: [ Roy (L) Stèphanie ]\" <over.there@hotmail.com>";
+	const char *ex1 = "=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>";
+//	const char *ex1 = "\":: [ Arrty ] :: [ Roy (L) Stèphanie ]\" <over.there@hotmail.com>";
 	const char *u72 = "=?utf-8?Q?Jos=E9_M=2E_Mart=EDn?= <jmartin@onsager.ugr.es>"; // latin-1 masking as utf8
-	const char *ex2 = "\"Jos? M. Mart?n\" <jmartin@onsager.ugr.es>";
+	const char *ex2 = "Jos? M. Mart?n <jmartin@onsager.ugr.es>";
 	const char *u73 = "=?utf-8?B?Ik9ubGluZSBSZXplcnZhxI1uw60gU3lzdMOpbSBTTU9TSyI=?= <e@mail>";
 	char *ex3;
 

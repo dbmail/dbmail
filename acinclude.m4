@@ -570,6 +570,15 @@ else
 		LDFLAGS="$LDFLAGS $ac_gmime_libs"
         	AC_MSG_RESULT([$ac_gmime_libs])
 	fi
+        ac_gmime_minvers="2.2.10"
+        AC_MSG_CHECKING([GMime version >= $ac_gmime_minvers])
+        ac_gmime_vers=`${gmimeconfig}  --atleast-version=$ac_gmime_minvers gmime-2.0 && echo yes`
+        if test -z "$ac_gmime_vers"
+        then
+                AC_MSG_ERROR([At least GMime version $ac_gmime_minvers is required.])
+        else
+                AC_MSG_RESULT([$ac_gmime_vers])
+        fi
 fi
 ])
 
