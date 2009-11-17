@@ -321,6 +321,20 @@ int dbmail_mailbox_insert_uid(DbmailMailbox *self, u64_t id)
 }
 
 #define FROM_STANDARD_DATE "Tue Oct 11 13:06:24 2005"
+static gchar * _message_get_envelope_date(const DbmailMessage *self)
+{
+	char *res;
+	struct tm gmt;
+	assert(self->internal_date);
+	
+	res = g_new0(char, TIMESTRING_SIZE+1);
+	memset(&gmt,'\0', sizeof(struct tm));
+	gmtime_r(&self->internal_date, &gmt);
+
+	strftime(res, TIMESTRING_SIZE, "%a %b %d %H:%M:%S %Y", &gmt);
+	return res;
+}
+
 
 static size_t dump_message_to_stream(DbmailMessage *message, GMimeStream *ostream)
 {
@@ -350,7 +364,7 @@ static size_t dump_message_to_stream(DbmailMessage *message, GMimeStream *ostrea
 		}
 		g_object_unref(ialist);
 		
-		d = dbmail_message_get_internal_date(message, 0);
+		d = _message_get_envelope_date(message);
 		date = g_string_new(d);
 		g_free(d);
 		if (date->len < 1)
