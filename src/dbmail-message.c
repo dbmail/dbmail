@@ -270,9 +270,9 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 
 static GMimeContentType *find_type(const char *s)
 {
-	GMimeContentType *type;
+	GMimeContentType *type = NULL;
 	GString *header;
-	char *rest, *h;
+	char *rest, *h = NULL;
 	int i=0;
 
 	rest = g_strcasestr(s, "\nContent-type: ");
@@ -299,7 +299,8 @@ static GMimeContentType *find_type(const char *s)
 	}
 	h = header->str;
 	g_strstrip(h);
-	type = g_mime_content_type_new_from_string(h);
+	if (strlen(h))
+		type = g_mime_content_type_new_from_string(h);
 	g_string_free(header,TRUE);
 	return type;
 }
@@ -362,9 +363,10 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if (is_header) {
 				prev_boundary = got_boundary;
 				prev_is_message = is_message;
-				mimetype = find_type(str);
-				is_message = g_mime_content_type_is_type(mimetype, "message", "rfc822");
-				g_object_unref(mimetype);
+				if ((mimetype = find_type(str))) {
+					is_message = g_mime_content_type_is_type(mimetype, "message", "rfc822");
+					g_object_unref(mimetype);
+				}
 			}
 
 			got_boundary = FALSE;
