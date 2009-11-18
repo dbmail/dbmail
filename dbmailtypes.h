@@ -112,10 +112,12 @@ typedef struct {
 
 typedef struct {
 	FILE *tx, *rx;
-	char ip_src[IPNUM_LEN];	/* client IP-number */
-	field_t clientname;	/* resolved client ip */
-	int timeout;		/* server timeout (seconds) */
-	int login_timeout;	/* login timeout (seconds) */
+	char ip_src[NI_MAXHOST];  /* client IP-number */
+	char dst_ip[NI_MAXHOST]; /* client IP-number */
+	char dst_port[NI_MAXSERV];/* client IP-port */
+	field_t clientname;	  /* resolved client ip */
+	int timeout;		  /* server timeout (seconds) */
+	int login_timeout;	  /* login timeout (seconds) */
 	void *userData;
 } clientinfo_t;
 

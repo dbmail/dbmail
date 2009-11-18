@@ -1299,10 +1299,14 @@ int db_insert_message_block(const char *block, u64_t block_size,
 int db_log_ip(const char *ip)
 {
 	u64_t id = 0;
-	gchar *sip = dm_stresc(ip);
+	gchar *sip;
 	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
 
+	if ( (! ip) || (! strlen(ip)) )
+		return DM_SUCCESS;
+
+	memset(query,0,DEF_QUERYSIZE);
+	sip = dm_stresc(ip);
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT idnr FROM %spbsp WHERE ipnumber = '%s'", DBPFX, ip);
 	g_free(sip);
@@ -4677,7 +4681,6 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_username)
 {
 	struct sockaddr saddr;
-	sa_family_t sa_family;
 	char clientsock[DM_SOCKADDR_LEN];
 	char * escaped_username;
 	const char *userid = NULL, *sockok = NULL, *sockno = NULL, *login = NULL;
@@ -4695,18 +4698,30 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 		strncpy(clientsock,"",1);
 	} else {
 		/* get the socket the client is connecting on */
-		sa_family = dm_get_client_sockaddr(ci, &saddr);
-		if (sa_family == AF_INET) {
-			snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%d", 
-					inet_ntoa(((struct sockaddr_in *)(&saddr))->sin_addr),
-					ntohs(((struct sockaddr_in *)(&saddr))->sin_port));
-			TRACE(TRACE_DEBUG, "client on inet socket [%s]", clientsock);
-		}	
-		if (sa_family == AF_UNIX) {
-			snprintf(clientsock, DM_SOCKADDR_LEN, "unix:%s",
-					((struct sockaddr_un *)(&saddr))->sun_path);
-			TRACE(TRACE_DEBUG, "client on unix socket [%s]", clientsock);
-		}		
+		int serr;
+                socklen_t len = sizeof(struct sockaddr);
+                char host[NI_MAXHOST], serv[NI_MAXSERV];
+
+                if (getsockname(fileno(ci->tx), &saddr, &len) < 0) {
+                        serr = errno;
+                        TRACE(TRACE_INFO, "getsockname::error [%s]", strerror(serr));
+                        return DM_SUCCESS; // non-fatal 
+                }
+
+                memset(host, 0, NI_MAXHOST);
+                memset(serv, 0, NI_MAXSERV);
+
+                if ((serr = getnameinfo(&saddr, len, host, NI_MAXHOST, serv, NI_MAXSERV,
+                                NI_NUMERICHOST | NI_NUMERICSERV))) {
+                        TRACE(TRACE_INFO, "getnameinfo::error [%s]", gai_strerror(serr));
+                        return DM_SUCCESS; // non-fatal 
+                }
+
+                strncpy(ci->dst_ip, host, NI_MAXHOST);
+                strncpy(ci->dst_port, serv, NI_MAXSERV);
+
+                snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%s", ci->dst_ip, ci->dst_port);
+                TRACE(TRACE_DEBUG, "client on inet socket [%s]", clientsock);
 	}
 
 	escaped_username = dm_stresc(username);
