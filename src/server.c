@@ -436,7 +436,7 @@ static void server_create_sockets(serverConfig_t * conf)
 static void server_sock_cb(int sock, short event, void *arg)
 {
 	client_sock *c = g_new0(client_sock,1);
-	struct sockaddr *caddr = g_new0(struct sockaddr, 1);
+	struct sockaddr *caddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
 	struct event *ev = (struct event *)arg;
 
 	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
@@ -460,6 +460,7 @@ static void server_sock_cb(int sock, short event, void *arg)
         }
 	
 	c->caddr = caddr;
+	c->caddr_len = len;
 	TRACE(TRACE_INFO, "connection accepted");
 
 	/* streams are ready, perform handling */

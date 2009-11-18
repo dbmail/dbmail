@@ -302,6 +302,7 @@ typedef struct  {
 	int sock;
 	SSL *ssl;                       /* SSL/TLS context for this client */
 	struct sockaddr *caddr;
+	socklen_t caddr_len;
 	void (*cb_close) (void *);	/* termination callback */
 } client_sock;
 

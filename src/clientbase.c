@@ -132,14 +132,14 @@ static int client_error_cb(int sock, int error, void *arg)
 	return r;
 }
 
-clientbase_t * client_init(int socket, struct sockaddr *caddr, SSL *ssl)
+clientbase_t * client_init(int socket, struct sockaddr *caddr, socklen_t len, SSL *ssl)
 {
 	clientbase_t *client	= g_new0(clientbase_t, 1);
 
-	client->timeout       = g_new0(struct timeval,1);
+	client->timeout         = g_new0(struct timeval,1);
 
 	if (g_thread_supported())
-		client->queue           = g_async_queue_new();
+		client->queue   = g_async_queue_new();
 	client->cb_error        = client_error_cb;
 
 	/* set byte counters to 0 */
@@ -152,7 +152,7 @@ clientbase_t * client_init(int socket, struct sockaddr *caddr, SSL *ssl)
 		client->tx		= STDOUT_FILENO;
 	} else {
 		int serr;
-		socklen_t len = sizeof (struct sockaddr);
+		TRACE(TRACE_DEBUG,"caddr [%p] sa_family [%d] len [%d]", caddr, caddr->sa_family, len);
 
 		if ((serr = getnameinfo(caddr, len, client->src_ip, NI_MAXHOST, client->src_port, NI_MAXSERV,
 			NI_NUMERICHOST | NI_NUMERICSERV))) {

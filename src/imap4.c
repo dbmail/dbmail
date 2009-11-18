@@ -405,9 +405,9 @@ int imap_handle_connection(client_sock *c)
 	clientbase_t *ci;
 
 	if (c)
-		ci = client_init(c->sock, c->caddr, c->ssl);
+		ci = client_init(c->sock, c->caddr, c->caddr_len, c->ssl);
 	else
-		ci = client_init(0, NULL, NULL);
+		ci = client_init(0, NULL, 0, NULL);
 
 	session = dbmail_imap_session_new();
 
