@@ -1800,8 +1800,6 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 
 	g_free(spattern);
 	
-	g_free(spattern);
-
 	qs = g_string_new("");
 	g_string_printf(qs,
 			"SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
