@@ -356,6 +356,11 @@ typedef struct {
 	GAsyncQueue *queue;		/* inter-thread message pipe */
 } clientbase_t;
 
+struct http_sock {
+	char address[128];
+	unsigned short port;
+};
+
 typedef struct {
 	clientbase_t *ci;
 	clientstate_t state;			/**< session state */
@@ -408,9 +413,9 @@ typedef struct {
 	gboolean ssl;
 	int backlog;
 	int resolveIP;
+	struct evhttp *evh;		// http server
 	field_t service_name, process_name;
-	field_t serverUser;
-	field_t serverGroup;
+	field_t serverUser, serverGroup;
 	field_t socket;
 	field_t log, error_log;
 	field_t pid_dir;
@@ -419,6 +424,7 @@ typedef struct {
         field_t tls_key;
         field_t tls_ciphers;
 	int (*ClientHandler) (client_sock *);
+	void (*cb) (struct evhttp_request *, void *);
 } serverConfig_t;
 
 

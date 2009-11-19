@@ -25,6 +25,7 @@
  */
 
 #include "dbmail.h"
+#include "dm_request.h"
 #define THIS_MODULE "server"
 
 static char *configFile = DEFAULT_CONFIG_FILE;
@@ -215,12 +216,15 @@ static int server_start_cli(serverConfig_t *conf)
 	srand((int) ((int) time(NULL) + (int) getpid()));
 
 	/* streams are ready, perform handling */
-	event_init();
 
-	if (server_setup(conf)) return -1;
-
-	conf->ClientHandler(NULL);
-	event_dispatch();
+	if (MATCH(conf->service_name,"HTTP")) {
+		TRACE(TRACE_DEBUG,"starting httpd cli server...");
+	} else {
+		event_init();
+		if (server_setup(conf)) return -1;
+		conf->ClientHandler(NULL);
+		event_dispatch();
+	}
 
 	disconnect_all();
 
@@ -345,65 +349,82 @@ static int create_unix_socket(serverConfig_t * conf)
 	return sock;
 }
 
-static int create_inet_socket(const char * ip, const char * port, int backlog, int *s, int nsock)
+static void create_inet_socket(serverConfig_t *conf, int i, gboolean ssl)
 {
 	struct addrinfo hints, *res, *res0;
 	int error = 0;
 	int so_reuseaddress = 1;
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+	const char *port;
+
+	if (ssl) {
+		port = conf->ssl_port;
+		TRACE(TRACE_DEBUG, "creating ssl inet socket [%d/%d], bindip [%s], ssl_port [%s]", i+1, conf->ipcount, conf->iplist[i], conf->ssl_port);
+	} else {
+		port = conf->port;
+		TRACE(TRACE_DEBUG, "creating plain inet socket [%d/%d], bindip [%s], port [%s]", i+1, conf->ipcount, conf->iplist[i], conf->port);
+	}
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family    = PF_UNSPEC;
 	hints.ai_socktype  = SOCK_STREAM;
 	hints.ai_flags     = AI_PASSIVE;
-	error = getaddrinfo(ip, port, &hints, &res0);
+	error = getaddrinfo(conf->iplist[i], conf->port, &hints, &res0);
 	if (error) {
 		TRACE(TRACE_ERR, "getaddrinfo error [%d] %s", error, gai_strerror(error));
-		return nsock;
+		return;
 		/*NOTREACHED*/
         }
 	
-	for (res = res0; res && nsock < MAXSOCKETS; res = res->ai_next) {
-		s[nsock] = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (s[nsock] < 0) {
-			TRACE(TRACE_ERR, "could not create a socket of family [%d], socktype[%d], protocol [%d]", 
-				res->ai_family, res->ai_socktype, res->ai_protocol);
+	for (res = res0; res && conf->ssl_socketcount < MAXSOCKETS && conf->socketcount < MAXSOCKETS; res = res->ai_next) {
+		int s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (s < 0) {
+			TRACE(TRACE_ERR, "could not create a socket of family [%d], socktype[%d], protocol [%d]", res->ai_family, res->ai_socktype, res->ai_protocol);
 			continue;
 		}
-		setsockopt(s[nsock], SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
-		dm_bind_and_listen(s[nsock], res->ai_addr, res->ai_addrlen, backlog);
-		UNBLOCK(s[nsock]);
-		if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), 
-				NI_NUMERICHOST | NI_NUMERICSERV)) {
+		setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
+		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog);
+		UNBLOCK(s);
+		if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
 			TRACE(TRACE_DEBUG, "could not get numeric hostname");
 		}
-		TRACE(TRACE_DEBUG, "created socket [%d] on [%s:%s]", s[nsock], hbuf, sbuf);
-		nsock++;
+		TRACE(TRACE_DEBUG, "created socket [%d] on [%s:%s]", s, hbuf, sbuf);
+		if (ssl)
+			conf->ssl_listenSockets[conf->ssl_socketcount++] = s;
+		else
+			conf->listenSockets[conf->socketcount++] = s;
  	}
-
 	freeaddrinfo(res0);
-
-	return nsock;
 }
 
 static void server_close_sockets(serverConfig_t *conf)
 {
-	int i;
-	for (i = 0; i < conf->socketcount; i++)
-		if (conf->listenSockets[i] > 0)
-			close(conf->listenSockets[i]);
-	conf->socketcount=0;
+	if (conf->evh) {
+		evhttp_free(conf->evh);
+	} else {
+		int i;
+		for (i = 0; i < conf->socketcount; i++)
+			if (conf->listenSockets[i] > 0)
+				close(conf->listenSockets[i]);
+		conf->socketcount=0;
 
-	for (i = 0; i < conf->ssl_socketcount; i++)
-		if (conf->ssl_listenSockets[i] > 0)
-			close(conf->ssl_listenSockets[i]);
-	conf->ssl_socketcount=0;
+		for (i = 0; i < conf->ssl_socketcount; i++)
+			if (conf->ssl_listenSockets[i] > 0)
+				close(conf->ssl_listenSockets[i]);
+		conf->ssl_socketcount=0;
+				close(conf->listenSockets[i]);
+	}
 }
 
+static void server_exit(void)
+{
+	disconnect_all();
+	server_close_sockets(server_conf);
+}
+	
 static void server_create_sockets(serverConfig_t * conf)
 {
 	int i;
-	char *ip = NULL;
 
 	conf->listenSockets = g_new0(int, MAXSOCKETS);
 	conf->ssl_listenSockets = g_new0(int, MAXSOCKETS);
@@ -414,20 +435,14 @@ static void server_create_sockets(serverConfig_t * conf)
 		tls_load_certs(conf);
 		if (conf->ssl)
 			tls_load_ciphers(conf);
-		if (conf->port) {
+		if (strlen(conf->port)) {
 			for (i = 0; i < conf->ipcount; i++) {
-				ip=strdup(conf->iplist[i]);
-				TRACE(TRACE_DEBUG, "creating plain inet socket [%d/%d], bindip [%s], port [%s]", i+1, conf->ipcount, ip, conf->port);
-				conf->socketcount=create_inet_socket(ip, conf->port, conf->backlog, conf->listenSockets, conf->socketcount);
-				free(ip);
+				create_inet_socket(conf, i, FALSE);
 			}
 		}
-		if (conf->ssl && conf->ssl_port) {
+		if (conf->ssl && strlen(conf->ssl_port)) {
 			for (i = 0; i < conf->ipcount; i++) {
-				ip=strdup(conf->iplist[i]);
-				TRACE(TRACE_DEBUG, "creating ssl inet socket [%d/%d], bindip [%s], ssl_port [%s]", i+1, conf->ipcount, ip, conf->ssl_port);
-				conf->ssl_socketcount=create_inet_socket(ip, conf->ssl_port, conf->backlog, conf->ssl_listenSockets, conf->ssl_socketcount);
-				free(ip);
+				create_inet_socket(conf, i, TRUE);
 			}
 		}
 	}
@@ -575,12 +590,6 @@ void disconnect_all(void)
 	g_free(sig_hup);
 }
 
-static void server_exit(void)
-{
-	disconnect_all();
-	server_close_sockets(server_conf);
-}
-
 static void server_pidfile(serverConfig_t *conf)
 {
 	static gboolean configured = FALSE;
@@ -607,8 +616,6 @@ int server_run(serverConfig_t *conf)
 	assert(conf);
 	reopen_logs(conf);
 
-	server_create_sockets(conf);
-
  	TRACE(TRACE_NOTICE, "starting main service loop for [%s]", conf->service_name);
 
 	server_conf = conf;
@@ -621,30 +628,54 @@ int server_run(serverConfig_t *conf)
 		TRACE(TRACE_ERR, "could not connect to authentication");
 		return -1;
 	}
-
 	srand((int) ((int) time(NULL) + (int) getpid()));
 
-	TRACE(TRACE_DEBUG,"setup event loop");
+ 	TRACE(TRACE_NOTICE, "starting main service loop for [%s]", conf->service_name);
+
+	server_conf = conf;
+
 	event_init();
 
 	if (server_setup(conf)) return -1;
 
 	if (conf->port) {
-		evsock = g_new0(struct event, server_conf->socketcount);
-		for (i = 0; i < server_conf->socketcount; i++) {
-			TRACE(TRACE_DEBUG, "Adding event for plain inet socket [%d] [%d/%d]", server_conf->listenSockets[i], i+1, server_conf->socketcount);
-			event_set(&evsock[i], server_conf->listenSockets[i], EV_READ, server_sock_cb, &evsock[i]);
-			event_add(&evsock[i], NULL);
+
+		if (MATCH(conf->service_name, "HTTP")) {
+			// FIXME: 
+			int port = atoi(conf->port);
+			if (! port) {
+				TRACE(TRACE_ERR, "Failed to convert port spec [%s]", conf->port);
+			} else {
+				for (i = 0; i < server_conf->ipcount; i++) {
+					TRACE(TRACE_DEBUG, "starting HTTP service [%s:%d]", conf->iplist[i], port);
+					if (! (conf->evh = evhttp_start(conf->iplist[i], port))) {
+						int serr = errno;
+						TRACE(TRACE_EMERG, "[%s]", strerror(serr));
+						return -1;
+					}
+					TRACE(TRACE_DEBUG, "started HTTP service [%p]", conf->evh);
+					evhttp_set_gencb(conf->evh, Request_cb, NULL);
+				}
+			}
+		} else {
+			server_create_sockets(conf);
+			evsock = g_new0(struct event, conf->ipcount+1);
+			if (conf->ssl && conf->ssl_port) {
+				evssl = g_new0(struct event, conf->ssl_socketcount);
+				for (i = 0; i < conf->ssl_socketcount; i++) {
+					TRACE(TRACE_DEBUG, "Adding event for ssl inet socket [%d] [%d/%d]", conf->ssl_listenSockets[i], i+1, conf->ssl_socketcount);
+					event_set(&evssl[i], conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, &evssl[i]);
+					event_add(&evssl[i], NULL);
+				}
+			} else {
+				evsock = g_new0(struct event, conf->socketcount);
+				for (i = 0; i < conf->socketcount; i++) {
+					event_set(&evsock[i], conf->listenSockets[i], EV_READ, server_sock_cb, &evsock[i]);
+					event_add(&evsock[i], NULL);
+				}
+			}	
 		}
-	}
-	if (conf->ssl && conf->ssl_port) {
-		evssl = g_new0(struct event, server_conf->ssl_socketcount);
-		for (i = 0; i < server_conf->ssl_socketcount; i++) {
-			TRACE(TRACE_DEBUG, "Adding event for ssl inet socket [%d] [%d/%d]", server_conf->ssl_listenSockets[i], i+1, server_conf->ssl_socketcount);
-			event_set(&evssl[i], server_conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, &evssl[i]);
-			event_add(&evssl[i], NULL);
-		}
-	}
+	}	
 
 	atexit(server_exit);
 
@@ -656,6 +687,7 @@ int server_run(serverConfig_t *conf)
 	server_pidfile(conf);
 
 	TRACE(TRACE_DEBUG,"dispatching event loop...");
+
 	event_dispatch();
 
 	return 0;

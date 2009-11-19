@@ -92,19 +92,19 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 		s = dbmail_imap_session_new();
 		if (! (imap4_tokenizer_main(s, search))) {
 			qerrorf("error parsing search string");
-			dbmail_imap_session_delete(s);
+			dbmail_imap_session_delete(&s);
 			dbmail_mailbox_free(mb);
 			return 1;
 		}
 	
 		if (dbmail_mailbox_build_imap_search(mb, s->args, &(s->args_idx), SEARCH_UNORDERED) < 0) {
 			qerrorf("invalid search string");
-			dbmail_imap_session_delete(s);
+			dbmail_imap_session_delete(&s);
 			dbmail_mailbox_free(mb);
 			return 1;
 		}
 		dbmail_mailbox_search(mb);
-		dbmail_imap_session_delete(s);	
+		dbmail_imap_session_delete(&s);	
 	}
 
 	if (strcmp(dumpfile, "-") == 0) {

@@ -1153,54 +1153,6 @@ int _ic_idle(ImapSession *self)
  *
  * append a message to a mailbox
  */
-static int imap_append_msg(const char *msgdata,
-		       u64_t mailbox_idnr, u64_t user_idnr,
-		       timestring_t internal_date, u64_t * msg_idnr)
-{
-        DbmailMessage *message;
-	int result;
-	GString *msgdata_string;
-
-	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
-
-	msgdata_string = g_string_new("");
-	g_string_printf(msgdata_string, "%s", msgdata);
-
-        message = dbmail_message_new();
-        message = dbmail_message_init_with_string(message, msgdata_string);
-	dbmail_message_set_internal_date(message, (char *)internal_date);
-	g_string_free(msgdata_string, TRUE); 
-        
-	/* 
-         * according to the rfc, the recent flag has to be set to '1'.
-	 * this also means that the status will be set to '001'
-         */
-
-        if (dbmail_message_store(message) < 0) {
-		dbmail_message_free(message);
-		return DM_EQUERY;
-	}
-
-	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr);
-	db_delete_message(message->id);
-        dbmail_message_free(message);
-	
-        switch (result) {
-            case -2:
-                    TRACE(TRACE_DEBUG, "error copying message to user [%llu],"
-                            "maxmail exceeded", user_idnr);
-                    return -2;
-            case -1:
-                    TRACE(TRACE_ERR, "error copying message to user [%llu]", 
-                            user_idnr);
-                    return -1;
-        }
-                
-	db_mailbox_seq_update(mailbox_idnr);
-        TRACE(TRACE_NOTICE, "message id=%llu is inserted", *msg_idnr);
-        
-        return DM_SUCCESS;
-}
 
 void _ic_append_enter(dm_thread_data *D)
 {
@@ -1317,7 +1269,7 @@ void _ic_append_enter(dm_thread_data *D)
 
 	message = self->args[i];
 
-	D->status = imap_append_msg(message, mboxid, self->userid, sqldate, &message_id);
+	D->status = db_append_msg(message, mboxid, self->userid, sqldate, &message_id);
 
 	switch (D->status) {
 	case -1:

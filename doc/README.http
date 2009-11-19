@@ -1,0 +1,134 @@
+
+
+dbmail-httpd:
+-------------
+
+Description: A RESTful management daemon for DBMail
+
+Goals: Provide a RESTful API over HTTP that will 
+allow complete access to the DBMail store, while leveraging
+the multi-threaded nature of DBMail daemons with it's 
+advanced database connection pool.
+
+As a demonstration of it's use a PHP Userland class is
+provided.
+
+general considerations
+======================
+
+Response headers:
+-----------------
+
+HTTP/1.1 200 OK
+Date: Wed, 05 Nov 2008 14:42:55 GMT
+Server: DBMail HTTP/REST (2.3.4)
+Connection: close
+Content-type: application/json; charset=utf-8
+
+Authentication and authorization:
+---------------------------------
+
+The HTTP interface supports Basic-Auth. The earlier versions
+of dbmail-httpd will only provide authenticated access to a 
+single user/password combination defined in dbmail.conf. This
+user will be fully authorized.
+
+Later version *may* support user-level authentication and mailbox
+level authorization..
+
+Cross-site forgery:
+-------------------
+
+data returned by a GET request is sent as type text/json
+to facilitate integration with AJAX frontend clients.
+
+the format of the resulting data has to be well-formed 
+to prevent cross-site forgery. See:
+http://mochikit.com/doc/html/MochiKit/Async.html
+
+
+request routing
+===============
+
+Routing of requests is modelled on the RESTful publishing interfaces 
+used by well-established standards such as the Atom Publishing 
+Standard (rfc 5023)
+
+The general structure of a url is
+
+/{controller}/{id}/{action}
+
+
+example requests
+================
+
+A - retrieve user and mailbox data
+
+1) get a list of users:
+C < GET /users/
+S > Content-type: application/json; charset=utf-8
+
+{'users':
+	{'id': 1, 'name': 'joe'},
+	{'id': 2, 'name': 'jane'},
+}
+
+1a) get a single user:
+C < GET /users/joe
+{'users':
+	{'id': 1, 'name': 'joe'},
+}
+
+2) get a list of mailboxes for a user:
+C < GET /users/joe/mailboxes
+S > Content-type: application/json; charset=utf-8
+
+{'mailboxes':
+	{'id': 1, 'name': 'Inbox', 'exists': 3410 },
+	{'id': 2, 'name': 'Trash', 'exists': 2871 },
+}
+
+3) get a list of messages for a mailbox:
+C < GET /mailboxes/1
+S > Content-type: text/json; charset=utf-8
+
+{'messages':
+	{'seq': 1, 'id': 1245911},
+	{'seq': 2, 'id': 4254519},
+}
+
+B - retrieve message data (this mimics the IMAP api)
+
+4) retrieve message by message_idnr
+C < GET /messages/1245911
+
+5) retrieve message envelope
+C < GET /messages/1245911/envelope
+
+6) retrieve message headers
+C < GET /messages/1245911/headers
+
+7) retrieve selected message headers 
+C < GET /messages/1245911/headers?h=subject,from,to
+
+8) retrieve message bodystructure
+C < GET /messages/1245911/bodystructure
+
+9) retrieve message part
+C < GET /messages/1245911/part/1.2.1 
+
+10) update a flag or label on a message
+C < POST /messages/1245911
+
+11) create or delete a mailbox (action depends on POST payload)
+C < POST /mailboxes
+
+11) store a message in a mailbox
+C < POST /mailboxes/2
+
+For POST actions the Content-length request header 
+must match the length of the payload.
+
+
+---
+

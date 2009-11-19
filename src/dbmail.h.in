@@ -79,7 +79,8 @@
 #include <termios.h>
 #include <unistd.h>
 #include <mhash.h>
-#include <event.h>
+#include <sys/queue.h>
+#include <evhttp.h>
 #include <math.h>
 #include <openssl/ssl.h>
 

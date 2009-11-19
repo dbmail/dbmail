@@ -33,6 +33,7 @@ sbin_PROGRAMS = dbmail-deliver \
 	dbmail-util \
 	dbmail-users \
 	dbmail-export \
+	dbmail-httpd \
 	dbmail-lmtpd $(SIEVEPROGS)
 
 COMMON = dbmail-user.c \
@@ -58,6 +59,8 @@ SERVER = server.c \
 	clientsession.c \
 	clientbase.c \
 	dm_tls.c \
+	dm_http.c \
+	dm_request.c \
 	dm_cidr.c
 
 IMAPD = dm_quota.c \
@@ -101,6 +104,9 @@ dbmail_export_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
 dbmail_lmtpd_LDADD = $(STATIC_MODULES) libdbmail.la
+ 
+dbmail_httpd_SOURCES = dm_http.c httpd.c
+dbmail_httpd_LDADD = $(STATIC_MODULES) libdbmail.la
   
 if SIEVE
 dbmail_sievecmd_SOURCES = sievecmd.c 

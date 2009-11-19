@@ -27,6 +27,7 @@
 
 void g_list_destroy(GList *l)
 {
+	if (! l) return;
 	l = g_list_first(l);
 	g_list_foreach(l,(GFunc)g_free,NULL);
 

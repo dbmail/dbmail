@@ -213,7 +213,7 @@ int db_use_usermap(void);
 
 /**
  * \brief check if username exists in the usermap table
- * \param ci clientbase_t of connected client
+ * \param int tx filehandle of connected client
  * \param userid login to lookup
  * \param real_username contains userid after successful lookup
  * \return
@@ -602,7 +602,19 @@ int db_isselectable(u64_t mailbox_idnr);
  *    - 1 flag set
  */
 int db_noinferiors(u64_t mailbox_idnr);
+/** 
+ * \brief append message to mailbox
+ * \param msgdata raw message data
+ * \param mailbox_idnr destination mailbox
+ * \param user_idnr who is appending
+ * \param internal_date optional
+ * \param msg_idnr result
+ * \return 
+ * 		- -1 on failure
+ * 		- 0 on success
+ */
 
+int db_append_msg(const char *msgdata, u64_t mailbox_idnr, u64_t user_idnr, timestring_t internal_date, u64_t * msg_idnr);
 /** 
  * \brief remove all messages from a mailbox
  * \param mailbox_idnr

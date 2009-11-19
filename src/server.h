@@ -49,5 +49,6 @@ void server_showhelp(const char *service, const char *greeting);
 int server_getopt(serverConfig_t *config, const char *service, int argc, char *argv[]);
 int server_mainloop(serverConfig_t *config, const char *service, const char *servicename);
 pid_t server_daemonize(serverConfig_t *conf);
+void server_http(serverConfig_t *conf);
 
 #endif

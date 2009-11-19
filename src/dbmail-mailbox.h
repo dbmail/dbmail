@@ -44,8 +44,6 @@ typedef struct {
 	u64_t size;
 //	GTree *keywords;
 
-	gchar *name;
-
 	GList *sorted;		// ordered list of UID values
 
 	MailboxState_T mbstate;	// cache mailbox metadata;

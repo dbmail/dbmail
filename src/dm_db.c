@@ -1785,6 +1785,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		if (! auth_user_exists(username, &search_user_idnr)) {
 			TRACE(TRACE_NOTICE, "cannot search namespace because user [%s] does not exist", username);
 			g_free(username);
+			g_free(spattern);
 			return DM_SUCCESS;
 		}
 		TRACE(TRACE_DEBUG, "searching namespace [%s] for user [%s] with pattern [%s]",
@@ -1799,6 +1800,8 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 
 	g_free(spattern);
 	
+	g_free(spattern);
+
 	qs = g_string_new("");
 	g_string_printf(qs,
 			"SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
@@ -2967,6 +2970,24 @@ int char2date_str(const char *date, field_t *frag)
 	return 0;
 }
 
+static sa_family_t dm_get_client_sockaddr(int tx, struct sockaddr *saddr)
+{
+	#define maxsocklen	128
+	union {
+		struct sockaddr sa;
+		char data[maxsocklen];
+	} un;
+
+	socklen_t len;
+	len = maxsocklen;
+
+	if (getsockname(tx, (struct sockaddr *)un.data, &len) < 0)
+		return (sa_family_t) -1;
+
+	memcpy(saddr, &un.sa, sizeof(un.sa));
+	return (un.sa.sa_family);
+}
+
 int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_username)
 {
 	struct sockaddr saddr;
@@ -2983,7 +3004,7 @@ int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_userna
 	
 	TRACE(TRACE_DEBUG,"checking userid [%s] in usermap", username);
 	
-	if (ci==NULL) {
+	if (ci->tx==0) {
 		strncpy(clientsock,"",1);
 	} else {
 		/* get the socket the client is connecting on */
@@ -3492,4 +3513,49 @@ int db_rehash_store(void)
 	return t;
 }
 
+int db_append_msg(const char *msgdata, u64_t mailbox_idnr, u64_t user_idnr, timestring_t internal_date, u64_t * msg_idnr)
+{
+        DbmailMessage *message;
+	int result;
+	GString *msgdata_string;
+
+	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
+
+	msgdata_string = g_string_new("");
+	g_string_printf(msgdata_string, "%s", msgdata);
+
+        message = dbmail_message_new();
+        message = dbmail_message_init_with_string(message, msgdata_string);
+	dbmail_message_set_internal_date(message, (char *)internal_date);
+	g_string_free(msgdata_string, TRUE); 
+        
+	/* 
+         * according to the rfc, the recent flag has to be set to '1'.
+	 * this also means that the status will be set to '001'
+         */
+
+        if (dbmail_message_store(message) < 0) {
+		dbmail_message_free(message);
+		return DM_EQUERY;
+	}
+
+	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr);
+	db_delete_message(message->id);
+        dbmail_message_free(message);
+	
+        switch (result) {
+            case -2:
+                    TRACE(TRACE_DEBUG, "error copying message to user [%llu],"
+                            "maxmail exceeded", user_idnr);
+                    return -2;
+            case -1:
+                    TRACE(TRACE_ERR, "error copying message to user [%llu]", 
+                            user_idnr);
+                    return -1;
+        }
+                
+        TRACE(TRACE_NOTICE, "message id=%llu is inserted", *msg_idnr);
+        
+        return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
+}
 

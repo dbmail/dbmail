@@ -159,9 +159,10 @@ ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command
 }
 
 
-void dbmail_imap_session_delete(ImapSession * self)
+void dbmail_imap_session_delete(ImapSession ** s)
 {
-	TRACE(TRACE_DEBUG,"[%p]", self);
+	ImapSession *self = *s;
+
 	Cache_free(&self->cache);
 
 	if (self->ci) {
@@ -202,10 +203,8 @@ void dbmail_imap_session_delete(ImapSession * self)
 	}
 	
 	g_string_free(self->buff,TRUE);
-
 	g_mutex_free(self->mutex);
 	g_free(self);
-	TRACE(TRACE_DEBUG,"imap session [%p] deleted", self);
 	self = NULL;
 }
 

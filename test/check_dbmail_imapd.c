@@ -177,7 +177,7 @@ START_TEST(test_imap_session_new)
 	ImapSession *s;
 	s = dbmail_imap_session_new();
 	fail_unless(s!=NULL, "Failed to initialize imapsession");
-	dbmail_imap_session_delete(s);
+	dbmail_imap_session_delete(&s);
 }
 END_TEST
 
@@ -206,7 +206,7 @@ START_TEST(test_imap_bodyfetch)
 	octet = dbmail_imap_session_bodyfetch_get_last_octetcnt(s);
 	fail_unless(octet==12288, "octetcnt incorrect");
 	
-	dbmail_imap_session_delete(s);
+	dbmail_imap_session_delete(&s);
 		
 }
 END_TEST
