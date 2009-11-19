@@ -68,11 +68,20 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 	public function testGetMessage() 
 	{
 		$msgs = $this->mbox->getMessages();
-//		print_r($msgs);
+		$keys = array_keys($msgs['messages']);
+		$this->assertNotNull($keys[0]);
+		$msg = $this->mbox->getMessage($keys[0]);
+		$this->assertNotNull($msg->view());
 	}
 
 	public function testGetHeaders()
 	{
+		$msgs = $this->mbox->getMessages();
+		$keys = array_keys($msgs['messages']);
+		$this->assertNotNull($keys[0]);
+		$msg = $this->mbox->getMessage($keys[0]);
+		$headers = $msg->getHeaders(array('subject','to','received'));
+		$this->assertNotNull($headers);
 
 	}
 
@@ -83,6 +92,7 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 		$exists = $mbox->exists;
 		$msg = "From: testuser1@localhost\nTo: testuser1@localhost\nSubject: test\n\ntext message\n\n";
 		$mbox->addMessage($msg);
+		$mbox = $user->getMailbox('INBOX');
 		$this->assertEquals($mbox->exists > $exists,true);
 	}
 
@@ -95,5 +105,6 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 	{
 
 	}
+
 }
 ?>

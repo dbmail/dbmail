@@ -226,6 +226,8 @@ void Http_getMessages(T R)
 	u64_t pid;
 	u64_t id = 0;
 
+	if (! Request_getId(R)) return;
+
 	if (! (id = strtoull(Request_getId(R), NULL, 10))) {
 		Request_error(R, HTTP_NOTFOUND, "Not found");
 		return;
@@ -245,9 +247,10 @@ void Http_getMessages(T R)
 		 * C < GET /messages/1245911
 		 */
 
+		u64_t size = dbmail_message_get_size(m, TRUE);
 		Request_setContentType(R,"application/json; charset=utf-8");
 		evbuffer_add_printf(buf, "{\"messages\": {\n");
-		evbuffer_add_printf(buf, "   \"%llu\":{\"size\":%llu}", pid, dbmail_message_get_size(m, TRUE));
+		evbuffer_add_printf(buf, "   \"%llu\":{\"size\":%llu}", id, size);
 		evbuffer_add_printf(buf, "\n}}\n");
 
 	} else if (MATCH(Request_getMethod(R), "view")) {

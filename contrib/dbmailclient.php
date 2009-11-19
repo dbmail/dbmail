@@ -218,12 +218,16 @@ class DBMailUser
 		}
 		return $url;
 	}
-	public function get($method='')
+	public function get($method='', $json=True)
 	{
 		$url = $this->getUrl($method);
-		$result = json_decode($this->curl->get($url),TRUE);
-		if (! $result)
-			print "FAILURE URL:[".$url."]\n";
+		$result = $this->curl->get($url);
+		if ($json) 
+			$result = json_decode($result,TRUE);
+		else
+			$result = $result->body;
+
+		if (! $result) print "FAILURE URL:[".$url."]\n";
 		return $result;
 	}
 		
@@ -295,10 +299,15 @@ class DBMailMessage extends DBMailMailbox
 {
 	public $controller = "messages";
 
+	public function view()
+	{
+		return $this->get("view", False);
+	}
+
 	public function getHeaders($headers)
 	{
 		$headers = implode(",",$headers);
-		return $this->get("headers/" . $headers);
+		return $this->get("headers/" . $headers, False);
 	}
 }
 
