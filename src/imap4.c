@@ -127,7 +127,7 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 			}
 			
 			ci_write_cb(session->ci);
-	//		imap_handle_input(session);
+			imap_handle_input(session);
 
 			break;
 	}
@@ -138,9 +138,6 @@ void imap_cb_read(void *arg)
 	int state;
 	ImapSession *session = (ImapSession *) arg;
 
-	if (! g_mutex_trylock(session->mutex))
-		return
-
 	TRACE(TRACE_DEBUG,"reading...");
 
 	ci_read_cb(session->ci);
@@ -149,18 +146,13 @@ void imap_cb_read(void *arg)
 	if (state & CLIENT_ERR) {
 		TRACE(TRACE_DEBUG,"client_state ERROR");
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
-		g_mutex_unlock(session->mutex);
 	} else if (state & CLIENT_EOF) {
 		TRACE(TRACE_NOTICE,"reached EOF");
 		event_del(session->ci->rev);
-		g_mutex_unlock(session->mutex);
 		if (session->ci->read_buffer->len < 1)
 			imap_session_bailout(session);
 	} else if (state & CLIENT_OK || state & CLIENT_AGAIN) {
-		g_mutex_unlock(session->mutex);
 		imap_handle_input(session);
-	} else {
-		g_mutex_unlock(session->mutex);
 	}
 }
 

@@ -178,13 +178,13 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 /* Strips off the #Users or #Public namespace, returning
  * the simple name, the namespace and username, if present. */
 
-char *mailbox_remove_namespace(const char *name, char **namespace, char **username)
+const char *mailbox_remove_namespace(const char *name, char **namespace, char **username)
 {
 	char *temp = NULL, *user = NULL;
 	size_t ns_user_len = 0;
 	size_t ns_publ_len = 0;
 	size_t fq_name_len;
-	char *mbox = NULL, *fq_name = g_strdup(name);
+	char *mbox = NULL, *fq_name = (char *)name;
 
 	ns_user_len = strlen(NAMESPACE_USER);
 	ns_publ_len = strlen(NAMESPACE_PUBLIC);

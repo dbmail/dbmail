@@ -81,7 +81,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
  *     - NULL on error
  *     - simple name of mailbox
  */
-char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username);
+const char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username);
 
 /**
  * \brief converts an IMAP date to a number (strictly ascending in date)

@@ -1709,7 +1709,8 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 
 int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
-	char *simple_name, *mbox, *namespace, *username;
+	char *mbox, *namespace, *username;
+	const char *simple_name;
 	int i, result;
 	size_t l;
 
@@ -1743,7 +1744,6 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 			TRACE(TRACE_INFO, "user [%s] not found.", username);
 			g_free(mbox);
 			g_free(username);
-			g_free(simple_name);
 			return FALSE;
 		}
 	}
@@ -1753,7 +1753,6 @@ int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 
 	g_free(mbox);
 	g_free(username);
-	g_free(simple_name);
 	return result;
 }
 
@@ -1761,7 +1760,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 {
 	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t search_user_idnr = user_idnr;
-	char *spattern;
+	const char *spattern;
 	char *namespace, *username;
 	struct mailbox_match *mailbox_like = NULL;
 	GString *qs;
@@ -1785,21 +1784,17 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		if (! auth_user_exists(username, &search_user_idnr)) {
 			TRACE(TRACE_NOTICE, "cannot search namespace because user [%s] does not exist", username);
 			g_free(username);
-			g_free(spattern);
 			return DM_SUCCESS;
 		}
 		TRACE(TRACE_DEBUG, "searching namespace [%s] for user [%s] with pattern [%s]",
 			namespace, username, spattern);
 		g_free(username);
-		g_free(spattern);
 	}
 
 	/* If there's neither % nor *, don't match on mailbox name. */
 	if ( (! strchr(spattern, '%')) && (! strchr(spattern,'*')) )
 		mailbox_like = mailbox_match_new(spattern);
 
-	g_free(spattern);
-	
 	qs = g_string_new("");
 	g_string_printf(qs,
 			"SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
@@ -1924,7 +1919,7 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 
 	GList *mailboxes = NULL;
 	char *namespace, *username, *cpy, **chunks = NULL;
-	char *simple_name;
+	const char *simple_name;
 	int i, is_users = 0, is_public = 0;
 	u64_t mboxid, public;
 
@@ -2023,7 +2018,6 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 	*errmsg = "Everything is peachy keen";
 
 	g_strfreev(chunks);
-	g_free(simple_name);
 	g_free(username);
 	g_free(cpy);
  
@@ -2039,7 +2033,6 @@ egeneral:
 	}
 	g_list_free(g_list_first(mailboxes));
 	g_strfreev(chunks);
-	g_free(simple_name);
 	g_free(username);
 	g_free(cpy);
 	return NULL;
@@ -2197,7 +2190,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
-	char *simple_name;
+	const char *simple_name;
 	char *frag;
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
@@ -2245,7 +2238,6 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 		db_con_close(c);
 	END_TRY;
 
-	g_free(simple_name);
 	return result;
 }
 
