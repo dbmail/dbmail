@@ -229,14 +229,9 @@ static int checktag(const char *s)
 	return 1;
 }
 
-static void imap_handle_exit(ImapSession *session, int status, gboolean waitfor)
+static void imap_handle_exit(ImapSession *session, int status)
 {
 	if (! session) return;
-
-	if (waitfor) {
-		g_mutex_lock(session->mutex);
-		g_mutex_unlock(session->mutex);
-	}
 
 	TRACE(TRACE_DEBUG, "[%p] state [%d] command_status [%d] [%s] returned with status [%d]", 
 		session, session->state, session->command_state, session->command, status);
@@ -375,13 +370,13 @@ void imap_handle_input(ImapSession *session)
 
 		if ( session->parser_state < 0 ) {
 			imap_session_printf(session, "%s BAD parse error\r\n", session->tag);
-			imap_handle_exit(session, 1, TRUE);
+			imap_handle_exit(session, 1);
 			break;
 		}
 
 		if ( session->parser_state ) {
 			if ((result = imap4(session))) 
-				imap_handle_exit(session, result, TRUE);
+				imap_handle_exit(session, result);
 			TRACE(TRACE_DEBUG,"imap4 returned [%d]", result);
 			break;
 		}
@@ -525,7 +520,7 @@ void _ic_cb_leave(gpointer data)
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;
 	TRACE(TRACE_DEBUG,"handling imap session [%p]",session);
-	imap_handle_exit(session, D->status, FALSE);
+	imap_handle_exit(session, D->status);
 }
 
 

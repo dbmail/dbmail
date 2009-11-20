@@ -609,7 +609,6 @@ int server_run(serverConfig_t *conf)
 {
 	int i;
 	struct event *evsock;
-	struct event *evssl;
 
 	mainRestart = 0;
 
@@ -658,22 +657,22 @@ int server_run(serverConfig_t *conf)
 				}
 			}
 		} else {
+			int k;
 			server_create_sockets(conf);
-			evsock = g_new0(struct event, conf->ipcount+1);
-			if (conf->ssl && conf->ssl_port) {
-				evssl = g_new0(struct event, conf->ssl_socketcount);
-				for (i = 0; i < conf->ssl_socketcount; i++) {
-					TRACE(TRACE_DEBUG, "Adding event for ssl inet socket [%d] [%d/%d]", conf->ssl_listenSockets[i], i+1, conf->ssl_socketcount);
-					event_set(&evssl[i], conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, &evssl[i]);
-					event_add(&evssl[i], NULL);
-				}
-			} else {
-				evsock = g_new0(struct event, conf->socketcount);
-				for (i = 0; i < conf->socketcount; i++) {
-					event_set(&evsock[i], conf->listenSockets[i], EV_READ, server_sock_cb, &evsock[i]);
-					event_add(&evsock[i], NULL);
-				}
-			}	
+			evsock = g_new0(struct event, conf->socketcount + conf->ssl_socketcount);
+
+			for (i = 0; i < conf->socketcount; i++) {
+				TRACE(TRACE_DEBUG, "Adding event for plain inet socket [%d] [%d/%d]", conf->listenSockets[i], i+1, conf->socketcount);
+				event_set(&evsock[i], conf->listenSockets[i], EV_READ, server_sock_cb, &evsock[i]);
+				event_add(&evsock[i], NULL);
+			}
+
+			for (i = 0; i < conf->ssl_socketcount; i++) {
+				k = conf->socketcount + i;
+				TRACE(TRACE_DEBUG, "Adding event for ssl inet socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, conf->ssl_socketcount);
+				event_set(&evsock[k], conf->ssl_listenSockets[k], EV_READ, server_sock_ssl_cb, &evsock[k]);
+				event_add(&evsock[k], NULL);
+			}
 		}
 	}	
 
