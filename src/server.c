@@ -307,6 +307,8 @@ pid_t server_daemonize(serverConfig_t *conf)
 static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, int backlog)
 {
 	int err;
+	int so_reuseaddress = 1;
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
 		err = errno;
@@ -353,23 +355,20 @@ static void create_inet_socket(serverConfig_t *conf, int i, gboolean ssl)
 {
 	struct addrinfo hints, *res, *res0;
 	int error = 0;
-	int so_reuseaddress = 1;
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
 	const char *port;
 
 	if (ssl) {
 		port = conf->ssl_port;
-		TRACE(TRACE_DEBUG, "creating ssl inet socket [%d/%d], bindip [%s], ssl_port [%s]", i+1, conf->ipcount, conf->iplist[i], conf->ssl_port);
 	} else {
 		port = conf->port;
-		TRACE(TRACE_DEBUG, "creating plain inet socket [%d/%d], bindip [%s], port [%s]", i+1, conf->ipcount, conf->iplist[i], conf->port);
 	}
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family    = PF_UNSPEC;
 	hints.ai_socktype  = SOCK_STREAM;
 	hints.ai_flags     = AI_PASSIVE;
-	error = getaddrinfo(conf->iplist[i], conf->port, &hints, &res0);
+	error = getaddrinfo(conf->iplist[i], port, &hints, &res0);
 	if (error) {
 		TRACE(TRACE_ERR, "getaddrinfo error [%d] %s", error, gai_strerror(error));
 		return;
@@ -382,13 +381,13 @@ static void create_inet_socket(serverConfig_t *conf, int i, gboolean ssl)
 			TRACE(TRACE_ERR, "could not create a socket of family [%d], socktype[%d], protocol [%d]", res->ai_family, res->ai_socktype, res->ai_protocol);
 			continue;
 		}
-		setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
-		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog);
-		UNBLOCK(s);
 		if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
 			TRACE(TRACE_DEBUG, "could not get numeric hostname");
 		}
-		TRACE(TRACE_DEBUG, "created socket [%d] on [%s:%s]", s, hbuf, sbuf);
+		TRACE(TRACE_DEBUG, "creating %s socket [%d] on [%s:%s]", ssl?"ssl":"plain", s, hbuf, sbuf);
+
+		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog);
+		UNBLOCK(s);
 		if (ssl)
 			conf->ssl_listenSockets[conf->ssl_socketcount++] = s;
 		else
@@ -412,7 +411,9 @@ static void server_close_sockets(serverConfig_t *conf)
 			if (conf->ssl_listenSockets[i] > 0)
 				close(conf->ssl_listenSockets[i]);
 		conf->ssl_socketcount=0;
-				close(conf->listenSockets[i]);
+		close(conf->listenSockets[i]);
+		if (conf->socket)
+			unlink(conf->socket);
 	}
 }
 
@@ -430,31 +431,30 @@ static void server_create_sockets(serverConfig_t * conf)
 	conf->ssl_listenSockets = g_new0(int, MAXSOCKETS);
 
 	if (strlen(conf->socket) > 0) {
-		conf->listenSockets[0] = create_unix_socket(conf);
-	} else {
-		tls_load_certs(conf);
-		if (conf->ssl)
-			tls_load_ciphers(conf);
-		if (strlen(conf->port)) {
-			for (i = 0; i < conf->ipcount; i++) {
-				create_inet_socket(conf, i, FALSE);
-			}
+		conf->listenSockets[conf->socketcount++] = create_unix_socket(conf);
+	} 
+	tls_load_certs(conf);
+	if (conf->ssl)
+		tls_load_ciphers(conf);
+	if (strlen(conf->port)) {
+		for (i = 0; i < conf->ipcount; i++) {
+			create_inet_socket(conf, i, FALSE);
 		}
-		if (conf->ssl && strlen(conf->ssl_port)) {
-			for (i = 0; i < conf->ipcount; i++) {
-				create_inet_socket(conf, i, TRUE);
-			}
+	}
+	if (conf->ssl && strlen(conf->ssl_port)) {
+		for (i = 0; i < conf->ipcount; i++) {
+			create_inet_socket(conf, i, TRUE);
 		}
 	}
 }
 
-static void server_sock_cb(int sock, short event, void *arg)
+static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 {
 	client_sock *c = g_new0(client_sock,1);
 	struct sockaddr *caddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
 	struct event *ev = (struct event *)arg;
 
-	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
+	TRACE(TRACE_DEBUG,"%d %d, %p, ssl:%s", sock, event, arg, ssl?"Y":"N");
 
 	/* accept the active fd */
 	int len = sizeof(struct sockaddr_in);
@@ -473,7 +473,29 @@ static void server_sock_cb(int sock, short event, void *arg)
                 }
                 return;
         }
-	
+		
+	if (ssl) {
+		if (! (c->ssl = SSL_new(tls_context))) {
+			TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
+			event_add(ev, NULL);
+			return;
+		}
+		if ( !SSL_set_fd(c->ssl, c->sock)) {
+			TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
+			SSL_free(c->ssl);
+			c->ssl = NULL;
+			event_add(ev, NULL);
+			return;
+		}
+		if (SSL_accept(c->ssl) <= 0) {
+			TRACE(TRACE_ERR, "Error in TLS handshake: %s", tls_get_error());
+			SSL_free(c->ssl);
+			c->ssl = NULL;
+			event_add(ev, NULL);
+			return;
+		}
+	}
+
 	c->caddr = caddr;
 	c->caddr_len = len;
 	TRACE(TRACE_INFO, "connection accepted");
@@ -486,63 +508,17 @@ static void server_sock_cb(int sock, short event, void *arg)
 
 	/* reschedule */
 	event_add(ev, NULL);
+
+}
+
+static void server_sock_cb(int sock, short event, void *arg)
+{
+	_sock_cb(sock, event, arg, FALSE);
 }
 
 static void server_sock_ssl_cb(int sock, short event, void *arg)
 {
-	client_sock *c = g_new0(client_sock,1);
-	struct sockaddr *caddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
-	struct event *ev = (struct event *)arg;
-
-	TRACE(TRACE_DEBUG,"%d %d, %p", sock, event, arg);
-
-	/* accept the active fd */
-	int len = sizeof(struct sockaddr_in);
-
-	if ((c->sock = accept(sock, caddr, (socklen_t *)&len)) < 0) {
-                int serr=errno;
-                switch(serr) {
-                        case ECONNABORTED:
-                        case EPROTO:
-                        case EINTR:
-                                TRACE(TRACE_DEBUG, "%s", strerror(serr));
-                                break;
-                        default:
-                                TRACE(TRACE_ERR, "%s", strerror(serr));
-                                break;
-                }
-                event_add(ev, NULL);
-                return;
-        }
-	
-	if (! (c->ssl = SSL_new(tls_context))) {
-		TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
-                event_add(ev, NULL);
-		return;
-	}
-	if ( !SSL_set_fd(c->ssl, c->sock)) {
-		TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
-		SSL_free(c->ssl);
-		c->ssl = NULL;
-		event_add(ev, NULL);
-		return;
-	}
-	if (SSL_accept(c->ssl) <= 0) {
-		TRACE(TRACE_ERR, "Error in TLS handshake: %s", tls_get_error());
-		SSL_free(c->ssl);
-		c->ssl = NULL;
-		event_add(ev, NULL);
-		return;
-	}
-
-	c->caddr = caddr;
-	TRACE(TRACE_INFO, "connection accepted");
-
-	/* streams are ready, perform handling */
-	server_conf->ClientHandler((client_sock *)c);
-
-	/* reschedule */
-	event_add(ev, NULL);
+	_sock_cb(sock, event, arg, TRUE);
 }
 
 
@@ -662,14 +638,14 @@ int server_run(serverConfig_t *conf)
 			evsock = g_new0(struct event, conf->socketcount + conf->ssl_socketcount);
 
 			for (i = 0; i < conf->socketcount; i++) {
-				TRACE(TRACE_DEBUG, "Adding event for plain inet socket [%d] [%d/%d]", conf->listenSockets[i], i+1, conf->socketcount);
+				TRACE(TRACE_DEBUG, "Adding event for plain socket [%d] [%d/%d]", conf->listenSockets[i], i+1, conf->socketcount);
 				event_set(&evsock[i], conf->listenSockets[i], EV_READ, server_sock_cb, &evsock[i]);
 				event_add(&evsock[i], NULL);
 			}
 
 			for (i = 0; i < conf->ssl_socketcount; i++) {
 				k = conf->socketcount + i;
-				TRACE(TRACE_DEBUG, "Adding event for ssl inet socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, conf->ssl_socketcount);
+				TRACE(TRACE_DEBUG, "Adding event for ssl socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, conf->ssl_socketcount);
 				event_set(&evsock[k], conf->ssl_listenSockets[k], EV_READ, server_sock_ssl_cb, &evsock[k]);
 				event_add(&evsock[k], NULL);
 			}
