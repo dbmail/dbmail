@@ -304,10 +304,20 @@ pid_t server_daemonize(serverConfig_t *conf)
 	return getsid(0);
 }
 
-static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, int backlog)
+static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, int backlog, gboolean ssl)
 {
-	int err;
-	int so_reuseaddress = 1;
+	int err, so_reuseaddress = 1;
+	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+	
+	memset(hbuf,0, sizeof(hbuf));
+	memset(sbuf,0, sizeof(sbuf));
+
+	if (getnameinfo(saddr, len, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
+		TRACE(TRACE_DEBUG, "could not get numeric hostname");
+	}
+
+	TRACE(TRACE_DEBUG, "creating %s socket [%d] on [%s:%s]", ssl?"ssl":"plain", sock, hbuf, sbuf);
+
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
@@ -344,7 +354,7 @@ static int create_unix_socket(serverConfig_t * conf)
 	TRACE(TRACE_DEBUG, "create socket [%s] backlog [%d]", conf->socket, conf->backlog);
 
 	// any error in dm_bind_and_listen is fatal
-	dm_bind_and_listen(sock, (struct sockaddr *)&un, sizeof(un), conf->backlog);
+	dm_bind_and_listen(sock, (struct sockaddr *)&un, sizeof(un), conf->backlog, FALSE);
 	
 	chmod(conf->socket, 02777);
 
@@ -354,8 +364,7 @@ static int create_unix_socket(serverConfig_t * conf)
 static void create_inet_socket(serverConfig_t *conf, int i, gboolean ssl)
 {
 	struct addrinfo hints, *res, *res0;
-	int error = 0;
-	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+	int s, error = 0;
 	const char *port;
 
 	if (ssl) {
@@ -376,17 +385,11 @@ static void create_inet_socket(serverConfig_t *conf, int i, gboolean ssl)
         }
 	
 	for (res = res0; res && conf->ssl_socketcount < MAXSOCKETS && conf->socketcount < MAXSOCKETS; res = res->ai_next) {
-		int s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (s < 0) {
+		if ((s = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
 			TRACE(TRACE_ERR, "could not create a socket of family [%d], socktype[%d], protocol [%d]", res->ai_family, res->ai_socktype, res->ai_protocol);
 			continue;
 		}
-		if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
-			TRACE(TRACE_DEBUG, "could not get numeric hostname");
-		}
-		TRACE(TRACE_DEBUG, "creating %s socket [%d] on [%s:%s]", ssl?"ssl":"plain", s, hbuf, sbuf);
-
-		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog);
+		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog, ssl);
 		UNBLOCK(s);
 		if (ssl)
 			conf->ssl_listenSockets[conf->ssl_socketcount++] = s;
@@ -633,19 +636,18 @@ int server_run(serverConfig_t *conf)
 				}
 			}
 		} else {
-			int k;
+			int k, total;
 			server_create_sockets(conf);
-			evsock = g_new0(struct event, conf->socketcount + conf->ssl_socketcount);
-
+			total = conf->socketcount + conf->ssl_socketcount;
+			evsock = g_new0(struct event, total);
 			for (i = 0; i < conf->socketcount; i++) {
-				TRACE(TRACE_DEBUG, "Adding event for plain socket [%d] [%d/%d]", conf->listenSockets[i], i+1, conf->socketcount);
+				TRACE(TRACE_DEBUG, "Adding event for plain socket [%d] [%d/%d]", conf->listenSockets[i], i+1, total);
 				event_set(&evsock[i], conf->listenSockets[i], EV_READ, server_sock_cb, &evsock[i]);
 				event_add(&evsock[i], NULL);
 			}
-
-			for (i = 0; i < conf->ssl_socketcount; i++) {
-				k = conf->socketcount + i;
-				TRACE(TRACE_DEBUG, "Adding event for ssl socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, conf->ssl_socketcount);
+			k = i+1;
+			for (k = i, i = 0; i < conf->ssl_socketcount; i++, k++) {
+				TRACE(TRACE_DEBUG, "Adding event for ssl socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, total);
 				event_set(&evsock[k], conf->ssl_listenSockets[k], EV_READ, server_sock_ssl_cb, &evsock[k]);
 				event_add(&evsock[k], NULL);
 			}
