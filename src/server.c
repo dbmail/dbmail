@@ -414,7 +414,6 @@ static void server_close_sockets(serverConfig_t *conf)
 			if (conf->ssl_listenSockets[i] > 0)
 				close(conf->ssl_listenSockets[i]);
 		conf->ssl_socketcount=0;
-		close(conf->listenSockets[i]);
 		if (conf->socket)
 			unlink(conf->socket);
 	}
