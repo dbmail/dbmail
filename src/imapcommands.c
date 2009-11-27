@@ -75,8 +75,8 @@ void cmd_free(cmd_t *cmd)
 	ImapSession *self = D->session; \
 	g_mutex_lock(self->mutex)
 
+	//dbmail_imap_session_buff_flush(D->session); 
 #define NOTIFY_DONE(D) \
-	dbmail_imap_session_buff_flush(D->session); \
 	D->session->command_state = TRUE; \
 	g_mutex_unlock(D->session->mutex); \
 	g_async_queue_push(queue, (gpointer)D); \

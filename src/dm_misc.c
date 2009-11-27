@@ -135,7 +135,8 @@ void create_current_timestring(timestring_t * timestring)
 	if (time(&td) == -1)
 		TRACE(TRACE_EMERG, "error getting time from OS");
 
-	tm = *localtime(&td);	/* get components */
+	memset(&tm,0,sizeof(tm));
+	localtime_r(&td, &tm);	/* get components */
 	strftime((char *) timestring, sizeof(timestring_t),
 		 "%Y-%m-%d %H:%M:%S", &tm);
 }

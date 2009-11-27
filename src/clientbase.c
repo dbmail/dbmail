@@ -341,7 +341,7 @@ void ci_read_cb(clientbase_t *self)
 			self->bytes_rx += t;	// Update our byte counter
 			self->client_state = CLIENT_OK; 
 			g_string_append_len(self->read_buffer, ibuf, t);
-			TRACE(TRACE_DEBUG,"read [%u:%s]", t, ibuf);
+			TRACE(TRACE_DEBUG,"read [%u:%s]", t, t?ibuf:"(null)");
 		}
 	}
 

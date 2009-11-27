@@ -103,7 +103,7 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 
-	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
+//	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
 
 	switch(session->state) {
 		case CLIENTSTATE_LOGOUT:
@@ -160,7 +160,6 @@ void imap_cb_read(void *arg)
 void socket_read_cb(int fd UNUSED, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
-	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
 	if (what == EV_READ)
 		imap_cb_read(session);
 	else if (what == EV_TIMEOUT && session->ci->cb_time)

@@ -85,12 +85,12 @@ void trace(trace_t level, const char * module, const char * function, int line, 
 	trace_t syslog_level;
 	va_list ap, cp;
 
-	gchar *message;
+	gchar *message = NULL;
 	static int configured=0;
 	size_t l, maxlen=120;
 
 	/* Return now if we're not logging anything. */
-	if (! level & TRACE_STDERR && ! level & TRACE_SYSLOG)
+	if ( !(level & TRACE_STDERR) && !(level & TRACE_SYSLOG))
 		return;
 
 	va_start(ap, formatstring);
@@ -105,7 +105,7 @@ void trace(trace_t level, const char * module, const char * function, int line, 
 
 	if (level & TRACE_STDERR) {
 		time_t now = time(NULL);
-		struct tm *tmp = localtime(&now);
+		struct tm tmp;
 		char date[32];
 
  		if (! configured) {
@@ -115,7 +115,8 @@ void trace(trace_t level, const char * module, const char * function, int line, 
  		}
  
 		memset(date,0,sizeof(date));
-		strftime(date,32,"%b %d %H:%M:%S", tmp);
+		localtime_r(&now, &tmp);
+		strftime(date,32,"%b %d %H:%M:%S", &tmp);
 
  		fprintf(stderr, STDERRFORMAT, date, hostname, __progname?__progname:"", getpid(), 
 			g_thread_self(), trace_to_text(level), module, function, line, message);
