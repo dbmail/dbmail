@@ -6,8 +6,8 @@
 
 @DPATCH@
 diff -urNad dbmail~/dbmail.conf dbmail/dbmail.conf
---- dbmail~/dbmail.conf	2009-11-26 13:32:30.000000000 +0100
-+++ dbmail/dbmail.conf	2009-11-26 13:33:32.000000000 +0100
+--- dbmail~/dbmail.conf	2009-12-01 17:12:07.000000000 +0100
++++ dbmail/dbmail.conf	2009-12-01 17:14:13.000000000 +0100
 @@ -131,8 +131,8 @@
  # Root privs are used to open a port, then privs
  # are dropped down to the user/group specified here.
