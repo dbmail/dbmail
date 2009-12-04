@@ -448,9 +448,10 @@ static char * dm_ldap_user_getdn(u64_t user_idnr)
 		return NULL;
 	}
 		
+	g_string_free(t,TRUE);
+
 	if (ldap_count_entries(_ldap_conn, ldap_res) < 1) {
 		TRACE(TRACE_DEBUG, "no entries found");
-		g_string_free(t,TRUE);
 		ldap_msgfree(ldap_res);
 		return NULL;
 	}

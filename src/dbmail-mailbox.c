@@ -157,6 +157,13 @@ static void mailbox_set_msginfo(DbmailMailbox *self, GTree *msginfo)
 	if (oldmsginfo) g_tree_destroy(oldmsginfo);
 }
 
+static void MessageInfo_free(void *data)
+{
+	MessageInfo *msginfo = (MessageInfo *)data;
+	g_list_destroy(msginfo->keywords);
+	g_free(msginfo);
+	msginfo = NULL;
+}
 
 int dbmail_mailbox_open(DbmailMailbox *self)
 {
@@ -183,7 +190,8 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	mailbox_uid_msn_new(self);
-	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,NULL,(GDestroyNotify)g_free);
+	// FIXME: leakage on tree-key indicates sync problem with ids/msn
+	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,NULL,(GDestroyNotify)MessageInfo_free);
 
 	c = db_con_get();
 	TRY

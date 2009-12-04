@@ -1341,7 +1341,8 @@ static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 		if (! g_list_next(ids)) break;
 		ids = g_list_next(ids);
 	}
-
+	ids = g_list_first(ids);
+	g_list_free(ids);
 
 	dbmail_imap_session_mailbox_update_recent(self);
 

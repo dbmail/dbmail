@@ -1352,6 +1352,7 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 		
 		/* paramlist */
 		t = imap_append_hash_as_string(t, disposition->param_hash);
+		g_object_unref(disposition);
 		
 		result = dbmail_imap_plist_as_string(t);
 		list = g_list_append_printf(list,"%s",result);
@@ -1996,10 +1997,12 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 			object = g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
 			if (!object) {
 				TRACE(TRACE_INFO, "object part [%d] is null", (int)index-1);
+				g_list_destroy(specs);
 				return NULL;
 			}
 			if (! GMIME_IS_OBJECT(object)) {
 				TRACE(TRACE_INFO, "object part [%d] is not an object", (int)index-1);
+				g_list_destroy(specs);
 				return NULL;
 			}
 
@@ -2013,14 +2016,18 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 			object = GMIME_OBJECT(GMIME_MESSAGE_PART(object)->message);
 			if (!object) {
 				TRACE(TRACE_INFO, "rfc822 part is null");
+				g_list_destroy(specs);
 				return NULL;
 			}
 			if (! GMIME_IS_OBJECT(object)) {
 				TRACE(TRACE_INFO, "rfc822 part is not an object");
+				g_list_destroy(specs);
 				return NULL;
 			}
 		}
 	}
+
+	g_list_destroy(specs);
 
 	return object;
 }

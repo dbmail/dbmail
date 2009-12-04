@@ -1866,6 +1866,8 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		db_con_close(c);
 	END_TRY;
 
+	g_string_free(qs, TRUE);
+
 	if (mailbox_like) mailbox_match_free(mailbox_like);
 	if (t == DM_EQUERY) return t;
 	if (n_rows == 0) return DM_SUCCESS;

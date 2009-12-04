@@ -36,7 +36,7 @@ extern db_param_t _db_params;
 //#define dprint(fmt, args...) TRACE(TRACE_DEBUG, fmt, ##args); printf(fmt, ##args)
 
 #ifndef dprint
-#define dprint(fmt, args...) 0
+#define dprint(fmt, args...) 
 #endif
 
 /*
@@ -432,10 +432,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	dbmail_message_set_internal_date(self, internal_date);
 	g_free(internal_date);
 	g_string_free(m,TRUE);
-	for (depth=0; blist[depth]; depth++)
-		g_free(blist[depth]);
-	g_free(blist);
-
+	g_strfreev(blist);
 	return self;
 }
 
@@ -772,6 +769,7 @@ static int _set_content(DbmailMessage *self, const GString *content)
 	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
 	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_mime_stream_close(stream);
+	g_object_unref(stream);
 
 	return res;
 }
@@ -1347,7 +1345,7 @@ int dbmail_message_store(DbmailMessage *self)
 static void insert_physmessage(DbmailMessage *self, C c)
 {
 	R r;
-	char *internal_date, *frag;
+	char *internal_date = NULL, *frag;
 	int thisyear;
 	volatile u64_t id = 0;
 	struct timeval tv;

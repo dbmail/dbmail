@@ -506,6 +506,10 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 	server_conf->ClientHandler((client_sock *)c);
 
 	g_free(caddr);
+
+	if (c->ssl)
+		SSL_free(c->ssl);
+
 	g_free(c);
 
 	/* reschedule */
