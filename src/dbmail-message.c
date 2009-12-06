@@ -880,9 +880,6 @@ static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, db
 		case DBMAIL_MESSAGE:
 			TRACE(TRACE_DEBUG,"parse message");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
-			// adding a header will prime the gmime message structure, but we want
-			// to add an innocuous header
-//			dbmail_message_set_header(self,"MIME-Version","1.0"); 
 			if (from) {
 				dbmail_message_set_internal_date(self, from);
 				g_free(from);

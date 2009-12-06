@@ -545,10 +545,10 @@ typedef struct {
  * cached message info
  */
 #define IMAP_NFLAGS 6
-typedef struct {
-	// map dbmail_messages
-	u64_t id;
+typedef struct { // map dbmail_messages
 	u64_t mailbox_id;
+	u64_t msn;
+	u64_t uid;
 	u64_t rfcsize;
 	char internaldate[IMAP_INTERNALDATE_LEN];
 	int flags[IMAP_NFLAGS];

@@ -897,7 +897,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 	if (self->fi->getUID) {
 		SEND_SPACE;
-		dbmail_imap_session_buff_printf(self, "UID %llu", msginfo->id);
+		dbmail_imap_session_buff_printf(self, "UID %llu", msginfo->uid);
 	}
 
 	if (self->fi->getMIME_IMB) {

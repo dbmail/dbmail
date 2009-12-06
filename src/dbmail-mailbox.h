@@ -72,13 +72,13 @@ GTree * dbmail_mailbox_get_msginfo(DbmailMailbox *self);
 void dbmail_mailbox_set_id(DbmailMailbox *self, u64_t id);
 u64_t dbmail_mailbox_get_id(DbmailMailbox *self);
 
+void dbmail_mailbox_uid_msn_map(DbmailMailbox *self);
 void dbmail_mailbox_set_uid(DbmailMailbox *self, gboolean uid);
 gboolean dbmail_mailbox_get_uid(DbmailMailbox *self);
 
 int dbmail_mailbox_dump(DbmailMailbox *self, FILE *ostream);
 
 int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t id);
-int dbmail_mailbox_insert_uid(DbmailMailbox *self, u64_t id);
 void dbmail_mailbox_free(DbmailMailbox *self);
 
 char * dbmail_mailbox_ids_as_string(DbmailMailbox *self);

@@ -1299,11 +1299,12 @@ void _ic_append_enter(dm_thread_data *D)
 		//insert new Messageinfo struct into self->mailbox->msginfo
 		//
 		int j = 0;
-		u64_t *uid;
+		u64_t *uid = g_new0(u64_t,1);
 		MessageInfo *msginfo = g_new0(MessageInfo,1);
 
 		/* id */
-		msginfo->id = message_id;
+		msginfo->uid = message_id;
+		msginfo->msn = 0; // as yet unknown
 
 		/* mailbox_id */
 		msginfo->mailbox_id = mboxid;
@@ -1316,18 +1317,15 @@ void _ic_append_enter(dm_thread_data *D)
 		msginfo->keywords = keywords;
 
 		/* internal date */
-		strncpy(msginfo->internaldate, 
-				strlen(sqldate) ? sqldate : "01-Jan-1970 00:00:01 +0100", 
-				IMAP_INTERNALDATE_LEN);
+		strncpy(msginfo->internaldate, strlen(sqldate) ? sqldate : "01-Jan-1970 00:00:01 +0100", IMAP_INTERNALDATE_LEN);
 
 		/* rfcsize */
 		msginfo->rfcsize = strlen(message);
 
-		uid = g_new0(u64_t,1);
 		*uid = message_id;
 		g_tree_insert(self->mailbox->msginfo, uid, msginfo); 
 
-		dbmail_mailbox_insert_uid(self->mailbox, message_id);
+		dbmail_mailbox_uid_msn_map(self->mailbox);
 
 		dbmail_imap_session_mailbox_status(self, TRUE);
 	} else {

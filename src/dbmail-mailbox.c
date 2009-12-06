@@ -39,7 +39,7 @@ DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	assert(id);
 	assert(self);
 
-	dbmail_mailbox_set_id(self,id);
+	dbmail_mailbox_set_id(self, id);
 	dbmail_mailbox_set_uid(self, FALSE);
 
 	if (dbmail_mailbox_open(self))
@@ -104,25 +104,39 @@ gboolean dbmail_mailbox_get_uid(DbmailMailbox *self)
 	return self->uid;
 }
 
-static void uid_msn_map(DbmailMailbox *self)
+void mailbox_uid_msn_new(DbmailMailbox *self)
+{
+	if (self->msn) g_tree_destroy(self->msn);
+	if (self->ids) g_tree_destroy(self->ids);
+
+	self->ids = NULL;
+	self->msn = NULL;
+
+	self->ids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,(GDestroyNotify)g_free);
+	self->msn = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
+	self->rows = 1;
+}
+
+void dbmail_mailbox_uid_msn_map(DbmailMailbox *self)
 {
 	GList *ids = NULL;
-	u64_t *id, *msn = NULL;
+	u64_t *uid, *msn = NULL;
+	MessageInfo *msginfo;
 
-	ids = g_tree_keys(self->ids);
+	mailbox_uid_msn_new(self);
 
-	if (self->msn) g_tree_destroy(self->msn);
-	self->msn = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
-
-	self->rows = 1;
-
+	ids = g_tree_keys(self->msginfo);
 	ids = g_list_first(ids);
 	while (ids) {
-		id = (u64_t *)ids->data;
-		msn = g_tree_lookup(self->ids, id);
-		*msn = self->rows++;
+		uid = (u64_t *)ids->data;
 
-		g_tree_insert(self->msn, msn, id);
+		msginfo = g_tree_lookup(self->msginfo, uid);
+
+		msn = g_new0(u64_t,1);
+		*msn = msginfo->msn = self->rows++;
+
+		g_tree_insert(self->ids, uid, msn);
+		g_tree_insert(self->msn, msn, uid);
 
 		if (! g_list_next(ids)) break;
 		ids = g_list_next(ids);
@@ -130,30 +144,20 @@ static void uid_msn_map(DbmailMailbox *self)
 
 	g_list_free(g_list_first(ids));
 
-	if (self->mbstate) MailboxState_setExists(self->mbstate, g_tree_nnodes(self->ids));
+	if (self->mbstate) MailboxState_setExists(self->mbstate, g_tree_nnodes(self->msginfo));
 
-	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->ids));
+	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->msginfo));
 	TRACE(TRACE_DEBUG,"total [%d] MSNs", g_tree_nnodes(self->msn));
 }
 	
-void mailbox_uid_msn_new(DbmailMailbox *self)
-{
-	if (self->ids) g_tree_destroy(self->ids);
-	if (self->msn) g_tree_destroy(self->msn);
 
-	self->ids = NULL;
-	self->msn = NULL;
-
-	self->ids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	self->msn = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
-	self->rows = 1;
-}
 
 static void mailbox_set_msginfo(DbmailMailbox *self, GTree *msginfo)
 {
 	/* switch to new cache and retire the old one */
 	GTree *oldmsginfo = self->msginfo;
 	self->msginfo = msginfo;
+	dbmail_mailbox_uid_msn_map(self);
 	if (oldmsginfo) g_tree_destroy(oldmsginfo);
 }
 
@@ -171,7 +175,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 	const char *query_result, *keyword;
 	MessageInfo *result;
 	GTree *msginfo;
-	u64_t *uid, *msn;
+	u64_t *uid;
 	u64_t id;
 	C c; R r; volatile int t = FALSE;
 	field_t frag;
@@ -189,9 +193,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 			frag ,DBPFX,DBPFX, self->id,
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
-	mailbox_uid_msn_new(self);
-	// FIXME: leakage on tree-key indicates sync problem with ids/msn
-	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,NULL,(GDestroyNotify)MessageInfo_free);
+	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
 
 	c = db_con_get();
 	TRY
@@ -204,15 +206,11 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 			id = db_result_get_u64(r,IMAP_NFLAGS + 2);
 
 			uid = g_new0(u64_t,1); *uid = id;
-			msn = g_new0(u64_t,1); *msn = i;
-
-			g_tree_insert(self->ids,uid,msn);
-			g_tree_insert(self->msn,msn,uid);
 
 			result = g_new0(MessageInfo,1);
 
 			/* id */
-			result->id = id;
+			result->uid = id;
 
 			/* mailbox_id */
 			result->mailbox_id = self->id;
@@ -232,6 +230,7 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 			result->rfcsize = db_result_get_u64(r,IMAP_NFLAGS + 1);
 
 			g_tree_insert(msginfo, uid, result); 
+
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -292,38 +291,22 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 	return t;
 }
 
-int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t id)
+int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t uid)
 {
 
-	if (! g_tree_remove(self->msginfo, &id)) {
-		TRACE(TRACE_WARNING,"trying to remove unknown UID [%llu]", id);
+	if (! g_tree_remove(self->msginfo, &uid)) {
+		TRACE(TRACE_WARNING,"trying to remove unknown UID [%llu]", uid);
 	}
 
-	if (! g_tree_remove(self->ids, &id)) {
-		TRACE(TRACE_ERR,"trying to remove unknown UID [%llu]", id);
+	if (! g_tree_remove(self->ids, &uid)) {
+		TRACE(TRACE_ERR,"trying to remove unknown UID [%llu]", uid);
 		return DM_EGENERAL;
 	}
 
-	uid_msn_map(self);
+	dbmail_mailbox_uid_msn_map(self);
 
 	if (! self->msginfo)
 		return DM_SUCCESS;
-
-	return DM_SUCCESS;
-}
-
-int dbmail_mailbox_insert_uid(DbmailMailbox *self, u64_t id)
-{
-	u64_t *uid, *msn;
-
-	uid = g_new0(u64_t,1);
-	msn = g_new0(u64_t,1);
-
-	*uid = id;
-	*msn = g_tree_nnodes(self->ids)+1;
-
-	g_tree_insert(self->ids, uid, msn);
-	uid_msn_map(self);
 
 	return DM_SUCCESS;
 }
