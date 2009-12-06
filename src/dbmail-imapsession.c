@@ -565,7 +565,7 @@ void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean no
 static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean not)
 {
 	C c; R r; volatile int t = FALSE;
-	GString *q = g_string_new("");
+	GString *q;
 	gchar *fld, *val, *old, *new = NULL;
 	u64_t *mid;
 	u64_t id;
@@ -621,6 +621,7 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 		snprintf(range,DEF_FRAGSIZE,"BETWEEN %llu AND %llu", self->msg_idnr, self->hi);
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %llu:%llu ceiling %llu [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
+	q = g_string_new("");
 	g_string_printf(q,"SELECT m.message_idnr, n.headername, v.headervalue "
 			"FROM %sheader h "
 			"JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
@@ -663,9 +664,9 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
-		g_string_free(q,TRUE);
 	END_TRY;
 
+	g_string_free(q,TRUE);
 	if (t == DM_EQUERY) return;
 	
 	self->lo += QUERY_BATCHSIZE;
@@ -1693,6 +1694,8 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self)
 	ids = g_tree_keys(self->mailbox->msginfo);
 	ids = g_list_reverse(ids);
 	g_list_foreach(ids, (GFunc) _do_expunge, self);
+	ids = g_list_first(ids);
+	g_list_free(ids);
 
 	if (i > g_tree_nnodes(self->mailbox->msginfo)) {
 		db_mailbox_seq_update(self->mailbox->id);
