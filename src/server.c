@@ -547,13 +547,16 @@ void server_sig_cb(int fd, short event, void *arg)
 
 static int server_set_sighandler(void)
 {
+	sigset_t set;
 	sig_int = g_new0(struct event, 1);
 	sig_hup = g_new0(struct event, 1);
-	sig_pipe = g_new0(struct event, 1);
 
 	signal_set(sig_int, SIGINT, server_sig_cb, sig_int); signal_add(sig_int, NULL);
 	signal_set(sig_hup, SIGHUP, server_sig_cb, sig_hup); signal_add(sig_hup, NULL);
-	signal_set(sig_pipe, SIGPIPE, server_sig_cb, sig_pipe); signal_add(sig_pipe, NULL);
+
+	sigemptyset(&set);
+	sigaddset(&set, SIGPIPE);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
 
 	TRACE(TRACE_INFO, "signal handler placed");
 
