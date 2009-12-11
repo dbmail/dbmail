@@ -298,11 +298,6 @@ int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t uid)
 		TRACE(TRACE_WARNING,"trying to remove unknown UID [%llu]", uid);
 	}
 
-	if (! g_tree_remove(self->ids, &uid)) {
-		TRACE(TRACE_ERR,"trying to remove unknown UID [%llu]", uid);
-		return DM_EGENERAL;
-	}
-
 	dbmail_mailbox_uid_msn_map(self);
 
 	if (! self->msginfo)
