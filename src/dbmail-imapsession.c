@@ -163,6 +163,7 @@ void dbmail_imap_session_delete(ImapSession ** s)
 {
 	ImapSession *self = *s;
 
+	TRACE(TRACE_DEBUG, "[%p]", self);
 	Cache_free(&self->cache);
 
 	if (self->ci) {
