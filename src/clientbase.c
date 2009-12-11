@@ -121,11 +121,17 @@ static int client_error_cb(int sock, int error, void *arg)
 			case EAGAIN:
 			case EINTR:
 				break; // reschedule
-			default:
+
+			case EPIPE: // ignore
 				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
+				client_rbuf_clear(client);
 				client_wbuf_clear(client);
-				client_wbuf_clear(client);
+				break;
+			default:
 				r = -1;
+				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
+				client_rbuf_clear(client);
+				client_wbuf_clear(client);
 				break;
 		}
 	}
