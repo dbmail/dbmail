@@ -2728,11 +2728,20 @@ static void db_set_msgkeywords(C c, u64_t msg_idnr, GList *keywords, int action_
 			db_stmt_exec(s);
 		}
 
+
 		keywords = g_list_first(keywords);
 		while (keywords) {
 			if ((! msginfo) || (! g_list_find_custom(msginfo->keywords, 
 							(char *)keywords->data, 
 							(GCompareFunc)g_ascii_strcasecmp))) {
+
+				if (action_type == IMAPFA_ADD) { // avoid duplicate key errors in case of concurrent inserts
+					s = db_stmt_prepare(c, "DELETE FROM %skeywords WHERE message_idnr=? AND keyword=?", DBPFX);
+					db_stmt_set_u64(s, 1, msg_idnr);
+					db_stmt_set_str(s, 2, (char *)keywords->data);
+					db_stmt_exec(s);
+				}
+
 				s = db_stmt_prepare(c, "INSERT %s INTO %skeywords (message_idnr,keyword) VALUES (?, ?)", 
 						ignore, DBPFX);
 				db_stmt_set_u64(s, 1, msg_idnr);
