@@ -275,7 +275,8 @@ CREATE TABLE dbmail_envelope (
 	envelope	TEXT NOT NULL DEFAULT '',
 	PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX dbmail_envelope_1 ON dbmail_envelope(physmessage_id, id);
+CREATE UNIQUE INDEX dbmail_envelope_1 ON dbmail_envelope(physmessage_id);
+CREATE UNIQUE INDEX dbmail_envelope_2 ON dbmail_envelope(physmessage_id, id);
 
 CREATE SEQUENCE dbmail_mimeparts_id_seq;
 CREATE TABLE dbmail_mimeparts (

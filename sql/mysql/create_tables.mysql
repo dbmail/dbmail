@@ -97,7 +97,8 @@ CREATE TABLE `dbmail_envelope` (
   `physmessage_id` bigint(20) NOT NULL default '0',
   `envelope` text NOT NULL,
   PRIMARY KEY  (`id`),
-  UNIQUE KEY `physmessage_id` (`physmessage_id`,`id`),
+  UNIQUE KEY `physmessage_id_1` (`physmessage_id`),
+  UNIQUE KEY `physmessage_id_2` (`physmessage_id`,`id`),
   CONSTRAINT `dbmail_envelope_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
