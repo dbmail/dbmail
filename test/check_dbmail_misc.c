@@ -72,10 +72,47 @@ START_TEST(test_g_strcasestr)
 }
 END_TEST
 
+char * g_strchomp_c(char *string, char c)
+{
+	size_t len;
+	if (! string) return NULL;
+
+	len = strlen(string);
+	while(len--) {
+		if (string[len] && string[len] == c)
+			string[len] = '\0';
+		else
+			break;
+	}
+	return string;
+}
+
+START_TEST(test_g_strchomp_c)
+{
+	int i;
+	const char *expect = "#Users";
+	char *u, *t, *s[] = {
+		"#Users",
+		"#Users/",
+		"#Users//",
+		"#Users///",
+		"#Users////",
+		NULL
+	};
+	for (i=0; s[i]; i++) {
+		u = g_strdup(s[i]);
+		t = g_strchomp_c(u,'/');
+		fail_unless(strcmp(t,expect)==0,"g_strchomp_c failed [%s] != [%s]", t, expect);
+		g_free(u);
+	}
+
+}
+END_TEST
+
 START_TEST(test_mailbox_remove_namespace)
 {
 
-	char *simple, *username, *namespace;
+	char *t, *simple, *username, *namespace;
 	char *patterns[] = {
 		"#Users/foo/mailbox", 
 		"#Users/foo/*", 
@@ -86,6 +123,7 @@ START_TEST(test_mailbox_remove_namespace)
 		"#Users/%", 
 		"#Users*", 
 		"#Users",
+
 		"#Public/foo/mailbox", 
 		"#Public/foo/*", 
 		"#Public/foo*",
@@ -101,7 +139,6 @@ START_TEST(test_mailbox_remove_namespace)
 		{ NAMESPACE_USER, "foo", "mailbox" },
 		{ NAMESPACE_USER, "foo", "*" },
 		{ NAMESPACE_USER, "foo", "*" },
-
 		{ NAMESPACE_USER, NULL, NULL },
 		{ NAMESPACE_USER, NULL, NULL },
 		{ NAMESPACE_USER, NULL, NULL },
@@ -113,8 +150,8 @@ START_TEST(test_mailbox_remove_namespace)
 		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo/*" },
 		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "foo*" },
 		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "" },
-		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "/" },
-		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "//" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "" },
+		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "" },
 		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "%" },
 		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "*" },
 		{ NAMESPACE_PUBLIC, PUBLIC_FOLDER_USER, "" }
@@ -123,10 +160,15 @@ START_TEST(test_mailbox_remove_namespace)
 	int i;
 
 	for (i = 0; patterns[i]; i++) {
-		simple = (char *)mailbox_remove_namespace(patterns[i], &namespace, &username);
-		fail_unless( ((simple == NULL && expected[i][2] == NULL) || strcmp(simple, expected[i][2])==0),"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n", patterns[i], simple, expected[i][2] );
-		fail_unless( ((username== NULL && expected[i][1] == NULL) || strcmp(username, expected[i][1])==0) ,"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n" , patterns[i], username, expected[i][1]);
-		fail_unless( ((namespace == NULL && expected[i][0] == NULL) || strcmp(namespace, expected[i][0])==0) ,"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n" , patterns[i], namespace, expected[i][0]);
+		t = g_strdup(patterns[i]);
+		simple = mailbox_remove_namespace(t, &namespace, &username);
+		fail_unless(((simple == NULL && expected[i][2] == NULL) || strcmp(simple, expected[i][2])==0),
+			"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n", patterns[i], simple, expected[i][2] );
+		fail_unless( ((username== NULL && expected[i][1] == NULL) || strcmp(username, expected[i][1])==0),
+			"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n" , patterns[i], username, expected[i][1]);
+		fail_unless( ((namespace == NULL && expected[i][0] == NULL) || strcmp(namespace, expected[i][0])==0),
+			"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n" , patterns[i], namespace, expected[i][0]);
+		g_free(t);
 	}
 
 }
@@ -391,6 +433,7 @@ Suite *dbmail_misc_suite(void)
 	
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_g_strcasestr);
+	tcase_add_test(tc_misc, test_g_strchomp_c);
 	tcase_add_test(tc_misc, test_mailbox_remove_namespace);
 	tcase_add_test(tc_misc, test_dbmail_iconv_str_to_db);
 	tcase_add_test(tc_misc, test_dbmail_iconv_decode_address);

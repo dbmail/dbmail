@@ -42,16 +42,16 @@ typedef struct {
 	u64_t unseen;
 	u64_t owner_id;
 	u64_t size;
-//	GTree *keywords;
 
 	GList *sorted;		// ordered list of UID values
 
 	MailboxState_T mbstate;	// cache mailbox metadata;
-	GTree *msginfo; 	// cache MessageInfo
 
 	GTree *found;		// search result (key: uid, value: msn)
-	GTree *ids; 		// key: uid, value: msn
-	GTree *msn; 		// key: msn, value: uid
+
+//	GTree *msginfo; 	// cache MessageInfo
+//	GTree *ids; 		// key: uid, value: msn
+//	GTree *msn; 		// key: msn, value: uid
 
 	GNode *search;
 	gchar *charset;		// charset used during search/sort
@@ -78,7 +78,6 @@ gboolean dbmail_mailbox_get_uid(DbmailMailbox *self);
 
 int dbmail_mailbox_dump(DbmailMailbox *self, FILE *ostream);
 
-int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t id);
 void dbmail_mailbox_free(DbmailMailbox *self);
 
 char * dbmail_mailbox_ids_as_string(DbmailMailbox *self);

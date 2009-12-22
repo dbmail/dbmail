@@ -131,14 +131,13 @@ void dm_thread_data_free(gpointer data)
  * through the main thread async queue. This data
  * is written directly to the output event
  */
-int dm_thread_data_sendmessage(gpointer data)
+void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
 	if (D->data && session && session->state < CLIENTSTATE_LOGOUT) {
-		return ci_write(session->ci, "%s", (char *)D->data);
+		ci_write(session->ci, "%s", (char *)D->data);
 	}
-	return 0;
 }
 
 /* 

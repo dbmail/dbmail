@@ -863,14 +863,14 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	u64_t *id = uid;
 	gboolean reportflags = FALSE;
 
-	MessageInfo *msginfo = g_tree_lookup(self->mailbox->msginfo, uid);
+	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), uid);
 
 	if (! msginfo) {
 		TRACE(TRACE_INFO, "[%p] failed to lookup msginfo struct for message [%llu]", self, *uid);
 		return 0;
 	}
 	
-	id = g_tree_lookup(self->mailbox->ids,uid);
+	id = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate),uid);
 
 	g_return_val_if_fail(id,-1);
 
@@ -1253,28 +1253,29 @@ int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr)
 	return 0;
 }
 
-static void notify_fetch(ImapSession *self, DbmailMailbox *newbox, u64_t *uid)
+static void notify_fetch(ImapSession *self, MailboxState_T N, u64_t *uid)
 {
 	u64_t *msn;
 	char *oldflags = NULL, *newflags = NULL;
 	MessageInfo *old = NULL, *new = NULL;
+	MailboxState_T M = self->mailbox->mbstate;
 
 	assert(uid);
 
-	if (! (newbox->msginfo && *uid && (new = g_tree_lookup(newbox->msginfo, uid))))
+	if (! (MailboxState_getMsginfo(N) && *uid && (new = g_tree_lookup(MailboxState_getMsginfo(N), uid))))
 		return;
 
-	if (! (msn = g_tree_lookup(newbox->ids, uid))) {
+	if (! (msn = g_tree_lookup(MailboxState_getIds(M), uid))) {
 		TRACE(TRACE_DEBUG,"[%p] can't find uid [%llu]", self, *uid);
 		return;
 	}
 
-	old = g_tree_lookup(self->mailbox->msginfo, uid);
+	old = g_tree_lookup(MailboxState_getMsginfo(M), uid);
 
 	// FETCH
 	if (old)
-		oldflags = imap_flags_as_string(self->mailbox->mbstate, old);
-	newflags = imap_flags_as_string(self->mailbox->mbstate, new);
+		oldflags = imap_flags_as_string(M, old);
+	newflags = imap_flags_as_string(M, new);
 
 	if ((! oldflags) || (! MATCH(oldflags,newflags))) {
 		char *t = NULL;
@@ -1294,51 +1295,72 @@ static gboolean notify_expunge(ImapSession *self, u64_t *uid)
 {
 	u64_t * msn;
 
-	if (! (msn = g_tree_lookup(self->mailbox->ids, uid))) {
+	if (! (msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), uid))) {
 		TRACE(TRACE_DEBUG,"[%p] can't find uid [%llu]", self, *uid);
 		return TRUE;
 	}
 
 	switch (self->command_type) {
-		case IMAP_COMM_EXPUNGE:
-		case IMAP_COMM_CHECK:
-		case IMAP_COMM_NOOP:
-		case IMAP_COMM_IDLE:
-			dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", *msn);
-			dbmail_mailbox_remove_uid(self->mailbox, *uid);
+		case IMAP_COMM_FETCH:
+		case IMAP_COMM_STORE:
+		case IMAP_COMM_SEARCH:
+			break;
 		default:
+			dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", *msn);
+			MailboxState_removeUid(self->mailbox->mbstate, *uid);
 		break;
 	}
 
 	return FALSE;
 }
-
-static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
+static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 {
-	u64_t *uid, *id;
-	DbmailMailbox *old;
+	u64_t *uid, exists;
+	MailboxState_T M;
 	GList *ids;
-	if (! new) return;
+	if (! N) return;
 
-	ids  = g_tree_keys(self->mailbox->ids);
+	M = self->mailbox->mbstate;
+	exists = MailboxState_getExists(M);
+
+	ids  = g_tree_keys(MailboxState_getIds(M));
 	ids = g_list_reverse(ids);
 
 	// send expunge updates
 	while (ids) {
 		uid = (u64_t *)ids->data;
-		if (! g_tree_lookup(new->ids, uid))
+		if (! g_tree_lookup(MailboxState_getIds(N), uid)) {
 			notify_expunge(self, uid);
+			exists--;
+		}
 
 		if (! g_list_next(ids)) break;
 		ids = g_list_next(ids);
 	}
+	ids = g_list_first(ids);
+	g_list_free(ids);
+
+	// override
+	MailboxState_setExists(N, exists);
+}
+
+static void mailbox_notify_update(ImapSession *self, MailboxState_T N)
+{
+	u64_t *uid, *id;
+	MailboxState_T M;
+	GList *ids;
+	if (! N) return;
+
+	M = self->mailbox->mbstate;
+
+	ids  = g_tree_keys(MailboxState_getIds(M));
 
 	// send fetch updates
 	ids = g_list_first(ids);
 	while (ids) {
 		uid = (u64_t *)ids->data;
 
-		notify_fetch(self, new, uid);
+		notify_fetch(self, N, uid);
 
 		if (! g_list_next(ids)) break;
 		ids = g_list_next(ids);
@@ -1349,12 +1371,10 @@ static void mailbox_notify_update(ImapSession *self, DbmailMailbox *new)
 	dbmail_imap_session_mailbox_update_recent(self);
 
 	// switch active mailbox view
-	old = self->mailbox;
-	self->mailbox = new;
+	self->mailbox->mbstate = N;
 	id = g_new0(u64_t,1);
-	*id = MailboxState_getId(new->mbstate);
-	g_tree_replace(self->mbxinfo, id, new->mbstate);
-	dbmail_mailbox_free(old);
+	*id = MailboxState_getId(N);
+	g_tree_replace(self->mbxinfo, id, N);
 }
 
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
@@ -1375,15 +1395,14 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	#     "Headers Only".
 	*/
 
-	int res;
-        DbmailMailbox *mailbox = NULL;
-	gboolean showexists = FALSE, showrecent = FALSE, unhandled=FALSE, showflags=FALSE;
+	MailboxState_T M, N = NULL;
+	gboolean showexists = FALSE, showrecent = FALSE, unhandled = FALSE, showflags = FALSE;
+	unsigned oldexists;
 
 	if (self->state != CLIENTSTATE_SELECTED) return FALSE;
 
 	if (update) {
-		MailboxState_T M, N;
-		unsigned oldseq, oldexists, oldrecent;
+		unsigned oldseq, oldrecent;
 		u64_t olduidnext;
 		char *oldflags, *newflags;
 
@@ -1395,23 +1414,17 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		olduidnext = MailboxState_getUidnext(M);
 
                 // re-read flags and counters
-		N = MailboxState_new(MailboxState_getId(M));
-
-		MailboxState_setOwner(N, self->userid);
-		if ((res = MailboxState_reload(N, self->userid)) != DM_SUCCESS) return res;
+		N = MailboxState_new(self->mailbox->id);
 
 		if (oldseq != MailboxState_getSeq(N)) {
 			// rebuild uid/msn trees
 			// ATTN: new messages shouldn't be visible in any way to a 
 			// client session until it has been announced with EXISTS
-			mailbox = dbmail_mailbox_new(self->mailbox->id);
-			mailbox->mbstate = N;
 
 			// EXISTS response may never decrease
-			if ((MailboxState_getUidnext(N) > olduidnext) && (MailboxState_getExists(N) > oldexists)) {
-				showexists = TRUE;
-			} else {
-				MailboxState_setExists(N,oldexists);
+			if ((MailboxState_getUidnext(N) > olduidnext)) {
+				if (MailboxState_getExists(N) > oldexists)
+					showexists = TRUE;
 			}
 
 			// RECENT response only when changed
@@ -1435,13 +1448,12 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 		case IMAP_COMM_APPEND:
 			showrecent = FALSE;
-			showexists = TRUE;
-		break;
-
+			break;
 		case IMAP_COMM_NOOP:
 		case IMAP_COMM_FETCH:
 		case IMAP_COMM_IDLE:
 		case IMAP_COMM_CHECK:
+		case IMAP_COMM_COPY:
 			// ok show them if needed
 		break;
 
@@ -1451,31 +1463,26 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	}
 
 	// never decrease without first sending expunge !!
-	if (mailbox && showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(mailbox->mbstate));
-	if (mailbox && showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(mailbox->mbstate));
-
-	if (mailbox && showflags) {
-		char *flags = MailboxState_flags(mailbox->mbstate);
+	if (N && (MailboxState_getExists(N) > MailboxState_getExists(M))) 
+		showexists = TRUE;
+	if (N && showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(N));
+	if (N && showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(N));
+	if (N) mailbox_notify_expunge(self, N);
+	if (N && showflags) {
+		char *flags = MailboxState_flags(N);
 		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
-		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)]\r\n", flags);
+		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)] Flags allowed.\r\n", flags);
 		g_free(flags);
 	}
+	if (N) mailbox_notify_update(self, N);
 
-	if (update) {
-		if (unhandled)
-			TRACE(TRACE_ERR, "[%p] EXISTS/RECENT changed but client "
-				"is not notified [%d]", self, self->command_type);
-
-		mailbox_notify_update(self, mailbox);
-	}
 
 	return 0;
 }
 
-static gboolean _get_mailbox(u64_t UNUSED *id, MailboxState_T M, gpointer data)
+static gboolean _get_mailbox(u64_t UNUSED *id, MailboxState_T M, gpointer UNUSED data)
 {
-	ImapSession *self = (ImapSession *)data;
-	return MailboxState_preload(M, self->userid);
+	return MailboxState_preload(M);
 }
 
 static void mailboxstate_destroy(MailboxState_T M)
@@ -1514,7 +1521,7 @@ static void _get_mbxinfo(ImapSession *self)
 		return;
 	}
 
-	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, (gpointer)self);
+	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, NULL);
 
 	if (self->mbxinfo) old = self->mbxinfo;
 	self->mbxinfo = mbxinfo;
@@ -1541,7 +1548,7 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 		id = g_new0(u64_t,1);
 		*id = mailbox_id;
 		M = MailboxState_new(mailbox_id);
-		_get_mailbox(0,M,(gpointer)self);
+		_get_mailbox(0,M,NULL);
 		if (MailboxState_getName(M)) {
 			g_tree_insert(self->mbxinfo, id, M);
 		} else {
@@ -1611,7 +1618,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 		uid = (gchar *)recent->data;
 		id = strtoull(uid, NULL, 10);
 		assert(id);
-		if ( (msginfo = g_tree_lookup(self->mailbox->msginfo, &id)) != NULL) {
+		if ( (msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), &id)) != NULL) {
 			msginfo->flags[IMAP_FLAG_RECENT] = 0;
 		} else {
 			TRACE(TRACE_WARNING,"[%p] can't find msginfo for [%llu]", self, id);
@@ -1666,10 +1673,7 @@ int dbmail_imap_session_set_state(ImapSession *self, clientstate_t state)
 
 static gboolean _do_expunge(u64_t *id, ImapSession *self)
 {
-	MessageInfo *msginfo;
-
-	msginfo = g_tree_lookup(self->mailbox->msginfo, id);
-	
+	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), id);
 	assert(msginfo);
 
 	if (! msginfo->flags[IMAP_FLAG_DELETED]) return FALSE;
@@ -1685,20 +1689,21 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self)
 	u64_t mailbox_size;
 	int i;
 	GList *ids;
+	MailboxState_T M = self->mailbox->mbstate;
 
-	if (! (i = g_tree_nnodes(self->mailbox->msginfo)))
+	if (! (i = g_tree_nnodes(MailboxState_getMsginfo(M))))
 		return DM_SUCCESS;
 
 	if (db_get_mailbox_size(self->mailbox->id, 1, &mailbox_size) == DM_EQUERY)
 		return DM_EQUERY;
 
-	ids = g_tree_keys(self->mailbox->msginfo);
+	ids = g_tree_keys(MailboxState_getMsginfo(M));
 	ids = g_list_reverse(ids);
 	g_list_foreach(ids, (GFunc) _do_expunge, self);
 	ids = g_list_first(ids);
 	g_list_free(ids);
 
-	if (i > g_tree_nnodes(self->mailbox->msginfo)) {
+	if (i > g_tree_nnodes(MailboxState_getMsginfo(M))) {
 		db_mailbox_seq_update(self->mailbox->id);
 		if (! dm_quota_user_dec(self->userid, mailbox_size))
 			return DM_EQUERY;
@@ -1898,7 +1903,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 	max = strlen(s);
 
-	TRACE(TRACE_DEBUG,"[%p] tokenize [%u/%u] [%s]", self, max, self->rbuff_size, buffer);
+	TRACE(TRACE_DEBUG,"[%p] tokenize [%lu/%lu] [%s]", self, max, self->rbuff_size, buffer);
 
 	assert(max <= MAX_LINESIZE);
 
@@ -1950,7 +1955,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			strncat(self->args[self->args_idx], buffer, got);
 			self->rbuff_size -= got;
 			if (self->rbuff_size <= 0) {
-				TRACE(TRACE_DEBUG,"string-literal complete [%u:%s]", self->rbuff_size, buffer);
+				TRACE(TRACE_DEBUG,"string-literal complete [%lu:%s]", self->rbuff_size, buffer);
 				self->args_idx++;
 				i += got;
 			} else {

@@ -143,7 +143,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer);
  */
 void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave, gpointer data);
 
-int dm_thread_data_sendmessage(gpointer data);
+void dm_thread_data_sendmessage(gpointer data);
 void _ic_cb_leave(gpointer data);
 
 #endif

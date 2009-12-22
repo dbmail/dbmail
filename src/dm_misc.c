@@ -179,7 +179,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 /* Strips off the #Users or #Public namespace, returning
  * the simple name, the namespace and username, if present. */
 
-const char *mailbox_remove_namespace(const char *name, char **namespace, char **username)
+char *mailbox_remove_namespace(char *name, char **namespace, char **username)
 {
 	char *temp = NULL, *user = NULL;
 	size_t ns_user_len = 0;
@@ -194,9 +194,11 @@ const char *mailbox_remove_namespace(const char *name, char **namespace, char **
 	if (namespace) *namespace = NULL;
 
 	fq_name_len = strlen(fq_name);
-	while (fq_name_len && g_str_has_suffix(fq_name,"/")) {
-		fq_name[fq_name_len-1] = '\0';
+	while (fq_name_len) {
+		if (! g_str_has_suffix(fq_name,"/"))
+			break;
 		fq_name_len--;
+		fq_name[fq_name_len] = '\0';
 	}
 
  	TRACE(TRACE_DEBUG,"[%s]", fq_name);

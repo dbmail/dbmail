@@ -61,7 +61,7 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right)
 	u64_t anyone_userid;
 	int test;
 	
-	MailboxState_reload(S, userid);
+	MailboxState_reload(S);
 	switch(right) {
 		case ACL_RIGHT_SEEN:
 		case ACL_RIGHT_WRITE:

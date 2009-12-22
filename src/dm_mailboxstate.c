@@ -50,18 +50,222 @@ struct T {
 	//
 	char *name;
 	GTree *keywords;
+	GTree *msginfo;
+	GTree *ids;
+	GTree *msn;
 };
 
 /* */
+
+static void MailboxState_uid_msn_new(T M)
+{
+	if (M->msn) g_tree_destroy(M->msn);
+	M->msn = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
+
+	if (M->ids) g_tree_destroy(M->ids);
+	M->ids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,(GDestroyNotify)g_free);
+}
+static void MessageInfo_free(MessageInfo *m)
+{
+	g_list_destroy(m->keywords);
+	g_free(m);
+}
+
 T MailboxState_new(u64_t id)
 {
 	T M;
+	unsigned nrows = 0, i = 0, j, k;
+	const char *query_result, *keyword;
+	MessageInfo *result;
+	GTree *msginfo;
+	u64_t *uid;
+	C c; R r; volatile int t = FALSE;
+	field_t frag;
+	INIT_QUERY;
 	
 	M = g_malloc0(sizeof(*M));
 	M->id = id;
 	M->keywords = g_tree_new_full((GCompareDataFunc)dm_strcasecmpdata, NULL,(GDestroyNotify)g_free,NULL);
+	MailboxState_reload(M);
+
+	k = 0;
+	date2char_str("internal_date", &frag);
+	snprintf(query, DEF_QUERYSIZE,
+			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
+			"draft_flag, recent_flag, %s, rfcsize, message_idnr "
+			"FROM %smessages m "
+			"JOIN %sphysmessage p ON p.id = m.physmessage_id "
+			"AND mailbox_idnr = %llu AND status IN (%d,%d) "
+			"ORDER BY message_idnr ASC",
+			frag ,DBPFX,DBPFX, M->id,
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+
+	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
+
+	c = db_con_get();
+	TRY
+		r = db_query(c,query);
+
+		i = 0;
+		while (db_result_next(r)) {
+			i++;
+
+			id = db_result_get_u64(r,IMAP_NFLAGS + 2);
+
+			uid = g_new0(u64_t,1); *uid = id;
+
+			result = g_new0(MessageInfo,1);
+
+			/* id */
+			result->uid = id;
+
+			/* mailbox_id */
+			result->mailbox_id = M->id;
+
+			/* flags */
+			for (j = 0; j < IMAP_NFLAGS; j++)
+				result->flags[j] = db_result_get_bool(r,j);
+
+			/* internal date */
+			query_result = db_result_get(r,IMAP_NFLAGS);
+			strncpy(result->internaldate,
+					(query_result) ? query_result :
+					"01-Jan-1970 00:00:01 +0100",
+					IMAP_INTERNALDATE_LEN);
+
+			/* rfcsize */
+			result->rfcsize = db_result_get_u64(r,IMAP_NFLAGS + 1);
+
+			g_tree_insert(msginfo, uid, result); 
+
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	END_TRY;
+
+	if (t == DM_EQUERY) {
+		db_con_close(c);
+		return NULL;
+	}
+
+	db_con_clear(c);
+
+	if (! i) {
+		TRACE(TRACE_DEBUG, "empty mailbox");
+		MailboxState_setMsginfo(M, msginfo);
+		db_con_close(c);
+		return M;
+	}
+
+	memset(query,0,sizeof(query));
+	snprintf(query, DEF_QUERYSIZE,
+		"SELECT k.message_idnr, keyword FROM %skeywords k "
+		"JOIN %smessages m USING (message_idnr) "
+		"JOIN %smailboxes b USING (mailbox_idnr) "
+		"WHERE b.mailbox_idnr = %llu AND m.status < %d",
+		DBPFX, DBPFX, DBPFX,
+		M->id, MESSAGE_STATUS_DELETE);
+
+	TRY
+		nrows = 0;
+		r = db_query(c,query);
+		while (db_result_next(r)) {
+			nrows++;
+			id = db_result_get_u64(r,0);
+			keyword = db_result_get(r,1);
+			if ((result = g_tree_lookup(msginfo, &id)) != NULL)
+				result->keywords = g_list_append(result->keywords, g_strdup(keyword));
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (t == DM_EQUERY) {
+		g_tree_destroy(msginfo);
+		return NULL;
+	}
+
+	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");
+
+	MailboxState_setMsginfo(M, msginfo);
 
 	return M;
+}
+
+void MailboxState_remap(T M)
+{
+	GList *ids = NULL;
+	u64_t *uid, *msn = NULL, rows = 1;
+	MessageInfo *msginfo;
+
+	MailboxState_uid_msn_new(M);
+
+	ids = g_tree_keys(M->msginfo);
+	ids = g_list_first(ids);
+	while (ids) {
+		uid = (u64_t *)ids->data;
+
+		msginfo = g_tree_lookup(M->msginfo, uid);
+
+		msn = g_new0(u64_t,1);
+		*msn = msginfo->msn = rows++;
+
+		g_tree_insert(M->ids, uid, msn);
+		g_tree_insert(M->msn, msn, uid);
+
+		if (! g_list_next(ids)) break;
+		ids = g_list_next(ids);
+	}
+
+	g_list_free(g_list_first(ids));
+
+	TRACE(TRACE_DEBUG,"total [%d] UIDs [%d] MSNs", g_tree_nnodes(M->ids), g_tree_nnodes(M->msn));
+}
+	
+GTree * MailboxState_getMsginfo(T M)
+{
+	return M->msginfo;
+}
+
+void MailboxState_setMsginfo(T M, GTree *msginfo)
+{
+	GTree *oldmsginfo = M->msginfo;
+	M->msginfo = msginfo;
+	MailboxState_remap(M);
+	if (oldmsginfo) g_tree_destroy(oldmsginfo);
+}
+
+void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo)
+{
+	u64_t *id = g_new0(u64_t,1);
+	*id = uid;
+	g_tree_insert(M->msginfo, id, msginfo); 
+	MailboxState_remap(M);
+}
+
+int MailboxState_removeUid(T M, u64_t uid)
+{
+	if (! g_tree_remove(M->msginfo, &uid)) {
+		TRACE(TRACE_WARNING,"trying to remove unknown UID [%llu]", uid);
+	}
+
+	MailboxState_remap(M);
+
+	return DM_SUCCESS;
+}
+
+GTree * MailboxState_getIds(T M)
+{
+	return M->ids;
+}
+
+GTree * MailboxState_getMsn(T M)
+{
+	return M->msn;
 }
 
 void MailboxState_setId(T M, u64_t id)
@@ -72,6 +276,7 @@ u64_t MailboxState_getId(T M)
 {
 	return M->id;
 }
+
 u64_t MailboxState_getSeq(T M)
 {
 	return M->seq;
@@ -84,6 +289,9 @@ void MailboxState_setExists(T M, u64_t exists)
 
 unsigned MailboxState_getExists(T M)
 {
+	unsigned real = g_tree_nnodes(M->msginfo);
+	if (real > M->exists)
+		M->exists = real;
 	return M->exists;
 }
 
@@ -202,7 +410,20 @@ void MailboxState_free(T *M)
 {
 	T s = *M;
 	if (s->name) g_free(s->name);
+	s->name = NULL;
+
 	g_tree_destroy(s->keywords);
+	s->keywords = NULL;
+
+	if (s->msn) g_tree_destroy(s->msn);
+	s->msn = NULL;
+
+	if (s->ids) g_tree_destroy(s->ids);		
+	s->ids = NULL;
+
+	if (s->msginfo) g_tree_destroy(s->msginfo);
+	s->msginfo = NULL;
+
 	s->id = 0;
 	s->name = NULL;
 	s->keywords = NULL;
@@ -232,7 +453,7 @@ static int db_getmailbox_flags(T M)
 	return t;
 }
 
-static int db_getmailbox_metadata(T M, u64_t user_idnr)
+static int db_getmailbox_metadata(T M)
 {
 	/* query mailbox for LIST results */
 	C c; R r; volatile int t = DM_SUCCESS;
@@ -257,9 +478,8 @@ static int db_getmailbox_metadata(T M, u64_t user_idnr)
 			
 			/* name */
 			name = g_strdup(db_result_get(r,i++));
-			if (! user_idnr) user_idnr = M->owner_id;
 
-			mbxname = mailbox_add_namespace(name, M->owner_id, user_idnr);
+			mbxname = mailbox_add_namespace(name, M->owner_id, M->owner_id);
 			fqname = g_string_new(mbxname);
 			fqname = g_string_truncate(fqname,IMAP_MAX_MAILBOX_NAMELEN);
 			MailboxState_setName(M, fqname->str);
@@ -459,16 +679,16 @@ static int db_getmailbox_seq(T M)
 	return t;
 }
 
-int MailboxState_preload(T M, u64_t userid)
+int MailboxState_preload(T M)
 {
 	int res;
-	if ((res = db_getmailbox_metadata(M, userid)) != DM_SUCCESS)
+	if ((res = db_getmailbox_metadata(M)) != DM_SUCCESS)
 		return res;
 
 	return DM_SUCCESS;
 }
 
-int MailboxState_reload(T M, u64_t userid)
+int MailboxState_reload(T M)
 {
 	int res;
 	u64_t oldseq;
@@ -489,7 +709,7 @@ int MailboxState_reload(T M, u64_t userid)
 		return res;
 	if ((res = db_getmailbox_keywords(M)) != DM_SUCCESS)
 		return res;
-	if ((res = db_getmailbox_metadata(M, userid)) != DM_SUCCESS)
+	if ((res = db_getmailbox_metadata(M)) != DM_SUCCESS)
 		return res;
 
 	return DM_SUCCESS;

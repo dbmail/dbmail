@@ -67,7 +67,7 @@ START_TEST(test_createdestroy)
 {
 	u64_t id = get_mailbox_id("INBOX");
 	MailboxState_T M = MailboxState_new(id);
-	MailboxState_reload(M,0);
+	MailboxState_reload(M);
 	MailboxState_free(&M);
 }
 END_TEST

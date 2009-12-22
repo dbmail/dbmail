@@ -42,9 +42,6 @@ DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	dbmail_mailbox_set_id(self, id);
 	dbmail_mailbox_set_uid(self, FALSE);
 
-	if (dbmail_mailbox_open(self))
-		TRACE(TRACE_ERR,"mailbox open failed [%llu]", id);
-
 	return self;
 }
 
@@ -58,14 +55,8 @@ static gboolean _node_free(GNode *node, gpointer dummy UNUSED)
 
 void dbmail_mailbox_free(DbmailMailbox *self)
 {
-	if (self->ids) g_tree_destroy(self->ids);		
-	if (self->msn) g_tree_destroy(self->msn);
 	if (self->found) g_tree_destroy(self->found);
 	if (self->sorted) g_list_destroy(self->sorted);
-	if (self->msginfo) {
-		g_tree_destroy(self->msginfo);
-		self->msginfo = NULL;
-	}
 	if (self->search) {
 		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, (GNodeTraverseFunc)_node_free, NULL);
 		g_node_destroy(self->search);
@@ -104,205 +95,15 @@ gboolean dbmail_mailbox_get_uid(DbmailMailbox *self)
 	return self->uid;
 }
 
-void mailbox_uid_msn_new(DbmailMailbox *self)
-{
-	if (self->msn) g_tree_destroy(self->msn);
-	if (self->ids) g_tree_destroy(self->ids);
-
-	self->ids = NULL;
-	self->msn = NULL;
-
-	self->ids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,(GDestroyNotify)g_free);
-	self->msn = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
-	self->rows = 1;
-}
-
 void dbmail_mailbox_uid_msn_map(DbmailMailbox *self)
 {
-	GList *ids = NULL;
-	u64_t *uid, *msn = NULL;
-	MessageInfo *msginfo;
-
-	mailbox_uid_msn_new(self);
-
-	ids = g_tree_keys(self->msginfo);
-	ids = g_list_first(ids);
-	while (ids) {
-		uid = (u64_t *)ids->data;
-
-		msginfo = g_tree_lookup(self->msginfo, uid);
-
-		msn = g_new0(u64_t,1);
-		*msn = msginfo->msn = self->rows++;
-
-		g_tree_insert(self->ids, uid, msn);
-		g_tree_insert(self->msn, msn, uid);
-
-		if (! g_list_next(ids)) break;
-		ids = g_list_next(ids);
-	}
-
-	g_list_free(g_list_first(ids));
-
-	if (self->mbstate) MailboxState_setExists(self->mbstate, g_tree_nnodes(self->msginfo));
-
-	TRACE(TRACE_DEBUG,"total [%d] UIDs", g_tree_nnodes(self->msginfo));
-	TRACE(TRACE_DEBUG,"total [%d] MSNs", g_tree_nnodes(self->msn));
-}
-	
-
-
-static void mailbox_set_msginfo(DbmailMailbox *self, GTree *msginfo)
-{
-	/* switch to new cache and retire the old one */
-	GTree *oldmsginfo = self->msginfo;
-	self->msginfo = msginfo;
-	dbmail_mailbox_uid_msn_map(self);
-	if (oldmsginfo) g_tree_destroy(oldmsginfo);
-}
-
-static void MessageInfo_free(void *data)
-{
-	MessageInfo *msginfo = (MessageInfo *)data;
-	g_list_destroy(msginfo->keywords);
-	g_free(msginfo);
-	msginfo = NULL;
+	MailboxState_remap(self->mbstate);
 }
 
 int dbmail_mailbox_open(DbmailMailbox *self)
 {
-	unsigned nrows = 0, i = 0, j, k;
-	const char *query_result, *keyword;
-	MessageInfo *result;
-	GTree *msginfo;
-	u64_t *uid;
-	u64_t id;
-	C c; R r; volatile int t = FALSE;
-	field_t frag;
-	INIT_QUERY;
-	
-	k = 0;
-	date2char_str("internal_date", &frag);
-	snprintf(query, DEF_QUERYSIZE,
-			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-			"draft_flag, recent_flag, %s, rfcsize, message_idnr "
-			"FROM %smessages m "
-			"JOIN %sphysmessage p ON p.id = m.physmessage_id "
-			"AND mailbox_idnr = %llu AND status IN (%d,%d) "
-			"ORDER BY message_idnr ASC",
-			frag ,DBPFX,DBPFX, self->id,
-			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-
-	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
-
-	c = db_con_get();
-	TRY
-		r = db_query(c,query);
-
-		i = 0;
-		while (db_result_next(r)) {
-			i++;
-
-			id = db_result_get_u64(r,IMAP_NFLAGS + 2);
-
-			uid = g_new0(u64_t,1); *uid = id;
-
-			result = g_new0(MessageInfo,1);
-
-			/* id */
-			result->uid = id;
-
-			/* mailbox_id */
-			result->mailbox_id = self->id;
-
-			/* flags */
-			for (j = 0; j < IMAP_NFLAGS; j++)
-				result->flags[j] = db_result_get_bool(r,j);
-
-			/* internal date */
-			query_result = db_result_get(r,IMAP_NFLAGS);
-			strncpy(result->internaldate,
-					(query_result) ? query_result :
-					"01-Jan-1970 00:00:01 +0100",
-					IMAP_INTERNALDATE_LEN);
-
-			/* rfcsize */
-			result->rfcsize = db_result_get_u64(r,IMAP_NFLAGS + 1);
-
-			g_tree_insert(msginfo, uid, result); 
-
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	END_TRY;
-
-	if (t == DM_EQUERY) {
-		db_con_close(c);
-		return t;
-	}
-
-	db_con_clear(c);
-
-	if (! i) {
-		TRACE(TRACE_DEBUG, "empty mailbox");
-		mailbox_set_msginfo(self, msginfo);
-		db_con_close(c);
-		return t;
-	}
-
-	memset(query,0,sizeof(query));
-	snprintf(query, DEF_QUERYSIZE,
-		"SELECT k.message_idnr, keyword FROM %skeywords k "
-		"JOIN %smessages m USING (message_idnr) "
-		"JOIN %smailboxes b USING (mailbox_idnr) "
-		"WHERE b.mailbox_idnr = %llu AND m.status < %d",
-		DBPFX, DBPFX, DBPFX,
-		self->id, MESSAGE_STATUS_DELETE);
-
-	TRY
-		nrows = 0;
-		r = db_query(c,query);
-		while (db_result_next(r)) {
-			nrows++;
-			id = db_result_get_u64(r,0);
-			keyword = db_result_get(r,1);
-			if ((result = g_tree_lookup(msginfo, &id)) != NULL)
-				result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) {
-		g_tree_destroy(msginfo);
-		return t;
-	}
-
-	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");
-
-	mailbox_set_msginfo(self, msginfo);
-
-	TRACE(TRACE_DEBUG,"mailbox [%llu] ids [%d], msn [%d]", self->id, g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
-
-	return t;
-}
-
-int dbmail_mailbox_remove_uid(DbmailMailbox *self, u64_t uid)
-{
-
-	if (! g_tree_remove(self->msginfo, &uid)) {
-		TRACE(TRACE_WARNING,"trying to remove unknown UID [%llu]", uid);
-	}
-
-	dbmail_mailbox_uid_msn_map(self);
-
-	if (! self->msginfo)
-		return DM_SUCCESS;
-
+	if ((self->mbstate = MailboxState_new(self->id)) == NULL)
+		return DM_EQUERY;
 	return DM_SUCCESS;
 }
 
@@ -379,9 +180,12 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 	GList *ids = NULL;
 	u64_t msgid, physid, *id;
 	DbmailMessage *m;
+	GTree *uids;
 	int count = 0;
 	C c; R r; volatile int t = FALSE;
 	INIT_QUERY;
+
+	uids = MailboxState_getIds(self->mbstate);
 
 	snprintf(query,DEF_QUERYSIZE,"SELECT id,message_idnr FROM %sphysmessage p "
 		"JOIN %smessages m ON p.id=m.physmessage_id "
@@ -395,7 +199,7 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 		while (db_result_next(r)) {
 			physid = db_result_get_u64(r,0);
 			msgid = db_result_get_u64(r,1);
-			if (g_tree_lookup(self->ids,&msgid)) {
+			if (g_tree_lookup(uids,&msgid)) {
 				id = g_new0(u64_t,1);
 				*id = physid;
 				ids = g_list_prepend(ids,id);
@@ -435,13 +239,14 @@ int dbmail_mailbox_dump(DbmailMailbox *self, FILE *file)
 {
 	int count = 0;
 	GMimeStream *ostream;
+	GTree *ids = MailboxState_getIds(self->mbstate);
 
-	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
+	if (ids==NULL || g_tree_nnodes(ids) == 0) {
 		TRACE(TRACE_DEBUG,"cannot dump empty mailbox");
 		return 0;
 	}
 	
-	assert(self->ids);
+	assert(ids);
 
 	ostream = g_mime_stream_file_new(file);
 	g_mime_stream_file_set_owner ((GMimeStreamFile *)ostream, FALSE);
@@ -1313,6 +1118,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 	const char *op;
 	char partial[DEF_FRAGSIZE];
 	C c; R r; S st;
+	GTree *ids;
 	
 	GString *t;
 	GString *q;
@@ -1485,10 +1291,11 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 
 		s->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
+		ids = MailboxState_getIds(self->mbstate);
 		while (db_result_next(r)) {
 			id = db_result_get_u64(r,0);
-			if (! (w = g_tree_lookup(self->ids, &id))) {
-				TRACE(TRACE_ERR, "key missing in self->ids: [%llu]\n", id);
+			if (! (w = g_tree_lookup(ids, &id))) {
+				TRACE(TRACE_ERR, "key missing in ids: [%llu]\n", id);
 				continue;
 			}
 			assert(w);
@@ -1516,22 +1323,35 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 {
 	GList *ids = NULL, *sets = NULL;
 	GString *t;
+	GTree *uids;
 	char *rest;
 	u64_t i, l, r, lo = 0, hi = 0;
 	u64_t *k, *v, *w = NULL;
 	GTree *a, *b, *c;
 	gboolean error = FALSE;
 	
-	b = NULL;
-
-	assert (self && self->ids && set);
-
 	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
-	if (g_tree_nnodes(self->ids) == 0)
+	if (! self->mbstate)
 		return b;
 
-	ids = g_tree_keys(self->ids);
+	uids = MailboxState_getIds(self->mbstate);
+
+	assert (self && uids && set);
+
+	if (g_tree_nnodes(uids) == 0) {
+/*
+		TRACE(TRACE_DEBUG, "empty mailbox, return fake set");
+		k = g_new0(u64_t,1);
+		v = g_new0(u64_t,1);
+		*k = 1;
+		*v = 1;
+		g_tree_insert(b,k,v);
+*/
+		return b;
+	}
+
+	ids = g_tree_keys(uids);
 	assert(ids);
 	ids = g_list_last(ids);
 	hi = *((u64_t *)ids->data);
@@ -1544,11 +1364,11 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		if (self->mbstate)
 			hi = MailboxState_getExists(self->mbstate);
 		else
-			hi = (u64_t)g_tree_nnodes(self->ids);
+			hi = (u64_t)g_tree_nnodes(uids);
 
-		if (hi != (u64_t)g_tree_nnodes(self->ids))
+		if (hi != (u64_t)g_tree_nnodes(uids))
 			TRACE(TRACE_WARNING, "[%p] mailbox info out of sync: exists [%llu] ids [%u]", 
-				self->mbstate, hi, g_tree_nnodes(self->ids));
+				self->mbstate, hi, g_tree_nnodes(uids));
 	}
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
@@ -1603,9 +1423,9 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		if (! (l && r)) break;
 
 		if (uid)
-			c = self->ids;
+			c = MailboxState_getIds(self->mbstate);
 		else
-			c = self->msn;
+			c = MailboxState_getMsn(self->mbstate);
 
 		for (i = min(l,r); i <= max(l,r); i++) {
 
@@ -1809,12 +1629,14 @@ int dbmail_mailbox_sort(DbmailMailbox *self)
 
 int dbmail_mailbox_search(DbmailMailbox *self) 
 {
+	GTree *ids;
 	if (! self->search) return 0;
 	
 	if (self->found) g_tree_destroy(self->found);
 	self->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
+	ids = MailboxState_getIds(self->mbstate);
 
-	g_tree_foreach(self->ids, (GTraverseFunc)_shallow_tree_copy, self->found);
+	g_tree_foreach(ids, (GTraverseFunc)_shallow_tree_copy, self->found);
 
 	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_do_search, (gpointer)self);

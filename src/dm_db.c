@@ -1710,7 +1710,7 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
 	char *mbox, *namespace, *username;
-	const char *simple_name;
+	char *simple_name;
 	int i, result;
 	size_t l;
 
@@ -1760,7 +1760,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 {
 	C c; R r; volatile int t = DM_SUCCESS;
 	u64_t search_user_idnr = user_idnr;
-	const char *spattern;
+	char *spattern;
 	char *namespace, *username;
 	struct mailbox_match *mailbox_like = NULL;
 	GString *qs;
@@ -1773,7 +1773,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 
 	/* If the pattern begins with a #Users or #Public, pull that off and 
 	 * find the new user_idnr whose mailboxes we're searching in. */
-	spattern = mailbox_remove_namespace(pattern, &namespace, &username);
+	spattern = mailbox_remove_namespace((char *)pattern, &namespace, &username);
 	if (!spattern) {
 		TRACE(TRACE_NOTICE, "invalid mailbox search pattern [%s]", pattern);
 		g_free(username);
@@ -1902,7 +1902,7 @@ int mailbox_is_writable(u64_t mailbox_idnr)
 {
 	MailboxState_T M = MailboxState_new(mailbox_idnr);
 	
-	MailboxState_reload(M,0);
+	MailboxState_reload(M);
 	if (MailboxState_getPermission(M) != IMAPPERM_READWRITE) {
 		MailboxState_free(&M);
 		TRACE(TRACE_INFO, "read-only mailbox");
@@ -1921,14 +1921,14 @@ GList * db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr, const char 
 
 	GList *mailboxes = NULL;
 	char *namespace, *username, *cpy, **chunks = NULL;
-	const char *simple_name;
+	char *simple_name;
 	int i, is_users = 0, is_public = 0;
 	u64_t mboxid, public;
 
 	/* Scratch space as we build the mailbox names. */
 	cpy = g_new0(char, strlen(mailbox) + 1);
 
-	simple_name = mailbox_remove_namespace(mailbox, &namespace, &username);
+	simple_name = mailbox_remove_namespace((char *)mailbox, &namespace, &username);
 
 	if (username) {
 		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
@@ -2192,7 +2192,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 
 int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
-	const char *simple_name;
+	char *simple_name;
 	char *frag;
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
@@ -2211,7 +2211,7 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 	}
 
 	/* remove namespace information from mailbox name */
-	if (!(simple_name = mailbox_remove_namespace(name, NULL, NULL))) {
+	if (!(simple_name = mailbox_remove_namespace((char *)name, NULL, NULL))) {
 		TRACE(TRACE_NOTICE, "Could not remove mailbox namespace.");
 		return DM_EGENERAL;
 	}
@@ -2969,24 +2969,6 @@ int char2date_str(const char *date, field_t *frag)
 	g_free(qs);
 
 	return 0;
-}
-
-static sa_family_t dm_get_client_sockaddr(int tx, struct sockaddr *saddr)
-{
-	#define maxsocklen	128
-	union {
-		struct sockaddr sa;
-		char data[maxsocklen];
-	} un;
-
-	socklen_t len;
-	len = maxsocklen;
-
-	if (getsockname(tx, (struct sockaddr *)un.data, &len) < 0)
-		return (sa_family_t) -1;
-
-	memcpy(saddr, &un.sa, sizeof(un.sa));
-	return (un.sa.sa_family);
 }
 
 int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_username)

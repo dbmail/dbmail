@@ -127,7 +127,7 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 		memset(deleted_flag, 0, IMAP_NFLAGS * sizeof(int));
 		deleted_flag[IMAP_FLAG_DELETED] = 1;
 
-		GList *ids = g_tree_keys(mb->ids);
+		GList *ids = g_tree_keys(MailboxState_getIds(mb->mbstate));
 
                 while (ids) {
 			// Flag the selected messages \\Deleted

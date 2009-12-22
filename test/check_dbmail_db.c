@@ -849,7 +849,7 @@ START_TEST(test_db_getmailbox)
 	id = get_mailbox_id("INBOX", &userid);
 	M = MailboxState_new(id);
 	
-	res = MailboxState_reload(M, userid);
+	res = MailboxState_reload(M);
 	fail_unless(res == DM_SUCCESS, "db_getmailbox failed");
 	fail_unless(MATCH("INBOX", MailboxState_getName(M)), "db_getmailbox failed");
 }

@@ -144,16 +144,6 @@ START_TEST(test_dbmail_mailbox_free)
 }
 END_TEST
 
-START_TEST(test_dbmail_mailbox_open)
-{
-	int result;
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	result = dbmail_mailbox_open(mb);
-	fail_unless(result == 0, "dbmail_mailbox_open failed");
-	dbmail_mailbox_free(mb);
-}
-END_TEST
-
 START_TEST(test_dbmail_mailbox_dump)
 {
 	int c = 0;
@@ -528,14 +518,14 @@ START_TEST(test_dbmail_mailbox_remove_uid)
 	
 	msn = 1;
 	set = dbmail_mailbox_get_set(mb, "1:*", 1);
-	c = g_tree_nnodes(mb->ids);
+	c = g_tree_nnodes(MailboxState_getIds(mb->mbstate));
 	j = c/2;
 
 	for (i=0; i<j; i++) {
-		id = g_tree_lookup(mb->msn, &msn);
-		dbmail_mailbox_remove_uid(mb, *id);
-		fail_unless(g_tree_nnodes(mb->ids)==c-i-1,
-			"remove_uid failed [%d] != [%d]", g_tree_nnodes(mb->ids), c-i-1);
+		id = g_tree_lookup(MailboxState_getMsn(mb->mbstate), &msn);
+		MailboxState_removeUid(mb->mbstate, *id);
+		fail_unless(g_tree_nnodes(MailboxState_getIds(mb->mbstate))==c-i-1,
+			"remove_uid failed [%d] != [%d]", g_tree_nnodes(MailboxState_getIds(mb->mbstate)), c-i-1);
 	}
 
 	dbmail_mailbox_free(mb);
@@ -553,7 +543,6 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);

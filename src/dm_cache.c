@@ -86,7 +86,8 @@ u64_t Cache_set_dump(T C, char *buf, int dumptype)
 	Mem_rewind(M);
 
 	rfc = get_crlf_encoded(buf);
-	outcnt = Mem_write(M, rfc, strlen(rfc));
+	outcnt = strlen(rfc);
+	Mem_write(M, rfc, outcnt);
 	g_free(rfc);
 	Mem_rewind(M);
 

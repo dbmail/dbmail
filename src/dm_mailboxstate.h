@@ -29,13 +29,22 @@ typedef struct T *T;
 
 extern T            MailboxState_new(u64_t id);
 
-extern int          MailboxState_preload(T, u64_t);
-extern int          MailboxState_reload(T, u64_t);
+extern int          MailboxState_preload(T);
+extern int          MailboxState_reload(T);
+extern void         MailboxState_remap(T);
+extern int          MailboxState_removeUid(T, u64_t);
+extern GTree *      MailboxState_getMsginfo(T);
+extern void         MailboxState_setMsginfo(T, GTree *);
+extern void         MailboxState_addMsginfo(T, u64_t, MessageInfo *);
+extern GTree *      MailboxState_getIds(T);
+extern GTree *      MailboxState_getMsn(T);
+
+
 extern void         MailboxState_setId(T, u64_t);
 extern u64_t        MailboxState_getId(T);
 extern u64_t        MailboxState_getSeq(T);
 extern u64_t        MailboxState_getUidnext(T);
-extern void	    MailboxState_setExists(T, u64_t);
+extern void         MailboxState_setExists(T, u64_t);
 extern unsigned	    MailboxState_getExists(T);
 extern void         MailboxState_setRecent(T, u64_t);
 extern unsigned	    MailboxState_getRecent(T);
