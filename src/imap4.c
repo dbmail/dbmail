@@ -77,15 +77,35 @@ static int imap4_tokenizer(ImapSession *, char *);
 static int imap4(ImapSession *);
 static void imap_handle_input(ImapSession *);
 
-static void imap_session_cleanup(gpointer data)
+static void imap_session_cleanup_enter(dm_thread_data *D)
 {
-	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;
-	//g_mutex_lock(session->mutex);
+
+	if ((! session->state) || session->state == CLIENTSTATE_QUIT_QUEUED)
+		return;
+
+	g_mutex_lock(session->mutex);
+
+	dbmail_imap_session_set_state(session, CLIENTSTATE_QUIT_QUEUED);
+
+	D->session->command_state = TRUE;
+	g_mutex_unlock(D->session->mutex);
+	g_async_queue_push(queue, (gpointer)D);
+	if (selfpipe[1] > -1) {
+		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; }
+	}
+	return;
+}
+
+static void imap_session_cleanup_leave(dm_thread_data *D)
+{
+	ImapSession *session = D->session;
+	if (session->state != CLIENTSTATE_QUIT_QUEUED)
+		return;
+
 	TRACE(TRACE_DEBUG,"[%p] ci [%p]", session, session->ci);
 	ci_close(session->ci);
 	session->ci = NULL;
-	//g_mutex_unlock(session->mutex);
 	dbmail_imap_session_delete(&session);
 }
 
@@ -110,15 +130,7 @@ static void imap_session_bailout(ImapSession *session)
 	}
 
 	if (session->state != CLIENTSTATE_QUIT_QUEUED) {
-		D = g_new0(dm_thread_data,1);
-		D->cb_leave = imap_session_cleanup;
-		D->session = session;
-		g_async_queue_push(queue, (gpointer)D);
-		dbmail_imap_session_set_state(session, CLIENTSTATE_QUIT_QUEUED);
-
-		if (selfpipe[1] > -1) { 
-			if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
-		} 
+		dm_thread_data_push((gpointer)session, imap_session_cleanup_enter, imap_session_cleanup_leave, NULL);
 	}
 }
 
@@ -132,9 +144,7 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 		case CLIENTSTATE_LOGOUT:
 			event_del(session->ci->wev);
 		case CLIENTSTATE_ERROR:
-			//g_mutex_lock(session->mutex);
 			imap_session_bailout(session);
-			//g_mutex_unlock(session->mutex);
 			break;
 		default:
 			if (session->ci->rev) {

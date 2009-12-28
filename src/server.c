@@ -98,6 +98,9 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	assert(cb_enter);
 
 	s = (ImapSession *)session;
+	if (s->state == CLIENTSTATE_QUIT_QUEUED)
+		return;
+
 	dm_thread_data *D = g_new0(dm_thread_data,1);
 	D->cb_enter	= cb_enter;
 	D->cb_leave     = cb_leave;
@@ -150,6 +153,10 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
 {
 	TRACE(TRACE_DEBUG,"data[%p], user_data[%p]", data, user_data);
 	dm_thread_data *D = (dm_thread_data *)data;
+	ImapSession *session = (ImapSession *)D->session;
+	if (session->state == CLIENTSTATE_QUIT_QUEUED)
+		return;
+
 	D->cb_enter(D);
 }
 
