@@ -16,6 +16,13 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 		$this->dm = new DBMail($host="localhost", $port=41380, $login="admin",$password="secret");
 		$this->user = $this->dm->getUser('testuser1');
 		$this->mbox = $this->user->getMailbox('INBOX');
+		$this->user->create("somenewmailbox2");
+	}
+
+	public function tearDown()
+	{
+		$this->user->delete("somenewmailbox1");
+		$this->user->delete("somenewmailbox2");
 	}
 
 	public function testDBMail()
@@ -59,6 +66,19 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 		$this->assertNotNull($this->mbox);
 	}
 
+	public function testCreate()
+	{
+		$this->user->create("somenewmailbox1");
+		$this->assertNotNull($this->user->getMailbox("somenewmailbox1"));
+	}
+
+	public function testDelete()
+	{
+		$this->assertNotNull($this->user->getMailbox("somenewmailbox2"));
+		$this->user->delete("somenewmailbox2");
+		$this->assertEquals($this->user->getMailbox("somenewmailbox2"), null);
+	}
+
 	public function testGetMessages()
 	{
 		$msgs = $this->mbox->getMessages();
@@ -82,7 +102,6 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 		$msg = $this->mbox->getMessage($keys[0]);
 		$headers = $msg->getHeaders(array('subject','to','received'));
 		$this->assertNotNull($headers);
-
 	}
 
 	public function testAddMessage()

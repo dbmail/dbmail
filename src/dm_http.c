@@ -53,7 +53,7 @@ void Http_getUsers(T R)
 		else if (auth_user_exists(Request_getId(R), &id))
 			username = g_strdup(Request_getId(R));
 
-		if (! username)
+		if (! (username && id))
 			Request_error(R, HTTP_NOTFOUND, "User not found");
 	}
 
@@ -62,11 +62,61 @@ void Http_getUsers(T R)
 		GList *users = NULL;
 
 		if (username) {
-
+			MailboxState_T M;
+			const char *mailbox;
+			u64_t mboxid;
 			/* 
 			 * retrieve user meta-data
 			 * C < /users/testuser1
+
+			 * create/delete mailbox for user
+			 * POST C < /users/testuser1
+
 			 */
+
+			if ((mailbox = evhttp_find_header(Request_getPOST(R),"create"))) {
+				const char *message;
+
+				if (db_mailbox_create_with_parents(mailbox, BOX_COMMANDLINE, id, &mboxid, &message)) {
+					Request_error(R, HTTP_BADREQUEST, message);
+					evbuffer_free(buf);
+					return;
+				}
+			}
+			if ((mailbox = evhttp_find_header(Request_getPOST(R),"delete"))) {
+
+				int access;
+
+				/* check if there is an attempt to delete inbox */
+				if (MATCH(mailbox, "INBOX")) {
+					Request_error(R, HTTP_BADREQUEST, "NO cannot delete special mailbox INBOX");
+					evbuffer_free(buf);
+					return;
+				}
+
+				if (! (db_findmailbox(mailbox, id, &mboxid)) ) {
+					Request_error(R, HTTP_NOTFOUND, "NO mailbox doesn't exists");
+					evbuffer_free(buf);
+					return;
+				}
+
+				/* Check if the user has ACL delete rights to this mailbox */
+				M = MailboxState_new(mboxid);
+				access = acl_has_right(M, id, ACL_RIGHT_DELETE);
+				if (access != 1) {
+					Request_error(R, HTTP_BADREQUEST, "NO permission denied");
+					evbuffer_free(buf);
+					return;
+				}
+
+				/* ok remove mailbox */
+				if (db_delete_mailbox(mboxid, 0, 1)) {
+					Request_error(R, HTTP_SERVUNAVAIL, "NO delete failed");
+					evbuffer_free(buf);
+					return;
+				}
+			}
+
 
 			users = g_list_append_printf(users, "%s", username);
 		} else {
@@ -103,7 +153,8 @@ void Http_getUsers(T R)
 
 		/*
 		 * list mailboxes for user
-		 * C < /users/testuser1/mailboxes
+		 * GET C < /users/testuser1/mailboxes
+		 *
 		 */
 
 		db_findmailbox_by_regex(id, "*", &mailboxes, FALSE);
@@ -177,7 +228,7 @@ void Http_getMailboxes(T R)
 					MailboxState_reload(b);
 			}
 			evbuffer_add_printf(buf, "{\"mailboxes\": {\n");
-			evbuffer_add_printf(buf, "    \"%llu\":{\"name\":\"%s\",\"exists\":%llu}", MailboxState_getId(b), MailboxState_getName(b), MailboxState_getExists(b));
+			evbuffer_add_printf(buf, "    \"%llu\":{\"name\":\"%s\",\"exists\":%d}", MailboxState_getId(b), MailboxState_getName(b), MailboxState_getExists(b));
 			evbuffer_add_printf(buf, "\n}}\n");
 		}
 		MailboxState_free(&b);
@@ -188,10 +239,10 @@ void Http_getMailboxes(T R)
 		 * C < GET /mailboxes/876/messages
 		 */
 
-		DbmailMailbox *m = dbmail_mailbox_new(id);
-		GTree *msns = MailboxState_getMsn(m->mbstate);
+		MailboxState_T b = MailboxState_new(id);
+		GTree *msns = MailboxState_getMsn(b);
 		GList *ids = g_tree_keys(msns);
-		GTree *msginfo = MailboxState_getMsginfo(m->mbstate);
+		GTree *msginfo = MailboxState_getMsginfo(b);
 
 		evbuffer_add_printf(buf, "{\"messages\": {\n");
 		while (ids && ids->data) {
@@ -206,7 +257,7 @@ void Http_getMailboxes(T R)
 		evbuffer_add_printf(buf, "\n}}\n");
 	
 		if (ids) g_list_free(g_list_first(ids));
-		dbmail_mailbox_free(m);
+		MailboxState_free(&b);
 	}
 
 	if (buf->totallen)

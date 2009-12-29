@@ -203,7 +203,8 @@ class DBMailUser
 				break;
 			}
 		}
-		assert(is_int($id));
+		if (! is_int($id))
+			return null;
 		return (int)$id;
 	}
 
@@ -235,8 +236,10 @@ class DBMailUser
 	{
 		$url = $this->getUrl();
 		$result = json_decode($this->curl->post($url, $vars),TRUE);
-		if (! $result)
-			print "FAILURE URL:[".$url."]\n";
+		if (! $result) {
+			//print "FAILURE URL:[".$url."]\n";
+			return;
+		}
 		foreach($result[$this->controller][$this->id] as $key => $value) {
 			$this->$key = $value;
 		}
@@ -255,24 +258,20 @@ class DBMailUser
 		if (! is_int($id)) {
 			$id = $this->getIdByName($mblist['mailboxes'], $id);
 		}
-		assert(is_int($id));
+		if (! is_int($id)) return null;
 		return new DBMailMailbox($this->curl,$id);
 	}
 
-	public function delete()
+	public function create($mailbox)
 	{
-
+		return $this->post(array('create'=>$mailbox));
 	}
 
-	public function create()
+	public function delete($mailbox)
 	{
-
+		return $this->post(array('delete'=>$mailbox));
 	}
 
-	public function update()
-	{
-
-	}
 }
 
 class DBMailMailbox extends DBMailUser
