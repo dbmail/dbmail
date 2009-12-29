@@ -289,9 +289,9 @@ void MailboxState_setExists(T M, u64_t exists)
 
 unsigned MailboxState_getExists(T M)
 {
-	unsigned real = g_tree_nnodes(M->msginfo);
-	if (real > M->exists)
-		M->exists = real;
+	int real = g_tree_nnodes(M->msginfo);
+	if (real > (int)M->exists)
+		M->exists = (unsigned)real;
 	return M->exists;
 }
 

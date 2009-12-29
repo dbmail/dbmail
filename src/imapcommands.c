@@ -1307,8 +1307,7 @@ void _ic_append_enter(dm_thread_data *D)
 		g_list_destroy(keywords);
 	}
 
-	dbmail_imap_session_buff_printf(self, "%s OK APPEND completed\r\n", self->tag);
-
+	IC_DONE_OK;
 	NOTIFY_DONE(D);
 }
 
@@ -1617,7 +1616,6 @@ static void _ic_fetch_enter(dm_thread_data *D)
 
 	dbmail_imap_session_fetch_free(self);
 	dbmail_imap_session_args_free(self, FALSE);
-
 	dbmail_imap_session_mailbox_status(self, FALSE);
 
 	if (result) {

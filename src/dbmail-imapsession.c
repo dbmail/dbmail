@@ -1315,7 +1315,7 @@ static gboolean notify_expunge(ImapSession *self, u64_t *uid)
 }
 static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 {
-	u64_t *uid, exists;
+	u64_t *uid, *msn, exists;
 	MailboxState_T M;
 	GList *ids;
 	if (! N) return;
@@ -1327,6 +1327,16 @@ static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 	ids = g_list_reverse(ids);
 
 	// send expunge updates
+	
+	if (ids) {
+		uid = (u64_t *)ids->data;
+		msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), uid);
+		if (msn && (*msn > MailboxState_getExists(N))) {
+			TRACE(TRACE_DEBUG,"exists new [%d] old: [%d]", MailboxState_getExists(N), MailboxState_getExists(M)); 
+			dbmail_imap_session_buff_printf(self, "* %d EXISTS\r\n", MailboxState_getExists(M));
+		}
+	}
+
 	while (ids) {
 		uid = (u64_t *)ids->data;
 		if (! g_tree_lookup(MailboxState_getIds(N), uid)) {
@@ -1448,6 +1458,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 		case IMAP_COMM_APPEND:
 			showrecent = FALSE;
+			TRACE(TRACE_DEBUG,"exists new: [%d] old: [%d]", MailboxState_getExists(N), MailboxState_getExists(M)); 
 			break;
 		case IMAP_COMM_NOOP:
 		case IMAP_COMM_FETCH:
@@ -1482,7 +1493,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 static gboolean _get_mailbox(u64_t UNUSED *id, MailboxState_T M, gpointer UNUSED data)
 {
-	return MailboxState_preload(M);
+	return MailboxState_reload(M);
 }
 
 static void mailboxstate_destroy(MailboxState_T M)
