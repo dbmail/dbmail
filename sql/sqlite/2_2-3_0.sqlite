@@ -1,0 +1,408 @@
+
+BEGIN TRANSACTION;
+
+DROP INDEX dbmail_sievescripts_3;
+CREATE UNIQUE INDEX dbmail_sievescripts_3 ON dbmail_sievescripts(owner_idnr,name);
+
+DROP TABLE IF EXISTS dbmail_mimeparts;
+CREATE TABLE dbmail_mimeparts (
+	id	INTEGER NOT NULL PRIMARY KEY,
+	hash	TEXT NOT NULL,
+	data	BLOB NOT NULL,
+	size	INTEGER NOT NULL
+);
+
+CREATE INDEX dbmail_mimeparts_1 ON dbmail_mimeparts (hash);
+
+DROP TABLE IF EXISTS dbmail_partlists;
+CREATE TABLE dbmail_partlists (
+	physmessage_id	INTEGER NOT NULL,
+   	is_header 	BOOLEAN DEFAULT '0' NOT NULL,
+	part_key	INTEGER DEFAULT '0' NOT NULL,
+	part_depth	INTEGER DEFAULT '0' NOT NULL,
+	part_order	INTEGER DEFAULT '0' NOT NULL,
+	part_id		INTEGER NOT NULL
+);
+
+CREATE INDEX dbmail_partlists_1 ON dbmail_partlists(physmessage_id);
+CREATE INDEX dbmail_partlists_2 ON dbmail_partlists(part_id);
+
+
+-- ALTER TABLE ONLY dbmail_partlists
+--    ADD CONSTRAINT dbmail_partlists_part_id_fkey FOREIGN KEY (part_id) REFERENCES dbmail_mimeparts(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DROP TRIGGER IF EXISTS fk_insert_partlists_mimeparts_id;
+CREATE TRIGGER fk_insert_partlists_mimeparts_id
+	BEFORE INSERT ON dbmail_partlists
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.part_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_mimeparts WHERE id = new.part_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_partlists" violates foreign key constraint "fk_insert_partlists_mimeparts_id"')
+		END;
+	END;
+DROP TRIGGER IF EXISTS fk_update_partlists_mimeparts_id;
+CREATE TRIGGER fk_update_partlists_mimeparts_id
+	BEFORE UPDATE ON dbmail_partlists
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.part_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_mimeparts WHERE id = new.part_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_partlists" violates foreign key constraint "fk_update_partlists_mimeparts_id"')
+		END;
+	END;
+DROP TRIGGER IF EXISTS fk_update2_partlists_mimeparts_id;
+CREATE TRIGGER fk_update2_partlists_mimeparts_id
+	AFTER UPDATE ON dbmail_mimeparts
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_partlists SET part_id = new.id WHERE part_id = OLD.id;
+	END;
+DROP TRIGGER IF EXISTS fk_delete_partlists_mimeparts_id;
+CREATE TRIGGER fk_delete_partlists_mimeparts_id
+	BEFORE DELETE ON dbmail_mimeparts
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_partlists WHERE part_id = OLD.id;
+	END;
+
+-- ALTER TABLE ONLY dbmail_partlists
+--    ADD CONSTRAINT dbmail_partlists_physmessage_id_fkey FOREIGN KEY (physmessage_id) REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+DROP TRIGGER IF EXISTS fk_insert_partlists_physmessage_id;
+CREATE TRIGGER fk_insert_partlists_physmessage_id
+	BEFORE INSERT ON dbmail_partlists
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_partlists" violates foreign key constraint "fk_insert_partlists_physmessage_id"')
+		END;
+	END;
+DROP TRIGGER IF EXISTS fk_update_partlists_physmessage_id;
+CREATE TRIGGER fk_update_partlists_physmessage_id
+	BEFORE UPDATE ON dbmail_partlists
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_partlists" violates foreign key constraint "fk_update_partlists_physmessage_id"')
+		END;
+	END;
+DROP TRIGGER IF EXISTS fk_update2_partlists_physmessage_id;
+CREATE TRIGGER fk_update2_partlists_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_partlists SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+DROP TRIGGER IF EXISTS fk_delete_partlists_physmessage_id;
+CREATE TRIGGER fk_delete_partlists_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_partlists WHERE physmessage_id = OLD.id;
+	END;
+
+CREATE TABLE dbmail_keywords (
+	keyword		TEXT NOT NULL,
+	message_idnr	INT NOT NULL
+);
+CREATE UNIQUE INDEX dbmail_keywords_1 ON dbmail_keywords(keyword,message_idnr);
+
+DROP TRIGGER IF EXISTS fk_insert_dbmail_keywords_dbmail_messages_message_idnr;
+CREATE TRIGGER fk_insert_dbmail_keywords_dbmail_messages_message_idnr
+	BEFORE INSERT ON dbmail_keywords
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.message_idnr IS NOT NULL)
+				AND ((SELECT message_idnr FROM dbmail_messages WHERE message_idnr = new.message_idnr) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_keywords" violates foreign key constraint "fk_insert_dbmail_keywords_dbmail_messages_message_idnr"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update_dbmail_keywords_dbmail_messages_message_idnr;
+CREATE TRIGGER fk_update_dbmail_keywords_dbmail_messages_message_idnr
+	BEFORE UPDATE ON dbmail_keywords
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.message_idnr IS NOT NULL)
+				AND ((SELECT message_idnr FROM dbmail_messages WHERE message_idnr = new.message_idnr) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_keywords" violates foreign key constraint "fk_update_dbmail_keywords_dbmail_messages_message_idnr"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update2_dbmail_keywords_dbmail_messages_message_idnr;
+CREATE TRIGGER fk_update2_dbmail_keywords_dbmail_messages_message_idnr
+	AFTER UPDATE ON dbmail_messages
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_keywords SET message_idnr = new.message_idnr WHERE message_idnr = OLD.message_idnr;
+	END;
+
+DROP TRIGGER IF EXISTS fk_delete_dbmail_keywords_dbmail_messages_message_idnr;
+CREATE TRIGGER fk_delete_dbmail_keywords_dbmail_messages_message_idnr
+	BEFORE DELETE ON dbmail_messages
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_keywords WHERE message_idnr = OLD.message_idnr;
+	END;
+
+
+ALTER TABLE dbmail_mailboxes ADD seq INTEGER DEFAULT '0' NOT NULL;
+CREATE INDEX dbmail_mailbox_4 ON dbmail_mailboxes(seq);
+
+ALTER TABLE dbmail_acl ADD COLUMN deleted_flag TINYINT(1) NOT NULL DEFAULT '0';
+ALTER TABLE dbmail_acl ADD COLUMN expunge_flag TINYINT(1) NOT NULL DEFAULT '0';
+UPDATE dbmail_acl SET deleted_flag=delete_flag, expunge_flag=delete_flag;
+
+
+DROP TABLE IF EXISTS dbmail_header;
+DROP TABLE IF EXISTS dbmail_headername;
+DROP TABLE IF EXISTS dbmail_headervalue;
+
+-- Drop old legacy cache tables
+DROP TABLE IF EXISTS dbmail_ccfield;
+DROP TABLE IF EXISTS dbmail_datefield;
+DROP TABLE IF EXISTS dbmail_fromfield;
+DROP TABLE IF EXISTS dbmail_replytofield;
+DROP TABLE IF EXISTS dbmail_subjectfield;
+DROP TABLE IF EXISTS dbmail_tofield;
+
+
+DELETE FROM dbmail_referencesfield;
+
+CREATE TABLE dbmail_headername (
+	id		INTEGER PRIMARY KEY,
+	headername	TEXT NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername (headername);
+
+CREATE TABLE dbmail_headervalue (
+ 	id		INTEGER NOT NULL PRIMARY KEY,
+	hash 		TEXT NOT NULL,
+        headervalue   	BLOB NOT NULL,
+	sortfield	TEXT NOT NULL,
+	datefield	DATETIME
+);
+CREATE INDEX dbmail_headervalue_1 ON dbmail_headervalue(hash);
+CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue(sortfield);
+CREATE INDEX dbmail_headervalue_3 ON dbmail_headervalue(datefield);
+
+CREATE TABLE dbmail_header (
+        physmessage_id      INTEGER NOT NULL,
+	headername_id       INTEGER NOT NULL,
+        headervalue_id      INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX dbmail_header_1 ON dbmail_header(physmessage_id,headername_id,headervalue_id);
+
+DROP TRIGGER IF EXISTS fk_insert_header_physmessage_id;
+CREATE TRIGGER fk_insert_header_physmessage_id
+	BEFORE INSERT ON dbmail_header
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_header" violates foreign key constraint "fk_insert_header_physmessage_id"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update_header_physmessage_id;
+CREATE TRIGGER fk_update_header_physmessage_id
+	BEFORE UPDATE ON dbmail_header
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_header" violates foreign key constraint "fk_update_header_physmessage_id"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update2_header_physmessage_id;
+CREATE TRIGGER fk_update2_header_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_header SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+
+DROP TRIGGER IF EXISTS fk_delete_header_physmessage_id;
+CREATE TRIGGER fk_delete_header_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_header WHERE physmessage_id = OLD.id;
+	END;
+
+DROP TRIGGER IF EXISTS fk_insert_header_headername_id;
+CREATE TRIGGER fk_insert_header_headername_id
+	BEFORE INSERT ON dbmail_header
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.headername_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_headername WHERE id = new.headername_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_header" violates foreign key constraint "fk_insert_header_headername_id"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update_header_headername_id;
+CREATE TRIGGER fk_update_header_headername_id
+	BEFORE UPDATE ON dbmail_header
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.headername_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_headername WHERE id = new.headername_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_header" violates foreign key constraint "fk_update_header_headername_id"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update2_header_headername_id;
+CREATE TRIGGER fk_update2_header_headername_id
+	AFTER UPDATE ON dbmail_headername
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_header SET headername_id = new.id WHERE headername_id = OLD.id;
+	END;
+
+DROP TRIGGER IF EXISTS fk_delete_header_headername_id;
+CREATE TRIGGER fk_delete_header_headername_id
+	BEFORE DELETE ON dbmail_headername
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_header WHERE headername_id = OLD.id;
+	END;
+
+DROP TRIGGER IF EXISTS fk_insert_header_headervalue_id;
+CREATE TRIGGER fk_insert_header_headervalue_id
+	BEFORE INSERT ON dbmail_header
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.headervalue_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_headervalue WHERE id = new.headervalue_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_header" violates foreign key constraint "fk_insert_header_headervalue_id"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update_header_headervalue_id;
+CREATE TRIGGER fk_update_header_headervalue_id
+	BEFORE UPDATE ON dbmail_header
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.headervalue_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_headervalue WHERE id = new.headervalue_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_header" violates foreign key constraint "fk_update_header_headervalue_id"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update2_header_headervalue_id;
+CREATE TRIGGER fk_update2_header_headervalue_id
+	AFTER UPDATE ON dbmail_headervalue
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_header SET headervalue_id = new.id WHERE headervalue_id = OLD.id;
+	END;
+
+DROP TRIGGER IF EXISTS fk_delete_header_headervalue_id;
+CREATE TRIGGER fk_delete_header_headervalue_id
+	BEFORE DELETE ON dbmail_headervalue
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_header WHERE headervalue_id = OLD.id;
+	END;
+
+CREATE VIEW dbmail_fromfield AS
+        SELECT physmessage_id,sortfield AS fromfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='from';
+
+CREATE VIEW dbmail_ccfield AS
+        SELECT physmessage_id,sortfield AS ccfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='cc';
+
+CREATE VIEW dbmail_tofield AS
+        SELECT physmessage_id,sortfield AS tofield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='to';
+
+CREATE VIEW dbmail_subjectfield AS
+        SELECT physmessage_id,headervalue AS subjectfield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='subject';
+
+CREATE VIEW dbmail_datefield AS
+        SELECT physmessage_id,datefield
+        FROM dbmail_messages m
+        JOIN dbmail_header h USING (physmessage_id)
+        JOIN dbmail_headername n ON h.headername_id = n.id
+        JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername='date';
+
+
+DROP TABLE IF EXISTS dbmail_filters;
+CREATE TABLE dbmail_filters (
+	id           INTEGER PRIMARY KEY,
+	user_id      INTEGER NOT NULL,
+	headername   TEXT NOT NULL,
+	headervalue  TEXT NOT NULL,	
+	mailbox      TEXT NOT NULL
+);
+CREATE UNIQUE INDEX dbmail_filters_index_1 ON dbmail_filters(user_id, id);
+
+DROP TRIGGER IF EXISTS fk_insert_filters_users_user_idnr;
+CREATE TRIGGER fk_insert_filters_users_user_idnr
+	BEFORE INSERT ON dbmail_filters
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_filters" violates foreign key constraint "fk_insert_filters_users_user_idnr"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update_filters_users_user_idnr;
+CREATE TRIGGER fk_update_filters_users_user_idnr
+	BEFORE UPDATE ON dbmail_filters
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_filters" violates foreign key constraint "fk_update_filters_users_user_idnr"')
+		END;
+	END;
+
+DROP TRIGGER IF EXISTS fk_update2_filters_users_user_idnr;
+CREATE TRIGGER fk_update2_filters_users_user_idnr
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_filters SET user_id = new.user_idnr WHERE user_id = OLD.user_idnr;
+	END;
+
+DROP TRIGGER IF EXISTS fk_delete_filters_users_user_idnr;
+CREATE TRIGGER fk_delete_filters_users_user_idnr
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_filters WHERE user_id = OLD.user_idnr;
+	END;
+
+
+CREATE UNIQUE INDEX message_parts ON dbmail_partlists(physmessage_id, part_key, part_depth, part_order);
+
+DROP TABLE IF EXISTS dbmail_authlog;
+CREATE TABLE dbmail_authlog (
+  id INTEGER PRIMARY KEY,
+  userid TEXT,
+  service TEXT,
+  login_time DATETIME,
+  logout_time DATETIME,
+  src_ip TEXT,
+  src_port INTEGER,
+  dst_ip TEXT,
+  dst_port INTEGER,
+  status TEXT DEFAULT 'active',
+  bytes_rx INTEGER DEFAULT '0' NOT NULL,
+  bytes_tx INTEGER DEFAULT '0' NOT NULL
+);
+
+COMMIT;
