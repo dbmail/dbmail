@@ -1,0 +1,244 @@
+
+-- This script fixes the 2.1 database schema for use with 3.0
+-- Running this script will drop legacy caching tables,
+-- so backup your database before continuing!
+
+
+SET FOREIGN_KEY_CHECKS=0;
+
+-- Make sure our database is set for utf8
+ALTER DATABASE CHARACTER SET utf8;
+
+-- Delete old cached data for the references
+BEGIN;
+DELETE FROM dbmail_referencesfield;
+COMMIT;
+
+-- Drop old legacy cache tables
+DROP TABLE IF EXISTS dbmail_ccfield;
+DROP TABLE IF EXISTS dbmail_datefield;
+DROP TABLE IF EXISTS dbmail_fromfield;
+DROP TABLE IF EXISTS dbmail_replytofield;
+DROP TABLE IF EXISTS dbmail_subjectfield;
+DROP TABLE IF EXISTS dbmail_tofield;
+
+-- Make sure all bigint columns are size 20 to be consistent and varchars are proper size
+ALTER TABLE dbmail_acl MODIFY COLUMN user_id BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_acl MODIFY COLUMN mailbox_id BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_acl ADD COLUMN deleted_flag TINYINT(1) NOT NULL DEFAULT '0';
+ALTER TABLE dbmail_acl ADD COLUMN expunge_flag TINYINT(1) NOT NULL DEFAULT '0';
+UPDATE dbmail_acl SET deleted_flag=delete_flag, expunge_flag=delete_flag;
+
+ALTER TABLE dbmail_aliases MODIFY COLUMN alias_idnr BIGINT(20) AUTO_INCREMENT NOT NULL;
+ALTER TABLE dbmail_aliases MODIFY COLUMN client_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+
+ALTER TABLE dbmail_envelope MODIFY COLUMN physmessage_id BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_envelope MODIFY COLUMN id BIGINT(20) AUTO_INCREMENT NOT NULL;
+ALTER TABLE dbmail_envelope ADD UNIQUE KEY physmessage_id_2 (physmessage_id);
+
+ALTER TABLE dbmail_mailboxes ADD seq bigint DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_mailboxes ADD KEY seq (seq);
+ALTER TABLE dbmail_mailboxes CHANGE name name VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE dbmail_mailboxes MODIFY COLUMN mailbox_idnr BIGINT(20) UNSIGNED AUTO_INCREMENT NOT NULL;
+ALTER TABLE dbmail_mailboxes MODIFY COLUMN owner_idnr BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_mailboxes MODIFY COLUMN seq BIGINT(20) DEFAULT 0 NOT NULL;
+
+ALTER TABLE dbmail_messages MODIFY COLUMN message_idnr BIGINT(20) UNSIGNED AUTO_INCREMENT NOT NULL;
+ALTER TABLE dbmail_messages MODIFY COLUMN mailbox_idnr BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_messages MODIFY COLUMN physmessage_id BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+
+ALTER TABLE dbmail_pbsp MODIFY COLUMN idnr BIGINT(20) UNSIGNED AUTO_INCREMENT NOT NULL;
+
+ALTER TABLE dbmail_physmessage MODIFY COLUMN id BIGINT(20) UNSIGNED AUTO_INCREMENT NOT NULL;
+ALTER TABLE dbmail_physmessage MODIFY COLUMN messagesize BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_physmessage MODIFY COLUMN rfcsize BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+
+ALTER TABLE dbmail_referencesfield MODIFY COLUMN physmessage_id BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_referencesfield MODIFY COLUMN id BIGINT(20) UNSIGNED AUTO_INCREMENT NOT NULL;
+
+ALTER TABLE dbmail_sievescripts DROP INDEX owner_idnr_2;
+ALTER TABLE dbmail_sievescripts MODIFY COLUMN name varchar(255) NOT NULL;
+ALTER TABLE dbmail_sievescripts MODIFY COLUMN owner_idnr BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_sievescripts ADD UNIQUE INDEX dbmail_sievescripts_1 (owner_idnr, name);
+
+ALTER TABLE dbmail_subscription MODIFY COLUMN user_id BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_subscription MODIFY COLUMN mailbox_id BIGINT(20) UNSIGNED DEFAULT 0 NOT NULL;
+
+ALTER TABLE dbmail_users MODIFY COLUMN user_idnr BIGINT(20) UNSIGNED AUTO_INCREMENT NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN client_idnr BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN maxmail_size BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN curmail_size BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN maxsieve_size BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN cursieve_size BIGINT(20) DEFAULT 0 NOT NULL;
+ALTER TABLE dbmail_users MODIFY COLUMN userid varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_users MODIFY COLUMN passwd varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_users MODIFY COLUMN encryption_type varchar(255) NOT NULL default '';
+
+ALTER TABLE dbmail_aliases MODIFY COLUMN alias varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_aliases MODIFY COLUMN deliver_to varchar(255) NOT NULL default '';
+
+ALTER TABLE dbmail_replycache MODIFY COLUMN to_addr varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_replycache MODIFY COLUMN from_addr varchar(255) NOT NULL default '';
+ALTER TABLE dbmail_replycache MODIFY COLUMN handle varchar(255) NOT NULL default '';
+
+ALTER TABLE dbmail_usermap MODIFY COLUMN login varchar(255) NOT NULL;
+ALTER TABLE dbmail_usermap MODIFY COLUMN sock_allow varchar(255) NOT NULL;
+ALTER TABLE dbmail_usermap MODIFY COLUMN sock_deny varchar(255) NOT NULL;
+ALTER TABLE dbmail_usermap MODIFY COLUMN userid varchar(255) NOT NULL;
+
+
+-- create new storage tables
+DROP TABLE IF EXISTS `dbmail_mimeparts`;
+CREATE TABLE `dbmail_mimeparts` (
+	`id`   bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+	`hash` char(128) NOT NULL,
+	`data` longblob NOT NULL,
+	`size` bigint(20) DEFAULT 0 NOT NULL,
+	PRIMARY KEY  (`id`),
+	KEY `hash` (`hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `dbmail_partlists`;
+CREATE TABLE `dbmail_partlists` (
+  `physmessage_id` bigint(20) UNSIGNED NOT NULL default '0',
+  `is_header` tinyint(1) NOT NULL default '0',
+  `part_key` smallint(6) NOT NULL default '0',
+  `part_depth` smallint(6) NOT NULL default '0',
+  `part_order` smallint(6) NOT NULL default '0',
+  `part_id` bigint(20) UNSIGNED NOT NULL default '0',
+  KEY `physmessage_id` (`physmessage_id`),
+  KEY `part_id` (`part_id`),
+  UNIQUE KEY `message_parts` (`physmessage_id`,`part_key`,`part_depth`,`part_order`),
+  CONSTRAINT `dbmail_partlists_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `dbmail_partlists_ibfk_2` FOREIGN KEY (`part_id`) REFERENCES `dbmail_mimeparts` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- message meta data
+DROP TABLE IF EXISTS dbmail_keywords;
+CREATE TABLE dbmail_keywords (
+	message_idnr bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+	keyword varchar(255) NOT NULL,
+	PRIMARY KEY  (message_idnr,keyword),
+	CONSTRAINT dbmail_keywords_ibfk_1 FOREIGN KEY (message_idnr) REFERENCES dbmail_messages (message_idnr) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Add new delivery sorting filters table
+DROP TABLE IF EXISTS dbmail_filters;
+CREATE TABLE dbmail_filters (
+	user_id      BIGINT(20) UNSIGNED NOT NULL,
+	id           BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+	headername   VARCHAR(255) NOT NULL,
+	headervalue  VARCHAR(255) NOT NULL,	
+	mailbox      VARCHAR(255) NOT NULL,	
+	PRIMARY KEY (id),
+	FOREIGN KEY (user_id) REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Add new authlog table
+DROP TABLE IF EXISTS dbmail_authlog;
+CREATE TABLE `dbmail_authlog` (
+  `id` bigint(20) UNSIGNED NOT NULL auto_increment,
+  `userid` varchar(100) default NULL,
+  `service` varchar(32) default NULL,
+  `login_time` datetime default NULL,
+  `logout_time` datetime default NULL,
+  `src_ip` varchar(16) default NULL,
+  `src_port` int(11) default NULL,
+  `dst_ip` varchar(16) default NULL,
+  `dst_port` int(11) default NULL,
+  `status` varchar(32) default 'active',
+  `bytes_rx` bigint(20) NOT NULL default '0',
+  `bytes_tx` bigint(20) NOT NULL default '0',
+  PRIMARY KEY  (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Create new single instance header storage tables
+DROP TABLE IF EXISTS dbmail_headername;
+CREATE TABLE `dbmail_headername` (
+  `id` bigint(20) UNSIGNED NOT NULL auto_increment,
+  `headername` varchar(255) NOT NULL default '',
+  PRIMARY KEY  (`id`),
+  UNIQUE KEY `headername` (`headername`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE if EXISTS dbmail_headervalue;
+CREATE TABLE `dbmail_headervalue` (
+  `id` bigint(20) UNSIGNED NOT NULL auto_increment,
+  `hash` varchar(255) NOT NULL,
+  `headervalue` text NOT NULL,
+  `sortfield` varchar(255) default NULL,
+  `datefield` datetime default NULL,
+  PRIMARY KEY  (`id`),
+  KEY `hash` (`hash`),
+  KEY `headervalue` (`headervalue`(255)),
+  KEY `sortfield` (`sortfield`),
+  KEY `datefield` (`datefield`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS dbmail_header;
+CREATE TABLE `dbmail_header` (
+  `physmessage_id` bigint(20) UNSIGNED NOT NULL,
+  `headername_id` bigint(20) UNSIGNED NOT NULL,
+  `headervalue_id` bigint(20) UNSIGNED NOT NULL,
+  PRIMARY KEY  (`physmessage_id`,`headername_id`,`headervalue_id`),
+  KEY `physmessage_id` (`physmessage_id`),
+  KEY `headername_id` (`headername_id`),
+  KEY `headervalue_id` (`headervalue_id`),
+  KEY `physmessage_id_headername_id` (`physmessage_id`,`headername_id`),
+  KEY `physmessage_id_headervalue_id` (`physmessage_id`,`headervalue_id`),
+  KEY `headername_id_headervalue_id` (`headername_id`,`headervalue_id`),
+  CONSTRAINT `dbmail_header_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `dbmail_header_ibfk_2` FOREIGN KEY (`headername_id`) REFERENCES `dbmail_headername` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `dbmail_header_ibfk_3` FOREIGN KEY (`headervalue_id`) REFERENCES `dbmail_headervalue` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- views for IMAP sort
+
+DROP VIEW IF EXISTS dbmail_fromfield;
+CREATE VIEW dbmail_fromfield AS 
+	SELECT physmessage_id,sortfield AS fromfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='from';
+
+DROP VIEW IF EXISTS dbmail_ccfield;
+CREATE VIEW dbmail_ccfield AS 
+	SELECT physmessage_id,sortfield AS ccfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='cc';
+
+DROP VIEW IF EXISTS dbmail_tofield;
+CREATE VIEW dbmail_tofield AS 
+	SELECT physmessage_id,sortfield AS tofield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='to';
+
+DROP VIEW IF EXISTS dbmail_subjectfield;
+CREATE VIEW dbmail_subjectfield AS 
+	SELECT physmessage_id,headervalue AS subjectfield 
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='subject';
+
+DROP VIEW IF EXISTS dbmail_datefield;
+CREATE VIEW dbmail_datefield AS 
+	SELECT physmessage_id,datefield
+	FROM dbmail_messages m 
+	JOIN dbmail_header h USING (physmessage_id) 
+	JOIN dbmail_headername n ON h.headername_id = n.id 
+	JOIN dbmail_headervalue v ON h.headervalue_id = v.id 
+WHERE n.headername='date';
+
+
+
+SET FOREIGN_KEY_CHECKS=1;
