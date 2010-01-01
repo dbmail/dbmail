@@ -22,6 +22,7 @@ Maintain health            link:dbmail-util.html[dbmail-util(8)]
 IMAP daemon                link:dbmail-imapd.html[dbmail-imapd(8)]
 POP3 daemon                link:dbmail-pop3d.html[dbmail-pop3d(8)]
 LMTP daemon                link:dbmail-lmtpd.html[dbmail-lmtpd(8)]
+HTTP daemon                link:dbmail-httpd.html[dbmail-httpd(8)]
 ManageSieve daemon         link:dbmail-timsieved.html[dbmail-timsieved(8)]
 ---------------------------------------------------------
 

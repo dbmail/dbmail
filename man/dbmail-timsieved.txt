@@ -13,8 +13,7 @@ dbmail-timsieved [-f configfile] [-p pidfile] [-nvVh]
 
 DESCRIPTION
 -----------
-The dbmail-timsieved daemon will spawn child processes as specified in
-the dbmail.conf file. These processes listen, by default, on port 2000
+The dbmail-timsieved process listens, by default, on port 2000
 of the localhost interface.
 
 include::serveropts.txt[]
