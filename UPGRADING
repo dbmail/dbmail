@@ -1,4 +1,4 @@
-Upgrading from DBMail 2.2 to DBMail 2.4
+Upgrading from DBMail 2.2 to DBMail 3.0
 
 Dependencies
 
@@ -53,18 +53,18 @@ SYSLOG_LOGGING_LEVELS     = 31
 
 Schema Changes
 
-* Use the migration scripts
-
 Migration scripts from the previous stable releases are provided in
 sql/mysql, sql/postgresql and sql/sqlite. Please test them first
 before applying them to your live database. Especially people who have
 modified their tables, and users using databases that go back to 2.0
 or earlier should take special care.
 
-The schema for 2.4 adds new tables for single-instance storage of
-mimeparts, and for supporting user labels on messages in IMAP. No
-migration of old data is supported, but the old data will remain
-accessible, while new messages will be stored in the new schema.
+The schema for 3.0 adds new tables for single-instance storage of
+mimeparts, and for supporting user labels on messages in IMAP.
+Migration of old data is supported through dbmail-util, but until 
+you migrate the old data will remain accessible. New messages will
+be stored in the new schema.
+
 Also, the header caching tables have been revised. This means they
 will have to be dropped, re-created, and re-filled using:
 dbmail-util -by
@@ -77,10 +77,11 @@ a hundred or so concurrently connected clients this stretched the
 scalability of the database backends. 
 
 Starting with version 2.3.3 dbmail has switched to a single process
-that uses a event-driven state machine to handle many many concurrent
+that uses a event-driven architecture to handle many many concurrent
 clients. Where needed a pool of worker threads is used to process
-database transactions. Finally, database transactions are handled by a
-single shared dynamic database connection pool to minimize the number
+database transactions. Currently, only the IMAP server is multi-
+threaded. Database transactions are handled by a single shared 
+dynamic database connection pool to minimize the number
 of overall database connections.  
 
 All this means that a number of configuration options are now
