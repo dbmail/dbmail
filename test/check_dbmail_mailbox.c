@@ -508,31 +508,6 @@ START_TEST(test_dbmail_mailbox_get_set)
 }
 END_TEST
 
-START_TEST(test_dbmail_mailbox_remove_uid)
-{
-	GTree *set;
-	u64_t *id, msn;
-	gint c, i, j;
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	dbmail_mailbox_set_uid(mb,TRUE);
-	
-	msn = 1;
-	set = dbmail_mailbox_get_set(mb, "1:*", 1);
-	c = g_tree_nnodes(MailboxState_getIds(mb->mbstate));
-	j = c/2;
-
-	for (i=0; i<j; i++) {
-		id = g_tree_lookup(MailboxState_getMsn(mb->mbstate), &msn);
-		MailboxState_removeUid(mb->mbstate, *id);
-		fail_unless(g_tree_nnodes(MailboxState_getIds(mb->mbstate))==c-i-1,
-			"remove_uid failed [%d] != [%d]", g_tree_nnodes(MailboxState_getIds(mb->mbstate)), c-i-1);
-	}
-
-	dbmail_mailbox_free(mb);
-
-}
-END_TEST
-
 Suite *dbmail_mailbox_suite(void)
 {
 	Suite *s = suite_create("Dbmail Mailbox");
@@ -550,7 +525,6 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_remove_uid);
 	return s;
 }
 

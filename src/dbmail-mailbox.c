@@ -95,11 +95,6 @@ gboolean dbmail_mailbox_get_uid(DbmailMailbox *self)
 	return self->uid;
 }
 
-void dbmail_mailbox_uid_msn_map(DbmailMailbox *self)
-{
-	MailboxState_remap(self->mbstate);
-}
-
 int dbmail_mailbox_open(DbmailMailbox *self)
 {
 	if ((self->mbstate = MailboxState_new(self->id)) == NULL)
@@ -239,6 +234,9 @@ int dbmail_mailbox_dump(DbmailMailbox *self, FILE *file)
 {
 	int count = 0;
 	GMimeStream *ostream;
+
+	dbmail_mailbox_open(self);
+
 	GTree *ids = MailboxState_getIds(self->mbstate);
 
 	if (ids==NULL || g_tree_nnodes(ids) == 0) {
@@ -1632,8 +1630,11 @@ int dbmail_mailbox_search(DbmailMailbox *self)
 	GTree *ids;
 	if (! self->search) return 0;
 	
+	dbmail_mailbox_open(self);
+
 	if (self->found) g_tree_destroy(self->found);
 	self->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);
+
 	ids = MailboxState_getIds(self->mbstate);
 
 	g_tree_foreach(ids, (GTraverseFunc)_shallow_tree_copy, self->found);

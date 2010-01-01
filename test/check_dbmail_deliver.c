@@ -490,10 +490,20 @@ END_TEST
  */
 //int auth_validate(char *username, char *password, u64_t * user_idnr);
 
+static clientbase_t * ci_new(void)
+{
+	clientbase_t *ci = g_new0(clientbase_t,1);
+	FILE *fd = fopen("/dev/null","w");
+	ci->rx = fileno(stdin);
+	ci->tx = fileno(fd);
+	return ci;
+}
+
+
 START_TEST(test_auth_validate) 
 {
 	int result;
-	clientbase_t *ci = NULL;
+	clientbase_t *ci = ci_new();
 
 	u64_t user_idnr = 0;
 	result = auth_validate(ci,"testuser1","test",&user_idnr);

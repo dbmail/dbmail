@@ -40,6 +40,16 @@ extern char *configFile;
 extern int quiet;
 extern int reallyquiet;
 
+static clientbase_t * ci_new(void)
+{
+	clientbase_t *ci = g_new0(clientbase_t,1);
+	FILE *fd = fopen("/dev/null","w");
+	ci->rx = fileno(stdin);
+	ci->tx = fileno(fd);
+	return ci;
+}
+
+
 /*
  *
  * the test fixtures
@@ -65,10 +75,11 @@ START_TEST(test_auth_validate)
 {
 	u64_t user_idnr;
 	int result;
-	
-	result = auth_validate(NULL, "testuser1", "test", &user_idnr);
+	clientbase_t *ci = ci_new();	
+
+	result = auth_validate(ci, "testuser1", "test", &user_idnr);
 	fail_unless(result==1,"auth_validate failed [%d]", result);
-	result = auth_validate(NULL, "nosuchtestuser", "testnosuchlogin", &user_idnr);
+	result = auth_validate(ci, "nosuchtestuser", "testnosuchlogin", &user_idnr);
 	fail_unless(result==0,"auth_validate failed [%d]", result);
 
 }
@@ -82,6 +93,7 @@ START_TEST(test_auth_change_password)
 	char *passwd = "newpassword";
 	char *password;
 	char *enctype;
+	clientbase_t *ci = ci_new();
 
 	if (!auth_user_exists(userid, &user_idnr))
 		auth_adduser(userid,"initialpassword","", 101, 1002400, &user_idnr);
@@ -102,7 +114,7 @@ START_TEST(test_auth_change_password)
 		result = auth_change_password(user_idnr, password, enctype);
 		fail_unless(result==0,"auth_change_password failed");
 
-		result = auth_validate(NULL, userid, passwd, &user_idnr_check);
+		result = auth_validate(ci, userid, passwd, &user_idnr_check);
 		fail_unless(result==1,"auth_validate failed, pwtype [%s]", pwtypes[i]);
 		fail_unless(user_idnr_check == user_idnr, "User ID number mismatch from auth_validate.");
 	}
@@ -119,6 +131,7 @@ START_TEST(test_auth_change_password_raw)
 	char *passwd = "yourtest";
 	char *password;
 	char *enctype;
+	clientbase_t *ci = ci_new();
 
 	if (!auth_user_exists(userid, &user_idnr))
 		auth_adduser(userid,"initialpassword","", 101, 1002400, &user_idnr);
@@ -149,7 +162,7 @@ START_TEST(test_auth_change_password_raw)
 		result = auth_change_password(user_idnr, password, enctype);
 		fail_unless(result==0,"auth_change_password failed");
 
-		result = auth_validate(NULL, userid, passwd, &user_idnr_check);
+		result = auth_validate(ci, userid, passwd, &user_idnr_check);
 		fail_unless(result==1,"auth_validate failed, pwtype [%s]", pwtypes[i]);
 		fail_unless(user_idnr_check == user_idnr, "User ID number mismatch from auth_validate.");
 	}

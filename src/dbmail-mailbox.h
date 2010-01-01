@@ -72,7 +72,6 @@ GTree * dbmail_mailbox_get_msginfo(DbmailMailbox *self);
 void dbmail_mailbox_set_id(DbmailMailbox *self, u64_t id);
 u64_t dbmail_mailbox_get_id(DbmailMailbox *self);
 
-void dbmail_mailbox_uid_msn_map(DbmailMailbox *self);
 void dbmail_mailbox_set_uid(DbmailMailbox *self, gboolean uid);
 gboolean dbmail_mailbox_get_uid(DbmailMailbox *self);
 
