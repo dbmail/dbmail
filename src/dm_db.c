@@ -2973,7 +2973,6 @@ int char2date_str(const char *date, field_t *frag)
 
 int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_username)
 {
-	struct sockaddr saddr;
 	char clientsock[DM_SOCKADDR_LEN];
 	const char *userid = NULL, *sockok = NULL, *sockno = NULL, *login = NULL;
 	unsigned row = 0;
@@ -2990,29 +2989,6 @@ int db_usermap_resolve(clientbase_t *ci, const char *username, char *real_userna
 	if (ci->tx==0) {
 		strncpy(clientsock,"",1);
 	} else {
-		/* get the socket the client is connecting on */
-		int serr;
-		socklen_t len = sizeof(struct sockaddr);
-		char host[NI_MAXHOST], serv[NI_MAXSERV];
-
-		if (getsockname(ci->tx, &saddr, &len) < 0) {
-			serr = errno;
-			TRACE(TRACE_INFO, "getsockname::error [%s]", strerror(serr));
-			return DM_SUCCESS; // non-fatal 
-		}
-
-		memset(host, 0, NI_MAXHOST);
-		memset(serv, 0, NI_MAXSERV);
-
-		if ((serr = getnameinfo(&saddr, len, host, NI_MAXHOST, serv, NI_MAXSERV, 
-				NI_NUMERICHOST | NI_NUMERICSERV))) {
-			TRACE(TRACE_INFO, "getnameinfo::error [%s]", gai_strerror(serr));
-			return DM_SUCCESS; // non-fatal	
-		}
-
-		strncpy(ci->dst_ip, host, NI_MAXHOST);
-		strncpy(ci->dst_port, serv, NI_MAXSERV);
-
 		snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%s", ci->dst_ip, ci->dst_port);
 		TRACE(TRACE_DEBUG, "client on inet socket [%s]", clientsock);
 	}

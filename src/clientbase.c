@@ -138,8 +138,9 @@ static int client_error_cb(int sock, int error, void *arg)
 	return r;
 }
 
-clientbase_t * client_init(int socket, struct sockaddr *caddr, socklen_t len, SSL *ssl)
+clientbase_t * client_init(client_sock *c)
 {
+	int serr;
 	clientbase_t *client	= g_new0(clientbase_t, 1);
 
 	client->timeout         = g_new0(struct timeval,1);
@@ -153,20 +154,27 @@ clientbase_t * client_init(int socket, struct sockaddr *caddr, socklen_t len, SS
 	client->bytes_tx = 0;
 
 	/* make streams */
-	if (socket == 0 && caddr == NULL) {
+	if (c == NULL) {
 		client->rx		= STDIN_FILENO;
 		client->tx		= STDOUT_FILENO;
 	} else {
-		int serr;
-		TRACE(TRACE_DEBUG,"caddr [%p] sa_family [%d] len [%d]", caddr, caddr->sa_family, len);
+		/* server-side */
+		TRACE(TRACE_DEBUG,"saddr [%p] sa_family [%d] len [%d]", c->saddr, c->saddr->sa_family, c->saddr_len);
+		if ((serr = getnameinfo(c->saddr, c->saddr_len, client->dst_ip, NI_MAXHOST, client->dst_port, NI_MAXSERV, 
+						NI_NUMERICHOST | NI_NUMERICSERV))) {
+			TRACE(TRACE_INFO, "getnameinfo::error [%s]", gai_strerror(serr));
+		}
+		TRACE(TRACE_NOTICE, "incoming connection on [%s:%s]", client->dst_ip, client->dst_port);
 
-		if ((serr = getnameinfo(caddr, len, client->src_ip, NI_MAXHOST, client->src_port, NI_MAXSERV,
-			NI_NUMERICHOST | NI_NUMERICSERV))) {
+		/* client-side */
+		TRACE(TRACE_DEBUG,"caddr [%p] sa_family [%d] len [%d]", c->caddr, c->caddr->sa_family, c->caddr_len);
+		if ((serr = getnameinfo(c->caddr, c->caddr_len, client->src_ip, NI_MAXHOST, client->src_port, NI_MAXSERV,
+						NI_NUMERICHOST | NI_NUMERICSERV))) {
 			TRACE(TRACE_EMERG, "getnameinfo:error [%s]", gai_strerror(serr));
 		} 
 
 		if (server_conf->resolveIP) {
-			if ((serr = getnameinfo(caddr, len, client->clientname, NI_MAXHOST, NULL, 0, NI_NAMEREQD))) {
+			if ((serr = getnameinfo(c->caddr, c->caddr_len, client->clientname, NI_MAXHOST, NULL, 0, NI_NAMEREQD))) {
 				TRACE(TRACE_INFO, "getnameinfo:error [%s]", gai_strerror(serr));
 			} 
 
@@ -174,14 +182,14 @@ clientbase_t * client_init(int socket, struct sockaddr *caddr, socklen_t len, SS
 					client->src_ip, client->src_port,
 					client->clientname[0] ? client->clientname : "Lookup failed");
 		} else {
-			TRACE(TRACE_NOTICE, "incoming connection from [%s:%s]",
-					client->src_ip, client->src_port);
+			TRACE(TRACE_NOTICE, "incoming connection from [%s:%s]", client->src_ip, client->src_port);
 		}
 
 		/* make streams */
-		client->rx = client->tx = socket;
-		client->ssl = ssl;
-		if (ssl)
+		client->rx = client->tx = c->sock;
+		client->ssl = c->ssl;
+
+		if (c->ssl)
 			client->ssl_state = TRUE;
 	}
 
@@ -410,18 +418,25 @@ int ci_readln(clientbase_t *self, char * buffer)
 
 void ci_authlog_init(clientbase_t *self, const char *service, const char *username, const char *status)
 {
-	if ((! server_conf->authlog) || server_conf->no_daemonize) return;
-	C c; R r;
+	if ((! server_conf->authlog) || server_conf->no_daemonize == 1) return;
+	C c; R r; S s;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	char *frag = db_returning("id");
 	c = db_con_get();
 	TRY
-		r = db_query(c, "INSERT INTO %sauthlog (userid, service, login_time, logout_time, src_ip, src_port, dst_ip, dst_port, status)"
-				" VALUES ('%s', '%s', %s, %s, "
-				"'%s', %d, '%s', %d, '%s') %s",
-				DBPFX, username, service, now, now, 
-				(char *)self->src_ip, self->src_port, (char *)self->dst_ip, self->dst_port, 
-				status, frag);
+
+		s = db_stmt_prepare(c, "INSERT INTO %sauthlog (userid, service, login_time, logout_time, src_ip, src_port, dst_ip, dst_port, status)"
+				" VALUES (?, ?, %s, %s, ?, ?, ?, ?, ?) %s", DBPFX, now, now, frag);
+
+		db_stmt_set_str(s, 1, username);
+		db_stmt_set_str(s, 2, service);
+		db_stmt_set_str(s, 3, (char *)self->src_ip);
+		db_stmt_set_int(s, 4, atoi(self->src_port));
+		db_stmt_set_str(s, 5, (char *)self->dst_ip);
+		db_stmt_set_int(s, 6, atoi(self->dst_port));
+		db_stmt_set_str(s, 7, status);
+
+		r = db_stmt_query(s);
 		
 		if(strcmp(AUTHLOG_ERR,status)!=0) self->authlog_id = db_insert_result(c, r);
 	CATCH(SQLException)
@@ -434,11 +449,25 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 
 static void ci_authlog_close(clientbase_t *self)
 {
+	C c; S s;
 	if ((! server_conf->authlog) || server_conf->no_daemonize) return;
 	if (! self->authlog_id) return;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
-	db_update("UPDATE %sauthlog SET logout_time=%s, status='%s', bytes_rx=%llu, bytes_tx=%llu "
-		"WHERE id=%llu", DBPFX, now, AUTHLOG_FIN, self->bytes_rx, self->bytes_tx, self->authlog_id);
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "UPDATE %sauthlog SET logout_time=%s, status=?, bytes_rx=?, bytes_tx=? "
+		"WHERE id=?", DBPFX, now);
+		db_stmt_set_str(s, 1, AUTHLOG_FIN);
+		db_stmt_set_u64(s, 2, self->bytes_rx);
+		db_stmt_set_u64(s, 3, self->bytes_tx);
+		db_stmt_set_u64(s, 4, self->authlog_id);
+
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 }
 
 void ci_close(clientbase_t *self)

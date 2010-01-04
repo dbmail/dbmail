@@ -304,6 +304,8 @@ typedef struct  {
 	SSL *ssl;                       /* SSL/TLS context for this client */
 	struct sockaddr *caddr;
 	socklen_t caddr_len;
+	struct sockaddr *saddr;
+	socklen_t saddr_len;
 	void (*cb_close) (void *);	/* termination callback */
 } client_sock;
 
@@ -333,9 +335,11 @@ typedef struct {
 
 	Cram_T auth;                    /* authentication context for cram-md5 */
 	u64_t authlog_id;
-	char src_ip[NI_MAXHOST];		/* client IP-number */
-	char src_port[NI_MAXSERV];		        /* client port number */
+
 	field_t clientname;             /* resolved client name */
+
+	char src_ip[NI_MAXHOST];	/* client IP-number */
+	char src_port[NI_MAXSERV];	/* client port number */
 
 	char dst_ip[NI_MAXHOST];	/* server IP-number */
 	char dst_port[NI_MAXSERV];      /* server port number */

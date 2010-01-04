@@ -460,14 +460,15 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 {
 	client_sock *c = g_new0(client_sock,1);
 	struct sockaddr *caddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
+	struct sockaddr *saddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
 	struct event *ev = (struct event *)arg;
 
 	TRACE(TRACE_DEBUG,"%d %d, %p, ssl:%s", sock, event, arg, ssl?"Y":"N");
 
 	/* accept the active fd */
-	int len = sizeof(struct sockaddr_in);
+	int len = sizeof(*caddr);
 
-	if ((c->sock = accept(sock, caddr, (socklen_t *)&len)) < 0) {
+	if ((c->sock = accept(sock, NULL, NULL)) < 0) {
                 int serr=errno;
                 switch(serr) {
                         case ECONNABORTED:
@@ -481,7 +482,25 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
                 }
                 return;
         }
-		
+
+	if (getpeername(c->sock, caddr, (socklen_t *)&len) < 0) {
+		int serr = errno;
+		TRACE(TRACE_EMERG, "getpeername::error [%s]", strerror(serr));
+		return; // fatal 
+	}
+
+	c->caddr = caddr;
+	c->caddr_len = len;
+
+	if (getsockname(c->sock, saddr, (socklen_t *)&len) < 0) {
+		int serr = errno;
+		TRACE(TRACE_EMERG, "getsockname::error [%s]", strerror(serr));
+		return; // fatal 
+	}
+
+	c->saddr = saddr;
+	c->saddr_len = len;
+	
 	if (ssl) {
 		if (! (c->ssl = SSL_new(tls_context))) {
 			TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
@@ -504,14 +523,13 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 		}
 	}
 
-	c->caddr = caddr;
-	c->caddr_len = len;
 	TRACE(TRACE_INFO, "connection accepted");
 
 	/* streams are ready, perform handling */
 	server_conf->ClientHandler((client_sock *)c);
 
 	g_free(caddr);
+	g_free(saddr);
 
 	if (c->ssl)
 		SSL_free(c->ssl);

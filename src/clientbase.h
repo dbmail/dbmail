@@ -25,7 +25,7 @@
 
 #include "dbmail.h"
  
-clientbase_t * client_init(int socket, struct sockaddr *caddr, socklen_t len, SSL *ssl);
+clientbase_t * client_init(client_sock *c);
 int ci_starttls(clientbase_t *self);
 
 void ci_authlog_init(clientbase_t *self, const char *service, const char *username, const char *status);
