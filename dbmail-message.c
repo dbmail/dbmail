@@ -1312,7 +1312,7 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	// require self to be a pristine (empty) DbmailMessage.
 	g_return_val_if_fail(self->content==NULL, self);
 
-	message = g_mime_message_new(FALSE);
+	message = g_mime_message_new(TRUE);
 
 	// determine the optimal encoding type for the body: how would gmime
 	// encode this string. This will return either base64 or quopri.
@@ -1320,9 +1320,11 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 		encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
 
 	// set basic headers
+	TRACE(TRACE_DEBUG, "from: [%s] to: [%s] subject: [%s] body: [%s]", from, to, subject, body);
 	g_mime_message_set_sender(message, from);
 	g_mime_message_set_subject(message, subject);
 	g_mime_message_set_header(message, "To", to);
+	g_mime_message_add_recipient(message, GMIME_RECIPIENT_TYPE_TO, "", to);
 
 	// construct mime-part
 	mime_part = g_mime_part_new();

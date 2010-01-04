@@ -334,10 +334,39 @@ int send_vacation(struct DbmailMessage *message,
  * Send an automatic reply.
  */
 #define REPLY_DAYS 7
-static int send_reply(struct DbmailMessage *message, const char *body)
+static int check_destination(struct DbmailMessage *message, GList *aliases)
+{
+	GList *to, *cc, *recipients;
+	to = dbmail_message_get_header_addresses(message, "To");
+	cc = dbmail_message_get_header_addresses(message, "Cc");
+	recipients = g_list_concat(to, cc);
+	if (! recipients)
+		TRACE(TRACE_DEBUG, "no recipients??");
+
+	while (recipients) {
+		char *addr = (char *)recipients->data;
+		aliases = g_list_first(aliases);
+		while (aliases) {
+			char *alias = (char *)aliases->data;
+			if (MATCH(alias, addr)) {
+				TRACE(TRACE_DEBUG, "valid alias found as recipient [%s]", alias);
+				return TRUE;
+			}
+			if (! g_list_next(aliases)) break;
+			aliases = g_list_next(aliases);
+		}
+		if (! g_list_next(recipients)) break;
+		recipients = g_list_next(recipients);
+	}
+
+	g_list_destroy(recipients);
+	return FALSE;
+}
+static int send_reply(struct DbmailMessage *message, const char *body, GList *aliases)
 {
 	const char *from, *to, *subject;
 	const char *x_dbmail_reply;
+	char *handle;
 	int result;
 
 	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
@@ -345,10 +374,15 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 		TRACE(TRACE_MESSAGE, "reply loop detected [%s]", x_dbmail_reply);
 		return 0;
 	}
-	
-	subject = dbmail_message_get_header(message, "Subject");
 
+	if (! check_destination(message, aliases)) {
+		TRACE(TRACE_MESSAGE, "no valid destination ");
+		return 0;
+	}
+
+	subject = dbmail_message_get_header(message, "Subject");
 	from = dbmail_message_get_header(message, "Delivered-To");
+
 	if (!from)
 		from = message->envelope_recipient->str;
 	if (!from)
@@ -366,7 +400,10 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 		return 0;
 	}
 
-	if (db_replycache_validate(to, from, "replycache", REPLY_DAYS) != DM_SUCCESS) {
+	handle = dm_md5((const unsigned char * const)body);
+
+	if (db_replycache_validate(to, from, handle, REPLY_DAYS) != DM_SUCCESS) {
+		g_free(handle);
 		TRACE(TRACE_DEBUG, "skip auto-reply");
 		return 0;
 	}
@@ -380,9 +417,10 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
 
 	if (result == 0) {
-		db_replycache_register(to, from, "replycache");
+		db_replycache_register(to, from, handle);
 	}
 
+	g_free(handle);
 	g_free(newsubject);
 	dbmail_message_free(new_message);
 
@@ -415,7 +453,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 	if (strcasecmp(val, "yes") == 0)
 		do_auto_reply = 1;
 
-	if (do_auto_notify != 0) {
+	if (do_auto_notify) {
 		TRACE(TRACE_DEBUG, "starting auto-notification procedure");
 
 		if (db_get_notify_address(useridnr, &notify_address) != 0)
@@ -424,7 +462,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 			if (notify_address == NULL)
 				TRACE(TRACE_DEBUG, "no notification address specified, skipping");
 			else {
-				TRACE(TRACE_DEBUG, "sending notifcation to [%s]", notify_address);
+				TRACE(TRACE_DEBUG, "sending notification to [%s]", notify_address);
 				if (send_notification(message, notify_address) < 0) {
 					TRACE(TRACE_ERROR, "error in call to send_notification.");
 					g_free(notify_address);
@@ -435,7 +473,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 		}
 	}
 
-	if (do_auto_reply != 0) {
+	if (do_auto_reply) {
 		TRACE(TRACE_DEBUG, "starting auto-reply procedure");
 
 		if (db_get_reply_body(useridnr, &reply_body) != 0)
@@ -444,7 +482,8 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 			if (reply_body == NULL || reply_body[0] == '\0')
 				TRACE(TRACE_DEBUG, "no reply body specified, skipping");
 			else {
-				if (send_reply(message, reply_body) < 0) {
+				GList *aliases = auth_get_user_aliases(useridnr);
+				if (send_reply(message, reply_body, aliases) < 0) {
 					TRACE(TRACE_ERROR, "error in call to send_reply");
 					g_free(reply_body);
 					return -1;
