@@ -1,0 +1,3 @@
+
+CREATE UNIQUE INDEX dbmail_envelope_1 ON dbmail_envelope(physmessage_id);
+
