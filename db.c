@@ -2970,7 +2970,7 @@ int db_getmailbox_flags(mailbox_t *mb)
 
 int db_getmailbox_count(mailbox_t *mb)
 {
-	unsigned exists = 0, seen = 0, recent = 0;
+	unsigned results[3];
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
@@ -2978,11 +2978,11 @@ int db_getmailbox_count(mailbox_t *mb)
 
 	/* count messages */
 	snprintf(query, DEF_QUERYSIZE,
- 			 "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+ 			 "SELECT 0,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
  			 "AND (status < %d) UNION "
- 			 "SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+ 			 "SELECT 1,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
  			 "AND (status < %d) AND seen_flag=1 UNION "
- 			 "SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+ 			 "SELECT 2,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
  			 "AND (status < %d) AND recent_flag=1", 
  			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
  			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
@@ -2994,14 +2994,14 @@ int db_getmailbox_count(mailbox_t *mb)
 	}
 
 	if (db_num_rows()) {
-		exists = (unsigned)db_get_result_int(0,1);
-		seen   = (unsigned)db_get_result_int(1,1);
-		recent = (unsigned)db_get_result_int(2,1);
+		results[db_get_result_int(0,0)] = (unsigned)db_get_result_int(0,1);
+		results[db_get_result_int(1,0)] = (unsigned)db_get_result_int(1,1);
+		results[db_get_result_int(2,0)] = (unsigned)db_get_result_int(2,1);
   	}
 
- 	mb->exists = exists;
- 	mb->unseen = exists - seen;
- 	mb->recent = recent;
+ 	mb->exists = results[0];
+ 	mb->unseen = results[0] - results[1];
+ 	mb->recent = results[2];
  
 	db_free_result();
 	
