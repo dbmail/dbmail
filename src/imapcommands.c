@@ -1579,7 +1579,6 @@ static void _ic_fetch_enter(dm_thread_data *D)
 {
 	LOCK_SESSION;
 	int result, state, setidx;
-	GTree *ids;
 
 	if (self->fi) {
 		dbmail_imap_session_bodyfetch_free(self);
@@ -1606,10 +1605,9 @@ static void _ic_fetch_enter(dm_thread_data *D)
 
 	result = DM_SUCCESS;
 
-	ids = MailboxState_getIds(self->mailbox->mbstate);
-  	if (g_tree_nnodes(ids) > 0) {
+  	if (g_tree_nnodes(MailboxState_getIds(self->mailbox->mbstate)) > 0) {
  		if (_dm_imapsession_get_ids(self, self->args[setidx]) == DM_SUCCESS) {
-  			self->ids_list = g_tree_keys(ids);
+  			self->ids_list = g_tree_keys(self->ids);
   			result = dbmail_imap_session_fetch_get_items(self);
   		}
 	}
