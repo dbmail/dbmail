@@ -865,10 +865,15 @@ void _ic_list_enter(dm_thread_data *D)
 
 		u64_t mailbox_id = *(u64_t *)children->data;
 		if ((M = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id)) != NULL) {
+			char *mailbox = g_new0(char, IMAP_MAX_MAILBOX_NAMELEN);
+			if ( (D->status = db_getmailboxname(mailbox_id, self->userid, mailbox)) != DM_SUCCESS) {
+				g_free(mailbox);
+				break;
+			}
 
 			/* Enforce match of mailbox to pattern. */
-			TRACE(TRACE_DEBUG,"test if [%s] matches [%s]", MailboxState_getName(M), pattern);
-			if (! listex_match(pattern, MailboxState_getName(M), MAILBOX_SEPARATOR, 0)) {
+			TRACE(TRACE_DEBUG,"test if [%s] matches [%s]", mailbox, pattern);
+			if (! listex_match(pattern, mailbox, MAILBOX_SEPARATOR, 0)) {
 				if (g_str_has_suffix(pattern,"%")) {
 					/*
 					   If the "%" wildcard is the last character of a mailbox name argument, matching levels
@@ -876,8 +881,8 @@ void _ic_list_enter(dm_thread_data *D)
 					   mailboxes, they are returned with the \Noselect mailbox name attribute
 					 */
 
-					TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", MailboxState_getName(M), pattern);
-					char *m = NULL, **p = g_strsplit(MailboxState_getName(M),MAILBOX_SEPARATOR,0);
+					TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox, pattern);
+					char *m = NULL, **p = g_strsplit(mailbox,MAILBOX_SEPARATOR,0);
 					int l = g_strv_length(p);
 					while (l > 1) {
 						if (p[l]) {
@@ -904,6 +909,10 @@ void _ic_list_enter(dm_thread_data *D)
 			} else {
 				show = TRUE;
 			}
+
+			if (! (MATCH(MailboxState_getName(M), mailbox))) 
+				MailboxState_setName(M, mailbox);
+			g_free(mailbox);
 
 			if (show && MailboxState_getName(M) && (! g_tree_lookup(shown, MailboxState_getName(M)))) {
 				char *s = g_strdup(MailboxState_getName(M));
