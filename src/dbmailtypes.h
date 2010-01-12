@@ -133,12 +133,6 @@ typedef enum DBMAIL_MESSAGE_FILTER_TYPES {
 	DBMAIL_MESSAGE_FILTER_BODY
 } message_filter_t;
 
-typedef enum DBMAIL_STREAM_TYPE {
-	DBMAIL_STREAM_PIPE = 1,
-	DBMAIL_STREAM_LMTP,
-	DBMAIL_STREAM_RAW
-} dbmail_stream_t;
-
 typedef struct {
 	u64_t id;
 	u64_t physid;

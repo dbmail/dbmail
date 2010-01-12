@@ -79,10 +79,13 @@ void do_showhelp(void) {
 
 int main(int argc, char *argv[])
 {
+#define READ_SIZE 1024
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
+	ssize_t n = 0;
+	GString *raw;
 	DbmailMessage *msg = NULL;
-	char *returnpath = NULL;
+	char buf[READ_SIZE], *returnpath = NULL;
 	GList *userlist = NULL;
 	GList *dsnusers = NULL;
 	deliver_to_user_t *dsnuser;
@@ -243,7 +246,15 @@ int main(int argc, char *argv[])
         }
 
 	/* read the whole message */
-	if (! (msg = dbmail_message_new_from_stream(stdin, DBMAIL_STREAM_PIPE))) {
+	memset(buf, 0, sizeof(buf));
+	raw = g_string_new("");
+	while ( (n = read(fileno(stdin), (void *)buf, READ_SIZE-1)) > 0) {
+		raw = g_string_append(raw, buf);
+		memset(buf, 0, sizeof(buf));
+	}
+
+	msg = dbmail_message_new();
+	if (! (msg = dbmail_message_init_with_string(msg, raw))) {
 		TRACE(TRACE_ERR, "error reading message");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
@@ -368,6 +379,7 @@ int main(int argc, char *argv[])
 			" turn up trace level for more detail", exitcode);
 	}
 
+	g_string_free(raw, TRUE);
 	dbmail_message_free(msg);
 	dsnuser_free_list(dsnusers);
 	g_list_destroy(userlist);

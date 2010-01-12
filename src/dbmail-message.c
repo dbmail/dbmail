@@ -50,8 +50,6 @@ static gboolean _header_cache(const char *header, const char *value, gpointer us
 
 static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template);
 static void _map_headers(DbmailMessage *self);
-static int _set_content(DbmailMessage *self, const GString *content);
-static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
 static int _message_insert(DbmailMessage *self, 
 		u64_t user_idnr, 
 		const char *mailbox, 
@@ -659,30 +657,6 @@ void dbmail_message_free(DbmailMessage *self)
 }
 
 
-/* \brief create and initialize a new DbmailMessage
- * \param FILE *instream from which to read
- * \param int streamtype is DBMAIL_STREAM_PIPE or DBMAIL_STREAM_LMTP
- * \return the new DbmailMessage
- */
-DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype) 
-{
-	
-	GMimeStream *stream;
-	DbmailMessage *message, *retmessage;
-	
-	assert(instream);
-	message = dbmail_message_new();
-	stream = g_mime_stream_fs_new(dup(fileno(instream)));
-	retmessage = dbmail_message_init_with_stream(message, stream, streamtype);
-	g_object_unref(stream);
-
-	if (retmessage)
-		return retmessage;
-	
-	dbmail_message_free(message);
-	return NULL;
-}
-
 /* \brief set the type flag for this DbmailMessage
  * \param the DbmailMessage on which to set the flag
  * \param type flag is either DBMAIL_MESSAGE or DBMAIL_MESSAGE_PART
@@ -716,184 +690,51 @@ int dbmail_message_get_class(const DbmailMessage *self)
  * \param GString *content contains the raw message
  * \return the filled DbmailMessage
  */
-DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GString *content)
+DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GString *str)
 {
-
-	_set_content(self,content);
-
-	if (! (GMIME_IS_MESSAGE(self->content))) {
-		dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
-		self->content=NULL;
-		_set_content(self, content);
-	}
-	
-	_map_headers(self);
-	
-	return self;
-}
-
-DbmailMessage * dbmail_message_init_from_gmime_message(DbmailMessage *self, GMimeMessage *message)
-{
-	g_return_val_if_fail(GMIME_IS_MESSAGE(message), NULL);
-
-	self->content = GMIME_OBJECT(message);
-	_map_headers(self);
-
-	return self;
-
-}
-
-/* \brief initialize a previously created DbmailMessage using a GMimeStream
- * \param empty DbmailMessage
- * \param stream from which to read
- * \param type which indicates either pipe/network style streaming
- * \return the filled DbmailMessage
- */
-DbmailMessage * dbmail_message_init_with_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
-	{
-	int res;
-
-	res = _set_content_from_stream(self,stream,type);
-	if (res != 0)
-		return NULL;
-
-	_map_headers(self);
-	return self;
-}
-
-static int _set_content(DbmailMessage *self, const GString *content)
-{
-	int res;
+	GMimeObject *content;
+	GMimeParser *parser;
+	gchar *from = NULL;
 	GMimeStream *stream;
 
-	stream = g_mime_stream_mem_new_with_buffer(content->str, content->len+1);
-	res = _set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
-	g_mime_stream_close(stream);
+	assert(self->content == NULL);
+
+	stream = g_mime_stream_mem_new_with_buffer(str->str, str->len);
+	parser = g_mime_parser_new_with_stream(stream);
 	g_object_unref(stream);
 
-	return res;
-}
-
-static int _set_content_from_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
-{
-#define MESSAGE_MAX_LINE_SIZE 1024
-	/* 
-	 * We convert all messages to crlf->lf for internal usage and
-	 * db-insertion
-	 */
-	
-	GMimeStream *fstream, *bstream, *mstream;
-	GMimeFilter *filter;
-	GMimeParser *parser;
-	gchar *buf, *from = NULL;
-	ssize_t getslen, putslen;
-	int res = 0;
-	gboolean firstline=TRUE;
-
-	/*
-	 * buildup the memory stream buffer
-	 * we will read from stream until either EOF or <dot><crlf> is encountered
-	 * depending on the streamtype
-	 */
-
-	if (self->content) {
-		self->content=NULL;
-	}
-	
-	parser = g_mime_parser_new();
-		
-	switch(type) {
-		case DBMAIL_STREAM_LMTP:
-		case DBMAIL_STREAM_PIPE:
-			
-			buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
-
-			self->tmp = tmpfile(); 
-			if (! self->tmp) {
-				int serr = errno;
-				TRACE(TRACE_ERR, "opening tmpfile failed: %s", strerror(serr));
-				res = 1;
-				break;
-			}
-
-			// setup a filter pipeline:
-			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
-
-			mstream = g_mime_stream_file_new(self->tmp); assert(mstream);
-			fstream = g_mime_stream_filter_new(mstream);
-			g_mime_stream_file_set_owner((GMimeStreamFile *)mstream, FALSE);
-
-			filter = g_mime_filter_crlf_new(FALSE,TRUE);
-			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
-			g_object_unref(filter);
-			
-			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
-			while ((getslen = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) > 0) {
-				if (firstline && strncmp(buf,"From ",5)==0) {
-					from = g_strdup(buf);
-					firstline=FALSE;
-					continue;
-				}
-
-				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
-					break;
-
-				putslen = g_mime_stream_write(fstream, buf, getslen);
-
-				if (g_mime_stream_flush(fstream)) {
-					TRACE(TRACE_ERR, "Failed to flush, is your /tmp filesystem full?");
-					res = 1;
-					break;
-				}
-
-				if (putslen < getslen && getslen > putslen+1) {
-					TRACE(TRACE_ERR, "Short write [%zd < %zd], is your /tmp filesystem full?", 
-						putslen, getslen);
-					res = 1;
-					break;
-				}
-			}
-			g_object_unref(bstream);
-			g_object_unref(fstream);
-
-			if (getslen < 0) {
-				TRACE(TRACE_ERR, "Read failed, did the client drop the connection?");
-				res = 1;
-			}
-
-			g_free(buf);
-			
-			g_mime_stream_reset(mstream);
-			g_mime_parser_init_with_stream(parser, mstream);
-			g_object_unref(mstream);
-
-		break;
-
-		default:
-		case DBMAIL_STREAM_RAW:
-			g_mime_parser_init_with_stream(parser, stream);
-		break;
-
+	TRACE(TRACE_DEBUG,"parse message");
+	if (strncmp(str->str, "From ", 5) == 0) {
+		/* don't use gmime's from scanner since body lines may begin with 'From ' */
+		char *end;
+		if ((end = g_strstr_len(str->str, 80, "\n"))) {
+			size_t l = end - str->str;
+			from = g_strndup(str->str, l);
+		}
 	}
 
-	switch (dbmail_message_get_class(self)) {
-		case DBMAIL_MESSAGE:
-			TRACE(TRACE_DEBUG,"parse message");
-			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
-			if (from) {
-				dbmail_message_set_internal_date(self, from);
-				g_free(from);
-			}
-			break;
-		case DBMAIL_MESSAGE_PART:
-			TRACE(TRACE_DEBUG,"parse part");
-			self->content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
-			break;
+	content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
+	if (content) {
+		dbmail_message_set_class(self, DBMAIL_MESSAGE);
+		self->content = content;
+		if (from) {
+			TRACE(TRACE_DEBUG,"from scan: %s", from);
+			dbmail_message_set_internal_date(self, from);
+		}
+		g_object_unref(parser);
+	} else {
+		TRACE(TRACE_DEBUG,"parse part");
+		content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
+		if (content) {
+			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
+			self->content = content;
+			g_object_unref(parser);
+		}
 	}
 
-	g_object_unref(parser);
-
-	return res;
+	if (from) g_free(from);
+	_map_headers(self);
+	return self;
 }
 
 static gboolean g_str_case_equal(gconstpointer a, gconstpointer b)
@@ -916,11 +757,8 @@ static void _map_headers(DbmailMessage *self)
 		char *message_id = NULL;
 		char *type = NULL;
 
-		// this is needed to correctly initialize gmime's mime iterator
-//		if (GMIME_MESSAGE(self->content)->mime_part)
-//			g_mime_header_list_set_raw (GMIME_MESSAGE(self->content)->mime_part->headers, NULL);
-
 		/* make sure the message has a message-id, else threading breaks */
+/*
 		if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {
 			char *domainname = g_new0(gchar, 255);
 			if (getdomainname(domainname,255))
@@ -930,7 +768,7 @@ static void _map_headers(DbmailMessage *self)
 			g_free(message_id);
 			g_free(domainname);
 		}
-
+*/
 
 		// gmime doesn't consider the content-type header to be a message-header so extract 
 		// and register it separately
@@ -939,7 +777,7 @@ static void _map_headers(DbmailMessage *self)
 			_register_header("Content-Type",type, (gpointer)self);
 	}
 
-	g_mime_header_list_foreach(GMIME_OBJECT(self->content)->headers, _register_header, self);
+	g_mime_header_list_foreach(g_mime_object_get_header_list(GMIME_OBJECT(self->content)), _register_header, self);
 }
 
 static void _register_header(const char *header, const char *value, gpointer user_data)
@@ -951,6 +789,7 @@ static void _register_header(const char *header, const char *value, gpointer use
 	assert(value);
 	assert(m);
 
+	TRACE(TRACE_DEBUG,"%s: %s", header, value);
 	if (! (hname = g_tree_lookup(m->header_name,header))) {
 		g_tree_insert(m->header_name,(gpointer)header,(gpointer)header);
 		hname = header;

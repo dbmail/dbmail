@@ -647,6 +647,11 @@ char *encoded_message_utf8 = "From: nobody@nowhere.org\n"
 	"\n"
 	"test\n\n";
 
+char *encoded_message_utf8_1 = "From: =?utf-8?Q?Maciej_K._Kr=C3=B3l?= <maciej.krol@domain.tld>\n"
+	"Subject: test\n"
+	"\n"
+	"test\n\n";
+
 char *encoded_message_utf8_2 = "X-Mozilla-Status: 0001\n"
 	"X-Mozilla-Status2: 00800000\n"
 	"X-Mozilla-Keys:                                                                                 \n"

@@ -47,9 +47,6 @@
  */
 
 DbmailMessage * dbmail_message_new(void);
-DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype);
-DbmailMessage * dbmail_message_init_from_gmime_message(DbmailMessage *self, GMimeMessage *message);
-DbmailMessage * dbmail_message_init_with_stream(DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
 DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GString *content);
 DbmailMessage * dbmail_message_construct(DbmailMessage *self, 
 		const gchar *sender, const gchar *recipient, 

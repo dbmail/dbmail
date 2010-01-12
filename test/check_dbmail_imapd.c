@@ -210,22 +210,6 @@ START_TEST(test_imap_bodyfetch)
 		
 }
 END_TEST
-START_TEST(test_g_mime_object_get_body)
-{
-	char * result;
-	DbmailMessage *m;
-
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
-	
-	result = g_mime_object_get_body(GMIME_OBJECT(m->content));
-	fail_unless(strlen(result)==1045,"g_mime_object_get_body failed");
-	g_free(result);
-	dbmail_message_free(m);
-	
-}
-END_TEST
-
 START_TEST(test_imap_get_structure)
 {
 	DbmailMessage *message;
@@ -582,7 +566,8 @@ START_TEST(test_imap_get_partspec)
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = imap_get_logical_part(object,"HEADER");
 	
-	expect = g_strdup("Content-Type: text/plain; charset=\"us-ascii\"\n"
+	expect = g_strdup("From nobody Wed Sep 14 16:47:48 2005\n"
+			"Content-Type: text/plain; charset=\"us-ascii\"\n"
 			"MIME-Version: 1.0\n"
 			"Content-Transfer-Encoding: 7bit\n"
 			"Message-Id: <1199706209l.3020l.1l@(none)>\n"
@@ -902,7 +887,6 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_partspec);
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
-	tcase_add_test(tc_mime, test_g_mime_object_get_body);
 
 	tcase_add_checked_fixture(tc_util, setup, teardown);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
