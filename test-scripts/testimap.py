@@ -368,7 +368,11 @@ class testImapServer(unittest.TestCase):
             to protect the password.  Will only work if the server
             `CAPABILITY' response includes the phrase `AUTH=CRAM-MD5'.
         """
-        #self.fail(unimplementedError)
+        o = getsock()
+        o.debug = DEBUG
+        result = o.login_cram_md5("testuser1", "test")
+        self.failUnlessRaises(Exception,o.login_cram_md5,"testuser1","blah")
+        self.assertEquals(result,('OK', ['AUTHENTICATE completed']))
 
     def testLogout(self):
         """ 

@@ -362,7 +362,13 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 			is_validated = Cram_verify(ci->auth, dbpass);
 		else
 			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "crypt") == 0) {
+        } else if (username == NULL || password == NULL) {
+		g_free(dbpass);
+		g_free(encode);		
+		return FALSE;
+        }
+
+	if (strcasecmp(encode, "crypt") == 0) {
 		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
 		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
 	} else if (strcasecmp(encode, "md5") == 0) {
