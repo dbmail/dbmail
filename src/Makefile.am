@@ -41,6 +41,7 @@ COMMON = dbmail-user.c \
 	dbmail-mailbox.c \
 	dm_mailboxstate.c \
 	dm_cram.c \
+	dm_capa.c \
 	dm_config.c \
 	dm_debug.c \
 	dm_list.c \
