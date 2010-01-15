@@ -34,6 +34,7 @@ struct T {
 	const char capabilities[MAX_CAPASIZE];
 	const char max_set[MAX_CAPASIZE];
 	GList *current_set;
+	gboolean dirty;
 };
 
 static GList *capa_search(T A, const char *c)
@@ -41,32 +42,42 @@ static GList *capa_search(T A, const char *c)
 	return g_list_find_custom(A->current_set, c, (GCompareFunc)strcasecmp);
 }
 
+static void capa_update(T A)
+{
+	if (A->dirty) {
+		GString *t = g_list_join(A->current_set, " ");
+		strncpy((char *)A->capabilities, t->str, MAX_CAPASIZE-1);
+		g_string_free(t, TRUE);
+		A->dirty = FALSE;
+	}
+}
+
 T Capa_new(void)
 {
 	field_t val;
 	T A;
 	A = g_malloc0(sizeof(*A));
-	char **v;
+	char **v, **h;
 
 	GETCONFIGVALUE("capability", "IMAP", val);
 	if (strlen(val) > 0)
-		strncpy((char *)A->max_set,val,MAX_CAPASIZE-1);
+		strncpy((char *)A->max_set, val, MAX_CAPASIZE-1);
 	else
-		strncpy((char *)A->max_set,IMAP_CAPABILITY_STRING,MAX_CAPASIZE-1);
+		strncpy((char *)A->max_set, IMAP_CAPABILITY_STRING, MAX_CAPASIZE-1);
 
-	A->current_set = NULL; //g_string_split(A->max_set, " ");
-	v = g_strsplit(A->max_set, " ", -1);
-	while (*v)
-		A->current_set = g_list_append(A->current_set, *v++);
+	A->current_set = NULL;
 
+	h = v = g_strsplit(A->max_set, " ", -1);
+	while (*v) A->current_set = g_list_append(A->current_set, *v++);
+	g_free(h);
+
+	A->dirty = TRUE;
 	return A;
 }
 
 const gchar * Capa_as_string(T A)
 {
-	GString *t = g_list_join(A->current_set, " ");
-	strncpy((char *)A->capabilities, t->str, MAX_CAPASIZE-1);
-	g_string_free(t, TRUE);
+	capa_update(A);
 	return A->capabilities;
 }
 
@@ -78,6 +89,7 @@ gboolean Capa_match(T A, const char *c)
 void Capa_add(T A, const char *c)
 {
 	A->current_set = g_list_append(A->current_set, g_strdup(c));
+	A->dirty = TRUE;
 }
 
 void Capa_remove(T A, const char * c)
@@ -86,6 +98,7 @@ void Capa_remove(T A, const char * c)
 	if (element) {
 		A->current_set = g_list_remove_link(A->current_set, element);
 		g_list_destroy(element);
+		A->dirty = TRUE;
 	}
 }
 
