@@ -1543,10 +1543,6 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		if (! sortfield)
 			sortfield = g_strndup(value, CACHE_WIDTH);
 
-		/* avoid column overflow */
-		if (strlen(value) > CACHE_WIDTH)
-			value[CACHE_WIDTH-1] = '\0';
-
 		if (strlen(sortfield) > CACHE_WIDTH)
 			sortfield[CACHE_WIDTH-1] = '\0';
 
