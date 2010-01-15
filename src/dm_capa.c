@@ -32,7 +32,7 @@
 
 struct T {
 	const char capabilities[MAX_CAPASIZE];
-	const char initial_set[MAX_CAPASIZE];
+	const char max_set[MAX_CAPASIZE];
 	GList *current_set;
 };
 
@@ -50,15 +50,14 @@ T Capa_new(void)
 
 	GETCONFIGVALUE("capability", "IMAP", val);
 	if (strlen(val) > 0)
-		strncpy((char *)A->initial_set,val,MAX_CAPASIZE-1);
+		strncpy((char *)A->max_set,val,MAX_CAPASIZE-1);
 	else
-		strncpy((char *)A->initial_set,IMAP_CAPABILITY_STRING,MAX_CAPASIZE-1);
+		strncpy((char *)A->max_set,IMAP_CAPABILITY_STRING,MAX_CAPASIZE-1);
 
-	A->current_set = NULL; //g_string_split(A->initial_set, " ");
-	v = g_strsplit(A->initial_set, " ", -1);
-	while (*v) {
+	A->current_set = NULL; //g_string_split(A->max_set, " ");
+	v = g_strsplit(A->max_set, " ", -1);
+	while (*v)
 		A->current_set = g_list_append(A->current_set, *v++);
-	}
 
 	return A;
 }

@@ -127,15 +127,8 @@ int _ic_starttls(ImapSession *self)
 // a trivial silly thread example
 void _ic_capability_enter(dm_thread_data *D)
 {
-	field_t val;
-	gboolean override = FALSE;
 	LOCK_SESSION;
-
-	GETCONFIGVALUE("capability", "IMAP", val);
-	if (strlen(val) > 0) override = TRUE;
-
-	dbmail_imap_session_buff_printf(self, "* %s %s\r\n", self->command, override ? val : IMAP_CAPABILITY_STRING);
-
+	dbmail_imap_session_buff_printf(self, "* %s %s\r\n", self->command, Capa_as_string(self->capa));
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
 }
@@ -212,6 +205,7 @@ void _ic_authenticate_enter(dm_thread_data *D)
 	if (imap_before_smtp) 
 		db_log_ip(self->ci->src_ip);
 
+	dbmail_imap_session_buff_printf(self, "* CAPABILITY %s\n", Capa_as_string(self->capa));
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
 }

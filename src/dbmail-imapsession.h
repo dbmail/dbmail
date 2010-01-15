@@ -44,7 +44,8 @@ typedef struct {
 
 	// FIXME: there is too much redundancy here
 	DbmailMessage *message;
-	Cache_T cache;
+	Cache_T cache;  
+	Capa_T capa;   // CAPABILITY
 
 	u64_t userid;		/* userID of client in dbase */
 
