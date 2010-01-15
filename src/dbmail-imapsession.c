@@ -1206,6 +1206,14 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 		case 0:
 			sleep(2);	/* security */
 			ci_authlog_init(self->ci, THIS_MODULE, username, AUTHLOG_ERR);
+			if (self->ci->auth) { // CRAM-MD5 auth failed
+				char *enctype = auth_getencryption(userid);
+				if (! MATCH(enctype,"")) {
+					Capa_remove(self->capa,"AUTH=CRAM-MD5");
+					dbmail_imap_session_buff_printf(self, "* CAPABILITY %s\n", Capa_as_string(self->capa));
+				}
+				g_free(enctype);
+			}
 			dbmail_imap_session_buff_printf(self, "%s NO login rejected\r\n", self->tag);
 			TRACE(TRACE_NOTICE, "[%p] login rejected: user [%s] from [%s:%s]", self, username, 
 				self->ci->src_ip, self->ci->src_port);
