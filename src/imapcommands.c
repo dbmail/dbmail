@@ -205,7 +205,7 @@ void _ic_authenticate_enter(dm_thread_data *D)
 	if (imap_before_smtp) 
 		db_log_ip(self->ci->src_ip);
 
-	dbmail_imap_session_buff_printf(self, "* CAPABILITY %s\n", Capa_as_string(self->capa));
+	dbmail_imap_session_buff_printf(self, "* CAPABILITY %s\r\n", Capa_as_string(self->capa));
 	IC_DONE_OK;
 	NOTIFY_DONE(D);
 }

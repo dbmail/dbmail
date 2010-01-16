@@ -103,6 +103,8 @@ ImapSession * dbmail_imap_session_new(void)
 	Capa_remove(self->capa, "THREAD=ORDEREDSUBJECT");
 	Capa_remove(self->capa, "UNSELECT");
 	Capa_remove(self->capa, "IDLE");
+	if (MATCH(_db_params.authdriver, "LDAP"))
+		Capa_remove(self->capa, "AUTH=CRAM-MD5");
 	self->physids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 
 	assert(self->cache);
@@ -1210,7 +1212,7 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 				char *enctype = auth_getencryption(userid);
 				if (! MATCH(enctype,"")) {
 					Capa_remove(self->capa,"AUTH=CRAM-MD5");
-					dbmail_imap_session_buff_printf(self, "* CAPABILITY %s\n", Capa_as_string(self->capa));
+					dbmail_imap_session_buff_printf(self, "* CAPABILITY %s\r\n", Capa_as_string(self->capa));
 				}
 				g_free(enctype);
 			}
