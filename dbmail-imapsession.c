@@ -1636,7 +1636,7 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 		sleep(2);	/* security */
 
 		/* validation failed: invalid user/pass combination */
-		TRACE(TRACE_MESSAGE, "user (name %s) coming from [%s] login rejected", username, self->ci->ip_src);
+		TRACE(TRACE_MESSAGE, "user (name %s) coming from [%s] login rejected", username, self->ci->src_ip);
 		dbmail_imap_session_printf(self, "%s NO login rejected\r\n", self->tag);
 
 		return 1;

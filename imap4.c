@@ -324,7 +324,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 	/* cleanup */
 	dbmail_imap_session_printf(session, "%s OK completed\r\n", session->tag);
-	TRACE(TRACE_MESSAGE, "Closing connection for client from IP [%s]\n", session->ci->ip_src);
+	TRACE(TRACE_MESSAGE, "Closing connection for client from IP [%s]\n", session->ci->src_ip);
 	dbmail_imap_session_delete(session);
 
 	return EOF;

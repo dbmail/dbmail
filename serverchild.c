@@ -226,12 +226,11 @@ pid_t CreateChild(ChildInfo_t * info)
 	}
 }
 
-int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * saClient)
+static int select_and_accept(ChildInfo_t * info, int * clientSocket)
 {
 	fd_set rfds;
 	int ip, result, flags;
 	int active = 0, maxfd = 0;
-	socklen_t len;
 
 	/* This is adapted from man 2 select */
 	FD_ZERO(&rfds);
@@ -267,10 +266,8 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	}
 
 	/* accept the active fd */
-	len = sizeof(struct sockaddr_in);
-
 	// the listenSockets are set non-blocking in server.c,create_inet_socket
-	*clientSocket = accept(info->listenSockets[active], saClient, &len);
+	*clientSocket = accept(info->listenSockets[active], NULL, NULL);
 	if (*clientSocket < 0)
 		return -1;
 
@@ -285,10 +282,8 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 
 int PerformChildTask(ChildInfo_t * info)
 {
-	int i, clientSocket, result;
-	struct sockaddr_in saClient;
-	struct hostent *clientHost;
-
+	int i, clientSocket, result, err;
+	socklen_t len = sizeof(struct sockaddr_storage);
 	if (!info) {
 		TRACE(TRACE_ERROR, "NULL info supplied");
 		return -1;
@@ -319,37 +314,58 @@ int PerformChildTask(ChildInfo_t * info)
 		child_reg_disconnected();
 
 		/* wait for connect */
-		result = select_and_accept(info, &clientSocket, (struct sockaddr *) &saClient);
+		result = select_and_accept(info, &clientSocket);
 		if (result != 0) {
 			i--;	/* don't count this as a connect */
 			continue;	/* accept failed, refuse connection & continue */
 		}
 
-		child_reg_connected();
-		
 		memset((void *)&client, 0, sizeof(client));	/* zero-init */
+
+		if (getsockname(clientSocket, (struct sockaddr *)&client.saddr, &len)) {
+			int err = errno;
+			TRACE(TRACE_FATAL, "getsockname::error [%s]", strerror(err));
+			return -1;
+		}
+		client.saddr_len = len;
+
+		if (getpeername(clientSocket, (struct sockaddr *)&client.caddr, &len)) {
+			int err = errno;
+			TRACE(TRACE_FATAL, "getpeername::error [%s]", strerror(err));
+			return -1;
+		}
+		client.caddr_len = len;
+
+		child_reg_connected();
 
 		client.timeout = info->timeout;
 		client.login_timeout = info->login_timeout;
-		strncpy((char *)client.ip_src, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
 		client.clientname[0] = '\0';
 			
-		if (info->resolveIP) {
-			clientHost = gethostbyaddr((char *) &saClient.sin_addr, 
-					sizeof(saClient.sin_addr), saClient.sin_family);
 
-			if (clientHost && clientHost->h_name)
-				strncpy((char *)client.clientname, clientHost->h_name, FIELDSIZE);
-
-			TRACE(TRACE_MESSAGE, "incoming connection from [%s (%s)] by pid [%d]",
-			      client.ip_src,
-			      client.clientname[0] ? client.clientname : "Lookup failed", getpid());
-		} else {
-			TRACE(TRACE_MESSAGE, "incoming connection from [%s] by pid [%d]",
-			      client.ip_src, getpid());
+		if ((err = getnameinfo((struct sockaddr *)&client.saddr, client.saddr_len, (char *)&client.dst_ip, NI_MAXHOST, (char *)&client.dst_port, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV))) {
+			TRACE(TRACE_INFO,"getnameinfo::error [%s]", gai_strerror(err));
 		}
 
-		child_reg_connected_client((const char *)client.ip_src, (const char *)client.clientname);
+		TRACE(TRACE_INFO, "incoming connection on [%s:%s]", (char *)&client.dst_ip, (char *)&client.dst_port);
+
+		if ((err = getnameinfo((struct sockaddr *)&client.caddr, client.caddr_len, (char *)&client.src_ip, NI_MAXHOST, (char *)&client.src_port, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV))) {
+			TRACE(TRACE_INFO,"getnameinfo::error [%s]", gai_strerror(err));
+		}
+
+		if (info->resolveIP) {
+			if ((err = getnameinfo((struct sockaddr *)&client.caddr, client.caddr_len, (char *)&client.clientname, sizeof(field_t), NULL, 0, NI_NAMEREQD))) {
+				TRACE(TRACE_INFO, "getnameinfo:error [%s]", gai_strerror(err));
+			} 
+
+			TRACE(TRACE_INFO, "incoming connection from [%s:%s (%s)]",
+					client.src_ip, client.src_port,
+					client.clientname[0] ? client.clientname : "Lookup failed");
+		} else {
+			TRACE(TRACE_INFO, "incoming connection from [%s:%s]", (char *)&client.src_ip, (char *)&client.src_port);
+		}
+
+		child_reg_connected_client((const char *)client.src_ip, (const char *)client.clientname);
 		
 		/* make streams */
 		if (!(client.rx = fdopen(dup(clientSocket), "r"))) {

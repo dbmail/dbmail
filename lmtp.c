@@ -195,7 +195,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 			/* reset function handle timeout */
 			alarm(0);
 			/* handle lmtp commands */
-			done = lmtp(ci->tx, ci->rx, buffer, ci->ip_src, &session);
+			done = lmtp(ci->tx, ci->rx, buffer, ci->src_ip, &session);
 		}
 		fflush(ci->tx);
 	}

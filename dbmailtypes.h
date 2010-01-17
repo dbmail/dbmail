@@ -112,9 +112,14 @@ typedef struct {
 
 typedef struct {
 	FILE *tx, *rx;
-	char ip_src[NI_MAXHOST];  /* client IP-number */
-	char dst_ip[NI_MAXHOST]; /* client IP-number */
-	char dst_port[NI_MAXSERV];/* client IP-port */
+	struct sockaddr_storage caddr;
+	socklen_t caddr_len;
+	char src_ip[NI_MAXHOST];  /* client IP-number */
+	char src_port[NI_MAXSERV];/* client IP-port */
+	struct sockaddr_storage saddr;
+	socklen_t saddr_len;
+	char dst_ip[NI_MAXHOST]; /* server IP-number */
+	char dst_port[NI_MAXSERV];/* server IP-port */
 	field_t clientname;	  /* resolved client ip */
 	int timeout;		  /* server timeout (seconds) */
 	int login_timeout;	  /* login timeout (seconds) */

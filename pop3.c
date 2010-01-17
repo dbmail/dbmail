@@ -284,7 +284,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	u64_t user_idnr;
 	struct message *msg;
 
-	char *client_ip = ci->ip_src;
+	char *client_ip = ci->src_ip;
 	FILE *stream = ci->tx;
 
 	/* buffer overflow attempt */
@@ -404,7 +404,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			return -1;
 		case 0:
 			TRACE(TRACE_ERROR, "user [%s] coming from [%s] tried to login with wrong password", 
-				session->username, ci->ip_src);
+				session->username, ci->src_ip);
 
 			g_free(session->username);
 			session->username = NULL;
