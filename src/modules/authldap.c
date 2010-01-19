@@ -164,7 +164,7 @@ static int authldap_connect(void)
 #endif
 
 	if (! g_thread_supported()) g_thread_init(NULL);
-	if (! ldap_conn_key) ldap_conn_key = g_private_new(g_free);
+	if (! ldap_conn_key) ldap_conn_key = g_private_new(ber_memfree);
 
 	__auth_get_config();
 
