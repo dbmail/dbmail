@@ -100,10 +100,11 @@ static void imap_session_cleanup_enter(dm_thread_data *D)
 static void imap_session_cleanup_leave(dm_thread_data *D)
 {
 	ImapSession *session = D->session;
+	TRACE(TRACE_DEBUG,"[%p] ci [%p] state [%d]", session, session->ci, session->state);
+
 	if (session->state != CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	TRACE(TRACE_DEBUG,"[%p] ci [%p]", session, session->ci);
 	ci_close(session->ci);
 	session->ci = NULL;
 	dbmail_imap_session_delete(&session);
