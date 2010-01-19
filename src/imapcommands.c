@@ -1641,8 +1641,9 @@ int _ic_fetch(ImapSession *self)
  * alter message-associated data in selected mailbox
  */
 
-static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
+static gboolean _do_store(u64_t *id, gpointer UNUSED value, dm_thread_data *D)
 {
+	ImapSession *self = D->session;
 	cmd_t cmd = self->cmd;
 
 	u64_t *msn;
@@ -1663,6 +1664,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, ImapSession *self)
 	if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE) {
 		if (db_set_msgflag(*id, cmd->flaglist, cmd->keywords, cmd->action, msginfo) < 0) {
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
+			D->status = TRUE;
 			return TRUE;
 		}
 	}
@@ -1783,6 +1785,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	/** check ACL's for STORE */
 	if (cmd->flaglist[IMAP_FLAG_SEEN] == 1) {
 		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_SEEN))) {
+			dbmail_imap_session_buff_printf(self, "%s NO access denied\r\n", self->tag);
 			D->status = result;
 			g_list_destroy(cmd->keywords);
 			g_free(cmd);
@@ -1791,6 +1794,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	}
 	if (cmd->flaglist[IMAP_FLAG_DELETED] == 1) {
 		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_DELETED))) {
+			dbmail_imap_session_buff_printf(self, "%s NO access denied\r\n", self->tag);
 			D->status = result;
 			g_list_destroy(cmd->keywords);
 			g_free(cmd);
@@ -1802,6 +1806,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	    cmd->flaglist[IMAP_FLAG_DRAFT] == 1 ||
 	    g_list_length(cmd->keywords) > 0 ) {
 		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_WRITE))) {
+			dbmail_imap_session_buff_printf(self, "%s NO access denied\r\n", self->tag);
 			D->status = result;
 			g_list_destroy(cmd->keywords);
 			g_free(cmd);
@@ -1824,7 +1829,9 @@ static void _ic_store_enter(dm_thread_data *D)
 
 	if (g_tree_nnodes(MailboxState_getIds(self->mailbox->mbstate)) > 0) {
  		if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS)
- 			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
+ 			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, D);
+		else
+			dbmail_imap_session_buff_printf(self, "%s NO STORE failed: Sequence invalid.\r\n", self->tag);
   	}	
 
 	db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
@@ -1832,8 +1839,8 @@ static void _ic_store_enter(dm_thread_data *D)
 	g_list_destroy(cmd->keywords);
 	g_free(cmd);
 
-	if (result) {
-		D->status = result;
+	if (result || D->status) {
+		if (result) D->status = result;
 		NOTIFY_DONE(D);
 	}
 
