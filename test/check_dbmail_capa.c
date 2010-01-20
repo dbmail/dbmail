@@ -70,7 +70,7 @@ END_TEST
 
 START_TEST(test_capa_add)
 {
-	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS BLAHCAPA";
+	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS ID BLAHCAPA";
 	Capa_add(A, "BLAHCAPA");
 	fail_unless(Capa_match(A, "BLAHCAPA"), "add failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
 	fail_unless(MATCH(Capa_as_string(A), ex1), "add failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
@@ -79,7 +79,7 @@ END_TEST
 
 START_TEST(test_capa_remove)
 {
-	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk SORT THREAD=ORDEREDSUBJECT UNSELECT IDLE";
+	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk SORT THREAD=ORDEREDSUBJECT UNSELECT IDLE ID";
 	Capa_remove(A, "STARTTLS");
 	fail_unless(! Capa_match(A, "STARTTLS"), "remove failed");
 	Capa_remove(A, "NAMESPACE");

@@ -96,8 +96,28 @@ void cmd_free(cmd_t *cmd)
  */
 
 /* 
- * ANY-STATE COMMANDS: capability, starttls, noop, logout
+ * ANY-STATE COMMANDS: capability, starttls, noop, logout, id
  */
+/*
+ * _ic_capability()
+ *
+ * returns a string to the client containing the server capabilities
+ */
+// a trivial silly thread example
+void _ic_capability_enter(dm_thread_data *D)
+{
+	LOCK_SESSION;
+	dbmail_imap_session_buff_printf(self, "* %s %s\r\n", self->command, Capa_as_string(self->capa));
+	IC_DONE_OK;
+	NOTIFY_DONE(D);
+}
+
+int _ic_capability(ImapSession *self)
+{
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_ANY)) return 1;
+	dm_thread_data_push((gpointer)self, _ic_capability_enter, _ic_cb_leave, NULL);
+	return 0;
+}
 
 int _ic_starttls(ImapSession *self)
 {
@@ -118,26 +138,6 @@ int _ic_starttls(ImapSession *self)
 	if (i == 0) return 3; /* done */
 
 	return i;
-}
-/*
- * _ic_capability()
- *
- * returns a string to the client containing the server capabilities
- */
-// a trivial silly thread example
-void _ic_capability_enter(dm_thread_data *D)
-{
-	LOCK_SESSION;
-	dbmail_imap_session_buff_printf(self, "* %s %s\r\n", self->command, Capa_as_string(self->capa));
-	IC_DONE_OK;
-	NOTIFY_DONE(D);
-}
-
-int _ic_capability(ImapSession *self)
-{
-	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_ANY)) return 1;
-	dm_thread_data_push((gpointer)self, _ic_capability_enter, _ic_cb_leave, NULL);
-	return 0;
 }
 
 /*
@@ -174,6 +174,25 @@ int _ic_logout(ImapSession *self)
 	dbmail_imap_session_set_state(self, CLIENTSTATE_LOGOUT);
 	TRACE(TRACE_NOTICE, "[%p] userid:[%llu]", self, self->userid);
 	return 2;
+}
+
+void _ic_id_enter(dm_thread_data *D)
+{
+	LOCK_SESSION;
+	struct utsname buf;
+	memset(&buf, 0, sizeof(buf));
+	uname(&buf);
+	dbmail_imap_session_buff_printf(self, "* ID (\"name\" \"dbmail\" \"version\" \"%s\""
+		" \"os\" \"%s\" \"os-version\" \"%s\")\r\n", VERSION, &buf.sysname, &buf.release);
+	IC_DONE_OK;
+	NOTIFY_DONE(D);
+}
+
+int _ic_id(ImapSession *self)
+{
+	if (!check_state_and_args(self, 1, 0, CLIENTSTATE_ANY)) return 1;
+	dm_thread_data_push((gpointer)self, _ic_id_enter, _ic_cb_leave, NULL);
+	return 0;
 }
 /*
  * PRE-AUTHENTICATED STATE COMMANDS

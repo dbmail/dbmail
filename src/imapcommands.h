@@ -35,6 +35,7 @@ int _ic_starttls(ImapSession *self);
 int _ic_capability(ImapSession *self);
 int _ic_noop(ImapSession *self);
 int _ic_logout(ImapSession *self);
+int _ic_id(ImapSession *self);
 
 /* non-auth state commands */
 int _ic_login(ImapSession *self);
