@@ -951,7 +951,8 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 	 * for db_get_msgflag()!
 	 */
 	int setSeenSet[IMAP_NFLAGS] = { 1, 0, 0, 0, 0, 0 };
-	if (self->fi->setseen && db_get_msgflag("seen", self->msg_idnr, ud->mailbox.uid) != 1) {
+
+	if ((ud->mailbox.permission == IMAPPERM_READWRITE) && self->fi->setseen && db_get_msgflag("seen", self->msg_idnr, ud->mailbox.uid) != 1) {
 		/* only if the user has an ACL which grants
 		   him rights to set the flag should the
 		   flag be set! */
