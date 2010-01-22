@@ -1,0 +1,8 @@
+
+The dbmail.conf distributed with the source package is patched 
+for compatibility with debian policy.
+
+Please refer to /usr/share/doc/dpatch/README.source.gz for more
+information.
+
+
