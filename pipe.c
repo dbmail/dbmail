@@ -411,7 +411,7 @@ static int send_reply(struct DbmailMessage *message, const char *body, GList *al
 	char *newsubject = g_strconcat("Re: ", subject, NULL);
 
 	struct DbmailMessage *new_message = dbmail_message_new();
-	new_message = dbmail_message_construct(new_message, from, to, newsubject, body);
+	new_message = dbmail_message_construct(new_message, to, from, newsubject, body);
 	dbmail_message_set_header(new_message, "X-DBMail-Reply", from);
 
 	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
