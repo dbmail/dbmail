@@ -39,13 +39,10 @@ static pid_t reap_child(void);
 
 void state_reset(child_state_t *s)
 {
+	memset(s, 0, sizeof (*s));
 	s->pid = -1;
 	s->ctime = time(0);
 	s->status = STATE_NOOP;
-	s->count = 0;
-	// FIXME: valgrind is complaining about s->user going 2 bytes past the structure.
-	memset(s->client, '\0', 128);
-	memset(s->user, '\0', 128);
 }
 
 int set_lock(int type)
@@ -84,12 +81,9 @@ int set_lock(int type)
 void scoreboard_new(serverConfig_t * conf)
 {
 	int serr;
-	if ((shmid = shmget(IPC_PRIVATE,
-			(sizeof(child_state_t) * HARD_MAX_CHILDREN),
-			0644 | IPC_CREAT)) == -1) {
+	if ((shmid = shmget(IPC_PRIVATE, sizeof(Scoreboard_t), 0644 | IPC_CREAT)) == -1) {
 		serr = errno;
-		TRACE(TRACE_FATAL, "shmget failed [%s]",
-				strerror(serr));
+		TRACE(TRACE_FATAL, "shmget failed [%s]", strerror(serr));
 	}
 	scoreboard = shmat(shmid, (void *) 0, 0);
 	serr=errno;
@@ -362,9 +356,9 @@ void child_reg_connected_client(const char *ip, const char *name)
 	scoreboard_wrlck();
 	if (scoreboard->child[key].status == STATE_CONNECTED) {
 		if (name && name[0])
-			strncpy(scoreboard->child[key].client, name, 127);
+			strncpy((char *)scoreboard->child[key].client, name, 127);
 		else
-			strncpy(scoreboard->child[key].client, ip, 127);
+			strncpy((char *)scoreboard->child[key].client, ip, 127);
 	} else {
 		TRACE(TRACE_MESSAGE, "client disconnected before status detail was logged");
 	}
@@ -387,7 +381,7 @@ void child_reg_connected_user(char *user)
 	
 	scoreboard_wrlck();
 	if (scoreboard->child[key].status == STATE_CONNECTED) {
-		strncpy(scoreboard->child[key].user, user, 127);
+		strncpy((char *)scoreboard->child[key].user, user, 127);
 	} else {
 		TRACE(TRACE_MESSAGE, "client disconnected before status detail was logged");
 	}
@@ -407,8 +401,8 @@ void child_reg_disconnected(void)
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_IDLE;
-	memset(scoreboard->child[key].client, '\0', 128);
-	memset(scoreboard->child[key].user, '\0', 128);
+	memset((void *)scoreboard->child[key].client, '\0', 128);
+	memset((void *)scoreboard->child[key].user, '\0', 128);
 	scoreboard_unlck();
 }
 
@@ -615,8 +609,8 @@ void scoreboard_state(void)
 		chpid = scoreboard->child[i].pid;
 		status = scoreboard->child[i].status;
 		count = scoreboard->child[i].count;
-		client = scoreboard->child[i].client;
-		user = scoreboard->child[i].user;
+		client = (char *)scoreboard->child[i].client;
+		user = (char *)scoreboard->child[i].user;
 		scoreboard_unlck();
 
 		// Matching 78 char fixed width as above.
@@ -631,7 +625,10 @@ void scoreboard_state(void)
 	}
 	scorelen += fprintf(scoreFD, "\n");
 	fflush(scoreFD);
-	ftruncate(fileno(scoreFD), scorelen);
+	if (ftruncate(fileno(scoreFD), scorelen) == -1) {
+		int err = errno;
+		TRACE(TRACE_ERROR, "truncate scoreboard failed [%s]", strerror(err));
+	}
 
 	g_free(state);
 }
