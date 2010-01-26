@@ -1928,7 +1928,10 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 		} else if (MATCH(self->args[0],"CRAM-MD5")) {
 			if (self->args_idx == 1) {
 				/* decode and store the response */
-				Cram_decode(self->ci->auth, s);
+				if (! Cram_decode(self->ci->auth, s)) {
+					Cram_free(&self->ci->auth);
+					return -1;
+				}
 				self->args_idx++;
 				goto finalize; // done
 			}
