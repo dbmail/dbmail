@@ -336,6 +336,7 @@ int send_vacation(struct DbmailMessage *message,
 #define REPLY_DAYS 7
 static int check_destination(struct DbmailMessage *message, GList *aliases)
 {
+	gboolean check = FALSE;
 	GList *to, *cc, *recipients;
 	to = dbmail_message_get_header_addresses(message, "To");
 	cc = dbmail_message_get_header_addresses(message, "Cc");
@@ -343,14 +344,15 @@ static int check_destination(struct DbmailMessage *message, GList *aliases)
 	if (! recipients)
 		TRACE(TRACE_DEBUG, "no recipients??");
 
-	while (recipients) {
+	while (recipients && (! check)) {
 		char *addr = (char *)recipients->data;
 		aliases = g_list_first(aliases);
-		while (aliases) {
+		while (aliases && (!check)) {
 			char *alias = (char *)aliases->data;
 			if (MATCH(alias, addr)) {
 				TRACE(TRACE_DEBUG, "valid alias found as recipient [%s]", alias);
-				return TRUE;
+				check = TRUE;
+				break;
 			}
 			if (! g_list_next(aliases)) break;
 			aliases = g_list_next(aliases);
@@ -360,8 +362,9 @@ static int check_destination(struct DbmailMessage *message, GList *aliases)
 	}
 
 	g_list_destroy(recipients);
-	return FALSE;
+	return check;
 }
+
 static int send_reply(struct DbmailMessage *message, const char *body, GList *aliases)
 {
 	const char *from, *to, *subject;

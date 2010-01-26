@@ -486,7 +486,7 @@ static void _register_header(const char *header, const char *value, gpointer use
 		hvalue = value;
 	}
 
-	if (! g_relation_exists(m->headers, hname, hvalue))
+	if (m->headers && (! g_relation_exists(m->headers, hname, hvalue)))
 		g_relation_insert(m->headers, hname, hvalue);
 }
 
