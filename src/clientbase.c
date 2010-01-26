@@ -475,7 +475,17 @@ void ci_close(clientbase_t *self)
 	assert(self);
 	TRACE(TRACE_DEBUG, "closing clientbase [%p]", self);
 
-	if (self->queue) g_async_queue_unref(self->queue);
+	if (self->queue) {
+		gpointer data;
+		do {
+			data = g_async_queue_try_pop(self->queue);
+			if (data) {
+				dm_thread_data_free(data);
+			}
+		} while (data);
+		g_async_queue_unref(self->queue);
+	}
+
 	event_del(self->rev);
 	event_del(self->wev);
 

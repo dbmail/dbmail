@@ -57,7 +57,6 @@ SSL_CTX *tls_context;
  *
  */
 
-static void dm_thread_data_free(gpointer data);
 
 /*
  * async queue drainage callback for the main thread

@@ -149,6 +149,7 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 			imap_session_bailout(session);
 			break;
 		default:
+#if 0
 			if (session->ci->rev) {
 				if ( session->command_type == IMAP_COMM_IDLE ) {
 					if ( session->command_state == FALSE ) {
@@ -157,12 +158,13 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 						// continuation '+' to the client
 						session->command_state = IDLE;
 						event_add(session->ci->rev, NULL);
-					} else if (session->command_state == TRUE)  { // IDLE is done
-						event_add(session->ci->rev, session->ci->timeout);
+			//		} else if (session->command_state == TRUE)  { // IDLE is done
+			//			event_add(session->ci->rev, session->ci->timeout);
 					}
 				}
 			}
 			
+#endif
 			ci_write_cb(session->ci);
 			imap_handle_input(session);
 
@@ -277,11 +279,9 @@ static void imap_handle_exit(ImapSession *session, int status)
 
 	switch(status) {
 		case -1:
-			//g_mutex_lock(session->mutex);
 			dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);	/* fatal error occurred, kick this user */
 			dbmail_imap_session_reset(session);
 			imap_session_bailout(session);
-			//g_mutex_unlock(session->mutex);
 			break;
 
 		case 0:
@@ -388,9 +388,8 @@ void imap_handle_input(ImapSession *session)
 			break;
 		}
 
-		if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop
+		if ( session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE ) { // session is in a IDLE loop
 			TRACE(TRACE_DEBUG,"read [%s] while in IDLE loop", buffer);
-			session->command_state = FALSE;
 			dm_thread_data *D = g_new0(dm_thread_data,1);
 			D->data = (gpointer)g_strdup(buffer);
 			g_async_queue_push(session->ci->queue, (gpointer)D);

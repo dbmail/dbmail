@@ -72,6 +72,38 @@ START_TEST(test_createdestroy)
 }
 END_TEST
 
+static void mailboxstate_destroy(MailboxState_T M)
+{
+	MailboxState_free(&M);
+}
+
+
+START_TEST(test_mbxinfo)
+{
+	MailboxState_T N, M;
+	GTree *mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
+	u64_t *k1, *k2;
+	u64_t id = get_mailbox_id("INBOX");
+
+	k1 = g_new0(u64_t,1);
+	k2 = g_new0(u64_t,1);
+
+	*k1 = id;
+	*k2 = id;
+
+	N = MailboxState_new(id);
+	MailboxState_reload(N);
+	g_tree_replace(mbxinfo, k1, N);
+
+	M = MailboxState_new(id);
+	MailboxState_reload(M);
+	g_tree_replace(mbxinfo, k2, M);
+
+	g_tree_destroy(mbxinfo);
+}
+END_TEST
+
+
 Suite *dbmail_common_suite(void)
 {
 	Suite *s = suite_create("Dbmail MailboxState");
@@ -81,6 +113,7 @@ Suite *dbmail_common_suite(void)
 	
 	tcase_add_checked_fixture(tc_state, setup, teardown);
 	tcase_add_test(tc_state, test_createdestroy);
+	tcase_add_test(tc_state, test_mbxinfo);
 
 	return s;
 }

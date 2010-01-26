@@ -80,6 +80,12 @@ static void send_data(ImapSession *self, Mem_T M, int cnt)
 	if (got != want) TRACE(TRACE_EMERG,"[%p] want [%d] <> got [%d]", self, want, got);
 }
 
+static void mailboxstate_destroy(MailboxState_T M)
+{
+	MailboxState_free(&M);
+}
+
+
 /* 
  * initializer and accessors for ImapSession
  */
@@ -106,6 +112,7 @@ ImapSession * dbmail_imap_session_new(void)
 	if (MATCH(_db_params.authdriver, "LDAP"))
 		Capa_remove(self->capa, "AUTH=CRAM-MD5");
 	self->physids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	self->mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
 
 	assert(self->cache);
  
@@ -1512,60 +1519,6 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	return 0;
 }
 
-static gboolean _get_mailbox(u64_t UNUSED *id, MailboxState_T M, gpointer UNUSED data)
-{
-	return MailboxState_reload(M);
-}
-
-static void mailboxstate_destroy(MailboxState_T M)
-{
-	MailboxState_free(&M);
-}
-
-static void _get_mbxinfo(ImapSession *self)
-{
-	C c; R r; volatile int t = FALSE;
-	GTree *old = NULL, *mbxinfo = NULL;
-	u64_t *id;
-	
-	TRACE(TRACE_DEBUG, "[%p]", self);
-
-	mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT mailbox_id FROM %ssubscription WHERE user_id=%llu",DBPFX, self->userid);
-		while (db_result_next(r)) {
-			id = g_new0(u64_t,1);
-			*id = db_result_get_u64(r, 0);
-			MailboxState_T M = MailboxState_new(*id);
-			MailboxState_setOwner(M, self->userid);
-			g_tree_insert(mbxinfo, id, M);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) {
-		g_tree_destroy(mbxinfo);
-		return;
-	}
-
-	g_tree_foreach(mbxinfo, (GTraverseFunc)_get_mailbox, NULL);
-
-	if (self->mbxinfo) old = self->mbxinfo;
-	self->mbxinfo = mbxinfo;
-
-	if (old) {
-		g_tree_destroy(old);
-		old = NULL;
-	}
-
-	return;
-}
-
 MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_id)
 {
 	MailboxState_T M = NULL;
@@ -1573,16 +1526,14 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 
 	TRACE(TRACE_DEBUG, "[%p] mailbox_id [%llu]", self, mailbox_id);
 
-	if (! self->mbxinfo) _get_mbxinfo(self);
-
 	/* fetch the cached mailbox metadata */
 	if ((M = (MailboxState_T)g_tree_lookup(self->mbxinfo, &mailbox_id)) == NULL) {
 		id = g_new0(u64_t,1);
 		*id = mailbox_id;
 		M = MailboxState_new(mailbox_id);
-		_get_mailbox(0,M,NULL);
+		MailboxState_reload(M);
 		if (MailboxState_getName(M)) {
-			g_tree_insert(self->mbxinfo, id, M);
+			g_tree_replace(self->mbxinfo, id, M);
 		} else {
 			MailboxState_free(&M);
 		}

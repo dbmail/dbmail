@@ -307,7 +307,7 @@ static gboolean mailbox_build_recent(u64_t *uid, MessageInfo *msginfo, ImapSessi
 static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 {
 	int err;
-	u64_t *id, mailbox_idnr = 0;
+	u64_t mailbox_idnr = 0;
 
 	/* get the mailbox_idnr */
 	db_findmailbox(mailbox, self->userid, &mailbox_idnr);
@@ -327,10 +327,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
 
 	/* fetch mailbox metadata */
-	self->mailbox->mbstate = MailboxState_new(mailbox_idnr);
-	id = g_new0(u64_t,1);
-	*id = mailbox_idnr;
-	g_tree_replace(self->mbxinfo, id, self->mailbox->mbstate);
+	self->mailbox->mbstate = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
 
 	/* check if user has right to select mailbox */
 	if (mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_READ) == 1) {
@@ -802,8 +799,6 @@ void _ic_subscribe_enter(dm_thread_data *D)
 		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		D->status = DM_EQUERY;
 		NOTIFY_DONE(D);
-	} else {
-		g_tree_remove(self->mbxinfo, &mboxid);		
 	}
 
 	IC_DONE_OK;
@@ -1105,6 +1100,10 @@ int imap_idle_loop(ImapSession *self, int timeout)
 	GTimeVal end_time;
 
 	TRACE(TRACE_DEBUG,"[%p]", self);
+
+	self->command_state = IDLE;
+	event_add(self->ci->rev, NULL);
+	
 	self->loop = 0;
 	do {
 		g_get_current_time(&end_time);
@@ -1112,7 +1111,11 @@ int imap_idle_loop(ImapSession *self, int timeout)
 		data = g_async_queue_timed_pop(self->ci->queue, &end_time);
 		if(self->state == CLIENTSTATE_ERROR) {
 			TRACE(TRACE_DEBUG, "[%p] idle loop exiting due to client error.", self);
-			g_free(data);
+			if (data) {
+				dm_thread_data *D = (gpointer)data;
+				g_free(D->data);
+				g_free(D);
+			}
 			return -1;
 		}
 		if (data) {
@@ -1158,10 +1161,11 @@ void _ic_idle_enter(dm_thread_data *D)
 	}
 	
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
+
 	dbmail_imap_session_buff_printf(self, "+ idling\r\n");
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	dbmail_imap_session_buff_flush(self);
-	
+
 	if ((t = imap_idle_loop(self, idle_timeout))) {
 		D->status = t;
 		NOTIFY_DONE(D);
