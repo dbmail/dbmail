@@ -9,7 +9,12 @@ OPTIONS
   place the pid file in your system's preferred location.
 
 -n::
-  No daemonize. The program remains attached to the console from
-  which it was started. This is quite useful for debugging when
-  combined with the -v option.
+  No daemonize. The program does not fork and remains attached to
+  the console from which it was started. This is quite useful for 
+  debugging when combined with the -v option.
+
+-D::
+  No detach. The program will fork but also remain attached to the 
+  console from which it was started. This is quite useful for
+  debugging when combined with the -v option.
 

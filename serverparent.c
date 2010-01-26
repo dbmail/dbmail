@@ -68,6 +68,7 @@ void serverparent_showhelp(const char *name, const char *greeting) {
 	printf("     -p file   specify an alternative runtime pidfile\n");
 	printf("     -s file   specify an alternative runtime statefile\n");
 	printf("     -n        do not daemonize (no children are forked)\n");
+	printf("     -D        do not daemonize, do not detach from console\n");
 	printf("     -v        verbose logging to syslog and stderr\n");
 	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
@@ -89,7 +90,7 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 
 	/* get command-line options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "vVhqnf:p:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "vVhqnDf:p:s:")) != -1) {
 		switch (opt) {
 		case 'v':
 			config->log_verbose = 1;
@@ -99,6 +100,9 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 			return -1;
 		case 'n':
 			config->no_daemonize = 1;
+			break;
+		case 'D':
+			config->no_daemonize = 2;
 			break;
 		case 'h':
 			return 1;
@@ -151,13 +155,14 @@ int serverparent_mainloop(serverConfig_t *config, const char *service, const cha
 {
 	SetMainSigHandler();
 
-	if (config->no_daemonize) {
+	if (config->no_daemonize == 1) {
 		StartCliServer(config);
 		TRACE(TRACE_INFO, "exiting cli server");
 		return 0;
 	}
 	
-	server_daemonize(config);
+	if (! config->no_daemonize)
+		server_daemonize(config);
 
 	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
