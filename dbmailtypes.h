@@ -44,7 +44,7 @@
 #define BACKLOG 16
 
 
-#define DM_SOCKADDR_LEN 108
+#define DM_SOCKADDR_LEN NI_MAXSERV+NI_MAXHOST
 #define DM_USERNAME_LEN 100
 
 /** string length of configuration values */

@@ -4681,16 +4681,15 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_username)
 {
 	struct sockaddr saddr;
-	char clientsock[DM_SOCKADDR_LEN];
 	char * escaped_username;
 	const char *userid = NULL, *sockok = NULL, *sockno = NULL, *login = NULL;
 	unsigned row, bestrow = 0;
 	int result;
 	int score, bestscore = -1;
 	char query[DEF_QUERYSIZE]; 
+	char *clientsock = g_new0(char,DM_SOCKADDR_LEN+1);
 
-	memset(query,0,DEF_QUERYSIZE);
-	memset(clientsock,0,DM_SOCKADDR_LEN);
+	memset(query,0,sizeof(query));
 	
 	TRACE(TRACE_DEBUG,"checking userid [%s] in usermap", username);
 	
@@ -4708,10 +4707,10 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
                         return DM_SUCCESS; // non-fatal 
                 }
 
-                memset(host, 0, NI_MAXHOST);
-                memset(serv, 0, NI_MAXSERV);
+                memset(host, 0, sizeof(host));
+                memset(serv, 0, sizeof(serv));
 
-                if ((serr = getnameinfo(&saddr, len, host, NI_MAXHOST, serv, NI_MAXSERV,
+                if ((serr = getnameinfo(&saddr, len, host, sizeof(host), serv, sizeof(serv),
                                 NI_NUMERICHOST | NI_NUMERICSERV))) {
                         TRACE(TRACE_INFO, "getnameinfo::error [%s]", gai_strerror(serr));
                         return DM_SUCCESS; // non-fatal 
@@ -4736,6 +4735,7 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select usermap");
+		g_free(clientsock);
 		return DM_EQUERY;
 	}
 
@@ -4743,6 +4743,7 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 		/* user does not exist */
 		TRACE(TRACE_DEBUG, "login [%s] not found in usermap", username);
 		db_free_result();
+		g_free(clientsock);
 		return DM_SUCCESS;
 	}
 
@@ -4765,6 +4766,8 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 			bestscore = score;
 		}
 	}
+
+	g_free(clientsock);
 
 	TRACE(TRACE_DEBUG, "bestscore [%d]", bestscore);
 	if (bestscore == 0)
