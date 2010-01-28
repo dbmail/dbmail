@@ -428,6 +428,7 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 		s = db_stmt_prepare(c, "INSERT INTO %sauthlog (userid, service, login_time, logout_time, src_ip, src_port, dst_ip, dst_port, status)"
 				" VALUES (?, ?, %s, %s, ?, ?, ?, ?, ?) %s", DBPFX, now, now, frag);
 
+		g_free(frag);
 		db_stmt_set_str(s, 1, username);
 		db_stmt_set_str(s, 2, service);
 		db_stmt_set_str(s, 3, (char *)self->src_ip);
