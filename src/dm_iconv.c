@@ -24,15 +24,25 @@
 
 #define THIS_MODULE "iconv"
 
+static GOnce iconv_once = G_ONCE_INIT;
+
 struct DbmailIconv *ic;
 
-void dbmail_iconv_init(void)
+static void dbmail_iconv_close(void)
 {
-	static volatile gboolean initialized = FALSE;
+	TRACE(TRACE_DEBUG,"closing");
+	g_mime_iconv_close(ic->to_db);
+	g_mime_iconv_close(ic->from_db);
+	g_mime_iconv_close(ic->from_msg);
+	ic->to_db = NULL;
+	ic->from_db = NULL;
+	ic->from_msg = NULL;
+	g_free(ic);
+	ic = NULL;
+}
 
-	if (initialized)
-		return;
-
+static gpointer dbmail_iconv_once(gpointer UNUSED data)
+{
 	ic = g_new0(struct DbmailIconv,1);	
 
 	memset(ic->db_charset,'\0', FIELDSIZE);
@@ -64,8 +74,15 @@ void dbmail_iconv_init(void)
 	ic->from_msg=g_mime_iconv_open("UTF-8",ic->msg_charset);
 	if (ic->from_msg == (iconv_t)-1)
 		TRACE(TRACE_EMERG, "iconv failure");
-	
-	initialized = TRUE;
+
+	atexit(dbmail_iconv_close);
+
+	return (gpointer)NULL;
+}
+
+void dbmail_iconv_init(void)
+{
+	g_once(&iconv_once, dbmail_iconv_once, NULL);
 }
 
 /* convert not encoded field to utf8 */

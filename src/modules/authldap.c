@@ -168,67 +168,56 @@ static int authldap_connect(void)
 	int version = 0;
 	LDAP *_ldap_conn = NULL;
 	int ret;
-	char *uri;
 
 	if (! g_thread_supported()) g_thread_init(NULL);
-
 	g_once(&ldap_conn_once, authldap_once, NULL);
 
 	switch (_ldap_cfg.version_int) {
-	case 3:
-		version = LDAP_VERSION3;
-		if (strlen(_ldap_cfg.uri)) {
-			TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] version [%d]", 
-				_ldap_cfg.uri, _ldap_cfg.version_int);
-			if ((ret = ldap_initialize(&_ldap_conn, _ldap_cfg.uri) == LDAP_SUCCESS)) 
-				break;
-			else 
-				TRACE(TRACE_WARNING, "ldap_initialize() returned %d", ret);
-		}
-
-		uri = g_strdup_printf("ldap://%s:%d", _ldap_cfg.hostname, _ldap_cfg.port_int);
-
-		TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] version [%d]", uri, _ldap_cfg.version_int);
-		if ((ret = ldap_initialize(&_ldap_conn, uri)) != LDAP_SUCCESS) 
-			TRACE(TRACE_EMERG, "ldap_initialize() failed [%d]", ret);
-
-		g_free(uri);
-		break;
-	case 2:
-		version = LDAP_VERSION2;
-		/* fall through... */
-	default:
-		if (!version) {
-			TRACE(TRACE_WARNING, "Unsupported LDAP version [%d] requested."
-				" Default to LDAP version 3.", _ldap_cfg.version_int);
+		case 3:
 			version = LDAP_VERSION3;
-		}
+			if (strlen(_ldap_cfg.uri)) {
+				TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] version [%d]", _ldap_cfg.uri, _ldap_cfg.version_int);
+				if ((ret = ldap_initialize(&_ldap_conn, _ldap_cfg.uri) != LDAP_SUCCESS)) 
+					TRACE(TRACE_WARNING, "ldap_initialize() failed %d", ret);
+			} else {
+				char *uri = g_strdup_printf("ldap://%s:%d", _ldap_cfg.hostname, _ldap_cfg.port_int);
+				TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] version [%d]", uri, _ldap_cfg.version_int);
+				if ((ret = ldap_initialize(&_ldap_conn, uri)) != LDAP_SUCCESS) 
+					TRACE(TRACE_EMERG, "ldap_initialize() failed [%d]", ret);
 
-		TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] : [%d] version [%d]",
-			_ldap_cfg.hostname, _ldap_cfg.port_int, _ldap_cfg.version_int);
-		_ldap_conn = ldap_init(_ldap_cfg.hostname, _ldap_cfg.port_int);
-		break;
+				g_free(uri);
+			}
+			break;
+		case 2:
+			version = LDAP_VERSION2; /* fall through... */
+		default:
+			if (!version) {
+				TRACE(TRACE_WARNING, "Unsupported LDAP version [%d] requested."
+						" Default to LDAP version 3.", _ldap_cfg.version_int);
+				version = LDAP_VERSION3;
+			}
+
+			TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] : [%d] version [%d]",
+					_ldap_cfg.hostname, _ldap_cfg.port_int, _ldap_cfg.version_int);
+			_ldap_conn = ldap_init(_ldap_cfg.hostname, _ldap_cfg.port_int);
+			break;
 	}
 
 	ldap_set_option(_ldap_conn, LDAP_OPT_PROTOCOL_VERSION, &version);
 
 	/* Turn off referrals */
-	if (strncasecmp(_ldap_cfg.referrals, "no", 2) == 0) {
+	if (strncasecmp(_ldap_cfg.referrals, "no", 2) == 0)
 		ldap_set_option(_ldap_conn, LDAP_OPT_REFERRALS, 0);
-	}
 
 	g_static_private_set(&ldap_conn_key, _ldap_conn, (GDestroyNotify)authldap_free);
 
 	return auth_ldap_bind();	
 }
 
-
-
 static int authldap_reconnect(void)
 {
 	LDAP *c;
-	if ((c = ldap_con_get()))
-		authldap_free((gpointer)c);
+	if ((c = ldap_con_get())) authldap_free((gpointer)c);
 	return authldap_connect();
 }
 
@@ -241,7 +230,7 @@ static LDAPMessage * authldap_search(const gchar *query)
 	LDAP *_ldap_conn = ldap_con_get();
 
 	g_return_val_if_fail(query!=NULL, NULL);
-	
+
 	while (c++ < 5) {
 		TRACE(TRACE_DEBUG, " [%s]", query);
 		err = ldap_search_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int, 
@@ -249,7 +238,7 @@ static LDAPMessage * authldap_search(const gchar *query)
 
 		if (! err)
 			return ldap_res;
-		
+
 		switch (err) {
 			case LDAP_SERVER_DOWN:
 				TRACE(TRACE_WARNING, "LDAP gone away: %s. Try to reconnect(%d/5).", ldap_err2string(err),c);
@@ -262,7 +251,7 @@ static LDAPMessage * authldap_search(const gchar *query)
 				break;
 		}
 	}
-	
+
 	TRACE(TRACE_EMERG,"unrecoverable error while talking to ldap server");
 	return NULL;
 }
@@ -276,17 +265,14 @@ void dm_ldap_freeresult(GList *entlist)
 		while(fldlist) {
 			attlist = fldlist->data;
 			g_list_destroy(attlist);
-			if (! g_list_next(fldlist))
-				break;
+			if (! g_list_next(fldlist)) break;
 			fldlist = g_list_next(fldlist);
 		}
 		g_list_free(g_list_first(fldlist));
 
-		if (! g_list_next(entlist))
-			break;
+		if (! g_list_next(entlist)) break;
 		entlist = g_list_next(entlist);
 	}
-
 	g_list_free(g_list_first(entlist));
 }
 
@@ -294,26 +280,23 @@ static GList * dm_ldap_ent_get_values(GList *entlist)
 {
 	GList *fldlist, *attlist;
 	GList *values = NULL;
-	gchar *tmp;
 	entlist = g_list_first(entlist);
 	while (entlist) {
 		fldlist = g_list_first(entlist->data);
 		while (fldlist) {
 			attlist = g_list_first(fldlist->data);
 			while (attlist) {
-				tmp = (gchar *)attlist->data;
-				TRACE(TRACE_DEBUG,"value [%s]", tmp);
-				values = g_list_append_printf(values,"%s", tmp);
-				if (! g_list_next(attlist))
-					break;
+				char *t = (gchar *)attlist->data;
+				TRACE(TRACE_DEBUG,"value [%s]", t);
+				values = g_list_append_printf(values,"%s", t);
+
+				if (! g_list_next(attlist)) break;
 				attlist = g_list_next(attlist);
 			}
-			if (! g_list_next(fldlist))
-				break;
+			if (! g_list_next(fldlist)) break;
 			fldlist = g_list_next(fldlist);
 		}
-		if (! g_list_next(entlist))
-			break;
+		if (! g_list_next(entlist)) break;
 		entlist = g_list_next(entlist);
 	}
 	return values;
@@ -331,8 +314,7 @@ static char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GLi
 	while (values) {
 		g_string_printf(t,"%s=%s", attribute, (char *)values->data);
 		l = g_list_append(l,g_strdup(t->str));
-		if (! g_list_next(values))
-			break;
+		if (! g_list_next(values)) break;
 		values = g_list_next(values);
 	}
 	t = g_list_join(l,")(");
@@ -359,13 +341,11 @@ static GList * __auth_get_every_match(const char *q, const char **retfields)
 	
 	attlist = fldlist = entlist = NULL;
 
-	if (! (ldap_res = authldap_search(q)))
-		return NULL;
+	if (! (ldap_res = authldap_search(q))) return NULL;
 
 	if ((j = ldap_count_entries(_ldap_conn, ldap_res)) < 1) {
 		TRACE(TRACE_DEBUG, "nothing found");
-		if (ldap_res)
-			ldap_msgfree(ldap_res);
+		if (ldap_res) ldap_msgfree(ldap_res);
 		return NULL;
 	}
 
@@ -373,16 +353,14 @@ static GList * __auth_get_every_match(const char *q, const char **retfields)
 	if ((ldap_msg = ldap_first_entry(_ldap_conn, ldap_res)) == NULL) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &err);
 		TRACE(TRACE_ERR, "ldap_first_entry failed: [%s]", ldap_err2string(err));
-		if (ldap_res)
-			ldap_msgfree(ldap_res);
+		if (ldap_res) ldap_msgfree(ldap_res);
 		return NULL;
 	}
 
 	while (ldap_msg) {
-		
 		dn = ldap_get_dn(_ldap_conn, ldap_msg);
+
 		TRACE(TRACE_DEBUG,"scan results for DN: [%s]", dn);
-		
 		for (k = 0; retfields[k] != NULL; k++) {
 			TRACE(TRACE_DEBUG,"ldap_get_values [%s]", retfields[k]);
 			if ((ldap_vals = ldap_get_values(_ldap_conn, ldap_msg, retfields[k]))) {
@@ -393,6 +371,7 @@ static GList * __auth_get_every_match(const char *q, const char **retfields)
 					m++;
 				}
 			}
+
 			fldlist = g_list_append(fldlist, attlist);
 			attlist = NULL;
 			
@@ -402,14 +381,11 @@ static GList * __auth_get_every_match(const char *q, const char **retfields)
 		fldlist = NULL;
 		
 		ldap_memfree(dn);
-		
 		ldap_msg = ldap_next_entry(_ldap_conn, ldap_msg);
 	}
 
-	if (ldap_res)
-		ldap_msgfree(ldap_res);
-	if (ldap_msg)
-		ldap_msgfree(ldap_msg);
+	if (ldap_res) ldap_msgfree(ldap_res);
+	if (ldap_msg) ldap_msgfree(ldap_msg);
 
 	return entlist;
 }
@@ -448,10 +424,9 @@ static u64_t dm_ldap_get_freeid(const gchar *attribute)
 	ids = g_list_first(ids);
 	while (ids) {
 		t = strtoull(ids->data,NULL,10);
-		if ( (t >= min) && (t <= max) ) 
+		if ((t >= min) && (t <= max)) 
 			key[t-min] = t;
-		if (! g_list_next(ids))
-			break;
+		if (! g_list_next(ids)) break;
 		ids = g_list_next(ids);
 	}
 
@@ -572,7 +547,7 @@ static char *__auth_get_first_match(const char *q, const char **retfields)
 
 	if (! (ldap_res = authldap_search(q)))
 		return NULL;
-	
+
 	if (ldap_count_entries(_ldap_conn, ldap_res) < 1) {
 		TRACE(TRACE_DEBUG, "none found");
 		goto endfree;
@@ -584,7 +559,7 @@ static char *__auth_get_first_match(const char *q, const char **retfields)
 		TRACE(TRACE_ERR, "ldap_first_entry failed: %s", ldap_err2string(err));
 		goto endfree;
 	}
-	
+
 	for (k = 0; retfields[k] != NULL; k++) {
 		if (0 == strcasecmp(retfields[k], "dn")) {
 			ldap_dn = ldap_get_dn(_ldap_conn, ldap_msg);
@@ -598,8 +573,8 @@ static char *__auth_get_first_match(const char *q, const char **retfields)
 			break;
 		}
 	}
-	
-      endfree:
+
+endfree:
 	if (ldap_dn)
 		ldap_memfree(ldap_dn);
 	if (ldap_vals)
