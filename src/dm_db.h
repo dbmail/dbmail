@@ -801,10 +801,4 @@ int db_message_mailbox_seq_update(u64_t message_id);
 
 int db_rehash_store(void);
 
-/* global memcache like setup */
-
-void global_cache_init(void);
-void global_cache_insert(gpointer key, gpointer value);
-gpointer global_cache_lookup(gpointer key);
-
 #endif

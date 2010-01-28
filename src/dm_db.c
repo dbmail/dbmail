@@ -687,48 +687,24 @@ char *db_returning(const char *s)
 /////////////////////////////////////////////////////////////////////////////
 
 
-void global_cache_init(void)
-{
-	global_cache = g_tree_new_full((GCompareDataFunc)dm_strcmpdata, NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
-}
-
-gpointer global_cache_lookup(gpointer key)
-{
-	if (! global_cache) {
-		global_cache_init();
-		return NULL;
-	}
-	return g_tree_lookup(global_cache, key);
-}
-
-void global_cache_insert(gpointer key, gpointer value)
-{
-	g_tree_insert(global_cache, g_strdup(key), value);
-}
-
-
-
-
 /*
  * check to make sure the database has been upgraded
  */
+static void check_table_exists(C c, const char *table, const char *errormessage)
+{
+	if (! db_query(c, "SELECT 1=1 FROM %s%s LIMIT 1 OFFSET 0", DBPFX, table))
+		TRACE(TRACE_EMERG, "%s", errormessage);
+}
+
 int db_check_version(void)
 {
 	C c = db_con_get();
-
 	TRY
-		if (! db_query(c, "SELECT 1=1 FROM %sphysmessage LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_EMERG, "pre-2.0 database incompatible. You need to run the conversion script");
-		if (! db_query(c, "SELECT 1=1 FROM %sheadervalue LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_EMERG, "2.0 database incompatible. You need to add the header tables.");
-		if (! db_query(c, "SELECT 1=1 FROM %senvelope LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_EMERG, "2.1 database incompatible. You need to add the envelopes table "
-					"and run dbmail-util -by");
-		if (! db_query(c, "SELECT 1=1 FROM %smimeparts LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_EMERG, "2.3 database incompatible.");
-		if ( ! db_query(c, "SELECT 1=1 FROM %sheader LIMIT 1 OFFSET 0", DBPFX))
-			TRACE(TRACE_EMERG, "2.3.5 database incompatible - single instance header storage missing.");
-
+		check_table_exists(c, "physmessage", "pre-2.0 database incompatible. You need to run the conversion script");
+		check_table_exists(c, "headervalue", "2.0 database incompatible. You need to add the header tables.");
+		check_table_exists(c, "envelope", "2.1 database incompatible. You need to add the envelopes table and run dbmail-util -by");
+		check_table_exists(c, "mimeparts", "2.3 database incompatible.");
+		check_table_exists(c, "header", "2.3.5 database incompatible - single instance header storage missing.");
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
