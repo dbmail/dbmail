@@ -1134,8 +1134,9 @@ int imap_idle_loop(ImapSession *self, int timeout)
 			g_free(D);
 		} else {
 			TRACE(TRACE_DEBUG,"[%p]", self);
-			if (! (self->loop++ % 10)) dbmail_imap_session_buff_printf(self, "* OK\r\n");
 			dbmail_imap_session_mailbox_status(self,TRUE);
+			if (! (self->loop++ % 10))
+				dbmail_imap_session_buff_printf(self, "* OK\r\n");
 			dbmail_imap_session_buff_flush(self);
 		}
 
