@@ -183,8 +183,8 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 	uids = MailboxState_getIds(self->mbstate);
 
 	snprintf(query,DEF_QUERYSIZE,"SELECT id,message_idnr FROM %sphysmessage p "
-		"JOIN %smessages m ON p.id=m.physmessage_id "
-		"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
+		"LEFT JOIN %smessages m ON p.id=m.physmessage_id "
+		"LEFT JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
 		"WHERE b.mailbox_idnr=%llu ORDER BY message_idnr",
 		DBPFX,DBPFX,DBPFX,self->id);
 
@@ -298,9 +298,9 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 	/* thread-roots (ordered) */
 	snprintf(query, DEF_QUERYSIZE, "SELECT min(m.message_idnr),v.sortfield "
 			"FROM %smessages m "
-			"JOIN %sheader h USING (physmessage_id) "
-			"JOIN %sheadername n ON h.headername_id = n.id "
-			"JOIN %sheadervalue v ON h.headervalue_id = v.id "
+			"LEFT JOIN %sheader h USING (physmessage_id) "
+			"LEFT JOIN %sheadername n ON h.headername_id = n.id "
+			"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 			"WHERE m.mailbox_idnr=%llu "
 			"AND n.headername = 'subject' AND m.status IN (%d,%d) "
 			"GROUP BY v.sortfield",
@@ -340,9 +340,9 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 	/* full threads (unordered) */
 	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr,v.sortfield "
 			"FROM %smessages m "
-			"JOIN %sheader h USING (physmessage_id) "
-			"JOIN %sheadername n ON h.headername_id = n.id "
-			"JOIN %sheadervalue v ON h.headervalue_id = v.id "
+			"LEFT JOIN %sheader h USING (physmessage_id) "
+			"LEFT JOIN %sheadername n ON h.headername_id = n.id "
+			"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 			"WHERE m.mailbox_idnr = %llu "
 			"AND n.headername = 'subject' AND m.status IN (%d,%d) "
 			"ORDER BY v.sortfield, v.datefield",
@@ -1152,9 +1152,9 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			g_free(field);
 			
 			g_string_printf(q,"SELECT message_idnr FROM %smessages m "
-					"JOIN %sheader h USING (physmessage_id) "
-					"JOIN %sheadername n ON h.headername_id = n.id "
-					"JOIN %sheadervalue v ON h.headervalue_id = v.id "
+					"LEFT JOIN %sheader h USING (physmessage_id) "
+					"LEFT JOIN %sheadername n ON h.headername_id = n.id "
+					"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 					"WHERE m.mailbox_idnr=? AND m.status IN (?,?) "
 					"AND n.headername = 'date' "
 					"AND %s ORDER BY message_idnr", 
@@ -1171,9 +1171,9 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_HDR:
 			
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
-					"JOIN %sheader h USING (physmessage_id) "
-					"JOIN %sheadername n ON h.headername_id = n.id "
-					"JOIN %sheadervalue v ON h.headervalue_id = v.id "
+					"LEFT JOIN %sheader h USING (physmessage_id) "
+					"LEFT JOIN %sheadername n ON h.headername_id = n.id "
+					"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 					"WHERE mailbox_idnr=? AND status IN (?,?) "
 					"AND n.headername = lower('%s') AND v.headervalue %s ? "
 					"ORDER BY message_idnr",
@@ -1194,11 +1194,11 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 
 			g_string_printf(q,"SELECT m.message_idnr, v.headervalue, k.data "
 					"FROM %smimeparts k "
-					"JOIN %spartlists l ON k.id=l.part_id "
-					"JOIN %sphysmessage p ON l.physmessage_id=p.id "
-					"JOIN %sheader h ON h.physmessage_id=p.id "
-					"JOIN %sheadervalue v ON h.headervalue_id=v.id "
-					"JOIN %smessages m ON m.physmessage_id=p.id "
+					"LEFT JOIN %spartlists l ON k.id=l.part_id "
+					"LEFT JOIN %sphysmessage p ON l.physmessage_id=p.id "
+					"LEFT JOIN %sheader h ON h.physmessage_id=p.id "
+					"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
+					"LEFT JOIN %smessages m ON m.physmessage_id=p.id "
 					"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
 					"GROUP BY m.message_idnr, v.headervalue, k.data "
 					"HAVING v.headervalue %s ? OR k.data %s ? "
@@ -1219,7 +1219,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 				
 			case IST_IDATE:
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
-					"JOIN %sphysmessage p ON m.physmessage_id=p.id "
+					"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
 					"WHERE mailbox_idnr = ? AND status IN (?,?) AND p.%s "
 					"ORDER BY message_idnr", 
 					DBPFX, DBPFX, s->search);
@@ -1233,10 +1233,10 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_DATA_BODY:
 			g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "p.data");
 			g_string_printf(q,"SELECT m.message_idnr,p.data FROM %smimeparts p "
-					"JOIN %spartlists l ON p.id=l.part_id "
-					"JOIN %sphysmessage s ON l.physmessage_id=s.id "
-					"JOIN %smessages m ON m.physmessage_id=s.id "
-					"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
+					"LEFT JOIN %spartlists l ON p.id=l.part_id "
+					"LEFT JOIN %sphysmessage s ON l.physmessage_id=s.id "
+					"LEFT JOIN %smessages m ON m.physmessage_id=s.id "
+					"LEFT JOIN %smailboxes b USING (mailbox_idnr) "
 					"WHERE b.mailbox_idnr=? AND m.status IN (?,?) "
 					"AND (l.part_key > 1 OR l.is_header=0) "
 					"GROUP BY m.message_idnr,p.data HAVING %s %s ?",
@@ -1259,7 +1259,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 				if (!gt_lt) gt_lt = '<';
 
 			g_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
-				"JOIN %sphysmessage p ON m.physmessage_id = p.id "
+				"LEFT JOIN %sphysmessage p ON m.physmessage_id = p.id "
 				"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) AND p.messagesize %c ? "
 				"ORDER BY message_idnr", DBPFX, DBPFX, gt_lt);
 

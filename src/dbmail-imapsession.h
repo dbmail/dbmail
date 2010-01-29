@@ -18,6 +18,7 @@ typedef struct cmd_t *cmd_t;
 /* ImapSession definition */
 typedef struct {
 	clientbase_t *ci;
+	Capa_T capa;   // CAPABILITY
 	char *tag;
 	char *command;
 	int command_type;
@@ -42,10 +43,8 @@ typedef struct {
 	u64_t hi; // upper boundary for message ids
 	u64_t ceiling; // upper boundary during prefetching
 
-	// FIXME: there is too much redundancy here
 	DbmailMessage *message;
 	Cache_T cache;  
-	Capa_T capa;   // CAPABILITY
 
 	u64_t userid;		/* userID of client in dbase */
 
@@ -61,6 +60,7 @@ typedef struct {
 	clientstate_t state; // session status 
 	int error_count;
 	GMutex *mutex;
+	Connection_T c; // database-connection;
 } ImapSession;
 
 

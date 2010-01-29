@@ -645,9 +645,9 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 	q = g_string_new("");
 	g_string_printf(q,"SELECT m.message_idnr, n.headername, v.headervalue "
 			"FROM %sheader h "
-			"JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
-			"JOIN %sheadername n ON h.headername_id=n.id "
-			"JOIN %sheadervalue v ON h.headervalue_id=v.id "
+			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
+			"LEFT JOIN %sheadername n ON h.headername_id=n.id "
+			"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
 			"WHERE m.mailbox_idnr = %llu "
 			"AND m.message_idnr %s "
 			"AND lower(n.headername) %s IN ('%s')",
@@ -833,7 +833,7 @@ static void _fetch_envelopes(ImapSession *self)
         q = g_string_new("");
 	g_string_printf(q,"SELECT message_idnr,envelope "
 			"FROM %senvelope e "
-			"JOIN %smessages m ON m.physmessage_id=e.physmessage_id "
+			"LEFT JOIN %smessages m USING (physmessage_id) "
 			"WHERE m.mailbox_idnr = %llu "
 			"AND message_idnr %s",
 			DBPFX, DBPFX,  
@@ -1672,7 +1672,7 @@ static gboolean _do_expunge(u64_t *id, ImapSession *self)
 
 	if (! msginfo->flags[IMAP_FLAG_DELETED]) return FALSE;
 
-	if (db_update("UPDATE %smessages SET status=%d WHERE message_idnr=%llu ", DBPFX, MESSAGE_STATUS_DELETE, *id) == DM_EQUERY)
+	if (db_exec(self->c, "UPDATE %smessages SET status=%d WHERE message_idnr=%llu ", DBPFX, MESSAGE_STATUS_DELETE, *id) == DM_EQUERY)
 		return TRUE;
 
 	return notify_expunge(self, id);
@@ -1693,7 +1693,14 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self)
 
 	ids = g_tree_keys(MailboxState_getMsginfo(M));
 	ids = g_list_reverse(ids);
+
+	self->c = db_con_get();
+	db_begin_transaction(self->c);
 	g_list_foreach(ids, (GFunc) _do_expunge, self);
+	db_commit_transaction(self->c);
+	db_con_close(self->c);
+	self->c = NULL;
+
 	ids = g_list_first(ids);
 	g_list_free(ids);
 

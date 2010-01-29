@@ -94,8 +94,8 @@ T MailboxState_new(u64_t id)
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
 			"draft_flag, recent_flag, %s, rfcsize, message_idnr "
 			"FROM %smessages m "
-			"JOIN %sphysmessage p ON p.id = m.physmessage_id "
-			"AND mailbox_idnr = %llu AND status IN (%d,%d) "
+			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
+			"WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) "
 			"ORDER BY message_idnr ASC",
 			frag ,DBPFX,DBPFX, M->id,
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
@@ -104,6 +104,7 @@ T MailboxState_new(u64_t id)
 
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c); // we need read-committed isolation
 		r = db_query(c,query);
 
 		i = 0;
@@ -161,8 +162,8 @@ T MailboxState_new(u64_t id)
 	memset(query,0,sizeof(query));
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT k.message_idnr, keyword FROM %skeywords k "
-		"JOIN %smessages m USING (message_idnr) "
-		"JOIN %smailboxes b USING (mailbox_idnr) "
+		"LEFT JOIN %smessages m USING (message_idnr) "
+		"LEFT JOIN %smailboxes b USING (mailbox_idnr) "
 		"WHERE b.mailbox_idnr = %llu AND m.status < %d",
 		DBPFX, DBPFX, DBPFX,
 		M->id, MESSAGE_STATUS_DELETE);
@@ -181,6 +182,7 @@ T MailboxState_new(u64_t id)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
+		db_commit_transaction(c);
 		db_con_close(c);
 	END_TRY;
 
@@ -631,8 +633,8 @@ static int db_getmailbox_keywords(T M)
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
-				"JOIN %smessages m ON k.message_idnr=m.message_idnr "
-				"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
+				"LEFT JOIN %smessages m USING (message_idnr) "
+				"LEFT JOIN %smailboxes b USING (mailbox_idnr) "
 				"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, M->id);
 
 		while (db_result_next(r)) {
