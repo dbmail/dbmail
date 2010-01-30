@@ -31,9 +31,6 @@ struct DbmailIconv *ic;
 static void dbmail_iconv_close(void)
 {
 	TRACE(TRACE_DEBUG,"closing");
-	g_mime_iconv_close(ic->to_db);
-	g_mime_iconv_close(ic->from_db);
-	g_mime_iconv_close(ic->from_msg);
 	ic->to_db = NULL;
 	ic->from_db = NULL;
 	ic->from_msg = NULL;
