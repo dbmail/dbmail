@@ -42,6 +42,7 @@ serverConfig_t *server_conf;
 
 static void server_config_load(serverConfig_t * conf, const char * const service);
 static int server_set_sighandler(void);
+void disconnect_all(void);
 
 struct event *sig_int, *sig_hup, *sig_pipe;
 
@@ -563,6 +564,7 @@ void server_sig_cb(int fd, short event, void *arg)
 		case SIGPIPE: // ignore
 		break;
 		default:
+			disconnect_all();
 			exit(0);
 		break;
 	}
@@ -590,12 +592,27 @@ static int server_set_sighandler(void)
 // Public methods
 void disconnect_all(void)
 {
-	if (tpool) g_thread_pool_free(tpool,TRUE,FALSE);
-	if (tpool_idle) g_thread_pool_free(tpool_idle,TRUE,FALSE);
 	db_disconnect();
 	auth_disconnect();
-	g_free(sig_int);
-	g_free(sig_hup);
+	g_mime_shutdown();
+	config_free();
+
+	if (tpool) { 
+		g_thread_pool_free(tpool,TRUE,FALSE);
+		tpool = NULL;
+	}
+	if (tpool_idle) {
+		g_thread_pool_free(tpool_idle,TRUE,FALSE);
+		tpool_idle = NULL;
+	}
+	if (sig_int) {
+		g_free(sig_int);
+		sig_int = NULL;
+	}
+	if (sig_hup) {
+		g_free(sig_hup);
+		sig_hup = NULL;
+	}
 }
 
 static void server_pidfile(serverConfig_t *conf)
@@ -804,7 +821,16 @@ int server_getopt(serverConfig_t *config, const char *service, int argc, char *a
 int server_mainloop(serverConfig_t *config, const char *service, const char *servicename)
 {
 	strncpy(config->process_name, servicename, FIELDSIZE);
-	
+
+	g_mime_init(0);
+	g_mime_parser_get_type();
+	g_mime_stream_get_type();
+	g_mime_stream_mem_get_type();
+	g_mime_stream_file_get_type();
+	g_mime_stream_buffer_get_type();
+	g_mime_stream_filter_get_type();
+	g_mime_filter_crlf_get_type();
+
 	tls_context = tls_init();
 
 	if (config->no_daemonize == 1) {

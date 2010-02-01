@@ -754,21 +754,7 @@ static void _map_headers(DbmailMessage *self)
 	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
 
 	if (GMIME_IS_MESSAGE(self->content)) {
-		char *message_id = NULL;
 		char *type = NULL;
-
-		/* make sure the message has a message-id, else threading breaks */
-/*
-		if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {
-			char *domainname = g_new0(gchar, 255);
-			if (getdomainname(domainname,255))
-				strcpy(domainname,"(none)");
-			message_id = g_mime_utils_generate_message_id(domainname);
-			g_mime_message_set_message_id(GMIME_MESSAGE(self->content), message_id);
-			g_free(message_id);
-			g_free(domainname);
-		}
-*/
 
 		// gmime doesn't consider the content-type header to be a message-header so extract 
 		// and register it separately

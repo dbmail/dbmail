@@ -32,29 +32,14 @@
 
 extern int imap_before_smtp;
 
-
-
 int main(int argc, char *argv[])
 {
 	serverConfig_t config;
 	int result;
-
-	g_mime_init(0);
-	g_mime_parser_get_type();
-	g_mime_stream_get_type();
-	g_mime_stream_mem_get_type();
-	g_mime_stream_file_get_type();
-	g_mime_stream_buffer_get_type();
-	g_mime_stream_filter_get_type();
-	g_mime_filter_crlf_get_type();
-
 	openlog(PNAME, LOG_PID, LOG_MAIL);
-
 	memset(&config, 0, sizeof(serverConfig_t));
 	result = server_getopt(&config, "IMAP", argc, argv);
-	if (result == -1)
-		goto shutdown;
-
+	if (result == -1) goto shutdown;
 	if (result == 1) {
 		server_showhelp("dbmail-imapd",
 				"This daemon provides Internet "
@@ -63,16 +48,10 @@ int main(int argc, char *argv[])
 		goto shutdown;
 	}
 
-
 	config.ClientHandler = imap_handle_connection;
 	imap_before_smtp = config.service_before_smtp;
-
 	result = server_mainloop(&config, "IMAP", "dbmail-imapd");
-	
 shutdown:
-	g_mime_shutdown();
-	config_free();
-
 	TRACE(TRACE_INFO, "return [%d]", result);
 	return result;
 }

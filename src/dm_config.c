@@ -32,31 +32,25 @@ db_param_t _db_params;
 
 /** dictionary which holds the configuration */
 static GKeyFile *config_dict = NULL;
-
 static int configured = 0;
+
 /**
  * read the configuration file and stores the configuration
  * directives in an internal structure.
  */
 int config_read(const char *config_filename)
 {
-	if (configured) 
-		return 0;
-	
+	if (configured) return 0;
 	assert(config_filename != NULL);
-        
         config_dict = g_key_file_new();
-	
 	if (! g_key_file_load_from_file(config_dict, config_filename, G_KEY_FILE_NONE, NULL)) {
 		g_key_file_free(config_dict);
                 TRACE(TRACE_EMERG, "error reading config file %s", config_filename);
 		_exit(1);
 		return -1;
 	}
-
 	// silence the glib logger
 	g_log_set_default_handler((GLogFunc)null_logger, NULL);
-
 	configured = 1;
         return 0;
 }
@@ -66,11 +60,9 @@ int config_read(const char *config_filename)
  */
 void config_free(void) 
 {
-	if (!configured) 
-		return;
-	
+	if (!configured) return;
 	g_key_file_free(config_dict);
-
+	config_dict = NULL;
 	configured = 0;
 }
 

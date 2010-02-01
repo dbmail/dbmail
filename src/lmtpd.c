@@ -34,14 +34,10 @@ int main(int argc, char *argv[])
 	serverConfig_t config;
 	int result;
 		
-	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
-
         memset(&config, 0, sizeof(serverConfig_t));
 	result = server_getopt(&config, "LMTP", argc, argv);
-	if (result == -1)
-		goto shutdown;
-
+	if (result == -1) goto shutdown;
 	if (result == 1) {
 		server_showhelp("dbmail-lmtpd",
 			"This daemon provides Local Mail Transport Protocol services.");
@@ -50,11 +46,7 @@ int main(int argc, char *argv[])
 
 	config.ClientHandler = lmtp_handle_connection;
 	result = server_mainloop(&config, "LMTP", "dbmail-lmtpd");
-	
 shutdown:
-	g_mime_shutdown();
-	config_free();
-
 	TRACE(TRACE_INFO, "exit");
 	return result;
 }

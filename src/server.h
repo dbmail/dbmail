@@ -45,7 +45,6 @@ int server_run(serverConfig_t *conf);
 void dm_queue_drain(int sock, short event, void *arg);
 void dm_thread_data_free(gpointer data);
 
-void disconnect_all(void);
 void server_showhelp(const char *service, const char *greeting);
 int server_getopt(serverConfig_t *config, const char *service, int argc, char *argv[]);
 int server_mainloop(serverConfig_t *config, const char *service, const char *servicename);

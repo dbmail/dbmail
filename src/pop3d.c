@@ -38,29 +38,19 @@ int main(int argc, char *argv[])
 	serverConfig_t config;
 	int result;
 		
-	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
-
         memset(&config, 0, sizeof(serverConfig_t));
 	result = server_getopt(&config, "POP", argc, argv);
-	if (result == -1)
-		goto shutdown;
-
+	if (result == -1) goto shutdown;
 	if (result == 1) {
 		server_showhelp("dbmail-pop3d",
 			"This daemon provides Post Office Protocol v3 services.\n");
 		goto shutdown;
 	}
-
 	config.ClientHandler = pop3_handle_connection;
 	pop_before_smtp = config.service_before_smtp;
-
 	result = server_mainloop(&config, "POP", "dbmail-pop3d");
-	
 shutdown:
-	g_mime_shutdown();
-	config_free();
-
 	TRACE(TRACE_INFO, "exit");
 	return result;
 }
