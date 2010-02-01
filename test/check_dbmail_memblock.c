@@ -45,7 +45,6 @@ void teardown(void)
 	config_free();
 }
 
-
 START_TEST(test_mem_open) 
 {
 	Mem_T M = Mem_open();
@@ -55,25 +54,47 @@ START_TEST(test_mem_open)
 }
 END_TEST
 
-
 #define DATASIZE 64*1024
 START_TEST(test_mem_write)
 {
-	char indata[DATASIZE];
+	char indata[100];
+	char *instr = "abcdefghijklmnopqrstuvwxyz";
+	char out[4096];
+	Mem_T M;
+
 	memset(indata, 'a', sizeof(indata));
 
-	Mem_T M = Mem_open();
-	Mem_write(M,indata,DATASIZE);
-	Mem_write(M,indata,DATASIZE);
+	M = Mem_open();
+	Mem_write(M,indata,100);
+	Mem_write(M,indata,100);
+	Mem_close(&M);
+
+	M = Mem_open();
+	Mem_write(M, instr, 20);
+
+	memset(out, 0, sizeof(out));
+	Mem_read(M, out, 10);
+	fail_unless(MATCH(out,"abcdefghij"), "Mem_read failed");
+
+	memset(out, 0, sizeof(out));
+	Mem_read(M, out, 2);
+	fail_unless(MATCH(out,"kl"), "Mem_read failed");
+
+	memset(out, 0, sizeof(out));
+	Mem_read(M, out, 2);
+	fail_unless(MATCH(out,"mn"), "Mem_read failed");
+	
 	Mem_close(&M);
 }
 END_TEST
 
 START_TEST(test_mem_read)
 {
+	char *instr = "abcdefghijklmnopqrstuvwxyz";
 	char indata[DATASIZE+1];
 	char outdata[DATASIZE+1];
 	int l;
+
 	memset(indata, '\0', sizeof(indata));
 	memset(outdata, '\0', sizeof(outdata));
 	memset(indata, 'a', DATASIZE);
@@ -89,8 +110,6 @@ START_TEST(test_mem_read)
 	Mem_close(&M);
 }
 END_TEST
-
-
 
 Suite *dbmail_memblock_suite(void)
 {
@@ -117,3 +136,4 @@ int main(void)
 	srunner_free(sr);
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+

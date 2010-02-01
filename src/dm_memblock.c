@@ -38,7 +38,7 @@
 
 struct T {
 	GByteArray *data;
-	guint pos;
+	int pos;
 };
 
 /*
@@ -51,6 +51,7 @@ T Mem_open()
 	T M;
 	NEW(M);
 	M->data = g_byte_array_new();
+	M->pos = 0;
 	return M;
 }
 
@@ -96,8 +97,10 @@ int Mem_write(T M, const void *data, int size)
 int Mem_read(T M, void *data, int size)
 {
 	assert(M);
-	memmove(data, M->data->data+M->pos, min((int)M->data->len, size));
-	return (int)min((int)M->data->len, size);
+	int read = min((int)M->data->len, size);
+	memmove(data, M->data->data+M->pos, read);
+	Mem_seek(M, read, SEEK_CUR);
+	return read;
 	
 }
 
@@ -115,47 +118,25 @@ int Mem_read(T M, void *data, int size)
 int Mem_seek(T M, long offset, int whence)
 {
 	assert(M);
-	guint maxpos = M->data->len-1;
-	long left;
-
 	switch (whence) {
-	case SEEK_SET:
-		M->pos = 0;
-		if (offset <= 0) return 0;
-		return Mem_seek(M, offset, SEEK_CUR);
+		case SEEK_SET:
+			M->pos = 0;
+			return Mem_seek(M, offset, SEEK_CUR);
 
-	case SEEK_CUR:
-		if (offset == 0) return 0;
-
-		if (offset > 0) {
-			left = maxpos - M->pos;
-			if (offset >= left) {
-				M->pos = maxpos;
-				return 0;
-			} else {
-				M->pos += offset;
-				return 0;
-			}
-		} else {
-			/* offset < 0, walk backwards */
-			left = -M->pos;
-
-			if (offset <= left) {
+		case SEEK_CUR:
+			M->pos += offset;
+			if (M->pos >= (int)M->data->len)
+				M->pos = M->data->len;
+			if (M->pos < 0)
 				M->pos = 0;
-				return 0;
-			} else {
-				M->pos += offset;	/* remember: offset<0 */
-				return 0;
-			}
-		}
+			break;
 
-	case SEEK_END:
-		M->pos = maxpos;
-		if (offset >= 0) return 0;
-		return Mem_seek(M, offset, SEEK_CUR);
+		case SEEK_END:
+			M->pos = M->data->len;
+			return Mem_seek(M, offset, SEEK_CUR);
 
-	default:
-		return -1;
+		default:
+			return -1;
 	}
 
 	return 0;
