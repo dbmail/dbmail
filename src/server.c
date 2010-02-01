@@ -484,8 +484,8 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 
 	if (getpeername(c->sock, caddr, (socklen_t *)&len) < 0) {
 		int serr = errno;
-		TRACE(TRACE_EMERG, "getpeername::error [%s]", strerror(serr));
-		return; // fatal 
+		TRACE(TRACE_INFO, "getpeername::error [%s]", strerror(serr));
+		return;
 	}
 
 	c->caddr = caddr;
