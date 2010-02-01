@@ -1079,8 +1079,6 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, ImapSession *self)
 		return TRUE;
 	}
 
-	dbmail_imap_session_buff_flush(self);
-
 	return FALSE;
 }
 
@@ -1089,9 +1087,9 @@ int dbmail_imap_session_fetch_get_items(ImapSession *self)
 	if (! self->ids)
 		TRACE(TRACE_INFO, "[%p] self->ids is NULL", self);
 	else {
-		dbmail_imap_session_buff_flush(self);
 		self->error = FALSE;
 		g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
+		dbmail_imap_session_buff_flush(self);
 		if (self->error) return -1;
 		dbmail_imap_session_mailbox_update_recent(self);
 	}
@@ -1179,6 +1177,8 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
 }
 
+#define IMAP_BUF_SIZE 4096
+
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
 {
         va_list ap, cp;
@@ -1194,7 +1194,7 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
 
         l = self->buff->len;
 
-	if (l >= TLS_SEGMENT) dbmail_imap_session_buff_flush(self);
+	if (l >= IMAP_BUF_SIZE) dbmail_imap_session_buff_flush(self);
 
         return (int)(l-j);
 }
