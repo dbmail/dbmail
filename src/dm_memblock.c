@@ -67,6 +67,7 @@ void Mem_close(T *M)
 	assert(M && m);
 
 	g_byte_array_free(m->data, TRUE);
+	g_free(m);
 	*M = NULL;
 
 	return;
