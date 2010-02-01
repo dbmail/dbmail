@@ -30,28 +30,16 @@
 #include <unistd.h>
 #include "dm_memblock.h"
 
-#define MEMBLOCK_SIZE (512ul*1024ul)
-
 #define T Mem_T
 
 #define NEW(x) x = g_malloc0( sizeof(*x) )
 
-struct MemBlock_t {
-	struct MemBlock_t *nextblk, *prevblk;
-	char data[MEMBLOCK_SIZE];
-};
-
-typedef struct MemBlock_t *MemBlock_t;
+#define min(x,y) ((x)<=(y)?(x):(y))
 
 struct T {
-	int nblocks;
-	long eom;		/* eom = end-of-mem; relative to lastblk */
-	long mpos;		/* mpos = mem-position; relative to currblk */
-	MemBlock_t firstblk, currblk, lastblk;
+	GByteArray *data;
+	guint pos;
 };
-
-/* internal use only */
-static int Mem_grow(T M);
 
 /*
  * mopen()
@@ -61,16 +49,8 @@ static int Mem_grow(T M);
 T Mem_open()
 {
 	T M;
-	MemBlock_t B;
-
 	NEW(M);
-	NEW(B);
-
-	M->firstblk = B;
-	M->lastblk = B;
-	M->currblk = B;
-	M->nblocks = 1;
-
+	M->data = g_byte_array_new();
 	return M;
 }
 
@@ -83,17 +63,10 @@ T Mem_open()
  */
 void Mem_close(T *M)
 {
-	assert(M && *M);
-	MemBlock_t tmp, next;
+	T m = *M;
+	assert(M && m);
 
-	tmp = (*M)->firstblk;
-	while (tmp) {
-		next = tmp->nextblk;	/* save address */
-		g_free(tmp);
-		tmp = next;
-	}
-
-	g_free(*M);
+	g_byte_array_free(m->data, TRUE);
 	*M = NULL;
 
 	return;
@@ -107,57 +80,10 @@ void Mem_close(T *M)
  */
 int Mem_write(T M, const void *data, int size)
 {
-	long left;
-
-	assert(M);
-	assert(data);
-	assert(size > 0);
-
-	left = MEMBLOCK_SIZE - M->mpos;
-
-	if (size <= left) {
-		/* entire fit */
-		memmove(&M->currblk->data[M->mpos], data, size);
-		M->mpos += size;
-
-		if (size == left) {
-			/* update */
-			if (M->currblk == M->lastblk) {
-				if (!Mem_grow(M)) {
-					M->mpos--;
-					M->eom = M->mpos;
-					return size - 1;
-				}
-			}
-
-			M->currblk = M->currblk->nextblk;
-			M->mpos = 0;
-		}
-
-		if (M->currblk == M->lastblk && M->mpos > M->eom)
-			M->eom = M->mpos;
-
-		return size;
-	}
-
-	/* copy everything that can be placed */
-	memmove(&M->currblk->data[M->mpos], data, left);
-	M->mpos += left;
-
-	if (M->currblk == M->lastblk) {
-		/* need a new block */
-		if (!Mem_grow(M))
-			return left;
-
-		M->eom = 0;
-	}
-
-	M->currblk = M->currblk->nextblk;	/* advance current block */
-	M->mpos = 0;
-
-	return left + Mem_write(M, &((char *) data)[left], size - left);
+	
+	M->data = g_byte_array_append(M->data, (const guint8 *)data, (guint)size);
+	return size;
 }
-
 
 /*
  * mread()
@@ -168,39 +94,10 @@ int Mem_write(T M, const void *data, int size)
  */
 int Mem_read(T M, void *data, int size)
 {
-	long left;
 	assert(M);
-	assert(data);
-	assert(size >=0);
-
-	if (M->lastblk == M->currblk)
-		left = M->eom - M->mpos;
-	else
-		left = MEMBLOCK_SIZE - M->mpos;
-
-	if (left <= 0) return 0;
-
-	if (size < left) {
-		/* entire fit */
-		memmove(data, &M->currblk->data[M->mpos], size);
-		M->mpos += size;
-
-		return size;
-	}
-
-	/* copy everything that can be placed */
-	memmove(data, &M->currblk->data[M->mpos], left);
-	M->mpos += left;
-
-	if (M->currblk == M->lastblk) {
-		/* no more data */
-		return left;
-	}
-
-	M->currblk = M->currblk->nextblk;	/* advance current block */
-	M->mpos = 0;
-
-	return left + Mem_read(M, &((char *) data)[left], size - left);
+	memmove(data, M->data->data+M->pos, min((int)M->data->len, size));
+	return (int)min((int)M->data->len, size);
+	
 }
 
 
@@ -216,67 +113,44 @@ int Mem_read(T M, void *data, int size)
  */
 int Mem_seek(T M, long offset, int whence)
 {
-	long left;
-
 	assert(M);
+	guint maxpos = M->data->len-1;
+	long left;
 
 	switch (whence) {
 	case SEEK_SET:
-		M->currblk = M->firstblk;
-		M->mpos = 0;
-
+		M->pos = 0;
 		if (offset <= 0) return 0;
-
 		return Mem_seek(M, offset, SEEK_CUR);
 
 	case SEEK_CUR:
 		if (offset == 0) return 0;
 
 		if (offset > 0) {
-			left = MEMBLOCK_SIZE - M->mpos;
+			left = maxpos - M->pos;
 			if (offset >= left) {
-				if (M->currblk == M->lastblk) {
-					M->mpos = M->eom;
-					return 0;
-				}
-
-				M->currblk = M->currblk->nextblk;
-				M->mpos = 0;
-				return Mem_seek(M, offset - left, SEEK_CUR);
+				M->pos = maxpos;
+				return 0;
 			} else {
-				M->mpos += offset;
-
-				if (M->currblk == M->lastblk && M->mpos > M->eom)
-					M->mpos = M->eom;
-
+				M->pos += offset;
 				return 0;
 			}
 		} else {
 			/* offset < 0, walk backwards */
-			left = -M->mpos;
+			left = -M->pos;
 
 			if (offset <= left) {
-				if (M->currblk == M->firstblk) {
-					M->mpos = 0;
-					return 0;
-				}
-
-				M->currblk = M->currblk->prevblk;
-				M->mpos = MEMBLOCK_SIZE;
-				return Mem_seek(M, offset - left, SEEK_CUR);
+				M->pos = 0;
+				return 0;
 			} else {
-				M->mpos += offset;	/* remember: offset<0 */
+				M->pos += offset;	/* remember: offset<0 */
 				return 0;
 			}
 		}
 
 	case SEEK_END:
-		M->currblk = M->lastblk;
-		M->mpos = M->eom;
-
-		if (offset >= 0)
-			return 0;
-
+		M->pos = maxpos;
+		if (offset >= 0) return 0;
 		return Mem_seek(M, offset, SEEK_CUR);
 
 	default:
@@ -297,25 +171,4 @@ void Mem_rewind(T M)
 	Mem_seek(M, 0, SEEK_SET);
 }
 
-
-/* 
- * Mem_grow()
- * adds a block to m
- * returns 0 on failure, 1 on succes
- */
-int Mem_grow(T M)
-{
-	MemBlock_t B;
-
-	assert(M);
-
-	NEW(B);
-
-	B->prevblk = M->lastblk;
-	M->lastblk->nextblk = B;
-	M->lastblk = B;
-	M->nblocks++;
-
-	return 1;
-}
 
