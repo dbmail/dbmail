@@ -404,8 +404,6 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	u64_t idx = 0;
 	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	
-	dbmail_mailbox_open(mb);
-
 	args = g_strdup("HEADER FROM foo.org ( SINCE 1-Jan-2005 )");
 	array = g_strsplit(args," ",0);
 	g_free(args);

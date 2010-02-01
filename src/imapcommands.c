@@ -327,7 +327,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
 
 	/* fetch mailbox metadata */
-	self->mailbox->mbstate = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
+	self->mailbox->mbstate = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr, TRUE);
 
 	/* check if user has right to select mailbox */
 	if (mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_READ) == 1) {
@@ -465,7 +465,7 @@ int _ic_create(ImapSession *self)
 static int imap_session_mailbox_check_acl(ImapSession * self, u64_t idnr,  ACLRight_t acl)
 {
 	int result;
-	MailboxState_T S = dbmail_imap_session_mbxinfo_lookup(self, idnr);
+	MailboxState_T S = dbmail_imap_session_mbxinfo_lookup(self, idnr, FALSE);
 	if ((result = mailbox_check_acl(self, S, acl)) == 1)
 		dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 	return result;
@@ -531,7 +531,7 @@ void _ic_delete_enter(dm_thread_data *D)
 		{
 			C c; volatile int t = DM_SUCCESS;
 			u64_t mailbox_size;
-			MailboxState_T S = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr);
+			MailboxState_T S = dbmail_imap_session_mbxinfo_lookup(self, mailbox_idnr, FALSE);
 
 			if (! mailbox_is_writable(mailbox_idnr)) {
 				D->status=DM_EQUERY;
@@ -728,7 +728,7 @@ void _ic_rename_enter(dm_thread_data *D)
 	while (children) {
 		u64_t childid = *(u64_t *)children->data;
 		const char *tname;
-		M = dbmail_imap_session_mbxinfo_lookup(self, childid);
+		M = dbmail_imap_session_mbxinfo_lookup(self, childid, FALSE);
 		tname = MailboxState_getName(M);
 
 		g_snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s", self->args[1], &tname[oldnamelen]);
@@ -745,7 +745,7 @@ void _ic_rename_enter(dm_thread_data *D)
 	if (children) g_list_destroy(children);
 
 	/* now replace name */
-	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid, FALSE);
 	if ((mailbox_rename(M, self->args[1])) != DM_SUCCESS) {
 		dbmail_imap_session_buff_printf(self, "* BYE error renaming mailbox\r\n");
 		D->status = DM_EGENERAL;
@@ -872,7 +872,7 @@ void _ic_list_enter(dm_thread_data *D)
 		N = NULL;
 
 		u64_t mailbox_id = *(u64_t *)children->data;
-		if ((M = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id)) != NULL) {
+		if ((M = dbmail_imap_session_mbxinfo_lookup(self, mailbox_id, FALSE)) != NULL) {
 			char *mailbox = g_new0(char, IMAP_MAX_MAILBOX_NAMELEN);
 			if ( (D->status = db_getmailboxname(mailbox_id, self->userid, mailbox)) != DM_SUCCESS) {
 				g_free(mailbox);
@@ -1040,7 +1040,7 @@ static void _ic_status_enter(dm_thread_data *D)
 		}
 	}
 
-	if (! (M = dbmail_imap_session_mbxinfo_lookup(self, id))) {
+	if (! (M = dbmail_imap_session_mbxinfo_lookup(self, id, FALSE))) {
 		dbmail_imap_session_buff_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		D->status = 1;
 		NOTIFY_DONE(D);
@@ -1207,7 +1207,7 @@ void _ic_append_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 
-	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid, FALSE);
 
 	/* check if user has right to append to  mailbox */
 	if ((result = imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_INSERT))) {
@@ -1925,7 +1925,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 	}
 
 	// check if user has right to COPY to destination mailbox
-	S = dbmail_imap_session_mbxinfo_lookup(self, destmboxid);
+	S = dbmail_imap_session_mbxinfo_lookup(self, destmboxid, FALSE);
 	if ((result = mailbox_check_acl(self, S, ACL_RIGHT_INSERT))) {
 		D->status = result;
 		NOTIFY_DONE(D);
@@ -2134,7 +2134,7 @@ static void _ic_setacl_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 	// has the rights to 'administer' this mailbox? 
-	S = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	S = dbmail_imap_session_mbxinfo_lookup(self, mboxid, FALSE);
 	if ((result = mailbox_check_acl(self, S, ACL_RIGHT_ADMINISTER))) {
 		D->status = result;
 		NOTIFY_DONE(D);
@@ -2174,7 +2174,7 @@ static void _ic_deleteacl_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 	
-	S = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	S = dbmail_imap_session_mbxinfo_lookup(self, mboxid, FALSE);
 	if ((result = mailbox_check_acl(self, S, ACL_RIGHT_ADMINISTER))) {
 		D->status = result;
 		NOTIFY_DONE(D);
@@ -2252,7 +2252,7 @@ static void _ic_listrights_enter(dm_thread_data *D)
 		NOTIFY_DONE(D);
 	}
 	// has the rights to 'administer' this mailbox? 
-	S = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	S = dbmail_imap_session_mbxinfo_lookup(self, mboxid, FALSE);
 	if ((result = mailbox_check_acl(self, S, ACL_RIGHT_ADMINISTER))) {
 		D->status=1;
 		NOTIFY_DONE(D);	

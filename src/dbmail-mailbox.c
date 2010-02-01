@@ -39,7 +39,7 @@ DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	assert(id);
 	assert(self);
 
-	dbmail_mailbox_set_id(self, id);
+	self->id = id;
 	dbmail_mailbox_set_uid(self, FALSE);
 
 	return self;
@@ -61,22 +61,11 @@ void dbmail_mailbox_free(DbmailMailbox *self)
 		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, (GNodeTraverseFunc)_node_free, NULL);
 		g_node_destroy(self->search);
 	}
-	if (self->fi) {
-		if (self->fi->bodyfetch) g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
-		g_free(self->fi);
-		self->fi = NULL;
-	}
 	if (self->charset) {
 		g_free(self->charset);
 		self->charset = NULL;
 	}
 	g_free(self);
-}
-
-void dbmail_mailbox_set_id(DbmailMailbox *self, u64_t id)
-{
-	assert(id > 0);
-	self->id = id;
 }
 
 u64_t dbmail_mailbox_get_id(DbmailMailbox *self)
@@ -1630,7 +1619,8 @@ int dbmail_mailbox_search(DbmailMailbox *self)
 	GTree *ids;
 	if (! self->search) return 0;
 	
-	dbmail_mailbox_open(self);
+	if (! self->mbstate)
+		dbmail_mailbox_open(self);
 
 	if (self->found) g_tree_destroy(self->found);
 	self->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,NULL);

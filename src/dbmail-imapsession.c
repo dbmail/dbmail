@@ -98,7 +98,6 @@ ImapSession * dbmail_imap_session_new(void)
 	self->buff = g_string_new("");
 	self->fi = g_new0(fetch_items_t,1);
 	self->mutex = g_mutex_new();
-	self->cache = Cache_new();
 	self->capa = Capa_new();
 	Capa_remove(self->capa, "ACL");
 	Capa_remove(self->capa, "RIGHTS=texk");
@@ -114,6 +113,7 @@ ImapSession * dbmail_imap_session_new(void)
 	self->physids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	self->mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
 
+	self->cache = Cache_new();
 	assert(self->cache);
  
 	TRACE(TRACE_DEBUG,"imap session [%p] created", self);
@@ -1519,7 +1519,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	return 0;
 }
 
-MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_id)
+MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_id, gboolean reload)
 {
 	MailboxState_T M = NULL;
 	u64_t *id;
@@ -1531,12 +1531,13 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 		id = g_new0(u64_t,1);
 		*id = mailbox_id;
 		M = MailboxState_new(mailbox_id);
-		MailboxState_reload(M);
 		if (MailboxState_getName(M)) {
 			g_tree_replace(self->mbxinfo, id, M);
 		} else {
 			MailboxState_free(&M);
 		}
+	} else if (reload) {
+		MailboxState_reload(M);
 	}
 
 	return M;
