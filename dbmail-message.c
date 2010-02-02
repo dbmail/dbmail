@@ -1066,9 +1066,9 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 	for (; ialist != NULL && ialist->address; ialist = ialist->next) {
 
 		ia = ialist->address;
-		g_return_if_fail(ia != NULL);
+		if (! ia) break;
 
-		if (g_mime_utils_text_is_8bit((unsigned char *)ia->value.addr, strlen(ia->value.addr))) {
+		if (ia->value.addr && g_mime_utils_text_is_8bit((unsigned char *)ia->value.addr, strlen(ia->value.addr))) {
 			TRACE(TRACE_INFO, "skip 8bit address");
 			continue;
 		}

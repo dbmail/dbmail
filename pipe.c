@@ -347,9 +347,9 @@ static int check_destination(struct DbmailMessage *message, GList *aliases)
 	while (recipients && (! check)) {
 		char *addr = (char *)recipients->data;
 		aliases = g_list_first(aliases);
-		while (aliases && (!check)) {
+		while (addr && aliases && (!check)) {
 			char *alias = (char *)aliases->data;
-			if (MATCH(alias, addr)) {
+			if (alias && MATCH(alias, addr)) {
 				TRACE(TRACE_DEBUG, "valid alias found as recipient [%s]", alias);
 				check = TRUE;
 				break;
