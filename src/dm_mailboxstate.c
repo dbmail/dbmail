@@ -92,13 +92,10 @@ T MailboxState_new(u64_t id)
 	date2char_str("internal_date", &frag);
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-			"draft_flag, recent_flag, %s, rfcsize, message_idnr "
-			"FROM %smessages m "
+			"draft_flag, recent_flag, %s, rfcsize, message_idnr FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
-			"WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) "
-			"ORDER BY message_idnr ASC",
-			frag ,DBPFX,DBPFX, M->id,
-			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+			"WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) ORDER BY message_idnr ASC",
+			frag, DBPFX, DBPFX, M->id, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
 

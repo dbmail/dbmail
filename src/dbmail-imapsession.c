@@ -1526,19 +1526,22 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 
 	TRACE(TRACE_DEBUG, "[%p] mailbox_id [%llu]", self, mailbox_id);
 
-	/* fetch the cached mailbox metadata */
-	if ((M = (MailboxState_T)g_tree_lookup(self->mbxinfo, &mailbox_id)) == NULL) {
+	if (reload) {
 		id = g_new0(u64_t,1);
 		*id = mailbox_id;
 		M = MailboxState_new(mailbox_id);
-		if (MailboxState_getName(M)) {
+		g_tree_replace(self->mbxinfo, id, M);
+	} else {
+		M = (MailboxState_T)g_tree_lookup(self->mbxinfo, &mailbox_id);
+		if (! M) {
+			id = g_new0(u64_t,1);
+			*id = mailbox_id;
+			M = MailboxState_new(mailbox_id);
 			g_tree_replace(self->mbxinfo, id, M);
-		} else {
-			MailboxState_free(&M);
 		}
-	} else if (reload) {
-		MailboxState_reload(M);
 	}
+
+	assert(M);
 
 	return M;
 }

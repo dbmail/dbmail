@@ -351,7 +351,6 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 		GTree *info = MailboxState_getMsginfo(self->mailbox->mbstate);
 		g_tree_foreach(info, (GTraverseFunc)mailbox_build_recent, self);
 		TRACE(TRACE_DEBUG, "build list of [%d] [%d] recent messages...", g_tree_nnodes(info), g_list_length(self->recent));
-		dbmail_imap_session_mailbox_update_recent(self);
 	}
 
 	return 0;
