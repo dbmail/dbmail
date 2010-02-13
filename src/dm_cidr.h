@@ -20,22 +20,17 @@
 #ifndef _DM_CIDR_H
 #define _DM_CIDR_H
 /*
- * 
- * $Id$
- * 
  * provide some CIDR utilities.
- * 
  */
+#define T Cidr_T
 
-struct cidrfilter {
-	char *sock_str;
-	struct sockaddr_in *socket;
-	short int mask;
-};
+typedef struct T *T;
 
-struct cidrfilter * cidr_new(const char *str);
-char * cidr_repr(struct cidrfilter *self);
-int cidr_match(struct cidrfilter *base, struct cidrfilter *test);
-void cidr_free(struct cidrfilter *self);
+extern T      cidr_new(const char *str);
+extern char * cidr_repr(T);
+extern int    cidr_match(T, T);
+extern void   cidr_free(T *);
+
+#undef T
 
 #endif

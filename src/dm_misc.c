@@ -644,7 +644,7 @@ u64_t dm_getguid(unsigned int serverid)
 
 int dm_sock_score(const char *base, const char *test)
 {
-	struct cidrfilter *basefilter, *testfilter;
+	Cidr_T basefilter, testfilter;
 	int result = 0;
 	char *t;
 
@@ -674,8 +674,8 @@ int dm_sock_score(const char *base, const char *test)
 		result = cidr_match(basefilter,testfilter);
 	}
 
-	cidr_free(basefilter);
-	cidr_free(testfilter);
+	cidr_free(&basefilter);
+	cidr_free(&testfilter);
 	
 	return result;
 }

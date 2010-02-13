@@ -21,10 +21,17 @@
 
 #define THIS_MODULE "cidr"
 
+#define T Cidr_T
 
-struct cidrfilter * cidr_new(const char *str)
+struct T {
+	char *sock_str;
+	struct sockaddr_in *socket;
+	short int mask;
+};
+
+T cidr_new(const char *str)
 {
-	struct cidrfilter *self;
+	T self;
 	char *addr, *port, *mask;
 	char *haddr, *hport;
 	unsigned i;
@@ -32,7 +39,7 @@ struct cidrfilter * cidr_new(const char *str)
 
 	assert(str != NULL);
 	
-	self = (struct cidrfilter *)malloc(sizeof(struct cidrfilter));
+	self = (T)g_malloc0(sizeof(*self));
 	self->sock_str = strdup(str);
 	self->socket = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
 	self->mask = 32;
@@ -95,7 +102,7 @@ struct cidrfilter * cidr_new(const char *str)
 	return self;
 }
 
-char * cidr_repr(struct cidrfilter *self) 
+char * cidr_repr(T self)
 {
 	return g_strdup_printf("struct cidrfilter {\n"
 			"\tsock_str: %s;\n"
@@ -110,7 +117,7 @@ char * cidr_repr(struct cidrfilter *self)
 			);
 }
 
-int cidr_match(struct cidrfilter *base, struct cidrfilter *test)
+int cidr_match(T base, T test)
 {
 	char *fullmask = "255.255.255.255";
 	struct in_addr match_addr, base_addr, test_addr;
@@ -138,16 +145,17 @@ int cidr_match(struct cidrfilter *base, struct cidrfilter *test)
 	
 }
 
-void cidr_free(struct cidrfilter *self)
+void cidr_free(T *self)
 {
-	if (! self)
-		return;
+	T s = *self;
+	if (! s) return;
 
-	if (self->socket)
-		free(self->socket);
-	if (self->sock_str)
-		free(self->sock_str);
-	if (self)
-		free(self);
+	if (s->socket)
+		free(s->socket);
+	if (s->sock_str)
+		free(s->sock_str);
+	if (s) free(s);
+
+	s = NULL;
 }
 
