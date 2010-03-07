@@ -97,7 +97,6 @@ ImapSession * dbmail_imap_session_new(void)
 	self->args = g_new0(char *, MAX_ARGS);
 	self->buff = g_string_new("");
 	self->fi = g_new0(fetch_items_t,1);
-	self->mutex = g_mutex_new();
 	self->capa = Capa_new();
 	Capa_remove(self->capa, "ACL");
 	Capa_remove(self->capa, "RIGHTS=texk");
@@ -224,7 +223,6 @@ void dbmail_imap_session_delete(ImapSession ** s)
 	}
 	
 	g_string_free(self->buff,TRUE);
-	g_mutex_free(self->mutex);
 	g_free(self);
 	self = NULL;
 }

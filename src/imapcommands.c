@@ -72,13 +72,10 @@ void cmd_free(cmd_t *cmd)
  */
 
 #define LOCK_SESSION \
-	ImapSession *self = D->session; \
-	g_mutex_lock(self->mutex)
+	ImapSession *self = D->session
 
-	//dbmail_imap_session_buff_flush(D->session); 
 #define NOTIFY_DONE(D) \
 	D->session->command_state = TRUE; \
-	g_mutex_unlock(D->session->mutex); \
 	g_async_queue_push(queue, (gpointer)D); \
 	if (selfpipe[1] > -1) { \
 		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } \

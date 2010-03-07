@@ -59,7 +59,6 @@ typedef struct {
 	gboolean error; // command result
 	clientstate_t state; // session status 
 	int error_count;
-	GMutex *mutex;
 	Connection_T c; // database-connection;
 } ImapSession;
 

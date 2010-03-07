@@ -85,12 +85,8 @@ static void imap_session_cleanup_enter(dm_thread_data *D)
 	if ((! session->state) || session->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	g_mutex_lock(session->mutex);
-
 	dbmail_imap_session_set_state(session, CLIENTSTATE_QUIT_QUEUED);
-
 	D->session->command_state = TRUE;
-	g_mutex_unlock(D->session->mutex);
 	g_async_queue_push(queue, (gpointer)D);
 	if (selfpipe[1] > -1) {
 		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; }
@@ -155,21 +151,23 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 void imap_cb_read(void *arg)
 {
 	int state;
+	size_t len;
 	ImapSession *session = (ImapSession *) arg;
 
 	TRACE(TRACE_DEBUG,"reading...");
 
 	ci_read_cb(session->ci);
 
+	len = session->ci->read_buffer->len;
 	state = session->ci->client_state;
+
 	if (state & CLIENT_ERR) {
-		TRACE(TRACE_DEBUG,"client_state ERROR");
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
+		return;
 	} 
 	if (state & CLIENT_EOF) {
-		TRACE(TRACE_NOTICE,"reached EOF");
 		event_del(session->ci->rev);
-		if (session->ci->read_buffer->len < 1)
+		if (len < 1)
 			imap_session_bailout(session);
 	} 
 	if (session->ci->read_buffer->len > 0)
