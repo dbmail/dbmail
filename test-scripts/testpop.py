@@ -165,8 +165,9 @@ class testPopServer(unittest.TestCase):
             result = self.o.retr(i)
             r = string.split(result[0])
             self.assertEquals(r[0],"+OK")
-            message = string.join(result[1],"\n")
-            self.assertEquals(int(r[1]),len(message))
+            message = string.join(result[1],"\r\n")
+            expectedlen = len(message) + 5 ## correction for trailing \r\n.\r\n
+            self.assertEquals(int(r[1]),expectedlen, "%d %s %d" % (i, r[1], expectedlen))
         
     def test_dele(self):
         """
