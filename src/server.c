@@ -98,6 +98,11 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	assert(cb_enter);
 
 	s = (ImapSession *)session;
+
+	/* put a cork on the network IO */
+	event_del(s->ci->rev);
+	event_del(s->ci->wev);
+
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 

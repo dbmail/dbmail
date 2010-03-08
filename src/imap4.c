@@ -139,9 +139,6 @@ static void imap_session_bailout(ImapSession *session)
 void socket_write_cb(int fd UNUSED, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
-
-	TRACE(TRACE_DEBUG,"[%p] what [%d] state [%d] command_state [%d]", session, what, session->state, session->command_state);
-
 	switch(session->state) {
 		case CLIENTSTATE_LOGOUT:
 			event_del(session->ci->wev);
@@ -149,25 +146,8 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 			imap_session_bailout(session);
 			break;
 		default:
-#if 0
-			if (session->ci->rev) {
-				if ( session->command_type == IMAP_COMM_IDLE ) {
-					if ( session->command_state == FALSE ) {
-						// make _very_ sure this is done only once during an idle command run
-						// only when the idle loop has just begun: just after we pushed the
-						// continuation '+' to the client
-						session->command_state = IDLE;
-						event_add(session->ci->rev, NULL);
-			//		} else if (session->command_state == TRUE)  { // IDLE is done
-			//			event_add(session->ci->rev, session->ci->timeout);
-					}
-				}
-			}
-			
-#endif
 			ci_write_cb(session->ci);
 			imap_handle_input(session);
-
 			break;
 	}
 }
@@ -185,17 +165,15 @@ void imap_cb_read(void *arg)
 	if (state & CLIENT_ERR) {
 		TRACE(TRACE_DEBUG,"client_state ERROR");
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
-	} else if (state & CLIENT_EOF) {
+	} 
+	if (state & CLIENT_EOF) {
 		TRACE(TRACE_NOTICE,"reached EOF");
 		event_del(session->ci->rev);
-		if (session->ci->read_buffer->len < 1) {
-			//g_mutex_lock(session->mutex);
+		if (session->ci->read_buffer->len < 1)
 			imap_session_bailout(session);
-			//g_mutex_unlock(session->mutex);
-		}
-	} else if (state & CLIENT_OK || state & CLIENT_AGAIN) {
+	} 
+	if (session->ci->read_buffer->len > 0)
 		imap_handle_input(session);
-	}
 }
 
 
@@ -554,6 +532,11 @@ void _ic_cb_leave(gpointer data)
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;
 	TRACE(TRACE_DEBUG,"handling imap session [%p]",session);
+
+	/* uncork network IO */
+	event_add(session->ci->rev, session->ci->timeout);
+	event_add(session->ci->wev, NULL);
+
 	imap_handle_exit(session, D->status);
 }
 

@@ -1656,7 +1656,6 @@ int dbmail_imap_session_set_state(ImapSession *self, clientstate_t state)
 			Capa_remove(self->capa, "AUTH=login");
 			Capa_remove(self->capa, "AUTH=CRAM-MD5");
 
-			event_add(self->ci->rev, self->ci->timeout);
 			break;
 
 		default:
