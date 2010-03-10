@@ -351,15 +351,12 @@ void ci_read_cb(clientbase_t *self)
 			self->client_state |= CLIENT_EOF;
 			break;
 
-		} else {
+		} else if (t > 0) {
 			self->bytes_rx += t;	// Update our byte counter
 			self->client_state = CLIENT_OK; 
 			g_string_append_len(self->read_buffer, ibuf, t);
-			TRACE(TRACE_DEBUG,"read [%u:%s]", t, t?ibuf:"(null)");
 		}
 	}
-
-	TRACE(TRACE_DEBUG,"[%p] state [%x] read_buffer->len[%u]", self, self->client_state, self->read_buffer->len);
 }
 
 int ci_read(clientbase_t *self, char *buffer, size_t n)
@@ -380,9 +377,6 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 		self->len += j;
 		client_rbuf_scale(self);
 	}
-
-	if (self->len)
-		TRACE(TRACE_DEBUG,"[%p] read [%u:%s]", self, self->len, buffer);
 
 	return self->len;
 }
@@ -474,7 +468,14 @@ static void ci_authlog_close(clientbase_t *self)
 void ci_close(clientbase_t *self)
 {
 	assert(self);
+
 	TRACE(TRACE_DEBUG, "closing clientbase [%p]", self);
+
+	event_del(self->rev);
+	event_del(self->wev);
+
+	g_free(self->rev); self->rev = NULL;
+	g_free(self->wev); self->wev = NULL;
 
 	if (self->queue) {
 		gpointer data;
@@ -486,12 +487,6 @@ void ci_close(clientbase_t *self)
 		} while (data);
 		g_async_queue_unref(self->queue);
 	}
-
-	event_del(self->rev);
-	event_del(self->wev);
-
-	g_free(self->rev); self->rev = NULL;
-	g_free(self->wev); self->wev = NULL;
 
 	if (self->tx > 0) {
 		shutdown(self->tx, SHUT_RDWR);
@@ -516,7 +511,6 @@ void ci_close(clientbase_t *self)
 		Cram_free(&c);
 		self->auth = NULL;
 	}
-
 
 	g_free(self);
 	
