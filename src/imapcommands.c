@@ -1089,67 +1089,15 @@ int _ic_status(ImapSession *self)
  *
  */
 
-int imap_idle_loop(ImapSession *self, int timeout)
-{
-	gpointer data;
-	char *message;
-	GTimeVal end_time;
-
-	TRACE(TRACE_DEBUG,"[%p]", self);
-
-	self->command_state = IDLE;
-	event_add(self->ci->rev, NULL);
-	
-	self->loop = 0;
-	do {
-		g_get_current_time(&end_time);
-		g_time_val_add(&end_time, 1000000*timeout);
-		data = g_async_queue_timed_pop(self->ci->queue, &end_time);
-		if(self->state == CLIENTSTATE_ERROR) {
-			TRACE(TRACE_DEBUG, "[%p] idle loop exiting due to client error.", self);
-			if (data) {
-				dm_thread_data *D = (gpointer)data;
-				g_free(D->data);
-				g_free(D);
-			}
-			return -1;
-		}
-		if (data) {
-			dm_thread_data *D = (gpointer)data;
-			message = (char *)D->data;
-			if (strlen(message) > 4 && strncasecmp(message,"DONE",4)==0) {
-				TRACE(TRACE_DEBUG, "[%p] DONE recieved", self);
-				g_free(D->data);
-				g_free(D);
-				return 0;
-			} else if (strlen(message) > 0) {
-				dbmail_imap_session_buff_printf(self,"%s BAD Expecting DONE\r\n", self->tag);
-				dbmail_imap_session_buff_flush(self);
-			}
-			g_free(D->data);
-			g_free(D);
-		} else {
-			TRACE(TRACE_DEBUG,"[%p]", self);
-			dbmail_imap_session_mailbox_status(self,TRUE);
-			if (! (self->loop++ % 10))
-				dbmail_imap_session_buff_printf(self, "* OK\r\n");
-			dbmail_imap_session_buff_flush(self);
-		}
-
-	} while (TRUE);
-
-	TRACE(TRACE_WARNING, "[%p] uncaught condition", self);
-	return 1;
-}
-
-
 #define IDLE_TIMEOUT 30
-
-void _ic_idle_enter(dm_thread_data *D)
+int _ic_idle(ImapSession *self)
 {
-	LOCK_SESSION;
-	int t = FALSE, idle_timeout = IDLE_TIMEOUT;
+	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_AUTHENTICATED)) return 1;
+
+	int idle_timeout = IDLE_TIMEOUT;
 	field_t val;
+
+	ci_cork(self->ci);
 
 	GETCONFIGVALUE("idle_timeout", "IMAP", val);
 	if ( strlen(val) && (idle_timeout = atoi(val)) <= 0 ) {
@@ -1159,22 +1107,16 @@ void _ic_idle_enter(dm_thread_data *D)
 	
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
 
+	self->ci->timeout->tv_sec = idle_timeout;
+
+	self->command_state = IDLE;
+
 	dbmail_imap_session_buff_printf(self, "+ idling\r\n");
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	dbmail_imap_session_buff_flush(self);
 
-	if ((t = imap_idle_loop(self, idle_timeout))) {
-		D->status = t;
-		NOTIFY_DONE(D);
-	}
-	IC_DONE_OK;
-	NOTIFY_DONE(D);
-}
+	ci_uncork(self->ci);
 
-int _ic_idle(ImapSession *self)
-{
-	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_AUTHENTICATED)) return 1;
-	dm_thread_data_push((gpointer)self, _ic_idle_enter, _ic_cb_leave, NULL);
 	return 0;
 }
 

@@ -36,7 +36,7 @@ volatile sig_atomic_t alarm_occurred = 0;
 // thread data
 int selfpipe[2];
 GAsyncQueue *queue;
-GThreadPool *tpool = NULL, *tpool_idle = NULL;
+GThreadPool *tpool = NULL;
 
 serverConfig_t *server_conf;
 
@@ -100,8 +100,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	s = (ImapSession *)session;
 
 	/* put a cork on the network IO */
-	event_del(s->ci->rev);
-	event_del(s->ci->wev);
+	ci_cork(s->ci);
 
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
@@ -117,10 +116,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 
 	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
 	
-	if (s->command_type == IMAP_COMM_IDLE)
-		g_thread_pool_push(tpool_idle, D, &err);
-	else
-		g_thread_pool_push(tpool, D, &err);
+	g_thread_pool_push(tpool, D, &err);
 
 	if (err) TRACE(TRACE_EMERG,"g_thread_pool_push failed [%s]", err->message);
 }
@@ -143,9 +139,8 @@ void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
-	if (D->data && session && session->state < CLIENTSTATE_LOGOUT) {
+	if (D->data && session) 
 		ci_write(session->ci, "%s", (char *)D->data);
-	}
 }
 
 /* 
@@ -191,11 +186,6 @@ static int server_setup(serverConfig_t *conf)
 	// Create the thread pool
 	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,10,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
-
-        if (! (tpool_idle = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,-1,FALSE,&err)))
-                TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
-        else
-                TRACE(TRACE_INFO,"thread pool created for idle imap clients");
 
 	// self-pipe used to push the event-loop
 	if (pipe(selfpipe))
@@ -605,10 +595,6 @@ void disconnect_all(void)
 	if (tpool) { 
 		g_thread_pool_free(tpool,TRUE,FALSE);
 		tpool = NULL;
-	}
-	if (tpool_idle) {
-		g_thread_pool_free(tpool_idle,TRUE,FALSE);
-		tpool_idle = NULL;
 	}
 	if (sig_int) {
 		g_free(sig_int);

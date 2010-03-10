@@ -145,8 +145,6 @@ clientbase_t * client_init(client_sock *c)
 
 	client->timeout         = g_new0(struct timeval,1);
 
-	if (g_thread_supported())
-		client->queue   = g_async_queue_new();
 	client->cb_error        = client_error_cb;
 
 	/* set byte counters to 0 */
@@ -201,6 +199,18 @@ clientbase_t * client_init(client_sock *c)
 	return client;
 }
 
+void ci_cork(clientbase_t *s)
+{
+	event_del(s->rev);
+	event_del(s->wev);
+}
+
+void ci_uncork(clientbase_t *s)
+{
+	event_add(s->rev, s->timeout);
+	event_add(s->wev, NULL);
+}
+
 int ci_starttls(clientbase_t *self)
 {
 	int e;
@@ -246,6 +256,7 @@ void ci_write_cb(clientbase_t *self)
 {
 	if (self->write_buffer->len > self->write_buffer_offset)
 		ci_write(self,NULL);
+	event_add(self->wev, NULL);
 }
 
 int ci_write(clientbase_t *self, char * msg, ...)
@@ -308,8 +319,6 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		client_wbuf_scale(self);
 
 	}
-
-	event_add(self->wev, NULL);
 
 	return 0;
 }
@@ -471,22 +480,10 @@ void ci_close(clientbase_t *self)
 
 	TRACE(TRACE_DEBUG, "closing clientbase [%p]", self);
 
-	event_del(self->rev);
-	event_del(self->wev);
+	ci_cork(self);
 
 	g_free(self->rev); self->rev = NULL;
 	g_free(self->wev); self->wev = NULL;
-
-	if (self->queue) {
-		gpointer data;
-		do {
-			data = g_async_queue_try_pop(self->queue);
-			if (data) {
-				dm_thread_data_free(data);
-			}
-		} while (data);
-		g_async_queue_unref(self->queue);
-	}
 
 	if (self->tx > 0) {
 		shutdown(self->tx, SHUT_RDWR);

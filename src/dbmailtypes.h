@@ -353,7 +353,6 @@ typedef struct {
 	size_t write_buffer_offset;	/* output buffer offset */
 
 	size_t len;			/* crlf decoded octets read by last ci_read(ln) call */
-	GAsyncQueue *queue;		/* inter-thread message pipe */
 } clientbase_t;
 
 struct http_sock {

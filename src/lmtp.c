@@ -143,8 +143,7 @@ static void reset_callbacks(ClientSession_t *session)
         UNBLOCK(session->ci->rx);
         UNBLOCK(session->ci->tx);
 
-        event_add(session->ci->rev, session->ci->timeout);
-        event_add(session->ci->wev, NULL);
+	ci_uncork(session->ci);
 }
 
 static void lmtp_rset(ClientSession_t *session, gboolean reset_state)

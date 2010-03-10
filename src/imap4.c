@@ -117,16 +117,6 @@ static void imap_session_bailout(ImapSession *session)
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
 
-	if ( session->command_type == IMAP_COMM_IDLE ) { // session is in a IDLE loop - need to exit the loop first
-		TRACE(TRACE_DEBUG, "[%p] Session is in an idle loop, exiting loop.", session);
-		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
-		session->command_state = FALSE;
-		D = g_new0(dm_thread_data,1);
-		D->data = NULL;
-		g_async_queue_push(session->ci->queue, (gpointer)D);
-		return;
-	}
-
 	if (session->state != CLIENTSTATE_QUIT_QUEUED) {
 		dm_thread_data_push((gpointer)session, imap_session_cleanup_enter, imap_session_cleanup_leave, NULL);
 	}
@@ -143,10 +133,10 @@ void socket_write_cb(int fd UNUSED, short what, void *arg)
 			break;
 		default:
 			ci_write_cb(session->ci);
-			imap_handle_input(session);
 			break;
 	}
 }
+
 
 void imap_cb_read(void *arg)
 {
@@ -228,13 +218,24 @@ static void send_greeting(ImapSession *session)
 
 /*
  * the default timeout callback */
+
 void imap_cb_time(void *arg)
 {
 	ImapSession *session = (ImapSession *) arg;
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
-	dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
-	imap_session_printf(session, "%s", IMAP_TIMEOUT_MSG);
+	if ( session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE ) { // session is in a IDLE loop
+		ci_cork(session->ci);
+		if (! (session->loop++ % 10)) {
+			imap_session_printf(session, "* OK\r\n");
+		}
+		dbmail_imap_session_mailbox_status(session,TRUE);
+		dbmail_imap_session_buff_flush(session);
+		ci_uncork(session->ci);
+	} else {
+		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
+		imap_session_printf(session, "%s", IMAP_TIMEOUT_MSG);
+	}
 }
 
 static int checktag(const char *s)
@@ -262,6 +263,9 @@ static void imap_handle_exit(ImapSession *session, int status)
 
 		case 0:
 			/* only do this in the main thread */
+
+			ci_uncork(session->ci);
+
 			if (session->state < CLIENTSTATE_LOGOUT) {
 				if (session->buff) {
 					int e = 0;
@@ -281,9 +285,10 @@ static void imap_handle_exit(ImapSession *session, int status)
 			} else {
 				dbmail_imap_session_buff_clear(session);
 			}				
-		
-			imap_handle_input(session);
 
+			// handle buffered pending input
+			imap_handle_input(session);
+		
 			break;
 		case 1:
 			session->command_state = TRUE;
@@ -364,12 +369,17 @@ void imap_handle_input(ImapSession *session)
 			break;
 		}
 
-		if ( session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE ) { // session is in a IDLE loop
-			TRACE(TRACE_DEBUG,"read [%s] while in IDLE loop", buffer);
-			dm_thread_data *D = g_new0(dm_thread_data,1);
-			D->data = (gpointer)g_strdup(buffer);
-			g_async_queue_push(session->ci->queue, (gpointer)D);
-			break;
+		// session is in a IDLE loop
+		if (session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE) { 
+			if (strlen(buffer) > 4 && strncasecmp(buffer,"DONE",4)==0)
+				imap_session_printf(session, "%s OK IDLE terminated\r\n", session->tag);
+			else
+				imap_session_printf(session,"%s BAD Expecting DONE\r\n", session->tag);
+
+			session->command_state = TRUE; // done
+			dbmail_imap_session_reset(session);
+
+			continue;
 		}
 
 		if (! imap4_tokenizer(session, buffer))
@@ -405,8 +415,7 @@ static void reset_callbacks(ImapSession *session)
 	UNBLOCK(session->ci->rx);
 	UNBLOCK(session->ci->tx);
 
-	event_add(session->ci->rev, session->ci->timeout);
-	event_add(session->ci->wev, NULL);
+	ci_uncork(session->ci);
 }
 
 int imap_handle_connection(client_sock *c)
@@ -530,10 +539,6 @@ void _ic_cb_leave(gpointer data)
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;
 	TRACE(TRACE_DEBUG,"handling imap session [%p]",session);
-
-	/* uncork network IO */
-	event_add(session->ci->rev, session->ci->timeout);
-	event_add(session->ci->wev, NULL);
 
 	imap_handle_exit(session, D->status);
 }
