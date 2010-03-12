@@ -109,7 +109,6 @@ static void imap_session_cleanup_leave(dm_thread_data *D)
 
 static void imap_session_bailout(ImapSession *session)
 {
-	dm_thread_data *D;
 	// brute force:
 	if (server_conf->no_daemonize == 1) _exit(0);
 
@@ -122,7 +121,7 @@ static void imap_session_bailout(ImapSession *session)
 	}
 }
 
-void socket_write_cb(int fd UNUSED, short what, void *arg)
+void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	switch(session->state) {
@@ -287,7 +286,8 @@ static void imap_handle_exit(ImapSession *session, int status)
 			}				
 
 			// handle buffered pending input
-			imap_handle_input(session);
+			if (session->ci->read_buffer->len > 0)
+				imap_handle_input(session);
 		
 			break;
 		case 1:
@@ -320,10 +320,7 @@ void imap_handle_input(ImapSession *session)
 	assert(session->ci);
 	assert(session->ci->write_buffer);
 
-	TRACE(TRACE_DEBUG, "[%p] parser_state [%d] command_state [%d]", session, session->parser_state, session->command_state);
-
 	// first flush the output buffer
-
 	if (session->ci->write_buffer->len) {
 		TRACE(TRACE_DEBUG,"[%p] write buffer not empty", session);
 		ci_write(session->ci, NULL);

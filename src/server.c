@@ -39,6 +39,7 @@ GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
 
 serverConfig_t *server_conf;
+extern db_param_t _db_params;
 
 static void server_config_load(serverConfig_t * conf, const char * const service);
 static int server_set_sighandler(void);
@@ -168,6 +169,7 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
 static int server_setup(serverConfig_t *conf)
 {
 	GError *err = NULL;
+	guint tpool_size = _db_params.max_db_connections;
 
 	server_set_sighandler();
 
@@ -184,7 +186,7 @@ static int server_setup(serverConfig_t *conf)
 	queue = g_async_queue_new();
 
 	// Create the thread pool
-	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,10,TRUE,&err)))
+	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
 	// self-pipe used to push the event-loop

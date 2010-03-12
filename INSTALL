@@ -94,7 +94,7 @@ What do you need?
 	the database. Of course you can use an other database name. After
 	setting up the user and database it's time to create the tables, do a:
 
-	psql -U dbmail dbmail < sql/postgresql/create_tables.pgsql
+	psql -U dbmail -h localhost dbmail < sql/postgresql/create_tables.pgsql
 
 	Don't forget to start postgresql with the -i option, so it accepts
 	TCP/IP connections.
