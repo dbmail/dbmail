@@ -440,8 +440,8 @@ static int user_quotum_dec(u64_t user_idnr, u64_t size)
 	TRACE(TRACE_DEBUG, "subtracting %llu from mailsize", size);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %susers SET curmail_size = curmail_size - %llu "
-		 "WHERE user_idnr = %llu", DBPFX, size, user_idnr);
+		 "UPDATE %susers SET curmail_size = CASE curmail_size >= %llu THEN curmail_size - %llu ELSE 0 END "
+		 "WHERE user_idnr = %llu", DBPFX, size, size, user_idnr);
 	
 	if (db_query(query) == -1)
 		return DM_EQUERY;
