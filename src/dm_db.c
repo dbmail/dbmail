@@ -831,8 +831,8 @@ int dm_quota_user_inc(u64_t user_idnr, u64_t size)
 int dm_quota_user_dec(u64_t user_idnr, u64_t size)
 {
 	NOT_DELIVERY_USER
-	return db_update("UPDATE %susers SET curmail_size = curmail_size - %llu WHERE user_idnr = %llu", 
-			DBPFX, size, user_idnr);
+	return db_update("UPDATE %susers SET curmail_size = CASE WHEN curmail_size >= %llu THEN curmail_size - %llu ELSE 0 END WHERE user_idnr = %llu", 
+			DBPFX, size, size, user_idnr);
 }
 
 static int dm_quota_user_validate(u64_t user_idnr, u64_t msg_size)
