@@ -1870,7 +1870,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern, GList ** chil
 	}
 
 	/* store matches */
-	TRACE(TRACE_INFO, "found [%d] mailboxes", g_list_length(*children));
+	TRACE(TRACE_INFO, "found [%d] mailboxes for [%s]", g_list_length(*children), pattern);
 	return DM_SUCCESS;
 }
 

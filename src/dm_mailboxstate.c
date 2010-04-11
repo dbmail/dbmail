@@ -71,24 +71,17 @@ static void MessageInfo_free(MessageInfo *m)
 	g_free(m);
 }
 
-T MailboxState_new(u64_t id)
+static T MailboxState_getMessageState(T M)
 {
-	T M;
-	unsigned nrows = 0, i = 0, j, k;
+	unsigned nrows = 0, i = 0, j;
 	const char *query_result, *keyword;
 	MessageInfo *result;
 	GTree *msginfo;
-	u64_t *uid;
+	u64_t *uid, id = 0;
 	C c; R r; volatile int t = FALSE;
 	field_t frag;
 	INIT_QUERY;
-	
-	M = g_malloc0(sizeof(*M));
-	M->id = id;
-	M->keywords = g_tree_new_full((GCompareDataFunc)dm_strcasecmpdata, NULL,(GDestroyNotify)g_free,NULL);
-	MailboxState_reload(M);
 
-	k = 0;
 	date2char_str("internal_date", &frag);
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
@@ -144,6 +137,7 @@ T MailboxState_new(u64_t id)
 
 	if (t == DM_EQUERY) {
 		db_con_close(c);
+		MailboxState_free(&M);
 		return NULL;
 	}
 
@@ -185,12 +179,29 @@ T MailboxState_new(u64_t id)
 
 	if (t == DM_EQUERY) {
 		g_tree_destroy(msginfo);
+		MailboxState_free(&M);
 		return NULL;
 	}
 
 	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");
 
 	MailboxState_setMsginfo(M, msginfo);
+
+	return M;
+}
+
+
+T MailboxState_new(u64_t id)
+{
+	T M;
+
+	M = g_malloc0(sizeof(*M));
+	M->id = id;
+	if (! id) return M;
+
+	M->keywords = g_tree_new_full((GCompareDataFunc)dm_strcasecmpdata, NULL,(GDestroyNotify)g_free,NULL);
+	MailboxState_reload(M);
+	MailboxState_getMessageState(M);
 
 	return M;
 }
