@@ -880,6 +880,8 @@ void _ic_list_enter(dm_thread_data *D)
 			break;
 		}
 
+		MailboxState_setName(M, mailbox);
+
 		/* Enforce match of mailbox to pattern. */
 		TRACE(TRACE_DEBUG,"test if [%s] matches [%s]", mailbox, pattern);
 		if (! listex_match(pattern, mailbox, MAILBOX_SEPARATOR, 0)) {
