@@ -137,18 +137,16 @@ static T MailboxState_getMessageState(T M)
 
 	if (t == DM_EQUERY) {
 		db_con_close(c);
-		MailboxState_free(&M);
-		return NULL;
+		return M;
 	}
 
-	db_con_clear(c);
-
-	if (! i) {
-		TRACE(TRACE_DEBUG, "empty mailbox");
+	if (! i) { // empty mailbox
 		MailboxState_setMsginfo(M, msginfo);
 		db_con_close(c);
 		return M;
 	}
+
+	db_con_clear(c);
 
 	memset(query,0,sizeof(query));
 	snprintf(query, DEF_QUERYSIZE,
@@ -179,8 +177,7 @@ static T MailboxState_getMessageState(T M)
 
 	if (t == DM_EQUERY) {
 		g_tree_destroy(msginfo);
-		MailboxState_free(&M);
-		return NULL;
+		return M;
 	}
 
 	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");

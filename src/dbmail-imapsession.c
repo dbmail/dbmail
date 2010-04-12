@@ -923,7 +923,11 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		
 		SEND_SPACE;
 		
-		dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL);
+		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
+			dbmail_imap_session_buff_clear(self);
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body structure\r\n");
+			return -1;
+		}
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->message)->content), 1))==NULL) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body structure\r\n");
@@ -963,7 +967,13 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 		SEND_SPACE;
 
-		dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL);
+		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
+			dbmail_imap_session_buff_clear(self);
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching message\r\n");
+			return -1;
+		}
+
+
 		dbmail_imap_session_buff_printf(self, "RFC822 {%llu}\r\n", Cache_get_size(self->cache) );
 		send_data(self, Cache_get_memdump(self->cache), Cache_get_size(self->cache) );
 
@@ -976,7 +986,11 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 		SEND_SPACE;
 		
-		dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL);
+		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
+			dbmail_imap_session_buff_clear(self);
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching message\r\n");
+			return -1;
+		}
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
 			dbmail_imap_session_buff_printf(self, "BODY[] {%llu}\r\n", Cache_get_size(self->cache) );
 			send_data(self, Cache_get_memdump(self->cache), Cache_get_size(self->cache) );
