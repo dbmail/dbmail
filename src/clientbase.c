@@ -201,12 +201,14 @@ clientbase_t * client_init(client_sock *c)
 
 void ci_cork(clientbase_t *s)
 {
-	event_del(s->rev);
-	event_del(s->wev);
+	TRACE(TRACE_DEBUG,"[%p]", s);
+	if (s->rev) event_del(s->rev);
+	if (s->wev) event_del(s->wev);
 }
 
 void ci_uncork(clientbase_t *s)
 {
+	TRACE(TRACE_DEBUG,"[%p]", s);
 	event_add(s->rev, s->timeout);
 	event_add(s->wev, NULL);
 }
@@ -241,7 +243,7 @@ int ci_starttls(clientbase_t *self)
 				self->ssl = NULL;
 				return DM_EGENERAL;
 			} else {
-				event_add(self->rev, self->timeout);
+				ci_uncork(self);
 				return e;
 			}
 		}
@@ -256,7 +258,6 @@ void ci_write_cb(clientbase_t *self)
 {
 	if (self->write_buffer->len > self->write_buffer_offset)
 		ci_write(self,NULL);
-	event_add(self->wev, NULL);
 }
 
 int ci_write(clientbase_t *self, char * msg, ...)
@@ -334,7 +335,6 @@ void ci_read_cb(clientbase_t *self)
 	char ibuf[IBUFLEN];
 
 	TRACE(TRACE_DEBUG,"[%p] reset timeout [%ld]", self, self->timeout->tv_sec); 
-	event_add(self->rev, self->timeout);
 
 	if (self->ssl && self->ssl_state == FALSE) {
 		ci_starttls(self);

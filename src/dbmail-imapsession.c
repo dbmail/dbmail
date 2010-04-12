@@ -1646,6 +1646,7 @@ int dbmail_imap_session_set_state(ImapSession *self, clientstate_t state)
 			assert(self->ci);
 			if (self->ci->wev) event_del(self->ci->wev);
 			// fall-through...
+
 		case CLIENTSTATE_LOGOUT:
 			assert(self->ci);
 			if (self->ci->rev) event_del(self->ci->rev);

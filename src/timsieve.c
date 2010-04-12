@@ -85,6 +85,8 @@ static void tims_handle_input(void *arg)
 	char buffer[MAX_LINESIZE];	/* connection buffer */
 	ClientSession_t *session = (ClientSession_t *)arg;
 
+	ci_cork(session->ci);
+
 	while (TRUE) {
 		memset(buffer, 0, sizeof(buffer));
 		l = ci_readln(session->ci, buffer);
@@ -105,7 +107,7 @@ static void tims_handle_input(void *arg)
 	}
 
 	if (session->state < QUIT)
-		event_add(session->ci->rev, session->ci->timeout);
+		ci_uncork(session->ci);
 }
 
 void tims_cb_time(void * arg)

@@ -1093,8 +1093,6 @@ int _ic_idle(ImapSession *self)
 	int idle_timeout = IDLE_TIMEOUT;
 	field_t val;
 
-	ci_cork(self->ci);
-
 	GETCONFIGVALUE("idle_timeout", "IMAP", val);
 	if ( strlen(val) && (idle_timeout = atoi(val)) <= 0 ) {
 		TRACE(TRACE_ERR, "[%p] illegal value for idle_timeout [%s]", self, val);
@@ -1102,16 +1100,11 @@ int _ic_idle(ImapSession *self)
 	}
 	
 	TRACE(TRACE_DEBUG,"[%p] start IDLE [%s]", self, self->tag);
-
 	self->ci->timeout->tv_sec = idle_timeout;
-
 	self->command_state = IDLE;
-
 	dbmail_imap_session_buff_printf(self, "+ idling\r\n");
 	dbmail_imap_session_mailbox_status(self,TRUE);
 	dbmail_imap_session_buff_flush(self);
-
-	ci_uncork(self->ci);
 
 	return 0;
 }

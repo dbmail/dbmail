@@ -116,6 +116,8 @@ static void imap_session_bailout(ImapSession *session)
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
 
+	ci_cork(session->ci);
+
 	if (session->state != CLIENTSTATE_QUIT_QUEUED) {
 		dm_thread_data_push((gpointer)session, imap_session_cleanup_enter, imap_session_cleanup_leave, NULL);
 	}
@@ -126,7 +128,6 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 	ImapSession *session = (ImapSession *)arg;
 	switch(session->state) {
 		case CLIENTSTATE_LOGOUT:
-			event_del(session->ci->wev);
 		case CLIENTSTATE_ERROR:
 			imap_session_bailout(session);
 			break;
@@ -151,11 +152,11 @@ void imap_cb_read(void *arg)
 	state = session->ci->client_state;
 
 	if (state & CLIENT_ERR) {
+		ci_cork(session->ci);
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 		return;
 	} 
 	if (state & CLIENT_EOF) {
-		event_del(session->ci->rev);
 		if (len < 1)
 			imap_session_bailout(session);
 	} 
@@ -167,6 +168,7 @@ void imap_cb_read(void *arg)
 void socket_read_cb(int fd UNUSED, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
+	TRACE(TRACE_DEBUG,"[%p]", session);
 	if (what == EV_READ)
 		imap_cb_read(session);
 	else if (what == EV_TIMEOUT && session->ci->cb_time)
@@ -262,9 +264,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 
 		case 0:
 			/* only do this in the main thread */
-
-			ci_uncork(session->ci);
-
 			if (session->state < CLIENTSTATE_LOGOUT) {
 				if (session->buff) {
 					int e = 0;
@@ -391,8 +390,10 @@ void imap_handle_input(ImapSession *session)
 		if ( session->parser_state ) {
 			result = imap4(session);
 			TRACE(TRACE_DEBUG,"imap4 returned [%d]", result);
-			if (result)
+
+			if (result || (session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE)) { 
 				imap_handle_exit(session, result);
+			}
 			break;
 		}
 
@@ -461,6 +462,8 @@ void dbmail_imap_session_reset(ImapSession *session)
 	session->command_state = FALSE;
 	session->parser_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
+
+	ci_uncork(session->ci);
 	
 	return;
 }
