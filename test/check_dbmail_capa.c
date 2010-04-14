@@ -70,10 +70,14 @@ END_TEST
 
 START_TEST(test_capa_add)
 {
-	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS ID BLAHCAPA";
-	Capa_add(A, "BLAHCAPA");
-	fail_unless(Capa_match(A, "BLAHCAPA"), "add failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
-	fail_unless(MATCH(Capa_as_string(A), ex1), "add failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
+	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS";
+	char *ex2 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS ID";
+	Capa_remove(A, "ID");
+	fail_unless(! Capa_match(A, "ID"), "remove failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
+	fail_unless(MATCH(Capa_as_string(A), ex1), "remove failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
+	Capa_add(A, "ID");
+	fail_unless(Capa_match(A, "ID"), "add failed\n[%s] !=\n[%s]\n", ex2, Capa_as_string(A));
+	fail_unless(MATCH(Capa_as_string(A), ex2), "add failed\n[%s] !=\n[%s]\n", ex2, Capa_as_string(A));
 }
 END_TEST
 
