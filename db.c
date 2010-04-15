@@ -4698,7 +4698,8 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 	} else {
 		/* get the socket the client is connecting on */
 		int serr;
-                socklen_t len = sizeof(struct sockaddr_storage);
+                //socklen_t len = sizeof(struct sockaddr_storage);
+                socklen_t len = sizeof(saddr);
                 char host[NI_MAXHOST], serv[NI_MAXSERV];
 
                 if (getsockname(fileno(ci->tx), &saddr, &len) < 0) {
