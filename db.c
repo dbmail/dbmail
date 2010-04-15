@@ -1549,28 +1549,52 @@ int db_icheck_messageblks(struct dm_list *lost_list)
 }
 int db_icheck_physmessages(gboolean cleanup)
 {
-	int result;
+	int result, i, n;
 	char query[DEF_QUERYSIZE];
 	memset(query,0,sizeof(query));
+	GList *ids = NULL;
 
 	if (cleanup) {
 		snprintf(query, DEF_QUERYSIZE, 
-				"DELETE FROM %sphysmessage WHERE id NOT IN "
-				"(SELECT physmessage_id FROM %smessages)", DBPFX, DBPFX);
+		                "SELECT p.id FROM %sphysmessage p LEFT JOIN %smessages m ON p.id = m.physmessage_id "
+				"WHERE m.physmessage_id IS NULL", DBPFX, DBPFX);
+
+		if ((result = db_query(query)) < 0) {
+			db_free_result();
+			return result;
+		}
+		n = db_num_rows();
+		for (i = 0; i < n; i++) {
+			u64_t *id = g_new0(u64_t,1);
+			*id = db_get_result_u64(i, 0);
+			ids = g_list_prepend(ids, id);
+		}
+		while(ids) {
+			snprintf(query, DEF_QUERYSIZE,
+					"DELETE FROM %sphysmessage WHERE id = %llu", DBPFX, *(u64_t *)ids->data);
+			if ((result = db_query(query)) < 0) {
+				db_free_result();
+				return result;
+			}
+			if (! g_list_next(ids)) break;
+			ids = g_list_next(ids);
+		}
+
 	} else {
 		snprintf(query, DEF_QUERYSIZE, 
 				"SELECT COUNT(*) FROM %sphysmessage p "
 				"LEFT JOIN %smessages m ON p.id = m.physmessage_id "
 				"WHERE m.message_idnr IS NULL ", DBPFX, DBPFX);
+
+		if ((result = db_query(query)) < 0) {
+			db_free_result();
+			return result;
+		}
+		result = db_get_result_int(0,0);
 	}
 
-	if ((result = db_query(query)) < 0) {
-		db_free_result();
-		return result;
-	}
 
 	if (! cleanup)
-		result = db_get_result_int(0,0);
 
 	db_free_result();
 	return result;
