@@ -275,7 +275,6 @@ static void imap_handle_exit(ImapSession *session, int status)
 					dbmail_imap_session_buff_clear(session);
 				}
 				if ((session->ci->write_buffer->len - session->ci->write_buffer_offset) > 0) {
-					TRACE(TRACE_DEBUG,"write_buffer size: %lu", (session->ci->write_buffer->len - session->ci->write_buffer_offset));
 					ci_write(session->ci, NULL);
 				} else if (session->command_state == TRUE) {
 					dbmail_imap_session_reset(session);
@@ -540,6 +539,7 @@ void _ic_cb_leave(gpointer data)
 	ImapSession *session = D->session;
 	TRACE(TRACE_DEBUG,"handling imap session [%p]",session);
 
+	ci_uncork(session->ci);
 	imap_handle_exit(session, D->status);
 }
 

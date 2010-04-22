@@ -288,37 +288,40 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	s = self->write_buffer->str + self->write_buffer_offset;
 	n = self->write_buffer->len - self->write_buffer_offset;
 
-	if (n > TLS_SEGMENT) n = TLS_SEGMENT;
+	while (n > 0) {
+		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
 
-	if (self->ssl) {
-		if (! self->tls_wbuf_n) {
-			strncpy(self->tls_wbuf, s, n);
-			self->tls_wbuf_n = n;
-		}
-		t = SSL_write(self->ssl, (gconstpointer)self->tls_wbuf, self->tls_wbuf_n);
-		e = t;
-	} else {
-		t = write(self->tx, (gconstpointer)s, n);
-		e = errno;
-	}
-
-	if (t == -1) {
-		if ((e = self->cb_error(self->tx, e, (void *)self))) {
-			self->client_state |= CLIENT_ERR;
-			return e;
-		}
-	} else {
-		self->bytes_tx += t;	// Update our byte counter
 		if (self->ssl) {
-			memset(self->tls_wbuf, '\0', TLS_SEGMENT);
-			self->tls_wbuf_n = 0;
+			if (! self->tls_wbuf_n) {
+				strncpy(self->tls_wbuf, s, n);
+				self->tls_wbuf_n = n;
+			}
+			t = SSL_write(self->ssl, (gconstpointer)self->tls_wbuf, self->tls_wbuf_n);
+			e = t;
+		} else {
+			t = write(self->tx, (gconstpointer)s, n);
+			e = errno;
 		}
-		self->write_buffer_offset += t;
 
-		TRACE(TRACE_INFO, "[%p] S > [%u/%u:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
+		if (t == -1) {
+			if ((e = self->cb_error(self->tx, e, (void *)self))) {
+				self->client_state |= CLIENT_ERR;
+				return e;
+			}
+		} else {
+			event_add(self->wev, NULL);
 
-		client_wbuf_scale(self);
+			self->bytes_tx += t;	// Update our byte counter
+			if (self->ssl) {
+				memset(self->tls_wbuf, '\0', TLS_SEGMENT);
+				self->tls_wbuf_n = 0;
+			}
+			self->write_buffer_offset += t;
+			TRACE(TRACE_INFO, "[%p] S > [%u/%u:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
+			client_wbuf_scale(self);
+		}
 
+		n = self->write_buffer->len - self->write_buffer_offset;
 	}
 
 	return 0;
