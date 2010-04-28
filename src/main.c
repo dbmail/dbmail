@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
 	ssize_t n = 0;
-	GString *raw;
+	GString *raw = NULL;
 	DbmailMessage *msg = NULL;
 	char buf[READ_SIZE], *returnpath = NULL;
 	GList *userlist = NULL;
@@ -247,9 +247,11 @@ int main(int argc, char *argv[])
 
 	/* read the whole message */
 	memset(buf, 0, sizeof(buf));
-	raw = g_string_new("");
 	while ( (n = read(fileno(stdin), (void *)buf, READ_SIZE-1)) > 0) {
-		raw = g_string_append(raw, buf);
+		if (! raw)
+			raw = g_string_new(buf);
+		else
+			raw = g_string_append(raw, buf);
 		memset(buf, 0, sizeof(buf));
 	}
 
@@ -379,7 +381,8 @@ int main(int argc, char *argv[])
 			" turn up trace level for more detail", exitcode);
 	}
 
-	g_string_free(raw, TRUE);
+	if (raw)
+		g_string_free(raw, TRUE);
 	dbmail_message_free(msg);
 	dsnuser_free_list(dsnusers);
 	g_list_destroy(userlist);
