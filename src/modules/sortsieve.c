@@ -530,11 +530,15 @@ int sort_getheader(sieve2_context_t *s, void *my)
 int sort_getenvelope(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
+	const char *to, *from;
 
-	sieve2_setvalue_string(s, "to",
-		m->message->envelope_recipient->str);
-	sieve2_setvalue_string(s, "from",
-		(char *)dbmail_message_get_header(m->message, "Return-Path"));
+	to = dbmail_message_get_envelope_recipient(m->message);
+	from = dbmail_message_get_header(m->message, "Return-Path");
+
+	TRACE(TRACE_DEBUG, "from [%s], to [%s]", from, to);
+
+	sieve2_setvalue_string(s, "to", (char *)to);
+	sieve2_setvalue_string(s, "from", (char *)from);
 
 	return SIEVE2_OK;
 }
@@ -606,20 +610,20 @@ int sort_debugtrace(sieve2_context_t *s, void *my UNUSED)
 	int trace_level;
 
 	switch (sieve2_getvalue_int(s, "level")) {
-	case 0:
-	case 1:
-	case 2:
-		trace_level = TRACE_INFO;
-		break;
-	case 3:
-	case 4:
-	case 5:
-	default:
-		trace_level = TRACE_DEBUG;
-		break;
+		case 0:
+		case 1:
+		case 2:
+			trace_level = TRACE_INFO;
+			break;
+		case 3:
+		case 4:
+		case 5:
+		default:
+			trace_level = TRACE_DEBUG;
+			break;
 	}
 
-	TRACE(trace_level, "libSieve: module [%s] file [%s] function [%s] message [%s]\n",
+	TRACE(trace_level, "sieve: [%s,%s,%s: [%s]\n",
 			sieve2_getvalue_string(s, "module"),
 			sieve2_getvalue_string(s, "file"),
 			sieve2_getvalue_string(s, "function"),
