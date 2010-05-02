@@ -27,7 +27,7 @@
 
 typedef struct sort_result sort_result_t;
 
-sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message);
+sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message, const char *mailbox);
 sort_result_t *sort_validate(u64_t user_idnr, char *scriptname);
 const char *sort_listextensions(void);
 void sort_free_result(sort_result_t *sort_result);

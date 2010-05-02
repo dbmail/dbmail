@@ -91,7 +91,7 @@ int sort_load_driver(void)
 	return 0;
 }
 
-sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message)
+sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message, const char *mailbox)
 {
 	if (!sort)
 		sort_load_driver();
@@ -99,7 +99,7 @@ sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message)
 		TRACE(TRACE_ERR, "Error loading sort driver");
 		return NULL;
 	}
-	return sort->process(user_idnr, message);
+	return sort->process(user_idnr, message, mailbox);
 }
 
 sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
