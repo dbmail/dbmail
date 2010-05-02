@@ -83,7 +83,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	&& db_check_sievescript_active(useridnr) == 0) {
 		TRACE(TRACE_INFO, "Calling for a Sieve sort");
 		sort_result_t *sort_result;
-		sort_result = sort_process(useridnr, message);
+		sort_result = sort_process(useridnr, message, mailbox);
 		if (sort_result) {
 			cancelkeep = sort_get_cancelkeep(sort_result);
 			reject = sort_get_reject(sort_result);

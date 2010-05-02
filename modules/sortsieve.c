@@ -799,7 +799,7 @@ freesieve:
  * such as dbmail-lmtpd, the daemon should
  * finish storing the message and restart.
  * */
-sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
+sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message, const char *mailbox)
 {
 	int res, exitnull = 0;
 	struct sort_result *result = NULL;
@@ -822,6 +822,9 @@ sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
 		exitnull = 1;
 		goto freesieve;
 	}
+	if (mailbox)
+		sort_context->result->mailbox = mailbox;
+
 	sort_context->result->errormsg = g_string_new("");
 
 	res = db_get_sievescript_active(user_idnr, &sort_context->script);
