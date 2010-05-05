@@ -1399,6 +1399,8 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 	g_free(t);
 	
 	s = strlen(h);
+	g_free(h);
+
 	if (b->len > s)
 		s++;
 	
@@ -1406,7 +1408,7 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 	s = b->len;
 	
 	/* count body lines */
-	v = t;
+	v = b->str;
 	i = 0;
 	while (v[i++]) {
 		if (v[i]=='\n' && v[i+1])
@@ -1415,8 +1417,6 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 	if (s >=2 && v[s-2] != '\n')
 		l++;
 	
-	g_free(h);
-	g_free(t);
 	g_string_free(b,TRUE);
 	*size = s;
 	*lines = l;
