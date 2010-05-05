@@ -116,26 +116,26 @@ gchar *get_crlf_encoded_opt(const char *in, int dots)
 	int i=0, nl = 0;
 	assert(in);
 
-	while (*p != '\0') {
-		if ISLF(*p) nl++;
-		p++; i++;
+	while (p[i]) {
+		curr = p[i];
+		if ISLF(curr) nl++;
+		prev = curr;
+		i++;
 	}
+
 	out = g_new0(char,i+(2*nl)+1);
 	t = out;
 	p = in;
-	while (*p != '\0') {
-		curr = *p;
-		if ISLF(curr) {
-			if (! ISCR(prev))
-				*t++ = '\r';
-		}
-		if (dots && ISDOT(curr)) {
-			if ISLF(prev)
-				*t++ = '.';
-		}
+	i = 0;
+	while (p[i]) {
+		curr = p[i];
+		if (ISLF(curr) && (! ISCR(prev)))
+			*t++ = '\r';
+		if (dots && ISDOT(curr) && ISLF(prev))
+			*t++ = '.';
 		*t++=curr;
 		prev = curr;
-		p++;
+		i++;
 	}
 	return out;
 }
@@ -935,55 +935,25 @@ gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
  */
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
 {
-	char *s, *t; size_t r;
+	char *s; size_t r;
 	s = dbmail_message_to_string(self);
+	r = strlen(s);
 
         if (crlf) {
-		t = get_crlf_encoded(s);
-		r = strlen(t);
-		g_free(t);
-	} else {
-		r = strlen(s);
+		int i = 0;
+		char curr = 0, prev = 0;
+		while (s[i]) {
+			curr = s[i];
+			if (ISLF(curr) && (! ISCR(prev)))
+				r++;
+			prev = curr;
+			i++;
+		}
 	}
 	
 	g_free(s);
 	return r;
 }
-size_t dbmail_message_get_hdrs_size(const DbmailMessage *self, gboolean crlf)
-{
-	char *s, *t; size_t r;
-	s = dbmail_message_hdrs_to_string(self);
-
-	if (crlf) {
-	        t = get_crlf_encoded(s);
-		r = strlen(t);
-        	g_free(t);
-	} else {
-		r = strlen(s);
-	}
-	
-	g_free(s);
-	return r;
-}
-size_t dbmail_message_get_body_size(const DbmailMessage *self, gboolean crlf)
-{
-	char *s, *t; size_t r;
-	s = dbmail_message_body_to_string(self);
-
-	if (! s) return 0;
-
-	if (crlf) {
-		t = get_crlf_encoded(s);
-		r = strlen(t);
-        	g_free(t);
-	} else {
-		r = strlen(s);
-	}
-	
-	g_free(s);
-	return r;
-}
-
 
 static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template)
 {
@@ -1119,7 +1089,7 @@ int dbmail_message_store(DbmailMessage *self)
 	u64_t user_idnr;
 	char unique_id[UID_SIZE];
 	int res = 0;
-	u64_t hdrs_size, body_size, rfcsize;
+	u64_t size, rfcsize;
 	int i=1, retry=10, delay=200;
 	
 	if (! auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
@@ -1136,17 +1106,16 @@ int dbmail_message_store(DbmailMessage *self)
 			continue;
 		}
 
-		hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
-		body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
-
 		if ((res = dm_message_store(self))) {
 			TRACE(TRACE_WARNING,"Failed to store mimeparts");
 			usleep(delay*i);
 			continue;
 		}
 
+		size    = (u64_t)dbmail_message_get_size(self,FALSE);
 		rfcsize = (u64_t)dbmail_message_get_size(self,TRUE);
-		if (( res = db_update_message(self->id, unique_id, (hdrs_size + body_size), rfcsize)) < 0) {
+
+		if (( res = db_update_message(self->id, unique_id, size, rfcsize)) < 0) {
 			usleep(delay*i);
 			continue;
 		}

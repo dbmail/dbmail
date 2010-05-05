@@ -177,6 +177,11 @@ START_TEST(test_g_mime_object_get_body)
 	g_free(result);
 	dbmail_message_free(m);
 	
+	m = message_init(rfc822);
+	result = g_mime_object_get_body(GMIME_OBJECT(m->content));
+	COMPARE("\n    this is a test message\n\n", result);
+	g_free(result);
+	dbmail_message_free(m);
 }
 END_TEST
 
@@ -818,6 +823,24 @@ START_TEST(test_get_crlf_encoded_opt2)
 }
 END_TEST
 
+START_TEST(test_dbmail_message_get_size)
+{
+	DbmailMessage *m;
+	GString *s;
+	char *t, *r;
+	size_t i, j;
+
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(rfc822));
+
+	i = dbmail_message_get_size(m, FALSE);
+	fail_unless(i==277, "dbmail_message_get_size failed");
+	j = dbmail_message_get_size(m, TRUE);
+	fail_unless(j==289, "dbmail_message_get_size failed");
+
+	dbmail_message_free(m);
+}
+END_TEST
 
 Suite *dbmail_message_suite(void)
 {
@@ -852,6 +875,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_construct);
 	tcase_add_test(tc_message, test_get_crlf_encoded_opt1);
 	tcase_add_test(tc_message, test_get_crlf_encoded_opt2);
+	tcase_add_test(tc_message, test_dbmail_message_get_size);
 	tcase_add_test(tc_message, test_encoding);
 	return s;
 }

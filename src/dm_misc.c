@@ -1385,39 +1385,31 @@ static GList * imap_append_header_as_string_default(GList *list,
 	return list;
 }
 
-static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines)
+static void imap_part_get_sizes(GMimeObject *part, size_t *size, size_t *lines)
 {
-	char *v, *h, *t;
-	GString *b;
-	int i;
-	size_t s = 0, l = 0;
+	char *v = NULL, curr = 0, prev = 0;
+	int i = 0;
+	size_t s = 0, l = 1;
 
-	/* get encoded size */
-	h = g_mime_object_get_headers(part);
-	t = g_mime_object_to_string(part);
-	b = g_string_new(t);
-	g_free(t);
-	
-	s = strlen(h);
-	g_free(h);
-
-	if (b->len > s)
-		s++;
-	
-	b = g_string_erase(b,0,s);
-	s = b->len;
-	
 	/* count body lines */
-	v = b->str;
-	i = 0;
-	while (v[i++]) {
-		if (v[i]=='\n' && v[i+1])
+	v = g_mime_object_get_body(part);
+	s = strlen(v);
+
+	while (v[i]) {
+		curr = v[i];
+		if (ISLF(curr))
 			l++;
+		if (ISLF(curr) && (! ISCR(prev))) // rfcsize
+			s++;
+		prev = curr;
+		i++;
 	}
-	if (s >=2 && v[s-2] != '\n')
-		l++;
+
+//	if (s >=2 && (! ISLF(prev)))
+//		l++;
 	
-	g_string_free(b,TRUE);
+	g_free(v);
+
 	*size = s;
 	*lines = l;
 }

@@ -85,9 +85,6 @@ char * dbmail_message_get_charset(DbmailMessage *self);
 
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf);
 
-size_t dbmail_message_get_hdrs_size(const DbmailMessage *self, gboolean crlf);
-size_t dbmail_message_get_body_size(const DbmailMessage *self, gboolean crlf);
-
 GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field);
 
 #define get_crlf_encoded(string) get_crlf_encoded_opt(string, 0)

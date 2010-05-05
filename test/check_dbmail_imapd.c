@@ -216,13 +216,21 @@ START_TEST(test_imap_get_structure)
 	char *result;
 	char *expect = g_new0(char,1024);
 
-
 	/* bare bones */
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(simple));
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	dbmail_message_free(message);
 	g_free(result);
+
+	/* text/plain */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
+	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 4 NIL NIL NIL NIL)",1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n[%s]\n", result, expect, g_mime_object_get_body(message->content));
+	g_free(result);
+	dbmail_message_free(message);
 
 	/* multipart */
 	message = dbmail_message_new();
@@ -239,22 +247,13 @@ START_TEST(test_imap_get_structure)
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_alternative));
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect,"(((\"TEXT\" \"PLAIN\" (\"CHARSET\" \"ISO-8859-1\") NIL NIL \"7BIT\" 281 9 NIL NIL NIL NIL)(\"TEXT\" \"HTML\" (\"CHARSET\" \"ISO-8859-1\") NIL NIL \"7BIT\" 759 16 NIL NIL NIL NIL) \"ALTERNATIVE\" (\"BOUNDARY\" \"------------040302030903000400040101\") NIL NIL NIL)(\"IMAGE\" \"JPEG\" (\"NAME\" \"jesse_2.jpg\") NIL NIL \"BASE64\" 262 NIL (\"INLINE\" (\"FILENAME\" \"jesse_2.jpg\")) NIL NIL) \"MIXED\" (\"BOUNDARY\" \"------------050000030206040804030909\") NIL NIL NIL)",1024);
+	strncpy(expect,"(((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 281 10 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 759 17 NIL NIL NIL NIL) \"alternative\" (\"boundary\" \"------------040302030903000400040101\") NIL NIL NIL)(\"image\" \"jpeg\" (\"name\" \"jesse_2.jpg\") NIL NIL \"base64\" 262 NIL (\"inline\" (\"filename\" \"jesse_2.jpg\")) NIL NIL) \"mixed\" (\"boundary\" \"------------050000030206040804030909\") NIL NIL NIL)",1024);
 
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
 	g_free(result);
 	dbmail_message_free(message);
 	
-	/* text/plain */
-	message = dbmail_message_new();
-	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
-	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 3 NIL NIL NIL NIL)",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
-	g_free(result);
 	g_free(expect);
-	dbmail_message_free(message);
-
 }
 END_TEST
 
