@@ -68,7 +68,6 @@ u64_t Cache_set_dump(T C, char *buf, int dumptype)
 {
 	u64_t outcnt = 0;
 	Mem_T M;
-	char *rfc;
 
 	switch (dumptype) {
 		case IMAP_CACHE_MEMDUMP:
@@ -83,12 +82,12 @@ u64_t Cache_set_dump(T C, char *buf, int dumptype)
 	}
 	
 	assert(M);
-	Mem_rewind(M);
+	assert(buf);
 
-	rfc = get_crlf_encoded(buf);
-	outcnt = strlen(rfc);
-	Mem_write(M, rfc, outcnt);
-	g_free(rfc);
+	outcnt = strlen(buf);
+
+	Mem_rewind(M);
+	Mem_write(M, buf, outcnt);
 	Mem_rewind(M);
 
 	return outcnt;

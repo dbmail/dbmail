@@ -1403,8 +1403,7 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 		s++;
 	
 	b = g_string_erase(b,0,s);
-	t = get_crlf_encoded(b->str);
-	s = strlen(t);
+	s = b->len;
 	
 	/* count body lines */
 	v = t;
@@ -2287,7 +2286,7 @@ char * dm_base64_decode(const gchar *s, size_t *len)
 	char *r = NULL, *p = (char *)g_base64_decode((const gchar *)s, len);
 	r = g_strndup(p, *len);
 	g_free(p);
-	TRACE(TRACE_DEBUG,"[%u:%s]->[%s]", *len, s, r);
+	TRACE(TRACE_DEBUG,"[%ld:%s]->[%s]", *len, s, r);
 	return r;
 }
 

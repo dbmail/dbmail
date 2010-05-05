@@ -1546,20 +1546,18 @@ char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
 	dbmail_message_free(msg);
 
 	/* always send all headers */
-	raw = get_crlf_encoded_dots(hdr);
-	s = g_string_new(raw);
+	s = g_string_new(hdr);
 	g_free(hdr);
-	g_free(raw);
 
 	/* send requested body lines */	
 	if (buf) {
-		raw = get_crlf_encoded_dots(buf);
+		t = g_string_new(buf);
 		g_free(buf);
 	} else {
-		raw = g_strdup("");
+		t = g_string_new("");
 	}
 
-	t = g_string_new(raw);
+	raw = t->str;
 	
 	if (lines > 0) {
 		while (raw[pos] && n < lines) {
@@ -1568,7 +1566,6 @@ char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
 		}
 		if (pos) t = g_string_truncate(t,pos);
 	}
-	g_free(raw);
 
 	g_string_append(s, t->str);
 	g_string_free(t, TRUE);

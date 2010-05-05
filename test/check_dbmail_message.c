@@ -544,26 +544,6 @@ START_TEST(test_dbmail_message_body_to_string)
 }
 END_TEST
 
-//size_t dbmail_message_get_rfcsize(DbmailMessage *self);
-
-START_TEST(test_dbmail_message_get_rfcsize)
-{
-	unsigned result;
-	GString *s;
-	DbmailMessage *m;
-	
-	s = g_string_new(multipart_message);
-	m = dbmail_message_new();
-        m = dbmail_message_init_with_string(m,s);
-	result = dbmail_message_get_rfcsize(m);
-	
-	fail_unless(result==1767, "dbmail_message_get_rfcsize failed [%d]", result);
-	
-	g_string_free(s,TRUE);
-        dbmail_message_free(m);
-}
-END_TEST
-
 //void dbmail_message_free(DbmailMessage *self);
 START_TEST(test_dbmail_message_free)
 {
@@ -860,7 +840,6 @@ Suite *dbmail_message_suite(void)
 //	tcase_add_test(tc_message, test_dbmail_message_init_with_stream);
 	tcase_add_test(tc_message, test_dbmail_message_hdrs_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_body_to_string);
-	tcase_add_test(tc_message, test_dbmail_message_get_rfcsize);
 	tcase_add_test(tc_message, test_dbmail_message_set_header);
 	tcase_add_test(tc_message, test_dbmail_message_set_header);
 	tcase_add_test(tc_message, test_dbmail_message_get_header);

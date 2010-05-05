@@ -2207,9 +2207,7 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 
 int insert_messages(DbmailMessage *message, GList *dsnusers)
 {
-	u64_t bodysize, rfcsize;
 	u64_t tmpid;
-	u64_t msgsize;
 	int result=0;
 
  	delivery_status_t final_dsn;
@@ -2224,10 +2222,6 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 	TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
 
 	tmpid = message->id; // for later removal
-
-	bodysize = (u64_t)dbmail_message_get_body_size(message, FALSE);
-	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);
-	msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 
 	// TODO: Run a Sieve script associated with the internal delivery user.
 	// Code would go here, after we've stored the message 

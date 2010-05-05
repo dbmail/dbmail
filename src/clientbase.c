@@ -122,11 +122,6 @@ static int client_error_cb(int sock, int error, void *arg)
 			case EINTR:
 				break; // reschedule
 
-			case EPIPE: // ignore
-				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
-				client_rbuf_clear(client);
-				client_wbuf_clear(client);
-				break;
 			default:
 				r = -1;
 				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
@@ -281,7 +276,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	}
 	
 	if (self->write_buffer->len < 1) { 
-		TRACE(TRACE_DEBUG, "write_buffer is empty [%d]", self->write_buffer->len);
+		TRACE(TRACE_DEBUG, "write_buffer is empty [%ld]", self->write_buffer->len);
 		return 0;
 	}
 
@@ -317,7 +312,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 				self->tls_wbuf_n = 0;
 			}
 			self->write_buffer_offset += t;
-			TRACE(TRACE_INFO, "[%p] S > [%u/%u:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
+			TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
 			client_wbuf_scale(self);
 		}
 
@@ -375,7 +370,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 {
 	assert(buffer);
 
-	TRACE(TRACE_DEBUG,"[%p] need [%u]", self, n);
+	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
 	self->len = 0;
 
 	char *s = self->read_buffer->str + self->read_buffer_offset;
@@ -405,7 +400,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 		size_t j, k = 0, l;
 		l = stridx(s, '\n');
 		if (l >= MAX_LINESIZE) {
-			TRACE(TRACE_ERR, "insane line-length [%u]", l);
+			TRACE(TRACE_ERR, "insane line-length [%ld]", l);
 			self->client_state = CLIENT_ERR;
 			return 0;
 		}
@@ -413,7 +408,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 			buffer[k++] = s[j];
 		self->read_buffer_offset += l+1;
 		self->len = k;
-		TRACE(TRACE_INFO, "[%p] C < [%u:%s]", self, self->len, buffer);
+		TRACE(TRACE_INFO, "[%p] C < [%ld:%s]", self, self->len, buffer);
 
 		client_rbuf_scale(self);
 	}

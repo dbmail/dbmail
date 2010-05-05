@@ -553,7 +553,7 @@ int sort_getsize(sieve2_context_t *s, void *my)
 	struct sort_context *m = (struct sort_context *)my;
 	int rfcsize;
 
-	rfcsize = dbmail_message_get_rfcsize(m->message);
+	rfcsize = dbmail_message_get_size(m->message, TRUE);
 
 	TRACE(TRACE_INFO, "Getting message size [%d]", rfcsize);
 

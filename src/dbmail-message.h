@@ -85,8 +85,6 @@ char * dbmail_message_get_charset(DbmailMessage *self);
 
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf);
 
-#define dbmail_message_get_rfcsize(x) dbmail_message_get_size(x, TRUE)
-
 size_t dbmail_message_get_hdrs_size(const DbmailMessage *self, gboolean crlf);
 size_t dbmail_message_get_body_size(const DbmailMessage *self, gboolean crlf);
 
