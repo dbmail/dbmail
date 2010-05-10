@@ -926,13 +926,6 @@ gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
 	return h;
 }
 
-
-/* 
- * Some dynamic accessors.
- * 
- * Don't cache these values to allow changes in message content!!
- * 
- */
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
 {
 	char *s; size_t r;
