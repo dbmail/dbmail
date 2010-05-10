@@ -280,11 +280,13 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		return 0;
 	}
 
-	s = self->write_buffer->str + self->write_buffer_offset;
 	n = self->write_buffer->len - self->write_buffer_offset;
 
 	while (n > 0) {
 		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
+
+		s = self->write_buffer->str + self->write_buffer_offset;
+
 
 		if (self->ssl) {
 			if (! self->tls_wbuf_n) {
@@ -304,16 +306,18 @@ int ci_write(clientbase_t *self, char * msg, ...)
 				return e;
 			}
 		} else {
+			TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, s);
+
 			event_add(self->wev, NULL);
 
 			self->bytes_tx += t;	// Update our byte counter
+			self->write_buffer_offset += t;
+			client_wbuf_scale(self);
+
 			if (self->ssl) {
 				memset(self->tls_wbuf, '\0', TLS_SEGMENT);
 				self->tls_wbuf_n = 0;
 			}
-			self->write_buffer_offset += t;
-			TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, self->write_buffer_offset, self->write_buffer->len, s);
-			client_wbuf_scale(self);
 		}
 
 		n = self->write_buffer->len - self->write_buffer_offset;
