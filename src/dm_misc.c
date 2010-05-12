@@ -1393,6 +1393,7 @@ static void imap_part_get_sizes(GMimeObject *part, size_t *size, size_t *lines)
 
 	/* count body lines */
 	v = g_mime_object_get_body(part);
+	if (! v) return;
 	s = strlen(v);
 
 	while (v[i]) {

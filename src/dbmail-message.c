@@ -97,7 +97,7 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	i = find_end_of_header(s);
 	if (i >= strlen(s)) {
 		g_free(s);
-		return NULL;
+		return g_strdup("");
 	}
 	
 	b = s+i;
