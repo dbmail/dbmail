@@ -1,13 +1,192 @@
 <?php
 
+# Map RESTful dbmail api to php classes
+#
+# Author  Paul Stevens - paul@nfg.nl
+# copyright: NFG BV 2009-2010, support@nfg.nl
+#
+class DBMail
+{
+	private $curl;
+
+	public function __construct($host='localhost', $port=41380, $login='', $password='')
+	{
+		$this->curl = new Curl();
+		$this->curl->options = array(
+			'CURLOPT_FAILONERROR'=>TRUE,
+			'CURLOPT_USERPWD'=>$login . ":" . $password
+			);
+		$this->curl->url = sprintf("http://%s:%d", $host, $port);
+	}
+
+	public function getUsers()
+	{
+		return json_decode($this->curl->get(sprintf("%s/users/", $this->curl->url)), TRUE);
+	}
+
+	public function getUser($userid)
+	{
+		return new DBMailUser($this->curl,$userid);
+	}
+
+
+}
+
+class DBMailUser
+{
+	public $controller = "users";
+
+	public function __construct($curl, $id)
+	{
+		$this->curl = $curl;
+		$this->id = $id;
+		$json = $this->get();
+		if ($json) {
+			if (! is_int($id))
+				$this->id = $this->getIdByName($json[$this->controller], $id);
+			if (is_int($this->id) and array_key_exists($this->id, $json[$this->controller])) {
+				foreach($json[$this->controller][$this->id] as $key => $value) {
+					$this->$key = $value;
+				}
+			}
+		}
+	}
+
+	public function __toString()
+	{
+		return print_r($this->get(),1);
+	}
+
+	private function getIdByName($array, $name)
+	{
+		$id = null;
+		assert(is_array($array));
+		foreach($array as $key => $val) {
+			if ($val['name'] == $name) {
+				$id = (int)$key;
+				break;
+			}
+		}
+		if (! is_int($id))
+			return null;
+		return (int)$id;
+	}
+
+	private function getUrl($method='')
+	{
+		$url = sprintf("%s/%s/", $this->curl->url, $this->controller);
+		if ($this->id) {
+			$url = sprintf("%s%s/", $url, $this->id);
+			if ($method) {
+				$url = sprintf("%s%s/", $url, $method);
+			}
+		}
+		return $url;
+	}
+	public function get($method='', $json=True)
+	{
+		$url = $this->getUrl($method);
+		$result = $this->curl->get($url);
+		if ($json) 
+			$result = json_decode($result,TRUE);
+		else
+			$result = $result->body;
+
+		//if (! $result) print "FAILURE URL:[".$url."]\n";
+		return $result;
+	}
+		
+	public function post($vars=array())
+	{
+		$url = $this->getUrl();
+		$result = json_decode($this->curl->post($url, $vars),TRUE);
+		if (! $result) {
+			//print "FAILURE URL:[".$url."]\n";
+			return;
+		}
+		foreach($result[$this->controller][$this->id] as $key => $value) {
+			$this->$key = $value;
+		}
+		return $result;
+	}
+
+	public function create($userid, $password)
+	{
+		return $this->post(array('create'=>$userid, 'password'=>$password));
+	}
+
+	public function delete()
+	{
+		return $this->post(array('delete'=>$this->id));
+	}
+
+
+	public function getMailboxes()
+	{
+		return $this->get("mailboxes");
+	}
+
+	public function getMailbox($id)
+	{
+		$realid = null;
+		$mblist = $this->getMailboxes();
+		if (! is_int($id)) {
+			$id = $this->getIdByName($mblist['mailboxes'], $id);
+		}
+		if (! is_int($id)) return null;
+		return new DBMailMailbox($this->curl,$id);
+	}
+
+	public function addMailbox($mailbox)
+	{
+		return $this->post(array('create'=>$mailbox));
+	}
+
+	public function delMailbox($mailbox)
+	{
+		return $this->post(array('delete'=>$mailbox));
+	}
+
+}
+
+class DBMailMailbox extends DBMailUser
+{
+	public $controller = "mailboxes";
+
+	public function getMessages()
+	{
+		return $this->get("messages"); 
+	}
+
+	public function getMessage($id)
+	{
+		return new DBMailMessage($this->curl, $id);
+	}
+
+	public function addMessage($message)
+	{
+		return $this->post(array('message'=>$message));
+	}
+}
+
+class DBMailMessage extends DBMailMailbox
+{
+	public $controller = "messages";
+
+	public function view()
+	{
+		return $this->get("view", False);
+	}
+
+	public function getHeaders($headers)
+	{
+		$headers = implode(",",$headers);
+		return $this->get("headers/" . $headers, False);
+	}
+}
+
 # Curl, CurlResponse
-#
 # Author  Sean Huber - shuber@huberry.com
-# Date    May 2008
-#
-# A basic CURL wrapper for PHP
-#
-# See the README for documentation/examples or http://php.net/curl for more information about the libcurl extension for PHP
 
 class Curl 
 {
@@ -144,170 +323,5 @@ class CurlResponse
     }
 }
 
-// Map RESTful dbmail api to php classes
-
-class DBMail
-{
-	private $curl;
-
-	public function __construct($host='localhost', $port=41380, $login='', $password='')
-	{
-		$this->curl = new Curl();
-		$this->curl->options = array(
-			'CURLOPT_FAILONERROR'=>TRUE,
-			'CURLOPT_USERPWD'=>$login . ":" . $password
-			);
-		$this->curl->url = sprintf("http://%s:%d", $host, $port);
-	}
-
-	public function getUsers()
-	{
-		return json_decode($this->curl->get(sprintf("%s/users/", $this->curl->url)), TRUE);
-	}
-
-	public function getUser($userid)
-	{
-		return new DBMailUser($this->curl,$userid);
-	}
-}
-
-class DBMailUser
-{
-	public $controller = "users";
-
-	public function __construct($curl, $id)
-	{
-		$this->curl = $curl;
-		$this->id = $id;
-		$json = $this->get();
-		assert($json);
-		if (! is_int($id))
-			$this->id = $this->getIdByName($json[$this->controller], $id);
-		foreach($json[$this->controller][$this->id] as $key => $value) {
-			$this->$key = $value;
-		}
-	}
-
-	public function __toString()
-	{
-		return print_r($this->get(),1);
-	}
-
-	private function getIdByName($array, $name)
-	{
-		$id = null;
-		assert(is_array($array));
-		foreach($array as $key => $val) {
-			if ($val['name'] == $name) {
-				$id = (int)$key;
-				break;
-			}
-		}
-		if (! is_int($id))
-			return null;
-		return (int)$id;
-	}
-
-	private function getUrl($method='')
-	{
-		$url = sprintf("%s/%s/", $this->curl->url, $this->controller);
-		if ($this->id) {
-			$url = sprintf("%s%s/", $url, $this->id);
-			if ($method) {
-				$url = sprintf("%s%s/", $url, $method);
-			}
-		}
-		return $url;
-	}
-	public function get($method='', $json=True)
-	{
-		$url = $this->getUrl($method);
-		$result = $this->curl->get($url);
-		if ($json) 
-			$result = json_decode($result,TRUE);
-		else
-			$result = $result->body;
-
-		if (! $result) print "FAILURE URL:[".$url."]\n";
-		return $result;
-	}
-		
-	public function post($vars=array())
-	{
-		$url = $this->getUrl();
-		$result = json_decode($this->curl->post($url, $vars),TRUE);
-		if (! $result) {
-			//print "FAILURE URL:[".$url."]\n";
-			return;
-		}
-		foreach($result[$this->controller][$this->id] as $key => $value) {
-			$this->$key = $value;
-		}
-		return $result;
-	}
-
-	public function getMailboxes()
-	{
-		return $this->get("mailboxes");
-	}
-
-	public function getMailbox($id)
-	{
-		$realid = null;
-		$mblist = $this->getMailboxes();
-		if (! is_int($id)) {
-			$id = $this->getIdByName($mblist['mailboxes'], $id);
-		}
-		if (! is_int($id)) return null;
-		return new DBMailMailbox($this->curl,$id);
-	}
-
-	public function create($mailbox)
-	{
-		return $this->post(array('create'=>$mailbox));
-	}
-
-	public function delete($mailbox)
-	{
-		return $this->post(array('delete'=>$mailbox));
-	}
-
-}
-
-class DBMailMailbox extends DBMailUser
-{
-	public $controller = "mailboxes";
-
-	public function getMessages()
-	{
-		return $this->get("messages"); 
-	}
-
-	public function getMessage($id)
-	{
-		return new DBMailMessage($this->curl, $id);
-	}
-
-	public function addMessage($message)
-	{
-		return $this->post(array('message'=>$message));
-	}
-}
-
-class DBMailMessage extends DBMailMailbox
-{
-	public $controller = "messages";
-
-	public function view()
-	{
-		return $this->get("view", False);
-	}
-
-	public function getHeaders($headers)
-	{
-		$headers = implode(",",$headers);
-		return $this->get("headers/" . $headers, False);
-	}
-}
 
 ?>

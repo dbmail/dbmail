@@ -120,11 +120,30 @@ void Http_getUsers(T R)
 
 			users = g_list_append_printf(users, "%s", username);
 		} else {
-
 			/* 
 			 * list all users
 			 * C < /users/
+			 *
+			 * create,edit,delete user
+			 * POST C < /users/
 			 */
+
+			const char *user = NULL;
+
+			if ((user = evhttp_find_header(Request_getPOST(R),"create"))) {
+				const char *password, *encoding, *quota;
+			       	password = evhttp_find_header(Request_getPOST(R), "password");
+			       	encoding = evhttp_find_header(Request_getPOST(R), "encoding");
+			       	quota    = evhttp_find_header(Request_getPOST(R), "quota");
+				TRACE(TRACE_DEBUG, "create user: [%s] password: [%s] encoding [%s] quota [%s]", 
+						user, password, encoding, quota);
+
+			} else if ((user = evhttp_find_header(Request_getPOST(R),"edit"))) {
+				TRACE(TRACE_DEBUG, "edit user: [%s]", user);
+
+			} else if ((user = evhttp_find_header(Request_getPOST(R),"delete"))) {
+				TRACE(TRACE_DEBUG, "delete user: [%s]", user);
+			}
 
 			users = auth_get_known_users();
 		}

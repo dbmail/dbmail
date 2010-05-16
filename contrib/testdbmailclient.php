@@ -16,7 +16,7 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 		$this->dm = new DBMail($host="localhost", $port=41380, $login="admin",$password="secret");
 		$this->user = $this->dm->getUser('testuser1');
 		$this->mbox = $this->user->getMailbox('INBOX');
-		$this->user->create("somenewmailbox2");
+		$this->user->addMailbox("somenewmailbox2");
 	}
 
 	public function tearDown()
@@ -29,7 +29,7 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 	{
 		$this->assertNotNull($this->dm);
 	}
-
+/*
 	public function testjson()
 	{
 		$j = '{"users": {
@@ -65,17 +65,29 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 	{
 		$this->assertNotNull($this->mbox);
 	}
-
-	public function testCreate()
+ */
+	public function testAddUser()
 	{
-		$this->user->create("somenewmailbox1");
+		$user = $this->dm->getUser(null);
+		$user->create('testadduser','testaddpassword');
+	}
+/*
+	public function testDelUser()
+	{
+		$user = $this->dm->getUser('testadduser');
+		$user->delete();
+	}
+
+	public function testAddMailbox()
+	{
+		$this->user->addMailbox("somenewmailbox1");
 		$this->assertNotNull($this->user->getMailbox("somenewmailbox1"));
 	}
 
-	public function testDelete()
+	public function testDelMailbox()
 	{
 		$this->assertNotNull($this->user->getMailbox("somenewmailbox2"));
-		$this->user->delete("somenewmailbox2");
+		$this->user->delMailbox("somenewmailbox2");
 		$this->assertEquals($this->user->getMailbox("somenewmailbox2"), null);
 	}
 
@@ -124,6 +136,6 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 	{
 
 	}
-
+ */
 }
 ?>
