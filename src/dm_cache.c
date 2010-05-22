@@ -108,7 +108,7 @@ void Cache_clear(T C)
 u64_t Cache_update(T C, DbmailMessage *message, int filter)
 {
 	u64_t tmpcnt = 0, outcnt = 0;
-	char *buf = NULL;
+	char *crlf = NULL, *buf = NULL;
 
 	TRACE(TRACE_DEBUG,"[%p] C->id[%llu] message->id[%llu]", C, C->id, message->id);
 
@@ -117,9 +117,11 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 		Cache_clear(C);
 
 		buf = dbmail_message_to_string(message);
-		outcnt = Cache_set_dump(C,buf,IMAP_CACHE_MEMDUMP);
-		tmpcnt = Cache_set_dump(C,buf,IMAP_CACHE_TMPDUMP);
+		crlf = get_crlf_encoded(buf);
+		outcnt = Cache_set_dump(C,crlf,IMAP_CACHE_MEMDUMP);
+		tmpcnt = Cache_set_dump(C,crlf,IMAP_CACHE_TMPDUMP);
 		g_free(buf);
+		g_free(crlf);
 
 		assert(tmpcnt==outcnt);
 		
@@ -132,13 +134,17 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 		/* for these two update the temp MEM buffer */	
 		case DBMAIL_MESSAGE_FILTER_HEAD:
 			buf = dbmail_message_hdrs_to_string(message);
-			outcnt = Cache_set_dump(C,buf,IMAP_CACHE_TMPDUMP);
+			crlf = get_crlf_encoded(buf);
+			outcnt = Cache_set_dump(C,crlf,IMAP_CACHE_TMPDUMP);
 			g_free(buf);
+			g_free(crlf);
 		break;
 		case DBMAIL_MESSAGE_FILTER_BODY:
 			buf = dbmail_message_body_to_string(message);
-			outcnt = Cache_set_dump(C,buf,IMAP_CACHE_TMPDUMP);
+			crlf = get_crlf_encoded(buf);
+			outcnt = Cache_set_dump(C,crlf,IMAP_CACHE_TMPDUMP);
 			g_free(buf);
+			g_free(crlf);
 		break;
 		case DBMAIL_MESSAGE_FILTER_FULL:
 			outcnt = C->size;

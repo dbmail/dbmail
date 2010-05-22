@@ -173,7 +173,7 @@ START_TEST(test_g_mime_object_get_body)
 	m = message_init(multipart_message);
 	
 	result = g_mime_object_get_body(GMIME_OBJECT(m->content));
-	fail_unless(strlen(result)==1045,"g_mime_object_get_body failed [%s]\n", result);
+	fail_unless(strlen(result)==1057,"g_mime_object_get_body failed [%d:%s]\n", strlen(result), result);
 	g_free(result);
 	dbmail_message_free(m);
 	
@@ -528,7 +528,7 @@ START_TEST(test_dbmail_message_body_to_string)
 	m = dbmail_message_new();
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_body_to_string(m);
-	fail_unless(strlen(result)==1045, "dbmail_message_body_to_string failed [%d] != [1045]\n[%s]\n", strlen(result),result);
+	fail_unless(strlen(result)==1057, "dbmail_message_body_to_string failed [%d] != [1057]\n[%s]\n", strlen(result),result);
 	
         dbmail_message_free(m);
 	g_string_free(s,TRUE);
@@ -538,7 +538,6 @@ START_TEST(test_dbmail_message_body_to_string)
 	m = dbmail_message_new();
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_body_to_string(m);
-//	printf("{%d} [%s]\n", strlen(result), result);
 	fail_unless(strlen(result)==330, "dbmail_message_body_to_string failed [330 != %d:%s]", strlen(result), result);
 	
         dbmail_message_free(m);

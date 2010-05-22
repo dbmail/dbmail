@@ -106,6 +106,8 @@ char *multipart_message = "From: \"Brother from another planet\" <vol@inter7.com
 	"Content-disposition: inline\n"
 	"\n"
 	"Test message one\n"
+	" and more.\n"
+	"\n"
 	"--boundary\n"
 	"Content-type: text/plain; charset=us-ascii; name=testfile\n"
 	"Content-transfer-encoding: base64\n"

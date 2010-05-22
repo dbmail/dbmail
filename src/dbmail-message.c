@@ -913,6 +913,7 @@ gchar * dbmail_message_body_to_string(const DbmailMessage *self)
 	assert(self && self->content);
 	return g_mime_object_get_body(GMIME_OBJECT(self->content));
 }
+
 gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
 {
 	gchar *h;
@@ -1006,10 +1007,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 
 /*
  *
- * retrieve the header messageblk
- *
- * TODO: this call is yet unused in the code, but here for
- * forward compatibility's sake.
+ * retrieve the message headers as a single mime object
  *
  */
 static DbmailMessage * _fetch_head(DbmailMessage *self)

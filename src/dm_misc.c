@@ -1934,24 +1934,27 @@ char * imap_get_envelope(GMimeMessage *message)
 
 char * imap_get_logical_part(const GMimeObject *object, const char * specifier) 
 {
-	gchar *t=NULL;
-	GString *s = g_string_new("");
-	
-	if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) {
+	gchar *s = NULL, *t=NULL;
+		
+	if (specifier == NULL) {
+		t = g_mime_object_to_string(GMIME_OBJECT(object));
+		s = get_crlf_encoded(t);
+		g_free(t);
+	}
+
+	else if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) {
 		t = g_mime_object_get_headers(GMIME_OBJECT(object));
-		g_string_printf(s,"%s\n", t);
+		s = get_crlf_encoded(t);
 		g_free(t);
 	} 
 	
 	else if (strcasecmp(specifier,"TEXT")==0) {
 		t = g_mime_object_get_body(GMIME_OBJECT(object));
-		g_string_printf(s,"%s",t);
+		s = get_crlf_encoded(t);
 		g_free(t);
-	}
+	} 
 
-	t = s->str;
-	g_string_free(s,FALSE);
-	return t;
+	return s;
 }
 
 	

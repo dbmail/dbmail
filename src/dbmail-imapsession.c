@@ -557,18 +557,24 @@ void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean no
 	ts = g_string_new(s);
 
 	if (bodyfetch->octetcnt > 0) {
-		
-		if (bodyfetch->octetstart > 0 && bodyfetch->octetstart < ts->len)
-			ts = g_string_erase(ts, 0, bodyfetch->octetstart);
-		
-		if (ts->len > bodyfetch->octetcnt)
-			ts = g_string_truncate(ts, bodyfetch->octetcnt);
-		
+		char *p;
+
 		tmp = get_crlf_encoded(ts->str);
 		cnt = strlen(tmp);
+
+		p = tmp;
+		if (bodyfetch->octetstart > 0 && bodyfetch->octetstart < (guint64)cnt) {
+			p += bodyfetch->octetstart;
+			cnt -= bodyfetch->octetstart;
+		}
+		
+		if ((guint64)cnt > bodyfetch->octetcnt) {
+			p[bodyfetch->octetcnt] = '\0';
+			cnt = bodyfetch->octetcnt;
+		}
 		
 		dbmail_imap_session_buff_printf(self, "<%llu> {%llu}\r\n%s\r\n", 
-				bodyfetch->octetstart, cnt+2, tmp);
+				bodyfetch->octetstart, cnt+2, p);
 	} else {
 		tmp = get_crlf_encoded(ts->str);
 		cnt = strlen(tmp);
@@ -704,6 +710,7 @@ static u64_t get_dumpsize(body_fetch_t *bodyfetch, gsize dumpsize)
 		return bodyfetch->octetcnt;
 	return (dumpsize - bodyfetch->octetstart);
 }
+
 static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch_t *bodyfetch, const char *type)
 {
 	TRACE(TRACE_DEBUG,"[%p] type [%s]", self, type);
