@@ -547,7 +547,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		while (session->messagelst) {
 			msg = (struct message *) session->messagelst->data;
 			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
-				char *s; size_t i;
+				char *s = NULL; size_t i;
 				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
 				if (! (s = db_get_message_lines(msg->realmessageid, -2, 0)))
 					return -1;
@@ -825,7 +825,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		while (session->messagelst) {
 			msg = (struct message *) session->messagelst->data;
 			if (msg->messageid == top_messageid && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
-				char *s; size_t i;
+				char *s = NULL; size_t i;
 				if (! (s = db_get_message_lines(msg->realmessageid, top_lines, 0)))
 					return -1;
 				i = ci_write(ci, "+OK %llu lines of message %llu\r\n%s", top_lines, top_messageid, s);
