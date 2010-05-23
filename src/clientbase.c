@@ -427,6 +427,7 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 	C c; R r; S s;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	char *frag = db_returning("id");
+	const char *user = self->auth?Cram_getUsername(self->auth):username;
 	c = db_con_get();
 	TRY
 
@@ -434,7 +435,7 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 				" VALUES (?, ?, %s, %s, ?, ?, ?, ?, ?) %s", DBPFX, now, now, frag);
 
 		g_free(frag);
-		db_stmt_set_str(s, 1, username);
+		db_stmt_set_str(s, 1, user);
 		db_stmt_set_str(s, 2, service);
 		db_stmt_set_str(s, 3, (char *)self->src_ip);
 		db_stmt_set_int(s, 4, atoi(self->src_port));
