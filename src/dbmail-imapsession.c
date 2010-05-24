@@ -123,6 +123,8 @@ static u64_t dbmail_imap_session_message_load(ImapSession *self, int filter)
 {
 	u64_t *physid = NULL;
 
+	TRACE(TRACE_DEBUG,"[%llu]", self->msg_idnr);
+
 	if (! (physid = g_tree_lookup(self->physids, &(self->msg_idnr)))) {
 		u64_t *uid;
 		physid = g_new0(u64_t,1);
@@ -385,6 +387,7 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 		/* read the numbers */
 		token[strlen(token) - 1] = '\0';
 		token[delimpos] = '\0';
+		self->fi->msgparse_needed=1;
 		dbmail_imap_session_bodyfetch_set_octetstart(self, strtoll(&token[1], NULL, 10));
 		dbmail_imap_session_bodyfetch_set_octetcnt(self,strtoll(&token [delimpos + 1], NULL, 10));
 
@@ -463,6 +466,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		
 		if (! nexttoken || ! MATCH(nexttoken,"[")) {
 			if (ispeek) return -2;	/* error DONE */
+			self->fi->msgparse_needed = 1;
 			self->fi->getMIME_IMB_noextension = 1;	/* just BODY specified */
 		} else {
 			int res = 0;
@@ -476,10 +480,13 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			TRACE(TRACE_DEBUG,"[%p] token [%s], nexttoken [%s]", self, token, nexttoken);
 
 			if (MATCH(token,"]")) {
-				if (ispeek)
+				if (ispeek) {
+					self->fi->msgparse_needed = 1;
 					self->fi->getBodyTotalPeek = 1;
-				else
+				} else {
+					self->fi->msgparse_needed = 1;
 					self->fi->getBodyTotal = 1;
+				}
 				self->args_idx++;				
 				res = _imap_session_fetch_parse_octet_range(self);
 				if (res == -2)
@@ -533,8 +540,6 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 				self->fi->isfirstfetchout = 0; \
 			else \
 				dbmail_imap_session_buff_printf(self, " ")
-
-
 
 #define QUERY_BATCHSIZE 2000
 
@@ -903,7 +908,16 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
-	
+
+	TRACE(TRACE_DEBUG,"[%llu] [%d]", self->msg_idnr, self->fi->msgparse_needed);
+	if (self->fi->msgparse_needed) {
+		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
+			dbmail_imap_session_buff_clear(self);
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE error loading message\r\n");
+			return -1;
+		}
+	}
+
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
 		char *s =date_sql2imap(msginfo->internaldate);
@@ -912,7 +926,8 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 	if (self->fi->getSize) {
 		SEND_SPACE;
-		dbmail_imap_session_buff_printf(self, "RFC822.SIZE %llu", msginfo->rfcsize);
+		dbmail_imap_session_buff_printf(self, "RFC822.SIZE %llu", 
+				self->cache?Cache_get_size(self->cache):msginfo->rfcsize);
 	}
 	if (self->fi->getFlags) {
 		SEND_SPACE;
@@ -927,14 +942,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 
 	if (self->fi->getMIME_IMB) {
-		
 		SEND_SPACE;
-		
-		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
-			dbmail_imap_session_buff_clear(self);
-			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body structure\r\n");
-			return -1;
-		}
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->message)->content), 1))==NULL) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body structure\r\n");
@@ -945,15 +953,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 
 	if (self->fi->getMIME_IMB_noextension) {
-		
 		SEND_SPACE;
-		
-		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
-			dbmail_imap_session_buff_clear(self);
-			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body\r\n");
-			return -1;
-		}
-
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->message)->content), 0))==NULL) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body\r\n");
@@ -964,40 +964,21 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	}
 
 	if (self->fi->getEnvelope) {
-
 		SEND_SPACE;
-		
 		_fetch_envelopes(self);
 	}
 
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {
-
 		SEND_SPACE;
-
-		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
-			dbmail_imap_session_buff_clear(self);
-			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching message\r\n");
-			return -1;
-		}
-
-
 		dbmail_imap_session_buff_printf(self, "RFC822 {%llu}\r\n", Cache_get_size(self->cache) );
 		send_data(self, Cache_get_memdump(self->cache), Cache_get_size(self->cache) );
-
 		if (self->fi->getRFC822)
 			self->fi->setseen = 1;
 
 	}
 
 	if (self->fi->getBodyTotal || self->fi->getBodyTotalPeek) {
-
 		SEND_SPACE;
-		
-		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
-			dbmail_imap_session_buff_clear(self);
-			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching message\r\n");
-			return -1;
-		}
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
 			dbmail_imap_session_buff_printf(self, "BODY[] {%llu}\r\n", Cache_get_size(self->cache) );
 			send_data(self, Cache_get_memdump(self->cache), Cache_get_size(self->cache) );
@@ -1014,30 +995,22 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 					dbmail_imap_session_bodyfetch_get_last_octetstart(self), actual_cnt);
 			send_data(self, M, actual_cnt);
 		}
-
 		if (self->fi->getBodyTotal)
 			self->fi->setseen = 1;
-
 	}
 
 	if (self->fi->getRFC822Header) {
-
 		SEND_SPACE;
-
 		tmpdumpsize = dbmail_imap_session_message_load(self,DBMAIL_MESSAGE_FILTER_HEAD);
 		dbmail_imap_session_buff_printf(self, "RFC822.HEADER {%llu}\r\n", tmpdumpsize);
 		send_data(self, Cache_get_tmpdump(self->cache), tmpdumpsize);
 	}
 
 	if (self->fi->getRFC822Text) {
-
 		SEND_SPACE;
-
-		// FIXME
 		tmpdumpsize = dbmail_imap_session_message_load(self,DBMAIL_MESSAGE_FILTER_BODY);
 		dbmail_imap_session_buff_printf(self, "RFC822.TEXT {%llu}\r\n", tmpdumpsize);
 		send_data(self, Cache_get_tmpdump(self->cache), tmpdumpsize);
-
 		self->fi->setseen = 1;
 	}
 
@@ -1086,7 +1059,6 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 
 	return 0;
 }
-
 
 static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, ImapSession *self)
 {
@@ -1283,7 +1255,6 @@ int dbmail_imap_session_prompt(ImapSession * self, char * prompt)
 	return 0;
 }
 
-
 int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr)
 {
 	/* check if mailbox is selectable */
@@ -1360,6 +1331,7 @@ static gboolean notify_expunge(ImapSession *self, u64_t *uid)
 
 	return FALSE;
 }
+
 static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 {
 	u64_t *uid, *msn, exists;
@@ -1736,7 +1708,6 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self)
 	return 0;
 }
 
-
 /*****************************************************************************
  *
  *
@@ -1744,7 +1715,6 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self)
  *
  *
  ****************************************************************************/
-
 void dbmail_imap_session_bodyfetch_new(ImapSession *self) 
 {
 

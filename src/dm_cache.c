@@ -118,16 +118,18 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 
 		buf = dbmail_message_to_string(message);
 		crlf = get_crlf_encoded(buf);
+
 		outcnt = Cache_set_dump(C,crlf,IMAP_CACHE_MEMDUMP);
 		tmpcnt = Cache_set_dump(C,crlf,IMAP_CACHE_TMPDUMP);
-		g_free(buf);
-		g_free(crlf);
 
 		assert(tmpcnt==outcnt);
 		
 		C->size = outcnt;
 		C->id = message->id;
 		
+		g_free(buf);
+		g_free(crlf);
+
 	}
 	
 	switch (filter) {

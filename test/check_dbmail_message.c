@@ -192,13 +192,19 @@ START_TEST(test_dbmail_message_store)
 	char *t, *e;
 
 	//-----------------------------------------
+	m = message_init("From: paul\n");
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
+	//-----------------------------------------
 	m = message_init(simple);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
 	g_free(e);
 	g_free(t);
-	return;
 	//-----------------------------------------
 	m = message_init(rfc822);
 	e = dbmail_message_to_string(m);
@@ -375,7 +381,6 @@ START_TEST(test_dbmail_message_retrieve)
 {
 	DbmailMessage *m, *n;
 	GString *s;
-	char *expect, *t;
 	u64_t physid;
 
 	s = g_string_new(multipart_message);
@@ -761,8 +766,8 @@ START_TEST(test_encoding)
 	char *raw, *enc, *dec;
 
 	raw = g_strdup( "Kristoffer Br�nemyr");
-	enc = g_mime_utils_header_encode_phrase((unsigned char *)raw);
-	dec = g_mime_utils_header_decode_phrase((unsigned char *)enc);
+	enc = g_mime_utils_header_encode_phrase((char *)raw);
+	dec = g_mime_utils_header_decode_phrase((char *)enc);
 	fail_unless(MATCH(raw,dec),"decode/encode failed");
 	g_free(raw);
 	g_free(dec);
@@ -773,6 +778,7 @@ END_TEST
 START_TEST(test_get_crlf_encoded_opt1)
 {
 	char *in[] = {
+		"a\n",
 		"a\nb\nc\n",
 		"a\nb\r\nc\n",
 		"a\nb\rc\n",
@@ -780,6 +786,7 @@ START_TEST(test_get_crlf_encoded_opt1)
 		NULL
 	};
 	char *out[] = {
+		"a\r\n",
 		"a\r\nb\r\nc\r\n",
 		"a\r\nb\r\nc\r\n",
 		"a\r\nb\rc\r\n",
@@ -825,10 +832,9 @@ END_TEST
 START_TEST(test_dbmail_message_get_size)
 {
 	DbmailMessage *m;
-	GString *s;
-	char *t, *r;
 	size_t i, j;
 
+	/* */
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(rfc822));
 
@@ -838,6 +844,18 @@ START_TEST(test_dbmail_message_get_size)
 	fail_unless(j==289, "dbmail_message_get_size failed");
 
 	dbmail_message_free(m);
+
+	/* */
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new("From: paul\n\n"));
+
+	i = dbmail_message_get_size(m, FALSE);
+	fail_unless(i==12, "dbmail_message_get_size failed [%d]", i);
+	j = dbmail_message_get_size(m, TRUE);
+	fail_unless(j==14, "dbmail_message_get_size failed [%d]", j);
+
+	dbmail_message_free(m);
+
 }
 END_TEST
 

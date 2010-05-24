@@ -141,6 +141,7 @@ typedef struct {
 	GString *envelope_recipient;
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;
+	gchar *raw_content;
 	GRelation *headers;
 	GHashTable *header_dict;
 	GTree *header_name;

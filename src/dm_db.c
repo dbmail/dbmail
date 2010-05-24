@@ -1004,42 +1004,7 @@ u64_t db_get_useridnr(u64_t message_idnr)
 	return user_idnr;
 }
 
-static int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size, u64_t rfc_size)
-{
-	return db_update("UPDATE %sphysmessage SET messagesize = %llu, rfcsize = %llu WHERE id = %llu", 
-			DBPFX, message_size, rfc_size, physmessage_id);
-}
 
-static int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
-{
-	return db_update("UPDATE %smessages SET unique_id = '%s', status = %d WHERE message_idnr = %llu", 
-			DBPFX, unique_id, MESSAGE_STATUS_NEW, message_idnr);
-}
-
-int db_update_message(u64_t message_idnr, const char *unique_id, u64_t message_size, u64_t rfc_size)
-{
-	assert(unique_id);
-	u64_t physmessage_id = 0;
-
-	if (! db_message_set_unique_id(message_idnr, unique_id))
-		return DM_EQUERY;
-
-	/* update the fields in the physmessage table */
-	if (db_get_physmessage_id(message_idnr, &physmessage_id)) 
-		return DM_EQUERY;
-
-	if (! db_physmessage_set_sizes(physmessage_id, message_size, rfc_size)) 
-		return DM_EQUERY;
-
-	if (! dm_quota_user_inc(db_get_useridnr(message_idnr), message_size)) {
-		TRACE(TRACE_ERR, "error calculating quotum "
-		      "used for user [%llu]. Database might be "
-		      "inconsistent. Run dbmail-util.",
-		      db_get_useridnr(message_idnr));
-		return DM_EQUERY;
-	}
-	return DM_SUCCESS;
-}
 
 int db_log_ip(const char *ip)
 {
@@ -1507,20 +1472,6 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_siz
 	if (! dm_quota_user_dec(user_idnr, mailbox_size))
 		return DM_EQUERY;
 	return DM_SUCCESS;
-}
-
-int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_end_dot)
-{
-	char *s;
-	size_t i;
-
-	TRACE(TRACE_DEBUG, "sending [%ld] lines from message [%llu]",
-			lines, message_idnr);
-	if (! (s = db_get_message_lines(message_idnr, lines, no_end_dot)))
-		return -1;
-	i = fprintf((FILE *)fstream, "%s", s);
-	g_free(s);
-	return i;
 }
 
 char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
@@ -3373,13 +3324,6 @@ int db_mailbox_seq_update(u64_t mailbox_id)
 {
 	return db_update("UPDATE %s %smailboxes SET seq=seq+1 WHERE mailbox_idnr=%llu", 
 		db_get_sql(SQL_IGNORE), DBPFX, mailbox_id);
-}
-
-int db_message_mailbox_seq_update(u64_t message_id)
-{
-	return db_update("UPDATE %s %smailboxes SET seq=seq+1 WHERE mailbox_idnr=("
-			"SELECT mailbox_idnr FROM %smessages WHERE message_idnr=%llu)", 
-			db_get_sql(SQL_IGNORE), DBPFX, DBPFX, message_id);
 }
 
 int db_rehash_store(void)

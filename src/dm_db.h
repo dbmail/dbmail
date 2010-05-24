@@ -31,9 +31,7 @@
 #include "dbmail.h"
 
 #define DUMP_BUF_SIZE 1024
-
 #define ICHECK_RESULTSETSIZE 1000000
-
 #define MAX_EMAIL_SIZE 250
 
 /* config types */
@@ -285,30 +283,6 @@ int dm_quota_rebuild_user(u64_t user_idnr);
 u64_t db_get_useridnr(u64_t message_idnr);
 
 /**
- * \brief insert a physmessage with an internal date.
- * \param internal_date the internal date in "YYYY-MM-DD HH:Mi:SS"
- * \param physmessage_id will hold the id of the physmessage on return. Must
- * hold a valid pointer on call.
- * \return 
- *    - -1 on failure
- *    -  1 on success
- */
-int db_insert_physmessage_with_internal_date(timestring_t internal_date, u64_t * physmessage_id);
-
-/**
- * \brief update unique_id, message_size and rfc_size of
- *        a message identified by message_idnr
- * \param message_idnr
- * \param unique_id unique id of message
- * \param message_size size of message
- * \param rfc_size
- * \return 
- *      - -1 on database error
- *      - 0 on success
- */
-int db_update_message(u64_t message_idnr, const char *unique_id, u64_t message_size, u64_t rfc_size);
-
-/**
  * \brief log IP-address for POP/IMAP_BEFORE_SMTP. If the IP-address
  *        is already logged, it's timestamp is renewed.
  * \param ip the ip (xxx.xxx.xxx.xxx)
@@ -398,9 +372,6 @@ int db_update_rfcsize(GList *lost);
 int db_icheck_envelope(GList **lost);
 int db_set_envelope(GList *lost);
 
-
-
-int db_setselectable(u64_t mailbox_idnr, int select_value);
 /**
  * \brief set status of a message
  * \param message_idnr
@@ -432,22 +403,6 @@ int db_delete_message(u64_t message_idnr);
 */
 int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		      int update_curmail_size);
-
-/**
- * \brief write lines of message to fstream. Always write full headers.
- * \param fstream the stream to write to
- * \param message_idnr idrn of message to write
- * \param lines number of lines to write. If <PRE>lines == -2</PRE>, then
- *              the whole message (excluding the header) is written.
- * \param no_end_dot if 
- *                    - 0 \b do write the final "." signalling
- *                    the end of the message
- *                    - otherwise do \b not write the final "."
- * \return 
- * 		- 0 on failure
- * 		- 1 on success
- */
-int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_end_dot);
 
 char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot);
 
@@ -615,14 +570,7 @@ int db_noinferiors(u64_t mailbox_idnr);
  */
 
 int db_append_msg(const char *msgdata, u64_t mailbox_idnr, u64_t user_idnr, timestring_t internal_date, u64_t * msg_idnr);
-/** 
- * \brief remove all messages from a mailbox
- * \param mailbox_idnr
- * \return 
- * 		- -1 on failure
- * 		- 0 on success
- */
-int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr);
+
 /**
  * \brief move all messages from one mailbox to another.
  * \param mailbox_to idnr of mailbox to move messages from.
@@ -797,7 +745,6 @@ const char * db_get_sql(sql_fragment_t frag);
 char * db_returning(const char *s);
 
 int db_mailbox_seq_update(u64_t mailbox_id);
-int db_message_mailbox_seq_update(u64_t message_id);
 
 int db_rehash_store(void);
 

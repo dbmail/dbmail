@@ -142,6 +142,7 @@ static T MailboxState_getMessageState(T M)
 
 	if (! i) { // empty mailbox
 		MailboxState_setMsginfo(M, msginfo);
+		db_commit_transaction(c);
 		db_con_close(c);
 		return M;
 	}

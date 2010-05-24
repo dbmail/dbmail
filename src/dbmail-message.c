@@ -425,7 +425,6 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			g_string_append_printf(m, "\n");
 	}
 	
-
 	self = dbmail_message_init_with_string(self,m);
 	dbmail_message_set_internal_date(self, internal_date);
 	g_free(internal_date);
@@ -449,21 +448,17 @@ static int store_body(GMimeObject *object, DbmailMessage *m)
 {
 	int r;
 	char *text = g_mime_object_get_body(object);
-	if (! text) 
-		return 0;
-
+	if (! text) return 0;
 	r = store_blob(m, text, 0);
 	g_free(text);
 	return r;
 }
-
 
 static gboolean store_mime_text(GMimeObject *object, DbmailMessage *m, gboolean skiphead)
 {
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 	if (! skiphead && store_head(object, m) < 0) return TRUE;
 	if(store_body(object, m) < 0) return TRUE;
-
 	return FALSE;
 }
 
@@ -640,6 +635,10 @@ void dbmail_message_free(DbmailMessage *self)
 		g_object_unref(self->content);
 		self->content = NULL;
 	}
+	if (self->raw_content) {
+		g_free(self->raw_content);
+		self->raw_content = NULL;
+	}
 	if (self->charset) {
 		g_free(self->charset);
 		self->charset = NULL;
@@ -703,7 +702,6 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GStri
 	parser = g_mime_parser_new_with_stream(stream);
 	g_object_unref(stream);
 
-	TRACE(TRACE_DEBUG,"parse message");
 	if (strncmp(str->str, "From ", 5) == 0) {
 		/* don't use gmime's from scanner since body lines may begin with 'From ' */
 		char *end;
@@ -717,17 +715,17 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GStri
 	if (content) {
 		dbmail_message_set_class(self, DBMAIL_MESSAGE);
 		self->content = content;
+		self->raw_content = dbmail_message_to_string(self);
 		if (from) {
-			TRACE(TRACE_DEBUG,"from scan: %s", from);
 			dbmail_message_set_internal_date(self, from);
 		}
 		g_object_unref(parser);
 	} else {
-		TRACE(TRACE_DEBUG,"parse part");
 		content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
 		if (content) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 			self->content = content;
+			self->raw_content = dbmail_message_to_string(self);
 			g_object_unref(parser);
 		}
 	}
@@ -775,7 +773,6 @@ static void _register_header(const char *header, const char *value, gpointer use
 	assert(value);
 	assert(m);
 
-	TRACE(TRACE_DEBUG,"%s: %s", header, value);
 	if (! (hname = g_tree_lookup(m->header_name,header))) {
 		g_tree_insert(m->header_name,(gpointer)header,(gpointer)header);
 		hname = header;
@@ -846,6 +843,9 @@ void dbmail_message_set_header(DbmailMessage *self, const char *header, const ch
 {
 	g_mime_object_set_header(GMIME_OBJECT(self->content), header, value);
 	if (self->headers) _map_headers(self);
+	if (self->raw_content) 
+		g_free(self->raw_content);
+	self->raw_content = dbmail_message_to_string(self);
 }
 
 const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *header)
@@ -930,7 +930,9 @@ gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
 {
 	char *s; size_t r;
-	s = dbmail_message_to_string(self);
+
+	s = self->raw_content;
+
 	r = strlen(s);
 
         if (crlf) {
@@ -944,8 +946,7 @@ size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
 			i++;
 		}
 	}
-	
-	g_free(s);
+
 	return r;
 }
 
@@ -1075,13 +1076,31 @@ DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int f
  *     - -1 on error
  *     -  1 on success
  */
+static int _update_message(DbmailMessage *self)
+{
+	u64_t size    = (u64_t)dbmail_message_get_size(self,FALSE);
+	u64_t rfcsize = (u64_t)dbmail_message_get_size(self,TRUE);
+
+	if (! db_update("UPDATE %sphysmessage SET messagesize = %llu, rfcsize = %llu WHERE id = %llu", 
+			DBPFX, size, rfcsize, self->physid))
+		return DM_EQUERY;
+
+	if (! db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %llu", 
+			DBPFX, MESSAGE_STATUS_NEW, self->id))
+		return DM_EQUERY;
+
+	if (! dm_quota_user_inc(db_get_useridnr(self->id), size))
+		return DM_EQUERY;
+
+	return DM_SUCCESS;
+}
+
+
 int dbmail_message_store(DbmailMessage *self)
 {
 	u64_t user_idnr;
 	char unique_id[UID_SIZE];
-	int res = 0;
-	u64_t size, rfcsize;
-	int i=1, retry=10, delay=200;
+	int res = 0, i = 1, retry = 10, delay = 200;
 	
 	if (! auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
 		TRACE(TRACE_ERR, "unable to find user_idnr for user [%s]. Make sure this system user is in the database!", DBMAIL_DELIVERY_USERNAME);
@@ -1097,16 +1116,13 @@ int dbmail_message_store(DbmailMessage *self)
 			continue;
 		}
 
-		if ((res = dm_message_store(self))) {
-			TRACE(TRACE_WARNING,"Failed to store mimeparts");
+		if ((res = _update_message(self) < 0)) {
 			usleep(delay*i);
 			continue;
 		}
 
-		size    = (u64_t)dbmail_message_get_size(self,FALSE);
-		rfcsize = (u64_t)dbmail_message_get_size(self,TRUE);
-
-		if (( res = db_update_message(self->id, unique_id, size, rfcsize)) < 0) {
+		if ((res = dm_message_store(self))) {
+			TRACE(TRACE_WARNING,"Failed to store mimeparts");
 			usleep(delay*i);
 			continue;
 		}
@@ -1115,7 +1131,7 @@ int dbmail_message_store(DbmailMessage *self)
 		if ((res = dbmail_message_cache_headers(self)) < 0) {
 			usleep(delay*i);
 			continue;
-			}
+		}
 		
 		/* ready */
 		break;
@@ -1697,6 +1713,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 
 	// attach the message to the DbmailMessage struct
 	self->content = (GMimeObject *)message;
+	self->raw_content = dbmail_message_to_string(self);
 
 	// cleanup
 	return self;
