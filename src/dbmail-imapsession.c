@@ -455,7 +455,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 	
 	} else if (MATCH(token,"body") || MATCH(token,"body.peek")) {
 		
-		/* setting msgparse_needed deferred to fetch_parse_partspec 
+		/* setting self->fi->msgparse_needed deferred to fetch_parse_partspec 
 		 * since we don't need to parse just to retrieve headers */
 		
 		dbmail_imap_session_bodyfetch_new(self);
@@ -560,14 +560,11 @@ void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean no
 	TRACE(TRACE_DEBUG,"[%p] [%s] [%s]", self, bodyfetch->hdrplist, s);
 
 	ts = g_string_new(s);
+	tmp = get_crlf_encoded(ts->str);
+	cnt = strlen(tmp);
 
 	if (bodyfetch->octetcnt > 0) {
-		char *p;
-
-		tmp = get_crlf_encoded(ts->str);
-		cnt = strlen(tmp);
-
-		p = tmp;
+		char *p = tmp;
 		if (bodyfetch->octetstart > 0 && bodyfetch->octetstart < (guint64)cnt) {
 			p += bodyfetch->octetstart;
 			cnt -= bodyfetch->octetstart;
@@ -581,8 +578,6 @@ void _send_headers(ImapSession *self, const body_fetch_t *bodyfetch, gboolean no
 		dbmail_imap_session_buff_printf(self, "<%llu> {%llu}\r\n%s\r\n", 
 				bodyfetch->octetstart, cnt+2, p);
 	} else {
-		tmp = get_crlf_encoded(ts->str);
-		cnt = strlen(tmp);
 		dbmail_imap_session_buff_printf(self, "{%llu}\r\n%s\r\n", cnt+2, tmp);
 	}
 
@@ -779,28 +774,29 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 
 	switch (bodyfetch->itemtype) {
 
-	case BFIT_TEXT:
-		dbmail_imap_session_buff_printf(self, "TEXT");
-	case BFIT_TEXT_SILENT:
-		_imap_send_part(self, part, bodyfetch, "TEXT");
-		break;
-	case BFIT_HEADER:
-		dbmail_imap_session_buff_printf(self, "HEADER");
-		_imap_send_part(self, part, bodyfetch, "HEADER");
-		break;
-	case BFIT_MIME:
-		dbmail_imap_session_buff_printf(self, "MIME");
-		_imap_send_part(self, part, bodyfetch, "MIME");
-		break;
-	case BFIT_HEADER_FIELDS_NOT:
-		condition=TRUE;
-	case BFIT_HEADER_FIELDS:
-		_fetch_headers(self, bodyfetch, condition);
-		break;
-	default:
-		dbmail_imap_session_buff_clear(self);
-		dbmail_imap_session_buff_printf(self, "\r\n* BYE internal server error\r\n");
-		return -1;
+		case BFIT_TEXT:
+			dbmail_imap_session_buff_printf(self, "TEXT");
+			// fall-through
+		case BFIT_TEXT_SILENT:
+			_imap_send_part(self, part, bodyfetch, "TEXT");
+			break;
+		case BFIT_HEADER:
+			dbmail_imap_session_buff_printf(self, "HEADER");
+			_imap_send_part(self, part, bodyfetch, "HEADER");
+			break;
+		case BFIT_MIME:
+			dbmail_imap_session_buff_printf(self, "MIME");
+			_imap_send_part(self, part, bodyfetch, "MIME");
+			break;
+		case BFIT_HEADER_FIELDS_NOT:
+			condition=TRUE;
+		case BFIT_HEADER_FIELDS:
+			_fetch_headers(self, bodyfetch, condition);
+			break;
+		default:
+			dbmail_imap_session_buff_clear(self);
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE internal server error\r\n");
+			return -1;
 
 	}
 	return 0;
@@ -928,6 +924,13 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		u64_t rfcsize = msginfo->rfcsize;
 		SEND_SPACE;
 
+		/* FIXME: this is an override to prevent mismatch between reported
+		 * rfc822.size and the actual number of octets in the message. 
+		 * There is a heisenbug in the message code that leads to these
+		 * mismatches during message storage that is only exposed when a 
+		 * message is retrieved again.
+		 * see bug #797
+		 */
 		if (self->fi->msgparse_needed && self->cache)
 			rfcsize = Cache_get_size(self->cache);
 		dbmail_imap_session_buff_printf(self, "RFC822.SIZE %llu", rfcsize);
@@ -937,13 +940,11 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		s = imap_flags_as_string(self->mailbox->mbstate, msginfo);
 		dbmail_imap_session_buff_printf(self,"FLAGS %s",s);
 		g_free(s);
-
 	}
 	if (self->fi->getUID) {
 		SEND_SPACE;
 		dbmail_imap_session_buff_printf(self, "UID %llu", msginfo->uid);
 	}
-
 	if (self->fi->getMIME_IMB) {
 		SEND_SPACE;
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->message)->content), 1))==NULL) {
