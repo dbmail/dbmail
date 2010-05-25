@@ -30,10 +30,9 @@ TYPE = 'network'
 
 
 import unittest, imaplib, re, commands
-import sys, traceback, getopt, string
+import traceback, string
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
-import email
 import time
 
 unimplementedError = 'Dbmail testcase unimplemented'

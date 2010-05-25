@@ -925,9 +925,12 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		g_free(s);
 	}
 	if (self->fi->getSize) {
+		u64_t rfcsize = msginfo->rfcsize;
 		SEND_SPACE;
-		dbmail_imap_session_buff_printf(self, "RFC822.SIZE %llu", 
-				self->cache?Cache_get_size(self->cache):msginfo->rfcsize);
+
+		if (self->fi->msgparse_needed && self->cache)
+			rfcsize = Cache_get_size(self->cache);
+		dbmail_imap_session_buff_printf(self, "RFC822.SIZE %llu", rfcsize);
 	}
 	if (self->fi->getFlags) {
 		SEND_SPACE;
