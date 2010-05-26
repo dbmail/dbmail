@@ -2264,6 +2264,39 @@ char * dm_get_hash_for_string(const char *buf)
 
 	return digest;
 }
+
+gchar *get_crlf_encoded_opt(const char *in, int dots)
+{
+	char prev = 0, curr = 0, *t, *out;
+	const char *p = in;
+	int i=0, nl = 0;
+	assert(in);
+
+	while (p[i]) {
+		curr = p[i];
+		if ISLF(curr) nl++;
+		prev = curr;
+		i++;
+	}
+
+	out = g_new0(char,i+(2*nl)+1);
+	t = out;
+	p = in;
+	i = 0;
+	while (p[i]) {
+		curr = p[i];
+		if (ISLF(curr) && (! ISCR(prev)))
+			*t++ = '\r';
+		if (dots && ISDOT(curr) && ISLF(prev))
+			*t++ = '.';
+		*t++=curr;
+		prev = curr;
+		i++;
+	}
+	return out;
+}
+
+
 void strip_crlf(char *buffer)
 {
 	if (! (buffer && buffer[0])) return;

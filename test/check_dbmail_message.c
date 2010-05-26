@@ -775,60 +775,6 @@ START_TEST(test_encoding)
 }
 END_TEST
 
-START_TEST(test_get_crlf_encoded_opt1)
-{
-	char *in[] = {
-		"a\n",
-		"a\nb\nc\n",
-		"a\nb\r\nc\n",
-		"a\nb\rc\n",
-		"a\nb\r\r\nc\n",
-		NULL
-	};
-	char *out[] = {
-		"a\r\n",
-		"a\r\nb\r\nc\r\n",
-		"a\r\nb\r\nc\r\n",
-		"a\r\nb\rc\r\n",
-		"a\r\nb\r\r\nc\r\n",
-		NULL
-	};
-	int i=0;
-	while (in[i]) {
-		char *r = get_crlf_encoded_opt(in[i],0);
-		fail_unless(MATCH(r,out[i]), "get_crlf_encoded failed [%s]!=[%s]", r, out[i]);
-		g_free(r);
-		i++;
-	}
-}
-END_TEST
-
-START_TEST(test_get_crlf_encoded_opt2)
-{
-	char *in[] = {
-		"a\nb\nc.\n",
-		"a\n.b\r\nc.\n",
-		"a\nb\r.c.\n",
-		"a\nb\r\r\n.\nc\n",
-		NULL
-	};
-	char *out[] = {
-		"a\r\nb\r\nc.\r\n",
-		"a\r\n..b\r\nc.\r\n",
-		"a\r\nb\r.c.\r\n",
-		"a\r\nb\r\r\n..\r\nc\r\n",
-		NULL
-	};
-	int i=0;
-	while (in[i]) {
-		char *r = get_crlf_encoded_opt(in[i],1);
-		fail_unless(MATCH(r,out[i]), "get_crlf_encoded failed [%s]!=[%s]", r, out[i]);
-		g_free(r);
-		i++;
-	}
-}
-END_TEST
-
 START_TEST(test_dbmail_message_get_size)
 {
 	DbmailMessage *m;
@@ -890,8 +836,6 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_get_header_addresses);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_repeated);
 	tcase_add_test(tc_message, test_dbmail_message_construct);
-	tcase_add_test(tc_message, test_get_crlf_encoded_opt1);
-	tcase_add_test(tc_message, test_get_crlf_encoded_opt2);
 	tcase_add_test(tc_message, test_dbmail_message_get_size);
 	tcase_add_test(tc_message, test_encoding);
 	return s;

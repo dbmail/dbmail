@@ -88,7 +88,7 @@ T cidr_new(const char *str)
 	if (! inet_aton(addr,&self->socket->sin_addr)) {
 		free(haddr);
 		free(hport);
-		cidr_free(self);
+		cidr_free(&self);
 		return NULL;
 	}
 

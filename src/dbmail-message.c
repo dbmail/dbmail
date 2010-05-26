@@ -109,37 +109,6 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	return s;
 }
 
-gchar *get_crlf_encoded_opt(const char *in, int dots)
-{
-	char prev = 0, curr = 0, *t, *out;
-	const char *p = in;
-	int i=0, nl = 0;
-	assert(in);
-
-	while (p[i]) {
-		curr = p[i];
-		if ISLF(curr) nl++;
-		prev = curr;
-		i++;
-	}
-
-	out = g_new0(char,i+(2*nl)+1);
-	t = out;
-	p = in;
-	i = 0;
-	while (p[i]) {
-		curr = p[i];
-		if (ISLF(curr) && (! ISCR(prev)))
-			*t++ = '\r';
-		if (dots && ISDOT(curr) && ISLF(prev))
-			*t++ = '.';
-		*t++=curr;
-		prev = curr;
-		i++;
-	}
-	return out;
-}
-
 static u64_t blob_exists(const char *buf, const char *hash)
 {
 	volatile u64_t id = 0;
@@ -201,8 +170,7 @@ static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 	C c; volatile gboolean t = FALSE;
 	c = db_con_get();
 	TRY
-		t = db_exec(c, 
-				"INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
+		t = db_exec(c, "INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
 				"VALUES (%llu,%d,%d,%d,%d,%llu)", DBPFX,
 				dbmail_message_get_physid(m), is_header, m->part_key, m->part_depth, m->part_order, id);	
 	CATCH(SQLException)
@@ -252,7 +220,9 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 		m->part_order=0;
 	}
 
-	dprint("<blob is_header=\"%d\" part_depth=\"%d\" part_key=\"%d\" part_order=\"%d\">\n%s\n</blob>\n", is_header, m->part_depth, m->part_key, m->part_order, buf);
+	dprint("<blob is_header=\"%d\" part_depth=\"%d\" part_key=\"%d\" part_order=\"%d\">\n%s\n</blob>\n", 
+			is_header, m->part_depth, m->part_key, m->part_order, buf);
+
 	if (! (id = blob_store(buf)))
 		return DM_EQUERY;
 
@@ -1101,6 +1071,7 @@ int dbmail_message_store(DbmailMessage *self)
 	u64_t user_idnr;
 	char unique_id[UID_SIZE];
 	int res = 0, i = 1, retry = 10, delay = 200;
+	int step = 0;
 	
 	if (! auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
 		TRACE(TRACE_ERR, "unable to find user_idnr for user [%s]. Make sure this system user is in the database!", DBMAIL_DELIVERY_USERNAME);
@@ -1110,27 +1081,40 @@ int dbmail_message_store(DbmailMessage *self)
 	create_unique_id(unique_id, user_idnr);
 
 	while (i++ < retry) {
-		/* create a message record */
-		if(_message_insert(self, user_idnr, DBMAIL_TEMPMBOX, unique_id) < 0) {
-			usleep(delay*i);
-			continue;
+		if (step == 0) {
+			/* create a message record */
+			if(_message_insert(self, user_idnr, DBMAIL_TEMPMBOX, unique_id) < 0) {
+				usleep(delay*i);
+				continue;
+			}
+			step++;
+		}
+		if (step == 1) {
+			/* update message meta-data and owner quota */
+			if ((res = _update_message(self) < 0)) {
+				usleep(delay*i);
+				continue;
+			}
+			step++;
 		}
 
-		if ((res = _update_message(self) < 0)) {
-			usleep(delay*i);
-			continue;
+		if (step == 2) {
+			/* store the message mime-parts */
+			if ((res = dm_message_store(self))) {
+				TRACE(TRACE_WARNING,"Failed to store mimeparts");
+				usleep(delay*i);
+				continue;
+			}
+			step++;
 		}
 
-		if ((res = dm_message_store(self))) {
-			TRACE(TRACE_WARNING,"Failed to store mimeparts");
-			usleep(delay*i);
-			continue;
-		}
-
-		/* store message headers */
-		if ((res = dbmail_message_cache_headers(self)) < 0) {
-			usleep(delay*i);
-			continue;
+		if (step == 3) {
+			/* store message headers */
+			if ((res = dbmail_message_cache_headers(self)) < 0) {
+				usleep(delay*i);
+				continue;
+			}
+			step++;
 		}
 		
 		/* ready */
