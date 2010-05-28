@@ -15,7 +15,7 @@ USERNAME = "testuser1"
 # number of messages to send per session
 RECONNECT = 5
 
-import smtplib, thread, time, sys, email, mailbox, os, string
+import smtplib, thread, time, sys, mailbox, string
 from optparse import OptionParser
 
 DEBUG=False

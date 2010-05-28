@@ -435,17 +435,20 @@ static void server_create_sockets(serverConfig_t * conf)
 	conf->listenSockets = g_new0(int, MAXSOCKETS);
 	conf->ssl_listenSockets = g_new0(int, MAXSOCKETS);
 
-	if (strlen(conf->socket) > 0) {
+	if (conf->socket && strlen(conf->socket))
 		conf->listenSockets[conf->socketcount++] = create_unix_socket(conf);
-	} 
+
 	tls_load_certs(conf);
+
 	if (conf->ssl)
 		tls_load_ciphers(conf);
-	if (strlen(conf->port)) {
+
+	if (conf->port && strlen(conf->port)) {
 		for (i = 0; i < conf->ipcount; i++) {
 			create_inet_socket(conf, i, FALSE);
 		}
 	}
+
 	if (conf->ssl && strlen(conf->ssl_port)) {
 		for (i = 0; i < conf->ipcount; i++) {
 			create_inet_socket(conf, i, TRUE);
