@@ -2153,7 +2153,7 @@ char * imap_flags_as_string(MailboxState_T S, MessageInfo *msginfo)
 	return s;
 }
 
-long long unsigned dm_strtoull(const char *nptr, char **endptr, int base)
+u64_t dm_strtoull(const char *nptr, char **endptr, int base)
 {
 	errno = 0;
 	long long int r = strtoll(nptr, endptr, base);

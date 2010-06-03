@@ -226,7 +226,7 @@ int tims_tokenizer(ClientSession_t *session, char *buffer)
 			g_string_printf(session->rbuff,"%s","");
 			session->parser_state = TRUE;
 		}
-		TRACE(TRACE_DEBUG, "state [%d], size [%u]", session->parser_state, session->rbuff_size);
+		TRACE(TRACE_DEBUG, "state [%d], size [%ld]", session->parser_state, session->rbuff_size);
 		return session->parser_state;
 	}
 
@@ -385,7 +385,7 @@ int tims(ClientSession_t *session)
 		script = (char *)session->args->data;
 
 		scriptlen = strlen(script);
-		TRACE(TRACE_INFO, "Client sending script of length [%u]", scriptlen);
+		TRACE(TRACE_INFO, "Client sending script of length [%ld]", scriptlen);
 		if (scriptlen >= UINT_MAX)
 			return tims_error(session, "NO \"Invalid script length.\"\r\n");
 
