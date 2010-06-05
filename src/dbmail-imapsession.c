@@ -1338,13 +1338,12 @@ static gboolean notify_expunge(ImapSession *self, u64_t *uid)
 
 static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 {
-	u64_t *uid, *msn, exists;
+	u64_t *uid, *msn;
 	MailboxState_T M;
 	GList *ids;
 	if (! N) return;
 
 	M = self->mailbox->mbstate;
-	exists = MailboxState_getExists(M);
 
 	ids  = g_tree_keys(MailboxState_getIds(M));
 	ids = g_list_reverse(ids);
@@ -1364,7 +1363,6 @@ static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 		uid = (u64_t *)ids->data;
 		if (! g_tree_lookup(MailboxState_getIds(N), uid)) {
 			notify_expunge(self, uid);
-			exists--;
 		}
 
 		if (! g_list_next(ids)) break;
@@ -1372,9 +1370,6 @@ static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 	}
 	ids = g_list_first(ids);
 	g_list_free(ids);
-
-	// override
-	MailboxState_setExists(N, exists);
 }
 
 static void mailbox_notify_update(ImapSession *self, MailboxState_T N)

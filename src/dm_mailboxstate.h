@@ -44,7 +44,6 @@ extern void         MailboxState_setId(T, u64_t);
 extern u64_t        MailboxState_getId(T);
 extern u64_t        MailboxState_getSeq(T);
 extern u64_t        MailboxState_getUidnext(T);
-extern void         MailboxState_setExists(T, u64_t);
 extern unsigned	    MailboxState_getExists(T);
 extern void         MailboxState_setRecent(T, u64_t);
 extern unsigned	    MailboxState_getRecent(T);
@@ -66,6 +65,7 @@ extern void         MailboxState_setIsUsers(T, gboolean);
 extern gboolean     MailboxState_isUsers(T);
 extern void         MailboxState_setIsPublic(T, gboolean);
 extern gboolean     MailboxState_isPublic(T);
+
 extern gboolean     MailboxState_hasKeyword(T, const char *);
 extern void         MailboxState_addKeyword(T, const char *);
 	

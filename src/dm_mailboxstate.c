@@ -259,6 +259,8 @@ int MailboxState_removeUid(T M, u64_t uid)
 {
 	if (! g_tree_remove(M->msginfo, &uid)) {
 		TRACE(TRACE_WARNING,"trying to remove unknown UID [%llu]", uid);
+	} else {
+		M->exists--;
 	}
 
 	MailboxState_remap(M);
@@ -288,11 +290,6 @@ u64_t MailboxState_getId(T M)
 u64_t MailboxState_getSeq(T M)
 {
 	return M->seq;
-}
-
-void MailboxState_setExists(T M, u64_t exists)
-{
-	M->exists = exists;
 }
 
 unsigned MailboxState_getExists(T M)
