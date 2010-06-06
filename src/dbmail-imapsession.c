@@ -1492,19 +1492,27 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	}
 
 	// never decrease without first sending expunge !!
-	if (N && (MailboxState_getExists(N) > MailboxState_getExists(M))) 
-		showexists = TRUE;
-	if (N && showexists) dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(N));
-	if (N && showrecent) dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(N));
-	if (N) mailbox_notify_expunge(self, N);
-	if (N && showflags) {
-		char *flags = MailboxState_flags(N);
-		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
-		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)] Flags allowed.\r\n", flags);
-		g_free(flags);
-	}
-	if (N) mailbox_notify_update(self, N);
+	if (N) {
+		if (MailboxState_getExists(N) > MailboxState_getExists(M))
+			showexists = TRUE;
 
+		if (showexists) 
+			dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(N));
+
+		if (showrecent) 
+			dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(N));
+
+		mailbox_notify_expunge(self, N);
+
+		if (showflags) {
+			char *flags = MailboxState_flags(N);
+			dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+			dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)] Flags allowed.\r\n", flags);
+			g_free(flags);
+		}
+
+		mailbox_notify_update(self, N);
+	}
 
 	return 0;
 }
