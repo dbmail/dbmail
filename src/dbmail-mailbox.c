@@ -789,19 +789,21 @@ static int _handle_search_args(DbmailMailbox *self, char **search_keys, u64_t *i
 		value->type = IST_IDATE;
 		(*idx)++;
 		s = date_imap2sql(search_keys[*idx]);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date < '%s'", s);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date < '%s'", s);
 		g_free(s);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "on") ) {
-		char *s;
+		char *s, *d;
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
 		s = date_imap2sql(search_keys[*idx]);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date %s '%s%%'", db_get_sql(SQL_SENSITIVE_LIKE), s);
+		d = g_strdup_printf(db_get_sql(SQL_TO_DATE), "p.internal_date");
+		g_snprintf(value->search, MAX_SEARCH_LEN, "%s = '%s'", d, s);
 		g_free(s);
+		g_free(d);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "since") ) {
@@ -811,7 +813,7 @@ static int _handle_search_args(DbmailMailbox *self, char **search_keys, u64_t *i
 		value->type = IST_IDATE;
 		(*idx)++;
 		s = date_imap2sql(search_keys[*idx]);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date > '%s'", s);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > '%s'", s);
 		g_free(s);
 		(*idx)++;
 	}
@@ -1193,7 +1195,8 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"HAVING v.headervalue %s ? OR k.data %s ? "
 					"ORDER BY m.message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
-					db_get_sql(SQL_INSENSITIVE_LIKE), db_get_sql(SQL_INSENSITIVE_LIKE));
+					db_get_sql(SQL_INSENSITIVE_LIKE), 
+					db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
@@ -1209,7 +1212,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_IDATE:
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 					"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
-					"WHERE mailbox_idnr = ? AND status IN (?,?) AND p.%s "
+					"WHERE mailbox_idnr = ? AND status IN (?,?) AND %s "
 					"ORDER BY message_idnr", 
 					DBPFX, DBPFX, s->search);
 
