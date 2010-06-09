@@ -12,7 +12,7 @@
 /* Prototypes must match with those in sort.h
  * and in the sorting drivers. */
 typedef struct {
-	sort_result_t *(* process)(u64_t user_idnr, DbmailMessage *message);
+	sort_result_t *(* process)(u64_t user_idnr, DbmailMessage *message, const char *mailbox);
 	sort_result_t *(* validate)(u64_t user_idnr, char *scriptname);
 	void (* free_result)(sort_result_t *result);
 	const char *(* listextensions)(void);
