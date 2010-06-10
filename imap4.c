@@ -304,7 +304,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 		result = (*imap_handler_functions[i]) (session);
 
 		if (result == -1) {
-			TRACE(TRACE_ERROR,"command return with error [%s]", IMAP_COMMANDS[i]);
+			TRACE(TRACE_INFO, "command return with error [%s]", IMAP_COMMANDS[i]);
 			done = 1;	/* fatal error occurred, kick this user */
 		}
 
