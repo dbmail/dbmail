@@ -831,7 +831,7 @@ void _ic_list_enter(dm_thread_data *D)
 	int list_is_lsub = 0;
 	GList *plist = NULL, *children = NULL;
 	GTree *shown = NULL;
-	char *pstring;
+	char *pstring = NULL;
 	MailboxState_T M = NULL;
 	size_t slen;
 	unsigned i;
@@ -877,16 +877,14 @@ void _ic_list_enter(dm_thread_data *D)
 		memset(mailbox, 0, IMAP_MAX_MAILBOX_NAMELEN);
 
 		u64_t mailbox_id = *(u64_t *)children->data;
+		if ( (D->status = db_getmailboxname(mailbox_id, self->userid, mailbox)) != DM_SUCCESS) {
+			break;
+		}
+
 		// avoid fully loading mailbox here
 		M = MailboxState_new(0);
 		MailboxState_setId(M, mailbox_id);
 		MailboxState_preload(M);
-
-		if ( (D->status = db_getmailboxname(mailbox_id, self->userid, mailbox)) != DM_SUCCESS) {
-			g_free(mailbox);
-			break;
-		}
-
 		MailboxState_setName(M, mailbox);
 
 		/* Enforce match of mailbox to pattern. */
@@ -950,9 +948,13 @@ void _ic_list_enter(dm_thread_data *D)
 			g_free(pstring);
 		}
 
+		MailboxState_free(&M);
+
 		if (! g_list_next(children)) break;
 		children = g_list_next(children);
 	}
+
+	g_free(mailbox);
 
 	if (shown) g_tree_destroy(shown);
 	if (children) g_list_destroy(children);

@@ -9,7 +9,7 @@ AM_CONFIG_HEADER(config.h:config.in)
 DM_MSG_CONFIGURE_START
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
-AC_DEFINE(_GNU_SOURCE,'','Defined GNU SOURCE')
+AC_DEFINE(_GNU_SOURCE,'TRUE','Defined GNU SOURCE')
 
 # ---------------------------------------------
 # shared or static
