@@ -238,7 +238,7 @@ int dbmail_mailbox_dump(DbmailMailbox *self, FILE *file)
 	ostream = g_mime_stream_file_new(file);
 	g_mime_stream_file_set_owner ((GMimeStreamFile *)ostream, FALSE);
 	
-	count =+ _mimeparts_dump(self, ostream);
+	count += _mimeparts_dump(self, ostream);
 
 	g_object_unref(ostream);
 	
