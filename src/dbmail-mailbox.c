@@ -789,19 +789,21 @@ static int _handle_search_args(DbmailMailbox *self, char **search_keys, u64_t *i
 		value->type = IST_IDATE;
 		(*idx)++;
 		s = date_imap2sql(search_keys[*idx]);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date < '%s'", s);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date < '%s'", s);
 		g_free(s);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "on") ) {
-		char *s;
+		char *s, *d;
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
 		s = date_imap2sql(search_keys[*idx]);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date %s '%s%%'", db_get_sql(SQL_SENSITIVE_LIKE), s);
+		d = g_strdup_printf(db_get_sql(SQL_TO_DATE), "p.internal_date");
+		g_snprintf(value->search, MAX_SEARCH_LEN, "%s = '%s'", d, s);
 		g_free(s);
+		g_free(d);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "since") ) {
@@ -811,7 +813,7 @@ static int _handle_search_args(DbmailMailbox *self, char **search_keys, u64_t *i
 		value->type = IST_IDATE;
 		(*idx)++;
 		s = date_imap2sql(search_keys[*idx]);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date > '%s'", s);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > '%s'", s);
 		g_free(s);
 		(*idx)++;
 	}
@@ -1193,7 +1195,8 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"HAVING v.headervalue %s ? OR k.data %s ? "
 					"ORDER BY m.message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
-					db_get_sql(SQL_INSENSITIVE_LIKE), db_get_sql(SQL_INSENSITIVE_LIKE));
+					db_get_sql(SQL_INSENSITIVE_LIKE), 
+					db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
@@ -1209,7 +1212,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_IDATE:
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 					"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
-					"WHERE mailbox_idnr = ? AND status IN (?,?) AND p.%s "
+					"WHERE mailbox_idnr = ? AND status IN (?,?) AND %s "
 					"ORDER BY message_idnr", 
 					DBPFX, DBPFX, s->search);
 
@@ -1312,7 +1315,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	GString *t;
 	GTree *uids;
 	char *rest;
-	u64_t i, l, r, lo = 0, hi = 0;
+	u64_t i, l, r, lo = 0, hi = 0, maxmsn = 0;
 	u64_t *k, *v, *w = NULL;
 	GTree *a, *b, *c;
 	gboolean error = FALSE;
@@ -1322,22 +1325,14 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	if (! self->mbstate)
 		return b;
 
-	uids = MailboxState_getIds(self->mbstate);
 
-	assert (self && uids && set);
+	assert (self && self->mbstate && set);
 
-	if (g_tree_nnodes(uids) == 0) {
-/*
-		TRACE(TRACE_DEBUG, "empty mailbox, return fake set");
-		k = g_new0(u64_t,1);
-		v = g_new0(u64_t,1);
-		*k = 1;
-		*v = 1;
-		g_tree_insert(b,k,v);
-*/
+	if (MailboxState_getExists(self->mbstate) == 0) // empty mailbox
 		return b;
-	}
 
+	maxmsn = MailboxState_getExists(self->mbstate);
+	uids = MailboxState_getIds(self->mbstate);
 	ids = g_tree_keys(uids);
 	assert(ids);
 	ids = g_list_last(ids);
@@ -1348,11 +1343,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 
 	if (! uid) {
 		lo = 1;
-		if (self->mbstate)
-			hi = MailboxState_getExists(self->mbstate);
-		else
-			hi = (u64_t)g_tree_nnodes(uids);
-
+		hi = maxmsn;
 		if (hi != (u64_t)g_tree_nnodes(uids))
 			TRACE(TRACE_WARNING, "[%p] mailbox info out of sync: exists [%llu] ids [%u]", 
 				self->mbstate, hi, g_tree_nnodes(uids));
@@ -1427,10 +1418,17 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 			
 			// we always want to return a tree with 
 			// uids as keys and msns as values 
-			if (uid)
-				g_tree_insert(a,k,v);
-			else
-				g_tree_insert(a,v,k);
+			if (uid) {
+				if (*k >= lo && *k <= hi)
+					g_tree_insert(a,k,v);
+				else
+					TRACE(TRACE_DEBUG,"lo: %llu, uid: %llu, msn: %llu, hi: %llu", lo, *k, *v, hi);
+			} else {
+				if (*k >= 1 && *k <= maxmsn)
+					g_tree_insert(a,v,k);
+				else
+					TRACE(TRACE_DEBUG,"lo: %llu, uid: %llu, msn: %llu, hi: %llu", lo, *v, *k, hi);
+			}
 		}
 		
 		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {

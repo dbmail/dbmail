@@ -1315,7 +1315,7 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, u64_t *uid)
 
 static gboolean notify_expunge(ImapSession *self, u64_t *uid)
 {
-	u64_t * msn;
+	u64_t *msn = NULL, m = 0;
 
 	if (! (msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), uid))) {
 		TRACE(TRACE_DEBUG,"[%p] can't find uid [%llu]", self, *uid);
@@ -1328,8 +1328,11 @@ static gboolean notify_expunge(ImapSession *self, u64_t *uid)
 		case IMAP_COMM_SEARCH:
 			break;
 		default:
-			dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", *msn);
-			MailboxState_removeUid(self->mailbox->mbstate, *uid);
+			m = *msn;
+			if (MailboxState_removeUid(self->mailbox->mbstate, *uid) == DM_SUCCESS)
+				dbmail_imap_session_buff_printf(self, "* %llu EXPUNGE\r\n", m);
+			else
+				return TRUE;
 		break;
 	}
 
