@@ -3,7 +3,7 @@ Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
 Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev | libgmime2.1-dev, libldap2-dev, libsqlite3-dev, libpq-dev, libmysqlclient15-dev | libmysqlclient14-dev, pkg-config, libtool, asciidoc, xmlto, chrpath, po-debconf
-Standards-Version: 3.8.3
+Standards-Version: 3.8.4
 
 Package: dbmail
 Architecture: any

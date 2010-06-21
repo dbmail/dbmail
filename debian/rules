@@ -66,10 +66,8 @@ stamps/build: stamps patch configure $(PACKAGES)
 stamps:
 	mkdir stamps
 	
-configure: stamps/configure
-stamps/configure: 
+configure:
 	autoreconf -i
-	touch $@
 
 dbmail: stamps/dbmail
 stamps/dbmail:
@@ -159,5 +157,5 @@ binary-%: build install
 	
 binary: binary-indep binary-arch
 
-.PHONY: build clean clean1 mrproper patch binary binary-common binary-indep binary-arch unpatch configure install
+.PHONY: build clean clean1 mrproper patch binary binary-common binary-indep binary-arch unpatch install
 
