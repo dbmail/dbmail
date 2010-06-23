@@ -958,7 +958,7 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 		   flag be set! */
 		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result == -1) {
-			dbmail_imap_session_buff_append(self, "\r\n *BYE internal dbase error\r\n");
+			dbmail_imap_session_buff_append(self, "\r\n* BYE internal dbase error\r\n");
 			return -1;
 		}
 		
@@ -971,7 +971,6 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 		}
 
 		self->fi->getFlags = 1;
-		dbmail_imap_session_buff_append(self, " ");
 	}
 
 	dbmail_imap_session_buff_append(self, ")\r\n");
