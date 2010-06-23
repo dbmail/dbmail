@@ -1031,7 +1031,7 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 		result = acl_has_right(self->mailbox->mbstate, self->userid, ACL_RIGHT_SEEN);
 		if (result == -1) {
 			dbmail_imap_session_buff_clear(self);
-			dbmail_imap_session_buff_printf(self, "\r\n *BYE internal dbase error\r\n");
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 			return -1;
 		}
 		
