@@ -9,8 +9,8 @@ dbmail-users - manages the DBMail user database.
 SYNOPSIS
 --------
 dbmail-users { -a username | -c username } [ -g clientid ] [ -m maxmail]
-[ -p passwordtype ] [ -P shadowfile ] [ -w password ] [ -W passwordfile]
-[ -u username ] [ -s aliases ] [ -S aliases ]
+  [ -p passwordtype ] [ -P shadowfile ] [ -w password ] [ -W passwordfile]
+  [ -u username ] [ -s aliases ] [ -S aliases ]
 
 dbmail-users { -d username | -e username }
 
