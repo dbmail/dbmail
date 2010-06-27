@@ -104,7 +104,20 @@ int _ic_noop(struct ImapSession *self)
 	return 0;
 }
 
+int _ic_id(struct ImapSession *self)
+{
+	struct utsname buf;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	if (!check_state_and_args(self, "ID", 0, 0, -1)) return 1;	/* error, return */
 
+	memset(&buf, 0, sizeof(buf));
+	uname(&buf);
+	dbmail_imap_session_printf(self, "* ID (\"name\" \"dbmail\" \"version\" \"%s\""
+		" \"os\" \"%s\" \"os-version\" \"%s\")\r\n", DBMAIL_VERSION, &buf.sysname, &buf.release);
+
+	dbmail_imap_session_printf(self, "%s OK ID completed\r\n", self->tag);
+	return 0;
+}
 /*
  * _ic_logout()
  *

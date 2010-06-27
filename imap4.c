@@ -39,7 +39,7 @@ const char *IMAP_COMMANDS[] = {
 	"check", "close", "expunge", "search", "fetch", "store", "copy",
 	"uid", "sort", "getquotaroot", "getquota",
 	"setacl", "deleteacl", "getacl", "listrights", "myrights",
-	"namespace","thread","unselect","idle",
+	"namespace","thread","unselect","idle","id",
 	"***NOMORE***"
 };
 
@@ -57,7 +57,7 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 	_ic_getquotaroot, _ic_getquota,
 	_ic_setacl, _ic_deleteacl, _ic_getacl, _ic_listrights,
 	_ic_myrights,
-	_ic_namespace, _ic_thread, _ic_unselect, _ic_idle,
+	_ic_namespace, _ic_thread, _ic_unselect, _ic_idle, _ic_id,
 	NULL
 };
 

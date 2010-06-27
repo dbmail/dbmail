@@ -69,6 +69,7 @@
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/utsname.h>
 #include <time.h>
 #include <termios.h>
 #include <unistd.h>

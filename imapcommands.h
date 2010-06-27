@@ -33,6 +33,7 @@
 /* any-state commands */
 int _ic_capability(struct ImapSession *self);
 int _ic_noop(struct ImapSession *self);
+int _ic_id(struct ImapSession *self);
 int _ic_logout(struct ImapSession *self);
 
 /* non-auth state commands */
