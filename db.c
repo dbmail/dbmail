@@ -1271,10 +1271,8 @@ int db_insert_message_block_physmessage(const char *block,
 }
 
 int db_insert_message_block(const char *block, u64_t block_size,
-			    u64_t message_idnr, u64_t * messageblk_idnr, unsigned is_header)
+			    u64_t message_idnr, u64_t *physmessage_id, u64_t * messageblk_idnr, unsigned is_header)
 {
-	u64_t physmessage_id;
-
 	assert(messageblk_idnr != NULL);
 	*messageblk_idnr = 0;
 	if (block == NULL) {
@@ -1282,13 +1280,13 @@ int db_insert_message_block(const char *block, u64_t block_size,
 		return DM_EQUERY;
 	}
 
-	if (db_get_physmessage_id(message_idnr, &physmessage_id) == DM_EQUERY) {
+	if ((! *physmessage_id) && (db_get_physmessage_id(message_idnr, physmessage_id) == DM_EQUERY)) {
 		TRACE(TRACE_ERROR, "error getting physmessage_id");
 		return DM_EQUERY;
 	}
 
-	if (db_insert_message_block_physmessage
-	    (block, block_size, physmessage_id, messageblk_idnr, is_header) < 0) {
+	assert(*physmessage_id > 0);
+	if (db_insert_message_block_physmessage(block, block_size, *physmessage_id, messageblk_idnr, is_header) < 0) {
 		TRACE(TRACE_ERROR, "error inserting messageblks for physmessage [%llu]",
 		      physmessage_id);
 		return DM_EQUERY;

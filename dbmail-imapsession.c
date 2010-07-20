@@ -1540,18 +1540,18 @@ int dbmail_imap_session_discard_to_eol(struct ImapSession *self)
 	clientinfo_t *ci = self->ci;
 
 	/* loop until we get a newline terminated chunk */
+	alarm(self->timeout);
 	while (!done)  {
 		memset(buffer, 0, MAX_LINESIZE);
-		alarm(self->timeout);
 		if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
-			alarm(0);
 			TRACE(TRACE_ERROR, "error reading from client");
-			return -1;
+			len = -1;
+			break;
 		}
 		len = strlen(buffer);
 		if (len <= 0) {
-			alarm(0);
-			return -1;
+			len = -1;
+			break;
 		}
 
 		/* Do we need to check for \r\n ? */
@@ -2449,11 +2449,14 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 			
 				ci_write(ci->tx, "+ OK gimme that string\r\n");
 				
+				/* dont wait forever */
+				alarm(self->timeout);
 				for (cnt = 0, dataidx = 0; cnt < quotedSize; cnt++) {
-					/* dont wait forever, but reset after every fgetc */
-					alarm(self->timeout);
-					if (! (gotc = fgetc(ci->rx)))
+					if (! (gotc = fgetc(ci->rx))) {
+						int serr = errno;
+						TRACE(TRACE_ERROR, "fgetc: [%s]", strerror(serr));
 						break;
+					}
 					
 					if (gotc == '\r')	/* only store if it is not \r */
 						continue;
@@ -2462,6 +2465,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				}
 				
 				alarm(0);
+				TRACE(TRACE_DEBUG, "args[%d]: [%d/%d]", nargs, cnt, quotedSize);
 
 				self->args[nargs][dataidx] = '\0';	/* terminate string */
 				nargs++;
@@ -2482,7 +2486,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					TRACE(TRACE_ERROR, "client socket has set error indicator in fgetc");
 					return NULL;
 				}
-				/* now read the rest of this line */
+				// now read the rest of this line 
 				result = dbmail_imap_session_readln(self, s);
 		
 				if (result < 0){
@@ -2494,9 +2498,9 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					return NULL;
 				}
 
-				/* remove trailing \r\n */
+				// remove trailing \r\n 
 				tmp = &s[strlen(s)];
-				tmp--;	/* go before trailing \0; watch this with empty strings! */
+				tmp--;	// go before trailing \0; watch this with empty strings! 
 				while (tmp >= s && (*tmp == '\r' || *tmp == '\n')) {
 					*tmp = '\0';
 					tmp--;
@@ -2504,7 +2508,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 
 				TRACE(TRACE_DEBUG, "got extra line [%s]", s);
 
-				/* start over! */
+				// start over! 
 				i = 0;
 				continue;
 			}

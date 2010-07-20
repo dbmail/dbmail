@@ -793,7 +793,7 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 int dbmail_message_store(struct DbmailMessage *self)
 {
 	u64_t user_idnr;
-	u64_t messageblk_idnr;
+	u64_t messageblk_idnr, physmessage_id = 0;
 	char unique_id[UID_SIZE];
 	char *hdrs, *body;
 	u64_t hdrs_size, body_size, rfcsize;
@@ -829,7 +829,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 
 	hdrs = dbmail_message_hdrs_to_string(self);
 	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
-	if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0) {
+	if(db_insert_message_block(hdrs, hdrs_size, self->id, &physmessage_id, &messageblk_idnr,1) < 0) {
 		g_free(hdrs);
 		return -1;
 	}
@@ -838,7 +838,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 	/* store body in several blocks (if needed */
 	body = dbmail_message_body_to_string(self);
 	body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
-	if (store_message_in_blocks(body, body_size, self->id) < 0) {
+	if (store_message_in_blocks(body, body_size, self->id, physmessage_id) < 0) {
 		g_free(body);
 		return -1;
 	}

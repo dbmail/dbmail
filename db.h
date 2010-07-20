@@ -596,7 +596,7 @@ int db_insert_message_block_physmessage(const char *block,
 *        - 0 otherwise
 */
 int db_insert_message_block(const char *block, u64_t block_size,
-			    u64_t message_idnr, 
+			    u64_t message_idnr, /*@out@*/ u64_t *physmessage_id,
 			    /*@out@*/ u64_t * messageblock_idnr,
 			    unsigned is_header);
 /**

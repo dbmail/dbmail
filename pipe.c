@@ -502,7 +502,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 
 
 int store_message_in_blocks(const char *message, u64_t message_size,
-			    u64_t msgidnr) 
+			    u64_t msgidnr, u64_t physmsg_id) 
 {
 	u64_t tmp_messageblk_idnr;
 	u64_t rest_size = message_size;
@@ -516,9 +516,9 @@ int store_message_in_blocks(const char *message, u64_t message_size,
 			      rest_size : READ_BLOCK_SIZE);
 		rest_size = (rest_size < READ_BLOCK_SIZE ?
 			     0 : rest_size - READ_BLOCK_SIZE);
-		TRACE(TRACE_DEBUG, "inserting message [%s]", &message[offset]);
+		TRACE(TRACE_DEBUG, "inserting message: size [%llu] block[%d]", message_size, block_nr);
 		if (db_insert_message_block(&message[offset],
-					    block_size, msgidnr,
+					    block_size, msgidnr, &physmsg_id,
 					    &tmp_messageblk_idnr,0) < 0) {
 			TRACE(TRACE_ERROR, "db_insert_message_block() failed");
 			return -1;

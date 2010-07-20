@@ -41,7 +41,8 @@ int insert_messages(struct DbmailMessage *message, struct dm_list *dsnusers);
  */
 int store_message_in_blocks(const char* message,
 				   u64_t message_size,
-				   u64_t msgidnr);
+				   u64_t msgidnr,
+				   u64_t physmsg_id);
 
 int send_vacation(struct DbmailMessage *message,
 		const char *to, const char *from,
