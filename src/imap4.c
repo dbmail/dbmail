@@ -236,6 +236,7 @@ void imap_cb_time(void *arg)
 	} else {
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 		imap_session_printf(session, "%s", IMAP_TIMEOUT_MSG);
+		imap_session_bailout(session);
 	}
 }
 
