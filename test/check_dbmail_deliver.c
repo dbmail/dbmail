@@ -768,7 +768,7 @@ START_TEST(test_g_tree_merge_not)
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
-	for (r=1; r<=10; r+=2) {
+	for (r=1; r<=1000000; r+=2) {
 		k = g_new0(u64_t,1);
 		v = g_new0(u64_t,1);
 		*k = r;
@@ -776,7 +776,7 @@ START_TEST(test_g_tree_merge_not)
 		g_tree_insert(b,k,v);
 	}
 	g_tree_merge(a,b,IST_SUBSEARCH_NOT);
-	fail_unless(g_tree_nnodes(a)==5,"g_tree_merge failed. Too few nodes in a.");
+	fail_unless(g_tree_nnodes(a)==500000,"g_tree_merge failed. Too few nodes in a. [%ld]", g_tree_nnodes(a));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -784,7 +784,7 @@ START_TEST(test_g_tree_merge_not)
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
-	for (r=1; r<=10; r+=2) {
+	for (r=1; r<=1000000; r+=2) {
 		k = g_new0(u64_t,1);
 		v = g_new0(u64_t,1);
 		*k = r;
@@ -792,7 +792,7 @@ START_TEST(test_g_tree_merge_not)
 		g_tree_insert(a,k,v);
 	}
 	g_tree_merge(a,b,IST_SUBSEARCH_NOT);
-	fail_unless(g_tree_nnodes(a)==5,"g_tree_merge failed. Too few nodes in a.");
+	fail_unless(g_tree_nnodes(a)==500000,"g_tree_merge failed. Too few nodes in a. [%ld]", g_tree_nnodes(a));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -809,7 +809,7 @@ START_TEST(test_g_tree_merge_or)
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
-	for (r=2; r<=10; r+=2) {
+	for (r=100000; r<=1000000; r+=2) {
 		k = g_new0(u64_t,1);
 		v = g_new0(u64_t,1);
 		*k = r;
@@ -818,7 +818,7 @@ START_TEST(test_g_tree_merge_or)
 	}
 
 	g_tree_merge(a,b,IST_SUBSEARCH_OR);
-	fail_unless(g_tree_nnodes(a)==5,"g_tree_merge failed. Too many nodes in a.");
+	fail_unless(g_tree_nnodes(a)==450001,"g_tree_merge failed. Too many nodes in a. [%ld]", g_tree_nnodes(a));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -835,7 +835,7 @@ START_TEST(test_g_tree_merge_and)
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
-	for (r=1; r<40; r+=10) {
+	for (r=10000; r<400000; r+=10) {
 		k = g_new0(u64_t,1);
 		v = g_new0(u64_t,1);
 		*k = r;
@@ -843,7 +843,7 @@ START_TEST(test_g_tree_merge_and)
 		g_tree_insert(a,k,v);
 	}
 
-	for (r=1; r<=10; r++) {
+	for (r=10000; r<=100000; r++) {
 		k = g_new0(u64_t,1);
 		v = g_new0(u64_t,1);
 		*k = r;
@@ -852,8 +852,8 @@ START_TEST(test_g_tree_merge_and)
 	}
 
 	g_tree_merge(a,b,IST_SUBSEARCH_AND);
-	fail_unless(g_tree_nnodes(a)==1,"g_tree_merge failed. Too few nodes in a.");
-	fail_unless(g_tree_nnodes(b)==10,"g_tree_merge failed. Too few nodes in b.");
+	fail_unless(g_tree_nnodes(a)==9001,"g_tree_merge failed. Too few nodes in a.[%ld]", g_tree_nnodes(a));
+	fail_unless(g_tree_nnodes(b)==90001,"g_tree_merge failed. Too few nodes in b. [%ld]", g_tree_nnodes(b));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -861,7 +861,7 @@ START_TEST(test_g_tree_merge_and)
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
-	for (r=2; r<=10; r+=2) {
+	for (r=20000; r<=100000; r+=2) {
 		k = g_new0(u64_t,1);
 		v = g_new0(u64_t,1);
 		*k = r;
@@ -869,7 +869,7 @@ START_TEST(test_g_tree_merge_and)
 		g_tree_insert(a,k,v);
 	}
 
-	for (r=1; r<=10; r++) {
+	for (r=10000; r<=100000; r++) {
 		k = g_new0(u64_t,1);
 		v = g_new0(u64_t,1);
 		*k = r;
@@ -878,8 +878,8 @@ START_TEST(test_g_tree_merge_and)
 	}
 
 	g_tree_merge(a,b,IST_SUBSEARCH_AND);
-	fail_unless(g_tree_nnodes(a)==5,"g_tree_merge failed. Too few nodes in a.");
-	fail_unless(g_tree_nnodes(b)==10,"g_tree_merge failed. Too few nodes in b.");
+	fail_unless(g_tree_nnodes(a)==40001,"g_tree_merge failed. Too few nodes in a. [%ld]", g_tree_nnodes(a));
+	fail_unless(g_tree_nnodes(b)==90001,"g_tree_merge failed. Too few nodes in b. [%ld]", g_tree_nnodes(b));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -1020,7 +1020,6 @@ Suite *dbmail_deliver_suite(void)
 	tcase_add_test(tc_misc, test_zap_between_right);
 	tcase_add_test(tc_misc, test_find_bounded);
 	tcase_add_test(tc_misc, test_zap_between_center);
-
 	return s;
 }
 
