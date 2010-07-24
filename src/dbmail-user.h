@@ -22,11 +22,12 @@
 
 #include "dbmail.h"
 
-#define qverbosef(fmt, args...) (!verbose ? 0 : printf(fmt, ##args) )
-#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
-#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
 
-#define null_strncpy(dst, src, len) (src ? strncpy(dst, src, len) : 0 )
+#define qverbosef(fmt, args...) if (verbose) printf(fmt, ##args)
+#define qprintf(fmt, args...) if (! (quiet||reallyquiet)) printf(fmt, ##args) 
+#define qerrorf(fmt, args...) if (! reallyquiet) fprintf(stderr, fmt, ##args) 
+
+#define null_strncpy(dst, src, len) if (src) strncpy(dst, src, len)
 #define null_crypt(src, dst) (src ? crypt(src, dst) : "" )
 
 

@@ -90,7 +90,6 @@ END_TEST
 
 START_TEST(test_mem_read)
 {
-	char *instr = "abcdefghijklmnopqrstuvwxyz";
 	char indata[DATASIZE+1];
 	char outdata[DATASIZE+1];
 	int l;

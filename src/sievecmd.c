@@ -34,9 +34,9 @@ int quiet = 0;
 /* Don't print errors. */
 int reallyquiet = 0;
 
-#define qverbosef(fmt, args...) (!verbose ? 0 : printf(fmt, ##args) )
-#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
-#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
+#define qverbosef(fmt, args...) if (verbose) printf(fmt, ##args)
+#define qprintf(fmt, args...) if (! (quiet||reallyquiet)) printf(fmt, ##args) 
+#define qerrorf(fmt, args...) if (! reallyquiet) fprintf(stderr, fmt, ##args) 
 
 char *configFile = DEFAULT_CONFIG_FILE;
 

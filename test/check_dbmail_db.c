@@ -1186,7 +1186,7 @@ END_TEST
 
 START_TEST(test_db_get_sql)
 {
-	char *s = db_get_sql(SQL_CURRENT_TIMESTAMP);
+	const char *s = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	fail_unless(s != NULL);
 }
 END_TEST

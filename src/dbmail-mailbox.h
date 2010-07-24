@@ -52,6 +52,7 @@ typedef struct {
 
 
 DbmailMailbox * dbmail_mailbox_new(u64_t id);
+int dbmail_mailbox_open(DbmailMailbox *self);
 int dbmail_mailbox_sort(DbmailMailbox *self);
 int dbmail_mailbox_search(DbmailMailbox *self);
 

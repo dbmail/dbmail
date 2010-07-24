@@ -224,7 +224,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	} else {
 		char *tmp;
 		tmp = g_strconcat(subject, message, NULL);
-		rc_handle = md5_handle = dm_md5((const unsigned char * const) tmp);
+		rc_handle = md5_handle = dm_md5((char * const) tmp);
 		g_free(tmp);
 	}
 

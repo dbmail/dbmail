@@ -63,7 +63,11 @@ stamps/configure:
 
 dbmail: stamps/dbmail
 stamps/dbmail: configure
-	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure $(CONFFLAGS) 
+	if [ -e /usr/bin/clang ]; then \
+		env CC="/usr/bin/clang" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure $(CONFFLAGS); \
+	else \
+		env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure $(CONFFLAGS); \
+	fi
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 	touch $@

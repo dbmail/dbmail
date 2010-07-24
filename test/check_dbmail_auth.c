@@ -178,7 +178,8 @@ START_TEST(test_auth_cram_md5)
 	const char *response = "dGltIGI5MTNhNjAyYzdlZGE3YTQ5NWI0ZTZlNzMzNGQzODkw";
 	const char *expect = "PDE4OTYuNjk3MTcwOTUyQHBvc3RvZmZpY2UucmVzdG9uLm1jaS5uZXQ+";
 	const char *secret = "tanstaaftanstaaf";
-	char *ch, *r;
+	const char *ch;
+        char *r;
 
 	c = Cram_new();
 	Cram_setChallenge(c, challenge);
