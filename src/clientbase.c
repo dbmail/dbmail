@@ -303,8 +303,10 @@ int ci_write(clientbase_t *self, char * msg, ...)
 		if (t == -1) {
 			if ((e = self->cb_error(self->tx, e, (void *)self))) {
 				self->client_state |= CLIENT_ERR;
-				return e;
+			} else {
+				event_add(self->wev, NULL);
 			}
+			return e;
 		} else {
 			TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, s);
 
