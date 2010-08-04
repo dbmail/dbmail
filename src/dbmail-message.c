@@ -294,21 +294,23 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	volatile int t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
 	gboolean prev_is_message = FALSE, is_message = FALSE;
-	GString *m = NULL;
+	GString *m = NULL, *n = NULL;
 	const void *blob;
 	field_t frag;
 
 	assert(dbmail_message_get_physid(self));
 	date2char_str("ph.internal_date", &frag);
+	n = g_string_new("");
+	g_string_printf(n,db_get_sql(SQL_ENCODE_ESCAPE), "data");
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,data "
+		r = db_query(c, "SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,%s "
 			"FROM %smimeparts p "
 			"JOIN %spartlists l ON p.id = l.part_id "
 			"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
 			"WHERE l.physmessage_id = %llu ORDER BY l.part_key,l.part_order ASC", 
-			frag, DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
+			frag, n->str, DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
 		
 		m = g_string_new("");
 
