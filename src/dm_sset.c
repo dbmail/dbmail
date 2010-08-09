@@ -18,78 +18,95 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "dbmail.h"
 #include "dm_sset.h"
+#include <stdlib.h>
+#include <search.h>
+#include <assert.h>
 
 #define THIS_MODULE "SSET"
 
 /*
- * implements the Sorted Set interface
+ * implements the Sorted Set interface using standard posix binary trees
  */
 
-#define T SSet_T
+#define T Sset_T
 
 struct T {
-	GTree *items;
+	void *root;
 	int (*cmp)(const void *, const void *);
-	int (*hash)(const void *);
+	int len;
 };
 
 
-T Sset_new(int (*cmp)(const void *a, const void *b), int (*hash)(const void *c))
+T Sset_new(int (*cmp)(const void *a, const void *b))
 {
-
 	T S;
-	S = g_malloc0(sizeof(*S));
-	S->items = g_tree_new_full((GCompareDataFunc)(cmp), NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	S = calloc(1, sizeof(*S));
+	S->root = NULL;
 	S->cmp = cmp;
-	S->hash = hash;
+	return S;
 }
 
 int Sset_has(T S, const void *a)
 {
-	return g_tree_lookup(S->items, a)?1:0;
+	if (!S->root) return 0;
+	return tfind(a, &(S->root), S->cmp)?1:0;
 }
 
 
 void Sset_add(T S, const void *a)
 {
-
+	if (! Sset_has(S, a)) {
+		void * t = NULL;
+		t = tsearch(a, &(S->root), S->cmp);
+		assert(t);
+		S->len++;
+	}
 }
 
 int Sset_len(T S)
 {
-
+	return S->len;
 }
 
 void * Sset_del(T S, const void * a)
 {
+	void * t = NULL;
+	if ((t = tdelete(a, &(S->root), S->cmp)) != NULL)
+		S->len--;
+	return t;
+}
 
+void Sset_map(T S, void (*func)(const void *))
+{
+	return;
 }
 
 void Sset_free(T *S)
 {
-
+	T s = *S;
+	if (s) free(s);
+	s = NULL;
 }
 
 T Sset_or(T a, T b) // a + b
 {
-
+	return a;
 }
 
 T Sset_and(T a, T b) // a * b
 {
-
+	return a;
 }
 
 T Sset_not(T a, T b) // a - b
 {
-
+	return a;
 }
 
-T Sset_xor(T a, T b); // a / b
+T Sset_xor(T a, T b) // a / b
 {
-
+	return a;
 }
 
 

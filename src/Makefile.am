@@ -26,7 +26,6 @@ if USE_DM_GETOPT
 DM_GETOPT = dm_getopt.c
 endif
 
-
 sbin_PROGRAMS = dbmail-deliver \
 	dbmail-pop3d \
 	dbmail-imapd \
@@ -53,7 +52,8 @@ COMMON = dbmail-user.c \
 	dm_digest.c \
 	dm_match.c \
 	dm_iconv.c \
-	dm_dsn.c $(DM_GETOPT)
+	dm_dsn.c \
+	dm_sset.c $(DM_GETOPT)
 	
 
 SERVER = server.c \

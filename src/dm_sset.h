@@ -32,11 +32,12 @@
 
 typedef struct T *T;
 
-extern T               Sset_new(int (*cmp)(const void *, const void *), int (*hash)(const void *));
+extern T               Sset_new(int (*cmp)(const void *, const void *));
 extern int             Sset_has(T, const void *); 
 extern void            Sset_add(T, const void *);
 extern int             Sset_len(T);
 extern void *          Sset_del(T, const void *);
+extern void            Sset_map(T, void (*func)(const void *));
 extern void            Sset_free(T *);
 
 extern T               Sset_or(T, T); // a + b

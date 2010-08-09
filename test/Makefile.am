@@ -29,6 +29,7 @@ TESTS=check_dbmail_common \
 	check_dbmail_util \
 	check_dbmail_dsn \
 	check_dbmail_capa \
+	check_dbmail_sset \
 	check_dbmail_db
 
 IMAPD = $(top_srcdir)/src/dm_quota.c \
@@ -104,4 +105,7 @@ check_dbmail_capa_SOURCES=check_dbmail_capa.c
 check_dbmail_capa_LDADD=$(CHECK_LDADD)
 check_dbmail_capa_INCLUDES=@CHECK_CFLAGS@
 
+check_dbmail_sset_SOURCES=check_dbmail_sset.c $(top_srcdir)/src/dm_sset.c
+check_dbmail_sset_LDADD=$(CHECK_LDADD)
+check_dbmail_sset_INCLUDES=@CHECK_CFLAGS@
 endif

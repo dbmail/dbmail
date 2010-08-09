@@ -134,6 +134,7 @@
 #include "dm_iconv.h"
 #include "dm_getopt.h"
 #include "dm_match.h"
+#include "dm_sset.h"
 
 #ifdef SIEVE
 #include <sieve2.h>
