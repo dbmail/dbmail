@@ -65,7 +65,7 @@ static void end_clock(char *msg)
 			(long double)(en_cpu.tms_stime - st_cpu.tms_stime));
 }
 
-Sset_T V;
+Sset_T V, W;
 
 
 struct item {
@@ -90,7 +90,8 @@ void setup(void)
 {
 	configure_debug(255,0);
 	config_read(configFile);
-	V = Sset_new(compare);
+	V = Sset_new(compare, sizeof(struct item));
+	W = Sset_new(compare, sizeof(struct item));
 }
 
 void teardown(void)
@@ -101,13 +102,11 @@ void teardown(void)
 START_TEST(test_sset_add)
 {
 	int i, n = 1000000;
-	struct item p, *t, *k;
+	struct item *t, *k;
        
 	start_clock();
-	k = malloc(sizeof(struct item) * n);
-	end_clock("malloc: ");
+	t = k = malloc(sizeof(struct item) * n);
 
-	t = k;
 	start_clock();
 	for (i = 0; i<n; i++, t++) {
 		t->key = i;
@@ -116,18 +115,72 @@ START_TEST(test_sset_add)
 	}
 	end_clock("Sset_add: ");
 
-	memset(&p, 0, sizeof(struct item));
-	start_clock();
-	for (i = 0; i<n; i++, t++) {
-		p.key = i;
-		Sset_del(V, (void *)&t);
-	}
-	end_clock("Sset_del: ");
-
-
 	free(k);
 }
 END_TEST
+
+START_TEST(test_sset_del)
+{
+	int i, n = 1000000;
+	struct item p, *t, *k;
+       
+	start_clock();
+	t = k = malloc(sizeof(struct item) * n);
+
+	for (i = 0; i<n; i++, t++) {
+		t->key = i;
+	        t->value = rand();
+		Sset_add(V, (void *)t);
+	}
+
+	fail_unless(Sset_len(V) == n);
+
+	memset(&p, 0, sizeof(struct item));
+	start_clock();
+	for (i = 0; i<n; i++) {
+		p.key = i;
+		Sset_del(V, (void *)&p);
+	}
+	end_clock("Sset_del: ");
+
+	fail_unless(Sset_len(V) == 0, "sset still holds: [%d]:", Sset_len(V));
+	free(k);
+}
+END_TEST
+
+START_TEST(test_sset_or)
+{
+	int i, n = 1000000;
+	struct item *t, *k, *l;
+       
+	t = k = malloc(sizeof(struct item) * n);
+
+	for (i = 0; i<n; i+=2, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(V, (void *)t);
+	}
+
+	t = l = malloc(sizeof(struct item) * n);
+	for (i = 1; i<=n; i+=2, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(W, (void *)t);
+	}
+ 
+	start_clock();
+	Sset_T p = Sset_or(V, W);
+	end_clock("Sset_or: ");
+
+	printf("[%d]", Sset_len(p));
+	Sset_free(&p);
+
+	free(k);
+	free(l);
+}
+END_TEST
+
+
 
 Suite *dbmail_sset_suite(void)
 {
@@ -138,6 +191,8 @@ Suite *dbmail_sset_suite(void)
 	
 	tcase_add_checked_fixture(tc_sset, setup, teardown);
 	tcase_add_test(tc_sset, test_sset_add);
+	tcase_add_test(tc_sset, test_sset_del);
+	tcase_add_test(tc_sset, test_sset_or);
 
 	return s;
 }
