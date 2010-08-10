@@ -1309,6 +1309,47 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 	return s->found;
 }
 
+struct filter_helper {  
+        gboolean uid;   
+        u64_t min;      
+        u64_t max;      
+        GTree *a;       
+};                      
+                        
+static int filter_range(gpointer key, gpointer value, gpointer data)
+{                       
+	u64_t *k, *v;   
+	struct filter_helper *d = (struct filter_helper *)data;
+
+	if (*(u64_t *)key < d->min) return FALSE; // skip
+	if (*(u64_t *)key > d->max) return TRUE; // done
+
+	k = g_new0(u64_t,1);
+	v = g_new0(u64_t,2);
+
+	*k = *(u64_t *)key;
+	*v = *(u64_t *)value;
+
+	if (d->uid)     
+		g_tree_insert(d->a, k, v);
+	else            
+		g_tree_insert(d->a, v, k);
+
+	return FALSE;   
+}                       
+
+static void find_range(GTree *c, u64_t l, u64_t r, GTree *a, gboolean uid)
+{                       
+	struct filter_helper data;
+
+	data.uid = uid; 
+	data.min = l;   
+	data.max = r;   
+	data.a = a;     
+
+	g_tree_foreach(c, (GTraverseFunc)filter_range, &data);
+}
+
 GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean uid)
 {
 	GList *ids = NULL, *sets = NULL;
@@ -1405,32 +1446,8 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		else
 			c = MailboxState_getMsn(self->mbstate);
 
-		for (i = min(l,r); i <= max(l,r); i++) {
+		find_range(c, min(l,r), max(l,r), a, uid);
 
-			if (! (w = g_tree_lookup(c,&i))) 
-				continue;
-
-			k = g_new0(u64_t,1);
-			v = g_new0(u64_t,1);
-			
-			*k = i;
-			*v = *w;
-			
-			// we always want to return a tree with 
-			// uids as keys and msns as values 
-			if (uid) {
-				if (*k >= lo && *k <= hi)
-					g_tree_insert(a,k,v);
-				else
-					TRACE(TRACE_DEBUG,"lo: %llu, uid: %llu, msn: %llu, hi: %llu", lo, *k, *v, hi);
-			} else {
-				if (*k >= 1 && *k <= maxmsn)
-					g_tree_insert(a,v,k);
-				else
-					TRACE(TRACE_DEBUG,"lo: %llu, uid: %llu, msn: %llu, hi: %llu", lo, *v, *k, hi);
-			}
-		}
-		
 		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
 			error = TRUE;
 			TRACE(TRACE_ERR, "cannot compare null trees");

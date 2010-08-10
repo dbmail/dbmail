@@ -995,6 +995,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 {
 	char *type = NULL;
 	GList *keys = NULL;
+	GTree *c = NULL;
 	int alen = 0, blen=0, klen=0;
 	
 	gpointer key;
@@ -1009,6 +1010,14 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 	
 	switch(condition) {
 		case IST_SUBSEARCH_AND:
+
+			if (! g_tree_nnodes(b) > 0) { //short-cut: pivot trees
+				c = a; a = b; b = c;
+			}
+
+			if (! g_tree_nnodes(a) > 0)
+				break;
+
 			type=g_strdup("AND");
 			/* delete from A all keys not in B */
 			merger->tree = b;
@@ -1031,6 +1040,10 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 		case IST_SUBSEARCH_OR:
 			type=g_strdup("OR");
 			
+			if (! g_tree_nnodes(a) > 0) { //short-cut: pivot trees
+				c = a; a = b; b = c;
+			}
+
 			if (! g_tree_nnodes(b) > 0)
 				break;
 
@@ -1058,11 +1071,11 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			
 		case IST_SUBSEARCH_NOT:
 			type=g_strdup("NOT");
+
+			if (! g_tree_nnodes(b) > 0)
+				break;
 			
 			keys = g_tree_keys(b);
-			
-			if (! g_list_length(keys))
-				break;
 			
 			while (keys->data) {
 				// remove from A keys also in B 
