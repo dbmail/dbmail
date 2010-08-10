@@ -25,7 +25,6 @@
  * Universe
  */
 
-#include <string.h>
 
 #ifndef SSET_H
 #define SSET_H
@@ -34,11 +33,11 @@
 
 typedef struct T *T;
 
-extern T               Sset_new(int (*cmp)(const void *, const void *), size_t);
+extern T               Sset_new(int (*cmp)(const void *, const void *), size_t, void (*free)(void *));
 extern int             Sset_has(T, const void *); 
 extern void            Sset_add(T, const void *);
 extern int             Sset_len(T);
-extern void *          Sset_del(T, const void *);
+extern void            Sset_del(T, const void *);
 extern void            Sset_map(T, int (*func)(void *, void *), void *);
 extern void            Sset_free(T *);
 

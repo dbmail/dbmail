@@ -18,8 +18,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <string.h>
 #include <stdlib.h>
-#include <search.h>
 #include <assert.h>
 #include <glib.h>
 
@@ -36,19 +36,26 @@
 struct T {
 	void *root;
 	int (*cmp)(const void *, const void *);
-	int len;
 	size_t size; // sizeof key
+	void (*free)(void *);
 };
 
 
-T Sset_new(int (*cmp)(const void *a, const void *b), size_t size)
+static int compare_data(void *a, void *b, void *c)
+{
+	T S = (T)c;
+	return S->cmp(a, b);
+}
+
+T Sset_new(int (*cmp)(const void *a, const void *b), size_t size, void (*free)(void *))
 {
 	T S;
 	assert(size > 0);
 	S = calloc(1, sizeof(*S));
-	S->root = (void *)g_tree_new((GCompareFunc)cmp);
+	S->root = (void *)g_tree_new_full((GCompareDataFunc)compare_data, S, free, NULL);
 	S->cmp = cmp;
 	S->size = size;
+	S->free = free;
 	return S;
 }
 
@@ -69,12 +76,11 @@ int Sset_len(T S)
 	return g_tree_nnodes((GTree *)S->root);
 }
 
-void * Sset_del(T S, const void * a)
+void Sset_del(T S, const void * a)
 {
 	void * t = NULL;
 	if ((t = g_tree_lookup((GTree *)S->root, a)) != NULL)
 		g_tree_remove((GTree *)S->root, a);
-	return t;
 }
 
 struct mapper_data {
@@ -110,7 +116,7 @@ void Sset_free(T *S)
 static int sset_copy(void *a, void *c)
 {
 	T t = (T)c;
-	if (! Sset_has(c, a)) {
+	if (! Sset_has(t, a)) {
 		void * item = malloc(t->size);
 		memcpy(item, (const void *)a, t->size);
 		Sset_add(t, item);
@@ -120,7 +126,7 @@ static int sset_copy(void *a, void *c)
 
 T Sset_or(T a, T b) // a + b
 {
-	T c = Sset_new(a->cmp, a->size);
+	T c = Sset_new(a->cmp, a->size, a->free?a->free:free);
 
 	Sset_map(a, sset_copy, c);
 	Sset_map(b, sset_copy, c);
@@ -148,7 +154,7 @@ static int sset_match_and(void *a, void *c)
 
 T Sset_and(T a, T b) // a * b
 {
-	T c = Sset_new(a->cmp, a->size);
+	T c = Sset_new(a->cmp, a->size, a->free?a->free:free);
 	T s;
 	struct sset_match_helper h;
        	if (Sset_len(a) < Sset_len(b)) {
@@ -180,7 +186,7 @@ static int sset_match_not(void *a, void *c)
 
 T Sset_not(T a, T b) // a - b
 {
-	T c = Sset_new(a->cmp, a->size);
+	T c = Sset_new(a->cmp, a->size, a->free?a->free:free);
 	struct sset_match_helper h;
 	h.o = c;
 
@@ -192,7 +198,7 @@ T Sset_not(T a, T b) // a - b
 
 T Sset_xor(T a, T b) // a / b
 {
-	T c = Sset_new(a->cmp, a->size);
+	T c = Sset_new(a->cmp, a->size, a->free?a->free:free);
 	struct sset_match_helper h;
 	h.o = c;
 

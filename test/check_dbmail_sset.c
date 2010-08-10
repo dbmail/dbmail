@@ -90,18 +90,19 @@ void setup(void)
 {
 	configure_debug(255,0);
 	config_read(configFile);
-	V = Sset_new(compare, sizeof(struct item));
-	W = Sset_new(compare, sizeof(struct item));
+	V = Sset_new(compare, sizeof(struct item), NULL);
+	W = Sset_new(compare, sizeof(struct item), NULL);
 }
 
 void teardown(void)
 {
 	Sset_free(&V);
+	Sset_free(&W);
 }
 
 START_TEST(test_sset_add)
 {
-	int i, n = 1000000;
+	int i, n = 10000;
 	struct item *t, *k;
        
 	start_clock();
@@ -122,7 +123,7 @@ END_TEST
 
 START_TEST(test_sset_del)
 {
-	int i, n = 1000000;
+	int i, n = 10000;
 	struct item p, *t, *k;
        
 	t = k = malloc(sizeof(struct item) * n);
@@ -150,7 +151,7 @@ END_TEST
 
 START_TEST(test_sset_or)
 {
-	long long int i, n = 1000000;
+	long long int i, n = 10000;
 	struct item *t, *k, *l;
        
 	t = k = malloc(sizeof(struct item) * n);
@@ -183,7 +184,7 @@ END_TEST
 
 START_TEST(test_sset_and1)
 {
-	long long int i, n = 1000000;
+	long long int i, n = 10000;
 	struct item *t, *k, *l;
        
 	k = malloc(sizeof(struct item) * n);
@@ -216,7 +217,7 @@ END_TEST
 
 START_TEST(test_sset_and2)
 {
-	long long int i, n = 1000000;
+	long long int i, n = 10000;
 	struct item *t, *k, *l;
        
 	k = malloc(sizeof(struct item) * n);
@@ -249,7 +250,7 @@ END_TEST
 
 START_TEST(test_sset_not)
 {
-	long long int i, n = 1000000;
+	long long int i, n = 10000;
 	struct item *t, *k, *l;
        
 	k = malloc(sizeof(struct item) * n);
@@ -282,7 +283,7 @@ END_TEST
 
 START_TEST(test_sset_xor)
 {
-	long long int i, n = 1000000;
+	long long int i, n = 10000;
 	struct item *t, *k, *l;
        
 	k = malloc(sizeof(struct item) * n);
@@ -324,14 +325,12 @@ Suite *dbmail_sset_suite(void)
 	
 	tcase_add_checked_fixture(tc_sset, setup, teardown);
 	tcase_add_test(tc_sset, test_sset_add);
-	/*
 	tcase_add_test(tc_sset, test_sset_del);
 	tcase_add_test(tc_sset, test_sset_or);
 	tcase_add_test(tc_sset, test_sset_and1);
 	tcase_add_test(tc_sset, test_sset_and2);
 	tcase_add_test(tc_sset, test_sset_not);
 	tcase_add_test(tc_sset, test_sset_xor);
-*/
 	return s;
 }
 
