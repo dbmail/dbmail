@@ -69,7 +69,7 @@ Sset_T V, W;
 
 
 struct item {
-	int key;
+	long long int key;
 	long long int value;
 };
 
@@ -115,6 +115,7 @@ START_TEST(test_sset_add)
 	}
 	end_clock("Sset_add: ");
 
+	fail_unless(Sset_len(V) == n, "sset holds: [%d]:", Sset_len(V));
 	free(k);
 }
 END_TEST
@@ -124,7 +125,6 @@ START_TEST(test_sset_del)
 	int i, n = 1000000;
 	struct item p, *t, *k;
        
-	start_clock();
 	t = k = malloc(sizeof(struct item) * n);
 
 	for (i = 0; i<n; i++, t++) {
@@ -150,7 +150,7 @@ END_TEST
 
 START_TEST(test_sset_or)
 {
-	int i, n = 1000000;
+	long long int i, n = 1000000;
 	struct item *t, *k, *l;
        
 	t = k = malloc(sizeof(struct item) * n);
@@ -172,7 +172,140 @@ START_TEST(test_sset_or)
 	Sset_T p = Sset_or(V, W);
 	end_clock("Sset_or: ");
 
-	printf("[%d]", Sset_len(p));
+	fail_unless(Sset_len(p) == Sset_len(V) + Sset_len(W), "Sset_or failed");
+
+	Sset_free(&p);
+
+	free(k);
+	free(l);
+}
+END_TEST
+
+START_TEST(test_sset_and1)
+{
+	long long int i, n = 1000000;
+	struct item *t, *k, *l;
+       
+	k = malloc(sizeof(struct item) * n);
+	l = malloc(sizeof(struct item) * n);
+
+	for (t = k, i = 0; i<n; i+=2, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(V, (void *)t);
+	}
+
+	for (t = l, i = 1; i<=n; i+=2, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(W, (void *)t);
+	}
+ 
+	start_clock();
+	Sset_T p = Sset_and(V, W);
+	end_clock("Sset_and1: ");
+
+	fail_unless(Sset_len(p) == 0, "Sset_and1 failed");
+
+	Sset_free(&p);
+
+	free(k);
+	free(l);
+}
+END_TEST
+
+START_TEST(test_sset_and2)
+{
+	long long int i, n = 1000000;
+	struct item *t, *k, *l;
+       
+	k = malloc(sizeof(struct item) * n);
+	l = malloc(sizeof(struct item) * n);
+
+	for (t = k, i = 0; i<n; i++, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(V, (void *)t);
+	}
+
+	for (t = l, i = 0; i<n; i++, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(W, (void *)t);
+	}
+ 
+	start_clock();
+	Sset_T p = Sset_and(V, W);
+	end_clock("Sset_and2: ");
+
+	fail_unless(Sset_len(p) == n, "Sset_and2 failed");
+
+	Sset_free(&p);
+
+	free(k);
+	free(l);
+}
+END_TEST
+
+START_TEST(test_sset_not)
+{
+	long long int i, n = 1000000;
+	struct item *t, *k, *l;
+       
+	k = malloc(sizeof(struct item) * n);
+	l = malloc(sizeof(struct item) * n);
+
+	for (t = k, i = 0; i<n; i+=2, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(V, (void *)t);
+	}
+
+	for (t = l, i = 1; i<=n; i+=2, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(W, (void *)t);
+	}
+ 
+	start_clock();
+	Sset_T p = Sset_not(V, W);
+	end_clock("Sset_not: ");
+
+	fail_unless(Sset_len(p) == Sset_len(V), "Sset_not failed");
+
+	Sset_free(&p);
+
+	free(k);
+	free(l);
+}
+END_TEST
+
+START_TEST(test_sset_xor)
+{
+	long long int i, n = 1000000;
+	struct item *t, *k, *l;
+       
+	k = malloc(sizeof(struct item) * n);
+	l = malloc(sizeof(struct item) * n);
+
+	for (t = k, i = 0; i<n; i+=2, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(V, (void *)t);
+	}
+
+	for (t = l, i = 1; i<=n; i+=2, t++) {
+		t->key = i;
+	        t->value = i;
+		Sset_add(W, (void *)t);
+	}
+ 
+	start_clock();
+	Sset_T p = Sset_xor(V, W);
+	end_clock("Sset_xor: ");
+
+	fail_unless(Sset_len(p) == n, "Sset_xor failed");
+
 	Sset_free(&p);
 
 	free(k);
@@ -191,9 +324,14 @@ Suite *dbmail_sset_suite(void)
 	
 	tcase_add_checked_fixture(tc_sset, setup, teardown);
 	tcase_add_test(tc_sset, test_sset_add);
+	/*
 	tcase_add_test(tc_sset, test_sset_del);
 	tcase_add_test(tc_sset, test_sset_or);
-
+	tcase_add_test(tc_sset, test_sset_and1);
+	tcase_add_test(tc_sset, test_sset_and2);
+	tcase_add_test(tc_sset, test_sset_not);
+	tcase_add_test(tc_sset, test_sset_xor);
+*/
 	return s;
 }
 

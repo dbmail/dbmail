@@ -77,19 +77,37 @@ void * Sset_del(T S, const void * a)
 	return t;
 }
 
-void Sset_map(T S, int (*func)(void *, void *, void *), void *data)
+struct mapper_data {
+	int (*func)(void *, void *);
+	void *data;
+};
+
+static int mapper(void *key, void *value, void *data)
 {
-	g_tree_foreach((GTree *)S->root, (GTraverseFunc)func, data);
+	struct mapper_data *m = (struct mapper_data *)data;
+	return m->func(key, m->data)?1:0;
+}
+
+void Sset_map(T S, int (*func)(void *, void *), void *data)
+{
+	struct mapper_data m;
+	m.func = func;
+	m.data = data;
+	g_tree_foreach((GTree *)S->root, (GTraverseFunc)mapper, &m);
 }
 
 void Sset_free(T *S)
 {
 	T s = *S;
-	if (s) free(s);
+	if (s) {
+		g_tree_destroy((GTree *)s->root);
+		s->root = NULL;
+		free(s);
+	}
 	s = NULL;
 }
 
-static int sset_copy(void *a, void *b, void *c)
+static int sset_copy(void *a, void *c)
 {
 	T t = (T)c;
 	if (! Sset_has(c, a)) {
@@ -110,19 +128,81 @@ T Sset_or(T a, T b) // a + b
 	return c;
 }
 
+struct sset_match_helper {
+	T i;
+	T o;
+};
+
+static int sset_match_and(void *a, void *c)
+{
+	struct sset_match_helper *m = (struct sset_match_helper *)c;
+	T t = m->o;
+
+	if (Sset_has(m->i, a)) {
+		void * item = malloc(t->size);
+		memcpy(item, (const void *)a, t->size);
+		Sset_add(m->o, item);
+	}
+	return 0;
+}
+
 T Sset_and(T a, T b) // a * b
 {
-	return a;
+	T c = Sset_new(a->cmp, a->size);
+	T s;
+	struct sset_match_helper h;
+       	if (Sset_len(a) < Sset_len(b)) {
+		s = a;
+		h.i = b;
+	} else {
+		s = b;
+		h.i = a;
+	}
+	h.o = c;
+
+	Sset_map(s, sset_match_and, &h);
+
+	return c;
+}
+
+static int sset_match_not(void *a, void *c)
+{
+	struct sset_match_helper *m = (struct sset_match_helper *)c;
+	T t = m->o;
+
+	if (! Sset_has(m->i, a)) {
+		void * item = malloc(t->size);
+		memcpy(item, (const void *)a, t->size);
+		Sset_add(m->o, item);
+	}
+	return 0;
 }
 
 T Sset_not(T a, T b) // a - b
 {
-	return a;
+	T c = Sset_new(a->cmp, a->size);
+	struct sset_match_helper h;
+	h.o = c;
+
+	h.i = b;
+	Sset_map(a, sset_match_not, &h);
+
+	return c;
 }
 
 T Sset_xor(T a, T b) // a / b
 {
-	return a;
+	T c = Sset_new(a->cmp, a->size);
+	struct sset_match_helper h;
+	h.o = c;
+
+	h.i = b;
+	Sset_map(a, sset_match_not, &h);
+
+	h.i = a;
+	Sset_map(b, sset_match_not, &h);
+
+	return c;
 }
 
 

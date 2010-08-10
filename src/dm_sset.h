@@ -39,7 +39,7 @@ extern int             Sset_has(T, const void *);
 extern void            Sset_add(T, const void *);
 extern int             Sset_len(T);
 extern void *          Sset_del(T, const void *);
-extern void            Sset_map(T, int (*func)(void *, void *, void *), void *);
+extern void            Sset_map(T, int (*func)(void *, void *), void *);
 extern void            Sset_free(T *);
 
 extern T               Sset_or(T, T); // a + b
