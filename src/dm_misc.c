@@ -991,15 +991,12 @@ static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_m
 	return FALSE;
 }
 
-int g_tree_merge(GTree **left, GTree **right, int condition)
+int g_tree_merge(GTree *a, GTree *b, int condition)
 {
 	char *type = NULL;
 	GList *keys = NULL;
 	GTree *c = NULL;
 	int alen = 0, blen=0, klen=0;
-	GTree *a, *b;
-	a = *left;
-	b = *right;
 	
 	gpointer key;
 	gpointer value;	
@@ -1013,11 +1010,6 @@ int g_tree_merge(GTree **left, GTree **right, int condition)
 	
 	switch(condition) {
 		case IST_SUBSEARCH_AND:
-
-			if (! g_tree_nnodes(b) > 0) { //short-cut: pivot trees
-				c = a; *left = *right; *right = c;
-				a = *left; b = *right;
-			}
 
 			if (! g_tree_nnodes(a) > 0)
 				break;
@@ -1044,11 +1036,6 @@ int g_tree_merge(GTree **left, GTree **right, int condition)
 		case IST_SUBSEARCH_OR:
 			type=g_strdup("OR");
 			
-			if (! g_tree_nnodes(a) > 0) { //short-cut: pivot trees
-				c = a; *left = *right; *right = c;
-				a = *left; b = *right;
-			}
-
 			if (! g_tree_nnodes(b) > 0)
 				break;
 
@@ -1111,6 +1098,7 @@ int g_tree_merge(GTree **left, GTree **right, int condition)
 
 	merger->list = g_list_first(merger->list);
 	g_list_free(merger->list);
+
 
 	g_free(merger);
 	g_free(type);
