@@ -307,7 +307,10 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
-			if (! g_tree_lookup(self->found,(gconstpointer)&idnr))
+
+			if (g_tree_nnodes(self->found) == 0)
+				continue;
+			if ( ! g_tree_lookup(self->found,(gconstpointer)&idnr))
 				continue;
 			subj = (char *)db_result_get(r,1);
 			g_tree_insert(tree,g_strdup(subj), NULL);
@@ -345,6 +348,9 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
+
+			if (g_tree_nnodes(self->found) == 0)
+				continue;
 			if (! (msn = g_tree_lookup(self->found, (gconstpointer)&idnr)))
 				continue;
 			subj = (char *)db_result_get(r,1);
@@ -1316,7 +1322,7 @@ struct filter_helper {
         GTree *a;       
 };                      
                         
-static int filter_range(gpointer key, gpointer value, gpointer data)
+static int filter_range_cb(gpointer key, gpointer value, gpointer data)
 {                       
 	u64_t *k, *v;   
 	struct filter_helper *d = (struct filter_helper *)data;
@@ -1338,7 +1344,7 @@ static int filter_range(gpointer key, gpointer value, gpointer data)
 	return FALSE;   
 }                       
 
-static void find_range(GTree *c, u64_t l, u64_t r, GTree *a, gboolean uid)
+static void filter_range(GTree *c, u64_t l, u64_t r, GTree *a, gboolean uid)
 {                       
 	struct filter_helper data;
 
@@ -1347,7 +1353,7 @@ static void find_range(GTree *c, u64_t l, u64_t r, GTree *a, gboolean uid)
 	data.max = r;   
 	data.a = a;     
 
-	g_tree_foreach(c, (GTraverseFunc)filter_range, &data);
+	g_tree_foreach(c, (GTraverseFunc)filter_range_cb, &data);
 }
 
 GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean uid)
@@ -1356,8 +1362,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	GString *t;
 	GTree *uids;
 	char *rest;
-	u64_t i, l, r, lo = 0, hi = 0, maxmsn = 0;
-	u64_t *k, *v, *w = NULL;
+	u64_t l, r, lo = 0, hi = 0, maxmsn = 0;
 	GTree *a, *b, *c;
 	gboolean error = FALSE;
 	
@@ -1446,13 +1451,17 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		else
 			c = MailboxState_getMsn(self->mbstate);
 
-		find_range(c, min(l,r), max(l,r), a, uid);
+		filter_range(c, min(l,r), max(l,r), a, uid);
 
-		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
+		TRACE(TRACE_DEBUG,"a[%d]", g_tree_nnodes(a));
+
+		if (g_tree_merge(&b,&a,IST_SUBSEARCH_OR)) {
 			error = TRUE;
 			TRACE(TRACE_ERR, "cannot compare null trees");
 			break;
 		}
+
+		TRACE(TRACE_DEBUG,"b[%d]", g_tree_nnodes(b));
 		
 		if (! g_list_next(sets)) break;
 		sets = g_list_next(sets);
@@ -1466,6 +1475,8 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	if (error) {
 		g_tree_destroy(b);
 		b = NULL;
+	} else {
+		TRACE(TRACE_DEBUG,"b[%d]", g_tree_nnodes(b));
 	}
 
 	return b;
@@ -1563,7 +1574,7 @@ static gboolean _merge_search(GNode *node, GTree *found)
 		case IST_SUBSEARCH_NOT:
 			g_tree_foreach(found, (GTraverseFunc)_found_tree_copy, s->found);
 			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer) s->found);
-			g_tree_merge(found, s->found, IST_SUBSEARCH_NOT);
+			g_tree_merge(&found, &s->found, IST_SUBSEARCH_NOT);
 			s->merged = TRUE;
 			g_tree_destroy(s->found);
 			s->found = NULL;
@@ -1586,17 +1597,17 @@ static gboolean _merge_search(GNode *node, GTree *found)
 				g_node_children_foreach(y, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)b->found);
 			}
 		
-			g_tree_merge(a->found, b->found,IST_SUBSEARCH_OR);
+			g_tree_merge(&a->found, &b->found,IST_SUBSEARCH_OR);
 			b->merged = TRUE;
 			g_tree_destroy(b->found);
 			b->found = NULL;
 
-			g_tree_merge(s->found, a->found,IST_SUBSEARCH_OR);
+			g_tree_merge(&s->found, &a->found,IST_SUBSEARCH_OR);
 			a->merged = TRUE;
 			g_tree_destroy(a->found);
 			a->found = NULL;
 
-			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+			g_tree_merge(&found, &s->found, IST_SUBSEARCH_AND);
 			s->merged = TRUE;
 			g_tree_destroy(s->found);
 			s->found = NULL;
@@ -1604,7 +1615,7 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			break;
 			
 		default:
-			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+			g_tree_merge(&found, &s->found, IST_SUBSEARCH_AND);
 			s->merged = TRUE;
 			g_tree_destroy(s->found);
 			s->found = NULL;

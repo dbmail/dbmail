@@ -111,7 +111,7 @@ gint dm_strcasecmpdata(gconstpointer a, gconstpointer b, gpointer data);
 GList * g_tree_keys(GTree *tree);
 GList * g_tree_values(GTree *tree);
 void tree_dump(GTree *t);
-int g_tree_merge(GTree *a, GTree *b, int condition);
+int g_tree_merge(GTree **a, GTree **b, int condition);
 	
 void pack_char(char *in, char c);
 

@@ -517,7 +517,6 @@ Suite *dbmail_mailbox_suite(void)
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
-	/*
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
@@ -527,7 +526,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
-	*/
+	
 	return s;
 }
 
