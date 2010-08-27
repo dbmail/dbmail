@@ -152,8 +152,8 @@ static T MailboxState_getMessageState(T M)
 	memset(query,0,sizeof(query));
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT k.message_idnr, keyword FROM %skeywords k "
-		"LEFT JOIN %smessages m USING (message_idnr) "
-		"LEFT JOIN %smailboxes b USING (mailbox_idnr) "
+		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
+		"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
 		"WHERE b.mailbox_idnr = %llu AND m.status < %d",
 		DBPFX, DBPFX, DBPFX,
 		M->id, MESSAGE_STATUS_DELETE);
@@ -637,8 +637,8 @@ static int db_getmailbox_keywords(T M)
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
-				"LEFT JOIN %smessages m USING (message_idnr) "
-				"LEFT JOIN %smailboxes b USING (mailbox_idnr) "
+				"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
+				"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
 				"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, M->id);
 
 		while (db_result_next(r)) {

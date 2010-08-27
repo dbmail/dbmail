@@ -358,11 +358,11 @@ int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user
 
 	if (strcasecmp(encode, "") == 0) {
 		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
-		if (ci && ci->auth) // CRAM-MD5
+		if (ci && ci->auth) // CRAM-MD5 
 			is_validated = Cram_verify(ci->auth, dbpass);
-		else
+		else 
 			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
-        } else if (username == NULL || password == NULL) {
+	} else if (username == NULL || password == NULL) {
 		g_free(dbpass);
 		g_free(encode);		
 		return FALSE;

@@ -252,6 +252,8 @@ void GetDBParams(void)
 		_db_params.db_driver = DM_DRIVER_MYSQL;
 	else if (MATCH((const char *)_db_params.driver,"postgresql"))
 		_db_params.db_driver = DM_DRIVER_POSTGRESQL;
+	else if (MATCH((const char *)_db_params.driver,"oracle"))
+		_db_params.db_driver = DM_DRIVER_ORACLE;
 	else
 		TRACE(TRACE_EMERG,"driver not supported");
 

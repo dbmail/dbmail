@@ -54,13 +54,18 @@
 /** string length of configuration values */
 #define FIELDSIZE 1024
 
+/** Maximal size available for comparision CLOB with string constant inside
+ * simple SELECT ... WHERE ... statement */
+#define DM_ORA_MAX_BYTES_LOB_CMP 4000
+
 /** use 64-bit unsigned integers as common data type */
 typedef unsigned long long u64_t;
 
 typedef enum {
 	DM_DRIVER_SQLITE	= 1,
 	DM_DRIVER_MYSQL		= 2,
-	DM_DRIVER_POSTGRESQL	= 3
+	DM_DRIVER_POSTGRESQL	= 3,
+	DM_DRIVER_ORACLE	= 4
 } dm_driver_t;
 
 typedef enum {
@@ -655,6 +660,9 @@ typedef enum {
 	SQL_STRCASE,
 	SQL_PARTIAL,
 	SQL_IGNORE,
-	SQL_RETURNING
+	SQL_RETURNING,
+	SQL_TABLE_EXISTS,
+	SQL_ESCAPE_COLUMN,
+	SQL_COMPARE_BLOB
 } sql_fragment_t;
 #endif

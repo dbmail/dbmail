@@ -663,7 +663,10 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 	TRY
 		r = db_query(c, q->str);
 		while (db_result_next(r)) {
-			
+			int l;	
+			const void *blob;
+			char *str = NULL;
+
 			id = db_result_get_u64(r, 0);
 			
 			if (! g_tree_lookup(self->ids,&id))
@@ -673,7 +676,12 @@ static void _fetch_headers(ImapSession *self, body_fetch_t *bodyfetch, gboolean 
 			*mid = id;
 			
 			fld = (char *)db_result_get(r, 1);
-			val = dbmail_iconv_db_to_utf7((char *)db_result_get(r, 2));
+			blob = db_result_get_blob(r, 2, &l);
+			str = g_new0(char,l+1);
+			str = strncpy(str,blob,l);
+			str[l]= 0;
+			val = dbmail_iconv_db_to_utf7(str);
+			g_free(str);
 			if (! val) {
 				TRACE(TRACE_DEBUG, "[%p] [%llu] no headervalue [%s]", self, id, fld);
 			} else {

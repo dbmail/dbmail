@@ -1183,7 +1183,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 
 			case IST_DATA_TEXT:
 
-			g_string_printf(q,"SELECT m.message_idnr, v.headervalue, k.data "
+			g_string_printf(q,"SELECT DISTINCT m.message_idnr"
 					"FROM %smimeparts k "
 					"LEFT JOIN %spartlists l ON k.id=l.part_id "
 					"LEFT JOIN %sphysmessage p ON l.physmessage_id=p.id "
@@ -1191,8 +1191,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
 					"LEFT JOIN %smessages m ON m.physmessage_id=p.id "
 					"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
-					"GROUP BY m.message_idnr, v.headervalue, k.data "
-					"HAVING v.headervalue %s ? OR k.data %s ? "
+					"AND v.headervalue %s ? OR k.data %s ? "
 					"ORDER BY m.message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
 					db_get_sql(SQL_INSENSITIVE_LIKE), 
@@ -1224,14 +1223,15 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			
 			case IST_DATA_BODY:
 			g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "p.data");
-			g_string_printf(q,"SELECT m.message_idnr,p.data FROM %smimeparts p "
+			g_string_printf(q,"SELECT DISTINCT m.message_idnr FROM %smimeparts p "
 					"LEFT JOIN %spartlists l ON p.id=l.part_id "
 					"LEFT JOIN %sphysmessage s ON l.physmessage_id=s.id "
 					"LEFT JOIN %smessages m ON m.physmessage_id=s.id "
-					"LEFT JOIN %smailboxes b USING (mailbox_idnr) "
+					"LEFT JOIN %smailboxes b ON m.mailbox_idnr = b.mailbox_idnr "
 					"WHERE b.mailbox_idnr=? AND m.status IN (?,?) "
 					"AND (l.part_key > 1 OR l.is_header=0) "
-					"GROUP BY m.message_idnr,p.data HAVING %s %s ?",
+					"AND %s %s ?"
+					"ORDER BY m.message_idnr",
 					DBPFX,DBPFX,DBPFX,DBPFX,DBPFX,
 					t->str, db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
 

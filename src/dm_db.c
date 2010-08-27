@@ -373,9 +373,12 @@ gboolean db_update(const char *q, ...)
 
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		result = db_exec(c, query);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
 	END_TRY;
@@ -446,7 +449,8 @@ unsigned db_num_fields(R r)
 }
 const char * db_result_get(R r, unsigned field)
 {
-	return ResultSet_getString(r, field+1);
+	const char * val = ResultSet_getString(r, field+1);
+	return val ? val : "";
 }
 int db_result_get_int(R r, unsigned field)
 {
@@ -462,7 +466,11 @@ u64_t db_result_get_u64(R r, unsigned field)
 }
 const void * db_result_get_blob(R r, unsigned field, int *size)
 {
-	return ResultSet_getBlob(r, field+1, size);
+	const char * val = ResultSet_getBlob(r, field+1, size);
+	if (!val) {
+		*size = 0;
+	}
+	return val;
 }
 
 u64_t db_insert_result(C c, R r)
@@ -483,6 +491,17 @@ u64_t db_insert_result(C c, R r)
 		if ((id = (u64_t )Connection_lastRowId(c)) == 0) // sqlite
 			id = db_result_get_u64(r, 0); // postgresql
 	}
+	assert(id);
+	return id;
+}
+
+u64_t db_get_pk(C c, const char *table)
+{
+	R r;
+	u64_t id = 0;
+	r = db_query(c, "SELECT sq_%s%s.CURRVAL FROM DUAL", DBPFX, table);
+	if (db_result_next(r))
+		id = db_result_get_u64(r, 0);
 	assert(id);
 	return id;
 }
@@ -562,6 +581,15 @@ static const char * db_get_sqlite_sql(sql_fragment_t frag)
 		break;
 		case SQL_RETURNING:
 		break;
+		case SQL_TABLE_EXISTS:
+			return "SELECT 1=1 FROM %s%s LIMIT 1 OFFSET 0";
+		break;
+		case SQL_ESCAPE_COLUMN:
+			return "";
+		break;
+		case SQL_COMPARE_BLOB:
+			return "%s=?";
+		break;
 	}
 	return NULL;
 }
@@ -605,6 +633,15 @@ static const char * db_get_mysql_sql(sql_fragment_t frag)
 			return "%s";
 		break;
 		case SQL_RETURNING:
+		break;
+		case SQL_TABLE_EXISTS:
+			return "SELECT 1=1 FROM %s%s LIMIT 1 OFFSET 0";
+		break;
+		case SQL_ESCAPE_COLUMN:
+			return "`";
+		break;
+		case SQL_COMPARE_BLOB:
+			return "%s=?";
 		break;
 	}
 	return NULL;
@@ -653,6 +690,68 @@ static const char * db_get_pgsql_sql(sql_fragment_t frag)
 		case SQL_RETURNING:
 			return "RETURNING %s";
 		break;
+		case SQL_TABLE_EXISTS:
+			return "SELECT 1=1 FROM %s%s LIMIT 1 OFFSET 0";
+		break;
+		case SQL_ESCAPE_COLUMN:
+			return "\"";
+		break;
+		case SQL_COMPARE_BLOB:
+			return "%s=?";
+		break;
+	}
+	return NULL;
+}
+
+static const char * db_get_oracle_sql(sql_fragment_t frag)
+{
+	switch(frag) {
+		case SQL_TO_CHAR:
+			return "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS')";
+		break;
+		case SQL_TO_DATE:
+			return "TO_DATE(%s, 'YYYY-MM-DD')";
+		break;
+		case SQL_TO_DATETIME:
+			return "TO_DATE(%s, 'YYYY-MM-DD HH24:MI:SS')";
+		break;
+                case SQL_TO_UNIXEPOCH:
+			return "DBMAIL_UTILS.UNIX_TIMESTAMP(%s)";
+		break;
+		case SQL_CURRENT_TIMESTAMP:
+			return "SYSTIMESTAMP";
+		break;
+		case SQL_EXPIRE:
+			return "SYSTIMESTAMP - INTERVAL %d DAY"; 
+		break;
+		case SQL_BINARY:
+			return "";
+		break;
+		case SQL_SENSITIVE_LIKE:
+			return "LIKE";
+		break;
+		case SQL_INSENSITIVE_LIKE:
+			return "LIKE";
+		break;
+		case SQL_IGNORE:
+			return "";
+		break;
+		case SQL_STRCASE:
+		case SQL_ENCODE_ESCAPE:
+		case SQL_PARTIAL:
+			return "%s";
+		break;
+		case SQL_RETURNING:
+		break;
+		case SQL_TABLE_EXISTS:
+			return "SELECT TABLE_NAME FROM USER_TABLES WHERE TABLE_NAME='%s%s'";
+		break;
+		case SQL_ESCAPE_COLUMN:
+			return "\"";
+		break;
+		case SQL_COMPARE_BLOB:
+			return "DBMS_LOB.COMPARE(%s,?) = 0";
+		break;
 	}
 	return NULL;
 }
@@ -668,9 +767,12 @@ const char * db_get_sql(sql_fragment_t frag)
 			return db_get_mysql_sql(frag);
 		case DM_DRIVER_POSTGRESQL:
 			return db_get_pgsql_sql(frag);
+		case DM_DRIVER_ORACLE:
+			return db_get_oracle_sql(frag);
+
 	}
 
-	TRACE(TRACE_EMERG, "driver not in [sqlite|mysql|postgresql]");
+	TRACE(TRACE_EMERG, "driver not in [sqlite|mysql|postgresql|oracle]");
 
 	return NULL;
 }
@@ -694,7 +796,7 @@ char *db_returning(const char *s)
  */
 static void check_table_exists(C c, const char *table, const char *errormessage)
 {
-	if (! db_query(c, "SELECT 1=1 FROM %s%s LIMIT 1 OFFSET 0", DBPFX, table))
+	if (! db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, table))
 		TRACE(TRACE_EMERG, "%s", errormessage);
 }
 
@@ -722,7 +824,7 @@ int db_use_usermap(void)
 	int use_usermap = TRUE;
 	C c = db_con_get();
 	TRY
-		if (! db_query(c, "SELECT 1=1 FROM %susermap LIMIT 1 OFFSET 0", DBPFX))
+		if (! db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "usermap"))
 			use_usermap = FALSE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1015,6 +1117,7 @@ int db_log_ip(const char *ip)
 	
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "SELECT idnr FROM %spbsp WHERE ipnumber = ?", DBPFX);
 		db_stmt_set_str(s,1,ip);
 		r = db_stmt_query(s);
@@ -1034,9 +1137,11 @@ int db_log_ip(const char *ip)
 			db_stmt_set_str(s,1,ip);
 			db_stmt_exec(s);
 		}
+		db_commit_transaction(c);
 		TRACE(TRACE_DEBUG, "ip [%s] logged", ip);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
@@ -2151,16 +2256,24 @@ int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		s = db_stmt_prepare(c,query);
 		db_stmt_set_str(s,1,simple_name);
 		db_stmt_set_u64(s,2,owner_idnr);
-
-		r = db_stmt_query(s);
-		*mailbox_idnr = db_insert_result(c, r);
+		
+		if (_db_params.db_driver == DM_DRIVER_ORACLE) {
+			db_stmt_exec(s);
+			*mailbox_idnr = db_get_pk(c, "mailboxes");
+		} else {
+			r = db_stmt_query(s);
+			*mailbox_idnr = db_insert_result(c, r);
+		}
+		db_commit_transaction(c);
 		TRACE(TRACE_DEBUG, "created mailbox with idnr [%llu] for user [%llu]",
 				*mailbox_idnr, owner_idnr);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		result = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
@@ -2460,14 +2573,26 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		create_unique_id(unique_id, msg_idnr);
-		r = db_query(c, "INSERT INTO %smessages ("
-			"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
-			" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,1,draft_flag,'%s',status"
-			" FROM %smessages WHERE message_idnr = %llu %s",DBPFX, mailbox_to, unique_id,DBPFX, msg_idnr, frag);
-		*newmsg_idnr = db_insert_result(c, r);
+		if (_db_params.db_driver == DM_DRIVER_ORACLE) {
+			db_exec(c, "INSERT INTO %smessages ("
+				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
+				" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,1,draft_flag,'%s',status"
+				" FROM %smessages WHERE message_idnr = %llu %s",DBPFX, mailbox_to, unique_id,DBPFX, msg_idnr, frag);
+			*newmsg_idnr = db_get_pk(c, "messages");
+
+		} else {
+			r = db_exec(c, "INSERT INTO %smessages ("
+				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
+				" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,1,draft_flag,'%s',status"
+				" FROM %smessages WHERE message_idnr = %llu %s",DBPFX, mailbox_to, unique_id,DBPFX, msg_idnr, frag);
+			*newmsg_idnr = db_insert_result(c, r);
+		}
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
 	END_TRY;
@@ -2479,11 +2604,14 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	/* Copy the message keywords */
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		db_exec(c, "INSERT INTO %skeywords (message_idnr, keyword) "
 			"SELECT %llu,keyword from %skeywords WHERE message_idnr=%llu", 
 			DBPFX, *newmsg_idnr, DBPFX, msg_idnr);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
 	END_TRY;
@@ -2564,6 +2692,7 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 	C c; S s; R r; volatile int t = TRUE;
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "SELECT * FROM %ssubscription WHERE user_id=? and mailbox_id=?", DBPFX);
 		db_stmt_set_u64(s,1,user_idnr);
 		db_stmt_set_u64(s,2,mailbox_idnr);
@@ -2574,8 +2703,10 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 			db_stmt_set_u64(s,2,mailbox_idnr);
 			t = db_stmt_exec(s);
 		}
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;		
 	FINALLY
 		db_con_close(c);
@@ -3048,6 +3179,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 	t = TRUE;
 	memset(query,0,DEF_QUERYSIZE);
 	TRY
+		db_begin_transaction(c);
 		frag = db_returning("user_idnr");
 		if (*user_idnr==0) {
 			snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
@@ -3076,12 +3208,18 @@ int db_user_create(const char *username, const char *password, const char *encty
 			db_stmt_set_str(s, 6, encoding);
 		}
 		g_free(frag);
-
-		r = db_stmt_query(s);
-		id = db_insert_result(c, r);
+		if (_db_params.db_driver == DM_DRIVER_ORACLE) {
+			db_stmt_exec(s);
+			id = db_get_pk(c, "users");
+		} else {
+			r = db_stmt_query(s);
+			id = db_insert_result(c, r);
+		}
 		if (*user_idnr == 0) *user_idnr = id;
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
@@ -3104,11 +3242,14 @@ int db_user_delete(const char * username)
 	C c; S s; volatile int t = FALSE;
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "DELETE FROM %susers WHERE userid = ?", DBPFX);
 		db_stmt_set_str(s, 1, username);
 		t = db_stmt_exec(s);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
 	END_TRY;
@@ -3120,12 +3261,15 @@ int db_user_rename(u64_t user_idnr, const char *new_name)
 	C c; S s; volatile gboolean t = FALSE;
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "UPDATE %susers SET userid = ? WHERE user_idnr= ?", DBPFX);
 		db_stmt_set_str(s, 1, new_name);
 		db_stmt_set_u64(s, 2, user_idnr);
 		t = db_stmt_exec(s);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
@@ -3228,13 +3372,16 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	t = FALSE;
 	db_con_clear(c);
 	TRY
+		db_begin_transaction(c);
 		s = db_stmt_prepare(c, query);
 		db_stmt_set_str(s, 1, tmp_to);
 		db_stmt_set_str(s, 2, tmp_from);
 		db_stmt_set_str(s, 3, tmp_handle);
 		t = db_stmt_exec(s);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
@@ -3260,11 +3407,13 @@ int db_replycache_unregister(const char *to, const char *from, const char *handl
 
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		s = db_stmt_prepare(c, query);
 		db_stmt_set_str(s, 1, to);
 		db_stmt_set_str(s, 2, from);
 		db_stmt_set_str(s, 3, handle);
 		t = db_stmt_exec(s);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
@@ -3358,6 +3507,7 @@ int db_rehash_store(void)
 	t = FALSE;
 	ids = g_list_first(ids);
 	TRY
+		db_begin_transaction(c);
 		while (ids) {
 			u64_t *id = ids->data;
 
@@ -3379,8 +3529,10 @@ int db_rehash_store(void)
 			if (! g_list_next(ids)) break;
 			ids = g_list_next(ids);
 		}
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
