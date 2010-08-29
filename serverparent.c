@@ -343,6 +343,10 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 	for (ip = 0; ip < config->ipcount; ip++) {
 		// Remove whitespace from each list entry, then log it.
 		g_strstrip(config->iplist[ip]);
+		if (config->iplist[ip][0] == '*') {
+			g_free(config->iplist[ip]);
+			config->iplist[ip] = g_strdup("0.0.0.0");
+		}
 		TRACE(TRACE_DEBUG, "binding to IP [%s]", config->iplist[ip]);
 	}
 
