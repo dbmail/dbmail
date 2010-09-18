@@ -11,6 +11,7 @@ msgstr ""
 "PO-Revision-Date: 2010-09-11 23:51+0200\n"
 "Last-Translator: Joe Hansen <joedalton2@yahoo.dk>\n"
 "Language-Team: Danish <debian-l10n-danish@lists.debian.org> \n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -30,9 +31,9 @@ msgid ""
 "will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
 "dbmail."
 msgstr ""
-"Bekræft venligst at du ønsker at lade debconf håndtere dele af din "
-"dbmail-konfiguration. Bemærk at ændringer du foretager i dbmail.conf manuelt "
-"IKKE vil blive overskrevet, hvis du senere vælger at genkøre dpkg-reconfigure "
+"Bekræft venligst at du ønsker at lade debconf håndtere dele af din dbmail-"
+"konfiguration. Bemærk at ændringer du foretager i dbmail.conf manuelt IKKE "
+"vil blive overskrevet, hvis du senere vælger at genkøre dpkg-reconfigure "
 "dbmail."
 
 #. Type: select
@@ -87,9 +88,9 @@ msgid ""
 "created. You should grant full read/write permissions on this database to "
 "the dbmail user."
 msgstr ""
-"Nævn venligst serveren hvor en database, der skal indeholde dbmails tabeller, "
-"vil blive oprettet. Du skal tildele fulde læse/skrive rettigheder til denne "
-"database for dbmail-brugeren."
+"Nævn venligst serveren hvor en database, der skal indeholde dbmails "
+"tabeller, vil blive oprettet. Du skal tildele fulde læse/skrive rettigheder "
+"til denne database for dbmail-brugeren."
 
 #. Type: string
 #. Description
@@ -156,8 +157,8 @@ msgid ""
 "Dbmail supports both IMAP and POP3 services. You can choose to run either "
 "one or both services."
 msgstr ""
-"Dbmail understøtter både IMAP og POP3-tjenester. Du kan vælge at køre "
-"enten en eller begge tjenester."
+"Dbmail understøtter både IMAP og POP3-tjenester. Du kan vælge at køre enten "
+"en eller begge tjenester."
 
 #. Type: boolean
 #. Description
@@ -172,8 +173,8 @@ msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
 "This is only needed when you like to feed the email to Dbmail by LMTP."
 msgstr ""
-"Vælg venligst hvorvidt LMTP-serveren skal startes efter genstart. "
-"Dette er kun nødvendigt, når du ønsker at give e-posten til Dbmail via LMTP."
+"Vælg venligst hvorvidt LMTP-serveren skal startes efter genstart. Dette er "
+"kun nødvendigt, når du ønsker at give e-posten til Dbmail via LMTP."
 
 #. Type: boolean
 #. Description
@@ -214,8 +215,7 @@ msgid ""
 "Please enter the port which your LDAP server is listening on. The default "
 "port is 389."
 msgstr ""
-"Indtast venligst porten hvor din LDAP-server lytter. Standardporten er "
-"389."
+"Indtast venligst porten hvor din LDAP-server lytter. Standardporten er 389."
 
 #. Type: string
 #. Description
@@ -302,7 +302,8 @@ msgstr "DN brugt til at binde til LDAP-serveren:"
 #. Description
 #: ../dbmail.templates:18001
 msgid "Please enter the DN which should be used to connect to the LDAP server."
-msgstr "Indtast venligst DN'en som skal bruges til at forbinde til LDAP-serveren."
+msgstr ""
+"Indtast venligst DN'en som skal bruges til at forbinde til LDAP-serveren."
 
 #. Type: password
 #. Description
@@ -316,5 +317,5 @@ msgstr "Adgangskode for at binde til LDAP-serveren:"
 msgid ""
 "Please enter the password which should be used to connect to the LDAP server."
 msgstr ""
-"Indtast venligst adgangskoden som skal bruges til at forbinde til LDAP-serveren."
-
+"Indtast venligst adgangskoden som skal bruges til at forbinde til LDAP-"
+"serveren."

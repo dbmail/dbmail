@@ -1,24 +1,7 @@
-dbmail (2.2.16-1) unstable; urgency=low
+dbmail (2.2.17-1) unstable; urgency=low
 
-  * upstream release
-
- -- Paul J Stevens <paul@nfg.nl>  Mon, 21 Jun 2010 11:13:25 +0200
-
-dbmail (2.2.15-1) unstable; urgency=low
-
-  * upstream release
-
- -- Paul J Stevens <paul@nfg.nl>  Sat, 13 Feb 2010 10:16:52 +0100
-
-dbmail (2.2.14-1) unstable; urgency=low
-
-  * upstream release
-
- -- Paul J Stevens <paul@nfg.nl>  Fri, 22 Jan 2010 10:38:06 +0100
-
-dbmail (2.2.13-1) unstable; urgency=low
-
-  * upstream release
+  * upstream release 
+  * add Danish debconf translation (Closes: #596465)
   * update autoconf files (Closes: #542080)
   * fix misc debian issues (Closes: #482282):
      - fix cron output due to missing files when in state "config-files"
@@ -27,7 +10,7 @@ dbmail (2.2.13-1) unstable; urgency=low
      - remove empty prerm
   * fix typo (Closes: #550259)
 
- -- Paul J Stevens <paul@nfg.nl>  Fri, 09 Oct 2009 14:41:47 +0200
+ -- Paul J Stevens <paul@nfg.nl>  Sat, 18 Sep 2010 17:51:36 +0000
 
 dbmail (2.2.11-1) unstable; urgency=low
 
