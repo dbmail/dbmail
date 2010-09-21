@@ -35,11 +35,14 @@ SSL_CTX *tls_context;
 
 /* Create the initial SSL context structure */
 SSL_CTX *tls_init(void) {
+	SSL_CTX *ctx;
 	SSL_library_init();
 	SSL_load_error_strings();
 	/* FIXME: We need to allow for the allowed SSL/TLS versions to be */
 	/* configurable. */
-	return SSL_CTX_new(SSLv23_method());
+	
+	ctx = SSL_CTX_new(SSLv23_server_method());
+	return ctx;
 }
 
 /* load the certificates into the context */
@@ -96,7 +99,26 @@ void tls_load_ciphers(serverConfig_t *conf) {
 
 /* Grab the top error off of the error stack and then return a string
  * corresponding to that error */
-char *tls_get_error(void) {
+char *tls_get_error(void) 
+{
 	return ERR_error_string(ERR_get_error(), NULL);
+}
+
+SSL *tls_setup(int fd) 
+{
+	SSL *ssl;
+
+	if (! (ssl = SSL_new(tls_context))) {
+		TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
+		return NULL;
+	}
+	if ( !SSL_set_fd(ssl, fd)) {
+		TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+		return NULL;
+	}
+
+	return ssl;
 }
 

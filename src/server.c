@@ -502,27 +502,7 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 	c->saddr = saddr;
 	c->saddr_len = len;
 	
-	if (ssl) {
-		if (! (c->ssl = SSL_new(tls_context))) {
-			TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
-			event_add(ev, NULL);
-			return;
-		}
-		if ( !SSL_set_fd(c->ssl, c->sock)) {
-			TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
-			SSL_free(c->ssl);
-			c->ssl = NULL;
-			event_add(ev, NULL);
-			return;
-		}
-		if (SSL_accept(c->ssl) <= 0) {
-			TRACE(TRACE_ERR, "Error in TLS handshake: %s", tls_get_error());
-			SSL_free(c->ssl);
-			c->ssl = NULL;
-			event_add(ev, NULL);
-			return;
-		}
-	}
+	if (ssl) c->ssl_state = -1; // defer tls setup
 
 	TRACE(TRACE_INFO, "connection accepted");
 
@@ -532,8 +512,10 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 	g_free(caddr);
 	g_free(saddr);
 
-	if (c->ssl)
+	if (c->ssl) {
+		SSL_shutdown(c->ssl);
 		SSL_free(c->ssl);
+	}
 
 	g_free(c);
 
@@ -691,7 +673,7 @@ int server_run(serverConfig_t *conf)
 			k = i+1;
 			for (k = i, i = 0; i < conf->ssl_socketcount; i++, k++) {
 				TRACE(TRACE_DEBUG, "Adding event for ssl socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, total);
-				event_set(&evsock[k], conf->ssl_listenSockets[k], EV_READ, server_sock_ssl_cb, &evsock[k]);
+				event_set(&evsock[k], conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, &evsock[k]);
 				event_add(&evsock[k], NULL);
 			}
 		}

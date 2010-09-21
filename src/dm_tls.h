@@ -23,6 +23,7 @@
 #include "dbmail.h"
 
 SSL_CTX *tls_init(void);
+SSL *tls_setup(int);
 void tls_load_certs(serverConfig_t *);
 void tls_load_ciphers(serverConfig_t *);
 char *tls_get_error(void);

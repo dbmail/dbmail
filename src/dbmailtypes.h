@@ -298,6 +298,7 @@ enum BODY_FETCH_ITEM_TYPES {
 typedef struct  {
 	int sock;
 	SSL *ssl;                       /* SSL/TLS context for this client */
+	gboolean ssl_state;		/* SSL_accept done or not */
 	struct sockaddr *caddr;
 	socklen_t caddr_len;
 	struct sockaddr *saddr;

@@ -435,7 +435,8 @@ int imap_handle_connection(client_sock *c)
 
 	session->ci = ci;
 
-	if (! server_conf->ssl) Capa_remove(session->capa, "STARTTLS");
+	if ((! server_conf->ssl) || (ci->ssl_state == TRUE)) 
+		Capa_remove(session->capa, "STARTTLS");
 
 	reset_callbacks(session);
 	

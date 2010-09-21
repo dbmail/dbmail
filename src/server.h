@@ -28,7 +28,18 @@
 #define _SERVER_H
 
 #include "dbmail.h"
- 
+
+#define BLOCK(a) \
+        { \
+                int flags; \
+                if ( (flags = fcntl(a, F_GETFL, 0)) < 0) \
+                        perror("F_GETFL"); \
+                flags &= ~O_NONBLOCK; \
+                if (fcntl(a, F_SETFL, flags) < 0) \
+                        perror("F_SETFL"); \
+        }
+
+
 #define UNBLOCK(a) \
         { \
                 int flags; \

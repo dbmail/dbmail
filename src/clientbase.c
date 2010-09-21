@@ -180,10 +180,9 @@ clientbase_t * client_init(client_sock *c)
 
 		/* make streams */
 		client->rx = client->tx = c->sock;
-		client->ssl = c->ssl;
-
-		if (c->ssl)
-			client->ssl_state = TRUE;
+		if (c->ssl_state == -1) {
+			ci_starttls(client);
+		}
 	}
 
 	client->read_buffer = g_string_new("");
@@ -212,21 +211,14 @@ int ci_starttls(clientbase_t *self)
 {
 	int e;
 	TRACE(TRACE_DEBUG,"[%p] ssl_state [%d]", self, self->ssl_state);
-	if (self->ssl && self->ssl_state) {
+	if (self->ssl && self->ssl_state > 0) {
 		TRACE(TRACE_ERR, "ssl already initialized");
 		return DM_EGENERAL;
 	}
 
 	if (! self->ssl) {
 		self->ssl_state = FALSE;
-		if (! (self->ssl = SSL_new(tls_context))) {
-			TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
-			return DM_EGENERAL;
-		}
-		if ( !SSL_set_fd(self->ssl, self->tx)) {
-			TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
-			SSL_free(self->ssl);
-			self->ssl = NULL;
+		if (! (self->ssl = tls_setup(self->tx))) {
 			return DM_EGENERAL;
 		}
 	}
@@ -234,6 +226,7 @@ int ci_starttls(clientbase_t *self)
 		if ((e = SSL_accept(self->ssl)) != 1) {
 			int e2;
 			if ((e2 = self->cb_error(self->rx, e, (void *)self))) {
+				SSL_shutdown(self->ssl);
 				SSL_free(self->ssl);
 				self->ssl = NULL;
 				return DM_EGENERAL;
@@ -242,10 +235,10 @@ int ci_starttls(clientbase_t *self)
 				return e;
 			}
 		}
+		TRACE(TRACE_INFO,"[%p] SSL handshake successful using %s", self->ssl, SSL_get_cipher(self->ssl));
 		self->ssl_state = TRUE;
 	}
 
-	TRACE(TRACE_DEBUG,"[%p] ssl initialized", self);
 	return DM_SUCCESS;
 }
 
@@ -347,10 +340,12 @@ void ci_read_cb(clientbase_t *self)
 
 	while (TRUE) {
 		memset(ibuf, 0, sizeof(ibuf));
-		if (self->ssl)
-			t = SSL_read(self->ssl, (void *)ibuf, IBUFLEN);
-		else
-			t = read(self->rx, (void *)ibuf, IBUFLEN);
+		if (self->ssl) {
+			t = SSL_read(self->ssl, ibuf, sizeof(ibuf)-1);
+			TRACE(TRACE_DEBUG, "[%p] [%ld]", self, t);
+		} else {
+			t = read(self->rx, ibuf, sizeof(ibuf)-1);
+		}
 
 		if (t < 0) {
 			int e;
@@ -361,6 +356,8 @@ void ci_read_cb(clientbase_t *self)
 			break;
 
 		} else if (t == 0) {
+			if (self->ssl)
+				self->cb_error(self->rx, errno, (void *)self);
 			self->client_state |= CLIENT_EOF;
 			break;
 
