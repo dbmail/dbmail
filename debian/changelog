@@ -10,7 +10,7 @@ dbmail (2.2.17-1) unstable; urgency=low
      - remove empty prerm
   * fix typo (Closes: #550259)
 
- -- Paul J Stevens <paul@nfg.nl>  Sat, 18 Sep 2010 17:51:36 +0000
+ -- Paul J Stevens <paul@nfg.nl>  Mon, 04 Oct 2010 08:15:43 +0000
 
 dbmail (2.2.11-1) unstable; urgency=low
 
