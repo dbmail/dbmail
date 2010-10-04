@@ -2,43 +2,52 @@ Source: dbmail
 Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
+Homepage: http://www.dbmail.org
 Build-Depends: automake1.9, debhelper (>= 5.0.7), libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev | libgmime2.1-dev, libldap2-dev, libsqlite3-dev, libpq-dev, libmysqlclient15-dev | libmysqlclient14-dev, pkg-config, libtool, asciidoc, xmlto, chrpath, po-debconf
 Standards-Version: 3.9.1
 
 Package: dbmail
+Section: mail
+Priority: optional
 Architecture: any
 Pre-Depends: adduser
+Homepage: http://www.dbmail.org
 Depends: ${misc:Depends}, ${shlibs:Depends}, ucf (>= 0.30), debconf (>= 0.5) | debconf-2.0
 Provides: imap-server, pop3-server
 Suggests: dbmail-pgsql | dbmail-mysql, sqlite3
-Description: base package for the dbmail email solution
- DBMAIL is a collection of programs that allows email to be
- stored in and retrieved from a sql database.
+Description: mail server that supports sql based mailstorage
+ DBMAIL is a collection of programs that allows both users and email to 
+ be stored in and retrieved from a relational database.
  .
- It supports MySQL, PostgreSQL and Sqlite3 as database backends, LDAP
- and Sieve.
+ It supports MySQL, PostgreSQL and Sqlite3 as database backends. The
+ Sqlite3 backend, LDAP authentication and Sieve filtering are included
+ in the base package.
  .
- Supported client protocols are: POP3, IMAP4, LMTP.
- .
- This package supports Sqlite3 and LDAP authentication.
+ Supported client protocols are: POP3, IMAP4, LMTP, MANAGESIEVE.
 
 Package: dbmail-pgsql
+Section: mail
+Priority: optional
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
-Description: PostgreSQL module for Dbmail
+Homepage: http://www.dbmail.org
+Description: PostgreSQL module for dbmail
  This package provides a module for adding PostgreSQL database 
  support to DBMAIL.
  .
- DBMAIL is a collection of programs that enables email to be
- stored in and retrieved from an sql database.
+ DBMAIL is a collection of programs that allows both users and email to 
+ be stored in and retrieved from a relational database.
 
 Package: dbmail-mysql
+Section: mail
+Priority: optional
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${binary:Version})
-Description: MySQL module for Dbmail
+Homepage: http://www.dbmail.org
+Description: MySQL module for dbmail
  This package provides a module for adding MySQL database 
  support to DBMAIL.
  .
- DBMAIL is a collection of programs that enables email to be
- stored in and retrieved from an sql database.
+ DBMAIL is a collection of programs that allows both users and email to 
+ be stored in and retrieved from a relational database.
 
