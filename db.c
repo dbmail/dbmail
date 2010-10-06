@@ -2376,7 +2376,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 			     sizeof(tmpmessage));
 	}
 
-	TRACE(TRACE_DEBUG, "adding succesful");
+	TRACE(TRACE_DEBUG, "adding successful");
 
 	/* setting all virtual values */
 	session_ptr->virtual_totalmessages = session_ptr->totalmessages;

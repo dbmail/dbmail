@@ -439,7 +439,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 	char *reply_body = NULL;
 	char *notify_address = NULL;
 
-	/* message has been succesfully inserted, perform auto-notification & auto-reply */
+	/* message has been successfully inserted, perform auto-notification & auto-reply */
 	if (config_get_value("AUTO_NOTIFY", "DELIVERY", val) < 0) {
 		TRACE(TRACE_ERROR, "error getting config value for AUTO_NOTIFY");
 		return -1;
