@@ -49,16 +49,13 @@ ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
 	export WITH_SIEVE=--with-sieve
 endif
 
-# dpatch
-export PACKAGE=dbmail
-export PACKAGES=dbmail
 
 CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
 	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
-stamps/build: stamps patch configure $(PACKAGES)
+stamps/build: stamps configure dbmail
 	touch $@
 
 stamps:
@@ -74,7 +71,7 @@ stamps/dbmail:
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 	touch $@
 
-clean: clean1 unpatch
+clean: clean1
 clean1: 
 	# run clean
 	dh_testroot
@@ -122,7 +119,7 @@ binary-common: build
 	dh_installdebconf -a
 	dh_installman -a
 	dh_installdocs -a
-	dh_installchangelogs -a
+	dh_installchangelogs -a debian/upstream.changelog
 	## update examples
 	(cd $(CURDIR) && find sql/sqlite/ -type f && cat debian/dbmail.examples) | \
 		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail.examples

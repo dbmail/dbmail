@@ -1,14 +1,22 @@
-#! /bin/sh /usr/share/dpatch/dpatch-run
-## 00-dbmail_conf.dpatch by  <paul@nfg.nl>
-##
-## All lines beginning with `## DP:' are a description of the patch.
-## DP: prepare a sane debian compliant config file
+Description: update dbmail.conf for debian policy
+Author: Paul J Stevens <paul@nfg.nl>
 
-@DPATCH@
-diff -urNad dbmail-2.2.5~/dbmail.conf dbmail-2.2.5/dbmail.conf
---- dbmail-2.2.5~/dbmail.conf	2007-04-27 09:52:11.000000000 +0200
-+++ dbmail-2.2.5/dbmail.conf	2007-05-15 21:53:25.000000000 +0200
-@@ -100,8 +100,8 @@
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- dbmail-2.2.17.orig/dbmail.conf
++++ dbmail-2.2.17/dbmail.conf
+@@ -100,8 +100,8 @@ TRACE_STDERR          = 1
  # Root privs are used to open a port, then privs
  # are dropped down to the user/group specified here.
  #
@@ -19,7 +27,7 @@ diff -urNad dbmail-2.2.5~/dbmail.conf dbmail-2.2.5/dbmail.conf
  
  # 
  # The IP addresses the services will bind to.
-@@ -154,22 +154,22 @@
+@@ -159,22 +159,22 @@ RESOLVE_IP            = no
  # 
  # logfile for stdout messages
  #
