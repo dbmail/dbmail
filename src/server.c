@@ -45,7 +45,7 @@ static void server_config_load(serverConfig_t * conf, const char * const service
 static int server_set_sighandler(void);
 void disconnect_all(void);
 
-struct event *sig_int, *sig_hup, *sig_pipe;
+struct event *sig_int, *sig_hup, *sig_pipe, *sig_term;
 
 struct event *pev = NULL;
 SSL_CTX *tls_context;
@@ -547,7 +547,6 @@ void server_sig_cb(int fd, short event, void *arg)
 		case SIGPIPE: // ignore
 		break;
 		default:
-			disconnect_all();
 			exit(0);
 		break;
 	}
@@ -558,9 +557,11 @@ static int server_set_sighandler(void)
 	sigset_t set;
 	sig_int = g_new0(struct event, 1);
 	sig_hup = g_new0(struct event, 1);
+	sig_term = g_new0(struct event, 1);
 
 	signal_set(sig_int, SIGINT, server_sig_cb, sig_int); signal_add(sig_int, NULL);
 	signal_set(sig_hup, SIGHUP, server_sig_cb, sig_hup); signal_add(sig_hup, NULL);
+	signal_set(sig_term, SIGTERM, server_sig_cb, sig_term); signal_add(sig_term, NULL);
 
 	sigemptyset(&set);
 	sigaddset(&set, SIGPIPE);
@@ -575,6 +576,7 @@ static int server_set_sighandler(void)
 // Public methods
 void disconnect_all(void)
 {
+	TRACE(TRACE_INFO, "disconnecting all");
 	db_disconnect();
 	auth_disconnect();
 	g_mime_shutdown();
@@ -591,6 +593,10 @@ void disconnect_all(void)
 	if (sig_hup) {
 		g_free(sig_hup);
 		sig_hup = NULL;
+	}
+	if (sig_term) {
+		g_free(sig_term);
+		sig_term = NULL;
 	}
 }
 
