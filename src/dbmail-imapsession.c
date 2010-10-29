@@ -1438,8 +1438,8 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		char *oldflags, *newflags;
 
 		M = self->mailbox->mbstate;
-		oldflags = MailboxState_flags(M);
 		oldseq = MailboxState_getSeq(M);
+		oldflags = MailboxState_flags(M);
 		oldexists = MailboxState_getExists(M);
 		oldrecent = MailboxState_getRecent(M);
 		olduidnext = MailboxState_getUidnext(M);
@@ -1472,8 +1472,10 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 	// command specific overrides
 	switch (self->command_type) {
-		case IMAP_COMM_SELECT:
 		case IMAP_COMM_EXAMINE:
+		case IMAP_COMM_SELECT:
+		case IMAP_COMM_SEARCH:
+		case IMAP_COMM_SORT:
 			showexists = showrecent = TRUE;
 		break;
 

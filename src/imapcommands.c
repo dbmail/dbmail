@@ -1426,6 +1426,9 @@ static void sorted_search_enter(dm_thread_data *D)
 		SESSION_RETURN;
 	}
 
+	if (self->state == CLIENTSTATE_SELECTED)
+		dbmail_imap_session_mailbox_status(self, TRUE);
+
 	mb = self->mailbox;
 	switch(order) {
 		case SEARCH_SORTED:
