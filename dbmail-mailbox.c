@@ -221,6 +221,20 @@ int dbmail_mailbox_remove_uid(struct DbmailMailbox *self, u64_t *id)
 }
 
 #define FROM_STANDARD_DATE "Tue Oct 11 13:06:24 2005"
+static gchar * _message_get_envelope_date(const struct DbmailMessage *message)
+{
+	char *res;
+	struct tm gmt;
+	assert(message->internal_date);
+
+	res = g_new0(char, TIMESTRING_SIZE+1);
+	memset(&gmt,'\0', sizeof(struct tm));
+	gmtime_r(&message->internal_date, &gmt);
+
+	strftime(res, TIMESTRING_SIZE, "%a %b %d %H:%M:%S %Y", &gmt);
+	return res;
+}
+
 
 static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream *ostream)
 {
@@ -250,7 +264,7 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 		}
 		internet_address_list_destroy(ialist);
 		
-		d = dbmail_message_get_internal_date(message, 0);
+		d = _message_get_envelope_date(message);
 		date = g_string_new(d);
 		g_free(d);
 		if (date->len < 1)
