@@ -57,7 +57,7 @@ int auth_load_driver(void)
 
 	/* Note that the limit here *includes* the NULL. This is intentional,
 	 * to allow g_module_build_path to try the current working directory. */
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 2; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
 
