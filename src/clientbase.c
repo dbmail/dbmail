@@ -348,16 +348,17 @@ void ci_read_cb(clientbase_t *self)
 		}
 
 		if (t < 0) {
-			int e;
-			if ((e = self->cb_error(self->rx, errno, (void *)self)))
+			int e = errno;
+			if ((e = self->cb_error(self->rx, e, (void *)self)))
 				self->client_state |= CLIENT_ERR;
 			else
 				self->client_state |= CLIENT_AGAIN;
 			break;
 
 		} else if (t == 0) {
+			int e = errno;
 			if (self->ssl)
-				self->cb_error(self->rx, errno, (void *)self);
+				self->cb_error(self->rx, e, (void *)self);
 			self->client_state |= CLIENT_EOF;
 			break;
 
