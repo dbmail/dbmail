@@ -9,7 +9,7 @@ dbmail-deliver - inserts messages into the DBMail mailsystem.
 SYNOPSIS
 --------
 dbmail-deliver [-t headerfield] [-d addresses] [-u usernames] [-m|-M mailboxname]
-[-r return path] [-f configFile]
+   [-r return path] [-f configFile]
 
 DESCRIPTION
 -----------

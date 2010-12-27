@@ -9,8 +9,8 @@ dbmail-sievecmd - manipulates Sieve scripts in the DBMail database.
 SYNOPSIS
 --------
 dbmail-sievecmd -u username [-l] [-a scriptname] [-d scriptname]
-[-i scriptname file] [-c [scriptname]] [-r scriptname]
-[-f configfile] [-nvVh]
+   [-i scriptname file] [-c [scriptname]] [-r scriptname]
+   [-f configfile] [-nvVh]
 
 DESCRIPTION
 -----------
