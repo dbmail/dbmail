@@ -1,6 +1,6 @@
 /*
  (c) 2000-2004 IC&S, The Netherlands 
- (c) 2004-2010 NFG Net Facilities Group BV, The Netherlands, support@nfg.nl
+ (c) 2004-2011 NFG Net Facilities Group BV, The Netherlands, support@nfg.nl
 
 FIXME: this information is somewhat outdated
 TODO:
@@ -16,8 +16,8 @@ DBMAIL Installation
 What do you need?
 
 - A working database, one of the following:
-  - MySQL 4.1.3 or higher with InnoDB.
-  - PostgreSQL 7.4 or higher.
+  - MySQL 5.0 or higher with InnoDB.
+  - PostgreSQL 8.3 or higher.
   - SQLite 3 or higher.
 - A working SMTP server (such as Postfix, Exim, QMail or Sendmail).
 - The DBMail source (www.dbmail.org).
@@ -25,9 +25,9 @@ What do you need?
   systems, make sure you install and use 'gmake'. 
 - Development files (libs, scripts and include files) for your database server.
   These will probably be provided by separate packages.
-- Glib (>= 2.8) development headers and libraries.
-- Gmime (>= 2.1.18) development headers and libraries.
-- libSieve for Sieve support (libsieve.sf.net).
+- Glib (>= 2.16) development headers and libraries.
+- Gmime (>= 2.4) development headers and libraries.
+- libSieve (>= 2.2.1) for Sieve support (libsieve.sf.net).
 - Any standard libldap for LDAP support (only tested with OpenLDAP, however).
 - mhash
 - openssl
