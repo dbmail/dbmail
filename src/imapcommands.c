@@ -228,8 +228,10 @@ void _ic_authenticate_enter(dm_thread_data *D)
 	if (imap_before_smtp) 
 		db_log_ip(self->ci->src_ip);
 
-	dbmail_imap_session_buff_printf(self, "* CAPABILITY %s\r\n", Capa_as_string(self->capa));
-	SESSION_OK;
+	if (self->state != CLIENTSTATE_ERROR) \
+		dbmail_imap_session_buff_printf(self, \
+				"%s OK [%s] User %s authenticated\r\n", \
+				self->tag, Capa_as_string(self->capa), self->args[self->args_idx]);
 	SESSION_RETURN;
 }
 
