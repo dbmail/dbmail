@@ -252,6 +252,7 @@ C db_con_get(void)
 	}
 
 	assert(c);
+	Connection_setQueryTimeout(c, (int)_db_params.query_timeout);
 	TRACE(TRACE_DATABASE,"[%p] connection from pool", c);
 	return c;
 }
@@ -279,6 +280,7 @@ void db_con_clear(C c)
 {
 	TRACE(TRACE_DATABASE,"[%p] connection cleared", c);
 	Connection_clear(c);
+	Connection_setQueryTimeout(c, (int)_db_params.query_timeout);
 	return;
 }
 
@@ -310,7 +312,7 @@ gboolean db_exec(C c, const char *q, ...)
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
 		gettimeofday(&before, NULL);
-		Connection_execute(c, (const char *)query);
+		Connection_execute(c, "%s", (const char *)query);
 		gettimeofday(&after, NULL);
 		result = TRUE;
 	CATCH(SQLException)
@@ -342,7 +344,7 @@ R db_query(C c, const char *q, ...)
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
 		gettimeofday(&before, NULL);
-		r = Connection_executeQuery(c, (const char *)query);
+		r = Connection_executeQuery(c, "%s", (const char *)query);
 		gettimeofday(&after, NULL);
 		result = TRUE;
 	CATCH(SQLException)
@@ -393,7 +395,7 @@ S db_stmt_prepare(C c, const char *q, ...)
         va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
-	s = Connection_prepareStatement(c, (const char *)query);
+	s = Connection_prepareStatement(c, "%s", (const char *)query);
 	g_free(query);
 	return s;
 }

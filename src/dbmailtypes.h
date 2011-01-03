@@ -113,6 +113,7 @@ typedef struct {
 	unsigned int query_time_info;
 	unsigned int query_time_notice;
 	unsigned int query_time_warning;
+	unsigned int query_timeout;
 } db_param_t;
 
 /** configuration items */

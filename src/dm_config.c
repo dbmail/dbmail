@@ -301,6 +301,14 @@ void GetDBParams(void)
 		else
 			_db_params.query_time_warning = 30;
 
+	if (config_get_value("query_timeout", "DBMAIL", query_time) < 0)
+		TRACE(TRACE_EMERG, "error getting config! [query_timeout]");
+		if (strlen(query_time) != 0)
+			_db_params.query_timeout = (unsigned int) strtoul(query_time, NULL, 10) * 1000;
+		else
+			_db_params.query_timeout = 300000;
+
+
 	if (strcmp(_db_params.pfx, "\"\"") == 0) {
 		/* FIXME: It appears that when the empty string is quoted
 		 * that the quotes themselves are returned as the value. */
