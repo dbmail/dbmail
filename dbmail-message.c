@@ -1206,7 +1206,7 @@ void dbmail_message_cache_datefield(const struct DbmailMessage *self)
 
 void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 {
-	char *value, *raw, *s, *tmp;
+	char *tmp_raw, *value, *raw, *s, *tmp;
 	char *charset;
 
 	charset = dbmail_message_get_charset((struct DbmailMessage *)self);
@@ -1219,7 +1219,10 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 		return;
 	}
 
-	value = dbmail_iconv_str_to_utf8(raw, charset);
+	tmp_raw = dbmail_iconv_str_to_utf8(raw, charset);
+	value = dbmail_iconv_decode_text(tmp_raw);
+	g_free(tmp_raw);
+
 	s = dm_base_subject(value);
 
 	// dm_base_subject returns utf-8 string, convert it into database encoding
