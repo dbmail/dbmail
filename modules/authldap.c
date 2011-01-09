@@ -860,7 +860,7 @@ GList * auth_get_known_aliases(void)
 	GList *l = g_string_split(t,",");
 	g_string_free(t,TRUE);
 	
-	query =  dm_ldap_get_filter('&',"objectClases",l);
+	query =  dm_ldap_get_filter('&',"objectClass",l);
 	entlist = __auth_get_every_match(query, fields);
 	g_free(query);
 	
