@@ -154,7 +154,7 @@ static u64_t blob_exists(const char *buf, const char *hash)
 			snprintf(blob_cmp, DEF_FRAGSIZE, db_get_sql(SQL_COMPARE_BLOB), "data");
 			s = db_stmt_prepare(c,"SELECT id FROM %smimeparts WHERE hash=? AND %ssize%s=? AND %s", 
 					DBPFX,db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN),
-					db_get_sql(SQL_COMPARE_BLOB));
+					blob_cmp);
 			db_stmt_set_str(s,1,hash);
 			db_stmt_set_u64(s,2,l);
 			db_stmt_set_blob(s,3,buf,l);
@@ -1204,7 +1204,7 @@ static void insert_physmessage(DbmailMessage *self, C c)
 		g_free(frag);	
 	} else {
 		if (_db_params.db_driver == DM_DRIVER_ORACLE) 
-			r = db_exec(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
+			db_exec(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
 		else
 			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
 		g_free(frag);	

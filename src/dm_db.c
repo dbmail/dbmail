@@ -2581,9 +2581,8 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 				" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,1,draft_flag,'%s',status"
 				" FROM %smessages WHERE message_idnr = %llu %s",DBPFX, mailbox_to, unique_id,DBPFX, msg_idnr, frag);
 			*newmsg_idnr = db_get_pk(c, "messages");
-
 		} else {
-			r = db_exec(c, "INSERT INTO %smessages ("
+			r = db_query(c, "INSERT INTO %smessages ("
 				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
 				" SELECT %llu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,1,draft_flag,'%s',status"
 				" FROM %smessages WHERE message_idnr = %llu %s",DBPFX, mailbox_to, unique_id,DBPFX, msg_idnr, frag);
