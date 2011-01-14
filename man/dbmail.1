@@ -1,0 +1,210 @@
+'\" t
+.\"     Title: dbmail
+.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 01/14/2011
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "DBMAIL" "1" "01/14/2011" "\ \&" "\ \&"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+dbmail \- the Database Mailer, is a suite of mail storage and retrieval programs centered around a database backend\&.
+.SH "SYNOPSIS"
+.sp
+See one of the following man pages for more information about the components of a DBMail system:
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Configuration file
+T}:T{
+.sp
+\m[blue]\fBdbmail\&.conf(5)\fR\m[]\&\s-2\u[1]\d\s+2
+T}
+T{
+.sp
+Deliver mail
+T}:T{
+.sp
+\m[blue]\fBdbmail\-deliver(1)\fR\m[]\&\s-2\u[2]\d\s+2
+T}
+T{
+.sp
+Manage user accounts
+T}:T{
+.sp
+\m[blue]\fBdbmail\-users(8)\fR\m[]\&\s-2\u[3]\d\s+2
+T}
+T{
+.sp
+Export mailbox contents
+T}:T{
+.sp
+\m[blue]\fBdbmail\-export(8)\fR\m[]\&\s-2\u[4]\d\s+2
+T}
+T{
+.sp
+Manage Sieve scripts
+T}:T{
+.sp
+\m[blue]\fBdbmail\-sievecmd(8)\fR\m[]\&\s-2\u[5]\d\s+2
+T}
+T{
+.sp
+Maintain health
+T}:T{
+.sp
+\m[blue]\fBdbmail\-util(8)\fR\m[]\&\s-2\u[6]\d\s+2
+T}
+T{
+.sp
+IMAP daemon
+T}:T{
+.sp
+\m[blue]\fBdbmail\-imapd(8)\fR\m[]\&\s-2\u[7]\d\s+2
+T}
+T{
+.sp
+POP3 daemon
+T}:T{
+.sp
+\m[blue]\fBdbmail\-pop3d(8)\fR\m[]\&\s-2\u[8]\d\s+2
+T}
+T{
+.sp
+LMTP daemon
+T}:T{
+.sp
+\m[blue]\fBdbmail\-lmtpd(8)\fR\m[]\&\s-2\u[9]\d\s+2
+T}
+T{
+.sp
+HTTP daemon
+T}:T{
+.sp
+\m[blue]\fBdbmail\-httpd(8)\fR\m[]\&\s-2\u[10]\d\s+2
+T}
+T{
+.sp
+ManageSieve daemon
+T}:T{
+.sp
+\m[blue]\fBdbmail\-timsieved(8)\fR\m[]\&\s-2\u[11]\d\s+2
+T}
+.TE
+.sp 1
+.SH "BUGS"
+.sp
+If you experience inexplicable problems with DBMail, please report the issue to the \m[blue]\fBDBMail Bug Tracker\fR\m[]\&\s-2\u[12]\d\s+2\&.
+.SH "LICENSE"
+.sp
+DBMail and its components are distributed under the terms of the GNU General Public License\&. Copyrights are held variously by the authors listed below\&.
+.SH "AUTHOR(S)"
+.sp
+DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+Eelco van Beek      Aaron Stone            Paul J Stevens
+Roel Rozendaal      Open Source Engineer   NFG Net Facilities Group BV
+Ilja Booij          Palo Alto, CA USA      http://www\&.nfg\&.nl
+IC&S                http://hydricacid\&.com
+http://www\&.ic\-s\&.nl
+.fi
+.if n \{\
+.RE
+.\}
+.SH "NOTES"
+.IP " 1." 4
+dbmail.conf(5)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail.conf.html
+.RE
+.IP " 2." 4
+dbmail-deliver(1)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-deliver.html
+.RE
+.IP " 3." 4
+dbmail-users(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-users.html
+.RE
+.IP " 4." 4
+dbmail-export(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-export.html
+.RE
+.IP " 5." 4
+dbmail-sievecmd(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-sievecmd.html
+.RE
+.IP " 6." 4
+dbmail-util(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-util.html
+.RE
+.IP " 7." 4
+dbmail-imapd(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-imapd.html
+.RE
+.IP " 8." 4
+dbmail-pop3d(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-pop3d.html
+.RE
+.IP " 9." 4
+dbmail-lmtpd(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-lmtpd.html
+.RE
+.IP "10." 4
+dbmail-httpd(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-httpd.html
+.RE
+.IP "11." 4
+dbmail-timsieved(8)
+.RS 4
+\%[set $man.base.url.for.relative.links]/dbmail-timsieved.html
+.RE
+.IP "12." 4
+DBMail Bug Tracker
+.RS 4
+\%http://dbmail.org/mantis/
+.RE
