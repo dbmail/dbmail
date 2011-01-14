@@ -102,6 +102,8 @@ What do you need?
 	SQLite setup
 	------------
 
+	FIXME: this doesn't work in 3.0 (yet/anymore)
+
 	Dbmail will automatically create the database specified in dbmail.conf. 
 	All you need to do is make sure that the directory which will contain
 	the database file exists, and is writable for the dbmail user.
@@ -117,13 +119,11 @@ What do you need?
 	documented there.
 
 3.	Run configure & make
-	Run the configure script. This script uses pg_config or mysql_config
-	(depending on --with-mysql or --with-pgsql) to detect where the
-	libraries and include files for these databases are.
+	Run the configure script.
 
-	e.g. when working with PostgreSQL, this is the configure command:
+	e.g. 
 
-	./configure --with-pgsql
+	./configure --with-sieve 
 
 	After running configure, 'make all' will build the executables.
 	
