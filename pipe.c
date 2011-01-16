@@ -690,7 +690,7 @@ int insert_messages(struct DbmailMessage *message,
 
 			/* Forward using the temporary stored message. */
 			if (send_forward_list(message, delivery->forwards,
-					dbmail_message_get_header(message, "Return-Path")) < 0) {
+					dbmail_message_get_header(message, "Return-Path"))) {
 				/* If forward fails, tell the sender that we're
 				 * having a transient error. They'll resend. */
 				TRACE(TRACE_MESSAGE, "forwaring failed, reporting transient error.");
