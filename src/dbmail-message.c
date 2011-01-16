@@ -2179,6 +2179,7 @@ int send_mail(DbmailMessage *message,
 		g_free(sendmail_command);
 	return 0;
 } 
+
 int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 {
 	int result = 0;
@@ -2374,7 +2375,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 			const char *from = dbmail_message_get_header(message, "Return-Path");
 
 			/* Forward using the temporary stored message. */
-			if (send_forward_list(message, delivery->forwards, from) < 0) {
+			if (send_forward_list(message, delivery->forwards, from)) {
 				/* If forward fails, tell the sender that we're
 				 * having a transient error. They'll resend. */
 				TRACE(TRACE_NOTICE, "forwaring failed, reporting transient error.");
