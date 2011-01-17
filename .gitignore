@@ -7,3 +7,4 @@ aclocal.m4
 config.in
 config/*
 configure
+man/*.[0-9]
