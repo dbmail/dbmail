@@ -29,8 +29,6 @@ typedef struct {
 
 	GString *buff; // output buffer
 
-	size_t rbuff_size; // size of string-literals
-
 	int parser_state;
 	char **args;
 	u64_t args_idx;

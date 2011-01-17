@@ -354,6 +354,7 @@ typedef struct {
 	char tls_wbuf[TLS_SEGMENT];	/* buffer to write during tls session */
 	size_t tls_wbuf_n;		/* number of octets to write during tls session */
 
+	size_t rbuff_size;              /* size of string-literals */
 	GString *read_buffer;		/* input buffer */
 	size_t read_buffer_offset;	/* input buffer offset */
 
@@ -383,7 +384,6 @@ typedef struct {
 	GList *args;			/* command args (allocated char *) */
 
 	GString *rbuff;			/* input buffer */
-	size_t rbuff_size;		/* required number of octets (for string literal) */
 
 	char *username;
 	char *password;

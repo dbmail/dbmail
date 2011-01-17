@@ -216,17 +216,17 @@ int tims_tokenizer(ClientSession_t *session, char *buffer)
 		session->command_type = command_type;
 	}
 
-	if (session->rbuff_size) {
+	if (session->ci->rbuff_size) {
 		size_t l = strlen(buffer);
-		size_t n = min(session->rbuff_size, l);
+		size_t n = min(session->ci->rbuff_size, l);
 		g_string_append_len(session->rbuff, buffer, n);
-		session->rbuff_size -= n;
-		if (! session->rbuff_size) {
+		session->ci->rbuff_size -= n;
+		if (! session->ci->rbuff_size) {
 			session->args = g_list_append(session->args, g_strdup(session->rbuff->str));
 			g_string_printf(session->rbuff,"%s","");
 			session->parser_state = TRUE;
 		}
-		TRACE(TRACE_DEBUG, "state [%d], size [%ld]", session->parser_state, session->rbuff_size);
+		TRACE(TRACE_DEBUG, "state [%d], size [%ld]", session->parser_state, session->ci->rbuff_size);
 		return session->parser_state;
 	}
 
@@ -259,7 +259,7 @@ int tims_tokenizer(ClientSession_t *session, char *buffer)
 				continue;
 			}
 			if (c == '{') { // a literal...
-				session->rbuff_size = strtoull(s+i, NULL, 10);
+				session->ci->rbuff_size = strtoull(s+i, NULL, 10);
 				return FALSE;
 			}
 			g_string_append_c(t,c);

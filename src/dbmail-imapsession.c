@@ -1917,7 +1917,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 	max = strlen(s);
 
-	TRACE(TRACE_DEBUG,"[%p] tokenize [%lu/%lu] [%s]", self, max, self->rbuff_size, buffer);
+	TRACE(TRACE_DEBUG,"[%p] tokenize [%lu/%lu] [%s]", self, max, self->ci->rbuff_size, buffer);
 
 	assert(max <= MAX_LINESIZE);
 
@@ -1928,7 +1928,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	inquote = 0;
 
 	// if we're not fetching string-literals it's safe to strip NL
-	if (self->rbuff_size == 0)
+	if (self->ci->rbuff_size == 0)
 		g_strchomp(s); 
 
 	if (self->args[0]) {
@@ -1961,18 +1961,18 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 	for (i = 0; i < max && s[i] && self->args_idx < MAX_ARGS - 1; i++) {
 		/* get bytes of string-literal */	
-		if (self->rbuff_size > 0) {
+		if (self->ci->rbuff_size > 0) {
 			size_t got = strlen(buffer);
 
-			assert(got <= self->rbuff_size);
+			assert(got <= self->ci->rbuff_size);
 
 			if (! self->args[self->args_idx])
-				self->args[self->args_idx] = g_new0(gchar, self->rbuff_size+1);
+				self->args[self->args_idx] = g_new0(gchar, self->ci->rbuff_size+1);
 
 			strncat(self->args[self->args_idx], buffer, got);
-			self->rbuff_size -= got;
-			if (self->rbuff_size <= 0) {
-				TRACE(TRACE_DEBUG,"string-literal complete [%lu:%s]", self->rbuff_size, buffer);
+			self->ci->rbuff_size -= got;
+			if (self->ci->rbuff_size <= 0) {
+				TRACE(TRACE_DEBUG,"string-literal complete [%lu:%s]", self->ci->rbuff_size, buffer);
 				self->args_idx++;
 				i += got;
 			} else {
@@ -2058,7 +2058,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 		/* check for {number}\0 */
 		if (s[i] == '{') {
-			self->rbuff_size = strtoul(&s[i + 1], &lastchar, 10);
+			self->ci->rbuff_size += strtoul(&s[i + 1], &lastchar, 10);
 
 			/* only continue if the number is followed by '}\0' */
 			TRACE(TRACE_DEBUG, "[%p] last char = %c", self, *lastchar);
@@ -2066,6 +2066,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 				(*lastchar == '}' && *(lastchar + 1) == '\0')) {
 				dbmail_imap_session_buff_printf(self, "+ OK gimme that string\r\n");
 				dbmail_imap_session_buff_flush(self);
+				self->ci->rbuff_size = 0;
 				return 0;
 			}
 		}

@@ -157,10 +157,10 @@ void imap_cb_read(void *arg)
 		return;
 	} 
 	if (state & CLIENT_EOF) {
-		if (len < 1)
+		if (0 < len < session->ci->rbuff_size)
 			imap_session_bailout(session);
 	} 
-	if (session->ci->read_buffer->len > 0)
+	if (len > 0)
 		imap_handle_input(session);
 }
 
@@ -349,10 +349,10 @@ void imap_handle_input(ImapSession *session)
 
 		memset(buffer, 0, sizeof(buffer));
 
-		if (session->rbuff_size <= 0) {
+		if (session->ci->rbuff_size <= 0) {
 			l = ci_readln(session->ci, buffer);
 		} else {
-			int needed = MIN(session->rbuff_size, (int)sizeof(buffer)-1);
+			int needed = MIN(session->ci->rbuff_size, (int)sizeof(buffer)-1);
 			l = ci_read(session->ci, buffer, needed);
 		}
 
