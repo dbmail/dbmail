@@ -140,16 +140,14 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 
 void imap_cb_read(void *arg)
 {
-	int state;
-	size_t len;
 	ImapSession *session = (ImapSession *) arg;
 
 	TRACE(TRACE_DEBUG,"reading...");
 
 	ci_read_cb(session->ci);
 
-	len = session->ci->read_buffer->len;
-	state = session->ci->client_state;
+	size_t len = session->ci->read_buffer->len;
+	int state = session->ci->client_state;
 
 	if (state & CLIENT_ERR) {
 		ci_cork(session->ci);
@@ -157,8 +155,11 @@ void imap_cb_read(void *arg)
 		return;
 	} 
 	if (state & CLIENT_EOF) {
-		if (0 < len < session->ci->rbuff_size)
-			imap_session_bailout(session);
+		if ((session->ci->rbuff_size > 0) && (len == session->ci->rbuff_size))
+			imap_handle_input(session);
+
+		imap_session_bailout(session);
+		return;
 	} 
 	if (len > 0)
 		imap_handle_input(session);

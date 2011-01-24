@@ -108,6 +108,13 @@ static int client_error_cb(int sock, int error, void *arg)
 			case SSL_ERROR_WANT_READ:
 			case SSL_ERROR_WANT_WRITE:
 				break; // reschedule
+			case SSL_ERROR_SYSCALL:
+				if (error == -1)
+					TRACE(TRACE_ERR, "[%p] %d %s", client, sock, strerror(errno));
+				client_rbuf_clear(client);
+				client_wbuf_clear(client);
+				r = -1;
+				break;
 			default:
 				TRACE(TRACE_DEBUG,"[%p] %d %d, %p", client, sock, sslerr, arg);
 				client_rbuf_clear(client);

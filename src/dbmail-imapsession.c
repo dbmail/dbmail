@@ -913,7 +913,6 @@ static int _fetch_get_items(ImapSession *self, u64_t *uid)
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
 
-	TRACE(TRACE_DEBUG,"[%llu] [%d]", self->msg_idnr, self->fi->msgparse_needed);
 	if (self->fi->msgparse_needed) {
 		if (! (dbmail_imap_session_message_load(self, DBMAIL_MESSAGE_FILTER_FULL))) {
 			dbmail_imap_session_buff_clear(self);
