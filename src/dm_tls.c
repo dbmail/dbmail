@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
   Copyright (c) 2008 John T. Guthrie III guthrie@counterexample.org
 
   This program is free software; you can redistribute it and/or 

@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
  Copyright (C) 2006 Aaron Stone aaron@serendipity.cx
 
  This program is free software; you can redistribute it and/or 

@@ -119,7 +119,7 @@ char *match_glob(char *pattern, char *candidate)
 			int j;
 
 			for (j = 0; j < len; j++) {
-				if (strncmp(parts[i], can + j, CLAMP(plen, plen, len - j)) == 0) {
+				if (strncmp(parts[i], can + j, MIN(plen, len - j)) == 0) {
 					can += CLAMP(plen + j, plen, len);
 					has_star = 0;
 					break;
@@ -138,7 +138,7 @@ char *match_glob(char *pattern, char *candidate)
 			int j;
 
 			for (j = 0; j <= has_question; j++) {
-				if (strncmp(parts[i], can + j, CLAMP(plen, plen, len - j)) == 0) {
+				if (strncmp(parts[i], can + j, MIN(plen, len-j)) == 0) {
 					can += CLAMP(plen + j, plen, len);
 					has_question = 0;
 					break;
@@ -153,8 +153,8 @@ char *match_glob(char *pattern, char *candidate)
 		}
 
 		// This is for normal matching.
-		if (strncmp(parts[i], can, CLAMP(plen, plen, len)) == 0) {
-			can += CLAMP(plen, plen, len);
+		if (strncmp(parts[i], can, MIN(plen, len)) == 0) {
+			can += MIN(plen, len);
 			continue;
 		}
 

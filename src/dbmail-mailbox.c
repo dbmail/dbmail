@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -1356,8 +1356,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	GString *t;
 	GTree *uids;
 	char *rest;
-	u64_t i, l, r, lo = 0, hi = 0, maxmsn = 0;
-	u64_t *k, *v, *w = NULL;
+	u64_t l, r, lo = 0, hi = 0, maxmsn = 0;
 	GTree *a, *b, *c;
 	gboolean error = FALSE;
 	

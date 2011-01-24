@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -995,7 +995,6 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 {
 	char *type = NULL;
 	GList *keys = NULL;
-	GTree *c = NULL;
 	int alen = 0, blen=0, klen=0;
 	
 	gpointer key;
