@@ -737,7 +737,7 @@ char * MailboxState_flags(T M)
 
 	s = string->str;
 	g_string_free(string, FALSE);
-	return s;
+	return g_strchomp(s);
 }
 
 int db_acl_has_right(MailboxState_T M, u64_t userid, const char *right_flag)
