@@ -1961,6 +1961,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	for (i = 0; i < max && s[i] && self->args_idx < MAX_ARGS - 1; i++) {
 		/* get bytes of string-literal */	
 		if (self->ci->rbuff_size > 0) {
+			unsigned int end;
 			size_t got = strlen(buffer);
 
 			assert(got <= self->ci->rbuff_size);
@@ -1970,14 +1971,27 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 			strncat(self->args[self->args_idx], buffer, got);
 			self->ci->rbuff_size -= got;
-			if (self->ci->rbuff_size <= 0) {
-				TRACE(TRACE_DEBUG,"string-literal complete [%lu:%s]", self->ci->rbuff_size, buffer);
-				self->args_idx++;
-				i += got;
-			} else {
+			if (self->ci->rbuff_size > 0) {
+				// need more before this string-literal is complete
 				return 0;
+			} 
+			self->args_idx++;
+			i += got;
+			g_strchomp(s); 
+			TRACE(TRACE_DEBUG,"string-literal complete [%lu:%s]", self->ci->rbuff_size, s);
+			// check for further continuation
+			end = strlen(s) -1;
+			if (end > 1 && s[end] == '}') {
+				char *r = rindex(s,'{');
+				if (r) { 
+					// fix-up previous argument
+					i = r-s; 
+					self->args[self->args_idx-1][i] = '\0';
+					g_strchomp(self->args[self->args_idx-1]);
+				}
+			} else {
+				continue;
 			}
-			continue;
 		}
 
 		/* check quotes */
@@ -2057,7 +2071,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 		/* check for {number}\0 */
 		if (s[i] == '{') {
-			self->ci->rbuff_size += strtoul(&s[i + 1], &lastchar, 10);
+			self->ci->rbuff_size = strtoul(&s[i + 1], &lastchar, 10);
 
 			/* only continue if the number is followed by '}\0' */
 			TRACE(TRACE_DEBUG, "[%p] last char = %c", self, *lastchar);
@@ -2065,7 +2079,6 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 				(*lastchar == '}' && *(lastchar + 1) == '\0')) {
 				dbmail_imap_session_buff_printf(self, "+ OK gimme that string\r\n");
 				dbmail_imap_session_buff_flush(self);
-				self->ci->rbuff_size = 0;
 				return 0;
 			}
 		}
@@ -2117,11 +2130,11 @@ finalize:
 
 	TRACE(TRACE_DEBUG, "[%p] tag: [%s], command: [%s], [%llu] args", self, self->tag, self->command, self->args_idx);
 	self->args[self->args_idx] = NULL;	/* terminate */
-#if 1
+//#if 1
 	for (i = 0; i<=self->args_idx && self->args[i]; i++) { 
 		TRACE(TRACE_DEBUG, "[%p] arg[%d]: '%s'\n", self, i, self->args[i]); 
 	}
-#endif
+//#endif
 	self->args_idx = 0;
 
 	return 1;

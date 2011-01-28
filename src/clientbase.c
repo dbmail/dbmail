@@ -379,11 +379,10 @@ void ci_read_cb(clientbase_t *self)
 
 int ci_read(clientbase_t *self, char *buffer, size_t n)
 {
+	// fetch data from the read buffer
 	assert(buffer);
 
-	TRACE(TRACE_DEBUG,"[%p] need [%ld]", self, n);
 	self->len = 0;
-
 	char *s = self->read_buffer->str + self->read_buffer_offset;
 	if ((self->read_buffer_offset + n) <= self->read_buffer->len) {
 		size_t j,k = 0;
@@ -401,6 +400,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 
 int ci_readln(clientbase_t *self, char * buffer)
 {
+	// fetch a line from the read buffer
 	char *nl;
 
 	assert(buffer);
