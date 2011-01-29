@@ -105,16 +105,17 @@ static void imap_session_cleanup_leave(dm_thread_data *D)
 	ci_close(session->ci);
 	session->ci = NULL;
 	dbmail_imap_session_delete(&session);
+
+	// brute force:
+	if (server_conf->no_daemonize == 1) _exit(0);
+
 }
 
 static void imap_session_bailout(ImapSession *session)
 {
-	// brute force:
-	if (server_conf->no_daemonize == 1) _exit(0);
+	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
 
 	assert(session && session->ci);
-
-	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
 
 	ci_cork(session->ci);
 
@@ -156,7 +157,8 @@ void imap_cb_read(void *arg)
 		return;
 	} 
 	if (state & CLIENT_EOF) {
-		if ((0 < need) && (need <= have))
+		//if ((0 < need) && (need <= have))
+		if (have)
 			imap_handle_input(session);
 		else
 			imap_session_bailout(session);
@@ -533,7 +535,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 	if (session->parser_state)
 		TRACE(TRACE_DEBUG,"parser_state: [%d]", session->parser_state);
 
-	return 1;
+	return session->parser_state;
 }
 	
 void _ic_cb_leave(gpointer data)

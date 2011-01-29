@@ -1902,7 +1902,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 {
 	int inquote = 0, quotestart = 0;
 	int nnorm = 0, nsquare = 0, paridx = 0, argstart = 0;
-	unsigned int i;
+	unsigned int i = 0;
 	size_t max;
 	char parlist[MAX_LINESIZE];
 	char *s, *lastchar;
@@ -1927,8 +1927,30 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	inquote = 0;
 
 	// if we're not fetching string-literals it's safe to strip NL
-	if (self->ci->rbuff_size == 0)
+	if (self->ci->rbuff_size) {
+		assert(max <= self->ci->rbuff_size);
+
+		if (! self->args[self->args_idx])
+			self->args[self->args_idx] = g_new0(gchar, self->ci->rbuff_size+1);
+
+		strncat(self->args[self->args_idx], buffer, max);
+		self->ci->rbuff_size -= max;
+		if (self->ci->rbuff_size == 0) {
+			self->args_idx++; // move on to next token
+			TRACE(TRACE_DEBUG, "string literal complete. last-char [%d]", s[max-1]);
+			if (MATCH(self->command,"APPEND")) {
+				TRACE(TRACE_DEBUG,"break out to finalize");
+				goto finalize;
+			}
+
+		}
+
+		return 0;
+
+	} else {
 		g_strchomp(s); 
+		max = strlen(s);
+	}
 
 	if (self->args[0]) {
 		if (MATCH(self->args[0],"LOGIN")) {
@@ -1958,25 +1980,9 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 		}
 	}
 
-	for (i = 0; i < max && s[i] && self->args_idx < MAX_ARGS - 1; i++) {
-		/* get bytes of string-literal */	
-		if (self->ci->rbuff_size > 0) {
-			size_t got = strlen(buffer);
-
-			assert(got <= self->ci->rbuff_size);
-
-			if (! self->args[self->args_idx])
-				self->args[self->args_idx] = g_new0(gchar, self->ci->rbuff_size+1);
-
-			strncat(self->args[self->args_idx], buffer, got);
-			self->ci->rbuff_size -= got;
-			if (self->ci->rbuff_size == 0)
-				self->args_idx++; // move on to next token
-			return 0;
-		}
-
+	for (i = 0; (i < max) && s[i] && (self->args_idx < MAX_ARGS - 1); i++) {
 		/* check quotes */
-		if (s[i] == '"' && ((i > 0 && s[i - 1] != '\\') || i == 0)) {
+		if ((s[i] == '"') && ((i > 0 && s[i - 1] != '\\') || i == 0)) {
 			if (inquote) {
 				/* quotation end, treat quoted string as argument */
 				self->args[self->args_idx] = g_new0(char,(i - quotestart));
@@ -1994,10 +2000,10 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 		if (inquote) continue;
 
-		/* check for (, ), [ or ] in string */
+		//if strchr("[]()",s[i]) {
 		if (s[i] == '(' || s[i] == ')' || s[i] == '[' || s[i] == ']') {
 			switch (s[i]) {
-			/* check parenthese structure */
+				/* check parenthese structure */
 				case ')':
 					
 				if (paridx < 0 || parlist[paridx] != NORMPAR)
@@ -2035,11 +2041,8 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 				break;
 			}
 
-			if (paridx < 0) {
-				/* error in parenthesis structure */
-				return -1;
-			}
-
+			if (paridx < 0) return -1; /* error in parenthesis structure */
+				
 			/* add this parenthesis to the arg list and continue */
 			self->args[self->args_idx] = g_new0(char,2);
 			self->args[self->args_idx][0] = s[i];
@@ -2048,6 +2051,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			self->args_idx++;
 			continue;
 		}
+
 		if (s[i] == ' ') continue;
 
 		/* check for {number}\0 */
@@ -2055,9 +2059,10 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			unsigned long int octets = strtoul(&s[i + 1], &lastchar, 10);
 
 			/* only continue if the number is followed by '}\0' */
-			TRACE(TRACE_DEBUG, "[%p] last char = %c", self, *lastchar);
-			if ((*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0') || 
-				(*lastchar == '}' && *(lastchar + 1) == '\0')) {
+			if (
+					(*lastchar == '}' && *(lastchar + 1) == '\0') ||
+					(*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0')
+			   ) {
 				self->ci->rbuff_size = octets;
 				dbmail_imap_session_buff_printf(self, "+ Ready for data\r\n");
 				dbmail_imap_session_buff_flush(self);
@@ -2067,14 +2072,14 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 		/* at an argument start now, walk on until next delimiter
 		 * and save argument 
 		 */
-
-		for (argstart = i; i < strlen(s) && !strchr(" []()", s[i]); i++)
+		for (argstart = i; i < strlen(s) && !strchr(" []()", s[i]); i++) {
 			if (s[i] == '"') {
 				if (s[i - 1] == '\\')
 					continue;
 				else
 					break;
 			}
+		}
 
 		self->args[self->args_idx] = g_new0(char,(i - argstart + 1));
 		memcpy((void *) self->args[self->args_idx], (void *) &s[argstart], i - argstart);
@@ -2083,11 +2088,8 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 		i--;		/* walked one too far */
 	}
 
-	if (paridx != 0) {
-		/* error in parenthesis structure */
-		return -1;
-	}
-
+	if (paridx != 0) return -1; /* error in parenthesis structure */
+		
 finalize:
 	if (self->args_idx == 1) {
 		if (MATCH(self->args[0],"LOGIN")) {
@@ -2109,6 +2111,7 @@ finalize:
 			return 0;
 		}
 	}
+
 
 	TRACE(TRACE_DEBUG, "[%p] tag: [%s], command: [%s], [%llu] args", self, self->tag, self->command, self->args_idx);
 	self->args[self->args_idx] = NULL;	/* terminate */
