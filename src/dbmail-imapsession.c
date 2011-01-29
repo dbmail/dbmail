@@ -1961,7 +1961,6 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 	for (i = 0; i < max && s[i] && self->args_idx < MAX_ARGS - 1; i++) {
 		/* get bytes of string-literal */	
 		if (self->ci->rbuff_size > 0) {
-			unsigned int end;
 			size_t got = strlen(buffer);
 
 			assert(got <= self->ci->rbuff_size);
@@ -1971,27 +1970,9 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 			strncat(self->args[self->args_idx], buffer, got);
 			self->ci->rbuff_size -= got;
-			if (self->ci->rbuff_size > 0) {
-				// need more before this string-literal is complete
-				return 0;
-			} 
-			self->args_idx++;
-			i += got;
-			g_strchomp(s); 
-			TRACE(TRACE_DEBUG,"string-literal complete [%lu:%s]", self->ci->rbuff_size, s);
-			// check for further continuation
-			end = strlen(s) -1;
-			if (end > 1 && s[end] == '}') {
-				char *r = rindex(s,'{');
-				if (r) { 
-					// fix-up previous argument
-					i = r-s; 
-					self->args[self->args_idx-1][i] = '\0';
-					g_strchomp(self->args[self->args_idx-1]);
-				}
-			} else {
-				continue;
-			}
+			if (self->ci->rbuff_size == 0)
+				self->args_idx++; // move on to next token
+			return 0;
 		}
 
 		/* check quotes */
@@ -2071,13 +2052,14 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 		/* check for {number}\0 */
 		if (s[i] == '{') {
-			self->ci->rbuff_size = strtoul(&s[i + 1], &lastchar, 10);
+			unsigned long int octets = strtoul(&s[i + 1], &lastchar, 10);
 
 			/* only continue if the number is followed by '}\0' */
 			TRACE(TRACE_DEBUG, "[%p] last char = %c", self, *lastchar);
 			if ((*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0') || 
 				(*lastchar == '}' && *(lastchar + 1) == '\0')) {
-				dbmail_imap_session_buff_printf(self, "+ OK gimme that string\r\n");
+				self->ci->rbuff_size = octets;
+				dbmail_imap_session_buff_printf(self, "+ Ready for data\r\n");
 				dbmail_imap_session_buff_flush(self);
 				return 0;
 			}
