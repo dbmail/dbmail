@@ -67,6 +67,12 @@ void send_greeting(ClientSession_t *session)
 {
 	field_t banner;
 	GETCONFIGVALUE("banner", "LMTP", banner);
+	if (! dm_db_ping()) {
+		ci_write(session->ci, "500 database has gone fishing BYE\r\n");
+		session->state = QUIT;
+		return;
+	}
+
 	if (strlen(banner) > 0)
 		ci_write(session->ci, "220 %s %s\r\n", session->hostname, banner);
 	else

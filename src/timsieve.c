@@ -70,6 +70,12 @@ static void send_greeting(ClientSession_t *session)
 {
 	field_t banner;
 	GETCONFIGVALUE("banner", "SIEVE", banner);
+	if (! dm_db_ping()) {
+		ci_write(session->ci, "BYE \"database has gone fishing\"\r\n");
+		session->state = QUIT;
+		return;
+	}
+
 	if (strlen(banner) > 0)
 		ci_write(session->ci, "\"IMPLEMENTATION\" \"%s\"\r\n", banner);
 	else

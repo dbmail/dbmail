@@ -58,6 +58,12 @@ static void send_greeting(ClientSession_t *session)
 {
 	field_t banner;
 	GETCONFIGVALUE("banner", "POP", banner);
+	if (! dm_db_ping()) {
+		ci_write(session->ci, "+ERR database has gone fishing\r\n");
+		session->state = CLIENTSTATE_QUIT;
+		return;
+	}
+
 	if (strlen(banner) > 0) {
 		ci_write(session->ci, "+OK %s %s\r\n", banner, session->apop_stamp);
 	} else {
