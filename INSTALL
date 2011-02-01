@@ -19,6 +19,7 @@ What do you need?
   - MySQL 5.0 or higher with InnoDB.
   - PostgreSQL 8.3 or higher.
   - SQLite 3 or higher.
+  - Oracle 11.1 or higher.
 - A working SMTP server (such as Postfix, Exim, QMail or Sendmail).
 - The DBMail source (www.dbmail.org).
 - GNU Make. On Linux systems, your standard 'make' program is GNU Make. On *BSD
@@ -107,6 +108,39 @@ What do you need?
 	Dbmail will automatically create the database specified in dbmail.conf. 
 	All you need to do is make sure that the directory which will contain
 	the database file exists, and is writable for the dbmail user.
+	
+	Oracle setup
+	------------
+	First create Oracle table spaces for DBMAIL schema. You can use as
+	example script sql/oracle/dbmail_ts.sql. In case when you are performing
+	this action on server where Oracle DB is installed you can invoke the
+	script in following way
+
+	sqlplus "/ as sysdba" @dbmail_ts.sql 
+
+	Note that most likely you will need to alter this script in order to set 
+	storage	limit values in way which meet your storage requirement/size. 
+
+	Don't forget that for script execution you should have configured environment 
+	with ORACLE_HOME, ORACLE_SID, ORACLE_BASE variables set. 
+
+	Then create DBMAIL user:
+
+	sqlplus "/ as sysdba" @sql/oracle/dbmail_grant.sql 
+
+	If you need to you can change DBMAIL user name in this script. Also
+	please note that the script will drop previously created DBMAIL user
+	and schema. 
+
+	After that you can upload DBMAIL data schema:
+	sqlplus dbmail/dbmail @sql/oracle/dbmail_schema.sql 
+	Please note that you should execute dbmail_schema.sql using 'dbmail'
+	user instead of DBA user.
+
+	However depending on you DB configuration you may need to perform 
+	slightly other or some additional steps to properly configure DB
+	storage and connectivity options so please ask Oracle DBA to assist you. 
+
 
 2. 	Set the database settings
 
@@ -115,8 +149,37 @@ What do you need?
 	to your likings.
 
 	Make sure to set your database name, user and host are configured
-	in dbmail.conf. Other options in the configuration file are 
-	documented there.
+        in dbmail.conf. Other options in the configuration file are 
+        documented there.
+
+	dbmail.conf settings for Oracle (remote access)
+	-----------------------------------------------
+	First you should set up environment variable $ORACLE_HOME with path to Oracle
+	instant client on your DBMAIL host.
+	There is at least two possible way to fill DB connection options in dmail.conf. 
+	1) You can configure dbmail.conf without using tnsnames.ora and Oracle services.
+	In such case you should specify in 'host' and 'sqlport' a host and port where
+	Oracle TNS listener accept connections. 'db' parameter should contain DBMAIL
+	schema name.
+
+	2) Or if you have Oracle Service configured for access to DBMAIL
+	schema and this service described in $ORACLE_HOME/network/admin/tnsnames.ora
+	then you should configure only following values in dbmail.conf - 'user', 'pass'
+	and 'db'. 'db' option should contain service name. Options 'host' and 'sqlport'
+	should be empty.
+	E.g. 
+	tnsnames.ora:
+		DBMAIL_SRV = (DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)
+			(HOST = 1.1.1.1)(PORT = 4521))
+			(CONNECT_DATA = (SERVER = DEDICATED)(SERVICE_NAME = DBMAIL_SRV)
+			(FAILOVER_MODE = (TYPE = SELECT)(METHOD = BASIC))))
+	dbmail.conf:
+		host =
+		sqlport =
+		user = dbmail
+		pass = dbmail
+		db = DBMAIL_SRV
+	
 
 3.	Run configure & make
 	Run the configure script.

@@ -1,5 +1,5 @@
 -- DESCRIPTION
---   Script to create PORTA tablespaces
+--  Simple example script to create  tablespaces
 -- usage:
 --   sqlplus "/ as sysdba" @create_ts.sql DATA_TOP
 
