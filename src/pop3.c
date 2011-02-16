@@ -179,6 +179,7 @@ static void pop3_close(ClientSession_t *session)
 	clientbase_t *ci = session->ci;
 	TRACE(TRACE_DEBUG,"[%p] sessionResult [%d]", session, session->SessionResult);
 
+	session->state = CLIENTSTATE_QUIT;
 	if (session->username != NULL && (session->was_apop || session->password != NULL)) {
 
 		switch (session->SessionResult) {
@@ -214,8 +215,6 @@ static void pop3_close(ClientSession_t *session)
 	} else {
 		ci_write(ci, "+OK see ya later\r\n");
 	}
-	
-	session->state = CLIENTSTATE_QUIT;
 }
 
 

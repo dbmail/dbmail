@@ -134,6 +134,8 @@ void client_session_read(void *arg)
 		event_del(session->ci->rev);
 		if (session->ci->read_buffer->len < 1)
 			client_session_bailout(&session);
+		else 
+			session->handle_input(session);
 	}
 	else if (state & CLIENT_OK || state & CLIENT_AGAIN) {
 		session->handle_input(session);
