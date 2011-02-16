@@ -148,7 +148,6 @@ void imap_cb_read(void *arg)
 	ci_read_cb(session->ci);
 
 	size_t have = session->ci->read_buffer->len;
-	size_t need = session->ci->rbuff_size;
 	int state = session->ci->client_state;
 
 	if (state & CLIENT_ERR) {
@@ -157,7 +156,6 @@ void imap_cb_read(void *arg)
 		return;
 	} 
 	if (state & CLIENT_EOF) {
-		//if ((0 < need) && (need <= have))
 		if (have)
 			imap_handle_input(session);
 		else
