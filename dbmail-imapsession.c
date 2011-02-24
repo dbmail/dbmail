@@ -2435,7 +2435,6 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 
 		if (s[i] == ' ')
 			continue;
-
 		/* check for {number}\0 */
 		if (s[i] == '{') {
 			quotedSize = strtoul(&s[i + 1], &lastchar, 10);
@@ -2444,6 +2443,8 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 			TRACE(TRACE_DEBUG, "last char = %c", *lastchar);
 			if ((*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0') || 
 			    (*lastchar == '}' && *(lastchar + 1) == '\0')) {
+				if (quotedSize > MAX_LITERAL)
+					return NULL;
 				/* allocate space for this argument (could be a message when used with APPEND) */
 				self->args[nargs] = g_new0(char, quotedSize+1);
 			

@@ -203,14 +203,17 @@
 #define AUTO_NOTIFY_SENDER "autonotify@dbmail"
 #define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
 
-/* input reading linelimit */
+// message limit for APPEND (100MB)
+#define MAX_LITERAL 1024*1024*100
+
+// input reading linelimit
 #define MAX_LINESIZE (65*1024)
 
-/* string length for query */
+// string length for query
 #define DEF_QUERYSIZE 1024
 #define DEF_FRAGSIZE 64 
 
-/** default table prefix */
+// default table prefix
 #define DEFAULT_DBPFX "dbmail_"
 
 #define MATCH(x,y) strcasecmp((x),(y))==0
