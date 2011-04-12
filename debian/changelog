@@ -1,3 +1,9 @@
+dbmail (3.0.0-rc2-1) lucid; urgency=low
+
+  * upstream release
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 12 Apr 2011 08:55:40 +0200
+
 dbmail (3.0.0-1) unstable; urgency=low
 
   * upstream release
