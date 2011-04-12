@@ -120,7 +120,7 @@ binary-common: build
 		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail.examples
 	rm -f stamps/tmpfile
 	dh_installexamples -a
-	dh_installdirs -A etc/dbmail var/run/dbmail var/log/dbmail usr/share/dbmail
+	dh_installdirs -A etc/dbmail var/log/dbmail usr/share/dbmail
 	install -m 644 $(CURDIR)/debian/default.dbmail $(CURDIR)/debian/dbmail/usr/share/dbmail/default.dbmail
 	dh_strip -a
 	dh_link -a
