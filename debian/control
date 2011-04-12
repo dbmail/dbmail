@@ -11,12 +11,13 @@ Pre-Depends: adduser
 Depends: ${misc:Depends}, ${shlibs:Depends}, ucf (>= 0.30)
 Provides: imap-server, pop3-server
 Suggests: sqlite3
-Description: base package for the dbmail email solution
- DBMAIL is a collection of programs that allows email to be
- stored in and retrieved from a sql database.
+Description: email storage server that supports SQL
+ DBMail is a collection of programs that allow the use of a relational
+ database to store both email messages and user account data. It
+ supports Sieve filtering, and the client protocols POP3, IMAP4, LMTP,
+ and ManageSieve.
  .
- It supports MySQL, PostgreSQL and Sqlite3 as database backends, LDAP
- and Sieve.
- .
- Supported client protocols are: POP3, IMAP4, LMTP.
+ This package supports LDAP authentication. Database backends are 
+ provided by libzdb which supports MySQL, PostgreSQL, SQLite and
+ Oracle.
  .
