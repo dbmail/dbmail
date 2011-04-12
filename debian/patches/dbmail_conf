@@ -14,9 +14,9 @@ Forwarded: <no|not-needed|url proving that it has been forwarded>
 Reviewed-By: <name and email of someone who approved the patch>
 Last-Update: <YYYY-MM-DD>
 
---- dbmail.orig/dbmail.conf
-+++ dbmail/dbmail.conf
-@@ -131,8 +131,8 @@
+--- a/dbmail.conf
++++ b/dbmail.conf
+@@ -135,8 +135,8 @@ query_timeout         = 300
  # Root privs are used to open a port, then privs
  # are dropped down to the user/group specified here.
  #
@@ -27,7 +27,7 @@ Last-Update: <YYYY-MM-DD>
  
  # 
  # The IPv4 and/or IPv6 addresses the services will bind to.
-@@ -169,17 +169,17 @@
+@@ -173,17 +173,17 @@ authlog               = no
  # 
  # logfile for stdout messages
  #
