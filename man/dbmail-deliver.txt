@@ -26,12 +26,12 @@ OPTIONS
 
 -d addresses...::
   Deliver messages to the recipients specified by addresses. This
-  option is mostly used for delivery from an MTA. Seperate multiple
+  option is mostly used for delivery from an MTA. Separate multiple
   addresses by spaces.
 
 -u usernames...::
   Deliver messages straight to the given username.
-  Seperate multiple usernames with spaces.
+  Separate multiple usernames with spaces.
 
 -m mailboxname::
   Deliver messages to mailbox mailboxname of the recipient. If
