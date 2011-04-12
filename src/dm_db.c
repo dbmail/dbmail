@@ -722,7 +722,7 @@ static const char * db_get_oracle_sql(sql_fragment_t frag)
 			return "SYSTIMESTAMP";
 		break;
 		case SQL_EXPIRE:
-			return "SYSTIMESTAMP - INTERVAL %d DAY"; 
+			return "SYSTIMESTAMP - NUMTODSINTERVAL(%d,'day')"; 
 		break;
 		case SQL_BINARY:
 			return "";
@@ -1220,7 +1220,9 @@ int db_icheck_physmessages(gboolean cleanup)
 		}
 		if (cleanup) {
 			while(ids) {
+				db_begin_transaction(c);
 				db_exec(c, "DELETE FROM %sphysmessage WHERE id = %llu", DBPFX, *(u64_t *)ids->data);
+				db_commit_transaction(c);
 				if (! g_list_next(ids)) break;
 				ids = g_list_next(ids);
 			}
@@ -1229,6 +1231,7 @@ int db_icheck_physmessages(gboolean cleanup)
 		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
@@ -1254,7 +1257,9 @@ int db_icheck_partlists(gboolean cleanup)
 		}
 		if (cleanup) {
 			while(ids) {
+				db_begin_transaction(c);
 				db_exec(c, "DELETE FROM %spartlists WHERE physmessage_id = %llu", DBPFX, *(u64_t *)ids->data);
+				db_commit_transaction(c);
 				if (! g_list_next(ids)) break;
 				ids = g_list_next(ids);
 			}
@@ -1263,6 +1268,7 @@ int db_icheck_partlists(gboolean cleanup)
 		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
@@ -1287,7 +1293,9 @@ int db_icheck_mimeparts(gboolean cleanup)
 		}
 		if (cleanup) {
 			while(ids) {
+				db_begin_transaction(c);
 				db_exec(c, "DELETE FROM %smimeparts WHERE id = %llu", DBPFX, *(u64_t *)ids->data);
+				db_commit_transaction(c);
 				if (! g_list_next(ids)) break;
 				ids = g_list_next(ids);
 			}
@@ -1296,6 +1304,7 @@ int db_icheck_mimeparts(gboolean cleanup)
 		g_list_destroy(ids);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
