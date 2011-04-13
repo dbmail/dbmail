@@ -14,6 +14,16 @@ Dependencies
 
 Config Changes
 
+* MySQL: notice!
+
+ A special note to MySQL users: since DBMail 3.0 stores attachments in
+ single rows, you need to set 'max_allowed_packet' in /etc/mysql/my.cnf
+ to a value that is larger than the largest email attachment you expect
+ to support. So if you accept emails upto say 20MB, you should set a 
+ value for 'max_allowed_packet' of no less than 21MB, leaving some room
+ for network overhead. If you want to be safe: use 1.5 times the max
+ message size.
+
 * [DBMAIL] section 
 
  Dbmail allows you to select the database backend and authentication
