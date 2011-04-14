@@ -193,7 +193,7 @@ void Http_getUsers(T R)
 		evbuffer_add_printf(buf, "\n}}\n");
 	} 
 
-	if (buf->totallen)
+	if (EVBUFFER_LENGTH(buf))
 		Request_send(R, HTTP_OK, "OK", buf);
 	else		
 		Request_error(R, HTTP_SERVUNAVAIL, "Server error");
@@ -279,7 +279,7 @@ void Http_getMailboxes(T R)
 		MailboxState_free(&b);
 	}
 
-	if (buf->totallen)
+	if (EVBUFFER_LENGTH(buf))
 		Request_send(R, HTTP_OK, "OK", buf);
 	else		
 		Request_error(R, HTTP_SERVUNAVAIL, "Server error");
@@ -375,7 +375,7 @@ void Http_getMessages(T R)
 		}
 	}
 
-	if (buf->totallen)
+	if (EVBUFFER_LENGTH(buf))
 		Request_send(R, HTTP_OK, "OK", buf);
 	else		
 		Request_error(R, HTTP_SERVUNAVAIL, "Server error");
