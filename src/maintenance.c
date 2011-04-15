@@ -47,6 +47,8 @@ int has_errors = 0;
 int serious_errors = 0;
 
 static int find_time(const char *timespec, TimeString_T *timestring);
+static int do_move_old(int days, char * mbinbox_name, char * mbtrash_name);
+static int do_erase_old(int days, char * mbtrash_name);
 static int do_check_integrity(void);
 static int do_purge_deleted(void);
 static int do_set_deleted(void);
@@ -78,6 +80,10 @@ int do_showhelp(void) {
 	"               the time syntax is [<hours>h][<minutes>m]\n"
 	"               valid examples: 72h, 4h5m, 10m\n"
 	"     -M        migrate legacy 2.2.x messageblks to mimeparts table\n"
+	"     --erase days  Detele messages older than date in INBOX/Trash \n"       
+	"     --move  days   Move messages from INBOX to INBOX/Trash\n"
+	"     --inbox name  Inbox folder to move from, used in conjunction with --move\n"
+	"     --trash name  Trash folder to move to, used in conjunction with --move\n"
 	"     -m limit  limit migration to [limit] number of physmessages. Default 10000 per run\n"
 	"\nCommon options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
@@ -98,17 +104,24 @@ int main(int argc, char *argv[])
 	int check_integrity = 0;
 	int check_iplog = 0, check_replycache = 0;
 	char *timespec_iplog = NULL, *timespec_replycache = NULL;
-	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0, rehash = 0;
+	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0, rehash = 0, move_old = 0, erase_old = 0;
 	int show_help = 0;
 	int do_nothing = 1;
 	int is_header = 0;
 	int migrate = 0, migrate_limit = 10000;
 	static struct option long_options[] = {
 		{ "rehash", 0, 0, 0 },
+		{ "move", 1, 0, 0 },
+		{ "erase", 1, 0, 0 },
+		{ "trash", 1, 0, 0 },
+		{ "inbox", 1, 0, 0 },
 		{ 0, 0, 0, 0 }
 	};
 	int opt_index = 0;
 	int opt;
+	int days_move = 0 , days_erase = 0;
+	char * mbtrash_name;
+	char * mbinbox_name;
 
 	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -124,6 +137,25 @@ int main(int argc, char *argv[])
 			do_nothing = 0;
 			if (strcmp(long_options[opt_index].name,"rehash")==0)
 				rehash = 1;
+
+			if (strcmp(long_options[opt_index].name,"move")==0) {
+				move_old = 1;
+				days_move = atoi(optarg);
+			}
+			if (strcmp(long_options[opt_index].name,"erase")==0) {
+				erase_old = 1;
+				purge_deleted = 1;
+				days_erase = atoi(optarg);
+			}
+
+			if (strcmp(long_options[opt_index].name,"trash")==0) {
+				mbtrash_name = optarg;
+			}
+
+			if (strcmp(long_options[opt_index].name,"inbox")==0) {
+				mbinbox_name = optarg;
+			}
+			
 			break;
 		case 'a':
 			/* This list should be kept up to date. */
@@ -272,6 +304,8 @@ int main(int argc, char *argv[])
 
 	qverbosef("Ok. Connected.\n");
 
+	if (erase_old) do_erase_old(days_erase, mbtrash_name);
+	if (move_old) do_move_old(days_move, mbinbox_name, mbtrash_name);
 	if (check_integrity) do_check_integrity();
 	if (purge_deleted) do_purge_deleted();
 	if (is_header) do_header_cache();
@@ -1057,3 +1091,105 @@ int find_time(const char *timespec, TimeString_T *timestring)
 	return 0;
 }
 
+/* Delete message from mailbox if it is Trash and the message date less then passed date */
+int do_erase_old(int days, char * mbtrash_name)
+{
+	C c; S s; R r;
+	char expire [DEF_FRAGSIZE];
+	memset(expire,0,sizeof(expire));
+	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), days);
+
+	c = db_con_get();
+
+	s = db_stmt_prepare(c,"SELECT msg.message_idnr FROM %smessages msg "
+			      "JOIN %sphysmessage phys ON msg.physmessage_id = phys.id "
+			      "JOIN %smailboxes mb ON msg.mailbox_idnr = mb.mailbox_idnr "
+			      "WHERE mb.name = ? AND msg.status < %d "
+			      "AND phys.internal_date < %s ",
+			      DBPFX, DBPFX, DBPFX, MESSAGE_STATUS_DELETE, expire);
+
+	db_stmt_set_str(s, 1, mbtrash_name);
+
+	TRY
+		r = db_stmt_query(s);
+		while(db_result_next(r)) 
+		{
+			uint64_t id = db_result_get_u64(r, 0);
+			qprintf("Deleting message id(%lu)\n", id);
+			db_set_message_status(id,MESSAGE_STATUS_PURGE);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	return -1;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return 0;
+}
+
+/* Move message to Trash if the message is in INBOX mailbox and date less then passed date. */
+int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
+{
+	C c; R r; R r1; S s; S s1; S s2;
+	int skip = 1;
+	char expire [DEF_FRAGSIZE];
+        uint64_t mailbox_to;
+        uint64_t mailbox_from;
+
+	memset(expire,0,sizeof(expire));
+	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), days);
+
+	c = db_con_get();
+	s = db_stmt_prepare(c,"SELECT msg.message_idnr, mb.owner_idnr, mb.mailbox_idnr FROM %smessages msg "
+			      "JOIN %sphysmessage phys ON msg.physmessage_id = phys.id "
+			      "JOIN %smailboxes mb ON msg.mailbox_idnr = mb.mailbox_idnr "
+			      "WHERE mb.name = ? AND msg.status < %d "
+			      "AND phys.internal_date < %s", 
+			      DBPFX, DBPFX, DBPFX, MESSAGE_STATUS_DELETE, expire);
+
+	s1 = db_stmt_prepare(c, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr = ? AND name = ?", DBPFX);
+	s2 = db_stmt_prepare(c, "UPDATE %smessages SET mailbox_idnr = ? WHERE message_idnr = ?", DBPFX);
+
+	db_stmt_set_str(s, 1, mbinbox_name);
+
+	TRY
+		r = db_stmt_query(s);
+		while (db_result_next(r))
+		{
+			skip = 1;
+			uint64_t id = db_result_get_u64(r, 0);
+			uint64_t user_id = db_result_get_u64(r, 1);
+			mailbox_from = db_result_get_u64(r, 2);
+
+			db_stmt_set_u64(s1,1,user_id);
+			db_stmt_set_str(s1,2,mbtrash_name);
+
+			r1 = db_stmt_query(s1);
+			if (db_result_next(r1)) {
+				mailbox_to = db_result_get_u64(r1, 0);
+				skip = 0;
+			} 
+
+			if (!skip) {
+				db_stmt_set_u64(s2,1,mailbox_to);
+				db_stmt_set_u64(s2,2,id);
+				db_stmt_exec(s2);
+				db_mailbox_seq_update(mailbox_to);
+				db_mailbox_seq_update(mailbox_from);
+			}
+			else {
+				qprintf("User(%lu) doesn't has mailbox(%s)\n", user_id, mbtrash_name);
+			}
+		}
+
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		return -1;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return 0;
+
+}
