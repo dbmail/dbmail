@@ -230,7 +230,7 @@ void _ic_authenticate_enter(dm_thread_data *D)
 
 	if (self->state != CLIENTSTATE_ERROR) \
 		dbmail_imap_session_buff_printf(self, \
-				"%s OK [%s] User %s authenticated\r\n", \
+				"%s OK [CAPABILITY %s] User %s authenticated\r\n", \
 				self->tag, Capa_as_string(self->capa), self->args[self->args_idx]);
 	SESSION_RETURN;
 }
