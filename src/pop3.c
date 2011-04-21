@@ -436,7 +436,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		}
 
 		/* check in authorization layer if these credentials are correct */
-		validate_result = auth_validate(ci, session->username, session->password, &result);
+		validate_result = auth_validate(ci, (const char *)session->username, (const char *)session->password, &result);
 
 		switch (validate_result) {
 		case -1:

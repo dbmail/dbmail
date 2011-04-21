@@ -1201,13 +1201,17 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
         return (int)(l-j);
 }
 
-int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password)
+int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, const char * password)
 {
 	u64_t userid = 0;
 	
 	int valid = auth_validate(self->ci, username, password, &userid);
 	
-	TRACE(TRACE_DEBUG, "[%p] trying to validate user [%s], pass [%s]", self, username, (password ? "XXXX" : "(null)") );
+	if (self->ci->auth)
+		username = Cram_getUsername(self->ci->auth);
+
+	TRACE(TRACE_DEBUG, "[%p] trying to validate user [%s]", self, username);
+
 	
 	switch(valid) {
 		case -1: /* a db-error occurred */
@@ -1218,12 +1222,13 @@ int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * 
 			sleep(2);	/* security */
 			ci_authlog_init(self->ci, THIS_MODULE, username, AUTHLOG_ERR);
 			if (self->ci->auth) { // CRAM-MD5 auth failed
-				char *enctype = auth_getencryption(userid);
-				if (! MATCH(enctype,"")) {
+				char *enctype = NULL;
+				if (userid) enctype = auth_getencryption(userid);
+				if ((! enctype) || (! MATCH(enctype,""))) {
 					Capa_remove(self->capa,"AUTH=CRAM-MD5");
 					dbmail_imap_session_buff_printf(self, "* CAPABILITY %s\r\n", Capa_as_string(self->capa));
 				}
-				g_free(enctype);
+				if (enctype) g_free(enctype);
 			}
 			dbmail_imap_session_buff_printf(self, "%s NO login rejected\r\n", self->tag);
 			TRACE(TRACE_NOTICE, "[%p] login rejected: user [%s] from [%s:%s]", self, username, 

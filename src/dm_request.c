@@ -77,7 +77,7 @@ static gboolean Request_user_auth(T R, char *token)
 	array = g_strsplit(token, ":", 2);
 	if (array[0] && array[1]) {
 		u64_t user_id = 0;
-		gchar *username, *password;
+		const gchar *username, *password;
 		username = array[0];
 		password = array[1];
 		if (auth_validate(NULL, username, password, &user_id) > 0) {

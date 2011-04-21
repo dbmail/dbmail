@@ -127,8 +127,8 @@ START_TEST(test_auth_change_password_raw)
 {
 	u64_t user_idnr, user_idnr_check;
 	int result, i;
-	char *userid = "testchangepass";
-	char *passwd = "yourtest";
+	const char *userid = "testchangepass";
+	const char *passwd = "yourtest";
 	char *password;
 	char *enctype;
 	clientbase_t *ci = ci_new();

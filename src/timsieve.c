@@ -352,7 +352,7 @@ int tims(ClientSession_t *session)
 			 * be made up of three parts: proxy, username, password
 			 * Between them are NULLs, which are conveniently encoded
 			 * by the base64 process... */
-			if (auth_validate(ci, tmp64[1], tmp64[2], &useridnr) == 1) {
+			if (auth_validate(ci, (const char *)tmp64[1], (const char *)tmp64[2], &useridnr) == 1) {
 				ci_authlog_init(ci, THIS_MODULE, tmp64[1], AUTHLOG_ACT);
 
 				ci_write(ci, "OK\r\n");

@@ -1192,7 +1192,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
  *
  * returns useridnr on OK, 0 on validation failed, -1 on error 
  */
-int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user_idnr)
+int auth_validate(clientbase_t *ci, const char *username, const char *password, u64_t * user_idnr)
 {
 	LDAP *_ldap_conn = ldap_con_get();
 	timestring_t timestring;

@@ -224,7 +224,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size);
  *     -  0 if not validated
  *     -  1 if OK
  */
-int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user_idnr);
+int auth_validate(clientbase_t *ci, const char *username, const char *password, u64_t * user_idnr);
 
 /** 
  * \brief try tp validate a user using md5 hash

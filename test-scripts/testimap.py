@@ -370,8 +370,16 @@ class testImapServer(unittest.TestCase):
         o = getsock()
         o.debug = DEBUG
         result = o.login_cram_md5("testuser1", "test")
-        self.failUnlessRaises(Exception,o.login_cram_md5,"testuser1","blah")
-        self.assertEquals(result,('OK', ['AUTHENTICATE completed']))
+        self.assertEquals(result,('OK',['[CAPABILITY IMAP4rev1 STARTTLS ID ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE] User testuser1 authenticated'] ))
+
+        o = getsock()
+        o.debug = DEBUG
+        self.failUnlessRaises(Exception,o.login_cram_md5,"testuser1","wrongpassword")
+
+        o = getsock()
+        o.debug = DEBUG
+        self.failUnlessRaises(Exception,o.login_cram_md5,"fakeuser","wrongpassword")
+
 
     def testLogout(self):
         """ 

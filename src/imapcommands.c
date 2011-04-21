@@ -221,17 +221,23 @@ void _ic_authenticate_enter(dm_thread_data *D)
 {
 	int err;
 	SESSION_GET;
-	if ((err = dbmail_imap_session_handle_auth(self,self->args[self->args_idx],self->args[self->args_idx+1]))) {
+	const char *username = (const char *)self->args[self->args_idx];
+	const char *password = (const char *)self->args[self->args_idx+1];
+
+	if ((err = dbmail_imap_session_handle_auth(self,username,password))) {
 		D->status = err;
 		SESSION_RETURN;
 	}
 	if (imap_before_smtp) 
 		db_log_ip(self->ci->src_ip);
 
-	if (self->state != CLIENTSTATE_ERROR) \
-		dbmail_imap_session_buff_printf(self, \
-				"%s OK [CAPABILITY %s] User %s authenticated\r\n", \
-				self->tag, Capa_as_string(self->capa), self->args[self->args_idx]);
+	if (self->state != CLIENTSTATE_ERROR) {
+		if (self->ci->auth)
+			username = Cram_getUsername(self->ci->auth);
+		dbmail_imap_session_buff_printf(self, 
+				"%s OK [CAPABILITY %s] User %s authenticated\r\n", 
+				self->tag, Capa_as_string(self->capa), username);
+	}
 	SESSION_RETURN;
 }
 

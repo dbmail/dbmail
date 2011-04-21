@@ -290,11 +290,12 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 	return db_change_mailboxsize(user_idnr, new_size);
 }
 
-int auth_validate(clientbase_t *ci, char *username, char *password, u64_t * user_idnr)
+int auth_validate(clientbase_t *ci, const char *username, const char *password, u64_t * user_idnr)
 {
 	int is_validated = 0;
 	char salt[13], cryptres[35], real_username[DM_USERNAME_LEN];
-	char *tuser, *hashstr, *dbpass = NULL, *encode = NULL;
+	char *hashstr, *dbpass = NULL, *encode = NULL;
+	const char *tuser;
 	int result, t = FALSE;
 	C c; R r;
 

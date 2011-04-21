@@ -92,7 +92,7 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...);
 int dbmail_imap_session_set_state(ImapSession *self, clientstate_t state);
 int client_is_authenticated(ImapSession * self);
 int check_state_and_args(ImapSession * self, int minargs, int maxargs, clientstate_t state);
-int dbmail_imap_session_handle_auth(ImapSession * self, char * username, char * password);
+int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, const char * password);
 int dbmail_imap_session_prompt(ImapSession * self, char * prompt);
 
 MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr, gboolean reload);
