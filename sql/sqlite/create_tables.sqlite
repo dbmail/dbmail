@@ -381,6 +381,79 @@ CREATE TRIGGER fk_delete_messageblks_physmessage_id
 	END;
 
  
+CREATE TABLE dbmail_auto_replies (
+   user_idnr INTEGER PRIMARY KEY,
+   reply_body TEXT,  
+   start_date DATETIME DEFAULT '1980-01-01 22:05:58' NOT NULL,
+   stop_date DATETIME DEFAULT '1980-01-01 22:05:58' NOT NULL
+);                   
+CREATE TRIGGER fk_insert_auto_replies_user_idnr
+        BEFORE INSERT ON dbmail_auto_replies
+        FOR EACH ROW BEGIN
+                SELECT CASE 
+                        WHEN (new.user_idnr IS NOT NULL)
+                                AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_idnr) IS NULL)
+                        THEN RAISE (ABORT, 'insert on table "dbmail_auto_replies" violates foreign key constraint "fk_insert_auto_replies_user_idnr"')
+                END; 
+        END;         
+CREATE TRIGGER fk_update1_auto_replies_user_idnr
+        BEFORE UPDATE ON dbmail_auto_replies
+        FOR EACH ROW BEGIN
+                SELECT CASE 
+                        WHEN (new.user_idnr IS NOT NULL)
+                                AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_idnr) IS NULL)
+                        THEN RAISE (ABORT, 'update on table "dbmail_auto_replies" violates foreign key constraint "fk_update1_auto_replies_user_idnr"')
+                END; 
+        END;         
+CREATE TRIGGER fk_update2_auto_replies_user_idnr
+        AFTER UPDATE ON dbmail_users
+        FOR EACH ROW BEGIN
+                UPDATE dbmail_auto_replies SET user_idnr = new.user_idnr WHERE user_idnr = OLD.user_idnr;
+        END;         
+CREATE TRIGGER fk_delete_auto_replies_user_idnr
+        BEFORE DELETE ON dbmail_users
+        FOR EACH ROW BEGIN
+                DELETE FROM dbmail_auto_replies WHERE user_idnr = OLD.user_idnr;
+        END;         
+                     
+CREATE TABLE dbmail_auto_notifications (
+   user_idnr INTEGER PRIMARY KEY,
+   notify_address TEXT  
+);                   
+
+CREATE TRIGGER fk_insert_auto_notifications_user_idnr
+        BEFORE INSERT ON dbmail_auto_notifications
+        FOR EACH ROW BEGIN
+                SELECT CASE 
+                        WHEN (new.user_idnr IS NOT NULL)
+                                AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_idnr) IS NULL)
+                        THEN RAISE (ABORT, 'insert on table "dbmail_auto_notifications" violates foreign key constraint "fk_insert_auto_notifications_user_idnr"')
+                END; 
+        END;         
+CREATE TRIGGER fk_update1_auto_notifications_user_idnr
+        BEFORE UPDATE ON dbmail_auto_notifications
+        FOR EACH ROW BEGIN
+                SELECT CASE 
+                        WHEN (new.user_idnr IS NOT NULL)
+                                AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_idnr) IS NULL)
+                        THEN RAISE (ABORT, 'update on table "dbmail_auto_notifications" violates foreign key constraint "fk_update1_auto_notifications_user_idnr"')
+                END; 
+        END;         
+CREATE TRIGGER fk_update2_auto_notifications_user_idnr
+        AFTER UPDATE ON dbmail_users
+        FOR EACH ROW BEGIN
+                UPDATE dbmail_auto_notifications SET user_idnr = new.user_idnr WHERE user_idnr = OLD.user_idnr;
+        END;         
+CREATE TRIGGER fk_delete_auto_notifications_user_idnr
+        BEFORE DELETE ON dbmail_users
+        FOR EACH ROW BEGIN
+                DELETE FROM dbmail_auto_notifications WHERE user_idnr = OLD.user_idnr;
+        END;         
+                     
+
+
+
+
 CREATE TABLE dbmail_pbsp (
    idnr INTEGER PRIMARY KEY,
    since DATETIME default '0' not null,

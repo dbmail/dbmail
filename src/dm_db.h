@@ -290,6 +290,12 @@ int dm_quota_rebuild_user(u64_t user_idnr);
  * 		- 0 if message is located in a shared mailbox.
  * 		- user_idnr otherwise
  */
+
+
+/* auto reply and auto notify */
+int db_get_notify_address(u64_t user_idnr, char **notify_address);
+int db_get_reply_body(u64_t user_idnr, char **reply_body);
+
 u64_t db_get_useridnr(u64_t message_idnr);
 
 /**

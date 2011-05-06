@@ -1731,7 +1731,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	// require self to be a pristine (empty) DbmailMessage.
 	g_return_val_if_fail(self->content==NULL, self);
 	
-	message = g_mime_message_new(FALSE);
+	message = g_mime_message_new(TRUE);
 
 	// determine the optimal encoding type for the body: how would gmime
 	// encode this string. This will return either base64 or quopri.
@@ -1739,9 +1739,11 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 		encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
 
 	// set basic headers
+	TRACE(TRACE_DEBUG, "from: [%s] to: [%s] subject: [%s] body: [%s]", from, to, subject, body);
 	g_mime_message_set_sender(message, from);
 	g_mime_message_set_subject(message, subject);
-	g_mime_message_add_recipient(message, GMIME_RECIPIENT_TYPE_TO, NULL, to);
+	g_mime_object_set_header(GMIME_OBJECT(message), "To", to);
+	g_mime_message_add_recipient(message, GMIME_RECIPIENT_TYPE_TO, "", to);
 
 	// construct mime-part
 	mime_part = g_mime_part_new();
@@ -1805,7 +1807,6 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	// cleanup
 	return self;
 }
-
 
 static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, const char *mailbox, char *into, size_t into_n)
 {
@@ -2180,6 +2181,227 @@ int send_mail(DbmailMessage *message,
 	return 0;
 } 
 
+static int valid_sender(const char *addr) 
+{
+	int ret = 1;
+	char *testaddr;
+	testaddr = g_ascii_strdown(addr, -1);
+	if (strstr(testaddr, "mailer-daemon@"))
+		ret = 0;
+	if (strstr(testaddr, "daemon@"))
+		ret = 0;
+	if (strstr(testaddr, "postmaster@"))
+		ret = 0;
+	g_free(testaddr);
+	return ret;
+}
+
+#define REPLY_DAYS 7
+
+static int check_destination(DbmailMessage *message, GList *aliases)
+{
+	GList *to, *cc, *recipients;
+	to = dbmail_message_get_header_addresses(message, "To");
+	cc = dbmail_message_get_header_addresses(message, "Cc");
+	recipients = g_list_concat(to, cc);
+	if (! recipients)
+		TRACE(TRACE_DEBUG, "no recipients??");
+
+	while (recipients) {
+		char *addr = (char *)recipients->data;
+		aliases = g_list_first(aliases);
+		while (aliases) {
+			char *alias = (char *)aliases->data;
+			if (MATCH(alias, addr)) {
+				TRACE(TRACE_DEBUG, "valid alias found as recipient [%s]", alias);
+				return TRUE;
+			}
+			if (! g_list_next(aliases)) break;
+			aliases = g_list_next(aliases);
+		}
+		if (! g_list_next(recipients)) break;
+		recipients = g_list_next(recipients);
+	}
+
+	g_list_destroy(recipients);
+	return FALSE;
+}
+
+
+static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
+{
+	const char *from, *to, *subject;
+	const char *x_dbmail_reply;
+	char *handle;
+	int result;
+
+	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
+	if (x_dbmail_reply) {
+		TRACE(TRACE_INFO, "reply loop detected [%s]", x_dbmail_reply);
+		return 0;
+	}
+
+	if (! check_destination(message, aliases)) {
+		TRACE(TRACE_INFO, "no valid destination ");
+		return 0;
+	}
+
+	subject = dbmail_message_get_header(message, "Subject");
+	from = dbmail_message_get_header(message, "Delivered-To");
+
+	if (!from)
+		from = message->envelope_recipient->str;
+	if (!from)
+		from = ""; // send_mail will change this to DEFAULT_POSTMASTER
+
+	to = dbmail_message_get_header(message, "Reply-To");
+	if (!to)
+		to = dbmail_message_get_header(message, "Return-Path");
+	if (!to) {
+		TRACE(TRACE_ERR, "no address to send to");
+		return 0;
+	}
+	if (!valid_sender(to)) {
+		TRACE(TRACE_DEBUG, "sender invalid. skip auto-reply.");
+		return 0;
+	}
+
+	handle = dm_md5((const char * const)body);
+
+	if (db_replycache_validate(to, from, handle, REPLY_DAYS) != DM_SUCCESS) {
+		g_free(handle);
+		TRACE(TRACE_DEBUG, "skip auto-reply");
+		return 0;
+	}
+
+	char *newsubject = g_strconcat("Re: ", subject, NULL);
+
+	DbmailMessage *new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, to, from, newsubject, body);
+	dbmail_message_set_header(new_message, "X-DBMail-Reply", from);
+
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
+
+	if (result == 0) {
+		db_replycache_register(to, from, handle);
+	}
+
+	g_free(handle);
+	g_free(newsubject);
+	dbmail_message_free(new_message);
+
+	return result;
+}
+
+/*          
+ *           * Send an automatic notification.
+ *            */         
+static int send_notification(DbmailMessage *message UNUSED, const char *to)
+{           
+	field_t from = "";
+	field_t subject = "";
+	int result;
+
+	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
+		TRACE(TRACE_INFO, "no config value for POSTMASTER");
+	}   
+
+	if (config_get_value("AUTO_NOTIFY_SENDER", "DELIVERY", from) < 0) {
+		TRACE(TRACE_INFO, "no config value for AUTO_NOTIFY_SENDER");
+	}   
+
+	if (config_get_value("AUTO_NOTIFY_SUBJECT", "DELIVERY", subject) < 0) {
+		TRACE(TRACE_INFO, "no config value for AUTO_NOTIFY_SUBJECT");
+	}   
+
+	if (strlen(from) < 1)
+		g_strlcpy(from, AUTO_NOTIFY_SENDER, FIELDSIZE);
+
+	if (strlen(subject) < 1)
+		g_strlcpy(subject, AUTO_NOTIFY_SUBJECT, FIELDSIZE);
+
+	DbmailMessage *new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, to, from, subject, "");
+
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
+
+	dbmail_message_free(new_message);
+
+	return result;
+}           
+
+
+/* Yeah, RAN. That's Reply And Notify ;-) */
+static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
+{
+	field_t val;
+	int do_auto_notify = 0, do_auto_reply = 0;
+	char *reply_body = NULL;
+	char *notify_address = NULL;
+
+	/* message has been successfully inserted, perform auto-notification & auto-reply */
+	if (config_get_value("AUTO_NOTIFY", "DELIVERY", val) < 0) {
+		TRACE(TRACE_ERR, "error getting config value for AUTO_NOTIFY");
+		return -1;
+	}
+
+	if (strcasecmp(val, "yes") == 0)
+		do_auto_notify = 1;
+
+	if (config_get_value("AUTO_REPLY", "DELIVERY", val) < 0) {
+		TRACE(TRACE_ERR, "error getting config value for AUTO_REPLY");
+		return -1;
+	}
+
+	if (strcasecmp(val, "yes") == 0)
+		do_auto_reply = 1;
+
+	if (do_auto_notify) {
+		TRACE(TRACE_DEBUG, "starting auto-notification procedure");
+
+		if (db_get_notify_address(useridnr, &notify_address) != 0)
+			TRACE(TRACE_ERR, "error fetching notification address");
+		else {
+			if (notify_address == NULL)
+				TRACE(TRACE_DEBUG, "no notification address specified, skipping");
+			else {
+				TRACE(TRACE_DEBUG, "sending notification to [%s]", notify_address);
+				if (send_notification(message, notify_address) < 0) {
+					TRACE(TRACE_ERR, "error in call to send_notification.");
+					g_free(notify_address);
+					return -1;
+				}
+				g_free(notify_address);
+			}
+		}
+	}
+
+	if (do_auto_reply) {
+		TRACE(TRACE_DEBUG, "starting auto-reply procedure");
+
+		if (db_get_reply_body(useridnr, &reply_body) != 0)
+			TRACE(TRACE_ERR, "error fetching reply body");
+		else {
+			if (reply_body == NULL || reply_body[0] == '\0')
+				TRACE(TRACE_DEBUG, "no reply body specified, skipping");
+			else {
+				GList *aliases = auth_get_user_aliases(useridnr);
+				if (send_reply(message, reply_body, aliases) < 0) {
+					TRACE(TRACE_ERR, "error in call to send_reply");
+					g_free(reply_body);
+					return -1;
+				}
+				g_free(reply_body);
+				
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+
 int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 {
 	int result = 0;
@@ -2328,6 +2550,11 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 				has_4 = 1;
 				break;
 			}
+
+			/* Automatic reply and notification */
+			if (execute_auto_ran(message, *useridnr) < 0) {
+				TRACE(TRACE_ERR, "error in execute_auto_ran(), but continuing delivery normally.");
+			}   
 
 			if (! g_list_next(userids))
 				break;

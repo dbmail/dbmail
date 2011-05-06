@@ -1069,24 +1069,69 @@ int dm_quota_rebuild()
 	return result;
 }
 
-u64_t db_get_mailbox_from_message(u64_t message_idnr)
+
+
+int db_get_notify_address(u64_t user_idnr, char **notify_address)
 {
 	C c; R r;
-	u64_t mailbox_idnr = 0;
+	const char *query_result = NULL;
+	volatile int t = DM_EGENERAL;
+
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT mailbox_idnr FROM %smessages WHERE message_idnr = %llu", 
-				DBPFX, message_idnr);
-		if (db_result_next(r))
-			mailbox_idnr = db_result_get_u64(r, 0);
+		r = db_query(c, "SELECT notify_address "
+				"FROM %sauto_notifications WHERE user_idnr = %llu",
+				DBPFX,user_idnr);
+		if (db_result_next(r)) {
+			query_result = db_result_get(r, 0);
+			if (query_result && (strlen(query_result) > 0)) {
+				*notify_address = g_strdup(query_result);
+				TRACE(TRACE_DEBUG, "notify address [%s]", *notify_address);
+				t = DM_SUCCESS;
+			}
+		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
-	return mailbox_idnr;
+	return t;
 }
+
+int db_get_reply_body(u64_t user_idnr, char **reply_body)
+{
+	C c; R r; S s;
+	const char *query_result;
+	volatile int t = DM_EGENERAL;
+	*reply_body = NULL;
+
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "SELECT reply_body FROM %sauto_replies "
+				"WHERE user_idnr = ? "
+				"AND (start_date IS NULL OR start_date <= ?) "
+				"AND (stop_date IS NULL OR stop_date >= ?)", DBPFX);
+		db_stmt_set_u64(s, 1, user_idnr);
+		db_stmt_set_str(s, 2, db_get_sql(SQL_CURRENT_TIMESTAMP));
+		db_stmt_set_str(s, 3, db_get_sql(SQL_CURRENT_TIMESTAMP));
+		r = db_stmt_query(s);
+		if (db_result_next(r)) {
+			query_result = db_result_get(r, 0);
+			if (query_result && (strlen(query_result)>0)) {
+				*reply_body = g_strdup(query_result);
+				TRACE(TRACE_DEBUG, "reply_body [%s]", *reply_body);
+				t = DM_SUCCESS;
+			}
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return t;
+}
+
 
 u64_t db_get_useridnr(u64_t message_idnr)
 {
