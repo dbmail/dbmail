@@ -4,6 +4,7 @@
 AC_INIT([dbmail], [3.0.0-rc2], [dbmail@dbmail.org])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h:config.in)
+AC_CONFIG_MACRO_DIR([m4])
 
 # ---------------------------------------------
 DM_MSG_CONFIGURE_START
