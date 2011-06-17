@@ -226,7 +226,7 @@ int dbmail_mailbox_dump(DbmailMailbox *self, FILE *file)
 
 	dbmail_mailbox_open(self);
 
-	GTree *ids = MailboxState_getIds(self->mbstate);
+	GTree *ids = self->found;
 
 	if (ids==NULL || g_tree_nnodes(ids) == 0) {
 		TRACE(TRACE_DEBUG,"cannot dump empty mailbox");

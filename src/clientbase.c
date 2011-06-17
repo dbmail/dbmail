@@ -464,8 +464,8 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 static void ci_authlog_close(clientbase_t *self)
 {
 	C c; S s;
-	if ((! server_conf->authlog) || server_conf->no_daemonize) return;
 	if (! self->authlog_id) return;
+	if ((! server_conf->authlog) || server_conf->no_daemonize) return;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	c = db_con_get();
 	TRY
