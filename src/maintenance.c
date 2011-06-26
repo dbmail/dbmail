@@ -414,13 +414,14 @@ static int db_deleted_count(u64_t * rows)
 	assert(rows); *rows = 0;
 
 	c = db_con_get();
+	r = db_query(c, "SELECT COUNT(*) FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
 	TRY
-		r = db_query(c, "SELECT COUNT(*) FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
-		if (db_result_next(r))
+		if (db_result_next(r)) {
 			*rows = db_result_get_int(r,0);
+			t = TRUE;
+		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
