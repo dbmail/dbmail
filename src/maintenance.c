@@ -607,10 +607,11 @@ int do_check_integrity(void)
 	if (count > 0) {
 		qerrorf("Ok. Found [%ld] unconnected physmessages.\n", count);
 		if (yes_to_all) {
-			if (! db_icheck_physmessages(TRUE))
+			if (! db_icheck_physmessages(TRUE)) {
 				qerrorf("Warning: could not delete orphaned physmessages. Check log.\n");
-			else
+			} else {
 				qerrorf("Ok. Orphaned physmessages deleted.\n");
+			}
 		}
 	} else {
 		qprintf("Ok. Found [%ld] unconnected physmessages.\n", count);
@@ -632,10 +633,11 @@ int do_check_integrity(void)
 	if (count > 0) {
 		qerrorf("Ok. Found [%ld] unconnected partlists.\n", count);
 		if (yes_to_all) {
-			if (! db_icheck_partlists(TRUE))
+			if (! db_icheck_partlists(TRUE)) {
 				qerrorf("Warning: could not delete orphaned partlists. Check log.\n");
-			else
+			} else {
 				qerrorf("Ok. Orphaned partlists deleted.\n");
+			}
 		}
 	} else {
 		qprintf("Ok. Found [%ld] unconnected partlists.\n", count);
@@ -657,10 +659,11 @@ int do_check_integrity(void)
 	if (count > 0) {
 		qerrorf("Ok. Found [%ld] unconnected mimeparts.\n", count);
 		if (yes_to_all) {
-			if (! db_icheck_mimeparts(TRUE))
+			if (! db_icheck_mimeparts(TRUE)) {
 				qerrorf("Warning: could not delete orphaned mimeparts. Check log.\n");
-			else
+			} else {
 				qerrorf("Ok. Orphaned mimeparts deleted.\n");
+			}
 		}
 	} else {
 		qprintf("Ok. Found [%ld] unconnected mimeparts.\n", count);
