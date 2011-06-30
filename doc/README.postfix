@@ -141,7 +141,7 @@ Using DBMail with Postfix
 	Now we need to tell Postfix to use this file. Add the following line
 	in main.cf:
 
-	local_recipient_maps = mysql:/etc/postfix/sql-recipients.cf
+	local_recipient_maps = proxy:mysql:/etc/postfix/sql-recipients.cf
 
 	This tells Postfix to use the database to check if a recipient is 
 	present in the database. Postfix will refuse the message  if a 
