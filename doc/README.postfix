@@ -131,9 +131,7 @@ Using DBMail with Postfix
 	password = <password>
 	hosts = <dbhost>
 	dbname = <dbname>
-	table = dbmail_aliases
-	select_field = alias
-	where_field = alias
+	query = SELECT alias FROM dbmail_aliases WHERE alias='%s'
 
 	Where you replace <username>, <password>, <dbhost> and <dbname> by the
 	database username, password, host and name of the dbmail database.
