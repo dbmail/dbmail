@@ -496,6 +496,10 @@ int lmtp(ClientSession_t * session)
 			session->rcpt = g_list_next(session->rcpt);
 		}
 		dbmail_message_free(msg);
+		/* Reset the session after a successful delivery;
+		 * MTA's like Exim prefer to immediately begin the
+		 * next delivery without an RSET or a reconnect. */
+		lmtp_rset(session,TRUE);
 		return 1;
 
 	default:
