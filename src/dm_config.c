@@ -172,8 +172,8 @@ void SetTraceLevel(const char *service_name)
 					"Config item TRACE_SYSLOG is deprecated. "
 					"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
 
-			trace_syslog_int = atoi(trace_syslog);
-			switch(trace_syslog_int) { // Convert old value to new system
+			int old_syslog_int = atoi(trace_syslog);
+			switch(old_syslog_int) { // Convert old value to new system
 				case 0:
 					trace_syslog_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT;
 					break;
@@ -208,8 +208,8 @@ void SetTraceLevel(const char *service_name)
 				"Config item TRACE_STDERR is deprecated. "
 				"Please use SYSLOG_LOGGING_LEVELS and FILE_LOGGING_LEVELS instead.");
 
-			trace_stderr_int = atoi(trace_stderr);
-			switch(trace_stderr_int) { // Convert old value to new system
+			int old_stderr_int = atoi(trace_stderr);
+			switch(old_stderr_int) { // Convert old value to new system
 				case 0:
 					trace_stderr_int = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT;
 					break;
