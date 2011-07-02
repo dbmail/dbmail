@@ -478,6 +478,42 @@ START_TEST(test_get_crlf_encoded_opt2)
 }
 END_TEST
 
+START_TEST(test_imap_unescape)
+{
+	char *r;
+	char *in[] = {
+		"",
+		"test",
+		"test'",
+		"test '",
+		"test \\",
+		"test \\\"",
+		"test \\\\",
+		"test \\s \\\"",
+		NULL
+	};
+	char *out[] = {
+		"",
+		"test",
+		"test'",
+		"test '",
+		"test \\",
+		"test \"",
+		"test \\",
+		"test \\s \"",
+		NULL
+	};
+
+	int i=0;
+	while (in[i]) {
+		r = imap_unescape(g_strdup(in[i]));
+		fail_unless(MATCH(out[i], r), "[%s] != [%s]", r, out[i]);
+		g_free(r);
+		i++;
+	}
+}
+END_TEST
+
 
 Suite *dbmail_misc_suite(void)
 {
@@ -505,7 +541,8 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_tiger);
 	tcase_add_test(tc_misc, test_get_crlf_encoded_opt1);
 	tcase_add_test(tc_misc, test_get_crlf_encoded_opt2);
-	
+	tcase_add_test(tc_misc, test_imap_unescape);
+
 	return s;
 }
 

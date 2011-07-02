@@ -2157,6 +2157,21 @@ char * imap_flags_as_string(MailboxState_T S, MessageInfo *msginfo)
 	return s;
 }
 
+char * imap_unescape(char *s)
+{
+	char *head = s, *this = s, *next = s;
+	while (*this) {
+		next = this+1;
+		if (*this && *next && (*this == '\\') && (*next == '"' || *next == '\\')) {
+			this++;
+			continue;
+		}
+		*head++ = *this++;
+	}
+	*head = 0;
+	return s;
+}
+
 u64_t dm_strtoull(const char *nptr, char **endptr, int base)
 {
 	errno = 0;

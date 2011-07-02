@@ -2120,6 +2120,29 @@ finalize:
 
 	TRACE(TRACE_DEBUG, "[%p] tag: [%s], command: [%s], [%llu] args", self, self->tag, self->command, self->args_idx);
 	self->args[self->args_idx] = NULL;	/* terminate */
+
+	switch (self->command_type) {
+		case IMAP_COMM_EXAMINE:
+		case IMAP_COMM_SELECT:
+		case IMAP_COMM_SEARCH:
+		case IMAP_COMM_CREATE:
+		case IMAP_COMM_DELETE:
+		case IMAP_COMM_RENAME:
+		case IMAP_COMM_SUBSCRIBE:
+		case IMAP_COMM_UNSUBSCRIBE:
+		case IMAP_COMM_STATUS:
+		case IMAP_COMM_COPY:
+		case IMAP_COMM_LOGIN:
+
+		for (i = 0; i<=self->args_idx && self->args[i]; i++) { 
+			imap_unescape(self->args[i]);
+		}
+		break;
+		default:
+		break;
+	}
+
+
 //#if 1
 	for (i = 0; i<=self->args_idx && self->args[i]; i++) { 
 		TRACE(TRACE_DEBUG, "[%p] arg[%d]: '%s'\n", self, i, self->args[i]); 
