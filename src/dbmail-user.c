@@ -81,10 +81,11 @@ int do_add(const char * const user,
 
 	if (db_createmailbox("INBOX", useridnr, &mailbox_idnr) < 0) {
 		qprintf("failed... removing user... ");
-		if (auth_delete_user(user))
+		if (auth_delete_user(user)) {
 			qprintf("failed also.\n");
-		else
+		} else {
 			qprintf("done.\n");
+		}
 		return -1;
 	}
 	qprintf("ok.\n");
@@ -708,10 +709,11 @@ int do_empty(u64_t useridnr)
 		fflush(stdout);
         
 		result = db_empty_mailbox(useridnr);
-		if (result != 0)
+		if (result != 0) {
 			qerrorf("Error. Please check the log.\n");
-		else
+		} else {
 			qprintf("Ok.\n");
+		}
 	} else {
 		GList *children = NULL;
 		u64_t owner_idnr;

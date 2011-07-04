@@ -556,7 +556,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
 				if (! (s = db_get_message_lines(msg->realmessageid, -2, 0)))
 					return -1;
-				i = ci_write(ci, "+OK %llu octets\r\n%s", strlen(s), s);
+				i = ci_write(ci, "+OK %llu octets\r\n%s", (u64_t)strlen(s), s);
 				g_free(s);
 				return 1;
 			}
