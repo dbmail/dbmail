@@ -246,7 +246,7 @@ class testImapServer(unittest.TestCase):
         # OE query
         result=self.o.fetch(id,"(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(len(result[1]),5)
-        expect=[(' (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) ((NIL NIL "somewher" "foo.org")(NIL NIL "other" "bar.org")) NIL {84}', '"Message from "Test User" <testuser@test.org>    of "Sat,\t14 Dec 2002 09:17:00 CST."'), (' {36}', '<"114.5862946l.21522l.0l"@localhost>'), (') BODY[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] {2}', '\r\n'), ')']
+        expect=[(' (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) ((NIL NIL "somewher" "foo.org")(NIL NIL "other" "bar.org")) NIL {84}', '"Message from "Test User" <testuser@test.org>    of "Sat, 14 Dec 2002 09:17:00 CST."'), (' {36}', '<"114.5862946l.21522l.0l"@localhost>'), (') BODY[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] {2}', '\r\n'), ')']
         self.assertEquals(result[1][1:],expect)
         self.assertEquals(result[0],'OK')
 
@@ -266,7 +266,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
 
         result = self.o.fetch(id,"(ENVELOPE)")
-        expect = [('1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" {21}','dbmail "test" message'), (' (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) ((NIL NIL "somewher" "foo.org")(NIL NIL "other" "bar.org")) NIL {84}', '"Message from "Test User" <testuser@test.org>    of "Sat,\t14 Dec 2002 09:17:00 CST."'), (' {36}', '<"114.5862946l.21522l.0l"@localhost>'), '))']
+        expect = [('1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" {21}','dbmail "test" message'), (' (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) ((NIL NIL "somewher" "foo.org")(NIL NIL "other" "bar.org")) NIL {84}', '"Message from "Test User" <testuser@test.org>    of "Sat, 14 Dec 2002 09:17:00 CST."'), (' {36}', '<"114.5862946l.21522l.0l"@localhost>'), '))']
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1],expect)
 
@@ -357,7 +357,7 @@ class testImapServer(unittest.TestCase):
         """
         self.o.logout()
         result=self.setUp("testuser1","test")
-        self.assertEquals(result,('OK', ['LOGIN completed']))
+        self.assertEquals(result,('OK', ['[CAPABILITY IMAP4rev1 STARTTLS ID ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE] User testuser1 authenticated']))
         self.failUnlessRaises(Exception,self.setUp,"testuser1","blah")
 
     def testLogin_cram_md5(self):
