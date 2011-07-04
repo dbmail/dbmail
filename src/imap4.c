@@ -546,6 +546,38 @@ void _ic_cb_leave(gpointer data)
 	imap_handle_exit(session, D->status);
 }
 
+static void imap_unescape_args(ImapSession *session)
+{
+	u64_t i = 0;
+	assert(session->command_type);
+	switch (session->command_type) {
+		case IMAP_COMM_EXAMINE:
+		case IMAP_COMM_SELECT:
+		case IMAP_COMM_SEARCH:
+		case IMAP_COMM_CREATE:
+		case IMAP_COMM_DELETE:
+		case IMAP_COMM_RENAME:
+		case IMAP_COMM_SUBSCRIBE:
+		case IMAP_COMM_UNSUBSCRIBE:
+		case IMAP_COMM_STATUS:
+		case IMAP_COMM_COPY:
+		case IMAP_COMM_LOGIN:
+
+		for (i = 0; session->args[i]; i++) { 
+			imap_unescape(session->args[i]);
+		}
+		break;
+		default:
+		break;
+	}
+#if 1
+	for (i = 0; session->args[i]; i++) { 
+		TRACE(TRACE_DEBUG, "[%p] arg[%llu]: '%s'\n", session, i, session->args[i]); 
+	}
+#endif
+
+}
+
 
 int imap4(ImapSession *session)
 {
@@ -584,6 +616,8 @@ int imap4(ImapSession *session)
 	session->error_count = 0;
 	session->command_type = j;
 	session->command_state=FALSE; // unset command-is-done-state while command in progress
+
+	imap_unescape_args(session);
 
 	TRACE(TRACE_INFO, "dispatch [%s]...\n", IMAP_COMMANDS[session->command_type]);
 	return (*imap_handler_functions[session->command_type]) (session);

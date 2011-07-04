@@ -2157,9 +2157,14 @@ char * imap_flags_as_string(MailboxState_T S, MessageInfo *msginfo)
 	return s;
 }
 
+#define DEBUG_UNESCAPE 0
+
 char * imap_unescape(char *s)
 {
 	char *head = s, *this = s, *next = s;
+#if DEBUG_UNESCAPE
+	char *orig = g_strdup(s);
+#endif
 	while (*this) {
 		next = this+1;
 		if (*this && *next && (*this == '\\') && (*next == '"' || *next == '\\')) {
@@ -2169,6 +2174,13 @@ char * imap_unescape(char *s)
 		*head++ = *this++;
 	}
 	*head = 0;
+
+#if DEBUG_UNESCAPE
+	if (! MATCH(s, orig))
+		TRACE(TRACE_DEBUG, "[%s] -> [%s]", orig, s);
+	g_free(orig);
+#endif
+
 	return s;
 }
 
