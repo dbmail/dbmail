@@ -213,9 +213,9 @@ static void send_greeting(ImapSession *session)
 	field_t banner;
 	GETCONFIGVALUE("banner", "IMAP", banner);
 	if (strlen(banner) > 0)
-		imap_session_printf(session, "* OK [CAPABILITY %s] %s\r\n", Capa_as_string(session->capa), banner);
+		imap_session_printf(session, "* OK [CAPABILITY %s] %s\r\n", Capa_as_string(session->preauth_capa), banner);
 	else
-		imap_session_printf(session, "* OK [CAPABILITY %s] dbmail %s ready.\r\n", Capa_as_string(session->capa), VERSION);
+		imap_session_printf(session, "* OK [CAPABILITY %s] dbmail %s ready.\r\n", Capa_as_string(session->preauth_capa), VERSION);
 	dbmail_imap_session_set_state(session,CLIENTSTATE_NON_AUTHENTICATED);
 }
 

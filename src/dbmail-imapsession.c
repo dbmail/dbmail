@@ -98,17 +98,20 @@ ImapSession * dbmail_imap_session_new(void)
 	self->buff = g_string_new("");
 	self->fi = g_new0(fetch_items_t,1);
 	self->capa = Capa_new();
-	Capa_remove(self->capa, "ACL");
-	Capa_remove(self->capa, "RIGHTS=texk");
-	Capa_remove(self->capa, "NAMESPACE");
-	Capa_remove(self->capa, "CHILDREN");
-	Capa_remove(self->capa, "SORT");
-	Capa_remove(self->capa, "QUOTA");
-	Capa_remove(self->capa, "THREAD=ORDEREDSUBJECT");
-	Capa_remove(self->capa, "UNSELECT");
-	Capa_remove(self->capa, "IDLE");
-	if (MATCH(_db_params.authdriver, "LDAP"))
+	self->preauth_capa = Capa_new();
+	Capa_remove(self->preauth_capa, "ACL");
+	Capa_remove(self->preauth_capa, "RIGHTS=texk");
+	Capa_remove(self->preauth_capa, "NAMESPACE");
+	Capa_remove(self->preauth_capa, "CHILDREN");
+	Capa_remove(self->preauth_capa, "SORT");
+	Capa_remove(self->preauth_capa, "QUOTA");
+	Capa_remove(self->preauth_capa, "THREAD=ORDEREDSUBJECT");
+	Capa_remove(self->preauth_capa, "UNSELECT");
+	Capa_remove(self->preauth_capa, "IDLE");
+	if (MATCH(_db_params.authdriver, "LDAP")) {
 		Capa_remove(self->capa, "AUTH=CRAM-MD5");
+		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
+	}
 	self->physids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	self->mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
 
@@ -185,6 +188,7 @@ void dbmail_imap_session_delete(ImapSession ** s)
 
 	TRACE(TRACE_DEBUG, "[%p]", self);
 	Cache_free(&self->cache);
+	Capa_free(&self->preauth_capa);
 	Capa_free(&self->capa);
 
 	if (self->ci) {
@@ -1660,15 +1664,6 @@ int dbmail_imap_session_set_state(ImapSession *self, clientstate_t state)
 			assert(self->ci);
 			TRACE(TRACE_DEBUG,"[%p] set timeout to [%d]", self, server_conf->timeout);
 			self->ci->timeout->tv_sec = server_conf->timeout; 
-			Capa_add(self->capa, "ACL");
-			Capa_add(self->capa, "RIGHTS=texk");
-			Capa_add(self->capa, "NAMESPACE");
-			Capa_add(self->capa, "CHILDREN");
-			Capa_add(self->capa, "SORT");
-			Capa_add(self->capa, "QUOTA");
-			Capa_add(self->capa, "THREAD=ORDEREDSUBJECT");
-			Capa_add(self->capa, "UNSELECT");
-			Capa_add(self->capa, "IDLE");
 			Capa_remove(self->capa, "AUTH=login");
 			Capa_remove(self->capa, "AUTH=CRAM-MD5");
 

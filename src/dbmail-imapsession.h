@@ -18,6 +18,7 @@ typedef struct cmd_t *cmd_t;
 /* ImapSession definition */
 typedef struct {
 	clientbase_t *ci;
+	Capa_T preauth_capa;   // CAPABILITY
 	Capa_T capa;   // CAPABILITY
 	char *tag;
 	char *command;
