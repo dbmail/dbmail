@@ -1183,7 +1183,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 
 			case IST_DATA_TEXT:
 
-			g_string_printf(q,"SELECT DISTINCT m.message_idnr"
+			g_string_printf(q,"SELECT DISTINCT m.message_idnr "
 					"FROM %smimeparts k "
 					"LEFT JOIN %spartlists l ON k.id=l.part_id "
 					"LEFT JOIN %sphysmessage p ON l.physmessage_id=p.id "
