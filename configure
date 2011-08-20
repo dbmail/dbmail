@@ -6697,7 +6697,7 @@ if test "x$ac_cv_lib_crypt_crypt" = x""yes; then :
 fi
 
 
-	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\" \\\\/'  sql/sqlite/create_tables.sqlite`
+	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/create_tables.sqlite`
 
 
 

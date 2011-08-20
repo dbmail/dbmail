@@ -183,9 +183,7 @@
 ""
 
 /* include sql/sqlite/create_tables.sqlite for autocreation */
-#define DM_SQLITECREATE \
-@SQLITECREATE@
-""
+#define DM_SQLITECREATE @SQLITECREATE@
 
 /** default directory and extension for pidfiles */
 #define DEFAULT_PID_DIR "@DM_STATEDIR@"

@@ -300,7 +300,7 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 ])
 
 AC_DEFUN([DM_SET_SQLITECREATE], [dnl
-	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\" \\\\/'  sql/sqlite/create_tables.sqlite`
+	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/create_tables.sqlite`
 ])
 
 AC_DEFUN([DM_CHECK_MATH], [dnl
