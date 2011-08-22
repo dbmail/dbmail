@@ -334,9 +334,9 @@ int send_vacation(struct DbmailMessage *message,
  * Send an automatic reply.
  */
 #define REPLY_DAYS 7
-static int check_destination(struct DbmailMessage *message, GList *aliases)
+static char * check_destination(struct DbmailMessage *message, GList *aliases)
 {
-	gboolean check = FALSE;
+	gchar * check = NULL;
 	GList *to, *cc, *recipients;
 	to = dbmail_message_get_header_addresses(message, "To");
 	cc = dbmail_message_get_header_addresses(message, "Cc");
@@ -351,7 +351,7 @@ static int check_destination(struct DbmailMessage *message, GList *aliases)
 			char *alias = (char *)aliases->data;
 			if (alias && MATCH(alias, addr)) {
 				TRACE(TRACE_DEBUG, "valid alias found as recipient [%s]", alias);
-				check = TRUE;
+				check = g_strdup(alias);
 				break;
 			}
 			if (! g_list_next(aliases)) break;
@@ -367,9 +367,10 @@ static int check_destination(struct DbmailMessage *message, GList *aliases)
 
 static int send_reply(struct DbmailMessage *message, const char *body, GList *aliases)
 {
-	const char *from, *to, *subject;
+	const char *to, *subject;
 	const char *x_dbmail_reply;
 	char *handle;
+	char *from = NULL;
 	int result;
 
 	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
@@ -378,18 +379,12 @@ static int send_reply(struct DbmailMessage *message, const char *body, GList *al
 		return 0;
 	}
 
-	if (! check_destination(message, aliases)) {
+	if (! (from = check_destination(message, aliases))) {
 		TRACE(TRACE_MESSAGE, "no valid destination ");
 		return 0;
 	}
 
 	subject = dbmail_message_get_header(message, "Subject");
-	from = dbmail_message_get_header(message, "Delivered-To");
-
-	if (!from)
-		from = message->envelope_recipient->str;
-	if (!from)
-		from = ""; // send_mail will change this to DEFAULT_POSTMASTER
 
 	to = dbmail_message_get_header(message, "Reply-To");
 	if (!to)
@@ -406,6 +401,7 @@ static int send_reply(struct DbmailMessage *message, const char *body, GList *al
 	handle = dm_md5((const unsigned char * const)body);
 
 	if (db_replycache_validate(to, from, handle, REPLY_DAYS) != DM_SUCCESS) {
+		g_free(from);
 		g_free(handle);
 		TRACE(TRACE_DEBUG, "skip auto-reply");
 		return 0;
@@ -423,6 +419,7 @@ static int send_reply(struct DbmailMessage *message, const char *body, GList *al
 		db_replycache_register(to, from, handle);
 	}
 
+	g_free(from);
 	g_free(handle);
 	g_free(newsubject);
 	dbmail_message_free(new_message);
