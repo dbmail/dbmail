@@ -577,6 +577,11 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 	}
 
 	field_value = dbmail_message_get_header(message, field_name);
+	if (! field_value) {
+		TRACE(TRACE_DEBUG, "field emptly [%s]", field_name);
+		return NULL;
+	}
+
 	TRACE(TRACE_INFO, "mail address parser looking at field [%s] with value [%s]", field_name, field_value);
 
 	if ((ialist = internet_address_parse_string(field_value)) == NULL) {
@@ -594,8 +599,6 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 	}
 
 	internet_address_list_destroy(ialisthead);
-
-	TRACE(TRACE_DEBUG, "mail address parser found [%d] email addresses", g_list_length(result));
 
 	return result;
 }

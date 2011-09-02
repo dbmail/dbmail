@@ -344,6 +344,8 @@ static char * check_destination(struct DbmailMessage *message, GList *aliases)
 	if (! recipients)
 		TRACE(TRACE_DEBUG, "no recipients??");
 
+	TRACE(TRACE_DEBUG, "mail address parser found [%d] email addresses", g_list_length(recipients));
+
 	while (recipients && (! check)) {
 		char *addr = (char *)recipients->data;
 		aliases = g_list_first(aliases);
