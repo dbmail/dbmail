@@ -800,8 +800,12 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 	/* do a inverted (DESC) query because adding the names to the 
 	 * final list inverts again */
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "SELECT alias FROM %saliases WHERE deliver_to = '%llu' "
-		 "ORDER BY alias DESC",DBPFX, user_idnr);
+		"SELECT alias FROM %saliases WHERE deliver_to = '%llu' "
+	        "UNION SELECT a2.alias FROM %saliases a1 JOIN %saliases a2 "
+		"ON (a1.alias = a2.deliver_to) "
+		"WHERE a1.deliver_to='%llu' AND a2.deliver_to IS NOT NULL "
+		"ORDER BY alias DESC",
+		DBPFX, user_idnr, DBPFX, DBPFX, user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		TRACE(TRACE_ERROR, "could not retrieve  list");
