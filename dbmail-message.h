@@ -74,6 +74,7 @@ struct DbmailMessage {
 	GTree *header_name;
 	GTree *header_value;
 	gchar *charset;
+	FILE *tmp;
 };
 
 /*
