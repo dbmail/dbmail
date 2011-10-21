@@ -143,20 +143,23 @@ void imap_cb_read(void *arg)
 {
 	ImapSession *session = (ImapSession *) arg;
 
-	TRACE(TRACE_DEBUG,"reading...");
-
 	ci_read_cb(session->ci);
 
 	size_t have = session->ci->read_buffer->len;
+	size_t need = session->ci->rbuff_size;
+
+	int enough = (need>0?(have == 0):(have > 0));
+
 	int state = session->ci->client_state;
 
+	TRACE(TRACE_DEBUG,"reading %d: %ld/%ld", enough, have, need);
 	if (state & CLIENT_ERR) {
 		ci_cork(session->ci);
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 		return;
 	} 
 	if (state & CLIENT_EOF) {
-		if (have)
+		if (enough)
 			imap_handle_input(session);
 		else
 			imap_session_bailout(session);
