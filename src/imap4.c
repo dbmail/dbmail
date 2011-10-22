@@ -468,6 +468,7 @@ void dbmail_imap_session_reset(ImapSession *session)
 	session->parser_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 
+	session->ci->timeout->tv_sec = server_conf->timeout; 
 	ci_uncork(session->ci);
 	
 	return;
