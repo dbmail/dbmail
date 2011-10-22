@@ -1457,11 +1457,10 @@ static int _header_value_get_id(const char *value, const char *sortfield, const 
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
+		*id = 0;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
-
-	assert(*id);
 
 	g_free(hash);
 
@@ -1596,7 +1595,10 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		g_free(value);
 
 		/* Insert relation between physmessage, header name and header value */
-		_header_insert(self->physid, headername_id, headervalue_id);
+		if (headervalue_id)
+			_header_insert(self->physid, headername_id, headervalue_id);
+		else
+			TRACE(TRACE_INFO, "error inserting headervalue. skipping.");
 
 		headervalue_id=0;
 
