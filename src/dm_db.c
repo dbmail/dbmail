@@ -216,7 +216,7 @@ int db_connect(void)
 	db_connected = 3;
 	db_con_close(c);
 
-	return 0;
+	return db_check_version();
 }
 
 /* But sometimes this gets called after help text or an
@@ -803,19 +803,26 @@ static void check_table_exists(C c, const char *table, const char *errormessage)
 int db_check_version(void)
 {
 	C c = db_con_get();
+	volatile int ok = 0;
 	TRY
 		check_table_exists(c, "physmessage", "pre-2.0 database incompatible. You need to run the conversion script");
 		check_table_exists(c, "headervalue", "2.0 database incompatible. You need to add the header tables.");
-		check_table_exists(c, "envelope", "2.1 database incompatible. You need to add the envelopes table and run dbmail-util -by");
-		check_table_exists(c, "mimeparts", "2.3 database incompatible.");
-		check_table_exists(c, "header", "2.3.5 database incompatible - single instance header storage missing.");
+		check_table_exists(c, "envelope", "2.1+ database incompatible. You need to add the envelopes table and run dbmail-util -by");
+		check_table_exists(c, "mimeparts", "3.x database incompatible.");
+		check_table_exists(c, "header", "3.x database incompatible - single instance header storage missing.");
+		ok = 1;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
-	return DM_SUCCESS;
+	if (ok)
+		TRACE(TRACE_DEBUG,"Tables OK");
+	else
+		TRACE(TRACE_WARNING,"Schema version incompatible. Bailing out");
+
+	return ok?DM_SUCCESS:DM_EQUERY;
 }
 
 /* test existence of usermap table */

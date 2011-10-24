@@ -240,11 +240,6 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 	
-        if (db_check_version() != 0) {
-                exitcode = EX_TEMPFAIL;
-                goto freeall;
-        }
-
 	/* read the whole message */
 	memset(buf, 0, sizeof(buf));
 	while ( (n = read(fileno(stdin), (void *)buf, READ_SIZE-1)) > 0) {
