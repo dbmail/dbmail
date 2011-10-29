@@ -561,7 +561,7 @@ gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessa
 		// part of the rfc822 headers
 		skiphead = TRUE;
 
-		g_mime_header_list_set_raw (GMIME_MESSAGE(object)->mime_part->headers, NULL);
+		g_mime_header_list_set_stream (GMIME_MESSAGE(object)->mime_part->headers, NULL);
 		mime_part = g_mime_message_get_mime_part((GMimeMessage *)object);
 	} else
 		mime_part = object;
@@ -1744,8 +1744,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	TRACE(TRACE_DEBUG, "from: [%s] to: [%s] subject: [%s] body: [%s]", from, to, subject, body);
 	g_mime_message_set_sender(message, from);
 	g_mime_message_set_subject(message, subject);
-	g_mime_object_set_header(GMIME_OBJECT(message), "To", to);
-	g_mime_message_add_recipient(message, GMIME_RECIPIENT_TYPE_TO, "", to);
+	g_mime_message_add_recipient(message, GMIME_RECIPIENT_TYPE_TO, NULL, to);
 
 	// construct mime-part
 	mime_part = g_mime_part_new();
