@@ -837,7 +837,7 @@ gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear
 	
 	res = g_new0(char, TIMESTRING_SIZE+1);
 	memset(&gmt,'\0', sizeof(struct tm));
-	gmtime_r(&self->internal_date, &gmt);
+	localtime_r(&self->internal_date, &gmt);
 
 	/* override if the date is not sane */
 	if (thisyear && gmt.tm_year + 1900 > thisyear + 1) {
