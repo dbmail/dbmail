@@ -12,7 +12,7 @@ export SHARED=--enable-static=no
 export MANPAGES=--enable-manpages=yes
 export REAL_CLEAN=
 
-CFLAGS = -Wall -std=gnu99 -O1
+CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
 
 # These are used for cross-compiling and for saving the configure script
@@ -27,9 +27,10 @@ ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export MANPAGES=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes
+	export REAL_CLEAN=mrproper
 	export WITH_LDAP=
 	export WITH_SIEVE=
-	CFLAGS = -Wall -std=gnu99 -g
+	CFLAGS = -g -std=gnu99
 endif
 ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
 	export WITH_LDAP=--with-ldap
@@ -120,7 +121,7 @@ binary-common: build
 	rm -f stamps/tmpfile
 	dh_installexamples -a
 	dh_installdirs -A etc/dbmail var/log/dbmail usr/share/dbmail
-	install -m 644 $(CURDIR)/debian/default.dbmail $(CURDIR)/debian/dbmail/usr/share/doc/dbmail/default.dbmail
+	install -m 644 $(CURDIR)/debian/default.dbmail $(CURDIR)/debian/dbmail/usr/share/doc/dbmail/examples/default.dbmail
 	dh_strip -a
 	dh_link -a
 	dh_compress -a
@@ -132,9 +133,13 @@ binary-common: build
 	dh_md5sums -a 
 	dh_builddeb -a
 	
-binary-indep: build install
+build-indep: build
 
-binary-arch: build install
+binary-indep: build-indep install
+
+build-arch: build
+
+binary-arch: build-arch install
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 
 binary-%: build install
