@@ -423,7 +423,10 @@ int db_stmt_set_u64(S s, int index, u64_t x)
 }
 int db_stmt_set_blob(S s, int index, const void *x, int size)
 {
-	TRACE(TRACE_DATABASE,"[%p] %d:[blob of length %d]", s, index, size);
+	if (size > 200)
+		TRACE(TRACE_DATABASE,"[%p] %d:[blob of length %d]", s, index, size);
+	else
+		TRACE(TRACE_DATABASE,"[%p] %d:[%s]", s, index, (char *)x);
 	PreparedStatement_setBlob(s, index, x, size);
 	return TRUE;
 }
