@@ -4,7 +4,7 @@ CONFIG=/etc/dbmail/dbmail.conf
 CONFIG_EX=/usr/share/doc/dbmail/examples/dbmail.conf
 
 DEBIAN_CONFIG=/etc/default/dbmail
-DEBIAN_CONFIG_EX=/usr/share/dbmail/default.dbmail
+DEBIAN_CONFIG_EX=/usr/share/doc/dbmail/default.dbmail
 
 test $DEBIAN_SCRIPT_DEBUG && set -v -x
 
