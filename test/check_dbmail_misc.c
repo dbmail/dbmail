@@ -185,6 +185,7 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	const char *u75 = "=?iso-8859-1?q?a?=";
 	const char *u76 = "=?utf-8?b?w6nDqcOp?=";
 	const char *u77 = "=?iso-8859-1?Q?ver_isto_=3D=3E_FW:_Envio_de_erro_da_aplica=E7=E3o_Decimal?=\n\t=?iso-8859-1?Q?Fire-Direc=E7=E3o?=";
+	const char *u78 = "=?UTF-8?Q?=D0=B4=D0=BE=D1=81=D1=82=D1=83=D0=BF=20?= =?UTF-8?Q?=D0=B2=20?= =?UTF-8?Q?=D0=BF=D0=B0=D0=BD=D0=B5=D0=BB=D1=8C=20?= =?UTF-8?Q?=D0=BF=D0=BE=D1=81=D0=BB=D0=B5=20?= =?UTF-8?Q?=D1=81=D0=BC=D0=B5=D0=BD=D1=8B=20?=ip-=?UTF-8?Q?=D0=B0=D0=B4=D1=80=D0=B5=D1=81=D0=B0?=";
 	const char *exp1 = "Neue Lösungfür unsere Kunden";
 	const char *exp2 = "Lösung";
 	const char *exp3 = "für";
@@ -192,6 +193,7 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	const char *exp5 = "a";
 	const char *exp6 = "ééé";
 	const char *exp7 = "ver isto => FW: Envio de erro da aplicação DecimalFire-Direcção";
+	const char *exp8 = "";
 
 	char *u8, *val2, *u82, *u83, *val3;
 
@@ -240,6 +242,11 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	u8 = dbmail_iconv_decode_text(u77);
 	fail_unless(strcmp(u8,exp7)==0,"decode failed [%s] != [%s]", u8, exp7);
 	g_free(u8);
+
+	u8 = dbmail_iconv_decode_text(u78);
+	fail_unless(strcmp(u8,exp7)==0,"decode failed [%s] != [%s]", u8, exp8);
+	g_free(u8);
+
 
 }
 END_TEST
