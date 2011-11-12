@@ -671,6 +671,17 @@ START_TEST(test_dbmail_message_cache_headers)
 	sprintf(s,"%.*s",10,"abcdefghijklmnopqrstuvwxyz");
 	fail_unless(MATCH(s,"abcdefghij"),"string truncate failed");
 	g_free(s);
+
+	m = dbmail_message_new();
+	j = g_string_new(multipart_message);
+	m = dbmail_message_init_with_string(m,j);
+	dbmail_message_set_header(m,
+			"Subject",
+			"=?utf-8?Q?[xxxxxxxxxxxxxxxxxx.xx_0000747]:_=C3=84nderungen_an_der_Artikel?= =?utf-8?Q?-Detailseite?="
+			);
+	dbmail_message_store(m);
+	dbmail_message_free(m);
+	g_string_free(j,TRUE);
 }
 END_TEST
 
