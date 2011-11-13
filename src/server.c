@@ -393,8 +393,9 @@ static void create_inet_socket(serverConfig_t *conf, int i, gboolean ssl)
 			TRACE(TRACE_ERR, "could not create a socket of family [%d], socktype[%d], protocol [%d]", res->ai_family, res->ai_socktype, res->ai_protocol);
 			continue;
 		}
-		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog, ssl);
 		UNBLOCK(s);
+
+		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog, ssl);
 		if (ssl)
 			conf->ssl_listenSockets[conf->ssl_socketcount++] = s;
 		else

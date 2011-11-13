@@ -112,6 +112,7 @@ SSL *tls_setup(int fd)
 		TRACE(TRACE_ERR, "Error creating TLS connection: %s", tls_get_error());
 		return NULL;
 	}
+	UNBLOCK(fd);
 	if ( !SSL_set_fd(ssl, fd)) {
 		TRACE(TRACE_ERR, "Error linking SSL structure to file descriptor: %s", tls_get_error());
 		SSL_shutdown(ssl);

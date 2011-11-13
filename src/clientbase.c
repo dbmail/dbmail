@@ -238,7 +238,6 @@ int ci_starttls(clientbase_t *self)
 				self->ssl = NULL;
 				return DM_EGENERAL;
 			} else {
-				ci_uncork(self);
 				return e;
 			}
 		}
