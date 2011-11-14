@@ -145,9 +145,7 @@ char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 		return subj;
 
  	if (charset) {
-		LOCK(&mutex);
  		conv_iconv = g_mime_iconv_open(ic->db_charset,charset);
-		UNLOCK(&mutex);
  		if (conv_iconv != (iconv_t)-1) {
  			subj=g_mime_iconv_strdup(conv_iconv,str_in);
  			g_mime_iconv_close(conv_iconv);
