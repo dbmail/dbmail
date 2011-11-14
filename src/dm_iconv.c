@@ -100,8 +100,8 @@ char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 	if (g_utf8_validate((const gchar *)str_in, -1, NULL) || !g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)))
 		return g_strdup(t);
 
- 	if (charset) {
- 		if ((conv_iconv=g_mime_iconv_open("UTF-8",charset)) != (iconv_t)-1) {
+	if (charset) {
+		if ((conv_iconv=g_mime_iconv_open("UTF-8",charset)) != (iconv_t)-1) {
 			subj = g_mime_iconv_strdup(conv_iconv,str_in);
 			g_mime_iconv_close(conv_iconv);
 		}
@@ -112,14 +112,14 @@ char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 		subj=g_mime_iconv_strdup(ic->from_msg,str_in);
 		UNLOCK(&mutex);
 	}
-	    
+
 	if (subj==NULL) {
 		subj=g_strdup(str_in);
 		char *p;
 		for(p=subj;*p;p++)
-		    if(*p & 0x80) *p='?';
+			if(*p & 0x80) *p='?';
 	}
- 
+
 	return subj;
 }
 
@@ -133,7 +133,7 @@ char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 
 	if ( str_in == NULL )
 		return NULL;
-	
+
 	if (! g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)) )
 		return g_strdup(str_in);
 
@@ -144,14 +144,14 @@ char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 	if (subj != NULL)
 		return subj;
 
- 	if (charset) {
- 		conv_iconv = g_mime_iconv_open(ic->db_charset,charset);
- 		if (conv_iconv != (iconv_t)-1) {
- 			subj=g_mime_iconv_strdup(conv_iconv,str_in);
- 			g_mime_iconv_close(conv_iconv);
-  		}
-  	}
-    
+	if (charset) {
+		conv_iconv = g_mime_iconv_open(ic->db_charset,charset);
+		if (conv_iconv != (iconv_t)-1) {
+			subj=g_mime_iconv_strdup(conv_iconv,str_in);
+			g_mime_iconv_close(conv_iconv);
+		}
+	}
+
 	if (subj==NULL) {
 		char *subj2;
 
@@ -171,7 +171,7 @@ char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 		subj=g_strdup(str_in);
 		char *p;
 		for(p=subj;*p;p++)
-		    if(*p & 0x80) *p='?';
+			if(*p & 0x80) *p='?';
 	}
 
 	return subj;
@@ -180,18 +180,18 @@ char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 char * dbmail_iconv_db_to_utf7(const char* str_in)
 {
 	char * subj=NULL;
-	
+
 	dbmail_iconv_init();
 
 	if (str_in==NULL)
 		return NULL;
-	
+
 	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)))
 		return g_strdup(str_in);
 
 	if (! g_utf8_validate((const char *)str_in,-1,NULL)) {
 		LOCK(&mutex);
-	      	subj = g_mime_iconv_strdup(ic->from_db, str_in);
+		subj = g_mime_iconv_strdup(ic->from_db, str_in);
 		UNLOCK(&mutex);
 		if (subj != NULL){
 			gchar *subj2;
@@ -199,7 +199,7 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 			g_free(subj);
 			return subj2;
 		}
-  	}
+	}
 
 	return g_mime_utils_header_encode_text(str_in);
 }
@@ -222,12 +222,12 @@ char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean i
 		TRACE(TRACE_WARNING, "unable to decode headervalue [%s] using charset [%s]", in, charset);
 		return NULL;
 	}
-	
+
 	if (isaddr)
 		value = dbmail_iconv_decode_address(tmp_raw);
 	else
 		value = dbmail_iconv_decode_text(tmp_raw);
-	
+
 	g_free(tmp_raw);
 
 	return value;
