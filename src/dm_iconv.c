@@ -107,10 +107,11 @@ char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 		}
 	}
 
-	LOCK(&mutex);
-	if (subj==NULL)
+	if (subj==NULL) {
+		LOCK(&mutex);
 		subj=g_mime_iconv_strdup(ic->from_msg,str_in);
-	UNLOCK(&mutex);
+		UNLOCK(&mutex);
+	}
 	    
 	if (subj==NULL) {
 		subj=g_strdup(str_in);
