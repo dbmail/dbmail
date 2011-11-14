@@ -243,6 +243,7 @@ int ci_starttls(clientbase_t *self)
 		}
 		TRACE(TRACE_INFO,"[%p] SSL handshake successful using %s", self->ssl, SSL_get_cipher(self->ssl));
 		self->ssl_state = TRUE;
+		ci_write(self,NULL);
 	}
 
 	return DM_SUCCESS;
@@ -303,7 +304,8 @@ int ci_write(clientbase_t *self, char * msg, ...)
 			if ((e = self->cb_error(self->tx, e, (void *)self))) {
 				self->client_state |= CLIENT_ERR;
 			} else {
-				event_add(self->wev, NULL);
+				if (self->ssl && self->ssl_state)
+					event_add(self->wev, NULL);
 			}
 			return e;
 		} else {
