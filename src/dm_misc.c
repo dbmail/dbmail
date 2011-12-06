@@ -1950,6 +1950,8 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 		t = g_mime_object_get_headers(GMIME_OBJECT(object));
 		s = get_crlf_encoded(t);
 		g_free(t);
+		s = g_realloc(s, strlen(s) + 3);
+		strcat(s, "\r\n");
 	} 
 	
 	else if (strcasecmp(specifier,"TEXT")==0) {
