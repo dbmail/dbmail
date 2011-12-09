@@ -1696,8 +1696,8 @@ char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot)
 	if (no_end_dot == 0)
 		g_string_append(s, "\r\n.\r\n");
 
-	c = s->str;
-	g_string_free(s,FALSE);
+	c = get_crlf_encoded(s->str);
+	g_string_free(s,TRUE);
 	return c;
 }
 
