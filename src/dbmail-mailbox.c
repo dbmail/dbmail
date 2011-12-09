@@ -100,7 +100,7 @@ static gchar * _message_get_envelope_date(const DbmailMessage *self)
 	
 	res = g_new0(char, TIMESTRING_SIZE+1);
 	memset(&gmt,'\0', sizeof(struct tm));
-	localtime_r(&self->internal_date, &gmt);
+	gmtime_r(&self->internal_date, &gmt);
 
 	strftime(res, TIMESTRING_SIZE, "%a %b %d %H:%M:%S %Y", &gmt);
 	return res;
