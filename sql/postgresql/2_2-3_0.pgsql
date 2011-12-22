@@ -108,6 +108,7 @@ DROP TABLE if exists dbmail_header;
 
 DROP TABLE if exists dbmail_headername CASCADE;
 DROP SEQUENCE IF EXISTS dbmail_headername_id_seq;
+DROP SEQUENCE IF EXISTS dbmail_headername_idnr_seq;
 CREATE SEQUENCE dbmail_headername_id_seq;
 CREATE TABLE dbmail_headername (
         id  INT8 NOT NULL DEFAULT nextval('dbmail_headername_id_seq'),
@@ -118,6 +119,7 @@ CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername(lower(headername));
 
 DROP TABLE if exists dbmail_headervalue CASCADE;
 DROP SEQUENCE IF EXISTS dbmail_headervalue_id_seq;
+DROP SEQUENCE IF EXISTS dbmail_headervalue_idnr_seq;
 CREATE SEQUENCE dbmail_headervalue_id_seq;
 CREATE TABLE dbmail_headervalue (
         id            INT8 NOT NULL DEFAULT nextval('dbmail_headervalue_id_seq'),
