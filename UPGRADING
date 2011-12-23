@@ -24,6 +24,16 @@ Config Changes
  for network overhead. If you want to be safe: use 1.5 times the max
  message size.
 
+* PostgreSQL: notice!
+
+ Also a special note to PostgreSQL users: since pg9 has changed the 
+ default for bytea_output in postgresql.conf you must make sure this
+ config parameter is set to 'escape'. Failing to do so will make it
+ impossible for DBMail to parse any query results involving bytea 
+ fields. This in turn will break the migration procedure and make
+ your email inaccessible.
+
+
 * [DBMAIL] section 
 
  Dbmail allows you to select the database backend and authentication
