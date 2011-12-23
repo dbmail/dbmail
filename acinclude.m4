@@ -71,18 +71,18 @@ fi
 ])
 
 AC_DEFUN([DM_SIEVE_INC],[
-    AC_COMPILE_IFELSE(
+    AC_COMPILE_IFELSE([
     AC_LANG_PROGRAM([[
         #define NULL 0
-        #include <sieve2.h>]]),
+        #include <sieve2.h>]])],
     [$1],
     [$2])
 ])
 AC_DEFUN([DM_SIEVE_LIB],[
-    AC_LINK_IFELSE(
+    AC_LINK_IFELSE([
     AC_LANG_PROGRAM([[
         #define NULL 0
-        #include <sieve2.h>]]),
+        #include <sieve2.h>]])],
     [$1],
     [$2])
 ])
