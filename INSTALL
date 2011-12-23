@@ -111,6 +111,13 @@ What do you need?
 	Don't forget to start postgresql with the -i option, so it accepts
 	TCP/IP connections.
 
+	Finally, if you run PostgreSQL 9 or later you must make sure your
+	postgresql.conf contains the following setting:
+
+	bytea_output = 'escape'
+
+	because DBMail can't handle the default 'hex' type output.	
+
 	SQLite setup
 	------------
 
