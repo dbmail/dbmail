@@ -1645,7 +1645,7 @@ int dbmail_imap_session_mailbox_update_recent(ImapSession *self)
 int dbmail_imap_session_set_state(ImapSession *self, clientstate_t state)
 {
 	TRACE(TRACE_DEBUG,"state [%d]", state);
-	if ( (self->state == state) )
+	if (self->state == state)
 		return 0;
 
 	switch (state) {
