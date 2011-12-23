@@ -2,7 +2,7 @@
 if WITHCHECK
 
 AM_CFLAGS = @SIEVEINC@ @LDAPINC@
-AM_LDFLAGS = -uCram_getUsername 
+AM_LDFLAGS = -Wl,-u,Cram_getUsername 
 
 INCLUDES = -I$(top_srcdir)/src
 
