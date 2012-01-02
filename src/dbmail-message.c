@@ -1897,7 +1897,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 		int res;
 		size_t sublen, subpos;
 		res = find_bounded((char *)destination, '+', '@', &subaddress, &sublen, &subpos);
-		if (res == 0 && sublen > 0) {
+		if (res > 0 && sublen > 0) {
 			/* We'll free this towards the end of the function. */
 			mailbox = subaddress;
 			source = BOX_ADDRESSPART;
