@@ -68,6 +68,12 @@ OPTIONS
  Clear the IP log used for IMAP/POP-before-SMTP. The time is specified as
  <hours>h<minutes>m (don't include the angle brackets, though!).
 
+-M::
+ migrate legacy 2.2.x messageblks to mimeparts table.
+
+-m limit::
+ limit number of physmessages migrated. Default 10000 per run.
+
 -n::
  Show the intended repairs without making any changes, i.e. no to all.
 
