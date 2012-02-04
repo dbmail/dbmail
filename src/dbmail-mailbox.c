@@ -1246,7 +1246,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"WHERE b.mailbox_idnr=? AND m.status IN (?,?) "
 					"%s "
 					"AND (l.part_key > 1 OR l.is_header=0) "
-					"AND %s %s ?"
+					"AND %s %s ? "
 					"ORDER BY m.message_idnr",
 					DBPFX,DBPFX,DBPFX,DBPFX,DBPFX,
 					inset?inset:"",
