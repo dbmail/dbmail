@@ -384,7 +384,7 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 /*
  * return self->ids as a string
  */
-char * dbmail_mailbox_ids_as_string(DbmailMailbox *self) 
+char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const char *sep) 
 {
 	GString *t;
 	gchar *s = NULL;
@@ -396,21 +396,19 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self)
 	}
 
 	t = g_string_new("");
-	switch (dbmail_mailbox_get_uid(self)) {
-		case TRUE:
-			l = g_tree_keys(self->found);
-		break;
-		case FALSE:
-			l = g_tree_values(self->found);
-		break;
+	if (uid || dbmail_mailbox_get_uid(self)) {
+		l = g_tree_keys(self->found);
+	} else {
+		l = g_tree_values(self->found);
 	}
 
 	h = l;
 
 	while(l->data) {
-		g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
+		g_string_append_printf(t,"%llu", *(u64_t *)l->data);
 		if (! g_list_next(l))
 			break;
+		g_string_append_printf(t,"%s", sep);
 		l = g_list_next(l);
 	}
 
@@ -1108,12 +1106,19 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 	char partial[DEF_FRAGSIZE];
 	C c; R r; S st;
 	GTree *ids;
+	char *inset = NULL;
 	
 	GString *t;
 	GString *q;
 
 	if (!s->search)
 		return NULL;
+
+	if (self->found && g_tree_nnodes(self->found) <= 200) {
+		char *setlist = dbmail_mailbox_ids_as_string(self, TRUE, ",");
+		inset = g_strdup_printf("AND m.message_idnr IN (%s)", setlist);
+		g_free(setlist);
+	}
 
 	c = db_con_get();
 	t = g_string_new("");
@@ -1191,9 +1196,11 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
 					"LEFT JOIN %smessages m ON m.physmessage_id=p.id "
 					"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
+					"%s "
 					"AND v.headervalue %s ? OR k.data %s ? "
 					"ORDER BY m.message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
+					inset?inset:"",
 					db_get_sql(SQL_INSENSITIVE_LIKE), 
 					db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
 
@@ -1487,6 +1494,39 @@ static gboolean _shallow_tree_copy(u64_t *key, u64_t *val, GTree *tree)
 	return FALSE;
 }
 
+static gboolean _prescan_search(GNode *node, DbmailMailbox *self)
+{
+	search_key_t *s = (search_key_t *)node->data;
+
+	if (s->searched) return FALSE;
+	
+	switch (s->type) {
+		case IST_SET:
+			if (! (s->found = dbmail_mailbox_get_set(self, (const char *)s->search, 0)))
+				return TRUE;
+			break;
+		case IST_UIDSET:
+			if (! (s->found = dbmail_mailbox_get_set(self, (const char *)s->search, 1)))
+				return TRUE;
+			break;
+		default:
+			return FALSE;
+
+	}
+	s->searched = TRUE;
+
+	g_tree_merge(self->found, s->found, IST_SUBSEARCH_AND);
+	s->merged = TRUE;
+
+	TRACE(TRACE_DEBUG,"[%p] depth [%d] type [%d] rows [%d]\n",
+		s, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0);
+
+	g_tree_destroy(s->found);
+	s->found = NULL;
+
+	return FALSE;
+}
+
 static gboolean _do_search(GNode *node, DbmailMailbox *self)
 {
 	search_key_t *s = (search_key_t *)node->data;
@@ -1642,6 +1682,9 @@ int dbmail_mailbox_search(DbmailMailbox *self)
 	ids = MailboxState_getIds(self->mbstate);
 
 	g_tree_foreach(ids, (GTraverseFunc)_shallow_tree_copy, self->found);
+ 
+	g_node_traverse(g_node_get_root(self->search), G_LEVEL_ORDER, G_TRAVERSE_ALL, 2, 
+			(GNodeTraverseFunc)_prescan_search, (gpointer)self);
 
 	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_do_search, (gpointer)self);

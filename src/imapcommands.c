@@ -1473,7 +1473,7 @@ static void sorted_search_enter(dm_thread_data *D)
 				s = dbmail_mailbox_sorted_as_string(mb);
 			break;
 			case SEARCH_UNORDERED:
-				s = dbmail_mailbox_ids_as_string(mb);
+				s = dbmail_mailbox_ids_as_string(mb, FALSE, " ");
 			break;
 			case SEARCH_THREAD_ORDEREDSUBJECT:
 				s = dbmail_mailbox_orderedsubject(mb);

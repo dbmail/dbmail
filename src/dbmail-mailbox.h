@@ -67,7 +67,7 @@ int dbmail_mailbox_dump(DbmailMailbox *self, FILE *ostream);
 
 void dbmail_mailbox_free(DbmailMailbox *self);
 
-char * dbmail_mailbox_ids_as_string(DbmailMailbox *self);
+char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const char *sep);
 char * dbmail_mailbox_sorted_as_string(DbmailMailbox *self);
 char * dbmail_mailbox_orderedsubject(DbmailMailbox *self);
 
