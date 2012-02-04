@@ -1152,9 +1152,11 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %sheadername n ON h.headername_id = n.id "
 					"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 					"WHERE m.mailbox_idnr=? AND m.status IN (?,?) "
+					"%s"
 					"AND n.headername = 'date' "
 					"AND %s ORDER BY message_idnr", 
 					DBPFX, DBPFX, DBPFX, DBPFX,
+					inset?inset:"",
 					t->str);
 
 			st = db_stmt_prepare(c,q->str);
@@ -1171,9 +1173,11 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %sheadername n ON h.headername_id = n.id "
 					"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 					"WHERE mailbox_idnr=? AND status IN (?,?) "
+					"%s"
 					"AND n.headername = lower('%s') AND v.headervalue %s ? "
 					"ORDER BY message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX,
+					inset?inset:"",
 					s->hdrfld, db_get_sql(SQL_INSENSITIVE_LIKE));
 
 			st = db_stmt_prepare(c,q->str);
@@ -1197,7 +1201,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %smessages m ON m.physmessage_id=p.id "
 					"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
 					"%s "
-					"AND v.headervalue %s ? OR k.data %s ? "
+					"AND (v.headervalue %s ? OR k.data %s ?) "
 					"ORDER BY m.message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
 					inset?inset:"",
@@ -1218,9 +1222,13 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			case IST_IDATE:
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 					"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
-					"WHERE mailbox_idnr = ? AND status IN (?,?) AND %s "
+					"WHERE mailbox_idnr = ? AND status IN (?,?) "
+					"%s"
+					"AND %s "
 					"ORDER BY message_idnr", 
-					DBPFX, DBPFX, s->search);
+					DBPFX, DBPFX, 
+					inset?inset:"",
+					s->search);
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
@@ -1236,10 +1244,12 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %smessages m ON m.physmessage_id=s.id "
 					"LEFT JOIN %smailboxes b ON m.mailbox_idnr = b.mailbox_idnr "
 					"WHERE b.mailbox_idnr=? AND m.status IN (?,?) "
+					"%s"
 					"AND (l.part_key > 1 OR l.is_header=0) "
 					"AND %s %s ?"
 					"ORDER BY m.message_idnr",
 					DBPFX,DBPFX,DBPFX,DBPFX,DBPFX,
+					inset?inset:"",
 					t->str, db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
 
 			st = db_stmt_prepare(c,q->str);
@@ -1259,8 +1269,13 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 
 			g_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
 				"LEFT JOIN %sphysmessage p ON m.physmessage_id = p.id "
-				"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) AND p.messagesize %c ? "
-				"ORDER BY message_idnr", DBPFX, DBPFX, gt_lt);
+				"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
+				"%s"
+				"AND p.messagesize %c ? "
+				"ORDER BY message_idnr", 
+				DBPFX, DBPFX, 
+				inset?inset:"",
+				gt_lt);
 
 			st = db_stmt_prepare(c,q->str);
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
