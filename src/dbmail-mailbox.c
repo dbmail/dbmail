@@ -1152,7 +1152,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %sheadername n ON h.headername_id = n.id "
 					"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 					"WHERE m.mailbox_idnr=? AND m.status IN (?,?) "
-					"%s"
+					"%s "
 					"AND n.headername = 'date' "
 					"AND %s ORDER BY message_idnr", 
 					DBPFX, DBPFX, DBPFX, DBPFX,
@@ -1173,7 +1173,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %sheadername n ON h.headername_id = n.id "
 					"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 					"WHERE mailbox_idnr=? AND status IN (?,?) "
-					"%s"
+					"%s "
 					"AND n.headername = lower('%s') AND v.headervalue %s ? "
 					"ORDER BY message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX,
@@ -1223,7 +1223,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 					"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
 					"WHERE mailbox_idnr = ? AND status IN (?,?) "
-					"%s"
+					"%s "
 					"AND %s "
 					"ORDER BY message_idnr", 
 					DBPFX, DBPFX, 
@@ -1244,7 +1244,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 					"LEFT JOIN %smessages m ON m.physmessage_id=s.id "
 					"LEFT JOIN %smailboxes b ON m.mailbox_idnr = b.mailbox_idnr "
 					"WHERE b.mailbox_idnr=? AND m.status IN (?,?) "
-					"%s"
+					"%s "
 					"AND (l.part_key > 1 OR l.is_header=0) "
 					"AND %s %s ?"
 					"ORDER BY m.message_idnr",
@@ -1270,7 +1270,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			g_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
 				"LEFT JOIN %sphysmessage p ON m.physmessage_id = p.id "
 				"WHERE m.mailbox_idnr = ? AND m.status IN (?,?) "
-				"%s"
+				"%s "
 				"AND p.messagesize %c ? "
 				"ORDER BY message_idnr", 
 				DBPFX, DBPFX, 
