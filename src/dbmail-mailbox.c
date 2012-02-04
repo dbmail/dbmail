@@ -1325,6 +1325,9 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 		db_con_close(c);
 	END_TRY;
 
+	if (inset)
+		g_free(inset);
+
 	g_string_free(q,TRUE);
 	g_string_free(t,TRUE);
 
