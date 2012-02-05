@@ -2264,7 +2264,7 @@ char * dm_get_hash_for_string(const char *buf)
 		else if (MATCH(hash_algorithm,"tiger"))
 			type=MHASH_TIGER;
 		else {
-			TRACE(TRACE_WARNING,"hash algorithm not supported. Using SHA1.");
+			TRACE(TRACE_INFO,"hash algorithm not supported. Using SHA1.");
 			type=MHASH_SHA1;
 		}
 		initialized=1;
