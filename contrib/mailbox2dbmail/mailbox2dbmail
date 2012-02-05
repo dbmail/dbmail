@@ -1,13 +1,12 @@
 #!/usr/bin/python
 
 # Copyright (C) 2004 Dan Weber <dan at mirrorlynx dot com>
+# Copyright (C) 2012 Paul J Stevens <paul@nfg.nl>
 #
-# 
-#
-# This program is free software; you can redistribute it and/or 
-# modify it under the terms of the GNU General Public License 
-# as published by the Free Software Foundation; either 
-# version 2 of the License, or (at your option) any later 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either
+# version 2 of the License, or (at your option) any later
 # version.
 #
 # This program is distributed in the hope that it will be useful,
@@ -18,32 +17,49 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-# 
+#
 
-import os,sys,getopt,email,email.Errors,mailbox
-version = "%s version 2.0" %(sys.argv[0],)
+import os
+import sys
+import getopt
+import email
+import email.Errors
+import mailbox
+
+version = "%s version 2.0" % (sys.argv[0], )
+
 
 def main():
     try:
-        user=mbox=type=conf=''
+        user = mbox = type = conf = ''
         box = "Inbox"
         path = "/usr/sbin/dbmail-deliver"
         dryrun = False
-        opts, args = getopt.getopt(sys.argv[1:], "u:m:b:t:p:f:dhv", ["user=","mail=","box=","path=","type=","help","version"])
+        opts, args = getopt.getopt(
+            sys.argv[1:],
+            "u:m:b:t:p:f:dhv",
+            ["user=", "mail=", "box=", "path=", "type=", "help", "version"])
         for o, a in opts:
-            if o in ("-v","--version"):
+            if o in ("-v", "--version"):
                 print version
                 sys.exit()
-            elif o in ("-h","--help"):
+            elif o in ("-h", "--help"):
                 usage()
                 sys.exit()
-            elif o in ("-d","--dryrun"): dryrun = True
-            elif o in ("-u","--user"): user = a
-            elif o in ("-m","--mail"): mbox = a
-            elif o in ("-b","--box"): box = a
-            elif o in ("-p","--path"): path = a
-            elif o in ("-t","--type"): type = a
-            elif o in ("-f"): conf = a
+            elif o in ("-d", "--dryrun"):
+                dryrun = True
+            elif o in ("-u", "--user"):
+                user = a
+            elif o in ("-m", "--mail"):
+                mbox = a
+            elif o in ("-b", "--box"):
+                box = a
+            elif o in ("-p", "--path"):
+                path = a
+            elif o in ("-t", "--type"):
+                type = a
+            elif o in ("-f"):
+                conf = a
         if dryrun:
             print "Dry run mode"
         if not user:
@@ -52,64 +68,74 @@ def main():
         if not mbox:
             print "No mailbox specified"
             sys.exit(1)
-        if box=="Inbox":
+        if box == "Inbox":
             print "Using default Inbox"
-        if type=="mbox":
-            mbox = mailbox.PortableUnixMailbox(open(mbox,'r'),email.message_from_file)
-        elif type=="maildir":
-            mbox = mailbox.Maildir(mbox,email.message_from_file)
-        elif type=="mhdir":
-            mbox = mailbox.MHMailbox(mbox,email.message_from_file)
+        if type == "mbox":
+            mbox = mailbox.PortableUnixMailbox(
+                open(mbox, 'r'),
+                email.message_from_file)
+        elif type == "maildir":
+            mbox = mailbox.Maildir(
+                mbox,
+                email.message_from_file)
+        elif type == "mhdir":
+            mbox = mailbox.MHMailbox(
+                mbox,
+                email.message_from_file)
         elif not type:
             print "No mailbox type specified"
             sys.exit(1)
-        convert(user,mbox,box,path,conf,dryrun)
+        convert(user, mbox, box, path, conf, dryrun)
     except getopt.GetoptError:
         usage()
         print "Error Parsing Options"
         sys.exit(1)
 
+
 def usage():
     print version
-    print """%s 
+    print """%s
     -d|--dryrun
-    -u|--user <user> 
-    -t|--type <mbox, maildir, and mhdir> 
-    -m|--mail <location of mailbox> 
-    -b|--box <Inbox,Inbox.Sent etc> 
+    -u|--user <user>
+    -t|--type <mbox, maildir, and mhdir>
+    -m|--mail <location of mailbox>
+    -b|--box <Inbox,Inbox.Sent etc>
     -p <path to dbmail-deliver>
     -f <path to alternative config file>
-    """ %(sys.argv[0],)
-    
-def convert(user,mbox,box,path,conf,dryrun):
-    if conf: conf = """-f %s""" % conf
-    command = """%s %s -m "%s" -u "%s" """ %(path,conf,box,user)
-    msgnumber=1
+    """ % (sys.argv[0], )
+
+
+def convert(user, mbox, box, path, conf, dryrun):
+    if conf:
+        conf = """-f %s""" % conf
+    command = """%s %s -m "%s" -u "%s" """ % (
+        path, conf, box, user)
+    msgnumber = 1
     try:
         while 1:
             mailmsg = mbox.next()
             if not mailmsg:
-                if msgnumber==1:
+                if msgnumber == 1:
                     raise "error", "Not a mailbox"
                 print "All Done!"
                 sys.exit()
             try:
                 if not dryrun:
-                    dbmail = os.popen(command,'w')
+                    dbmail = os.popen(command, 'w')
                     dbmail.writelines(mailmsg.as_string(True))
                     dbmail.close()
                     del mailmsg
-                print "Processed Message %s" %(msgnumber,)
+                print "Processed Message %s" % (msgnumber, )
                 msgnumber = msgnumber + 1
             except IOError:
                 print "Either box or user is invalid"
                 sys.exit(1)
-        return 0    
-    except email.Errors.MessageParseError,ValueError:
+        return 0
+    except email.Errors.MessageParseError, ValueError:
         print "Error Parsing Mail"
         sys.exit(1)
 
 if __name__ == "__main__":
     main()
-        
+
 # vim: ai ts=4 sts=4 et sw=4
