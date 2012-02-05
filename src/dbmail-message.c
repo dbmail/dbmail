@@ -1166,6 +1166,10 @@ int dbmail_message_store(DbmailMessage *self)
 				usleep(delay*i);
 				continue;
 			}
+
+			dbmail_message_cache_referencesfield(self);
+			dbmail_message_cache_envelope(self);
+
 			step++;
 		}
 		
@@ -1297,9 +1301,6 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 
 	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
 	
-	dbmail_message_cache_referencesfield(self);
-	dbmail_message_cache_envelope(self);
-
 	return DM_SUCCESS;
 }
 
