@@ -109,8 +109,8 @@ void trace(trace_t level, const char * module, const char * function, int line, 
 		char date[32];
 
  		if (! configured) {
- 			memset(hostname,'\0',16);
- 			gethostname(hostname,16);
+ 			memset(hostname,'\0',sizeof(hostname));
+ 			gethostname(hostname,15);
  			configured=1;
  		}
  
