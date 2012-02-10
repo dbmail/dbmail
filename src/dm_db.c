@@ -666,7 +666,7 @@ static const char * db_get_pgsql_sql(sql_fragment_t frag)
 			return "ROUND(DATE_PART('epoch',%s))";
 		break;
 		case SQL_CURRENT_TIMESTAMP:
-			return "CURRENT_TIMESTAMP";
+			return "NOW()";
 		break;
 		case SQL_EXPIRE:
 			return "NOW() - INTERVAL '%d DAY'";
