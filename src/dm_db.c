@@ -613,7 +613,7 @@ static const char * db_get_mysql_sql(sql_fragment_t frag)
 			return "UNIX_TIMESTAMP(%s)";
 		break;
 		case SQL_CURRENT_TIMESTAMP:
-			return "CURRENT_TIMESTAMP";
+			return "NOW()";
 		break;
 		case SQL_EXPIRE:
 			return "NOW() - INTERVAL %d DAY";
@@ -1120,11 +1120,9 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	TRY
 		s = db_stmt_prepare(c, "SELECT reply_body FROM %sauto_replies "
 				"WHERE user_idnr = ? "
-				"AND (start_date IS NULL OR start_date <= ?) "
-				"AND (stop_date IS NULL OR stop_date >= ?)", DBPFX);
+				"AND ? BETWEEN start_date AND stop_date", DBPFX);
 		db_stmt_set_u64(s, 1, user_idnr);
 		db_stmt_set_str(s, 2, db_get_sql(SQL_CURRENT_TIMESTAMP));
-		db_stmt_set_str(s, 3, db_get_sql(SQL_CURRENT_TIMESTAMP));
 		r = db_stmt_query(s);
 		if (db_result_next(r)) {
 			query_result = db_result_get(r, 0);
