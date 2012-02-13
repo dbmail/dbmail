@@ -1120,9 +1120,10 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	TRY
 		s = db_stmt_prepare(c, "SELECT reply_body FROM %sauto_replies "
 				"WHERE user_idnr = ? "
-				"AND ? BETWEEN start_date AND stop_date", DBPFX);
+				"AND %s BETWEEN start_date AND stop_date", 
+				DBPFX,
+				db_get_sql(SQL_CURRENT_TIMESTAMP));
 		db_stmt_set_u64(s, 1, user_idnr);
-		db_stmt_set_str(s, 2, db_get_sql(SQL_CURRENT_TIMESTAMP));
 		r = db_stmt_query(s);
 		if (db_result_next(r)) {
 			query_result = db_result_get(r, 0);
