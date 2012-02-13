@@ -695,7 +695,12 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT alias FROM %saliases WHERE deliver_to = '%llu' ORDER BY alias",DBPFX, user_idnr);
+		r = db_query(c, "SELECT alias FROM %saliases WHERE deliver_to = '%llu' "
+				"UNION SELECT a2.alias FROM %saliases a1 JOIN %saliases a2 "
+				"ON (a1.alias = a2.deliver_to) "
+				"WHERE a1.deliver_to='%llu' AND a2.deliver_to IS NOT NULL "
+				"ORDER BY alias DESC",
+				DBPFX, user_idnr, DBPFX, DBPFX, user_idnr);
 		while (db_result_next(r))
 			l = g_list_prepend(l,g_strdup(db_result_get(r,0)));
 	CATCH(SQLException)
