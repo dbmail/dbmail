@@ -2382,7 +2382,7 @@ static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
 		TRACE(TRACE_DEBUG, "starting auto-reply procedure");
 
 		if (db_get_reply_body(useridnr, &reply_body) != 0)
-			TRACE(TRACE_ERR, "error fetching reply body");
+			TRACE(TRACE_DEBUG, "no reply body found");
 		else {
 			if (reply_body == NULL || reply_body[0] == '\0')
 				TRACE(TRACE_DEBUG, "no reply body specified, skipping");
