@@ -22,10 +22,27 @@ mainloop: LOOP
   DEALLOCATE PREPARE dropkeys;
   SET @dropkey = NULL;
 END LOOP mainloop;
+
+-- Workaround for different Upgrade pathes
+  SELECT index_name INTO @dropkey FROM information_schema.STATISTICS
+  WHERE table_schema like DATABASE()
+  AND table_name = "dbmail_sievescripts"
+  GROUP BY index_name
+  HAVING count(1) = 2;
+
+IF @dropkey IS NOT NULL THEN
+  SET @sqltext := CONCAT('ALTER TABLE dbmail_sievescripts DROP INDEX ', @dropkey);
+  PREPARE dropkeys FROM @sqltext;
+  EXECUTE dropkeys;
+  DEALLOCATE PREPARE dropkeys;
+  SET @dropkey = NULL;
+END IF;
+
 END//
 DELIMITER ;
 
 CALL dodropkeys();
+DROP PROCEDURE IF EXISTS dodropkeys;
 
 -- Make sure our database is set for utf8
 ALTER DATABASE CHARACTER SET utf8;
@@ -42,6 +59,9 @@ DROP TABLE IF EXISTS dbmail_fromfield;
 DROP TABLE IF EXISTS dbmail_replytofield;
 DROP TABLE IF EXISTS dbmail_subjectfield;
 DROP TABLE IF EXISTS dbmail_tofield;
+
+-- Empty cache tables
+TRUNCATE TABLE dbmail_envelope;
 
 -- create new storage tables
 DROP TABLE IF EXISTS `dbmail_mimeparts`;
@@ -199,7 +219,6 @@ ALTER TABLE `dbmail_referencesfield`
 ALTER TABLE `dbmail_sievescripts`
   MODIFY COLUMN `owner_idnr` BIGINT( 20 ) UNSIGNED NOT NULL DEFAULT '0',
   MODIFY COLUMN name varchar(255) NOT NULL,
-  DROP INDEX owner_idnr_2,
   ADD UNIQUE INDEX dbmail_sievescripts_1 (owner_idnr, name);
 
 ALTER TABLE `dbmail_subscription`
