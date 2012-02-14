@@ -11,7 +11,7 @@ Type: select
 Choices: sql, ldap
 Default: sql
 _Description: Authentication driver to activate:
- Dbmail by defauls uses SQL based authentication. But you can also use
+ Dbmail by default uses SQL based authentication. But you can also use
  LDAP instead.
 
 Template: dbmail/dbmail/postmaster
