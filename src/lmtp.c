@@ -256,6 +256,8 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 
 		if (strncmp(buffer,".\n",2)==0 || strncmp(buffer,".\r\n",3)==0)
 			session->parser_state = TRUE;
+		else if (strncmp(buffer,".",1)==0)
+			g_string_append(session->rbuff, &buffer[1]);
 		else
 			g_string_append(session->rbuff, buffer);
 	} else
