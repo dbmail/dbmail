@@ -14,8 +14,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.1-1\n"
-"Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-28 18:17+0100\n"
+"Report-Msgid-Bugs-To: dbmail@packages.debian.org\n"
+"POT-Creation-Date: 2012-02-15 09:03+0100\n"
 "PO-Revision-Date: 2007-02-28 12:43+0100\n"
 "Last-Translator: Stefano Canepa <sc@linux.it>\n"
 "Language-Team: Italian Localization <debian-l10n-italian@lists.debian.org>\n"
@@ -53,8 +53,12 @@ msgstr "Driver di autenticazione da attivare:"
 #. Type: select
 #. Description
 #: ../dbmail.templates:2001
+#, fuzzy
+#| msgid ""
+#| "Dbmail by defauls uses SQL based authentication. But you can also use "
+#| "LDAP instead."
 msgid ""
-"Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
+"Dbmail by default uses SQL based authentication. But you can also use LDAP "
 "instead."
 msgstr ""
 "Dbmail di default usa l'autenticazione SQL, ma si può usare LDAP al suo "

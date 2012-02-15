@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: dbmail VERSION\n"
-"Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-28 18:17+0100\n"
+"Report-Msgid-Bugs-To: dbmail@packages.debian.org\n"
+"POT-Creation-Date: 2012-02-15 09:03+0100\n"
 "PO-Revision-Date: 2007-02-26 14:42+0530\n"
 "Last-Translator: പ്രവീണ്‍|Praveen എ|A <pravi.a@gmail.com>\n"
 "Language-Team: സ്വതന്ത്ര മലയാളം കമ്പ്യൂട്ടിങ്ങ്|Swathanthra Malayalam Computing <smc-"
@@ -46,8 +46,12 @@ msgstr "സജീവമാക്കേണ്ട ആധികാരികതാ �
 #. Type: select
 #. Description
 #: ../dbmail.templates:2001
+#, fuzzy
+#| msgid ""
+#| "Dbmail by defauls uses SQL based authentication. But you can also use "
+#| "LDAP instead."
 msgid ""
-"Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
+"Dbmail by default uses SQL based authentication. But you can also use LDAP "
 "instead."
 msgstr ""
 "Dbmail ഡിഫാള്‍ട്ടായി SQL അടിസ്ഥാനമാക്കിയിട്ടുള്ള ആധികാരിത ഉപയോഗിക്കുന്നു. പക്ഷേ നിങ്ങള്‍ക്ക് "

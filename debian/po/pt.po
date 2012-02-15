@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: dbmail\n"
-"Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-28 18:17+0100\n"
+"Report-Msgid-Bugs-To: dbmail@packages.debian.org\n"
+"POT-Creation-Date: 2012-02-15 09:03+0100\n"
 "PO-Revision-Date: 2007-02-28 22:28+0000\n"
 "Last-Translator: Carlos Lisboa <carloslisboa@gmail.com>\n"
 "Language-Team: Portuguese <traduz@debianpt.org>\n"
@@ -45,8 +45,12 @@ msgstr "Controlador de autenticação a activar:"
 #. Type: select
 #. Description
 #: ../dbmail.templates:2001
+#, fuzzy
+#| msgid ""
+#| "Dbmail by defauls uses SQL based authentication. But you can also use "
+#| "LDAP instead."
 msgid ""
-"Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
+"Dbmail by default uses SQL based authentication. But you can also use LDAP "
 "instead."
 msgstr ""
 "O dbmail por omissão utiliza autenticação baseada em SQL. No entanto pode "

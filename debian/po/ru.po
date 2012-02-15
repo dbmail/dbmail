@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 2.2.1-1\n"
-"Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-28 18:17+0100\n"
+"Report-Msgid-Bugs-To: dbmail@packages.debian.org\n"
+"POT-Creation-Date: 2012-02-15 09:03+0100\n"
 "PO-Revision-Date: 2007-02-27 20:42+0300\n"
 "Last-Translator: Yuri Kozlov <kozlov.y@gmail.com>\n"
 "Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
@@ -48,8 +48,12 @@ msgstr "Активируемый драйвер аутентификации:"
 #. Type: select
 #. Description
 #: ../dbmail.templates:2001
+#, fuzzy
+#| msgid ""
+#| "Dbmail by defauls uses SQL based authentication. But you can also use "
+#| "LDAP instead."
 msgid ""
-"Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
+"Dbmail by default uses SQL based authentication. But you can also use LDAP "
 "instead."
 msgstr ""
 "По умолчанию Dbmail использует аутентификацию из SQL. Но вместо этого, также "
