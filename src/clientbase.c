@@ -45,15 +45,15 @@ static void dm_tls_error(void)
 				case EINTR:
 					break;
 				default:
-					TRACE(TRACE_ERR, "%s", strerror(se));
+					TRACE(TRACE_INFO, "%s", strerror(se));
 				break;
 			}
 		} else {
-			TRACE(TRACE_ERR, "Unknown error");
+			TRACE(TRACE_INFO, "Unknown error");
 		}
 		return;
 	}
-	TRACE(TRACE_ERR, "%s", ERR_error_string(e, NULL));
+	TRACE(TRACE_INFO, "%s", ERR_error_string(e, NULL));
 }
 
 static void client_wbuf_clear(clientbase_t *client)
@@ -110,7 +110,7 @@ static int client_error_cb(int sock, int error, void *arg)
 				break; // reschedule
 			case SSL_ERROR_SYSCALL:
 				if (error == -1)
-					TRACE(TRACE_ERR, "[%p] %d %s", client, sock, strerror(errno));
+					TRACE(TRACE_DEBUG, "[%p] %d %s", client, sock, strerror(errno));
 				client_rbuf_clear(client);
 				client_wbuf_clear(client);
 				r = -1;
@@ -219,7 +219,7 @@ int ci_starttls(clientbase_t *self)
 	int e;
 	TRACE(TRACE_DEBUG,"[%p] ssl_state [%d]", self, self->ssl_state);
 	if (self->ssl && self->ssl_state > 0) {
-		TRACE(TRACE_ERR, "ssl already initialized");
+		TRACE(TRACE_WARNING, "ssl already initialized");
 		return DM_EGENERAL;
 	}
 
@@ -412,7 +412,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 		size_t j, k = 0, l;
 		l = stridx(s, '\n');
 		if (l >= MAX_LINESIZE) {
-			TRACE(TRACE_ERR, "insane line-length [%ld]", l);
+			TRACE(TRACE_WARNING, "insane line-length [%ld]", l);
 			self->client_state = CLIENT_ERR;
 			return 0;
 		}
