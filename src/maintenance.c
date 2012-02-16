@@ -581,12 +581,16 @@ int do_check_integrity(void)
 	time_t start, stop;
 	GList *lost = NULL;
 	const char *action;
+	gboolean cleanup;
 	long count = 0;
 
-	if (yes_to_all)
+	if (yes_to_all) {
 		action = "Repairing";
-	else
+		cleanup = TRUE;
+	} else {
 		action = "Checking";
+		cleanup = FALSE;
+	}
 
 	qprintf("\n%s DBMAIL message integrity...\n", action);
 
@@ -599,19 +603,15 @@ int do_check_integrity(void)
 	/* part 3 */
 	start = stop;
 	qprintf("\n%s DBMAIL physmessage integrity...\n", action);
-	if ((count = db_icheck_physmessages(FALSE)) < 0) {
+	if ((count = db_icheck_physmessages(cleanup)) < 0) {
 		qerrorf("Failed. An error occurred. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 	if (count > 0) {
 		qerrorf("Ok. Found [%ld] unconnected physmessages.\n", count);
-		if (yes_to_all) {
-			if (! db_icheck_physmessages(TRUE)) {
-				qerrorf("Warning: could not delete orphaned physmessages. Check log.\n");
-			} else {
-				qerrorf("Ok. Orphaned physmessages deleted.\n");
-			}
+		if (cleanup) {
+			qerrorf("Ok. Orphaned physmessages deleted.\n");
 		}
 	} else {
 		qprintf("Ok. Found [%ld] unconnected physmessages.\n", count);
@@ -625,19 +625,15 @@ int do_check_integrity(void)
 	/* part 4 */
 	start = stop;
 	qprintf("\n%s DBMAIL partlists integrity...\n", action);
-	if ((count = db_icheck_partlists(FALSE)) < 0) {
+	if ((count = db_icheck_partlists(cleanup)) < 0) {
 		qerrorf("Failed. An error occurred. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 	if (count > 0) {
 		qerrorf("Ok. Found [%ld] unconnected partlists.\n", count);
-		if (yes_to_all) {
-			if (! db_icheck_partlists(TRUE)) {
-				qerrorf("Warning: could not delete orphaned partlists. Check log.\n");
-			} else {
-				qerrorf("Ok. Orphaned partlists deleted.\n");
-			}
+		if (cleanup) {
+			qerrorf("Ok. Orphaned partlists deleted.\n");
 		}
 	} else {
 		qprintf("Ok. Found [%ld] unconnected partlists.\n", count);
@@ -651,19 +647,15 @@ int do_check_integrity(void)
 	/*  part 5 */
 	start = stop;
 	qprintf("\n%s DBMAIL mimeparts integrity...\n", action);
-	if ((count = db_icheck_mimeparts(FALSE)) < 0) {
+	if ((count = db_icheck_mimeparts(cleanup)) < 0) {
 		qerrorf("Failed. An error occurred. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 	if (count > 0) {
 		qerrorf("Ok. Found [%ld] unconnected mimeparts.\n", count);
-		if (yes_to_all) {
-			if (! db_icheck_mimeparts(TRUE)) {
-				qerrorf("Warning: could not delete orphaned mimeparts. Check log.\n");
-			} else {
-				qerrorf("Ok. Orphaned mimeparts deleted.\n");
-			}
+		if (cleanup) {
+			qerrorf("Ok. Orphaned mimeparts deleted.\n");
 		}
 	} else {
 		qprintf("Ok. Found [%ld] unconnected mimeparts.\n", count);
