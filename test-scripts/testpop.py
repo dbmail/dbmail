@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-# 
+#
 
 # For a protocol trace set to 4
 DEBUG = 0
@@ -28,15 +28,16 @@ DEBUG = 0
 TYPE = 'network'
 
 
-import unittest, poplib, re
-import sys, traceback, getopt, string
+import unittest
+import poplib
+import string
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
 # for network testing
-HOST,PORT = "localhost", 10110
+HOST, PORT = "localhost", 10110
 
 # for stdin/stdout testing
 DAEMONBIN = "./dbmail-pop3d -n -f /etc/dbmail/dbmail-test.conf"
@@ -44,42 +45,47 @@ DAEMONBIN = "./dbmail-pop3d -n -f /etc/dbmail/dbmail-test.conf"
 #DAEMONBIN = "valgrind --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
 
 
-TESTMSG={}
+TESTMSG = {}
+
 
 def getMessageStrict():
-    m=MIMEText("""
+    m = MIMEText("""
     this is a test message
     """)
-    m.add_header("To","testuser@foo.org")
-    m.add_header("From","somewher@foo.org")
-    m.add_header("Date","Mon, 26 Sep 2005 13:26:39 +0200")
-    m.add_header("Subject","dbmail test message")
+    m.add_header("To", "testuser@foo.org")
+    m.add_header("From", "somewher@foo.org")
+    m.add_header("Date", "Mon, 26 Sep 2005 13:26:39 +0200")
+    m.add_header("Subject", "dbmail test message")
     return m
 
+
 def getMultiPart():
-    m=MIMEMultipart()
+    m = MIMEMultipart()
     m.attach(getMessageStrict())
-    m.add_header("To","testaddr@bar.org")
-    m.add_header("From","testuser@foo.org")
-    m.add_header("Date","Sun, 25 Sep 2005 13:26:39 +0200")
-    m.add_header("Subject","dbmail multipart message")
+    m.add_header("To", "testaddr@bar.org")
+    m.add_header("From", "testuser@foo.org")
+    m.add_header("Date", "Sun, 25 Sep 2005 13:26:39 +0200")
+    m.add_header("Subject", "dbmail multipart message")
     return m
-    
-TESTMSG['strict822']=getMessageStrict()
-TESTMSG['multipart']=getMultiPart()
+
+
+TESTMSG['strict822'] = getMessageStrict()
+TESTMSG['multipart'] = getMultiPart()
+
 
 def getsock():
     if TYPE == 'network':
-        return poplib.POP3(HOST,PORT)
+        return poplib.POP3(HOST, PORT)
     elif TYPE == 'stream':
         return poplib.POP3_stream(DAEMONBIN)
 
+
 def strip_crlf(s):
-    return string.replace(s,'\r','')
+    return string.replace(s, '\r', '')
+
 
 class testPopServer(unittest.TestCase):
-
-    def setUp(self,username="testuser1",password="test"):
+    def setUp(self, username="testuser1", password="test"):
         self.o = getsock()
         self.o.set_debuglevel(DEBUG)
         self.o.user(username)
@@ -90,7 +96,7 @@ class testPopServer(unittest.TestCase):
         `getwelcome()'
              Returns the greeting string sent by the POP3 server.
         """
-        self.assertEquals(self.o.getwelcome()[:4],'+OK ')
+        self.assertEquals(self.o.getwelcome()[:4], '+OK ')
 
     def test_user(self):
         """
@@ -100,19 +106,20 @@ class testPopServer(unittest.TestCase):
         """
         o = getsock()
         o.set_debuglevel(DEBUG)
-        self.assertEquals(o.user('foobar')[:12],"+OK Password")
+        self.assertEquals(o.user('foobar')[:12], "+OK Password")
 
     def test_pass(self):
         """
         `pass_(password)'
              Send password, response includes message count and mailbox size.
-             Note: the mailbox on the server is locked until `quit()' is called.
+             Note: the mailbox on the server is locked until `quit()' is
+             called.
         """
         o = getsock()
         o.set_debuglevel(DEBUG)
         o.user('testuser2')
-        self.assertEquals(o.pass_('test')[:13],"+OK testuser2")
-    
+        self.assertEquals(o.pass_('test')[:13], "+OK testuser2")
+
     def test_apop(self):
         """
         `apop(user, secret)'
@@ -135,10 +142,9 @@ class testPopServer(unittest.TestCase):
              `(MESSAGE COUNT, MAILBOX SIZE)'.
 
         """
-        tpl=self.o.stat()
-        self.assertEquals(len(tpl),2)
-        self.assertEquals(type(tpl[0]),type(123))
-
+        tpl = self.o.stat()
+        self.assertEquals(len(tpl), 2)
+        self.assertEquals(type(tpl[0]), type(123))
 
     def test_list(self):
         """
@@ -147,10 +153,10 @@ class testPopServer(unittest.TestCase):
              octets', ...])'.  If WHICH is set, it is the message to list.
         """
         l = self.o.list()
-        self.assertEquals(l[0][:3],"+OK")
+        self.assertEquals(l[0][:3], "+OK")
         count = string.split(l[0])[1]
-        n,s=string.split(l[1][int(count)-1])
-        self.assertEquals(self.o.list(n),"+OK %s %s" % (n,s))
+        n, s = string.split(l[1][int(count) - 1])
+        self.assertEquals(self.o.list(n), "+OK %s %s" % (n, s))
 
     def test_retr(self):
         """
@@ -160,16 +166,17 @@ class testPopServer(unittest.TestCase):
         """
         l = self.o.list()
         count = string.split(l[0])[1]
-        n,s=string.split(l[1][int(count)-1])
-        for i in range(1,int(n)):
+        n, s = string.split(l[1][int(count) - 1])
+        for i in range(1, int(n)):
             result = self.o.retr(i)
             r = string.split(result[0])
-            self.assertEquals(r[0],"+OK")
-            message = string.join(result[1],"\r\n")
-            expectedlen = len(message) + 5## correction for trailing \r\n.\r\n
-            print r, expectedlen
-            #self.assertEquals(int(r[1]),expectedlen, "%d %s %d" % (i, r[1], expectedlen))
-        
+            self.assertEquals(r[0], "+OK")
+            message = string.join(result[1], "\r\n")
+            expectedlen = len(message)
+            self.assertEquals(int(r[1]),
+                              expectedlen,
+                              "%d %s %d" % (i, r[1], expectedlen))
+
     def test_dele(self):
         """
         `dele(which)'
@@ -179,7 +186,7 @@ class testPopServer(unittest.TestCase):
              deletes on any disconnect).
 
         """
-        self.assertEquals(self.o.dele(1),'+OK message 1 deleted')
+        self.assertEquals(self.o.dele(1), '+OK message 1 deleted')
         self.o.rset()
 
     def test_rset(self):
@@ -188,14 +195,14 @@ class testPopServer(unittest.TestCase):
              Remove any deletion marks for the mailbox.
         """
         result = self.o.rset()
-        self.assertEquals(result[:4],'+OK ')
+        self.assertEquals(result[:4], '+OK ')
 
     def test_noop(self):
         """
         `noop()'
              Do nothing.  Might be used as a keep-alive.
         """
-        self.assertEquals(self.o.noop()[:3],'+OK')
+        self.assertEquals(self.o.noop()[:3], '+OK')
 
     def test_quit(self):
         """
@@ -216,8 +223,8 @@ class testPopServer(unittest.TestCase):
              servers.  Test this method by hand against the POP3 servers you
              will use before trusting it.
         """
-        result = self.o.top(1,10)
-        self.assertEquals(result[0],'+OK 10 lines of message 1')
+        result = self.o.top(1, 10)
+        self.assertEquals(result[0], '+OK 10 lines of message 1')
 
     def test_uidl(self):
         """
@@ -228,10 +235,9 @@ class testPopServer(unittest.TestCase):
              ['mesgnum uid', ...], OCTETS)'.
         """
         all = self.o.uidl()
-        self.assertEquals(all[0][:4],'+OK ')
+        self.assertEquals(all[0][:4], '+OK ')
         one = self.o.uidl(1)
         self.assertEquals(one[4:], all[1][0])
-
 
     def tearDown(self):
         self.o.rset()
@@ -240,10 +246,10 @@ class testPopServer(unittest.TestCase):
 
 def usage():
     print """testpop.py:   test dbmail imapserver
-    
     """
-    
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     unittest.main()
 
+#EOF

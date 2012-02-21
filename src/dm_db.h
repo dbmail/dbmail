@@ -420,7 +420,7 @@ int db_delete_message(u64_t message_idnr);
 int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		      int update_curmail_size);
 
-char * db_get_message_lines(u64_t message_idnr, long lines, int no_end_dot);
+char * db_get_message_lines(u64_t message_idnr, long lines);
 
 /**
  * \brief update POP3 session
