@@ -172,11 +172,14 @@ class testPopServer(unittest.TestCase):
             result = self.o.retr(i)
             r = string.split(result[0])
             self.assertEquals(r[0], "+OK")
-            message = string.join(result[1], "\r\n")
+            message = '\r\n'.join(result[1])
             expectedlen = len(message)
+            bytestuffed = [x for x in result[1] if x.startswith('.')]
+            expectedlen = expectedlen + len(bytestuffed)
             self.assertEquals(int(r[1]),
                               expectedlen,
-                              "%d %s %d" % (i, r[1], expectedlen))
+                              "[%s] msgid %d octets %s message %d" % (
+                                  result[1], i, r[1], expectedlen))
 
     def test_dele(self):
         """

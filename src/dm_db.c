@@ -1680,17 +1680,18 @@ char * db_get_message_lines(u64_t message_idnr, long lines)
 
 	raw = t->str;
 	
-	while (raw[pos] && n < lines) {
-		if (raw[pos] == '\n') n++;
-		pos++;
+	if (lines >=0) {
+		while (raw[pos] && n < lines) {
+			if (raw[pos] == '\n') n++;
+			pos++;
+		}
+		t = g_string_truncate(t,pos);
 	}
-
-	t = g_string_truncate(t,pos);
 
 	g_string_append(s, t->str);
 	g_string_free(t, TRUE);
 
-	c = get_crlf_encoded(s->str);
+	c = get_crlf_encoded_dots(s->str);
 	g_string_free(s,TRUE);
 	return c;
 }
