@@ -33,6 +33,7 @@ import poplib
 import string
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
+from email import message_from_string
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
@@ -225,6 +226,13 @@ class testPopServer(unittest.TestCase):
         """
         result = self.o.top(1, 10)
         self.assertEquals(result[0], '+OK 10 lines of message 1')
+        result = self.o.top(1, 0)
+        msg = message_from_string('\r\n'.join(result[1]))
+        self.assertEquals(msg.get_payload(), "")
+
+        result = self.o.top(1, 2)
+        msg = message_from_string('\r\n'.join(result[1]))
+        self.assertEquals(len(msg.get_payload().split('\r\n')), 3)
 
     def test_uidl(self):
         """

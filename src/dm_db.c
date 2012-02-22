@@ -1097,9 +1097,9 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 			if (query_result && (strlen(query_result) > 0)) {
 				*notify_address = g_strdup(query_result);
 				TRACE(TRACE_DEBUG, "notify address [%s]", *notify_address);
-				t = DM_SUCCESS;
 			}
 		}
+		t = DM_SUCCESS;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
@@ -1680,13 +1680,12 @@ char * db_get_message_lines(u64_t message_idnr, long lines)
 
 	raw = t->str;
 	
-	if (lines > 0) {
-		while (raw[pos] && n < lines) {
-			if (raw[pos] == '\n') n++;
-			pos++;
-		}
-		if (pos) t = g_string_truncate(t,pos);
+	while (raw[pos] && n < lines) {
+		if (raw[pos] == '\n') n++;
+		pos++;
 	}
+
+	t = g_string_truncate(t,pos);
 
 	g_string_append(s, t->str);
 	g_string_free(t, TRUE);
