@@ -451,6 +451,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	dbmail_message_set_internal_date(self, internal_date);
 	g_free(internal_date);
 	g_string_free(m,TRUE);
+	g_string_free(n,TRUE);
 	g_strfreev(blist);
 	return self;
 }

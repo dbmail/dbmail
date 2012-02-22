@@ -74,28 +74,35 @@ void g_string_maybe_shrink(GString *s)
 int drop_privileges(char *newuser, char *newgroup)
 {
 	/* will drop running program's priviledges to newuser and newgroup */
-	struct passwd *pwd = NULL;
-	struct group *grp = NULL;
+	struct passwd pwd;
+	struct passwd *presult;
+	struct group grp;
+	struct group *gresult;
+	char buf[16384];
+	int s;
 
-	grp = getgrnam(newgroup);
+	memset(buf,0,sizeof(buf));
 
-	if (grp == NULL) {
-		TRACE(TRACE_ERR, "could not find group %s\n", newgroup);
+	s = getgrnam_r(newgroup, &grp, buf, sizeof(buf), &gresult);
+	if (gresult == NULL) {
+		if (s == 0)
+			TRACE(TRACE_ERR, "could not find group %s\n", newgroup);
 		return -1;
 	}
 
-	pwd = getpwnam(newuser);
-	if (pwd == NULL) {
-		TRACE(TRACE_ERR, "could not find user %s\n", newuser);
+	s = getpwnam_r(newuser, &pwd, buf, sizeof(buf), &presult);
+	if (presult == NULL) {
+		if (s == 0)
+			TRACE(TRACE_ERR, "could not find user %s\n", newuser);
 		return -1;
 	}
 
-	if (setgid(grp->gr_gid) != 0) {
+	if (setgid(grp.gr_gid) != 0) {
 		TRACE(TRACE_ERR, "could not set gid to %s\n", newgroup);
 		return -1;
 	}
 
-	if (setuid(pwd->pw_uid) != 0) {
+	if (setuid(pwd.pw_uid) != 0) {
 		TRACE(TRACE_ERR, "could not set uid to %s\n", newuser);
 		return -1;
 	}
@@ -886,7 +893,7 @@ char *date_sql2imap(const char *sqldate)
 char *date_imap2sql(const char *imapdate)
 {
 	struct tm tm;
-	char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;
+	char _sqldate[SQL_INTERNALDATE_LEN + 1];
 	char *last_char;
 
 	// bsd needs this:
