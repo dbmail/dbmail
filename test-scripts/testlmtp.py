@@ -15,13 +15,19 @@ USERNAME = "testuser1"
 # number of messages to send per session
 RECONNECT = 5
 
-import smtplib, thread, time, sys, mailbox, string
+import smtplib
+import thread
+import time
+import sys
+import mailbox
+import string
 from optparse import OptionParser
 
-DEBUG=False
+DEBUG = False
 
 tlocks = {}
 tdict = {}
+
 
 class LMTPClient:
     def __init__(self, hostname, port):
@@ -42,20 +48,21 @@ class LMTPClient:
     def quit(self):
         return self.conn.quit()
 
+
 def frontloader(*args):
     tid = args[0]
     tlocks[tid].acquire()
-    c = LMTPClient('localhost',10024)
+    c = LMTPClient('localhost', 10024)
     c.lhlo('host')
-    mb = mailbox.mbox(MAILBOX,factory=None, create=False)
+    mb = mailbox.mbox(MAILBOX, factory=None, create=False)
     i = 1
     while i < MESSAGES:
         for msg in mb.values():
-            addr = string.split(msg.get_from())[0];
-            c.send(addr,USERNAME,msg.as_string())
-            if not i % RECONNECT: 
+            addr = string.split(msg.get_from())[0]
+            c.send(addr, USERNAME, msg.as_string())
+            if not i % RECONNECT:
                 c.quit()
-                c = LMTPClient('localhost',10024)
+                c = LMTPClient('localhost', 10024)
                 c.lhlo('host')
                 sys.stdout.write('_')
             else:
@@ -72,15 +79,21 @@ if __name__ == '__main__':
 
     parser = OptionParser()
     parser.add_option("-c", "--clients", dest="CLIENTS",
-        help="Number of concurrent clients [default: %default]", default=CLIENTS)
+        help="Number of concurrent clients [default: %default]",
+                      default=CLIENTS)
     parser.add_option("-m", "--mailbox", dest="MAILBOX",
-        help="mailbox to feed to LMTP [default: %default]", default=MAILBOX)
-    parser.add_option("-n", "--messages", dest="MESSAGES", default=MESSAGES,
+        help="mailbox to feed to LMTP [default: %default]",
+                      default=MAILBOX)
+    parser.add_option("-n", "--messages", dest="MESSAGES",
+                      default=MESSAGES,
         help="number of messsages clients sends [default: %default]")
-    parser.add_option("-u", "--username", dest="USERNAME", default=USERNAME,
+    parser.add_option("-u", "--username", dest="USERNAME",
+                      default=USERNAME,
         help="deliver to username [default: %default]")
-    parser.add_option("-r", "--reconnect", dest="RECONNECT", default=RECONNECT,
-        help="Number of messages to send before reconnecting [default: %default]")
+    parser.add_option("-r", "--reconnect", dest="RECONNECT",
+                      default=RECONNECT,
+                      help="Number of messages to send before " \
+                        "reconnecting [default: %default]")
 
     (options, args) = parser.parse_args()
 
@@ -91,14 +104,14 @@ if __name__ == '__main__':
     RECONNECT = int(options.RECONNECT)
 
     # start the client threads
-    for i in range(0,CLIENTS):
+    for i in range(0, CLIENTS):
         tlocks[i] = thread.allocate_lock()
 
     print "Starting %d clients" % CLIENTS
     print "Deliver %d messages per client to %s" % (MESSAGES, USERNAME)
     print "Use messages from %s" % MAILBOX
 
-    for i in range(0,CLIENTS):
+    for i in range(0, CLIENTS):
         id = thread.start_new_thread(frontloader, (i,))
         tdict[i] = id
         time.sleep(1)
@@ -106,11 +119,11 @@ if __name__ == '__main__':
     time.sleep(5)
     # wait for the clients to finish
     while 1:
-        for i in range(0,CLIENTS):
+        for i in range(0, CLIENTS):
             done = []
-            if tdict.has_key(i):
+            if i in tdict:
                 r = tlocks[i].acquire(0)
-                if r: 
+                if r:
                     sys.stdout.write('Q')
                     sys.stdout.flush()
                     tlocks[i].release()
@@ -123,3 +136,4 @@ if __name__ == '__main__':
         time.sleep(1)
 
 
+#EOF
