@@ -183,8 +183,8 @@ void Http_getUsers(T R)
 		while (mailboxes->data) {
 			MailboxState_T b = MailboxState_new(*((u64_t *)mailboxes->data));
 			MailboxState_setOwner(b, id);
-			if (MailboxState_reload(b) == DM_SUCCESS)
-				evbuffer_add_printf(buf, "    \"%llu\":{\"name\":\"%s\",\"exists\":%u}", MailboxState_getId(b), MailboxState_getName(b), MailboxState_getExists(b));
+			//if (MailboxState_reload(b) == DM_SUCCESS)
+			evbuffer_add_printf(buf, "    \"%llu\":{\"name\":\"%s\",\"exists\":%u}", MailboxState_getId(b), MailboxState_getName(b), MailboxState_getExists(b));
 			MailboxState_free(&b);
 			if (! g_list_next(mailboxes)) break;
 			mailboxes = g_list_next(mailboxes);
@@ -238,19 +238,20 @@ void Http_getMailboxes(T R)
 		 * C < POST /mailboxes/876 
 		 */
 
+		const char *msg;
+		u64_t msg_id = 0;
 		MailboxState_T b = MailboxState_new(id);
-		if (MailboxState_reload(b) == DM_SUCCESS) {
-			const char *msg;
-			u64_t msg_id = 0;
-			if ((msg = evhttp_find_header(Request_getPOST(R),"message"))) {
-				if (! db_append_msg(msg, MailboxState_getId(b), MailboxState_getOwner(b), NULL, &msg_id))
-					MailboxState_reload(b);
-			}
-			evbuffer_add_printf(buf, "{\"mailboxes\": {\n");
-			evbuffer_add_printf(buf, "    \"%llu\":{\"name\":\"%s\",\"exists\":%d}", MailboxState_getId(b), MailboxState_getName(b), MailboxState_getExists(b));
-			evbuffer_add_printf(buf, "\n}}\n");
+		unsigned exists = MailboxState_getExists(b);
+
+		if ((msg = evhttp_find_header(Request_getPOST(R),"message"))) {
+			if (! db_append_msg(msg, MailboxState_getId(b), MailboxState_getOwner(b), NULL, &msg_id))
+				exists++;		
 		}
+		evbuffer_add_printf(buf, "{\"mailboxes\": {\n");
+		evbuffer_add_printf(buf, "    \"%llu\":{\"name\":\"%s\",\"exists\":%d}", MailboxState_getId(b), MailboxState_getName(b), exists);
+		evbuffer_add_printf(buf, "\n}}\n");
 		MailboxState_free(&b);
+
 	} else if (MATCH(Request_getMethod(R),"messages")) {
 
 		/*

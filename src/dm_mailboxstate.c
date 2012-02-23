@@ -55,6 +55,7 @@ struct T {
 	GTree *msn;
 };
 
+static void MailboxState_load(T M, C c);
 /* */
 
 static void MailboxState_uid_msn_new(T M)
@@ -71,14 +72,14 @@ static void MessageInfo_free(MessageInfo *m)
 	g_free(m);
 }
 
-static T MailboxState_getMessageState(T M)
+static T MailboxState_getMessageState(T M, C c)
 {
 	unsigned nrows = 0, i = 0, j;
 	const char *query_result, *keyword;
 	MessageInfo *result;
 	GTree *msginfo;
 	u64_t *uid, id = 0;
-	C c; R r; volatile int t = FALSE;
+	R r;
 	field_t frag;
 	INIT_QUERY;
 
@@ -92,58 +93,44 @@ static T MailboxState_getMessageState(T M)
 
 	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
 
-	c = db_con_get();
-	TRY
-		db_begin_transaction(c); // we need read-committed isolation
-		r = db_query(c,query);
+	r = db_query(c,query);
 
-		i = 0;
-		while (db_result_next(r)) {
-			i++;
+	i = 0;
+	while (db_result_next(r)) {
+		i++;
 
-			id = db_result_get_u64(r,IMAP_NFLAGS + 2);
+		id = db_result_get_u64(r,IMAP_NFLAGS + 2);
 
-			uid = g_new0(u64_t,1); *uid = id;
+		uid = g_new0(u64_t,1); *uid = id;
 
-			result = g_new0(MessageInfo,1);
+		result = g_new0(MessageInfo,1);
 
-			/* id */
-			result->uid = id;
+		/* id */
+		result->uid = id;
 
-			/* mailbox_id */
-			result->mailbox_id = M->id;
+		/* mailbox_id */
+		result->mailbox_id = M->id;
 
-			/* flags */
-			for (j = 0; j < IMAP_NFLAGS; j++)
-				result->flags[j] = db_result_get_bool(r,j);
+		/* flags */
+		for (j = 0; j < IMAP_NFLAGS; j++)
+			result->flags[j] = db_result_get_bool(r,j);
 
-			/* internal date */
-			query_result = db_result_get(r,IMAP_NFLAGS);
-			strncpy(result->internaldate,
-					(query_result) ? query_result :
-					"01-Jan-1970 00:00:01 +0100",
-					IMAP_INTERNALDATE_LEN);
+		/* internal date */
+		query_result = db_result_get(r,IMAP_NFLAGS);
+		strncpy(result->internaldate,
+				(query_result) ? query_result :
+				"01-Jan-1970 00:00:01 +0100",
+				IMAP_INTERNALDATE_LEN);
 
-			/* rfcsize */
-			result->rfcsize = db_result_get_u64(r,IMAP_NFLAGS + 1);
+		/* rfcsize */
+		result->rfcsize = db_result_get_u64(r,IMAP_NFLAGS + 1);
 
-			g_tree_insert(msginfo, uid, result); 
+		g_tree_insert(msginfo, uid, result); 
 
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	END_TRY;
-
-	if (t == DM_EQUERY) {
-		db_con_close(c);
-		return M;
 	}
 
 	if (! i) { // empty mailbox
 		MailboxState_setMsginfo(M, msginfo);
-		db_commit_transaction(c);
-		db_con_close(c);
 		return M;
 	}
 
@@ -154,31 +141,18 @@ static T MailboxState_getMessageState(T M)
 		"SELECT k.message_idnr, keyword FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 		"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-		"WHERE b.mailbox_idnr = %llu AND m.status < %d",
+		"WHERE b.mailbox_idnr = %llu AND m.status IN (%d,%d)",
 		DBPFX, DBPFX, DBPFX,
-		M->id, MESSAGE_STATUS_DELETE);
+		M->id, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
-	TRY
-		nrows = 0;
-		r = db_query(c,query);
-		while (db_result_next(r)) {
-			nrows++;
-			id = db_result_get_u64(r,0);
-			keyword = db_result_get(r,1);
-			if ((result = g_tree_lookup(msginfo, &id)) != NULL)
-				result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_commit_transaction(c);
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) {
-		g_tree_destroy(msginfo);
-		return M;
+	nrows = 0;
+	r = db_query(c,query);
+	while (db_result_next(r)) {
+		nrows++;
+		id = db_result_get_u64(r,0);
+		keyword = db_result_get(r,1);
+		if ((result = g_tree_lookup(msginfo, &id)) != NULL)
+			result->keywords = g_list_append(result->keywords, g_strdup(keyword));
 	}
 
 	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");
@@ -191,15 +165,29 @@ static T MailboxState_getMessageState(T M)
 
 T MailboxState_new(u64_t id)
 {
-	T M;
+	T M; C c;
+	volatile int t = DM_SUCCESS;
 
 	M = g_malloc0(sizeof(*M));
 	M->id = id;
 	if (! id) return M;
 
 	M->keywords = g_tree_new_full((GCompareDataFunc)dm_strcasecmpdata, NULL,(GDestroyNotify)g_free,NULL);
-	MailboxState_reload(M);
-	MailboxState_getMessageState(M);
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c); // we need read-committed isolation
+		MailboxState_load(M, c);
+		MailboxState_getMessageState(M, c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_commit_transaction(c);
+		db_con_close(c);
+	END_TRY;
+
+	if (t == DM_EQUERY)
+		MailboxState_free(&M);
 
 	return M;
 }
@@ -437,32 +425,21 @@ void MailboxState_free(T *M)
 	s = NULL;
 }
 
-static int db_getmailbox_flags(T M)
+static void db_getmailbox_flags(T M, C c)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
-	g_return_val_if_fail(M->id,DM_EQUERY);
-	
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %llu",
-				DBPFX, M->id);
-		if (db_result_next(r))
-			M->permission = db_result_get_int(r, 0);
+	R r;
+	g_return_if_fail(M->id);
 
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
+	r = db_query(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %llu",
+			DBPFX, M->id);
+	if (db_result_next(r))
+		M->permission = db_result_get_int(r, 0);
 }
 
-static int db_getmailbox_metadata(T M)
+static void db_getmailbox_metadata(T M, C c)
 {
 	/* query mailbox for LIST results */
-	C c; R r; volatile int t = DM_SUCCESS;
+	R r;
 	char *mbxname, *name, *pattern;
 	struct mailbox_match *mailbox_like = NULL;
 	GString *fqname, *qs;
@@ -475,42 +452,31 @@ static int db_getmailbox_metadata(T M)
 		 "FROM %smailboxes WHERE mailbox_idnr = %llu",
 		 DBPFX, M->id);
 
-	c = db_con_get();
-	TRY
-		r = db_query(c, query);
-		if (db_result_next(r)) {
-			/* owner_idnr */
-			M->owner_id = db_result_get_u64(r, i++);
-			
-			/* name */
-			name = g_strdup(db_result_get(r,i++));
+	r = db_query(c, query);
+	if (db_result_next(r)) {
+		/* owner_idnr */
+		M->owner_id = db_result_get_u64(r, i++);
 
-			mbxname = mailbox_add_namespace(name, M->owner_id, M->owner_id);
-			fqname = g_string_new(mbxname);
-			fqname = g_string_truncate(fqname,IMAP_MAX_MAILBOX_NAMELEN);
-			MailboxState_setName(M, fqname->str);
-			g_string_free(fqname,TRUE);
-			g_free(mbxname);
+		/* name */
+		name = g_strdup(db_result_get(r,i++));
 
-			/* no_select */
-			M->no_select=db_result_get_bool(r,i++);
-			/* no_inferior */
-			M->no_inferiors=db_result_get_bool(r,i++);
-			
-			/* no_children */
-			pattern = g_strdup_printf("%s/%%", name);
-			mailbox_like = mailbox_match_new(pattern);
-			g_free(pattern);
-			g_free(name);
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	END_TRY;
+		mbxname = mailbox_add_namespace(name, M->owner_id, M->owner_id);
+		fqname = g_string_new(mbxname);
+		fqname = g_string_truncate(fqname,IMAP_MAX_MAILBOX_NAMELEN);
+		MailboxState_setName(M, fqname->str);
+		g_string_free(fqname,TRUE);
+		g_free(mbxname);
 
-	if (t == DM_EQUERY) {
-		db_con_close(c);
-		return t;
+		/* no_select */
+		M->no_select=db_result_get_bool(r,i++);
+		/* no_inferior */
+		M->no_inferiors=db_result_get_bool(r,i++);
+
+		/* no_children */
+		pattern = g_strdup_printf("%s/%%", name);
+		mailbox_like = mailbox_match_new(pattern);
+		g_free(pattern);
+		g_free(name);
 	}
 
 	db_con_clear(c);
@@ -523,76 +489,52 @@ static int db_getmailbox_metadata(T M)
 	if (mailbox_like && mailbox_like->sensitive)
 		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
 
-	t = DM_SUCCESS;
-	TRY
-		stmt = db_stmt_prepare(c, qs->str);
-		prml = 1;
-		db_stmt_set_u64(stmt, prml++, M->owner_id);
+	stmt = db_stmt_prepare(c, qs->str);
+	prml = 1;
+	db_stmt_set_u64(stmt, prml++, M->owner_id);
 
-		if (mailbox_like && mailbox_like->insensitive)
-			db_stmt_set_str(stmt, prml++, mailbox_like->insensitive);
-		if (mailbox_like && mailbox_like->sensitive)
-			db_stmt_set_str(stmt, prml++, mailbox_like->sensitive);
+	if (mailbox_like && mailbox_like->insensitive)
+		db_stmt_set_str(stmt, prml++, mailbox_like->insensitive);
+	if (mailbox_like && mailbox_like->sensitive)
+		db_stmt_set_str(stmt, prml++, mailbox_like->sensitive);
 
-		r = db_stmt_query(stmt);
-		if (db_result_next(r)) {
-			int nr_children = db_result_get_int(r,0);
-			M->no_children=nr_children ? 0 : 1;
-		} else {
-			M->no_children=1;
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
+	r = db_stmt_query(stmt);
+	if (db_result_next(r)) {
+		int nr_children = db_result_get_int(r,0);
+		M->no_children=nr_children ? 0 : 1;
+	} else {
+		M->no_children=1;
+	}
 
 	mailbox_match_free(mailbox_like);
 	g_string_free(qs, TRUE);
-
-	return t;
 }
 
-static int db_getmailbox_count(T M)
+static void db_getmailbox_count(T M, C c)
 {
-	C c; R r; 
-	volatile int t;
+	R r; 
 	unsigned result[3];
 
 	result[0] = result[1] = result[2] = 0;
 
-	g_return_val_if_fail(M->id,DM_EQUERY);
+	g_return_if_fail(M->id);
 
 	/* count messages */
- 	t = FALSE;
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT 0,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
-				"AND (status < %d) UNION "
-				"SELECT 1,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
-				"AND (status < %d) AND seen_flag=1 UNION "
-				"SELECT 2,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
-				"AND (status < %d) AND recent_flag=1",
-				DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-				DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-				DBPFX, M->id, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-		if (db_result_next(r))
-			result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
-		if (db_result_next(r))
-			result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
-		if (db_result_next(r))
-			result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
-		db_con_clear(c);
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY)
-		return t;
+	r = db_query(c, "SELECT 0,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+			"AND (status < %d) UNION "
+			"SELECT 1,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+			"AND (status < %d) AND seen_flag=1 UNION "
+			"SELECT 2,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+			"AND (status < %d) AND recent_flag=1",
+			DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+			DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+			DBPFX, M->id, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+	if (db_result_next(r))
+		result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
+	if (db_result_next(r))
+		result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
+	if (db_result_next(r))
+		result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
 
 	M->exists = result[0];
 	M->unseen = result[0] - result[1];
@@ -607,118 +549,78 @@ static int db_getmailbox_count(T M)
 
 	if (M->exists == 0) {
 		M->uidnext = 1;
-		return t;
+		return;
 	}
 
-	c = db_con_get();
-	t = FALSE;
-	TRY
-		r = db_query(c, "SELECT MAX(message_idnr)+1 FROM %smessages WHERE mailbox_idnr=%llu",DBPFX, M->id);
-		if (db_result_next(r))
-			M->uidnext = db_result_get_u64(r,0);
-		else
-			M->uidnext = 1;
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
+	r = db_query(c, "SELECT MAX(message_idnr)+1 FROM %smessages WHERE mailbox_idnr=%llu",DBPFX, M->id);
+	if (db_result_next(r))
+		M->uidnext = db_result_get_u64(r,0);
+	else
+		M->uidnext = 1;
 }
 
-static int db_getmailbox_keywords(T M)
+static void db_getmailbox_keywords(T M, C c)
 {
-	C c; R r; 
-	volatile int t = DM_SUCCESS;
+	R r; 
 	const char *key;
 
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
-				"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
-				"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-				"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, M->id);
+	r = db_query(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
+			"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
+			"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
+			"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, M->id);
 
-		while (db_result_next(r)) {
-			key = g_strdup(db_result_get(r,0));
-			g_tree_insert(M->keywords, (gpointer)key, (gpointer)key);
-		}
-
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-		if (M->keywords) g_tree_destroy(M->keywords);
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
+	while (db_result_next(r)) {
+		key = g_strdup(db_result_get(r,0));
+		g_tree_insert(M->keywords, (gpointer)key, (gpointer)key);
+	}
 }
 
-static int db_getmailbox_seq(T M)
+static void db_getmailbox_seq(T M, C c)
 {
-	C c; R r; 
-	volatile int t = DM_SUCCESS;
+	R r; 
 
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=%llu", DBPFX, M->id);
-		if (db_result_next(r)) {
-			if (! M->name)
-				M->name = g_strdup(db_result_get(r, 0));
-			M->seq = db_result_get_u64(r,1);
-			TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
-		} else {
-			TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%llu]", M->id);
-			t = DM_EQUERY;
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		M->seq = 0;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	return t;
+	r = db_query(c, "SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=%llu", DBPFX, M->id);
+	if (db_result_next(r)) {
+		if (! M->name)
+			M->name = g_strdup(db_result_get(r, 0));
+		M->seq = db_result_get_u64(r,1);
+		TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
+	} else {
+		TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%llu]", M->id);
+	}
 }
 
 int MailboxState_preload(T M)
 {
-	int res;
-	if ((res = db_getmailbox_metadata(M)) != DM_SUCCESS)
-		return res;
+	volatile int t = DM_SUCCESS;
+	C c = db_con_get();
+	TRY
+		db_getmailbox_metadata(M, c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
-	return DM_SUCCESS;
+	return t;
 }
 
-int MailboxState_reload(T M)
+static void MailboxState_load(T M, C c)
 {
-	int res;
 	u64_t oldseq;
-	
-	g_return_val_if_fail(M->id,DM_EQUERY);
+
+	g_return_if_fail(M->id);
 
 	oldseq = M->seq;
-	
-	if ((res = db_getmailbox_seq(M)) != DM_SUCCESS)
-		return res;
+	db_getmailbox_seq(M, c);
+	if (M->uidnext && (M->seq == oldseq)) 
+		return;
 
-	if ( M->uidnext && (M->seq == oldseq) )
-		return DM_SUCCESS;
-
-	if ((res = db_getmailbox_flags(M)) != DM_SUCCESS)
-		return res;
-	if ((res = db_getmailbox_count(M)) != DM_SUCCESS)
-		return res;
-	if ((res = db_getmailbox_keywords(M)) != DM_SUCCESS)
-		return res;
-	if ((res = db_getmailbox_metadata(M)) != DM_SUCCESS)
-		return res;
-
-	return DM_SUCCESS;
+	db_getmailbox_flags(M, c);
+	db_getmailbox_count(M, c);
+	db_getmailbox_keywords(M, c);
+	db_getmailbox_metadata(M, c);
 }
 
 char * MailboxState_flags(T M)

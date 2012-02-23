@@ -829,18 +829,8 @@ START_TEST(test_db_findmailbox_by_regex)
 
 }
 END_TEST
-/**
- * \brief get info on a mailbox. Info is filled in in the
- *        MailboxInfo struct.
- * \param mb the MailboxInfo to fill in. (mb->uid needs to be
- *        set already!
- * \return
- *     - -1 on failure
- *     - 0 on success
- */
-//int db_getmailbox(MailboxInfo * mb);
 
-START_TEST(test_db_getmailbox)
+START_TEST(test_MailboxState_new)
 {
 	int res;
 	u64_t id, userid;
@@ -849,9 +839,8 @@ START_TEST(test_db_getmailbox)
 	id = get_mailbox_id("INBOX", &userid);
 	M = MailboxState_new(id);
 	
-	res = MailboxState_reload(M);
-	fail_unless(res == DM_SUCCESS, "db_getmailbox failed");
-	fail_unless(MATCH("INBOX", MailboxState_getName(M)), "db_getmailbox failed");
+	fail_unless(M != NULL, "MailboxState_new failed");
+	fail_unless(MATCH("INBOX", MailboxState_getName(M)), "MailboxState_new failed");
 }
 END_TEST
 
@@ -1210,7 +1199,7 @@ Suite *dbmail_db_suite(void)
 	tcase_add_test(tc_db, test_Connection_executeQuery);
 	tcase_add_test(tc_db, test_db_createmailbox);
 	tcase_add_test(tc_db, test_db_delete_mailbox);
-	tcase_add_test(tc_db, test_db_getmailbox);
+	tcase_add_test(tc_db, test_MailboxState_new);
 	tcase_add_test(tc_db, test_db_replycache);
 	tcase_add_test(tc_db, test_db_mailbox_set_permission);
 	tcase_add_test(tc_db, test_db_mailbox_create_with_parents);

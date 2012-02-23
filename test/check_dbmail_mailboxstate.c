@@ -67,7 +67,6 @@ START_TEST(test_createdestroy)
 {
 	u64_t id = get_mailbox_id("INBOX");
 	MailboxState_T M = MailboxState_new(id);
-	MailboxState_reload(M);
 	MailboxState_free(&M);
 }
 END_TEST
@@ -92,11 +91,9 @@ START_TEST(test_mbxinfo)
 	*k2 = id;
 
 	N = MailboxState_new(id);
-	MailboxState_reload(N);
 	g_tree_replace(mbxinfo, k1, N);
 
 	M = MailboxState_new(id);
-	MailboxState_reload(M);
 	g_tree_replace(mbxinfo, k2, M);
 
 	g_tree_destroy(mbxinfo);

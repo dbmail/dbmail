@@ -1990,17 +1990,14 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern, GList ** chil
 
 int mailbox_is_writable(u64_t mailbox_idnr)
 {
+	int result = TRUE;
 	MailboxState_T M = MailboxState_new(mailbox_idnr);
-	
-	MailboxState_reload(M);
 	if (MailboxState_getPermission(M) != IMAPPERM_READWRITE) {
-		MailboxState_free(&M);
 		TRACE(TRACE_INFO, "read-only mailbox");
-		return FALSE;
+		result = FALSE;
 	}
-
 	MailboxState_free(&M);
-	return TRUE;
+	return result;
 
 }
 

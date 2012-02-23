@@ -30,7 +30,6 @@ typedef struct T *T;
 extern T            MailboxState_new(u64_t id);
 
 extern int          MailboxState_preload(T);
-extern int          MailboxState_reload(T);
 extern void         MailboxState_remap(T);
 extern int          MailboxState_removeUid(T, u64_t);
 extern GTree *      MailboxState_getMsginfo(T);
