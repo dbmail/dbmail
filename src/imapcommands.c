@@ -840,6 +840,7 @@ void _ic_list_enter(dm_thread_data *D)
 {
 	SESSION_GET;
 	int list_is_lsub = 0;
+	gboolean show_child_info = TRUE;
 	GList *plist = NULL, *children = NULL;
 	GTree *shown = NULL;
 	char *pstring = NULL;
@@ -908,10 +909,11 @@ void _ic_list_enter(dm_thread_data *D)
 				   mailboxes, they are returned with the \Noselect mailbox name attribute
 				   */
 
+				show_child_info = FALSE;
 				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox, pattern);
 				char *m = NULL, **p = g_strsplit(mailbox,MAILBOX_SEPARATOR,0);
 				int l = g_strv_length(p);
-				while (l > 1) {
+				while (l > 0) {
 					if (p[l]) {
 						g_free(p[l]);
 						p[l] = NULL;
@@ -945,10 +947,12 @@ void _ic_list_enter(dm_thread_data *D)
 				plist = g_list_append(plist, g_strdup("\\noselect"));
 			if (MailboxState_noInferiors(M))
 				plist = g_list_append(plist, g_strdup("\\noinferiors"));
-			if (MailboxState_noChildren(M))
-				plist = g_list_append(plist, g_strdup("\\hasnochildren"));
-			else
-				plist = g_list_append(plist, g_strdup("\\haschildren"));
+			if (show_child_info) {
+				if (MailboxState_noChildren(M))
+					plist = g_list_append(plist, g_strdup("\\hasnochildren"));
+				else
+					plist = g_list_append(plist, g_strdup("\\haschildren"));
+			}
 
 			/* show */
 			pstring = dbmail_imap_plist_as_string(plist);

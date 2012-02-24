@@ -60,6 +60,7 @@ extern unsigned     MailboxState_getPermission(T S);
 extern void         MailboxState_setName(T S, const char *name);
 extern const char * MailboxState_getName(T S);
 
+extern gboolean     MailboxState_isSubscribed(T);
 extern void         MailboxState_setIsUsers(T, gboolean);
 extern gboolean     MailboxState_isUsers(T);
 extern void         MailboxState_setIsPublic(T, gboolean);

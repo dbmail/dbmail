@@ -44,6 +44,7 @@ struct T {
 	unsigned unseen;
 	unsigned permission;
 	// 
+	gboolean is_subscribed;
 	gboolean is_public;
 	gboolean is_users;
 	gboolean is_inbox;
@@ -331,15 +332,22 @@ void MailboxState_setName(T M, const char *name)
 		old = NULL;
 	}
 }
+
 const char * MailboxState_getName(T M)
 {
 	return M->name;
+}
+
+gboolean MailboxState_isSubscribed(T M)
+{
+	return M->is_subscribed;
 }
 
 void MailboxState_setIsUsers(T M, gboolean t)
 {
 	M->is_users = t;
 }
+
 gboolean MailboxState_isUsers(T M)
 {
 	return M->is_users;
@@ -373,6 +381,8 @@ void MailboxState_setNoSelect(T M, gboolean no_select)
 
 gboolean MailboxState_noSelect(T M)
 {
+	if (! M->is_subscribed)
+		M->no_select = TRUE;
 	return M->no_select;
 }
 void MailboxState_setNoChildren(T M, gboolean no_children)
@@ -448,17 +458,26 @@ static void db_getmailbox_metadata(T M, C c)
 	INIT_QUERY;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT owner_idnr, name, no_select, no_inferiors "
-		 "FROM %smailboxes WHERE mailbox_idnr = %llu",
-		 DBPFX, M->id);
+		 "SELECT CASE WHEN user_id IS NULL THEN 0 ELSE 1 END, "
+		 "owner_idnr, name, no_select, no_inferiors "
+		 "FROM %smailboxes b LEFT OUTER JOIN %ssubscription s ON "
+		 "b.mailbox_idnr = s.mailbox_id WHERE b.mailbox_idnr = %llu",
+		 DBPFX, DBPFX, M->id);
 
 	r = db_query(c, query);
 	if (db_result_next(r)) {
+		/* subsciption */
+		M->is_subscribed = db_result_get_bool(r, i++);
+
 		/* owner_idnr */
 		M->owner_id = db_result_get_u64(r, i++);
 
 		/* name */
 		name = g_strdup(db_result_get(r,i++));
+		if (MATCH(name, "INBOX")) {
+			M->is_inbox = TRUE;
+			M->is_subscribed = TRUE;
+		}
 
 		mbxname = mailbox_add_namespace(name, M->owner_id, M->owner_id);
 		fqname = g_string_new(mbxname);
