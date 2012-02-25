@@ -886,7 +886,7 @@ GTuples * dbmail_message_get_header_repeated(const DbmailMessage *self, const ch
 
 GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field_name)
 {
-	InternetAddressList *ialisthead, *ialist;
+	InternetAddressList *ialist;
 	InternetAddress *ia;
 	GList *result = NULL;
 	const char *field_value;
@@ -897,7 +897,9 @@ GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *
 		return NULL; 
 	}
 
-	field_value = dbmail_message_get_header(message, field_name);
+	if ((field_value = dbmail_message_get_header(message, field_name)) == NULL)
+		return NULL;
+	
 	TRACE(TRACE_INFO, "mail address parser looking at field [%s] with value [%s]", field_name, field_value);
 	
 	if ((ialist = internet_address_list_parse_string(field_value)) == NULL) {
@@ -905,11 +907,14 @@ GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *
 		return NULL;
 	}
 
-	ialisthead = ialist;
 	i = internet_address_list_length(ialist);
 	for (j=0; j<i; j++) {
+		char *a;
 		ia = internet_address_list_get_address(ialist, j);
-		result = g_list_append(result, g_strdup(internet_address_mailbox_get_addr((InternetAddressMailbox *)ia)));
+		if ((a = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia)) != NULL) {;
+			TRACE(TRACE_DEBUG, "mail address parser found [%s]", a);
+			result = g_list_append(result, g_strdup(a));
+		}
 	}
 	g_object_unref(ialist);
 
@@ -2204,12 +2209,16 @@ static int valid_sender(const char *addr)
 
 static int check_destination(DbmailMessage *message, GList *aliases)
 {
-	GList *to, *cc, *recipients;
+	GList *to, *cc, *recipients = NULL;
 	to = dbmail_message_get_header_addresses(message, "To");
 	cc = dbmail_message_get_header_addresses(message, "Cc");
-	recipients = g_list_concat(to, cc);
-	if (! recipients)
+	if (to && cc)
+		recipients = g_list_concat(to, cc);
+
+	if (recipients == NULL) {
 		TRACE(TRACE_DEBUG, "no recipients??");
+		return FALSE;
+	}
 
 	while (recipients) {
 		char *addr = (char *)recipients->data;
