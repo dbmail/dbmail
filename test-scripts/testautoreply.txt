@@ -1,0 +1,14 @@
+LHLO host
+MAIL FROM: <>
+RCPT TO: <testuser1@localhost>
+DATA
+To: 
+CC: testuser1@localhost
+Subject: test autoreply
+Reply-To: nobody@dbmail.eu
+From: nobody@dbmail.eu
+
+test
+
+.
+QUIT

@@ -2212,25 +2212,23 @@ static int check_destination(DbmailMessage *message, GList *aliases)
 	GList *to, *cc, *recipients = NULL;
 	to = dbmail_message_get_header_addresses(message, "To");
 	cc = dbmail_message_get_header_addresses(message, "Cc");
-	if (to && cc)
-		recipients = g_list_concat(to, cc);
 
-	if (recipients == NULL) {
-		TRACE(TRACE_DEBUG, "no recipients??");
-		return FALSE;
-	}
+	recipients = g_list_concat(to, cc);
 
 	while (recipients) {
 		char *addr = (char *)recipients->data;
-		aliases = g_list_first(aliases);
-		while (aliases) {
-			char *alias = (char *)aliases->data;
-			if (MATCH(alias, addr)) {
-				TRACE(TRACE_DEBUG, "valid alias found as recipient [%s]", alias);
-				return TRUE;
+
+		if (addr) {
+			aliases = g_list_first(aliases);
+			while (aliases) {
+				char *alias = (char *)aliases->data;
+				if (MATCH(alias, addr)) {
+					TRACE(TRACE_DEBUG, "valid alias found as recipient [%s]", alias);
+					return TRUE;
+				}
+				if (! g_list_next(aliases)) break;
+				aliases = g_list_next(aliases);
 			}
-			if (! g_list_next(aliases)) break;
-			aliases = g_list_next(aliases);
 		}
 		if (! g_list_next(recipients)) break;
 		recipients = g_list_next(recipients);
