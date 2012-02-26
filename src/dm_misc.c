@@ -1864,6 +1864,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	GList *list = NULL;
 	char *result;
 	char *s = NULL, *t = NULL;
+	const char *h;
 
 	if (! GMIME_IS_MESSAGE(message)) {
 		TRACE(TRACE_ERR, "argument is not a message");
@@ -1903,13 +1904,15 @@ char * imap_get_envelope(GMimeMessage *message)
 	/* from */
 	list = envelope_address_part(list, message, "From");
 	/* sender */
-	if (g_mime_object_get_header(GMIME_OBJECT(message),"Sender"))
+	h = g_mime_object_get_header(GMIME_OBJECT(message),"Sender");
+	if (h && (strlen(h) > 0))
 		list = envelope_address_part(list, message, "Sender");
 	else
 		list = envelope_address_part(list, message, "From");
 
 	/* reply-to */
-	if (g_mime_object_get_header(GMIME_OBJECT(message),"Reply-to"))
+	h = g_mime_object_get_header(GMIME_OBJECT(message),"Reply-to");
+	if (h && (strlen(h) > 0))
 		list = envelope_address_part(list, message, "Reply-to");
 	else
 		list = envelope_address_part(list, message, "From");
