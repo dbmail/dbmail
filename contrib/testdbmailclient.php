@@ -6,7 +6,7 @@
 
 */
 
-require_once "PHPUnit/Framework.php";
+#require_once "PHPUnit/Framework.php";
 require_once "dbmailclient.php";
 
 class testdbmailclient extends PHPUnit_Framework_TestCase 
@@ -29,7 +29,7 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 	{
 		$this->assertNotNull($this->dm);
 	}
-/*
+
 	public function testjson()
 	{
 		$j = '{"users": {
@@ -65,13 +65,13 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 	{
 		$this->assertNotNull($this->mbox);
 	}
- */
+
 	public function testAddUser()
 	{
 		$user = $this->dm->getUser(null);
-		$user->create('testadduser','testaddpassword');
+		//FIXME: $user->create('testadduser','testaddpassword');
 	}
-/*
+
 	public function testDelUser()
 	{
 		$user = $this->dm->getUser('testadduser');
@@ -136,6 +136,6 @@ class testdbmailclient extends PHPUnit_Framework_TestCase
 	{
 
 	}
- */
+
 }
 ?>
