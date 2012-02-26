@@ -417,10 +417,8 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
  */
 int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 {
-	int invalidargs, ispeek = 0;
+	int ispeek = 0;
 	
-	invalidargs = 0;
-
 	if (!self->args[self->args_idx]) return -1;	/* no more */
 	if (self->args[self->args_idx][0] == '(') self->args_idx++;
 	if (!self->args[self->args_idx]) return -2;	/* error */
@@ -1443,7 +1441,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	*/
 
 	MailboxState_T M, N = NULL;
-	gboolean showexists = FALSE, showrecent = FALSE, unhandled = FALSE, showflags = FALSE;
+	gboolean showexists = FALSE, showrecent = FALSE, showflags = FALSE;
 	unsigned oldexists;
 
 	if (self->state != CLIENTSTATE_SELECTED) return FALSE;
@@ -1508,7 +1506,6 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		break;
 
 		default:
-			unhandled=TRUE;
 		break;
 	}
 
@@ -1550,6 +1547,9 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailb
 		*id = mailbox_id;
 		M = MailboxState_new(mailbox_id);
 		g_tree_replace(self->mbxinfo, id, M);
+	} else if (self->mailbox && self->mailbox->mbstate && (MailboxState_getId(self->mailbox->mbstate) == mailbox_id)) {
+		// selected state
+		M = self->mailbox->mbstate;
 	} else {
 		M = (MailboxState_T)g_tree_lookup(self->mbxinfo, &mailbox_id);
 		if (! M) {

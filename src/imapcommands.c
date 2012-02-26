@@ -318,7 +318,6 @@ static gboolean mailbox_build_recent(u64_t *uid, MessageInfo *msginfo, ImapSessi
 
 static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 {
-	int err;
 	u64_t mailbox_idnr = 0;
 
 	/* get the mailbox_idnr */
@@ -326,8 +325,9 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	
 	/* create missing INBOX for this authenticated user */
 	if ((! mailbox_idnr ) && (strcasecmp(mailbox, "INBOX")==0)) {
-		TRACE(TRACE_INFO, "[%p] Auto-creating INBOX for user id [%llu]", self, self->userid);
-		err = db_createmailbox("INBOX", self->userid, &mailbox_idnr);
+		int err = db_createmailbox("INBOX", self->userid, &mailbox_idnr);
+		TRACE(TRACE_INFO, "[%p] [%d] Auto-creating INBOX for user id [%llu]", 
+				self, err, self->userid);
 	}
 	
 	if (! mailbox_idnr) {
@@ -845,7 +845,6 @@ void _ic_list_enter(dm_thread_data *D)
 	GTree *shown = NULL;
 	char *pstring = NULL;
 	MailboxState_T M = NULL;
-	size_t slen;
 	unsigned i;
 	char *pattern;
 	char *mailbox = g_new0(char, IMAP_MAX_MAILBOX_NAMELEN);
@@ -859,7 +858,7 @@ void _ic_list_enter(dm_thread_data *D)
 	}
 
 	/* check the reference name, should contain only accepted mailboxname chars */
-	for (i = 0, slen = strlen(AcceptedMailboxnameChars); self->args[0][i]; i++) {
+	for (i = 0; self->args[0][i]; i++) {
 		if (index(AcceptedMailboxnameChars, self->args[0][i]) == NULL) {
 			dbmail_imap_session_buff_printf(self, "%s BAD reference name contains invalid characters\r\n", self->tag);
 			D->status = 1;
@@ -1429,12 +1428,9 @@ static void sorted_search_enter(dm_thread_data *D)
 	int result = 0;
 	gchar *s = NULL;
 	const gchar *cmd;
-	gboolean sorted;
 
 	search_order_t order = *(search_order_t *)D->data;
 
-	if (order == SEARCH_SORTED) sorted = 1;
-	
 	if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_READ))) {
 		D->status = result;
 		SESSION_RETURN;
