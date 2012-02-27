@@ -200,8 +200,8 @@ int sort_vacation(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
 	const char *message, *subject, *fromaddr, *handle;
-	const char *rc_to, *rc_from, *rc_handle;
-	char *md5_handle = NULL;
+	const char *rc_to, *rc_from;
+	char *rc_handle;
 	int days, mime;
 
 	days = sieve2_getvalue_int(s, "days");
@@ -219,14 +219,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (days < 1) days = 1;
 	if (days > 30) days = 30;
 
-	if (handle) {
-		rc_handle = handle;
-	} else {
-		char *tmp;
-		tmp = g_strconcat(subject, message, NULL);
-		rc_handle = md5_handle = dm_md5((char * const) tmp);
-		g_free(tmp);
-	}
+	rc_handle = dm_md5((char * const) handle);
 
 	// FIXME: should be validated as a user might try
 	// to forge an address from their script.
@@ -249,6 +242,8 @@ int sort_vacation(sieve2_context_t *s, void *my)
 		TRACE(TRACE_INFO, "Vacation suppressed to [%s] from [%s] handle [%s] repeat days [%d]",
 			rc_to, rc_from, rc_handle, days);
 	}
+
+	g_free(rc_handle);
 
 	m->result->cancelkeep = 0;
 	return SIEVE2_OK;
