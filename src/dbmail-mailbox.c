@@ -949,6 +949,7 @@ static int _handle_search_args(DbmailMailbox *self, char **search_keys, u64_t *i
 	/* ignore the charset. Let the database handle this */
         } else if ( MATCH(key, "charset") )  {
                 (*idx)++;// FIXME: check for valid charset here
+		if (self->charset) g_free(self->charset);
 		self->charset = g_strdup(search_keys[*idx]);
 		TRACE(TRACE_DEBUG,"using charset [%s] for searching", self->charset);
                 (*idx)++; 
