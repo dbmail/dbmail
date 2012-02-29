@@ -187,8 +187,10 @@ T MailboxState_new(u64_t id)
 		db_con_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY)
+	if (t == DM_EQUERY) {
+		TRACE(TRACE_ERR, "Error opening mailbox");
 		MailboxState_free(&M);
+	}
 
 	return M;
 }

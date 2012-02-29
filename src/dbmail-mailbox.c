@@ -1386,36 +1386,39 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	GTree *a, *b, *c;
 	gboolean error = FALSE;
 	
-	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	TRACE(TRACE_DEBUG, "[%s] uid [%d]", set, uid);
+
 
 	if (! self->mbstate)
-		return b;
-
+		return NULL;
 
 	assert (self && self->mbstate && set);
 
-	if (MailboxState_getExists(self->mbstate) == 0) // empty mailbox
-		return b;
+	if ((! uid ) && (MailboxState_getExists(self->mbstate) == 0)) // empty mailbox
+		return NULL;
 
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	maxmsn = MailboxState_getExists(self->mbstate);
 	uids = MailboxState_getIds(self->mbstate);
 	ids = g_tree_keys(uids);
-	assert(ids);
-	ids = g_list_last(ids);
-	hi = *((u64_t *)ids->data);
-	ids = g_list_first(ids);
-	lo = *((u64_t *)ids->data);
-	g_list_free(g_list_first(ids));
+	if (ids) {
+		ids = g_list_last(ids);
+		hi = *((u64_t *)ids->data);
+		ids = g_list_first(ids);
+		lo = *((u64_t *)ids->data);
+		g_list_free(g_list_first(ids));
+	}
+
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
 	if (! uid) {
 		lo = 1;
 		hi = maxmsn;
 		if (hi != (u64_t)g_tree_nnodes(uids))
 			TRACE(TRACE_WARNING, "[%p] mailbox info out of sync: exists [%llu] ids [%u]", 
-				self->mbstate, hi, g_tree_nnodes(uids));
+					self->mbstate, hi, g_tree_nnodes(uids));
 	}
 	
-	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
 	t = g_string_new(set);
 	
@@ -1425,59 +1428,74 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	while(sets) {
 		l = 0; r = 0;
 		
-		if (strlen((char *)sets->data) < 1) break;
-		
-		rest = sets->data;
-		
-		if (rest[0] == '*') {
-			l = hi;
-			r = l;
-			if (strlen(rest) > 1)
-				rest++;
-		} else {
-			if (! (l = dm_strtoull(sets->data,&rest,10))) {
+		rest = (char *)sets->data;
+
+		if (strlen(rest) < 1) break;
+
+		if (g_tree_nnodes(uids) == 0) { // empty box
+			if (uid && (rest[0] == '*')) {
+				u64_t *k = g_new0(u64_t,1);
+				u64_t *v = g_new0(u64_t,2);
+
+				*k = 1;
+				*v = MailboxState_getUidnext(self->mbstate);
+
+				g_tree_insert(b, k, v);
+			} else {
 				error = TRUE;
 				break;
 			}
-
-			if (l == 0xffffffff) // outlook
+		} else {
+			if (rest[0] == '*') {
 				l = hi;
-
-			l = max(l,lo);
-			r = l;
-		}
-		
-		if (rest[0]==':') {
-			if (strlen(rest)>1) rest++;
-			if (rest[0] == '*') r = hi;
-			else {
-				if (! (r = dm_strtoull(rest,NULL,10))) {
+				r = l;
+				if (strlen(rest) > 1)
+					rest++;
+			} else {
+				if (! (l = dm_strtoull(sets->data,&rest,10))) {
 					error = TRUE;
 					break;
 				}
 
-				if (r == 0xffffffff) r = hi; // outlook
+				if (l == 0xffffffff) l = hi; // outlook
+
+				l = max(l,lo);
+				r = l;
 			}
 			
-			if (!r) break;
-			if (r > hi) r = hi;
-			if (r < lo) r = lo;
+			if (rest[0]==':') {
+				if (strlen(rest)>1) rest++;
+				if (rest[0] == '*') r = hi;
+				else {
+					if (! (r = dm_strtoull(rest,NULL,10))) {
+						error = TRUE;
+						break;
+					}
+
+					if (r == 0xffffffff) r = hi; // outlook
+				}
+				
+				if (!r) break;
+				if (r > hi) r = hi;
+				if (r < lo) r = lo;
+			}
+		
+			if (! (l && r)) break;
+
+			if (uid)
+				c = MailboxState_getIds(self->mbstate);
+			else
+				c = MailboxState_getMsn(self->mbstate);
+
+			find_range(c, min(l,r), max(l,r), a, uid);
+
+			if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
+				error = TRUE;
+				TRACE(TRACE_ERR, "cannot compare null trees");
+				break;
+			}
 		}
-	
-		if (! (l && r)) break;
 
-		if (uid)
-			c = MailboxState_getIds(self->mbstate);
-		else
-			c = MailboxState_getMsn(self->mbstate);
-
-		find_range(c, min(l,r), max(l,r), a, uid);
-
-		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
-			error = TRUE;
-			TRACE(TRACE_ERR, "cannot compare null trees");
-			break;
-		}
 		
 		if (! g_list_next(sets)) break;
 		sets = g_list_next(sets);
@@ -1491,6 +1509,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	if (error) {
 		g_tree_destroy(b);
 		b = NULL;
+		TRACE(TRACE_DEBUG, "return NULL");
 	}
 
 	return b;

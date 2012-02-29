@@ -428,11 +428,13 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 END_TEST
 START_TEST(test_dbmail_mailbox_get_set)
 {
-	guint c, d;
+	guint c, d, r;
 	GTree *set;
 	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	dbmail_mailbox_set_uid(mb,TRUE);
-	dbmail_mailbox_open(mb);
+	r = dbmail_mailbox_open(mb);
+
+	fail_unless(r == DM_SUCCESS, "dbmail_mailbox_open failed");
 
 	// basic tests;
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
@@ -495,15 +497,13 @@ START_TEST(test_dbmail_mailbox_get_set)
 	dbmail_mailbox_open(mb);
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
-	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
-	g_tree_destroy(set);
+	fail_unless(set == NULL,"dbmail_mailbox_get_set failed");
 	
 	set = dbmail_mailbox_get_set(mb, "*", 0);
-	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
-	g_tree_destroy(set);
+	fail_unless(set == NULL,"dbmail_mailbox_get_set failed");
 
 	set = dbmail_mailbox_get_set(mb, "1", 0);
-	fail_unless(set==NULL,"dbmail_mailbox_get_set failed");
+	fail_unless(set == NULL,"dbmail_mailbox_get_set failed");
 
 	dbmail_mailbox_free(mb);
 }
