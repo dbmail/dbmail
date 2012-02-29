@@ -249,7 +249,7 @@ START_TEST(test_dbmail_iconv_decode_address)
 	char *u71 = "=?iso-8859-1?Q?::_=5B_Arrty_=5D_::_=5B_Roy_=28L=29_St=E8phanie_=5D?=  <over.there@hotmail.com>";
 	//const char *ex1 = "\":: [ Arrty ] :: [ Roy (L) Stèphanie ]\" <over.there@hotmail.com>";
 	char *u72 = "=?utf-8?Q?Jos=E9_M=2E_Mart=EDn?= <jmartin@onsager.ugr.es>"; // latin-1 masking as utf8
-	const char *ex2 = "Jos\351 M. Mart\355n <jmartin@onsager.ugr.es>";
+	const char *ex2 = "Jos? M. Mart?n <jmartin@onsager.ugr.es>";
 	char *u73 = "=?utf-8?B?Ik9ubGluZSBSZXplcnZhxI1uw60gU3lzdMOpbSBTTU9TSyI=?= <e@mail>";
 	char *ex3;
 
@@ -514,6 +514,58 @@ START_TEST(test_imap_unescape)
 }
 END_TEST
 
+START_TEST(test_date_imap2sql)
+{
+	char *r;
+	int i = 0;
+	char *in[] = {
+		"01-Jan-2001",
+		"1-Jan-2001",
+		"blah",
+		NULL
+	};
+	char *out[] = {
+		"2001-01-01 00:00:00",
+		"2001-01-01 00:00:00",
+		"",
+		NULL
+	};
+
+	while (in[i]) {
+		r = date_imap2sql(in[i]);
+		fail_unless(MATCH(out[i], r), "[%s] != [%s]", r, out[i]);
+		g_free(r);
+		i++;
+	}
+
+}
+END_TEST
+
+START_TEST(test_date_sql2imap)
+{
+	char *r;
+	int i = 0;
+	char *in[] = {
+		"2001-02-03 04:05:06",
+		"blah",
+		NULL
+	};
+	char *out[] = {
+		"03-Feb-2001 04:05:06 +0000",
+		"03-Nov-1979 00:00:00 +0000",
+		NULL
+	};
+
+	while (in[i]) {
+		r = date_sql2imap(in[i]);
+		fail_unless(MATCH(out[i], r), "[%s] != [%s]", r, out[i]);
+		g_free(r);
+		i++;
+	}
+
+}
+END_TEST
+
 
 Suite *dbmail_misc_suite(void)
 {
@@ -542,6 +594,8 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_get_crlf_encoded_opt1);
 	tcase_add_test(tc_misc, test_get_crlf_encoded_opt2);
 	tcase_add_test(tc_misc, test_imap_unescape);
+	tcase_add_test(tc_misc, test_date_imap2sql);
+	tcase_add_test(tc_misc, test_date_sql2imap);
 
 	return s;
 }

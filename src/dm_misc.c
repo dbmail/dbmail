@@ -895,6 +895,12 @@ char *date_imap2sql(const char *imapdate)
 	struct tm tm;
 	char _sqldate[SQL_INTERNALDATE_LEN + 1];
 	char *last_char;
+	size_t l = strlen(imapdate);
+
+	if ((l < 10) || (l > 11)) {
+		TRACE(TRACE_DEBUG, "invalid size IMAP date [%s]", imapdate);
+		return g_strdup("");
+	}
 
 	// bsd needs this:
 	memset(&tm, 0, sizeof(struct tm));
@@ -903,7 +909,7 @@ char *date_imap2sql(const char *imapdate)
 		TRACE(TRACE_DEBUG, "error parsing IMAP date %s", imapdate);
 		return g_strdup("");
 	}
-	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN, "%Y-%m-%d 00:00:00", &tm);
+	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN+1, "%Y-%m-%d 00:00:00", &tm);
 
 	return g_strdup(_sqldate);
 }
