@@ -58,11 +58,13 @@ static void start_clock(void)
 static void end_clock(char *msg)
 {
 	en_time = times(&en_cpu);
+	/*
 	printf("%sReal Time: %LF, User Time %LF, System Time %LF\n",
 			msg,
 			(long double)(en_time - st_time),
 			(long double)(en_cpu.tms_utime - st_cpu.tms_utime),
 			(long double)(en_cpu.tms_stime - st_cpu.tms_stime));
+			*/
 }
 
 Sset_T V, W;
