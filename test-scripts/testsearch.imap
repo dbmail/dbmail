@@ -1,23 +1,42 @@
-a01 login testuser1 test
-a02 select inbox
-a03 SEARCH 1:*
-a04 SEARCH charset US-ASCII UID 1,*
-a05 UID SEARCH charset US-ASCII UID 1,*
-a06 SEARCH charset US-ASCII 1:*
-a08 SEARCH charset US-ASCII ALL
-a09 UID SEARCH charset US-ASCII ALL
-a11 UID SEARCH charset US-ASCII SUBJECT "some test"
-a12 SEARCH charset utf-8 SUBJECT "lars hase"
-a13 SEARCH charset utf-8 SUBJECT "Привет всем"
-a14 search 1:* 
-a15 search 1:* 1 3
-a15 search 1:* 1 3
-a16 search 1:* not 4
-a17 search 1:* 3:5 not (4)
-a18 SEARCH 1:* not 3
-a19 SEARCH 1:* not (3)
-a20 SEARCH 1:* or 1 3:5
-a21 SEARCH 1:* or (1) (3:5)
-a22 SEARCH 1:* or (1) (3:5) not 4
-a23 SEARCH 1:* or (1) (3:5) not (4)
-a24 logout
+a login testuser1 test
+a create searchbox
+a append searchbox {10}
+From: test
+a append searchbox {10}
+From: test
+a append searchbox {10}
+From: test
+a append searchbox {10}
+From: test
+a append searchbox {10}
+From: test
+a append searchbox {10}
+From: test
+a select searchbox
+a SEARCH 1:*
+a SEARCH charset US-ASCII UID 1,*
+a UID SEARCH charset US-ASCII UID 1,*
+a SEARCH charset US-ASCII 1:*
+a SEARCH charset US-ASCII ALL
+a UID SEARCH charset US-ASCII ALL
+a UID SEARCH charset US-ASCII SUBJECT "some test"
+a SEARCH charset utf-8 SUBJECT "lars hase"
+a SEARCH charset utf-8 SUBJECT "Привет всем"
+a search 1:* 
+a search 1:* 1 3
+a search 1:* 1 3
+a search 1:* not 4
+a search 1:* 3:5 not (4)
+a SEARCH 1:* not 3
+a SEARCH 1:* not (3)
+a SEARCH 1:* or 1 3:5
+a SEARCH 1:* or (1) (3:5)
+a SEARCH 1:* or (1) (3:5) not 4
+a SEARCH 1:* or (1) (3:5) not (4)
+a store 1 +flags $key1
+a store 2 +flags $key2
+a search keyword $key1
+a search unkeyword $key2
+a close
+a delete searchbox
+a logout

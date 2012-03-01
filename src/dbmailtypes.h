@@ -461,22 +461,24 @@ typedef struct {
  */
 
 enum IMAP_SEARCH_TYPES { 
-	IST_SET = 1, 		/* 1 */
-	IST_UIDSET, 		/* 2 */
-	IST_FLAG,  		/* 3 */
-	IST_SORT,  		/* 4 */
-	IST_HDR,  		/* 5 */
-	IST_HDRDATE_BEFORE,  	/* 6 */
-	IST_HDRDATE_ON,  	/* 7 */
-	IST_HDRDATE_SINCE, 	/* 8 */
-	IST_IDATE,  		/* 9 */
-	IST_DATA_BODY,  	/* 10 */
-	IST_DATA_TEXT, 		/* 11 */
-	IST_SIZE_LARGER,  	/* 12 */
-	IST_SIZE_SMALLER,  	/* 13 */
-	IST_SUBSEARCH_AND, 	/* 14 */
-	IST_SUBSEARCH_OR,  	/* 15 */
-	IST_SUBSEARCH_NOT 	/* 16 */
+	IST_SET = 1,
+	IST_UIDSET,
+	IST_FLAG,
+	IST_KEYWORD,
+	IST_UNKEYWORD,
+	IST_SORT,
+	IST_HDR,
+	IST_HDRDATE_BEFORE,
+	IST_HDRDATE_ON,
+	IST_HDRDATE_SINCE,
+	IST_IDATE,
+	IST_DATA_BODY,
+	IST_DATA_TEXT,
+	IST_SIZE_LARGER,
+	IST_SIZE_SMALLER,
+	IST_SUBSEARCH_AND,
+	IST_SUBSEARCH_OR,
+	IST_SUBSEARCH_NOT
 };
 
 typedef enum {
@@ -492,9 +494,10 @@ typedef struct {
 	char table[MAX_SEARCH_LEN];
 	char order[MAX_SEARCH_LEN];
 	char field[MAX_SEARCH_LEN];
+	char op[MAX_SEARCH_LEN];
 	char search[MAX_SEARCH_LEN];
 	char hdrfld[MIME_FIELD_MAX];
-	int match;
+//	int match;
 	GTree *found;
 	gboolean reverse;
 	gboolean searched;
