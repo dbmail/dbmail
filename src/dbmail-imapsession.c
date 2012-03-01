@@ -1413,8 +1413,6 @@ static void mailbox_notify_update(ImapSession *self, MailboxState_T N)
 	ids = g_list_first(ids);
 	g_list_free(ids);
 
-	dbmail_imap_session_mailbox_update_recent(self);
-
 	// switch active mailbox view
 	self->mailbox->mbstate = N;
 	id = g_new0(u64_t,1);

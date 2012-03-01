@@ -2877,6 +2877,8 @@ int db_set_msgflag(u64_t msg_idnr, int *flags, GList *keywords, int action_type,
 	pos += snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET ", DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
+		if (flags[i])
+			TRACE(TRACE_DEBUG,"set %s", db_flag_desc[i]);
 
 		switch (action_type) {
 		case IMAPFA_ADD:
@@ -2898,7 +2900,7 @@ int db_set_msgflag(u64_t msg_idnr, int *flags, GList *keywords, int action_type,
 			if (flags[i]) {
 				if (msginfo && msginfo->flags) msginfo->flags[i] = 1;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=1", seen?",":"", db_flag_desc[i]); 
-			} else {
+			} else if (i != IMAP_FLAG_RECENT) {
 				if (msginfo && msginfo->flags) msginfo->flags[i] = 0;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=0", seen?",":"", db_flag_desc[i]); 
 			}
