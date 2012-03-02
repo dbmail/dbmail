@@ -1535,7 +1535,7 @@ int _dm_imapsession_get_ids(ImapSession *self, const char *set)
 	self->ids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
 
 	if ( (! self->use_uid) && ((!self->ids) || (g_tree_nnodes(self->ids)==0)) ) {
-		ci_write(self->ci, "%s BAD invalid sequence\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid sequence\r\n", self->tag);
 		return DM_EGENERAL;
 	}
 
@@ -1578,6 +1578,8 @@ static void _ic_fetch_enter(dm_thread_data *D)
 		self->args_idx++;
 	} while (state > 0);
 
+	dbmail_imap_session_mailbox_status(self, FALSE);
+
 	if ((result = _dm_imapsession_get_ids(self, self->args[setidx])) == DM_SUCCESS) {
 		self->ids_list = g_tree_keys(self->ids);
 		result = dbmail_imap_session_fetch_get_items(self);
@@ -1590,8 +1592,6 @@ static void _ic_fetch_enter(dm_thread_data *D)
 		D->status = result;
 		SESSION_RETURN;
 	}
-
-	dbmail_imap_session_mailbox_status(self, FALSE);
 
 	SESSION_OK;
 	SESSION_RETURN;
@@ -1786,17 +1786,18 @@ static void _ic_store_enter(dm_thread_data *D)
 	   the right to store the flags */
 
 	self->cmd = cmd;
-	
+
+	if ( update ) {
+		char *flags = MailboxState_flags(self->mailbox->mbstate);
+		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)] Flags allowed.\r\n", flags);
+		g_free(flags);
+	}
+
 	if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS) {
 		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, D);
 		if (self->ids) {
 			db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
-			if ( update ) {
-				char *flags = MailboxState_flags(self->mailbox->mbstate);
-				dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
-				dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)] Flags allowed.\r\n", flags);
-				g_free(flags);
-			}
 		}
 	}
 
