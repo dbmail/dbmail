@@ -1502,7 +1502,36 @@ static gboolean _header_insert(u64_t physmessage_id, u64_t headername_id, u64_t 
 	return t;
 }
 
-	
+static GString * _header_addresses(InternetAddressList *ialist)
+{
+	int i,j;
+	InternetAddress *ia;
+	GString *store = g_string_new("");
+
+	i = internet_address_list_length(ialist);
+	for (j=0; j<i; j++) {
+		ia = internet_address_list_get_address(ialist, j);
+		if(ia == NULL) break;
+
+		if (internet_address_group_get_members((InternetAddressGroup *)ia)) {
+			GString *group;
+			g_string_append_printf(store, "%s ", internet_address_get_name(ia));
+			group = _header_addresses(internet_address_group_get_members((InternetAddressGroup *)ia));
+			g_string_append(store, group->str);
+			g_string_free(group, TRUE);
+		} else {
+			const char *name = internet_address_get_name(ia);
+			const char *addr = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
+
+			if (name)
+				g_string_append_printf(store, "%s ", name);
+			if (addr)
+				g_string_append_printf(store, "%s ", addr);
+		}
+	}
+	return store;
+}
+
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {
 	u64_t headername_id;
@@ -1560,8 +1589,11 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 		// Generate additional fields for SORT optimization
 		if(isaddr) {
+			GString *store;
 			int i,j=0;
 			emaillist = internet_address_list_parse_string(value);
+			store = _header_addresses(emaillist);
+
 			i = internet_address_list_length(emaillist);
 			for (j=0; j<i; j++) {
 	                        ia = internet_address_list_get_address(emaillist, j);
@@ -1574,6 +1606,10 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 				}
 			}
 			g_object_unref(emaillist);
+			g_free(value);
+
+			value = store->str;
+			g_string_free(store, FALSE);
 		}
 
 		if(issubject) {
