@@ -1534,8 +1534,10 @@ int _dm_imapsession_get_ids(ImapSession *self, const char *set)
 
 	self->ids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
 
-	if ( (!self->ids) || (g_tree_nnodes(self->ids)==0) )
+	if ( (! self->use_uid) && ((!self->ids) || (g_tree_nnodes(self->ids)==0)) ) {
+		ci_write(self->ci, "%s BAD invalid sequence\r\n", self->tag);
 		return DM_EGENERAL;
+	}
 
 	return DM_SUCCESS;
 }
@@ -1576,23 +1578,20 @@ static void _ic_fetch_enter(dm_thread_data *D)
 		self->args_idx++;
 	} while (state > 0);
 
-	result = DM_SUCCESS;
-
-  	if (g_tree_nnodes(MailboxState_getIds(self->mailbox->mbstate)) > 0) {
- 		if (_dm_imapsession_get_ids(self, self->args[setidx]) == DM_SUCCESS) {
-  			self->ids_list = g_tree_keys(self->ids);
-  			result = dbmail_imap_session_fetch_get_items(self);
-  		}
+	if ((result = _dm_imapsession_get_ids(self, self->args[setidx])) == DM_SUCCESS) {
+		self->ids_list = g_tree_keys(self->ids);
+		result = dbmail_imap_session_fetch_get_items(self);
 	}
 
 	dbmail_imap_session_fetch_free(self);
 	dbmail_imap_session_args_free(self, FALSE);
-	dbmail_imap_session_mailbox_status(self, FALSE);
 
 	if (result) {
 		D->status = result;
 		SESSION_RETURN;
 	}
+
+	dbmail_imap_session_mailbox_status(self, FALSE);
 
 	SESSION_OK;
 	SESSION_RETURN;
@@ -1788,23 +1787,18 @@ static void _ic_store_enter(dm_thread_data *D)
 
 	self->cmd = cmd;
 	
-	result = DM_SUCCESS;
-
-	if ( update ) {
-		char *flags = MailboxState_flags(self->mailbox->mbstate);
-		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
-		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)] Flags allowed.\r\n", flags);
-		g_free(flags);
+	if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS) {
+		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, D);
+		if (self->ids) {
+			db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
+			if ( update ) {
+				char *flags = MailboxState_flags(self->mailbox->mbstate);
+				dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
+				dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)] Flags allowed.\r\n", flags);
+				g_free(flags);
+			}
+		}
 	}
-
-	if (g_tree_nnodes(MailboxState_getIds(self->mailbox->mbstate)) > 0) {
- 		if ((result = _dm_imapsession_get_ids(self, self->args[k])) == DM_SUCCESS)
- 			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, D);
-		else
-			dbmail_imap_session_buff_printf(self, "%s NO STORE failed: Sequence invalid.\r\n", self->tag);
-  	}	
-
-	db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
 
 	g_list_destroy(cmd->keywords);
 	g_free(cmd);
@@ -1881,14 +1875,19 @@ static void _ic_copy_enter(dm_thread_data *D)
 	cmd->mailbox_id = destmboxid;
 	self->cmd = cmd;
 
-	if (g_tree_nnodes(MailboxState_getIds(self->mailbox->mbstate)) > 0) {
- 		if ((_dm_imapsession_get_ids(self, self->args[self->args_idx]) == DM_SUCCESS))
- 			g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
-  	}	
+	if ((result = _dm_imapsession_get_ids(self, self->args[self->args_idx])) == DM_SUCCESS) {
+		g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
+		if (self->ids)
+			db_mailbox_seq_update(destmboxid);
+	}
+  	
 	g_free(self->cmd);
 	self->cmd = NULL;
 
-	db_mailbox_seq_update(destmboxid);
+	if (result) {
+		D->status = result;
+		SESSION_RETURN;
+	}
 
 	if (MailboxState_getId(self->mailbox->mbstate) == destmboxid)
 		dbmail_imap_session_mailbox_status(self, TRUE);
