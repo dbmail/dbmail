@@ -350,8 +350,8 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.fetch("1:*", "(Flags)")[0], 'OK')
 
         # bogus ranges
-        self.assertEquals(self.o.fetch("-10:10", "(Flags)")[0], 'OK')
-        self.assertEquals(self.o.fetch("10:-10", "(Flags)")[0], 'OK')
+        self.failUnlessRaises(Exception, self.o.fetch, "-10:10", "(Flags)")
+        self.failUnlessRaises(Exception, self.o.fetch, "10:-10", "(Flags)")
 
     def testGetacl(self):
         """

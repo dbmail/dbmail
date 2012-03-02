@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "dm_memblock.h"
 
 #define T Mem_T
@@ -82,7 +83,8 @@ void Mem_close(T *M)
  */
 int Mem_write(T M, const void *data, int size)
 {
-	
+	guint remove = M->data->len - M->pos;
+	if (remove > 0) M->data = g_byte_array_remove_range(M->data, M->pos, remove);
 	M->data = g_byte_array_append(M->data, (const guint8 *)data, (guint)size);
 	return size;
 }
