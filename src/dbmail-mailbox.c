@@ -1384,7 +1384,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key_t *s)
 			old = s->found;
 			s->found = invert;
 			g_tree_destroy(old);
-
+			g_list_free(g_list_first(uids));
 		}
 
 	CATCH(SQLException)
