@@ -96,7 +96,7 @@ int check_state_and_args(ImapSession * self, int minargs, int maxargs, clientsta
 int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, const char * password);
 int dbmail_imap_session_prompt(ImapSession * self, char * prompt);
 
-MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr, gboolean reload);
+MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr);
 
 int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
 

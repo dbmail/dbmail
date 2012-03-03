@@ -88,12 +88,12 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right)
 
 	/* Check if the user has the right; this will also
 	 * return true if the user is the mailbox owner. */
-	if ((test = db_acl_has_right(S, userid, right_flag)))
+	if ((test = MailboxState_hasPermission(S, userid, right_flag)))
 		return TRUE;
 
 	/* else check the 'anyone' user */
 	if (auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone_userid))
-		return db_acl_has_right(S, anyone_userid, right_flag);
+		return MailboxState_hasPermission(S, anyone_userid, right_flag);
 	
 	return FALSE;
 }
@@ -372,7 +372,7 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 	memset(&map, '\0', sizeof(struct ACLMap));
 	S = MailboxState_new(mboxid);
 	MailboxState_setOwner(S, owner_idnr);
-	result = db_acl_get_acl_map(S, userid, &map);
+	result = MailboxState_getAcl(S, userid, &map);
 	MailboxState_free(&S);
 
 	if (result == DM_EQUERY) return result;

@@ -56,14 +56,6 @@ char *alias_mailbox = "testfailalias+foomailbox@nonexistantdomain";
 char *userpart_catchall = "testfailcatchall@";
 char *domain_catchall = "@nonexistantdomain";
 
-static u64_t get_mailbox_id(const char *name, u64_t *userid)
-{
-	u64_t id;
-	auth_user_exists("testuser1",userid);
-	db_find_create_mailbox(name, BOX_COMMANDLINE, *userid, &id);
-	return id;
-}
-
 /*
  *
  * the test fixtures
@@ -132,18 +124,6 @@ START_TEST(test_db_stmt_prepare)
 }
 END_TEST
 
-START_TEST(test_db_stmt_set_int)
-{
-
-}
-END_TEST
-
-START_TEST(test_db_stmt_set_u64)
-{
-
-}
-END_TEST
-
 START_TEST(test_db_stmt_set_str)
 {
 	C c; S s; R r;
@@ -156,18 +136,6 @@ START_TEST(test_db_stmt_set_str)
 	fail_unless(r != NULL, "db_stmt_query failed");
 	fail_unless(db_result_next(r), "db_result_next failed");
 	db_con_close(c);
-
-}
-END_TEST
-
-START_TEST(test_db_stmt_set_blob)
-{
-
-}
-END_TEST
-
-START_TEST(test_db_stmt_exec)
-{
 
 }
 END_TEST
@@ -820,27 +788,11 @@ END_TEST
 //			    int only_subscribed);
 START_TEST(test_db_findmailbox_by_regex)
 {
-	int result;
 	GList *children = NULL;
 	u64_t mailbox_id = 0;
 
-	result = db_createmailbox("INBOX/Trash", testidnr, &mailbox_id);
-	result = db_findmailbox_by_regex(testidnr, "INBOX/Trash", &children, 0);
-
-}
-END_TEST
-
-START_TEST(test_MailboxState_new)
-{
-	int res;
-	u64_t id, userid;
-	MailboxState_T M;
-	
-	id = get_mailbox_id("INBOX", &userid);
-	M = MailboxState_new(id);
-	
-	fail_unless(M != NULL, "MailboxState_new failed");
-	fail_unless(MATCH("INBOX", MailboxState_getName(M)), "MailboxState_new failed");
+	db_createmailbox("INBOX/Trash", testidnr, &mailbox_id);
+	db_findmailbox_by_regex(testidnr, "INBOX/Trash", &children, 0);
 }
 END_TEST
 
@@ -1190,16 +1142,11 @@ Suite *dbmail_db_suite(void)
 	tcase_add_checked_fixture(tc_db, setup, teardown);
 
 	tcase_add_test(tc_db, test_db_stmt_prepare);
-//	tcase_add_test(tc_db, test_db_stmt_set_int);
-//	tcase_add_test(tc_db, test_db_stmt_set_u64);
 	tcase_add_test(tc_db, test_db_stmt_set_str);
-//	tcase_add_test(tc_db, test_db_stmt_set_blob);
-	tcase_add_test(tc_db, test_db_stmt_exec);
 
 	tcase_add_test(tc_db, test_Connection_executeQuery);
 	tcase_add_test(tc_db, test_db_createmailbox);
 	tcase_add_test(tc_db, test_db_delete_mailbox);
-	tcase_add_test(tc_db, test_MailboxState_new);
 	tcase_add_test(tc_db, test_db_replycache);
 	tcase_add_test(tc_db, test_db_mailbox_set_permission);
 	tcase_add_test(tc_db, test_db_mailbox_create_with_parents);

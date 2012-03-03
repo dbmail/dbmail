@@ -57,6 +57,8 @@ struct T {
 };
 
 static void MailboxState_load(T M, C c);
+static void MailboxState_setMsginfo(T M, GTree *msginfo);
+static void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo);
 /* */
 
 static void MailboxState_uid_msn_new(T M)
@@ -222,7 +224,7 @@ void MailboxState_remap(T M)
 
 	g_list_free(g_list_first(ids));
 
-	TRACE(TRACE_DEBUG,"total [%d] UIDs [%d] MSNs", g_tree_nnodes(M->ids), g_tree_nnodes(M->msn));
+	//TRACE(TRACE_DEBUG,"total [%d] UIDs [%d] MSNs", g_tree_nnodes(M->ids), g_tree_nnodes(M->msn));
 }
 	
 GTree * MailboxState_getMsginfo(T M)
@@ -230,7 +232,7 @@ GTree * MailboxState_getMsginfo(T M)
 	return M->msginfo;
 }
 
-void MailboxState_setMsginfo(T M, GTree *msginfo)
+static void MailboxState_setMsginfo(T M, GTree *msginfo)
 {
 	GTree *oldmsginfo = M->msginfo;
 	M->msginfo = msginfo;
@@ -238,7 +240,7 @@ void MailboxState_setMsginfo(T M, GTree *msginfo)
 	if (oldmsginfo) g_tree_destroy(oldmsginfo);
 }
 
-void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo)
+static void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo)
 {
 	u64_t *id = g_new0(u64_t,1);
 	*id = uid;
@@ -292,11 +294,6 @@ unsigned MailboxState_getExists(T M)
 	return M->exists;
 }
 
-void MailboxState_setRecent(T M, u64_t recent)
-{
-	M->recent = recent;
-}
-
 unsigned MailboxState_getRecent(T M)
 {
 	return M->recent;
@@ -338,11 +335,6 @@ void MailboxState_setName(T M, const char *name)
 const char * MailboxState_getName(T M)
 {
 	return M->name;
-}
-
-gboolean MailboxState_isSubscribed(T M)
-{
-	return M->is_subscribed;
 }
 
 void MailboxState_setIsUsers(T M, gboolean t)
@@ -407,11 +399,6 @@ unsigned MailboxState_getUnseen(T M)
 	return M->unseen;
 }
 
-
-/*
- * closes the msg cache
- */
-
 void MailboxState_free(T *M)
 {
 	T s = *M;
@@ -437,7 +424,7 @@ void MailboxState_free(T *M)
 	s = NULL;
 }
 
-static void db_getmailbox_flags(T M, C c)
+static void db_getmailbox_permission(T M, C c)
 {
 	R r;
 	g_return_if_fail(M->id);
@@ -460,7 +447,8 @@ static void db_getmailbox_metadata(T M, C c)
 	INIT_QUERY;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT CASE WHEN user_id IS NULL THEN 0 ELSE 1 END, "
+		 "SELECT "
+		 "CASE WHEN user_id IS NULL THEN 0 ELSE 1 END, " // subscription
 		 "owner_idnr, name, no_select, no_inferiors "
 		 "FROM %smailboxes b LEFT OUTER JOIN %ssubscription s ON "
 		 "b.mailbox_idnr = s.mailbox_id WHERE b.mailbox_idnr = %llu",
@@ -468,6 +456,7 @@ static void db_getmailbox_metadata(T M, C c)
 
 	r = db_query(c, query);
 	if (db_result_next(r)) {
+
 		/* subsciption */
 		M->is_subscribed = db_result_get_bool(r, i++);
 
@@ -490,10 +479,11 @@ static void db_getmailbox_metadata(T M, C c)
 
 		/* no_select */
 		M->no_select=db_result_get_bool(r,i++);
+
 		/* no_inferior */
 		M->no_inferiors=db_result_get_bool(r,i++);
 
-		/* no_children */
+		/* no_children search pattern*/
 		pattern = g_strdup_printf("%s/%%", name);
 		mailbox_like = mailbox_match_new(pattern);
 		g_free(pattern);
@@ -531,7 +521,7 @@ static void db_getmailbox_metadata(T M, C c)
 	g_string_free(qs, TRUE);
 }
 
-static void db_getmailbox_count(T M, C c)
+static void db_getmailbox_count(T M, C c, gboolean update_recent)
 {
 	R r; 
 	unsigned result[3];
@@ -559,7 +549,8 @@ static void db_getmailbox_count(T M, C c)
 
 	M->exists = result[0];
 	M->unseen = result[0] - result[1];
-	M->recent = result[2];
+	if (update_recent)
+		M->recent = result[2];
  
 	TRACE(TRACE_DEBUG, "exists [%d] unseen [%d] recent [%d]", M->exists, M->unseen, M->recent);
 	/* now determine the next message UID 
@@ -611,16 +602,18 @@ static void db_getmailbox_seq(T M, C c)
 	}
 }
 
-int MailboxState_preload(T M)
+int MailboxState_metadata(T M)
 {
 	volatile int t = DM_SUCCESS;
 	C c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		db_getmailbox_metadata(M, c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
 	FINALLY
+		db_commit_transaction(c);
 		db_con_close(c);
 	END_TRY;
 
@@ -638,10 +631,37 @@ static void MailboxState_load(T M, C c)
 	if (M->uidnext && (M->seq == oldseq)) 
 		return;
 
-	db_getmailbox_flags(M, c);
-	db_getmailbox_count(M, c);
+	db_getmailbox_permission(M, c);
+	db_getmailbox_count(M, c, TRUE);
 	db_getmailbox_keywords(M, c);
 	db_getmailbox_metadata(M, c);
+
+	TRACE(TRACE_DEBUG, "[%s] exists [%d] recent [%d]", 
+			M->name, M->exists, M->recent);
+
+}
+
+int MailboxState_count(T M, gboolean update_recent)
+{
+	TRACE(TRACE_DEBUG, "[%s] update_recent [%d]", 
+			M->name, update_recent);
+			
+	C c;
+	volatile int t = DM_SUCCESS;
+
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		db_getmailbox_count(M, c, update_recent);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_commit_transaction(c);
+		db_con_close(c);
+	END_TRY;
+
+	return t;
 }
 
 char * MailboxState_flags(T M)
@@ -663,7 +683,7 @@ char * MailboxState_flags(T M)
 	return g_strchomp(s);
 }
 
-int db_acl_has_right(MailboxState_T M, u64_t userid, const char *right_flag)
+int MailboxState_hasPermission(T M, u64_t userid, const char *right_flag)
 {
 	C c; R r;
 	volatile int result = FALSE;
@@ -705,7 +725,7 @@ int db_acl_has_right(MailboxState_T M, u64_t userid, const char *right_flag)
 	return result;
 }
 
-int db_acl_get_acl_map(MailboxState_T M, u64_t userid, struct ACLMap *map)
+int MailboxState_getAcl(T M, u64_t userid, struct ACLMap *map)
 {
 	int i;
 	volatile int t = DM_SUCCESS;

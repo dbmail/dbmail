@@ -1533,11 +1533,18 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	return 0;
 }
 
-MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_id, gboolean reload)
+MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_id)
 {
 	MailboxState_T M = NULL;
 	u64_t *id;
+	int reload = FALSE;
 
+	switch (self->command_type) {
+		case IMAP_COMM_SELECT:
+			reload = TRUE;
+			break;
+	}
+	
 	TRACE(TRACE_DEBUG, "[%p] mailbox_id [%llu]", self, mailbox_id);
 
 	if (reload) {
