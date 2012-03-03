@@ -1619,13 +1619,17 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		}
 
 		if(isdate) {
-			date = g_mime_utils_header_decode_date(value,NULL);
+			int offset;
+			date = g_mime_utils_header_decode_date(value,&offset);
 			if (date == (time_t)-1)
 				date = (time_t)0;
 
+			date += (offset * 36); // +0200 -> offset 200
 			datefield = g_new0(gchar,20);
-			strftime(datefield,20,"%Y-%m-%d %H:%M:%S",gmtime(&date));
-			TRACE(TRACE_DEBUG,"Date is [%ld], datefield [%s]",date,datefield);
+			strftime(datefield,20,"%Y-%m-%d", gmtime(&date));
+
+			TRACE(TRACE_DEBUG,"Date is [%s] offset [%d], datefield [%s]",
+					value, offset, datefield);
 		}
 
 		if (! sortfield)
