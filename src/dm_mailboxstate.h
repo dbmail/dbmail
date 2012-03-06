@@ -29,10 +29,17 @@ typedef struct T *T;
 
 extern T            MailboxState_new(u64_t id);
 
-extern int          MailboxState_metadata(T);
-extern int          MailboxState_count(T, gboolean);
+extern int          MailboxState_info(T);
+extern int          MailboxState_count(T);
 extern void         MailboxState_remap(T);
+extern int          MailboxState_build_recent(T);
+extern int          MailboxState_flush_recent(T);
+extern int          MailboxState_clear_recent(T);
+extern GTree *      MailboxState_steal_recent(T);
+extern int          MailboxState_merge_recent(T, GTree *);
+
 extern int          MailboxState_removeUid(T, u64_t);
+extern void         MailboxState_addMsginfo(T, u64_t, MessageInfo *);
 extern GTree *      MailboxState_getMsginfo(T);
 extern GTree *      MailboxState_getIds(T);
 extern GTree *      MailboxState_getMsn(T);
@@ -67,6 +74,7 @@ extern gboolean     MailboxState_hasKeyword(T, const char *);
 extern void         MailboxState_addKeyword(T, const char *);
 	
 extern char *       MailboxState_flags(T);
+extern GList *      MailboxState_message_flags(T, MessageInfo *);
 
 extern void         MailboxState_free(T *);
 

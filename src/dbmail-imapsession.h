@@ -50,8 +50,7 @@ typedef struct {
 	GTree *ids;
 	GTree *physids;		// cache physmessage_ids for uids 
 	GTree *envelopes;
-	GTree *mbxinfo; // cache MailboxState_T 
-	GList *recent;
+	GTree *mbxinfo; 	// cache MailboxState_T 
 	GList *ids_list;
 
 	cmd_t cmd; // command structure (wip)
@@ -102,8 +101,7 @@ int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
 
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
 int dbmail_imap_session_mailbox_expunge(ImapSession *self);
-int dbmail_imap_session_mailbox_select_recent(ImapSession *self);
-int dbmail_imap_session_mailbox_update_recent(ImapSession *self);
+int dbmail_imap_session_update_recent(ImapSession *self);
 
 int dbmail_imap_session_fetch_get_items(ImapSession *self);
 int dbmail_imap_session_fetch_parse_args(ImapSession * self);

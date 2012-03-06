@@ -281,9 +281,11 @@ static gboolean mailbox_first_unseen(gpointer key, gpointer value, gpointer data
 
 static int imap_session_mailbox_close(ImapSession *self)
 {
-	// flush recent messages from previous select
 	dbmail_imap_session_set_state(self,CLIENTSTATE_AUTHENTICATED);
 	if (self->mailbox) {
+		if (self->mailbox->mbstate)
+			MailboxState_clear_recent(self->mailbox->mbstate);
+
 		dbmail_mailbox_free(self->mailbox);
 		self->mailbox = NULL;
 	}
@@ -305,14 +307,6 @@ static int mailbox_check_acl(ImapSession *self, MailboxState_T S, ACLRight_t acl
 	TRACE(TRACE_DEBUG,"access granted");
 	return 0;
 
-}
-
-
-static gboolean mailbox_build_recent(u64_t *uid, MessageInfo *msginfo, ImapSession *self)
-{
-	if (msginfo->flags[IMAP_FLAG_RECENT])
-		self->recent = g_list_prepend(self->recent, g_strdup_printf("%llu", *uid));
-	return FALSE;
 }
 
 
@@ -356,14 +350,11 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	}
 
 	/* check if mailbox is selectable */
-	if (MailboxState_noSelect(self->mailbox->mbstate)) return DM_EGENERAL;
+	if (MailboxState_noSelect(self->mailbox->mbstate)) 
+		return DM_EGENERAL;
 
 	/* build list of recent messages */
-        if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE && MailboxState_getMsginfo(self->mailbox->mbstate)) {
-		GTree *info = MailboxState_getMsginfo(self->mailbox->mbstate);
-		g_tree_foreach(info, (GTraverseFunc)mailbox_build_recent, self);
-		TRACE(TRACE_DEBUG, "build list of [%d] [%d] recent messages...", g_tree_nnodes(info), g_list_length(self->recent));
-	}
+	MailboxState_build_recent(self->mailbox->mbstate);
 
 	return 0;
 }
@@ -414,10 +405,12 @@ static void _ic_select_enter(dm_thread_data *D)
 			dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %llu] first unseen message\r\n", *msn);
 	}
 
-	if (self->command_type == IMAP_COMM_SELECT) 
+	if (self->command_type == IMAP_COMM_SELECT) {
 		okarg = "READ-WRITE";
-	else
+		MailboxState_flush_recent(S);
+	} else {
 		okarg = "READ-ONLY";
+	}
 
 	dbmail_imap_session_buff_printf(self, "%s OK [%s] %s completed\r\n", self->tag, okarg, self->command);
 
@@ -894,7 +887,7 @@ void _ic_list_enter(dm_thread_data *D)
 		// avoid fully loading mailbox here
 		M = MailboxState_new(0);
 		MailboxState_setId(M, mailbox_id);
-		MailboxState_metadata(M);
+		MailboxState_info(M);
 		MailboxState_setName(M, mailbox);
 
 		/* Enforce match of mailbox to pattern. */
@@ -1054,14 +1047,14 @@ static void _ic_status_enter(dm_thread_data *D)
 	// avoid fully loading mailbox here
 	M = MailboxState_new(0);
 	MailboxState_setId(M, id);
-	if (MailboxState_metadata(M)) {
+	if (MailboxState_info(M)) {
 		dbmail_imap_session_buff_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		D->status = 1;
 		SESSION_RETURN;
 	}
 
 	MailboxState_setName(M, self->args[0]);
-	MailboxState_count(M, FALSE);
+	MailboxState_count(M);
 
 	if ((result = mailbox_check_acl(self, M, ACL_RIGHT_READ))) {
 		D->status = result;
@@ -1151,6 +1144,8 @@ void _ic_append_enter(dm_thread_data *D)
 	MailboxState_T M;
 	SESSION_GET;
 	char *message;
+	gboolean recent = TRUE;
+	MessageInfo *info;
 
 	memset(flaglist,0,sizeof(flaglist));
 
@@ -1254,9 +1249,15 @@ void _ic_append_enter(dm_thread_data *D)
 		sqldate[0] = '\0';
 	}
 
+
+	if (self->state == CLIENTSTATE_SELECTED && self->mailbox->id == mboxid) {
+		dbmail_imap_session_mailbox_status(self, TRUE);
+		recent = FALSE;
+	}
+	
 	message = self->args[i];
 
-	D->status = db_append_msg(message, mboxid, self->userid, sqldate, &message_id);
+	D->status = db_append_msg(message, mboxid, self->userid, sqldate, &message_id, recent);
 
 	switch (D->status) {
 	case -1:
@@ -1282,11 +1283,23 @@ void _ic_append_enter(dm_thread_data *D)
 		break;
 	}
 
-	if (message_id && self->state == CLIENTSTATE_SELECTED && self->mailbox->id == mboxid) {
-		dbmail_imap_session_mailbox_status(self, TRUE);
-	} else {
-		g_list_destroy(keywords);
-	}
+	// MessageInfo
+	info = g_new0(MessageInfo,1);
+	info->uid = message_id;
+	info->mailbox_id = mboxid;
+	for (flagcount = 0; flagcount < IMAP_NFLAGS; flagcount++)
+		info->flags[flagcount] = flaglist[flagcount];
+	info->flags[IMAP_FLAG_RECENT] = 1;
+	strncpy(info->internaldate, sqldate[0]?sqldate:"01-Jan-1970 00:00:01 +0100", IMAP_INTERNALDATE_LEN);
+	info->rfcsize = strlen(message);
+	info->keywords = keywords;
+
+	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
+	MailboxState_addMsginfo(M, message_id, info);
+
+	// show EXISTS and RECENT
+	dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(M));
+	dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(M));
 
 	SESSION_OK;
 	SESSION_RETURN;
@@ -1340,9 +1353,11 @@ static void _ic_close_enter(dm_thread_data *D)
 		SESSION_RETURN;
 	}
 	/* only perform the expunge if the user has the right to do it */
-	if (result == 1)
+	if (result == 1) {
 		if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE)
 			dbmail_imap_session_mailbox_expunge(self);
+		imap_session_mailbox_close(self);
+	}
 
 	dbmail_imap_session_set_state(self, CLIENTSTATE_AUTHENTICATED);
 
@@ -1594,6 +1609,8 @@ static void _ic_fetch_enter(dm_thread_data *D)
 	dbmail_imap_session_fetch_free(self);
 	dbmail_imap_session_args_free(self, FALSE);
 
+	MailboxState_flush_recent(self->mailbox->mbstate);
+
 	if (result) {
 		D->status = result;
 		SESSION_RETURN;
@@ -1647,7 +1664,7 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, dm_thread_data *D)
 	// Set the system flags
 	for (i = 0; i < IMAP_NFLAGS; i++) {
 		
-		if (i == IMAP_FLAG_RECENT) // Skip recent_flag because it is already part of the query.
+		if (i == IMAP_FLAG_RECENT) // Skip recent_flag
 			continue;
 
 		switch (cmd->action) {
@@ -1673,10 +1690,13 @@ static gboolean _do_store(u64_t *id, gpointer UNUSED value, dm_thread_data *D)
 
 	// reporting callback
 	if (! cmd->silent) {
+		GList *sublist = NULL;
 		char *uid = NULL;
 		if (self->use_uid)
 			uid = g_strdup_printf("UID %llu ", *id);
-		s = imap_flags_as_string(self->mailbox->mbstate, msginfo);
+		sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
+		s = dbmail_imap_plist_as_string(sublist);
+		g_list_destroy(sublist);
 		dbmail_imap_session_buff_printf(self,"* %llu FETCH (%sFLAGS %s)\r\n", *msn, uid?uid:"", s);
 		if (uid) g_free(uid);
 		g_free(s);
@@ -1838,7 +1858,7 @@ static gboolean _do_copy(u64_t *id, gpointer UNUSED value, ImapSession *self)
 	u64_t newid;
 	int result;
 
-	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid);
+	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid, TRUE);
 	if (result == -1) {
 		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		return TRUE;

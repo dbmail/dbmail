@@ -2151,30 +2151,6 @@ char * imap_cleanup_address(const char *a)
 	return r;
 }
 
-char * imap_flags_as_string(MailboxState_T S, MessageInfo *msginfo)
-{
-	GList *t, *sublist = NULL;
-	int j;
-	char *s;
-
-	for (j = 0; j < IMAP_NFLAGS; j++) {
-		if (msginfo->flags[j])
-			sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
-	}
-	
-	t = g_list_first(msginfo->keywords);
-	while (t) {
-		if (MailboxState_hasKeyword(S, t->data))
-			sublist = g_list_append(sublist, g_strdup((gchar *)t->data));
-		if (! g_list_next(t)) break;
-		t = g_list_next(t);
-	}
-	
-	s = dbmail_imap_plist_as_string(sublist);
-	g_list_destroy(sublist);
-	return s;
-}
-
 #define DEBUG_UNESCAPE 0
 
 char * imap_unescape(char *s)

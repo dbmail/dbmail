@@ -244,7 +244,7 @@ void Http_getMailboxes(T R)
 		unsigned exists = MailboxState_getExists(b);
 
 		if ((msg = evhttp_find_header(Request_getPOST(R),"message"))) {
-			if (! db_append_msg(msg, MailboxState_getId(b), MailboxState_getOwner(b), NULL, &msg_id))
+			if (! db_append_msg(msg, MailboxState_getId(b), MailboxState_getOwner(b), NULL, &msg_id, TRUE))
 				exists++;		
 		}
 		evbuffer_add_printf(buf, "{\"mailboxes\": {\n");

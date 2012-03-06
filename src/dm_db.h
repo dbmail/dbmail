@@ -585,7 +585,8 @@ int db_noinferiors(u64_t mailbox_idnr);
  * 		- 0 on success
  */
 
-int db_append_msg(const char *msgdata, u64_t mailbox_idnr, u64_t user_idnr, timestring_t internal_date, u64_t * msg_idnr);
+int db_append_msg(const char *msgdata, u64_t mailbox_idnr, u64_t user_idnr, 
+		timestring_t internal_date, u64_t * msg_idnr, gboolean recent);
 
 /**
  * \brief move all messages from one mailbox to another.
@@ -607,7 +608,7 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from);
  * 		- 0 on success
  */
 int db_copymsg(u64_t msg_idnr, u64_t mailbox_to,
-	       u64_t user_idnr, u64_t * newmsg_idnr);
+	       u64_t user_idnr, u64_t * newmsg_idnr, gboolean recent);
 
 /**
  * \brief check if mailbox already holds message with message-id

@@ -26,6 +26,7 @@
 /*
  */
 extern db_param_t _db_params;
+extern const char *imap_flag_desc_escaped[];
 #define DBPFX _db_params.pfx
 
 #define T MailboxState_T
@@ -39,8 +40,8 @@ struct T {
 	unsigned no_select;
 	unsigned no_children;
 	unsigned no_inferiors;
-	unsigned exists;
 	unsigned recent;
+	unsigned exists;
 	unsigned unseen;
 	unsigned permission;
 	// 
@@ -54,11 +55,11 @@ struct T {
 	GTree *msginfo;
 	GTree *ids;
 	GTree *msn;
+	GTree *recent_queue;
 };
 
-static void MailboxState_load(T M, C c);
+static void state_load_metadata(T M, C c);
 static void MailboxState_setMsginfo(T M, GTree *msginfo);
-static void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo);
 /* */
 
 static void MailboxState_uid_msn_new(T M)
@@ -75,7 +76,7 @@ static void MessageInfo_free(MessageInfo *m)
 	g_free(m);
 }
 
-static T MailboxState_getMessageState(T M, C c)
+static T state_load_messages(T M, C c)
 {
 	unsigned nrows = 0, i = 0, j;
 	const char *query_result, *keyword;
@@ -175,12 +176,14 @@ T MailboxState_new(u64_t id)
 	M->id = id;
 	if (! id) return M;
 
+	M->recent_queue = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,NULL);
+
 	M->keywords = g_tree_new_full((GCompareDataFunc)dm_strcasecmpdata, NULL,(GDestroyNotify)g_free,NULL);
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c); // we need read-committed isolation
-		MailboxState_load(M, c);
-		MailboxState_getMessageState(M, c);
+		state_load_metadata(M, c);
+		state_load_messages(M, c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -223,8 +226,6 @@ void MailboxState_remap(T M)
 	}
 
 	g_list_free(g_list_first(ids));
-
-	//TRACE(TRACE_DEBUG,"total [%d] UIDs [%d] MSNs", g_tree_nnodes(M->ids), g_tree_nnodes(M->msn));
 }
 	
 GTree * MailboxState_getMsginfo(T M)
@@ -240,11 +241,14 @@ static void MailboxState_setMsginfo(T M, GTree *msginfo)
 	if (oldmsginfo) g_tree_destroy(oldmsginfo);
 }
 
-static void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo)
+void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo)
 {
 	u64_t *id = g_new0(u64_t,1);
 	*id = uid;
 	g_tree_insert(M->msginfo, id, msginfo); 
+	if (msginfo->flags[IMAP_FLAG_RECENT] == 1)
+		M->recent++;
+	MailboxState_build_recent(M);
 	MailboxState_remap(M);
 }
 
@@ -417,9 +421,9 @@ void MailboxState_free(T *M)
 	if (s->msginfo) g_tree_destroy(s->msginfo);
 	s->msginfo = NULL;
 
-	s->id = 0;
-	s->name = NULL;
-	s->keywords = NULL;
+	if (s->recent_queue) g_tree_destroy(s->recent_queue);
+	s->recent_queue = NULL;
+
 	g_free(s);
 	s = NULL;
 }
@@ -435,7 +439,7 @@ static void db_getmailbox_permission(T M, C c)
 		M->permission = db_result_get_int(r, 0);
 }
 
-static void db_getmailbox_metadata(T M, C c)
+static void db_getmailbox_info(T M, C c)
 {
 	/* query mailbox for LIST results */
 	R r;
@@ -521,7 +525,7 @@ static void db_getmailbox_metadata(T M, C c)
 	g_string_free(qs, TRUE);
 }
 
-static void db_getmailbox_count(T M, C c, gboolean update_recent)
+static void db_getmailbox_count(T M, C c)
 {
 	R r; 
 	unsigned result[3];
@@ -549,8 +553,7 @@ static void db_getmailbox_count(T M, C c, gboolean update_recent)
 
 	M->exists = result[0];
 	M->unseen = result[0] - result[1];
-	if (update_recent)
-		M->recent = result[2];
+	M->recent = result[2];
  
 	TRACE(TRACE_DEBUG, "exists [%d] unseen [%d] recent [%d]", M->exists, M->unseen, M->recent);
 	/* now determine the next message UID 
@@ -602,13 +605,13 @@ static void db_getmailbox_seq(T M, C c)
 	}
 }
 
-int MailboxState_metadata(T M)
+int MailboxState_info(T M)
 {
 	volatile int t = DM_SUCCESS;
 	C c = db_con_get();
 	TRY
 		db_begin_transaction(c);
-		db_getmailbox_metadata(M, c);
+		db_getmailbox_info(M, c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -620,7 +623,7 @@ int MailboxState_metadata(T M)
 	return t;
 }
 
-static void MailboxState_load(T M, C c)
+static void state_load_metadata(T M, C c)
 {
 	u64_t oldseq;
 
@@ -632,27 +635,23 @@ static void MailboxState_load(T M, C c)
 		return;
 
 	db_getmailbox_permission(M, c);
-	db_getmailbox_count(M, c, TRUE);
+	db_getmailbox_count(M, c);
 	db_getmailbox_keywords(M, c);
-	db_getmailbox_metadata(M, c);
+	db_getmailbox_info(M, c);
 
 	TRACE(TRACE_DEBUG, "[%s] exists [%d] recent [%d]", 
 			M->name, M->exists, M->recent);
-
 }
 
-int MailboxState_count(T M, gboolean update_recent)
+int MailboxState_count(T M)
 {
-	TRACE(TRACE_DEBUG, "[%s] update_recent [%d]", 
-			M->name, update_recent);
-			
 	C c;
 	volatile int t = DM_SUCCESS;
 
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
-		db_getmailbox_count(M, c, update_recent);
+		db_getmailbox_count(M, c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -783,3 +782,136 @@ int MailboxState_getAcl(T M, u64_t userid, struct ACLMap *map)
 }
 
 
+static gboolean mailbox_build_recent(u64_t *uid, MessageInfo *msginfo, T M)
+{
+	if (msginfo->flags[IMAP_FLAG_RECENT]) {
+		u64_t *copy = g_new0(u64_t,1);
+		*copy = *uid;
+		g_tree_insert(M->recent_queue, copy, copy);
+	}
+	return FALSE;
+}
+
+int MailboxState_build_recent(T M)
+{
+        if (MailboxState_getPermission(M) == IMAPPERM_READWRITE && MailboxState_getMsginfo(M)) {
+		GTree *info = MailboxState_getMsginfo(M);
+		g_tree_foreach(info, (GTraverseFunc)mailbox_build_recent, M);
+		TRACE(TRACE_DEBUG, "build list of [%d] [%d] recent messages...", 
+				g_tree_nnodes(info), g_tree_nnodes(M->recent_queue));
+	}
+
+	return 0;
+}
+
+static int _update_recent(GList *slices)
+{
+	INIT_QUERY;
+	C c;
+	volatile int t = FALSE;
+
+	if (! (slices = g_list_first(slices)))
+		return t;
+
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		while (slices) {
+			db_exec(c, "UPDATE %smessages SET recent_flag = 0 WHERE message_idnr IN (%s) AND recent_flag = 1", DBPFX, (gchar *)slices->data);
+			if (! g_list_next(slices)) break;
+			slices = g_list_next(slices);
+		}
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+		db_rollback_transaction(c);
+	FINALLY
+		db_con_close(c);
+		g_list_destroy(slices);
+	END_TRY;
+
+	return t;
+}
+
+int MailboxState_flush_recent(T M) 
+{
+	GList *recent;
+
+	if (M && MailboxState_getPermission(M) != IMAPPERM_READWRITE) 
+		return DM_SUCCESS;
+
+	TRACE(TRACE_DEBUG,"flush [%d] recent messages", g_tree_nnodes(M->recent_queue));
+
+	if (! g_tree_nnodes(M->recent_queue))
+		return DM_SUCCESS;
+
+	recent = g_tree_keys(M->recent_queue);
+
+	_update_recent(g_list_slices_u64(recent,100));
+
+	g_list_free(g_list_first(recent));
+
+	if ( (M) && (MailboxState_getId(M)) )
+		db_mailbox_seq_update(MailboxState_getId(M));
+
+	return 0;
+}
+
+static gboolean mailbox_clear_recent(u64_t *uid, MessageInfo *msginfo, T M)
+{
+	msginfo->flags[IMAP_FLAG_RECENT] = 0;
+	g_tree_remove(M->recent_queue, uid);
+	return FALSE;
+}
+
+int MailboxState_clear_recent(T M)
+{
+        if (MailboxState_getPermission(M) == IMAPPERM_READWRITE && MailboxState_getMsginfo(M)) {
+		GTree *info = MailboxState_getMsginfo(M);
+		g_tree_foreach(info, (GTraverseFunc)mailbox_clear_recent, M);
+	}
+
+	return 0;
+}
+
+GList * MailboxState_message_flags(T M, MessageInfo *msginfo)
+{
+	GList *t, *sublist = NULL;
+	int j;
+	u64_t uid = msginfo->uid;
+
+	for (j = 0; j < IMAP_NFLAGS; j++) {
+		if (msginfo->flags[j])
+			sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
+	}
+	if ((msginfo->flags[IMAP_FLAG_RECENT] == 0) && g_tree_lookup(M->recent_queue, &uid)) {
+		TRACE(TRACE_DEBUG,"set \\recent flag");
+		sublist = g_list_append(sublist, g_strdup((gchar *)imap_flag_desc_escaped[IMAP_FLAG_RECENT]));
+	}
+
+	t = g_list_first(msginfo->keywords);
+	while (t) {
+		if (MailboxState_hasKeyword(M, t->data))
+			sublist = g_list_append(sublist, g_strdup((gchar *)t->data));
+		if (! g_list_next(t)) break;
+		t = g_list_next(t);
+	}
+	
+	return sublist;
+}
+
+GTree * MailboxState_steal_recent(T M)
+{
+	GTree *recent_queue = M->recent_queue;
+	M->recent_queue = NULL;
+	return recent_queue;
+}
+
+int MailboxState_merge_recent(T M, GTree *recent_queue)
+{
+	g_tree_merge(M->recent_queue, recent_queue, IST_SUBSEARCH_OR);
+	g_tree_destroy(recent_queue);
+	M->recent = g_tree_nnodes(M->recent_queue);
+	return 0;
+}
