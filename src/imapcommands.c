@@ -903,7 +903,7 @@ void _ic_list_enter(dm_thread_data *D)
 				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox, pattern);
 				char *m = NULL, **p = g_strsplit(mailbox,MAILBOX_SEPARATOR,0);
 				int l = g_strv_length(p);
-				while (l > 0) {
+				while (l > 1) {
 					if (p[l]) {
 						g_free(p[l]);
 						p[l] = NULL;
