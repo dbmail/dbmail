@@ -379,8 +379,6 @@ void MailboxState_setNoSelect(T M, gboolean no_select)
 
 gboolean MailboxState_noSelect(T M)
 {
-	if (! M->is_subscribed)
-		M->no_select = TRUE;
 	return M->no_select;
 }
 void MailboxState_setNoChildren(T M, gboolean no_children)

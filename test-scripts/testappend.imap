@@ -1,10 +1,17 @@
-x capability
-x login testuser1 test
-x select INBOX
-x append INBOX {17}
-From: paul
+X login testuser1 test
+X delete newbox
+X list "" *
+X create newbox
+X append newbox {10}
+From: test
+X status newbox (messages unseen recent)
+X examine newbox
+X select newbox
+X append newbox {10}
+From: test
+X fetch 1:* flags
+X unselect
+X status newbox (messages unseen recent)
+X delete newbox
+X logout
 
-test
-
-x fetch * (UID RFC822.HEADER)
-x logout

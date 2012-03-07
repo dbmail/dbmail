@@ -1,4 +1,13 @@
 x login testuser1 test
 x list "" *
+x create sub1/sub2/sub3
+x list "" *
+x list "" %
+x unsubscribe sub1
+x list "" *
+x list "" %
+x delete sub1/sub2/sub3
+x delete sub1/sub2
+x delete sub1
 x logout
 
