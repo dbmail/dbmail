@@ -3610,8 +3610,7 @@ int db_append_msg(const char *msgdata, u64_t mailbox_idnr, u64_t user_idnr,
 
 	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
 
-	msgdata_string = g_string_new("");
-	g_string_printf(msgdata_string, "%s", msgdata);
+	msgdata_string = g_string_new(msgdata);
 
         message = dbmail_message_new();
         message = dbmail_message_init_with_string(message, msgdata_string);

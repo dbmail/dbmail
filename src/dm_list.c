@@ -45,11 +45,10 @@ void g_list_destroy(GList *l)
 //FIXME: this needs some cleaning up:
 GList *g_list_slices(GList *list, unsigned limit)
 {
-	unsigned i,j;
+	unsigned i;
 	GList *new = NULL;
 	GString *slice;
 
-	j = g_list_length(list) % limit;
 	list = g_list_first(list);
 	
 	while(list) {
@@ -73,11 +72,10 @@ GList *g_list_slices(GList *list, unsigned limit)
 
 GList *g_list_slices_u64(GList *list, unsigned limit)
 {
-	unsigned i,j;
+	unsigned i;
 	GList *new = NULL;
 	GString *slice;
 
-	j = g_list_length(list) % limit;
 	list = g_list_first(list);
 	while(list) {
 		slice = g_string_new("");

@@ -839,7 +839,7 @@ void _ic_list_enter(dm_thread_data *D)
 	MailboxState_T M = NULL;
 	unsigned i;
 	char *pattern;
-	char *mailbox = g_new0(char, IMAP_MAX_MAILBOX_NAMELEN);
+	char mailbox[IMAP_MAX_MAILBOX_NAMELEN];
 
 	/* check if self->args are both empty strings, i.e. A001 LIST "" "" 
 	   this has special meaning; show root & delimiter */
@@ -877,7 +877,7 @@ void _ic_list_enter(dm_thread_data *D)
 	while ((! D->status) && children) {
 		gboolean show = FALSE;
 
-		memset(mailbox, 0, IMAP_MAX_MAILBOX_NAMELEN);
+		memset(&mailbox, 0, IMAP_MAX_MAILBOX_NAMELEN);
 
 		u64_t mailbox_id = *(u64_t *)children->data;
 		if ( (D->status = db_getmailboxname(mailbox_id, self->userid, mailbox)) != DM_SUCCESS) {
@@ -956,8 +956,6 @@ void _ic_list_enter(dm_thread_data *D)
 		if (! g_list_next(children)) break;
 		children = g_list_next(children);
 	}
-
-	g_free(mailbox);
 
 	if (shown) g_tree_destroy(shown);
 	if (children) g_list_destroy(children);
@@ -1050,6 +1048,7 @@ static void _ic_status_enter(dm_thread_data *D)
 	if (MailboxState_info(M)) {
 		dbmail_imap_session_buff_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		D->status = 1;
+		MailboxState_free(&M);
 		SESSION_RETURN;
 	}
 
@@ -1058,6 +1057,7 @@ static void _ic_status_enter(dm_thread_data *D)
 
 	if ((result = mailbox_check_acl(self, M, ACL_RIGHT_READ))) {
 		D->status = result;
+		MailboxState_free(&M);
 		SESSION_RETURN;
 	}
 
@@ -1078,6 +1078,7 @@ static void _ic_status_enter(dm_thread_data *D)
 			dbmail_imap_session_buff_printf(self, "\r\n%s BAD option '%s' specified\r\n",
 				self->tag, self->args[i]);
 			D->status = 1;
+			MailboxState_free(&M);
 			SESSION_RETURN;
 		}
 	}
@@ -1087,6 +1088,7 @@ static void _ic_status_enter(dm_thread_data *D)
 
 	dbmail_imap_session_buff_printf(self, "* STATUS %s %s\r\n", astring, pstring);	
 	g_free(astring); g_free(pstring);
+	MailboxState_free(&M);
 
 	SESSION_OK;
 	SESSION_RETURN;
@@ -1230,7 +1232,6 @@ void _ic_append_enter(dm_thread_data *D)
 	 * if so, assume this is the literal date.
 	 */
 	if (self->args[i + 1]) {
-		int offset;
 		internal_date = self->args[i];
 		i++;
 		TRACE(TRACE_DEBUG, "[%p] internal date [%s] found, next arg [%s]", self, internal_date, self->args[i]);

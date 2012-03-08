@@ -830,9 +830,16 @@ void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
 {
 	self->internal_date = time(NULL);
 	if (internal_date && strlen(internal_date)) {
-		self->internal_date = g_mime_utils_header_decode_date(internal_date, &(self->internal_date_gmtoff));
+		time_t dt;
+	        if ((dt = g_mime_utils_header_decode_date(
+						internal_date,
+						&(self->internal_date_gmtoff)))) {
+			self->internal_date = dt;
+		}
 		TRACE(TRACE_DEBUG, "internal_date [%s] [%ld] offset [%d]",
-				internal_date, self->internal_date, self->internal_date_gmtoff);
+				internal_date,
+				self->internal_date,
+				self->internal_date_gmtoff);
 	}
 }
 
@@ -840,23 +847,18 @@ void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
 gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear)
 {
 	char *res;
-	char *rfcdate;
 	struct tm gmt;
 	assert(self->internal_date);
 	
-	res = g_new0(char, TIMESTRING_SIZE+1);
 	memset(&gmt,'\0', sizeof(struct tm));
 	gmtime_r(&self->internal_date, &gmt);
 
 	/* override if the date is not sane */
-	if (thisyear && gmt.tm_year + 1900 > thisyear + 1) {
+	if (thisyear && ((gmt.tm_year + 1900) > (thisyear + 1)))
 		gmt.tm_year = thisyear - 1900;
-	}
 
+	res = g_new0(char, TIMESTRING_SIZE+1);
 	strftime(res, TIMESTRING_SIZE, "%Y-%m-%d %T", &gmt);
-	rfcdate = g_mime_utils_header_format_date(self->internal_date, self->internal_date_gmtoff);
-	TRACE(TRACE_DEBUG, "[%s] [%s]", rfcdate, res);
-	g_free(rfcdate);
 
 	return res;
 }
@@ -1008,6 +1010,10 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	if ((self = _mime_retrieve(self)))
 		return self;
 
+	/* 
+	 * _mime_retrieve failed. Fall back to messageblks
+	 * interface
+	 */
 	self = store;
 
 	date2char_str("p.internal_date", &frag);
@@ -1035,12 +1041,9 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	db_con_close(c);
 	
 	self = dbmail_message_init_with_string(self,m);
-	if (internal_date && strlen(internal_date))
-		dbmail_message_set_internal_date(self, internal_date);
+	dbmail_message_set_internal_date(self, internal_date);
 
-	if (internal_date)
-		g_free(internal_date);
-
+	if (internal_date) g_free(internal_date);
 	g_string_free(m,TRUE);
 
 	return self;
@@ -1219,17 +1222,22 @@ static void insert_physmessage(DbmailMessage *self, C c)
 		char2date_str(internal_date, &to_date_str);
 		g_free(internal_date);
 		if (_db_params.db_driver == DM_DRIVER_ORACLE) 
-			db_exec(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, &to_date_str, frag);
+			db_exec(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s",
+					DBPFX, &to_date_str, frag);
 		else 
-			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, &to_date_str, frag);
-		g_free(frag);	
+			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s",
+					DBPFX, &to_date_str, frag);
 	} else {
 		if (_db_params.db_driver == DM_DRIVER_ORACLE) 
-			db_exec(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
+			db_exec(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s",
+					DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
 		else
-			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
-		g_free(frag);	
+			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s",
+					DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
 	}
+
+	g_free(frag);	
+
 	if (_db_params.db_driver == DM_DRIVER_ORACLE)
 		id = db_get_pk(c, "physmessage");
 	else
@@ -1307,6 +1315,38 @@ int _message_insert(DbmailMessage *self,
 }
 
 #define CACHE_WIDTH 255
+
+void _message_cache_envelope_date(const DbmailMessage *self)
+{
+	time_t date = self->internal_date;
+	char *value, *datefield, *sortfield;
+	u64_t headervalue_id;
+	u64_t headername_id;
+
+	value = g_mime_utils_header_format_date(
+			self->internal_date, 
+			self->internal_date_gmtoff);
+
+	sortfield = g_new0(char, CACHE_WIDTH+1);
+	strftime(sortfield, CACHE_WIDTH, "%Y-%m-%d %H:%M:%S", gmtime(&date));
+
+	if (self->internal_date_gmtoff)
+		date += (self->internal_date_gmtoff * 36);
+
+	datefield = g_new0(gchar, 20);
+	strftime(datefield, 20, "%Y-%m-%d", gmtime(&date));
+
+	_header_name_get_id(self, "Date", &headername_id);
+	_header_value_get_id(value, sortfield, datefield, &headervalue_id);
+
+	if (headervalue_id && headername_id)
+		_header_insert(self->physid, headername_id, headervalue_id);
+
+	g_free(value);
+	g_free(sortfield);
+	g_free(datefield);
+}
+
 int dbmail_message_cache_headers(const DbmailMessage *self)
 {
 	assert(self);
@@ -1317,36 +1357,25 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 		return -1;
 	}
 
-	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
-	if (! dbmail_message_get_header(self, "Date")) {
-		time_t date = self->internal_date;
-		char *value, *datefield, *sortfield;
-		u64_t headervalue_id;
-		u64_t headername_id;
+	/* 
+	 * store all headers as-is, plus separate copies for
+	 * searching and sorting
+	 * 
+	 * */
+	g_tree_foreach(self->header_name,
+			(GTraverseFunc)_header_cache, (gpointer)self);
 
-		value = g_mime_utils_header_format_date(self->internal_date, 
-				self->internal_date_gmtoff);
-
-		sortfield = g_new0(char, CACHE_WIDTH+1);
-		strftime(sortfield, CACHE_WIDTH, "%Y-%m-%d %H:%M:%S", gmtime(&date));
-
-		if (self->internal_date_gmtoff)
-			date += (self->internal_date_gmtoff * 36);
-		datefield = g_new0(gchar, 20);
-		strftime(datefield, 20, "%Y-%m-%d", gmtime(&date));
-
-		_header_name_get_id(self, "Date", &headername_id);
-		_header_value_get_id(value, sortfield, datefield, &headervalue_id);
-
-		if (headervalue_id && headername_id)
-			_header_insert(self->physid, headername_id, headervalue_id);
-
-		g_free(value);
-		g_free(sortfield);
-		g_free(datefield);
-	}
+	/* 
+	 * if there is no Date: header, store the envelope's date
+	 * 
+	 * */
+	if (! dbmail_message_get_header(self, "Date"))
+		_message_cache_envelope_date(self);
 	
-	/* not all messages have a references field or a in-reply-to field */
+	/* 
+	 * not all messages have a references field or a in-reply-to field 
+	 *
+	 * */
 	dbmail_message_cache_referencesfield(self);
 
 	return DM_SUCCESS;
@@ -1662,6 +1691,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 						addr = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
 						gchar **parts = g_strsplit(addr, "@",2);
 						sortfield = g_strndup(parts[0]?parts[0]:"", CACHE_WIDTH);
+						g_strfreev(parts);
 					}
 				}
 			}
