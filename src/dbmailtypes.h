@@ -143,7 +143,7 @@ typedef struct {
 	u64_t id;
 	u64_t physid;
 	time_t internal_date;
-	int *internal_date_gmtoff;
+	int internal_date_gmtoff;
 	GString *envelope_recipient;
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;

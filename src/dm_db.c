@@ -3601,10 +3601,11 @@ int db_rehash_store(void)
 }
 
 int db_append_msg(const char *msgdata, u64_t mailbox_idnr, u64_t user_idnr,
-		timestring_t internal_date, u64_t * msg_idnr, gboolean recent)
+		char* internal_date, u64_t * msg_idnr, gboolean recent)
 {
         DbmailMessage *message;
 	int result;
+	char *date = NULL;
 	GString *msgdata_string;
 
 	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;

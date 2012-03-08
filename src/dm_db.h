@@ -586,7 +586,7 @@ int db_noinferiors(u64_t mailbox_idnr);
  */
 
 int db_append_msg(const char *msgdata, u64_t mailbox_idnr, u64_t user_idnr, 
-		timestring_t internal_date, u64_t * msg_idnr, gboolean recent);
+		char * internal_date, u64_t * msg_idnr, gboolean recent);
 
 /**
  * \brief move all messages from one mailbox to another.

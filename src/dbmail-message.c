@@ -48,6 +48,10 @@ extern db_param_t _db_params;
 static void _register_header(const char *header, const char *value, gpointer user_data);
 static gboolean _header_cache(const char *header, const char *value, gpointer user_data);
 
+static gboolean _header_insert(u64_t physmessage_id, u64_t headername_id, u64_t headervalue_id);
+static int _header_name_get_id(const DbmailMessage *self, const char *header, u64_t *id);
+static int _header_value_get_id(const char *value, const char *sortfield, const char *datefield, u64_t *id);
+
 static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template);
 static void _map_headers(DbmailMessage *self);
 static int _message_insert(DbmailMessage *self, 
@@ -731,6 +735,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GStri
 		if ((end = g_strstr_len(str->str, 80, "\n"))) {
 			size_t l = end - str->str;
 			from = g_strndup(str->str, l);
+			TRACE(TRACE_DEBUG, "From_ [%s]", from);
 		}
 	}
 
@@ -823,16 +828,19 @@ u64_t dbmail_message_get_physid(const DbmailMessage *self)
 
 void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
 {
-	if (internal_date && strlen(internal_date))
-		self->internal_date = g_mime_utils_header_decode_date(internal_date, self->internal_date_gmtoff);
-	else
-		self->internal_date = time(NULL);
+	self->internal_date = time(NULL);
+	if (internal_date && strlen(internal_date)) {
+		self->internal_date = g_mime_utils_header_decode_date(internal_date, &(self->internal_date_gmtoff));
+		TRACE(TRACE_DEBUG, "internal_date [%s] [%ld] offset [%d]",
+				internal_date, self->internal_date, self->internal_date_gmtoff);
+	}
 }
 
 /* thisyear is a workaround for some broken gmime version. */
 gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear)
 {
 	char *res;
+	char *rfcdate;
 	struct tm gmt;
 	assert(self->internal_date);
 	
@@ -846,6 +854,10 @@ gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear
 	}
 
 	strftime(res, TIMESTRING_SIZE, "%Y-%m-%d %T", &gmt);
+	rfcdate = g_mime_utils_header_format_date(self->internal_date, self->internal_date_gmtoff);
+	TRACE(TRACE_DEBUG, "[%s] [%s]", rfcdate, res);
+	g_free(rfcdate);
+
 	return res;
 }
 
@@ -909,7 +921,7 @@ GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *
 
 	i = internet_address_list_length(ialist);
 	for (j=0; j<i; j++) {
-		char *a;
+		const char *a;
 		ia = internet_address_list_get_address(ialist, j);
 		if ((a = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia)) != NULL) {;
 			TRACE(TRACE_DEBUG, "mail address parser found [%s]", a);
@@ -1294,6 +1306,7 @@ int _message_insert(DbmailMessage *self,
 	return t;
 }
 
+#define CACHE_WIDTH 255
 int dbmail_message_cache_headers(const DbmailMessage *self)
 {
 	assert(self);
@@ -1305,6 +1318,33 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	}
 
 	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
+	if (! dbmail_message_get_header(self, "Date")) {
+		time_t date = self->internal_date;
+		char *value, *datefield, *sortfield;
+		u64_t headervalue_id;
+		u64_t headername_id;
+
+		value = g_mime_utils_header_format_date(self->internal_date, 
+				self->internal_date_gmtoff);
+
+		sortfield = g_new0(char, CACHE_WIDTH+1);
+		strftime(sortfield, CACHE_WIDTH, "%Y-%m-%d %H:%M:%S", gmtime(&date));
+
+		if (self->internal_date_gmtoff)
+			date += (self->internal_date_gmtoff * 36);
+		datefield = g_new0(gchar, 20);
+		strftime(datefield, 20, "%Y-%m-%d", gmtime(&date));
+
+		_header_name_get_id(self, "Date", &headername_id);
+		_header_value_get_id(value, sortfield, datefield, &headervalue_id);
+
+		if (headervalue_id && headername_id)
+			_header_insert(self->physid, headername_id, headervalue_id);
+
+		g_free(value);
+		g_free(sortfield);
+		g_free(datefield);
+	}
 	
 	/* not all messages have a references field or a in-reply-to field */
 	dbmail_message_cache_referencesfield(self);
@@ -1312,7 +1352,6 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	return DM_SUCCESS;
 }
 
-#define CACHE_WIDTH 255
 
 
 static int _header_name_get_id(const DbmailMessage *self, const char *header, u64_t *id)
@@ -1616,12 +1655,14 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 					// Only the first email recipient is to be used for sorting - so save it now.
 					const char *addr;
 				       
-					if (internet_address_group_get_members((InternetAddressGroup *)ia))
+					if (internet_address_group_get_members((InternetAddressGroup *)ia)) {
 						addr = internet_address_get_name(ia);
-					else
+						sortfield = g_strndup(addr ? addr : "", CACHE_WIDTH);
+					} else {
 						addr = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
-
-					sortfield = g_strndup(addr ? addr : "", CACHE_WIDTH);
+						gchar **parts = g_strsplit(addr, "@",2);
+						sortfield = g_strndup(parts[0]?parts[0]:"", CACHE_WIDTH);
+					}
 				}
 			}
 			g_object_unref(emaillist);
@@ -1640,8 +1681,8 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		if(isdate) {
 			int offset;
 			date = g_mime_utils_header_decode_date(value,&offset);
-			if (date == (time_t)-1)
-				date = (time_t)0;
+			sortfield = g_new0(char, CACHE_WIDTH+1);
+			strftime(sortfield, CACHE_WIDTH, "%Y-%m-%d %H:%M:%S", gmtime(&date));
 
 			date += (offset * 36); // +0200 -> offset 200
 			datefield = g_new0(gchar,20);

@@ -1138,7 +1138,7 @@ void _ic_append_enter(dm_thread_data *D)
 {
 	u64_t mboxid, message_id = 0;
 	int i, j, result;
-	timestring_t sqldate;
+	char *internal_date = NULL;
 	int flaglist[IMAP_NFLAGS], flagcount = 0;
 	GList *keywords = NULL;
 	MailboxState_T M;
@@ -1230,23 +1230,10 @@ void _ic_append_enter(dm_thread_data *D)
 	 * if so, assume this is the literal date.
 	 */
 	if (self->args[i + 1]) {
-		struct tm tm;
-		char *dt = self->args[i];
-
-		memset(&tm, 0, sizeof(struct tm));
-
-		dt = g_strstrip(dt);
-
-		if (strptime(dt, "%d-%b-%Y %T", &tm) != NULL)
-			strftime(sqldate, sizeof(sqldate), "%Y-%m-%d %H:%M:%S", &tm);
-		else
-			sqldate[0] = '\0';
-		/* internal date specified */
-
+		int offset;
+		internal_date = self->args[i];
 		i++;
-		TRACE(TRACE_DEBUG, "[%p] internal date [%s] found, next arg [%s]", self, sqldate, self->args[i]);
-	} else {
-		sqldate[0] = '\0';
+		TRACE(TRACE_DEBUG, "[%p] internal date [%s] found, next arg [%s]", self, internal_date, self->args[i]);
 	}
 
 
@@ -1257,7 +1244,7 @@ void _ic_append_enter(dm_thread_data *D)
 	
 	message = self->args[i];
 
-	D->status = db_append_msg(message, mboxid, self->userid, sqldate, &message_id, recent);
+	D->status = db_append_msg(message, mboxid, self->userid, internal_date, &message_id, recent);
 
 	switch (D->status) {
 	case -1:
@@ -1290,7 +1277,7 @@ void _ic_append_enter(dm_thread_data *D)
 	for (flagcount = 0; flagcount < IMAP_NFLAGS; flagcount++)
 		info->flags[flagcount] = flaglist[flagcount];
 	info->flags[IMAP_FLAG_RECENT] = 1;
-	strncpy(info->internaldate, sqldate[0]?sqldate:"01-Jan-1970 00:00:01 +0100", IMAP_INTERNALDATE_LEN);
+	strncpy(info->internaldate, internal_date?internal_date:"01-Jan-1970 00:00:01 +0100", IMAP_INTERNALDATE_LEN);
 	info->rfcsize = strlen(message);
 	info->keywords = keywords;
 
