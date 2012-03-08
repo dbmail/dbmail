@@ -1514,19 +1514,31 @@ static GString * _header_addresses(InternetAddressList *ialist)
 		if(ia == NULL) break;
 
 		if (internet_address_group_get_members((InternetAddressGroup *)ia)) {
+
+			if (j>0) g_string_append(store, " ");
+
 			GString *group;
-			g_string_append_printf(store, "%s ", internet_address_get_name(ia));
+			g_string_append_printf(store, "%s:", internet_address_get_name(ia));
 			group = _header_addresses(internet_address_group_get_members((InternetAddressGroup *)ia));
-			g_string_append(store, group->str);
+			if (group->len > 0)
+				g_string_append_printf(store, " %s", group->str);
 			g_string_free(group, TRUE);
+			g_string_append(store, ";");
 		} else {
+
+			if (j>0)
+				g_string_append(store, ", ");
+
 			const char *name = internet_address_get_name(ia);
 			const char *addr = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
 
 			if (name)
 				g_string_append_printf(store, "%s ", name);
 			if (addr)
-				g_string_append_printf(store, "%s ", addr);
+				g_string_append_printf(store, "%s%s%s", 
+						name?"<":"", 
+						addr,
+						name?">":"");
 		}
 	}
 	return store;
@@ -1599,9 +1611,16 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	                        ia = internet_address_list_get_address(emaillist, j);
 				if(ia == NULL) break;
 
+
 				if(sortfield == NULL) {
 					// Only the first email recipient is to be used for sorting - so save it now.
-					const char *addr = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
+					const char *addr;
+				       
+					if (internet_address_group_get_members((InternetAddressGroup *)ia))
+						addr = internet_address_get_name(ia);
+					else
+						addr = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
+
 					sortfield = g_strndup(addr ? addr : "", CACHE_WIDTH);
 				}
 			}
