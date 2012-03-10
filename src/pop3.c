@@ -307,6 +307,38 @@ int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 	return 1;
 }
 
+static int _pop3_session_authenticated(ClientSession_t *session, int user_idnr)
+{
+	clientbase_t *ci = session->ci;
+	int result = 0;
+	session->state = CLIENTSTATE_AUTHENTICATED;
+	ci_authlog_init(ci, THIS_MODULE, (const char *)session->username, AUTHLOG_ACT);
+	client_session_set_timeout(session, server_conf->timeout);
+
+	/* user seems to be valid, let's build a session */
+	TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]", 
+			session->username);
+
+	/* if pop_before_smtp is active, log this ip */
+	if (pop_before_smtp)
+		db_log_ip(ci->src_ip);
+
+	result = db_createsession(user_idnr, session);
+	if (result == 1) {
+		ci_write(ci, "+OK %s has %llu messages (%llu octets)\r\n", 
+				session->username, 
+				session->virtual_totalmessages, 
+				session->virtual_totalsize);
+		TRACE(TRACE_NOTICE, "user %s logged in [messages=%llu, octets=%llu]", 
+				session->username, 
+				session->virtual_totalmessages, 
+				session->virtual_totalsize);
+	} else
+		session->SessionResult = 4;	/* Database error. */
+
+	return result;
+}
+
 int pop3(ClientSession_t *session, const char *buffer)
 {
 	/* returns a 0  on a quit
@@ -454,37 +486,10 @@ int pop3(ClientSession_t *session, const char *buffer)
 			session->password = NULL;
 
 			return pop3_error(session, "-ERR username/password incorrect\r\n");
-
 		default:
-			/* user logged in OK */
-			ci_authlog_init(ci, THIS_MODULE, (const char *)session->username, AUTHLOG_ACT);
-			session->state = CLIENTSTATE_AUTHENTICATED;
-
-			client_session_set_timeout(session, server_conf->timeout);
-
-			/* now we're going to build up a session for this user */
-			TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]",
-					session->username);
-
-			/* if pop_before_smtp is active, log this ip */
-			if (pop_before_smtp)
-				db_log_ip(ci->src_ip);
-
-			result = db_createsession(result, session);
-			if (result == 1) {
-				ci_write(ci, "+OK %s has %llu messages (%llu octets)\r\n", 
-						session->username, 
-						session->virtual_totalmessages, 
-						session->virtual_totalsize);
-				TRACE(TRACE_NOTICE, "user %s logged in [messages=%llu, octets=%llu]", 
-						session->username, 
-						session->virtual_totalmessages, 
-						session->virtual_totalsize);
-			} else
-				session->SessionResult = 4;	/* Database error. */
-
-			return result;
+			return _pop3_session_authenticated(session, result);
 		}
+
 		return 1;
 
 	case POP3_LIST:
@@ -552,11 +557,11 @@ int pop3(ClientSession_t *session, const char *buffer)
 		while (session->messagelst) {
 			msg = (struct message *) session->messagelst->data;
 			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
-				char *s = NULL; size_t i;
+				char *s = NULL;
 				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
 				if (! (s = db_get_message_lines(msg->realmessageid, -2)))
 					return -1;
-				i = ci_write(ci, "+OK %llu octets\r\n%s", (u64_t)strlen(s), s);
+				ci_write(ci, "+OK %llu octets\r\n%s", (u64_t)strlen(s), s);
 				ci_write(ci, "\r\n.\r\n");
 				g_free(s);
 				return 1;
@@ -756,33 +761,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 			return pop3_error(session, "-ERR authentication attempt is invalid\r\n");
 
 		default:
-			/* user logged in OK */
-			session->state = CLIENTSTATE_AUTHENTICATED;
-
-			client_session_set_timeout(session, server_conf->timeout);
-
-			/* user seems to be valid, let's build a session */
-			TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]", 
-					session->username);
-
-			/* if pop_before_smtp is active, log this ip */
-			if (pop_before_smtp)
-				db_log_ip(ci->src_ip);
-
-			result = db_createsession(result, session);
-			if (result == 1) {
-				ci_write(ci, "+OK %s has %llu messages (%llu octets)\r\n", 
-						session->username, 
-						session->virtual_totalmessages, 
-						session->virtual_totalsize);
-				TRACE(TRACE_NOTICE, "user %s logged in [messages=%llu, octets=%llu]", 
-						session->username, 
-						session->virtual_totalmessages, 
-						session->virtual_totalsize);
-			} else
-				session->SessionResult = 4;	/* Database error. */
-
-			return result;
+			return _pop3_session_authenticated(session, result);
 		}
 		return 1;
 
