@@ -2420,6 +2420,8 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 	DbmailMessage *new_message = dbmail_message_new();
 	new_message = dbmail_message_construct(new_message, to, from, newsubject, body);
 	dbmail_message_set_header(new_message, "X-DBMail-Reply", from);
+	dbmail_message_set_header(new_message, "Precedence", "bulk");
+	dbmail_message_set_header(new_message, "Auto-Submitted", "auto-replied");
 
 	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
 
