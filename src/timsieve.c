@@ -476,7 +476,7 @@ int tims(ClientSession_t *session)
 			g_free(script);
 			return tims_error(session, "NO \"Internal error.\"\r\n");
 		} else {
-			ci_write(ci, "{%u+}\r\n", (unsigned int)strlen(script));
+			ci_write(ci, "{%u}\r\n", (unsigned int)strlen(script));
 			ci_write(ci, "%s\r\n", script);
 			ci_write(ci, "OK\r\n");
 			g_free(script);
