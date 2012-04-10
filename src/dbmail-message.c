@@ -2373,6 +2373,7 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 {
 	const char *from, *to, *subject;
 	const char *x_dbmail_reply;
+	const char *precedence;
 	char *handle;
 	int result;
 
@@ -2381,6 +2382,10 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 		TRACE(TRACE_INFO, "reply loop detected [%s]", x_dbmail_reply);
 		return 0;
 	}
+
+	precedence = dbmail_message_get_header(message, "Precedence");
+	if (precedence && (MATCH(precedence, "bulk") || MATCH(precedence, "list")))
+		return 0;
 
 	if (! check_destination(message, aliases)) {
 		TRACE(TRACE_INFO, "no valid destination ");
