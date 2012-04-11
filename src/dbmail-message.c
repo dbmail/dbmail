@@ -2644,6 +2644,8 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 {
 	u64_t tmpid;
 	int result=0;
+	field_t val;
+	gboolean quota_softfail = FALSE;
 
  	delivery_status_t final_dsn;
 
@@ -2655,6 +2657,15 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 	} 
 
 	TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
+
+	config_get_value("QUOTA_FAILURE", "DELIVERY", val);
+	if (MATCH(val, "soft"))
+		quota_softfail = TRUE;
+	else if (MATCH(val, "hard"))
+		quota_softfail = FALSE;
+	else
+		TRACE(TRACE_INFO, "Using default hard bounce for quota failure");
+
 
 	tmpid = message->id; // for later removal
 
@@ -2668,7 +2679,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 		
 		GList *userids;
 
-		int has_2 = 0, has_4 = 0, has_5 = 0, has_5_2 = 0;
+		int ok = 0, temp = 0, fail = 0, fail_quota = 0;
 		
 		deliver_to_user_t *delivery = (deliver_to_user_t *) dsnusers->data;
 		
@@ -2682,20 +2693,20 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 			switch (sort_and_deliver(message, delivery->address, *useridnr, delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
 				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%llu]", *useridnr);
-				has_2 = 1;
+				ok = 1;
 				break;
 			case DSN_CLASS_FAIL:
 				TRACE(TRACE_ERR, "permanent failure sort_and_deliver for useridnr [%llu]", *useridnr);
-				has_5 = 1;
+				fail = 1;
 				break;
 			case DSN_CLASS_QUOTA:
 				TRACE(TRACE_NOTICE, "mailbox over quota, message rejected for useridnr [%llu]", *useridnr);
-				has_5_2 = 1;
+				fail_quota = 1;
 				break;
 			case DSN_CLASS_TEMP:
 			default:
 				TRACE(TRACE_ERR, "unknown temporary failure in sort_and_deliver for useridnr [%llu]", *useridnr);
-				has_4 = 1;
+				temp = 1;
 				break;
 			}
 
@@ -2710,7 +2721,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 
 		}
 
-		final_dsn.class = dsnuser_worstcase_int(has_2, has_4, has_5, has_5_2);
+		final_dsn.class = dsnuser_worstcase_int(ok, temp, fail, fail_quota);
 		switch (final_dsn.class) {
 		case DSN_CLASS_OK:
 			/* Success. Address related. Valid. */
@@ -2733,8 +2744,11 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 1, 1);
 			break;
 		case DSN_CLASS_QUOTA:
-			/* Permanent failure. Mailbox related. Over quota limit. */
-			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 2, 2);
+			/* Failure. Mailbox related. Over quota limit. */
+			if (quota_softfail)
+				set_dsn(&delivery->dsn, DSN_CLASS_TEMP, 2, 2);
+			else
+				set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 2, 2);
 			break;
 		case DSN_CLASS_NONE:
 			/* Leave the DSN status at whatever dsnuser_resolve set it at. */
