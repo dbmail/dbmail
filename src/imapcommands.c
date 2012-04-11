@@ -1251,16 +1251,21 @@ void _ic_append_enter(dm_thread_data *D)
 	case -1:
 		TRACE(TRACE_ERR, "[%p] error appending msg", self);
 		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error storing message\r\n");
+		D->status=1;
+		SESSION_RETURN;
 		break;
 
 	case -2:
 		TRACE(TRACE_INFO, "[%p] quotum would exceed", self);
 		dbmail_imap_session_buff_printf(self, "%s NO not enough quotum left\r\n", self->tag);
+		D->status=1;
+		SESSION_RETURN;
 		break;
 
 	case TRUE:
 		TRACE(TRACE_ERR, "[%p] faulty msg", self);
 		dbmail_imap_session_buff_printf(self, "%s NO invalid message specified\r\n", self->tag);
+		SESSION_RETURN;
 		break;
 	case FALSE:
 		if (flagcount) {
