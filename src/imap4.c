@@ -148,11 +148,11 @@ void imap_cb_read(void *arg)
 	size_t have = session->ci->read_buffer->len;
 	size_t need = session->ci->rbuff_size;
 
-	int enough = (need>0?(have == 0):(have > 0));
+	int enough = (need>0?(have >= need):(have > 0));
 
 	int state = session->ci->client_state;
 
-	TRACE(TRACE_DEBUG,"reading %d: %ld/%ld", enough, have, need);
+	TRACE(TRACE_DEBUG,"state [%d] reading %d: %ld/%ld", state, enough, have, need);
 	if (state & CLIENT_ERR) {
 		ci_cork(session->ci);
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
@@ -351,14 +351,16 @@ void imap_handle_input(ImapSession *session)
 	// Read in a line at a time if we don't have a string literal size defined
 	// Otherwise read in rbuff_size amount of data
 	while (TRUE) {
+		char *input = NULL;
+		char *alloc_buf = NULL;
 
 		memset(buffer, 0, sizeof(buffer));
 
 		if (session->ci->rbuff_size <= 0) {
 			l = ci_readln(session->ci, buffer);
 		} else {
-			int needed = MIN(session->ci->rbuff_size, (int)sizeof(buffer)-1);
-			l = ci_read(session->ci, buffer, needed);
+			alloc_buf = g_new0(char, session->ci->rbuff_size+1);
+			l = ci_read(session->ci, alloc_buf, session->ci->rbuff_size);
 		}
 
 		if (l == 0) break; // done
@@ -382,8 +384,23 @@ void imap_handle_input(ImapSession *session)
 			continue;
 		}
 
-		if (! imap4_tokenizer(session, buffer))
+		if (alloc_buf != NULL)
+			input = alloc_buf;
+		else
+			input = buffer;
+
+		if (! imap4_tokenizer(session, input)) {
+			if (alloc_buf != NULL) {
+				g_free(alloc_buf);
+				alloc_buf = NULL;
+			}
 			continue;
+		}
+
+		if (alloc_buf != NULL) {
+			g_free(alloc_buf);
+			alloc_buf = NULL;
+		}
 
 		if ( session->parser_state < 0 ) {
 			imap_session_printf(session, "%s BAD parse error\r\n", session->tag);

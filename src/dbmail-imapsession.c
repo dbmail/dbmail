@@ -1824,16 +1824,15 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 	assert(buffer);
 
-	/* Check for zero length input */
-	if (! strlen(buffer)) goto finalize;
-
 	s = (char *)buffer;
-
 	max = strlen(s);
+
+	if (max < 1)
+		goto finalize;
 
 	TRACE(TRACE_DEBUG,"[%p] tokenize [%lu/%lu] [%s]", self, max, self->ci->rbuff_size, buffer);
 
-	assert(max <= MAX_LINESIZE);
+//	assert(max <= MAX_LINESIZE);
 
 	/* find the arguments */
 	paridx = 0;

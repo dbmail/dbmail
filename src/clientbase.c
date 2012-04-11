@@ -329,7 +329,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 	return 0;
 }
 
-#define IBUFLEN 4096
+#define IBUFLEN 65535
 void ci_read_cb(clientbase_t *self)
 {
 	/* 
@@ -386,13 +386,16 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	self->len = 0;
 	char *s = self->read_buffer->str + self->read_buffer_offset;
 	if ((self->read_buffer_offset + n) <= self->read_buffer->len) {
+		/*
 		size_t j,k = 0;
 
 		memset(buffer, 0, sizeof(buffer));
 		for (j=0; j<n; j++)
 			buffer[k++] = s[j];
+		*/
+		memcpy(buffer, s, n);
 		self->read_buffer_offset += n;
-		self->len += j;
+		self->len += n;
 		client_rbuf_scale(self);
 	}
 
