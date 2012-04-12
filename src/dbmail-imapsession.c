@@ -1977,8 +1977,24 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 					(*lastchar == '}' && *(lastchar + 1) == '\0') ||
 					(*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0')
 			   ) {
-				self->ci->rbuff_size = octets;
-				dbmail_imap_session_buff_printf(self, "+ OK\r\n");
+				field_t maxsize;
+				unsigned long maxoctets = 0;
+				config_get_value("MAX_MESSAGE_SIZE", "IMAP", maxsize);
+				if (strlen(maxsize)) {
+					maxoctets = strtoul(maxsize, NULL, 0);
+					TRACE(TRACE_DEBUG, "using MAX_MESSAGE_SIZE [%s -> %lu octets]", 
+							maxsize, maxoctets);
+				}
+
+				if ((maxoctets > 0) && (octets > maxoctets)) {
+					dbmail_imap_session_buff_printf(self,
+							"%s NO %s failed: message size too large\r\n",
+							self->tag, self->command);
+					self->command_state = TRUE;
+				} else {
+					self->ci->rbuff_size = octets;
+					dbmail_imap_session_buff_printf(self, "+ OK\r\n");
+				}
 				dbmail_imap_session_buff_flush(self);
 				return 0;
 			}
