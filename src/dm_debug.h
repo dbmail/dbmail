@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -22,8 +22,8 @@
  
 */
 
-#ifndef  _DEBUG_H
-#define  _DEBUG_H
+#ifndef  DM_DEBUG_H
+#define  DM_DEBUG_H
 
 #include "dbmail.h"
 
@@ -37,7 +37,7 @@ typedef enum {
 	TRACE_INFO = 64,
 	TRACE_DEBUG = 128,
 	TRACE_DATABASE = 256 // Logs at Debug Level
-} trace_t;
+} Trace_T;
 
 
 /* Define several macros for GCC specific attributes.
@@ -54,9 +54,9 @@ typedef enum {
 
 
 #define TRACE(level, fmt...) trace(level, THIS_MODULE, __func__, __LINE__, fmt)
-void trace(trace_t level, const char * module, const char * function, int line, const char *formatstring, ...) PRINTF_ARGS(5, 6);
+void trace(Trace_T level, const char * module, const char * function, int line, const char *formatstring, ...) PRINTF_ARGS(5, 6);
 
-void configure_debug(trace_t trace_syslog, trace_t trace_stderr);
+void configure_debug(Trace_T trace_syslog, Trace_T trace_stderr);
 
 void null_logger(const char UNUSED *log_domain, GLogLevelFlags UNUSED log_level, const char UNUSED *message, gpointer UNUSED data);
 #endif

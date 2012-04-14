@@ -1,7 +1,7 @@
 /*
   
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -38,10 +38,10 @@ int selfpipe[2];
 GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
 
-serverConfig_t *server_conf;
-extern db_param_t _db_params;
+ServerConfig_T *server_conf;
+extern DBParam_T db_params;
 
-static void server_config_load(serverConfig_t * conf, const char * const service);
+static void server_config_load(ServerConfig_T * conf, const char * const service);
 static int server_set_sighandler(void);
 void disconnect_all(void);
 
@@ -167,10 +167,10 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
  * basic server setup
  *
  */
-static int server_setup(serverConfig_t *conf)
+static int server_setup(ServerConfig_T *conf)
 {
 	GError *err = NULL;
-	guint tpool_size = _db_params.max_db_connections;
+	guint tpool_size = db_params.max_db_connections;
 
 	server_set_sighandler();
 
@@ -204,7 +204,7 @@ static int server_setup(serverConfig_t *conf)
 	return 0;
 }
 	
-static int server_start_cli(serverConfig_t *conf)
+static int server_start_cli(ServerConfig_T *conf)
 {
 	server_conf = conf;
 	if (db_connect() != 0) {
@@ -237,7 +237,7 @@ static int server_start_cli(serverConfig_t *conf)
 }
 
 // PUBLIC
-int StartCliServer(serverConfig_t * conf)
+int StartCliServer(ServerConfig_T * conf)
 {
 	assert(conf);
 	server_start_cli(conf);
@@ -247,7 +247,7 @@ int StartCliServer(serverConfig_t * conf)
 /* Should be called after a HUP to allow for log rotation,
  * as the filesystem may want to give us new inodes and/or
  * the user may have changed the log file configs. */
-static void reopen_logs(serverConfig_t *conf)
+static void reopen_logs(ServerConfig_T *conf)
 {
 	int serr;
 
@@ -269,7 +269,7 @@ static void reopen_logs(serverConfig_t *conf)
 	
 /* Should be called once to initially close the actual std{in,out,err}
  * and open the redirection files. */
-static void reopen_logs_fatal(serverConfig_t *conf)
+static void reopen_logs_fatal(ServerConfig_T *conf)
 {
 	int serr;
 
@@ -287,7 +287,7 @@ static void reopen_logs_fatal(serverConfig_t *conf)
 	}
 }
 
-pid_t server_daemonize(serverConfig_t *conf)
+pid_t server_daemonize(ServerConfig_T *conf)
 {
 	assert(conf);
 	
@@ -338,7 +338,7 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 	
 }
 
-static int create_unix_socket(serverConfig_t * conf)
+static int create_unix_socket(ServerConfig_T * conf)
 {
 	int sock;
 	struct sockaddr_un un;
@@ -365,7 +365,7 @@ static int create_unix_socket(serverConfig_t * conf)
 	return sock;
 }
 
-static void create_inet_socket(serverConfig_t *conf, int i, gboolean ssl)
+static void create_inet_socket(ServerConfig_T *conf, int i, gboolean ssl)
 {
 	struct addrinfo hints, *res, *res0;
 	int s, error = 0;
@@ -404,7 +404,7 @@ static void create_inet_socket(serverConfig_t *conf, int i, gboolean ssl)
 	freeaddrinfo(res0);
 }
 
-static void server_close_sockets(serverConfig_t *conf)
+static void server_close_sockets(ServerConfig_T *conf)
 {
 	if (conf->evh) {
 		evhttp_free(conf->evh);
@@ -430,7 +430,7 @@ static void server_exit(void)
 	server_close_sockets(server_conf);
 }
 	
-static void server_create_sockets(serverConfig_t * conf)
+static void server_create_sockets(ServerConfig_T * conf)
 {
 	int i;
 
@@ -601,7 +601,7 @@ void disconnect_all(void)
 	}
 }
 
-static void server_pidfile(serverConfig_t *conf)
+static void server_pidfile(ServerConfig_T *conf)
 {
 	static gboolean configured = FALSE;
 	if (configured) return;
@@ -616,7 +616,7 @@ static void server_pidfile(serverConfig_t *conf)
 	configured = TRUE;
 }
 
-int server_run(serverConfig_t *conf)
+int server_run(ServerConfig_T *conf)
 {
 	int i;
 	struct event *evsock;
@@ -724,7 +724,7 @@ void server_showhelp(const char *name, const char *greeting) {
  * 1 help must be shown, then quit
  */ 
 
-static void server_config_free(serverConfig_t * config)
+static void server_config_free(ServerConfig_T * config)
 {
 	assert(config);
 
@@ -737,10 +737,10 @@ static void server_config_free(serverConfig_t * config)
 	config->ssl_listenSockets = NULL;
 	config->iplist = NULL;
 
-	memset(config, 0, sizeof(serverConfig_t));
+	memset(config, 0, sizeof(ServerConfig_T));
 }
 
-int server_getopt(serverConfig_t *config, const char *service, int argc, char *argv[])
+int server_getopt(ServerConfig_T *config, const char *service, int argc, char *argv[])
 {
 	int opt;
 	configFile = g_strdup(DEFAULT_CONFIG_FILE);
@@ -804,7 +804,7 @@ int server_getopt(serverConfig_t *config, const char *service, int argc, char *a
 	return 0;
 }
 
-int server_mainloop(serverConfig_t *config, const char *service, const char *servicename)
+int server_mainloop(ServerConfig_T *config, const char *service, const char *servicename)
 {
 	strncpy(config->process_name, servicename, FIELDSIZE);
 
@@ -842,9 +842,9 @@ int server_mainloop(serverConfig_t *config, const char *service, const char *ser
 	return 0;
 }
 
-void server_config_load(serverConfig_t * config, const char * const service)
+void server_config_load(ServerConfig_T * config, const char * const service)
 {
-	field_t val, val_ssl;
+	Field_T val, val_ssl;
 
 	TRACE(TRACE_DEBUG, "reading config [%s]", configFile);
 	config_free();

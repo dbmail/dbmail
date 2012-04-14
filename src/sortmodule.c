@@ -10,7 +10,7 @@
 #include "dbmail.h"
 #define THIS_MODULE "sort"
 
-static sort_func_t *sort = NULL;
+static sort_func *sort = NULL;
 
 /* Returns:
  *  1 on modules unsupported
@@ -30,7 +30,7 @@ int sort_load_driver(void)
 		return 1;
 	}
 
-	sort = g_new0(sort_func_t,1);
+	sort = g_new0(sort_func,1);
 	if (!sort) {
 		TRACE(TRACE_EMERG, "cannot allocate memory");
 		return -3;
@@ -39,11 +39,11 @@ int sort_load_driver(void)
 	/* The only supported driver is Sieve. */
 	driver = "sort_sieve";
 
-	field_t library_dir;
+	Field_T library_dir;
 	config_get_value("library_directory", "DBMAIL", library_dir);
 	if (strlen(library_dir) == 0) {
 		TRACE(TRACE_DEBUG, "no value for library_directory, using default [%s]", DEFAULT_LIBRARY_DIR);
-		snprintf(library_dir, sizeof(field_t), "%s", DEFAULT_LIBRARY_DIR);
+		snprintf(library_dir, sizeof(Field_T), "%s", DEFAULT_LIBRARY_DIR);
 	} else {
 		TRACE(TRACE_DEBUG, "library_directory is [%s]", library_dir);
 	}
@@ -91,7 +91,7 @@ int sort_load_driver(void)
 	return 0;
 }
 
-sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message, const char *mailbox)
+SortResult_T *sort_process(uint64_t user_idnr, DbmailMessage *message, const char *mailbox)
 {
 	if (!sort)
 		sort_load_driver();
@@ -102,7 +102,7 @@ sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message, const char 
 	return sort->process(user_idnr, message, mailbox);
 }
 
-sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
+SortResult_T *sort_validate(uint64_t user_idnr, char *scriptname)
 {
 	if (!sort)
 		sort_load_driver();
@@ -124,42 +124,42 @@ const char *sort_listextensions(void)
 	return sort->listextensions();
 }
 
-void sort_free_result(sort_result_t *result)
+void sort_free_result(SortResult_T *result)
 {
 	if (!sort->free_result)
 		return;
 	return sort->free_result(result);
 }
 
-int sort_get_cancelkeep(sort_result_t *result)
+int sort_get_cancelkeep(SortResult_T *result)
 {
 	if (!sort->get_cancelkeep)
 		return 0;
 	return sort->get_cancelkeep(result);
 }
 
-int sort_get_reject(sort_result_t *result)
+int sort_get_reject(SortResult_T *result)
 {
 	if (!sort->get_reject)
 		return 0;
 	return sort->get_reject(result);
 }
 
-const char * sort_get_mailbox(sort_result_t *result)
+const char * sort_get_mailbox(SortResult_T *result)
 {
 	if (!sort->get_mailbox)
 		return "";
 	return sort->get_mailbox(result);
 }
 
-const char * sort_get_errormsg(sort_result_t *result)
+const char * sort_get_errormsg(SortResult_T *result)
 {
 	if (!sort->get_errormsg)
 		return "";
 	return sort->get_errormsg(result);
 }
 
-int sort_get_error(sort_result_t *result)
+int sort_get_error(SortResult_T *result)
 {
 	if (!sort->get_error)
 		return 0;

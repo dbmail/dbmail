@@ -1,6 +1,6 @@
 /*
  Copyright (C) 2004 IC & S dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -18,14 +18,18 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-ClientSession_t * client_session_new(client_sock *c);
+#ifndef DM_CLIENTSESSION_H
+
+#define DM_CLIENTSESSION_H
+
+ClientSession_T * client_session_new(client_sock *c);
 
 void client_session_read(void *arg); // read event callback
 
-void client_session_reset(ClientSession_t * session);
-void client_session_reset_parser(ClientSession_t *session);
-void client_session_bailout(ClientSession_t **session);
-void client_session_set_timeout(ClientSession_t *session, int timeout);
+void client_session_reset(ClientSession_T * session);
+void client_session_reset_parser(ClientSession_T *session);
+void client_session_bailout(ClientSession_T **session);
+void client_session_set_timeout(ClientSession_T *session, int timeout);
 
 void socket_read_cb(int fd, short what, void *arg);
 void socket_write_cb(int fd, short what, void *arg);
@@ -35,4 +39,4 @@ int imap_handle_connection(client_sock *c);
 int tims_handle_connection(client_sock *c);
 int lmtp_handle_connection(client_sock *c);
 
-
+#endif

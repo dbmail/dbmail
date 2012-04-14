@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2005-2011 NFG Net Facilities Group BV support@nfg.nl
+ *   Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -35,13 +35,13 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t _db_params;
+extern DBParam_T db_params;
 
-#define DBPFX _db_params.pfx
+#define DBPFX db_params.pfx
 
 /* we need this one because we can't directly link imapd.o */
-extern u64_t msgbuf_idx;
-extern u64_t msgbuf_buflen;
+extern uint64_t msgbuf_idx;
+extern uint64_t msgbuf_buflen;
 
 extern char *multipart_message;
 extern char *multipart_message_part;
@@ -55,7 +55,7 @@ extern char *raw_lmtp_data;
 	
 void init_testuser1(void) 
 {
-        u64_t user_idnr;
+        uint64_t user_idnr;
 	if (! (auth_user_exists("testuser1",&user_idnr)))
 		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
 }
@@ -142,9 +142,9 @@ START_TEST(test_dbmail_imap_astring_as_string)
 END_TEST
 
 #ifdef OLD
-static clientbase_t * ci_new(void)
+static ClientBase_T * ci_new(void)
 {
-	clientbase_t *ci = g_new0(clientbase_t,1);
+	ClientBase_T *ci = g_new0(ClientBase_T,1);
 	FILE *fd = fopen("/dev/null","w");
 	ci->rx = fileno(stdin);
 	ci->tx = fileno(fd);
@@ -152,9 +152,9 @@ static clientbase_t * ci_new(void)
 }
 
 static char *tempfile;
-static clientbase_t * ci_new_writable(void)
+static ClientBase_T * ci_new_writable(void)
 {
-	clientbase_t *ci = ci_new();
+	ClientBase_T *ci = ci_new();
 
 	tempfile = tmpnam(NULL);
 	mkfifo(tempfile, 0600);
@@ -165,7 +165,7 @@ static clientbase_t * ci_new_writable(void)
 	return ci;
 }
 
-static void ci_free_writable(clientbase_t *ci)
+static void ci_free_writable(ClientBase_T *ci)
 {
 	if (ci->tx > 0) close(ci->tx);
 	if (ci->rx >= 0) close(ci->rx);
@@ -651,9 +651,9 @@ START_TEST(test_imap_get_partspec)
 END_TEST
 
 #ifdef OLD
-static u64_t get_physid(void)
+static uint64_t get_physid(void)
 {
-	u64_t id = 0;
+	uint64_t id = 0;
 	GString *q = g_string_new("");
 	g_string_printf(q,"select id from %sphysmessage order by id desc limit 1", DBPFX);
 	Connection_executeQuery(q->str);
@@ -661,9 +661,9 @@ static u64_t get_physid(void)
 	id = db_get_result_u64(0,0);
 	return id;
 }
-static u64_t get_msgsid(void)
+static uint64_t get_msgsid(void)
 {
-	u64_t id = 0;
+	uint64_t id = 0;
 	GString *q = g_string_new("");
 	g_string_printf(q,"select message_idnr from %smessages order by message_idnr desc limit 1", DBPFX);
 	Connection_executeQuery(q->str);
@@ -712,11 +712,11 @@ START_TEST(test_g_list_slices_u64)
 	unsigned i=0;
 	unsigned j=98;
 	unsigned s=11;
-	u64_t *l;
+	uint64_t *l;
 	GList *list = NULL;
 	GList *sub = NULL;
 	for (i=0; i< j; i++) {
-		l = g_new0(u64_t,1);
+		l = g_new0(uint64_t,1);
 		*l = i;
 		list = g_list_append(list, l);
 	}

@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -25,17 +25,17 @@
 
 /*
  */
-extern db_param_t _db_params;
+extern DBParam_T db_params;
 extern const char *imap_flag_desc_escaped[];
-#define DBPFX _db_params.pfx
+#define DBPFX db_params.pfx
 
 #define T MailboxState_T
 
 struct T {
-	u64_t id;
-	u64_t uidnext;
-	u64_t owner_id;
-	u64_t seq;
+	uint64_t id;
+	uint64_t uidnext;
+	uint64_t owner_id;
+	uint64_t seq;
 	//
 	unsigned no_select;
 	unsigned no_children;
@@ -82,9 +82,9 @@ static T state_load_messages(T M, C c)
 	const char *query_result, *keyword;
 	MessageInfo *result;
 	GTree *msginfo;
-	u64_t *uid, id = 0;
+	uint64_t *uid, id = 0;
 	R r;
-	field_t frag;
+	Field_T frag;
 	INIT_QUERY;
 
 	date2char_str("internal_date", &frag);
@@ -92,7 +92,7 @@ static T state_load_messages(T M, C c)
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
 			"draft_flag, recent_flag, %s, rfcsize, message_idnr FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
-			"WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) ORDER BY message_idnr ASC",
+			"WHERE m.mailbox_idnr = %lu AND m.status IN (%d,%d) ORDER BY message_idnr ASC",
 			frag, DBPFX, DBPFX, M->id, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
@@ -105,7 +105,7 @@ static T state_load_messages(T M, C c)
 
 		id = db_result_get_u64(r,IMAP_NFLAGS + 2);
 
-		uid = g_new0(u64_t,1); *uid = id;
+		uid = g_new0(uint64_t,1); *uid = id;
 
 		result = g_new0(MessageInfo,1);
 
@@ -145,7 +145,7 @@ static T state_load_messages(T M, C c)
 		"SELECT k.message_idnr, keyword FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 		"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-		"WHERE b.mailbox_idnr = %llu AND m.status IN (%d,%d)",
+		"WHERE b.mailbox_idnr = %lu AND m.status IN (%d,%d)",
 		DBPFX, DBPFX, DBPFX,
 		M->id, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
@@ -167,7 +167,7 @@ static T state_load_messages(T M, C c)
 }
 
 
-T MailboxState_new(u64_t id)
+T MailboxState_new(uint64_t id)
 {
 	T M; C c;
 	volatile int t = DM_SUCCESS;
@@ -203,7 +203,7 @@ T MailboxState_new(u64_t id)
 void MailboxState_remap(T M)
 {
 	GList *ids = NULL;
-	u64_t *uid, *msn = NULL, rows = 1;
+	uint64_t *uid, *msn = NULL, rows = 1;
 	MessageInfo *msginfo;
 
 	MailboxState_uid_msn_new(M);
@@ -211,11 +211,11 @@ void MailboxState_remap(T M)
 	ids = g_tree_keys(M->msginfo);
 	ids = g_list_first(ids);
 	while (ids) {
-		uid = (u64_t *)ids->data;
+		uid = (uint64_t *)ids->data;
 
 		msginfo = g_tree_lookup(M->msginfo, uid);
 
-		msn = g_new0(u64_t,1);
+		msn = g_new0(uint64_t,1);
 		*msn = msginfo->msn = rows++;
 
 		g_tree_insert(M->ids, uid, msn);
@@ -241,9 +241,9 @@ static void MailboxState_setMsginfo(T M, GTree *msginfo)
 	if (oldmsginfo) g_tree_destroy(oldmsginfo);
 }
 
-void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo)
+void MailboxState_addMsginfo(T M, uint64_t uid, MessageInfo *msginfo)
 {
-	u64_t *id = g_new0(u64_t,1);
+	uint64_t *id = g_new0(uint64_t,1);
 	*id = uid;
 	g_tree_insert(M->msginfo, id, msginfo); 
 	if (msginfo->flags[IMAP_FLAG_RECENT] == 1)
@@ -252,10 +252,10 @@ void MailboxState_addMsginfo(T M, u64_t uid, MessageInfo *msginfo)
 	MailboxState_remap(M);
 }
 
-int MailboxState_removeUid(T M, u64_t uid)
+int MailboxState_removeUid(T M, uint64_t uid)
 {
 	if (! g_tree_remove(M->msginfo, &uid)) {
-		TRACE(TRACE_WARNING,"trying to remove unknown UID [%llu]", uid);
+		TRACE(TRACE_WARNING,"trying to remove unknown UID [%lu]", uid);
 		return DM_EGENERAL;
 	}
 
@@ -276,16 +276,16 @@ GTree * MailboxState_getMsn(T M)
 	return M->msn;
 }
 
-void MailboxState_setId(T M, u64_t id)
+void MailboxState_setId(T M, uint64_t id)
 {
 	M->id = id;
 }
-u64_t MailboxState_getId(T M)
+uint64_t MailboxState_getId(T M)
 {
 	return M->id;
 }
 
-u64_t MailboxState_getSeq(T M)
+uint64_t MailboxState_getSeq(T M)
 {
 	return M->seq;
 }
@@ -303,15 +303,15 @@ unsigned MailboxState_getRecent(T M)
 	return M->recent;
 }
 
-u64_t MailboxState_getUidnext(T M)
+uint64_t MailboxState_getUidnext(T M)
 {
 	return M->uidnext;
 }
-void MailboxState_setOwner(T M, u64_t owner_id)
+void MailboxState_setOwner(T M, uint64_t owner_id)
 {
 	M->owner_id = owner_id;
 }
-u64_t MailboxState_getOwner(T M)
+uint64_t MailboxState_getOwner(T M)
 {
 	return M->owner_id;
 }
@@ -431,7 +431,7 @@ static void db_getmailbox_permission(T M, C c)
 	R r;
 	g_return_if_fail(M->id);
 
-	r = db_query(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %llu",
+	r = db_query(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %lu",
 			DBPFX, M->id);
 	if (db_result_next(r))
 		M->permission = db_result_get_int(r, 0);
@@ -453,7 +453,7 @@ static void db_getmailbox_info(T M, C c)
 		 "CASE WHEN user_id IS NULL THEN 0 ELSE 1 END, " // subscription
 		 "owner_idnr, name, no_select, no_inferiors "
 		 "FROM %smailboxes b LEFT OUTER JOIN %ssubscription s ON "
-		 "b.mailbox_idnr = s.mailbox_id WHERE b.mailbox_idnr = %llu",
+		 "b.mailbox_idnr = s.mailbox_id WHERE b.mailbox_idnr = %lu",
 		 DBPFX, DBPFX, M->id);
 
 	r = db_query(c, query);
@@ -533,11 +533,11 @@ static void db_getmailbox_count(T M, C c)
 	g_return_if_fail(M->id);
 
 	/* count messages */
-	r = db_query(c, "SELECT 0,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+	r = db_query(c, "SELECT 0,COUNT(*) FROM %smessages WHERE mailbox_idnr=%lu "
 			"AND (status < %d) UNION "
-			"SELECT 1,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+			"SELECT 1,COUNT(*) FROM %smessages WHERE mailbox_idnr=%lu "
 			"AND (status < %d) AND seen_flag=1 UNION "
-			"SELECT 2,COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+			"SELECT 2,COUNT(*) FROM %smessages WHERE mailbox_idnr=%lu "
 			"AND (status < %d) AND recent_flag=1",
 			DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
 			DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
@@ -565,7 +565,7 @@ static void db_getmailbox_count(T M, C c)
 		return;
 	}
 
-	r = db_query(c, "SELECT MAX(message_idnr)+1 FROM %smessages WHERE mailbox_idnr=%llu",DBPFX, M->id);
+	r = db_query(c, "SELECT MAX(message_idnr)+1 FROM %smessages WHERE mailbox_idnr=%lu",DBPFX, M->id);
 	if (db_result_next(r))
 		M->uidnext = db_result_get_u64(r,0);
 	else
@@ -580,7 +580,7 @@ static void db_getmailbox_keywords(T M, C c)
 	r = db_query(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
 			"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 			"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-			"WHERE b.mailbox_idnr=%llu", DBPFX, DBPFX, DBPFX, M->id);
+			"WHERE b.mailbox_idnr=%lu", DBPFX, DBPFX, DBPFX, M->id);
 
 	while (db_result_next(r)) {
 		key = g_strdup(db_result_get(r,0));
@@ -592,14 +592,14 @@ static void db_getmailbox_seq(T M, C c)
 {
 	R r; 
 
-	r = db_query(c, "SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=%llu", DBPFX, M->id);
+	r = db_query(c, "SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=%lu", DBPFX, M->id);
 	if (db_result_next(r)) {
 		if (! M->name)
 			M->name = g_strdup(db_result_get(r, 0));
 		M->seq = db_result_get_u64(r,1);
-		TRACE(TRACE_DEBUG,"id: [%llu] name: [%s] seq [%llu]", M->id, M->name, M->seq);
+		TRACE(TRACE_DEBUG,"id: [%lu] name: [%s] seq [%lu]", M->id, M->name, M->seq);
 	} else {
-		TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%llu]", M->id);
+		TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%lu]", M->id);
 	}
 }
 
@@ -623,7 +623,7 @@ int MailboxState_info(T M)
 
 static void state_load_metadata(T M, C c)
 {
-	u64_t oldseq;
+	uint64_t oldseq;
 
 	g_return_if_fail(M->id);
 
@@ -680,15 +680,15 @@ char * MailboxState_flags(T M)
 	return g_strchomp(s);
 }
 
-int MailboxState_hasPermission(T M, u64_t userid, const char *right_flag)
+int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 {
 	C c; R r;
 	volatile int result = FALSE;
-	u64_t owner_id, mboxid;
+	uint64_t owner_id, mboxid;
 
 	mboxid = MailboxState_getId(M);
 
-	TRACE(TRACE_DEBUG, "checking ACL [%s] for user [%llu] on mailbox [%llu]",
+	TRACE(TRACE_DEBUG, "checking ACL [%s] for user [%lu] on mailbox [%lu]",
 			right_flag, userid, mboxid);
 
 	/* If we don't know who owns the mailbox, look it up. */
@@ -701,7 +701,7 @@ int MailboxState_hasPermission(T M, u64_t userid, const char *right_flag)
 	}
 
 	if (owner_id == userid) {
-		TRACE(TRACE_DEBUG, "mailbox [%llu] is owned by user [%llu], giving all rights",
+		TRACE(TRACE_DEBUG, "mailbox [%lu] is owned by user [%lu], giving all rights",
 				mboxid, userid);
 		return 1;
 	}
@@ -709,7 +709,7 @@ int MailboxState_hasPermission(T M, u64_t userid, const char *right_flag)
 	result = FALSE;
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT * FROM %sacl WHERE user_id = %llu AND mailbox_id = %llu AND %s = 1", DBPFX, userid, mboxid, right_flag);
+		r = db_query(c, "SELECT * FROM %sacl WHERE user_id = %lu AND mailbox_id = %lu AND %s = 1", DBPFX, userid, mboxid, right_flag);
 		if (db_result_next(r))
 			result = TRUE;
 	CATCH(SQLException)
@@ -722,12 +722,12 @@ int MailboxState_hasPermission(T M, u64_t userid, const char *right_flag)
 	return result;
 }
 
-int MailboxState_getAcl(T M, u64_t userid, struct ACLMap *map)
+int MailboxState_getAcl(T M, uint64_t userid, struct ACLMap *map)
 {
 	int i;
 	volatile int t = DM_SUCCESS;
 	gboolean gotrow = FALSE;
-	u64_t anyone;
+	uint64_t anyone;
 	C c; R r; S s;
 
 	g_return_val_if_fail(MailboxState_getId(M),DM_EGENERAL); 
@@ -780,10 +780,10 @@ int MailboxState_getAcl(T M, u64_t userid, struct ACLMap *map)
 }
 
 
-static gboolean mailbox_build_recent(u64_t *uid, MessageInfo *msginfo, T M)
+static gboolean mailbox_build_recent(uint64_t *uid, MessageInfo *msginfo, T M)
 {
 	if (msginfo->flags[IMAP_FLAG_RECENT]) {
-		u64_t *copy = g_new0(u64_t,1);
+		uint64_t *copy = g_new0(uint64_t,1);
 		*copy = *uid;
 		g_tree_insert(M->recent_queue, copy, copy);
 	}
@@ -856,7 +856,7 @@ int MailboxState_flush_recent(T M)
 	return 0;
 }
 
-static gboolean mailbox_clear_recent(u64_t *uid, MessageInfo *msginfo, T M)
+static gboolean mailbox_clear_recent(uint64_t *uid, MessageInfo *msginfo, T M)
 {
 	msginfo->flags[IMAP_FLAG_RECENT] = 0;
 	g_tree_remove(M->recent_queue, uid);
@@ -877,7 +877,7 @@ GList * MailboxState_message_flags(T M, MessageInfo *msginfo)
 {
 	GList *t, *sublist = NULL;
 	int j;
-	u64_t uid = msginfo->uid;
+	uint64_t uid = msginfo->uid;
 
 	for (j = 0; j < IMAP_NFLAGS; j++) {
 		if (msginfo->flags[j])

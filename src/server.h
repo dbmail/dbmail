@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -24,8 +24,8 @@
  * data type defintions & function prototypes for main server program.
  */
 
-#ifndef _SERVER_H
-#define _SERVER_H
+#ifndef DM_SERVER_H
+#define DM_SERVER_H
 
 #include "dbmail.h"
 
@@ -50,16 +50,16 @@
                         perror("F_SETFL"); \
         }
 
-int StartCliServer(serverConfig_t * conf);
-int server_run(serverConfig_t *conf);
+int StartCliServer(ServerConfig_T * conf);
+int server_run(ServerConfig_T *conf);
 
 void dm_queue_drain(int sock, short event, void *arg);
 void dm_thread_data_free(gpointer data);
 
 void server_showhelp(const char *service, const char *greeting);
-int server_getopt(serverConfig_t *config, const char *service, int argc, char *argv[]);
-int server_mainloop(serverConfig_t *config, const char *service, const char *servicename);
-pid_t server_daemonize(serverConfig_t *conf);
-void server_http(serverConfig_t *conf);
+int server_getopt(ServerConfig_T *config, const char *service, int argc, char *argv[]);
+int server_mainloop(ServerConfig_T *config, const char *service, const char *servicename);
+pid_t server_daemonize(ServerConfig_T *conf);
+void server_http(ServerConfig_T *conf);
 
 #endif

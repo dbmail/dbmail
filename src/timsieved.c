@@ -33,12 +33,12 @@ const char *sieve_extensions = NULL;
 
 int main(int argc, char *argv[])
 {
-	serverConfig_t config;
+	ServerConfig_T config;
 	int result;
 		
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-        memset(&config, 0, sizeof(serverConfig_t));
+        memset(&config, 0, sizeof(ServerConfig_T));
 	result = server_getopt(&config, "SIEVE", argc, argv);
 	if (result == -1) goto shutdown;
 	if (result == 1) {

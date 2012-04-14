@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -32,28 +32,28 @@ char            *__progname = NULL;
 char		hostname[16];
  
 /* the debug variables */
-static trace_t TRACE_SYSLOG = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
-static trace_t TRACE_STDERR = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
+static Trace_T TRACE_SYSLOG = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
+static Trace_T TRACE_STDERR = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
 
 /*
  * configure the debug settings
  */
-void configure_debug(trace_t trace_syslog, trace_t trace_stderr)
+void configure_debug(Trace_T trace_syslog, Trace_T trace_stderr)
 {
 	TRACE_SYSLOG = trace_syslog;
 	TRACE_STDERR = trace_stderr;
 }
 
-/* Make sure that these match trace_t. */
+/* Make sure that these match Trace_T. */
 void null_logger(const char UNUSED *log_domain, GLogLevelFlags UNUSED log_level, const char UNUSED *message, gpointer UNUSED data)
 {
 	// ignore glib messages	
 	return;
 }
 
-static const char * trace_to_text(trace_t level)
+static const char * Trace_To_text(Trace_T level)
 {
-	const char * const trace_text[] = {
+	const char * const Trace_Text[] = {
 		"EMERGENCY",
 		"Alert",
 		"Critical",
@@ -64,7 +64,7 @@ static const char * trace_to_text(trace_t level)
 		"Debug",
 		"Database"
 	};
-	return trace_text[ilogb((double) level)];
+	return Trace_Text[ilogb((double) level)];
 }
 
 /* Call me like this:
@@ -80,9 +80,9 @@ static const char * trace_to_text(trace_t level)
 
 #define SYSLOGFORMAT "[%p] %s:[%s] %s(+%d): %s"
 #define STDERRFORMAT "%s %s %s[%d]: [%p] %s:[%s] %s(+%d): %s"
-void trace(trace_t level, const char * module, const char * function, int line, const char *formatstring, ...)
+void trace(Trace_T level, const char * module, const char * function, int line, const char *formatstring, ...)
 {
-	trace_t syslog_level;
+	Trace_T syslog_level;
 	va_list ap, cp;
 
 	gchar *message = NULL;
@@ -119,7 +119,7 @@ void trace(trace_t level, const char * module, const char * function, int line, 
 		strftime(date,32,"%b %d %H:%M:%S", &tmp);
 
  		fprintf(stderr, STDERRFORMAT, date, hostname, __progname?__progname:"", getpid(), 
-			g_thread_self(), trace_to_text(level), module, function, line, message);
+			g_thread_self(), Trace_To_text(level), module, function, line, message);
  
 		if (message[l] != '\n')
 			fprintf(stderr, "\n");
@@ -163,7 +163,7 @@ void trace(trace_t level, const char * module, const char * function, int line, 
 		}
 		size_t w = min(l,maxlen);
 		message[w] = '\0';
-		syslog(syslog_level, SYSLOGFORMAT, g_thread_self(), trace_to_text(level), module, function, line, message);
+		syslog(syslog_level, SYSLOGFORMAT, g_thread_self(), Trace_To_text(level), module, function, line, message);
 	}
 	g_free(message);
 

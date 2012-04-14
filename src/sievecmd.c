@@ -41,18 +41,18 @@ int reallyquiet = 0;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 static int do_showhelp(void);
-static int do_list(u64_t user_idnr);
-static int do_activate(u64_t user_idnr, char *name);
-static int do_deactivate(u64_t user_idnr, char *name);
-static int do_remove(u64_t user_idnr, char *name);
-static int do_edit(u64_t user_idnr, char *name);
-static int do_insert(u64_t user_idnr, char *name, char *source);
-static int do_cat(u64_t user_idnr, char *name, FILE *out);
+static int do_list(uint64_t user_idnr);
+static int do_activate(uint64_t user_idnr, char *name);
+static int do_deactivate(uint64_t user_idnr, char *name);
+static int do_remove(uint64_t user_idnr, char *name);
+static int do_edit(uint64_t user_idnr, char *name);
+static int do_insert(uint64_t user_idnr, char *name, char *source);
+static int do_cat(uint64_t user_idnr, char *name, FILE *out);
 
 int main(int argc, char *argv[])
 {
 	int res = 0, opt = 0, opt_prev = 0;
-	u64_t user_idnr = 0;
+	uint64_t user_idnr = 0;
 	char *user_name = NULL;
 	char *script_name = NULL;
 	char *script_source = NULL;
@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
 }
 
 
-int do_activate(u64_t user_idnr, char *name)
+int do_activate(uint64_t user_idnr, char *name)
 {
 	if (!name) {
 		qerrorf("Must give the name of a script to activate.\n");
@@ -280,7 +280,7 @@ int do_activate(u64_t user_idnr, char *name)
 }
 
 
-int do_deactivate(u64_t user_idnr, char *name)
+int do_deactivate(uint64_t user_idnr, char *name)
 {
 	char *scriptname = NULL;
 
@@ -311,7 +311,7 @@ int do_deactivate(u64_t user_idnr, char *name)
 	return 0;
 }
 
-int do_edit(u64_t user_idnr, char *name)
+int do_edit(uint64_t user_idnr, char *name)
 {
 	int ret = 0;
 	int editor_val = 0;
@@ -420,7 +420,7 @@ cleanup:
 	return ret;
 }
 
-int do_cat(u64_t user_idnr, char *name, FILE *out)
+int do_cat(uint64_t user_idnr, char *name, FILE *out)
 {
 	int res = 0;
 	char *buf = NULL;
@@ -508,12 +508,12 @@ static int read_from_stream(FILE * instream, char **m_buf, int maxlen)
         return 0;
 }
 
-int do_insert(u64_t user_idnr, char *name, char *source)
+int do_insert(uint64_t user_idnr, char *name, char *source)
 {
 	int res = 0, was_found = 0;
 	char *buf = NULL;
 	FILE *file = NULL;
-	sort_result_t *sort_result;
+	SortResult_T *sort_result;
 
 	res = dm_sievescript_getbyname(user_idnr, name, &buf);
 	if (buf) {
@@ -597,7 +597,7 @@ int do_insert(u64_t user_idnr, char *name, char *source)
 }
 
 
-int do_remove(u64_t user_idnr, char *name)
+int do_remove(uint64_t user_idnr, char *name)
 {
 	if (! dm_sievescript_delete(user_idnr, name)) {
 		qerrorf("Error deleting script [%s].\n", name);
@@ -610,7 +610,7 @@ int do_remove(u64_t user_idnr, char *name)
 }
 
 
-int do_list(u64_t user_idnr)
+int do_list(uint64_t user_idnr)
 {
 	GList *scriptlist = NULL;
 
@@ -627,7 +627,7 @@ int do_list(u64_t user_idnr)
 
 	scriptlist = g_list_first(scriptlist);
 	while (scriptlist) {
-		sievescript_info_t *info = (sievescript_info_t *) scriptlist->data;
+		sievescript_info *info = (sievescript_info *) scriptlist->data;
 		if (info->active == 1)
 			printf("  + ");
 		else

@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -21,8 +21,8 @@
 /*
  * list.h: list header */
 
-#ifndef  _LIST_H
-#define  _LIST_H
+#ifndef  DM_LIST_H
+#define  DM_LIST_H
 
 #include <glib.h>
 #include <sys/types.h>

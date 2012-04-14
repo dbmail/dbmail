@@ -1,11 +1,11 @@
 /*
  *
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  */
 	
-#ifndef _DBMAIL_COMMANDCHANNEL_H
-#define _DBMAIL_COMMANDCHANNEL_H
+#ifndef DM_COMMANDCHANNEL_H
+#define DM_COMMANDCHANNEL_H
 
 #include "dbmail.h"
 #include "dm_cache.h"
@@ -17,7 +17,7 @@ typedef struct cmd_t *cmd_t;
 
 /* ImapSession definition */
 typedef struct {
-	clientbase_t *ci;
+	ClientBase_T *ci;
 	Capa_T preauth_capa;   // CAPABILITY
 	Capa_T capa;   // CAPABILITY
 	char *tag;
@@ -26,26 +26,26 @@ typedef struct {
 	int command_state;
 
 	gboolean use_uid;
-	u64_t msg_idnr;  // replace this with a GList
+	uint64_t msg_idnr;  // replace this with a GList
 
 	GString *buff; // output buffer
 
 	int parser_state;
 	char **args;
-	u64_t args_idx;
+	uint64_t args_idx;
 
 	int loop; // idle loop counter
-	fetch_items_t *fi;
+	fetch_items *fi;
 
 	DbmailMailbox *mailbox;	/* currently selected mailbox */
-	u64_t lo; // lower boundary for message ids
-	u64_t hi; // upper boundary for message ids
-	u64_t ceiling; // upper boundary during prefetching
+	uint64_t lo; // lower boundary for message ids
+	uint64_t hi; // upper boundary for message ids
+	uint64_t ceiling; // upper boundary during prefetching
 
 	DbmailMessage *message;
 	Cache_T cache;  
 
-	u64_t userid;		/* userID of client in dbase */
+	uint64_t userid;		/* userID of client in dbase */
 
 	GTree *ids;
 	GTree *physids;		// cache physmessage_ids for uids 
@@ -55,7 +55,7 @@ typedef struct {
 
 	cmd_t cmd; // command structure (wip)
 	gboolean error; // command result
-	clientstate_t state; // session status 
+	ClientState_T state; // session status 
 	int error_count;
 	Connection_T c; // database-connection;
 } ImapSession;
@@ -68,7 +68,7 @@ typedef struct {
 	void (* cb_enter)(gpointer);		/* callback on thread entry		*/
 	void (* cb_leave)(gpointer);		/* callback on thread exit		*/
 	ImapSession *session;
-	clientbase_t ci;
+	ClientBase_T ci;
 	gpointer data;				/* payload				*/
 	int status;				/* command result 			*/
 } dm_thread_data;
@@ -89,15 +89,15 @@ void dbmail_imap_session_buff_clear(ImapSession *self);
 void dbmail_imap_session_buff_flush(ImapSession *self);
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...);
 
-int dbmail_imap_session_set_state(ImapSession *self, clientstate_t state);
+int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state);
 int client_is_authenticated(ImapSession * self);
-int check_state_and_args(ImapSession * self, int minargs, int maxargs, clientstate_t state);
+int check_state_and_args(ImapSession * self, int minargs, int maxargs, ClientState_T state);
 int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, const char * password);
 int dbmail_imap_session_prompt(ImapSession * self, char * prompt);
 
-MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, u64_t mailbox_idnr);
+MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t mailbox_idnr);
 
-int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, u64_t idnr);
+int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, uint64_t idnr);
 
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
 int dbmail_imap_session_mailbox_expunge(ImapSession *self);
@@ -108,7 +108,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self);
 
 void dbmail_imap_session_bodyfetch_new(ImapSession *self);
 void dbmail_imap_session_bodyfetch_free(ImapSession *self);
-body_fetch_t * dbmail_imap_session_bodyfetch_get_last(ImapSession *self);
+body_fetch * dbmail_imap_session_bodyfetch_get_last(ImapSession *self);
 void dbmail_imap_session_bodyfetch_rewind(ImapSession *self);
 
 int dbmail_imap_session_bodyfetch_set_partspec(ImapSession *self, char *partspec, int length);

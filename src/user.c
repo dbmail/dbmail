@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	char *user = NULL, *newuser = NULL, *userspec = NULL, *alias = NULL;
 	char *passwd = NULL, *passwdtype = NULL, *passwdfile = NULL;
 	char *password = NULL, *enctype = NULL;
-	u64_t useridnr = 0, clientid = 0, maxmail = 0;
+	uint64_t useridnr = 0, clientid = 0, maxmail = 0;
 	GList *alias_add = NULL, *alias_del = NULL, *fwds_add = NULL, *fwds_del = NULL;
 	GString *tmp = NULL;
 	struct change_flags change_flags;

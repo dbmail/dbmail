@@ -1,5 +1,3 @@
-#ifndef DSN_H
-#define DSN_H
 /*
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -19,6 +17,9 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#ifndef DM_DSN_H
+#define DM_DSN_H
+
 #include "dbmail.h"
 
 typedef enum {
@@ -36,14 +37,14 @@ typedef struct {
 } delivery_status_t;
 
 typedef struct {
-	u64_t useridnr;		/* Specific user id recipient (from outside). */
+	uint64_t useridnr;		/* Specific user id recipient (from outside). */
 	char *address;	/* Envelope recipient (from outside). */
 	char *mailbox;	/* Default mailbox to use for userid deliveries (from outside). */
-	mailbox_source_t source; /* Who specified the mailbox (e.g. trusted or untrusted source)? */
-	GList *userids;	/* List of u64_t* -- internal useridnr's to deliver to (internal). */
+	mailbox_source source; /* Who specified the mailbox (e.g. trusted or untrusted source)? */
+	GList *userids;	/* List of uint64_t* -- internal useridnr's to deliver to (internal). */
 	GList *forwards;	/* List of char* -- external addresses to forward to (internal). */
 	delivery_status_t dsn;	/* Return status of this "delivery basket" (to outside). */
-} deliver_to_user_t;
+} Delivery_T;
 
 /**
  * \brief Turn a numerical delivery status
@@ -61,8 +62,8 @@ int dsn_tostring(delivery_status_t dsn, const char ** const class,
 
 /**
  * \brief Sets values on the dsn delivery_status_t
- *        inside of a delivery deliver_to_user_t.
- * \param delivery is a pointer to a deliver_to_user_t struct.
+ *        inside of a delivery Delivery_T.
+ * \param delivery is a pointer to a Delivery_T struct.
  * \param class is the class (use values from dsn_class_t).
  * \param subject is the subject.
  * \param detail is the detail.
@@ -77,9 +78,9 @@ void set_dsn(delivery_status_t *dsn,
  *   - 0 on success
  *   - -1 on failure
  */
-int dsnuser_init(deliver_to_user_t * dsnuser);
+int dsnuser_init(Delivery_T * dsnuser);
 
-void dsnuser_free(deliver_to_user_t * dsnuser);
+void dsnuser_free(Delivery_T * dsnuser);
 void dsnuser_free_list(GList *deliveries);
 
 /**
@@ -102,12 +103,12 @@ int dsnuser_resolve_list(GList *deliveries);
  * flagged with a DSN code so that success or failure can be
  * properly indicated at the top of the delivery call chain,
  * such as in dbmail-deliver and dbmail-lmtpd.
- * \param deliveries Pointer to a deliver_to_user_t.
+ * \param deliveries Pointer to a Delivery_T.
  * \return
  *   - 0 on success
  *   - -1 on failure
  */
-int dsnuser_resolve(deliver_to_user_t *dsnuser);
+int dsnuser_resolve(Delivery_T *dsnuser);
 
 /**
  * \brief Loop through the list of delivery addresses

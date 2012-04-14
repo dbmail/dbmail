@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -25,8 +25,8 @@
 
 #include "dbmail.h"
 
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern DBParam_T db_params;
+#define DBPFX db_params.pfx
 #define DBMAIL_TEMPMBOX "INBOX"
 #define THIS_MODULE "message"
 
@@ -48,14 +48,14 @@ extern db_param_t _db_params;
 static void _register_header(const char *header, const char *value, gpointer user_data);
 static gboolean _header_cache(const char *header, const char *value, gpointer user_data);
 
-static gboolean _header_insert(u64_t physmessage_id, u64_t headername_id, u64_t headervalue_id);
-static int _header_name_get_id(const DbmailMessage *self, const char *header, u64_t *id);
-static int _header_value_get_id(const char *value, const char *sortfield, const char *datefield, u64_t *id);
+static gboolean _header_insert(uint64_t physmessage_id, uint64_t headername_id, uint64_t headervalue_id);
+static int _header_name_get_id(const DbmailMessage *self, const char *header, uint64_t *id);
+static int _header_value_get_id(const char *value, const char *sortfield, const char *datefield, uint64_t *id);
 
 static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template);
 static void _map_headers(DbmailMessage *self);
 static int _message_insert(DbmailMessage *self, 
-		u64_t user_idnr, 
+		uint64_t user_idnr, 
 		const char *mailbox, 
 		const char *unique_id); 
 
@@ -113,10 +113,10 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	return s;
 }
 
-static u64_t blob_exists(const char *buf, const char *hash)
+static uint64_t blob_exists(const char *buf, const char *hash)
 {
-	volatile u64_t id = 0;
-	volatile u64_t id_old = 0;
+	volatile uint64_t id = 0;
+	volatile uint64_t id_old = 0;
 	size_t l;
 	assert(buf);
 	C c; S s; R r;
@@ -126,7 +126,7 @@ static u64_t blob_exists(const char *buf, const char *hash)
 	l = strlen(buf);
 	c = db_con_get();
 	TRY
-		if (_db_params.db_driver == DM_DRIVER_ORACLE  && l > DM_ORA_MAX_BYTES_LOB_CMP) {
+		if (db_params.db_driver == DM_DRIVER_ORACLE  && l > DM_ORA_MAX_BYTES_LOB_CMP) {
 			db_begin_transaction(c);
 			/** XXX Due to specific Oracle behavior and limitation of
 			 * libzdb methods we can't perform direct comparision lob data
@@ -168,7 +168,7 @@ static u64_t blob_exists(const char *buf, const char *hash)
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		if (_db_params.db_driver == DM_DRIVER_ORACLE) 
+		if (db_params.db_driver == DM_DRIVER_ORACLE) 
 			db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
@@ -177,11 +177,11 @@ static u64_t blob_exists(const char *buf, const char *hash)
 	return id;
 }
 
-static u64_t blob_insert(const char *buf, const char *hash)
+static uint64_t blob_insert(const char *buf, const char *hash)
 {
 	C c; R r; S s;
 	size_t l;
-	volatile u64_t id = 0;
+	volatile uint64_t id = 0;
 	char *frag = db_returning("id");
 
 	assert(buf);
@@ -195,7 +195,7 @@ static u64_t blob_insert(const char *buf, const char *hash)
 		db_stmt_set_str(s, 1, hash);
 		db_stmt_set_blob(s, 2, buf, l);
 		db_stmt_set_int(s, 3, l);
-		if (_db_params.db_driver == DM_DRIVER_ORACLE) {
+		if (db_params.db_driver == DM_DRIVER_ORACLE) {
 			db_stmt_exec(s);
 			id = db_get_pk(c, "mimeparts");
 		} else {
@@ -210,20 +210,20 @@ static u64_t blob_insert(const char *buf, const char *hash)
 		db_con_close(c);
 	END_TRY;
 
-	TRACE(TRACE_DEBUG,"inserted id [%llu]", id);
+	TRACE(TRACE_DEBUG,"inserted id [%lu]", id);
 	g_free(frag);
 
 	return id;
 }
 
-static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
+static int register_blob(DbmailMessage *m, uint64_t id, gboolean is_header)
 {
 	C c; volatile gboolean t = FALSE;
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
 		t = db_exec(c, "INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
-				"VALUES (%llu,%d,%d,%d,%d,%llu)", DBPFX,
+				"VALUES (%lu,%d,%d,%d,%d,%lu)", DBPFX,
 				dbmail_message_get_physid(m), is_header, m->part_key, m->part_depth, m->part_order, id);	
 		db_commit_transaction(c);
 	CATCH(SQLException)
@@ -236,9 +236,9 @@ static int register_blob(DbmailMessage *m, u64_t id, gboolean is_header)
 	return t;
 }
 
-static u64_t blob_store(const char *buf)
+static uint64_t blob_store(const char *buf)
 {
-	u64_t id;
+	uint64_t id;
 	char *hash;
 
 	if (! buf) return 0;
@@ -265,7 +265,7 @@ static u64_t blob_store(const char *buf)
 
 static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 {
-	u64_t id;
+	uint64_t id;
 
 	if (! buf) return 0;
 
@@ -350,7 +350,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	gboolean prev_is_message = FALSE, is_message = FALSE;
 	GString *m = NULL, *n = NULL;
 	const void *blob;
-	field_t frag;
+	Field_T frag;
 
 	assert(dbmail_message_get_physid(self));
 	date2char_str("ph.internal_date", &frag);
@@ -363,7 +363,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			"FROM %smimeparts p "
 			"JOIN %spartlists l ON p.id = l.part_id "
 			"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
-			"WHERE l.physmessage_id = %llu ORDER BY l.part_key,l.part_order ASC", 
+			"WHERE l.physmessage_id = %lu ORDER BY l.part_key,l.part_order ASC", 
 			frag, n->str, DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
 		
 		m = g_string_new("");
@@ -815,13 +815,13 @@ static void _register_header(const char *header, const char *value, gpointer use
 		g_relation_insert(m->headers, hname, hvalue);
 }
 
-void dbmail_message_set_physid(DbmailMessage *self, u64_t physid)
+void dbmail_message_set_physid(DbmailMessage *self, uint64_t physid)
 {
 	self->id = physid;
 	self->physid = physid;
 }
 
-u64_t dbmail_message_get_physid(const DbmailMessage *self)
+uint64_t dbmail_message_get_physid(const DbmailMessage *self)
 {
 	return self->physid;
 }
@@ -999,7 +999,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	INIT_QUERY;
 	C c; R r;
 	DbmailMessage *store;
-	field_t frag;
+	Field_T frag;
 	char *internal_date = NULL;
 	gconstpointer blob;
 	
@@ -1059,7 +1059,7 @@ static DbmailMessage * _fetch_head(DbmailMessage *self)
 	const char *query_template = 	"SELECT b.messageblk, b.is_header, %s "
 		"FROM %smessageblks b "
 		"JOIN %sphysmessage p ON b.physmessage_id=p.id "
-		"WHERE b.physmessage_id = %llu "
+		"WHERE b.physmessage_id = %lu "
 		"AND b.is_header = '1'";
 	return _retrieve(self, query_template);
 
@@ -1075,7 +1075,7 @@ static DbmailMessage * _fetch_full(DbmailMessage *self)
 	const char *query_template = "SELECT b.messageblk, b.is_header, %s "
 		"FROM %smessageblks b "
 		"JOIN %sphysmessage p ON b.physmessage_id=p.id "
-		"WHERE b.physmessage_id = %llu "
+		"WHERE b.physmessage_id = %lu "
 		"ORDER BY b.messageblk_idnr";
 	return _retrieve(self, query_template);
 }
@@ -1086,7 +1086,7 @@ static DbmailMessage * _fetch_full(DbmailMessage *self)
  * \param filter (header-only or full message)
  * \return filled DbmailMessage
  */
-DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int filter)
+DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, uint64_t physid, int filter)
 {
 	assert(physid);
 	
@@ -1105,7 +1105,7 @@ DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int f
 	
 
 	if ((!self) || (! self->content)) {
-		TRACE(TRACE_ERR, "retrieval failed for physid [%llu]", physid);
+		TRACE(TRACE_ERR, "retrieval failed for physid [%lu]", physid);
 		return NULL;
 	}
 
@@ -1121,14 +1121,14 @@ DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int f
  */
 static int _update_message(DbmailMessage *self)
 {
-	u64_t size    = (u64_t)dbmail_message_get_size(self,FALSE);
-	u64_t rfcsize = (u64_t)dbmail_message_get_size(self,TRUE);
+	uint64_t size    = (uint64_t)dbmail_message_get_size(self,FALSE);
+	uint64_t rfcsize = (uint64_t)dbmail_message_get_size(self,TRUE);
 
-	if (! db_update("UPDATE %sphysmessage SET messagesize = %llu, rfcsize = %llu WHERE id = %llu", 
+	if (! db_update("UPDATE %sphysmessage SET messagesize = %lu, rfcsize = %lu WHERE id = %lu", 
 			DBPFX, size, rfcsize, self->physid))
 		return DM_EQUERY;
 
-	if (! db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %llu", 
+	if (! db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %lu", 
 			DBPFX, MESSAGE_STATUS_NEW, self->id))
 		return DM_EQUERY;
 
@@ -1141,7 +1141,7 @@ static int _update_message(DbmailMessage *self)
 
 int dbmail_message_store(DbmailMessage *self)
 {
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	char unique_id[UID_SIZE];
 	int res = 0, i = 1, retry = 10, delay = 200;
 	int step = 0;
@@ -1205,7 +1205,7 @@ static void insert_physmessage(DbmailMessage *self, C c)
 	R r;
 	char *internal_date = NULL, *frag;
 	int thisyear;
-	volatile u64_t id = 0;
+	volatile uint64_t id = 0;
 	struct timeval tv;
 	struct tm gmt;
 
@@ -1218,17 +1218,17 @@ static void insert_physmessage(DbmailMessage *self, C c)
 	frag = db_returning("id");
 
 	if (internal_date != NULL) {
-		field_t to_date_str;
+		Field_T to_date_str;
 		char2date_str(internal_date, &to_date_str);
 		g_free(internal_date);
-		if (_db_params.db_driver == DM_DRIVER_ORACLE) 
+		if (db_params.db_driver == DM_DRIVER_ORACLE) 
 			db_exec(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s",
 					DBPFX, &to_date_str, frag);
 		else 
 			r = db_query(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s",
 					DBPFX, &to_date_str, frag);
 	} else {
-		if (_db_params.db_driver == DM_DRIVER_ORACLE) 
+		if (db_params.db_driver == DM_DRIVER_ORACLE) 
 			db_exec(c, "INSERT INTO %sphysmessage (internal_date) VALUES (%s) %s",
 					DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), frag);
 		else
@@ -1238,25 +1238,25 @@ static void insert_physmessage(DbmailMessage *self, C c)
 
 	g_free(frag);	
 
-	if (_db_params.db_driver == DM_DRIVER_ORACLE)
+	if (db_params.db_driver == DM_DRIVER_ORACLE)
 		id = db_get_pk(c, "physmessage");
 	else
 		id = db_insert_result(c, r);
 
 	if (! id) {
-		TRACE(TRACE_ERR,"no physmessage_id [%llu]", id);
+		TRACE(TRACE_ERR,"no physmessage_id [%lu]", id);
 	} else {
 		dbmail_message_set_physid(self, id);
-		TRACE(TRACE_DEBUG,"new physmessage_id [%llu]", id);
+		TRACE(TRACE_DEBUG,"new physmessage_id [%lu]", id);
 	}
 }
 
 int _message_insert(DbmailMessage *self, 
-		u64_t user_idnr, 
+		uint64_t user_idnr, 
 		const char *mailbox, 
 		const char *unique_id)
 {
-	u64_t mailboxid;
+	uint64_t mailboxid;
 	char *frag = NULL;
 	C c; R r;
 	volatile int t = 0;
@@ -1280,11 +1280,11 @@ int _message_insert(DbmailMessage *self,
 		db_begin_transaction(c);
 		insert_physmessage(self, c);
 
-		if (_db_params.db_driver == DM_DRIVER_ORACLE) {
+		if (db_params.db_driver == DM_DRIVER_ORACLE) {
 				db_exec(c, "INSERT INTO "
 						"%smessages(mailbox_idnr, physmessage_id, unique_id,"
 						"recent_flag, status) "
-						"VALUES (%llu, %llu, '%s', 1, %d)",
+						"VALUES (%lu, %lu, '%s', 1, %d)",
 						DBPFX, mailboxid, dbmail_message_get_physid(self), unique_id,
 						MESSAGE_STATUS_INSERT);
 				self->id = db_get_pk(c, "messages");
@@ -1293,13 +1293,13 @@ int _message_insert(DbmailMessage *self,
 				r = db_query(c, "INSERT INTO "
 						"%smessages(mailbox_idnr, physmessage_id, unique_id,"
 						"recent_flag, status) "
-						"VALUES (%llu, %llu, '%s', 1, %d) %s",
+						"VALUES (%lu, %lu, '%s', 1, %d) %s",
 						DBPFX, mailboxid, dbmail_message_get_physid(self), unique_id,
 						MESSAGE_STATUS_INSERT, frag);
 				g_free(frag);
 				self->id = db_insert_result(c, r);
 		}
-		TRACE(TRACE_DEBUG,"new message_idnr [%llu]", self->id);
+		TRACE(TRACE_DEBUG,"new message_idnr [%lu]", self->id);
 
 		t = DM_SUCCESS;
 		db_commit_transaction(c);
@@ -1320,8 +1320,8 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 {
 	time_t date = self->internal_date;
 	char *value, *datefield, *sortfield;
-	u64_t headervalue_id;
-	u64_t headername_id;
+	uint64_t headervalue_id;
+	uint64_t headername_id;
 
 	value = g_mime_utils_header_format_date(
 			self->internal_date, 
@@ -1383,9 +1383,9 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 
 
 
-static int _header_name_get_id(const DbmailMessage *self, const char *header, u64_t *id)
+static int _header_name_get_id(const DbmailMessage *self, const char *header, uint64_t *id)
 {
-	u64_t *tmp = NULL;
+	uint64_t *tmp = NULL;
 	gpointer cacheid;
 	gchar *case_header, *safe_header, *frag;
 	C c; R r; S s;
@@ -1394,13 +1394,13 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 	// rfc822 headernames are case-insensitive
 	safe_header = g_ascii_strdown(header,-1);
 	if ((cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)safe_header)) != NULL) {
-		*id = *(u64_t *)cacheid;
+		*id = *(uint64_t *)cacheid;
 		g_free(safe_header);
 		return 1;
 	}
 
 	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
-	tmp = g_new0(u64_t,1);
+	tmp = g_new0(uint64_t,1);
 
 	c = db_con_get();
 
@@ -1423,7 +1423,7 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 
 			db_stmt_set_str(s,1,safe_header);
 
-			if (_db_params.db_driver == DM_DRIVER_ORACLE) {
+			if (db_params.db_driver == DM_DRIVER_ORACLE) {
 				db_stmt_exec(s);
 				*tmp = db_get_pk(c, "headername");
 			} else {
@@ -1455,14 +1455,14 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, u6
 	return 1;
 }
 
-static u64_t _header_value_exists(C c, const char *value, const char *hash)
+static uint64_t _header_value_exists(C c, const char *value, const char *hash)
 {
 	R r; S s;
-	u64_t id = 0;
+	uint64_t id = 0;
 	char blob_cmp[DEF_FRAGSIZE];
 	memset(blob_cmp, 0, sizeof(blob_cmp));
 
-	if (_db_params.db_driver == DM_DRIVER_ORACLE && strlen(value) > DM_ORA_MAX_BYTES_LOB_CMP) {
+	if (db_params.db_driver == DM_DRIVER_ORACLE && strlen(value) > DM_ORA_MAX_BYTES_LOB_CMP) {
 		/** Value greater then DM_ORA_MAX_BYTES_LOB_CMP will cause SQL exception */
 		return 0;
 	}
@@ -1481,10 +1481,10 @@ static u64_t _header_value_exists(C c, const char *value, const char *hash)
 
 }
 
-static u64_t _header_value_insert(C c, const char *value, const char *sortfield, const char *datefield, const char *hash)
+static uint64_t _header_value_insert(C c, const char *value, const char *sortfield, const char *datefield, const char *hash)
 {
 	R r; S s;
-	u64_t id = 0;
+	uint64_t id = 0;
 	char *frag;
 
 	db_con_clear(c);
@@ -1502,21 +1502,21 @@ static u64_t _header_value_insert(C c, const char *value, const char *sortfield,
 	if (datefield)
 		db_stmt_set_str(s, 4, datefield);
 
-	if (_db_params.db_driver == DM_DRIVER_ORACLE) {
+	if (db_params.db_driver == DM_DRIVER_ORACLE) {
 		db_stmt_exec(s);
 		id = db_get_pk(c, "headervalue");
 	} else {
 		r = db_stmt_query(s);
 		id = db_insert_result(c, r);
 	}
-	TRACE(TRACE_DATABASE,"new headervalue.id [%llu]", id);
+	TRACE(TRACE_DATABASE,"new headervalue.id [%lu]", id);
 
 	return id;
 }
 
-static int _header_value_get_id(const char *value, const char *sortfield, const char *datefield, u64_t *id)
+static int _header_value_get_id(const char *value, const char *sortfield, const char *datefield, uint64_t *id)
 {
-	u64_t tmp = 0;
+	uint64_t tmp = 0;
 	char *hash;
 
 	C c;
@@ -1544,7 +1544,7 @@ static int _header_value_get_id(const char *value, const char *sortfield, const 
 	return TRUE;
 }
 
-static gboolean _header_insert(u64_t physmessage_id, u64_t headername_id, u64_t headervalue_id)
+static gboolean _header_insert(uint64_t physmessage_id, uint64_t headername_id, uint64_t headervalue_id)
 {
 
 	C c; S s; volatile gboolean t = TRUE;
@@ -1614,8 +1614,8 @@ static GString * _header_addresses(InternetAddressList *ialist)
 
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {
-	u64_t headername_id;
-	u64_t headervalue_id;
+	uint64_t headername_id;
+	uint64_t headervalue_id;
 	DbmailMessage *self = (DbmailMessage *)user_data;
 	GTuples *values;
 	unsigned char *raw;
@@ -1751,7 +1751,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	return FALSE;
 }
 
-static void insert_field_cache(u64_t physid, const char *field, const char *value)
+static void insert_field_cache(uint64_t physid, const char *field, const char *value)
 {
 	gchar *clean_value;
 	C c; S s;
@@ -1800,7 +1800,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	g_free(field);
 
 	if (! refs) {
-		TRACE(TRACE_DEBUG, "reference_decode failed [%llu]", self->physid);
+		TRACE(TRACE_DEBUG, "reference_decode failed [%lu]", self->physid);
 		return;
 	}
 	
@@ -1948,10 +1948,10 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	return self;
 }
 
-static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, const char *mailbox, char *into, size_t into_n)
+static int get_mailbox_from_filters(DbmailMessage *message, uint64_t useridnr, const char *mailbox, char *into, size_t into_n)
 {
 	int t = FALSE;
-	u64_t anyone = 0;
+	uint64_t anyone = 0;
 	C c; R r;
 			
 	TRACE(TRACE_INFO, "default mailbox [%s]", mailbox);
@@ -1969,8 +1969,8 @@ static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, cons
 			"JOIN %sheader h ON h.headername_id = n.id "
 			"join %sheadervalue v on v.id=h.headervalue_id "
 			"WHERE v.headervalue %s f.headervalue "
-			"AND h.physmessage_id=%llu "
-			"AND f.user_id in (%llu,%llu)", 
+			"AND h.physmessage_id=%lu "
+			"AND f.user_id in (%lu,%lu)", 
 			DBPFX, DBPFX, DBPFX, DBPFX,
 			db_get_sql(SQL_INSENSITIVE_LIKE),
 			dbmail_message_get_physid(message), anyone, useridnr);
@@ -1995,20 +1995,20 @@ static int get_mailbox_from_filters(DbmailMessage *message, u64_t useridnr, cons
 /* Figure out where to deliver the message, then deliver it.
  * */
 dsn_class_t sort_and_deliver(DbmailMessage *message,
-		const char *destination, u64_t useridnr,
-		const char *mailbox, mailbox_source_t source)
+		const char *destination, uint64_t useridnr,
+		const char *mailbox, mailbox_source source)
 {
 	int cancelkeep = 0;
 	int reject = 0;
 	dsn_class_t ret;
-	field_t val;
+	Field_T val;
 	char *subaddress = NULL;
 
 	/* Catch the brute force delivery right away.
 	 * We skip the Sieve scripts, and down the call
 	 * chain we don't check permissions on the mailbox. */
 	if (source == BOX_BRUTEFORCE) {
-		TRACE(TRACE_NOTICE, "Beginning brute force delivery for user [%llu] to mailbox [%s].",
+		TRACE(TRACE_NOTICE, "Beginning brute force delivery for user [%lu] to mailbox [%s].",
 				useridnr, mailbox);
 		return sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
 	}
@@ -2027,7 +2027,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 		}
 	}
 
-	TRACE(TRACE_INFO, "Destination [%s] useridnr [%llu], mailbox [%s], source [%d]",
+	TRACE(TRACE_INFO, "Destination [%s] useridnr [%lu], mailbox [%s], source [%d]",
 			destination, useridnr, mailbox, source);
 	
 	/* Subaddress. */
@@ -2051,7 +2051,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 	config_get_value("SIEVE", "DELIVERY", val);
 	if (strcasecmp(val, "yes") == 0 && dm_sievescript_isactive(useridnr)) {
 		TRACE(TRACE_INFO, "Calling for a Sieve sort");
-		sort_result_t *sort_result = sort_process(useridnr, message, mailbox);
+		SortResult_T *sort_result = sort_process(useridnr, message, mailbox);
 		if (sort_result) {
 			cancelkeep = sort_get_cancelkeep(sort_result);
 			reject = sort_get_reject(sort_result);
@@ -2095,14 +2095,14 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 }
 
 dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
-		u64_t useridnr, const char *mailbox, mailbox_source_t source,
+		uint64_t useridnr, const char *mailbox, mailbox_source source,
 		int *msgflags)
 {
-	u64_t mboxidnr, newmsgidnr;
-	field_t val;
-	size_t msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
+	uint64_t mboxidnr, newmsgidnr;
+	Field_T val;
+	size_t msgsize = (uint64_t)dbmail_message_get_size(message, FALSE);
 
-	TRACE(TRACE_INFO,"useridnr [%llu] mailbox [%s]", useridnr, mailbox);
+	TRACE(TRACE_INFO,"useridnr [%lu] mailbox [%s]", useridnr, mailbox);
 
 	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
 		TRACE(TRACE_ERR, "mailbox [%s] not found", mailbox);
@@ -2125,12 +2125,12 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		
 		switch (permission) {
 		case -1:
-			TRACE(TRACE_NOTICE, "error retrieving right for [%llu] to deliver mail to [%s]",
+			TRACE(TRACE_NOTICE, "error retrieving right for [%lu] to deliver mail to [%s]",
 					useridnr, mailbox);
 			return DSN_CLASS_TEMP;
 		case 0:
 			// No right.
-			TRACE(TRACE_NOTICE, "user [%llu] does not have right to deliver mail to [%s]",
+			TRACE(TRACE_NOTICE, "user [%lu] does not have right to deliver mail to [%s]",
 					useridnr, mailbox);
 			// Switch to INBOX.
 			if (strcmp(mailbox, "INBOX") == 0) {
@@ -2141,7 +2141,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 			return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags);
 		case 1:
 			// Has right.
-			TRACE(TRACE_INFO, "user [%llu] has right to deliver mail to [%s]",
+			TRACE(TRACE_INFO, "user [%lu] has right to deliver mail to [%s]",
 					useridnr, mailbox);
 			break;
 		default:
@@ -2163,18 +2163,18 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	// Ok, we have the ACL right, time to deliver the message.
 	switch (db_copymsg(message->id, mboxidnr, useridnr, &newmsgidnr, TRUE)) {
 	case -2:
-		TRACE(TRACE_ERR, "error copying message to user [%llu],"
+		TRACE(TRACE_ERR, "error copying message to user [%lu],"
 				"maxmail exceeded", useridnr);
 		return DSN_CLASS_QUOTA;
 	case -1:
-		TRACE(TRACE_ERR, "error copying message to user [%llu]", 
+		TRACE(TRACE_ERR, "error copying message to user [%lu]", 
 				useridnr);
 		return DSN_CLASS_TEMP;
 	default:
-		TRACE(TRACE_NOTICE, "message id=%llu, size=%zd is inserted", 
+		TRACE(TRACE_NOTICE, "message id=%lu, size=%zd is inserted", 
 				newmsgidnr, msgsize);
 		if (msgflags) {
-			TRACE(TRACE_NOTICE, "message id=%llu, setting imap flags", 
+			TRACE(TRACE_NOTICE, "message id=%lu, setting imap flags", 
 				newmsgidnr);
 			db_set_msgflag(newmsgidnr, msgflags, NULL, IMAPFA_ADD, NULL);
 			db_mailbox_seq_update(mboxidnr);
@@ -2222,7 +2222,7 @@ int send_mail(DbmailMessage *message,
 	char *escaped_from = NULL;
 	char *message_string = NULL;
 	char *sendmail_command = NULL;
-	field_t sendmail, postmaster;
+	Field_T sendmail, postmaster;
 	int result;
 
 	if (!from || strlen(from) < 1) {
@@ -2446,8 +2446,8 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
  *            */         
 static int send_notification(DbmailMessage *message UNUSED, const char *to)
 {           
-	field_t from = "";
-	field_t subject = "";
+	Field_T from = "";
+	Field_T subject = "";
 	int result;
 
 	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
@@ -2480,9 +2480,9 @@ static int send_notification(DbmailMessage *message UNUSED, const char *to)
 
 
 /* Yeah, RAN. That's Reply And Notify ;-) */
-static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
+static int execute_auto_ran(DbmailMessage *message, uint64_t useridnr)
 {
-	field_t val;
+	Field_T val;
 	int do_auto_notify = 0, do_auto_reply = 0;
 	char *reply_body = NULL;
 	char *notify_address = NULL;
@@ -2553,7 +2553,7 @@ static int execute_auto_ran(DbmailMessage *message, u64_t useridnr)
 int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 {
 	int result = 0;
-	field_t postmaster;
+	Field_T postmaster;
 
 	if (!from) {
 		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0)
@@ -2642,9 +2642,9 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 
 int insert_messages(DbmailMessage *message, GList *dsnusers)
 {
-	u64_t tmpid;
+	uint64_t tmpid;
 	int result=0;
-	field_t val;
+	Field_T val;
 	gboolean quota_softfail = FALSE;
 
  	delivery_status_t final_dsn;
@@ -2656,7 +2656,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 		return result;
 	} 
 
-	TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
+	TRACE(TRACE_DEBUG, "temporary msgidnr is [%lu]", message->id);
 
 	config_get_value("QUOTA_FAILURE", "DELIVERY", val);
 	if (MATCH(val, "soft"))
@@ -2681,31 +2681,31 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 
 		int ok = 0, temp = 0, fail = 0, fail_quota = 0;
 		
-		deliver_to_user_t *delivery = (deliver_to_user_t *) dsnusers->data;
+		Delivery_T *delivery = (Delivery_T *) dsnusers->data;
 		
 		/* Each user may have a list of user_idnr's for local
 		 * delivery. */
 		userids = g_list_first(delivery->userids);
 		while (userids) {
-			u64_t *useridnr = (u64_t *) userids->data;
+			uint64_t *useridnr = (uint64_t *) userids->data;
 
-			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%llu]", *useridnr);
+			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%lu]", *useridnr);
 			switch (sort_and_deliver(message, delivery->address, *useridnr, delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
-				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%llu]", *useridnr);
+				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%lu]", *useridnr);
 				ok = 1;
 				break;
 			case DSN_CLASS_FAIL:
-				TRACE(TRACE_ERR, "permanent failure sort_and_deliver for useridnr [%llu]", *useridnr);
+				TRACE(TRACE_ERR, "permanent failure sort_and_deliver for useridnr [%lu]", *useridnr);
 				fail = 1;
 				break;
 			case DSN_CLASS_QUOTA:
-				TRACE(TRACE_NOTICE, "mailbox over quota, message rejected for useridnr [%llu]", *useridnr);
+				TRACE(TRACE_NOTICE, "mailbox over quota, message rejected for useridnr [%lu]", *useridnr);
 				fail_quota = 1;
 				break;
 			case DSN_CLASS_TEMP:
 			default:
-				TRACE(TRACE_ERR, "unknown temporary failure in sort_and_deliver for useridnr [%llu]", *useridnr);
+				TRACE(TRACE_ERR, "unknown temporary failure in sort_and_deliver for useridnr [%lu]", *useridnr);
 				temp = 1;
 				break;
 			}
@@ -2781,7 +2781,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
 	if (! db_delete_message(tmpid)) 
-		TRACE(TRACE_ERR, "failed to delete temporary message [%llu]", message->id);
+		TRACE(TRACE_ERR, "failed to delete temporary message [%lu]", message->id);
 	TRACE(TRACE_DEBUG, "temporary message deleted from database. Done.");
 
 	return 0;

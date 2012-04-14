@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -45,7 +45,7 @@ const char *IMAP_COMMANDS[] = {
 };
 
 extern int selfpipe[2];
-extern serverConfig_t *server_conf;
+extern ServerConfig_T *server_conf;
 extern GAsyncQueue *queue;
 
 const char AcceptedTagChars[] =
@@ -213,7 +213,7 @@ static int imap_session_printf(ImapSession * self, char * message, ...)
 static void send_greeting(ImapSession *session)
 {
 	/* greet user */
-	field_t banner;
+	Field_T banner;
 	GETCONFIGVALUE("banner", "IMAP", banner);
 	if (strlen(banner) > 0)
 		imap_session_printf(session, "* OK [CAPABILITY %s] %s\r\n", Capa_as_string(session->preauth_capa), banner);
@@ -444,7 +444,7 @@ static void reset_callbacks(ImapSession *session)
 int imap_handle_connection(client_sock *c)
 {
 	ImapSession *session;
-	clientbase_t *ci;
+	ClientBase_T *ci;
 
 	if (c)
 		ci = client_init(c);
@@ -573,7 +573,7 @@ void _ic_cb_leave(gpointer data)
 
 static void imap_unescape_args(ImapSession *session)
 {
-	u64_t i = 0;
+	uint64_t i = 0;
 	assert(session->command_type);
 	switch (session->command_type) {
 		case IMAP_COMM_EXAMINE:
@@ -597,7 +597,7 @@ static void imap_unescape_args(ImapSession *session)
 	}
 #if 1
 	for (i = 0; session->args[i]; i++) { 
-		TRACE(TRACE_DEBUG, "[%p] arg[%llu]: '%s'\n", session, i, session->args[i]); 
+		TRACE(TRACE_DEBUG, "[%p] arg[%lu]: '%s'\n", session, i, session->args[i]); 
 	}
 #endif
 

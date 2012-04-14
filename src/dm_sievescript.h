@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef  _DM_SIEVESCRIPT_H
-#define  _DM_SIEVESCRIPT_H
+#ifndef  DM_SIEVESCRIPT_H
+#define  DM_SIEVESCRIPT_H
 
 #include "dbmail.h"
 
@@ -40,7 +40,7 @@
  *        - 0 on success
  * \attention caller should free the returned script
  */
-int dm_sievescript_getbyname(u64_t user_idnr, char *scriptname, char **script);
+int dm_sievescript_getbyname(uint64_t user_idnr, char *scriptname, char **script);
 /**
  * \brief Check if the user has an active sieve script.
  * \param user_idnr user id
@@ -49,8 +49,8 @@ int dm_sievescript_getbyname(u64_t user_idnr, char *scriptname, char **script);
  *        - 1 when user has an active script
  *        - 0 when user doesn't have an active script
  */
-int dm_sievescript_isactive(u64_t user_idnr);
-int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname);
+int dm_sievescript_isactive(uint64_t user_idnr);
+int dm_sievescript_isactive_byname(uint64_t user_idnr, const char *scriptname);
 /**
  * \brief get the name of the active sieve script for a user
  * \param user_idnr user id
@@ -62,7 +62,7 @@ int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname);
  *        - 0 on success
  * \attention caller should free the returned script name
  */
-int dm_sievescript_get(u64_t user_idnr, char **scriptname);
+int dm_sievescript_get(uint64_t user_idnr, char **scriptname);
 /**
  * \brief get a list of sieve scripts for a user
  * \param user_idnr user id
@@ -72,7 +72,7 @@ int dm_sievescript_get(u64_t user_idnr, char **scriptname);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_list(u64_t user_idnr, GList **scriptlist);
+int dm_sievescript_list(uint64_t user_idnr, GList **scriptlist);
 /**
  * \brief rename a sieve script for a user
  * \param user_idnr user id
@@ -84,7 +84,7 @@ int dm_sievescript_list(u64_t user_idnr, GList **scriptlist);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname);
+int dm_sievescript_rename(uint64_t user_idnr, char *scriptname, char *newname);
 /**
  * \brief add a sieve script for a user
  * \param user_idnr user id
@@ -96,7 +96,7 @@ int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script);
+int dm_sievescript_add(uint64_t user_idnr, char *scriptname, char *script);
 /**
  * \brief deactivate a sieve script for a user
  * \param user_idnr user id
@@ -107,7 +107,7 @@ int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_deactivate(u64_t user_idnr, char *scriptname);
+int dm_sievescript_deactivate(uint64_t user_idnr, char *scriptname);
 /**
  * \brief activate a sieve script for a user
  * \param user_idnr user id
@@ -118,7 +118,7 @@ int dm_sievescript_deactivate(u64_t user_idnr, char *scriptname);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_activate(u64_t user_idnr, char *scriptname);
+int dm_sievescript_activate(uint64_t user_idnr, char *scriptname);
 /**
  * \brief delete a sieve script for a user
  * \param user_idnr user id
@@ -128,7 +128,7 @@ int dm_sievescript_activate(u64_t user_idnr, char *scriptname);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_delete(u64_t user_idnr, char *scriptname);
+int dm_sievescript_delete(uint64_t user_idnr, char *scriptname);
 /**
  * \brief checks to see if the user has space for a script
  * \param user_idnr user id
@@ -138,7 +138,7 @@ int dm_sievescript_delete(u64_t user_idnr, char *scriptname);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_quota_check(u64_t user_idnr, u64_t scriptlen);
+int dm_sievescript_quota_check(uint64_t user_idnr, uint64_t scriptlen);
 /**
  * \brief sets the sieve script quota for a user
  * \param user_idnr user id
@@ -147,7 +147,7 @@ int dm_sievescript_quota_check(u64_t user_idnr, u64_t scriptlen);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_quota_set(u64_t user_idnr, u64_t quotasize);
+int dm_sievescript_quota_set(uint64_t user_idnr, uint64_t quotasize);
 /**
  * \brief gets the current sieve script quota for a user
  * \param user_idnr user id
@@ -156,6 +156,6 @@ int dm_sievescript_quota_set(u64_t user_idnr, u64_t quotasize);
  *        - -1 on database failure
  *        - 0 on success
  */
-int dm_sievescript_quota_get(u64_t user_idnr, u64_t * quotasize);
+int dm_sievescript_quota_get(uint64_t user_idnr, uint64_t * quotasize);
 
 #endif

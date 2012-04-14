@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -28,8 +28,8 @@
 #define T Cache_T
 
 struct T {
-	u64_t id;
-	u64_t size;
+	uint64_t id;
+	uint64_t size;
 	Mem_T memdump;
 	Mem_T tmpdump;
 	int file_dumped;
@@ -64,9 +64,9 @@ T Cache_new(void)
 	return C;
 }
 
-u64_t Cache_set_dump(T C, char *buf, int dumptype)
+uint64_t Cache_set_dump(T C, char *buf, int dumptype)
 {
-	u64_t outcnt = 0;
+	uint64_t outcnt = 0;
 	Mem_T M;
 
 	switch (dumptype) {
@@ -105,12 +105,12 @@ void Cache_clear(T C)
 }
 
 
-u64_t Cache_update(T C, DbmailMessage *message, int filter)
+uint64_t Cache_update(T C, DbmailMessage *message, int filter)
 {
-	u64_t tmpcnt = 0, outcnt = 0;
+	uint64_t tmpcnt = 0, outcnt = 0;
 	char *crlf = NULL, *buf = NULL;
 
-	TRACE(TRACE_DEBUG,"[%p] C->id[%llu] message->id[%llu]", C, C->id, message->id);
+	TRACE(TRACE_DEBUG,"[%p] C->id[%lu] message->id[%lu]", C, C->id, message->id);
 
 	if (C->id != message->id) {
 
@@ -157,7 +157,7 @@ u64_t Cache_update(T C, DbmailMessage *message, int filter)
 
 	}
 
-	TRACE(TRACE_DEBUG,"C->size[%llu], outcnt[%llu]", C->size, outcnt);	
+	TRACE(TRACE_DEBUG,"C->size[%lu], outcnt[%lu]", C->size, outcnt);	
 
 	return outcnt;
 }
@@ -170,7 +170,7 @@ void Cache_set_memdump(T C, Mem_T M)
 	C->memdump = M;
 }
 
-u64_t Cache_get_size(T C)
+uint64_t Cache_get_size(T C)
 {
 	assert(C);
 	return C->size;

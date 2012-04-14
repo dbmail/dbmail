@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2008-2011 NFG Net Facilities Group BV, support@nfg.nl
+ Copyright (C) 2008-2012 NFG Net Facilities Group BV, support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -35,7 +35,7 @@
 struct T {
 	struct evhttp_request *req;
 	void *data;
-	u64_t user_id;
+	uint64_t user_id;
 	const char *uri;
 	const char *controller;
 	const char *id;
@@ -43,7 +43,7 @@ struct T {
 	const char *arg;
 	struct evkeyvalq *GET;
 	struct evkeyvalq *POST;
-	clientbase_t *ci;
+	ClientBase_T *ci;
 	void (*cb)(T);
 	char **parts;
 };
@@ -76,7 +76,7 @@ static gboolean Request_user_auth(T R, char *token)
 	gchar **array;
 	array = g_strsplit(token, ":", 2);
 	if (array[0] && array[1]) {
-		u64_t user_id = 0;
+		uint64_t user_id = 0;
 		const gchar *username, *password;
 		username = array[0];
 		password = array[1];
@@ -94,8 +94,8 @@ static gboolean Request_user_auth(T R, char *token)
 static gboolean Request_basic_auth(T R)
 {
 	const char *auth;
-	field_t realm;
-	memset(realm,0,sizeof(field_t));
+	Field_T realm;
+	memset(realm,0,sizeof(Field_T));
 	config_get_value("realm", "HTTP", realm);
 	if (! strlen(realm))
 		strcpy(realm,"DBMail HTTP Access");
@@ -107,11 +107,11 @@ static gboolean Request_basic_auth(T R)
 		return FALSE;
 	}
 	if (strncmp(auth,"Basic ", 6) == 0) {
-		field_t userpw;
+		Field_T userpw;
 		gsize len;
 		guchar *s;
 		gchar *safe;
-		memset(userpw,0,sizeof(field_t));
+		memset(userpw,0,sizeof(Field_T));
 		config_get_value("admin", "HTTP", userpw);
 		auth+=6;
 		TRACE(TRACE_DEBUG, "auth [%s]", auth);
@@ -218,7 +218,7 @@ T Request_new(struct evhttp_request *req, void *data)
 	return R;
 }
 
-u64_t Request_getUser(T R)
+uint64_t Request_getUser(T R)
 {
 	return R->user_id;
 }

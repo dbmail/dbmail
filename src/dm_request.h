@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2008-2011 NFG Net Facilities Group BV, support@nfg.nl
+ Copyright (C) 2008-2012 NFG Net Facilities Group BV, support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -34,7 +34,7 @@ extern void     Request_header(T, const char *, const char *);
 extern void     Request_setContentType(T, const char *);
 extern void     Request_free(T *);
 
-extern u64_t              Request_getUser(T R);
+extern uint64_t              Request_getUser(T R);
 extern const char *       Request_getController(T);
 extern const char *       Request_getId(T);
 extern const char *       Request_getMethod(T);

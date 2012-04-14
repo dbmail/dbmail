@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2005-2011 NFG Net Facilities Group BV support@nfg.nl
+ *  Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -42,7 +42,7 @@ int imap_before_smtp = 0;
 	
 void init_testuser1(void) 
 {
-        u64_t user_idnr;
+        uint64_t user_idnr;
 
 	char user1[] = "testuser1";
 	char user2[] = "testuser2";
@@ -106,7 +106,7 @@ START_TEST(test_insert_messages)
 	DbmailMessage *message;
 	GList *dsnusers = NULL;
 	GString *tmp;
-	deliver_to_user_t *dsnuser = g_new0(deliver_to_user_t,1);
+	Delivery_T *dsnuser = g_new0(Delivery_T,1);
 	
 	message = dbmail_message_new();
 	tmp = g_string_new(multipart_message);
@@ -144,8 +144,8 @@ END_TEST
  *     -  1 on success
  */
 //int store_message_in_blocks(const char* message,
-//				   u64_t message_size,
-//				   u64_t msgidnr);
+//				   uint64_t message_size,
+//				   uint64_t msgidnr);
 
 
 
@@ -163,11 +163,11 @@ END_TEST
  *
  */
 
-static u64_t get_first_user_idnr(void);
+static uint64_t get_first_user_idnr(void);
 
-u64_t get_first_user_idnr(void)
+uint64_t get_first_user_idnr(void)
 {
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	GList *users = auth_get_known_users();
 	users = g_list_first(users);
 	auth_user_exists((char *)users->data,&user_idnr);
@@ -225,10 +225,10 @@ END_TEST
  *    -  0 if user not found
  *    -  1 otherwise
  */
-//int auth_user_exists(const char *username, u64_t * user_idnr);
+//int auth_user_exists(const char *username, uint64_t * user_idnr);
 START_TEST(test_auth_user_exists)
 {
-	u64_t uid;
+	uint64_t uid;
 	int result;
 	result = auth_user_exists(DBMAIL_DELIVERY_USERNAME,&uid);
 	fail_unless(result==1,"auth_user_exists error return value");
@@ -262,13 +262,13 @@ END_TEST
  *   - -1 on error
  *   -  1 on success
  */
-//int auth_getclientid(u64_t user_idnr, u64_t * client_idnr);
+//int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr);
 
 START_TEST(test_auth_getclientid)
 {
 	int result;
-	u64_t client_idnr;
-	u64_t user_idnr = get_first_user_idnr();
+	uint64_t client_idnr;
+	uint64_t user_idnr = get_first_user_idnr();
 	result = auth_getclientid(user_idnr, &client_idnr);
 	fail_unless(result==1,"auth_getclientid failed");
 	
@@ -286,12 +286,12 @@ END_TEST
  *        maxmail_size of 0.
  *     -  1 otherwise
  */
-//int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size);
+//int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size);
 START_TEST(test_auth_getmaxmailsize)
 {
 	int result;
-	u64_t maxmail_size;
-	u64_t user_idnr = get_first_user_idnr();
+	uint64_t maxmail_size;
+	uint64_t user_idnr = get_first_user_idnr();
 	result = auth_getmaxmailsize(user_idnr, &maxmail_size);
 	fail_unless(result>=0,"auth_getmaxmailsize failed");
 	//fail_unless(maxmail_size>=0,"auth_getmaxmailsize return illegal maxmail_size");
@@ -309,11 +309,11 @@ END_TEST
  * \return
  *    - NULL if error
  */
-//char *auth_getencryption(u64_t user_idnr);
+//char *auth_getencryption(uint64_t user_idnr);
 START_TEST(test_auth_getencryption)
 {
 	char * result = NULL;
-	u64_t user_idnr = get_first_user_idnr();
+	uint64_t user_idnr = get_first_user_idnr();
 	result = auth_getencryption(user_idnr);
 	fail_unless(result!=NULL,"auth_getencryption failed");
 	g_free(result);
@@ -357,12 +357,12 @@ END_TEST
  *     -  1 on success
  */
 //int auth_adduser(const char *username, const char *password, const char *enctype,
-//		 u64_t clientid, u64_t maxmail, u64_t * user_idnr);
+//		 uint64_t clientid, uint64_t maxmail, uint64_t * user_idnr);
 
 START_TEST(test_auth_adduser)
 {
 	int result;
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	result = auth_adduser("sometestfoouser","sometestfoopass", "md5", 101, 1024000, &user_idnr);
 	fail_unless(result==1,"auth_adduser failed");
 	fail_unless(user_idnr > 0, "auth_adduser returned invalid user_idnr");
@@ -393,10 +393,10 @@ END_TEST
  *      - -1 on failure
  *      -  0 on success
  */
-//int auth_change_username(u64_t user_idnr, const char *new_name);
+//int auth_change_username(uint64_t user_idnr, const char *new_name);
 START_TEST(test_auth_change_username)
 {
-	u64_t user_idnr, new_idnr;
+	uint64_t user_idnr, new_idnr;
 	char *old="beforerename";
 	char *new="afterrename";
 	int result;
@@ -419,11 +419,11 @@ END_TEST
  *    - -1 on failure
  *    -  0 on success
  */
-//int auth_change_password(u64_t user_idnr,
+//int auth_change_password(uint64_t user_idnr,
 //			 const char *new_pass, const char *enctype);
 START_TEST(test_auth_change_password)
 {
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	int result;
 	char *userid = "testchangepass";
 	auth_adduser(userid,"sometestpass","md5", 101, 1002400, &user_idnr);
@@ -441,10 +441,10 @@ END_TEST
  *    - -1 on failure
  *    -  0 on success
  */
-//int auth_change_clientid(u64_t user_idnr, u64_t new_cid);
+//int auth_change_clientid(uint64_t user_idnr, uint64_t new_cid);
 START_TEST(test_auth_change_clientid)
 {
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	int result;
 	char *userid = "testchangeclientid";
 	auth_adduser(userid, "testpass", "md5", 101, 1000, &user_idnr);
@@ -462,10 +462,10 @@ END_TEST
  *    - -1 on failure
  *    -  0 on success
  */
-//int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size);
+//int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size);
 START_TEST(test_auth_change_mailboxsize)
 {
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	int result;
 	char *userid = "testchangemaxm";
 	auth_adduser(userid, "testpass", "md5", 101, 1000, &user_idnr);
@@ -482,17 +482,17 @@ END_TEST
  * \param username 
  * \param password
  * \param user_idnr will hold the user_idnr after return. Must be a pointer
- * to a valid u64_t variable on call.
+ * to a valid uint64_t variable on call.
  * \return
  *     - -1 on error
  *     -  0 if not validated
  *     -  1 if OK
  */
-//int auth_validate(char *username, char *password, u64_t * user_idnr);
+//int auth_validate(char *username, char *password, uint64_t * user_idnr);
 
-static clientbase_t * ci_new(void)
+static ClientBase_T * ci_new(void)
 {
-	clientbase_t *ci = g_new0(clientbase_t,1);
+	ClientBase_T *ci = g_new0(ClientBase_T,1);
 	FILE *fd = fopen("/dev/null","w");
 	ci->rx = fileno(stdin);
 	ci->tx = fileno(fd);
@@ -503,9 +503,9 @@ static clientbase_t * ci_new(void)
 START_TEST(test_auth_validate) 
 {
 	int result;
-	clientbase_t *ci = ci_new();
+	ClientBase_T *ci = ci_new();
 
-	u64_t user_idnr = 0;
+	uint64_t user_idnr = 0;
 	result = auth_validate(ci,"testuser1","test",&user_idnr);
 	fail_unless(result==TRUE,"auth_validate positive failure");
 	fail_unless(user_idnr > 0,"auth_validate couldn't find user_idnr");
@@ -526,7 +526,7 @@ END_TEST
  *      -  0 if not validated
  *      -  user_idrn if OK
  */
-//u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
+//uint64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 //			char *apop_stamp);
 /**
  * \brief get username for a user_idnr
@@ -536,11 +536,11 @@ END_TEST
  *    - username otherwise
  * \attention caller should free username string
  */
-//char *auth_get_userid(u64_t user_idnr);
+//char *auth_get_userid(uint64_t user_idnr);
 START_TEST(test_auth_get_userid)
 {
-	u64_t testidnr;
-	u64_t user_idnr = get_first_user_idnr();
+	uint64_t testidnr;
+	uint64_t user_idnr = get_first_user_idnr();
 	char *username = auth_get_userid(user_idnr);
 	fail_unless(strlen(username)>3,"auth_get_userid failed");
 	auth_user_exists(username, &testidnr);
@@ -559,8 +559,8 @@ END_TEST
  *      - -1 on database error
  *      -  1 on success
  */
-//int auth_get_users_from_clientid(u64_t client_id, 
-//			       u64_t ** user_ids,
+//int auth_get_users_from_clientid(uint64_t client_id, 
+//			       uint64_t ** user_ids,
 //			       unsigned *num_users);
 
 /**
@@ -568,10 +568,10 @@ END_TEST
  * \param user_idnr idnr of user
  * \return aliases list of aliases
  */
-//GList * auth_get_user_aliases(u64_t user_idnr);
+//GList * auth_get_user_aliases(uint64_t user_idnr);
 START_TEST(test_auth_get_user_aliases)
 {
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	char *username="testuser1";
 	GList *aliases;
 	int result;
@@ -590,12 +590,12 @@ END_TEST
  *        -  0 on success
  *        -  1 if alias already exists for given user
  */
-//int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid);
+//int auth_addalias(uint64_t user_idnr, const char *alias, uint64_t clientid);
 
 START_TEST(test_auth_addalias)
 {
 	int result;
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	char *username="testuser1";
 	result = auth_user_exists(username,&user_idnr);
 	result = auth_addalias(user_idnr,"addalias@foobar.org",0);
@@ -613,7 +613,7 @@ END_TEST
  *        - 1 if deliver_to already exists for given alias
  */
 //int auth_addalias_ext(const char *alias, const char *deliver_to,
-//		    u64_t clientid);
+//		    uint64_t clientid);
 START_TEST(test_auth_addalias_ext)
 {
 	int result;
@@ -629,11 +629,11 @@ END_TEST
  *         - -1 on failure
  *         - 0 on success
  */
-//int auth_removealias(u64_t user_idnr, const char *alias);
+//int auth_removealias(uint64_t user_idnr, const char *alias);
 START_TEST(test_auth_removealias)
 {
 	int result;
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	char *username="testuser1";
 	result = auth_user_exists(username,&user_idnr);
 	result = auth_removealias(user_idnr,"addalias@foobar.org");
@@ -721,7 +721,7 @@ START_TEST(test_g_tree_keys)
 {
 	GTree *a;
 	GList *akeys;
-	u64_t *k, *v;
+	uint64_t *k, *v;
 	int i=0;
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
@@ -734,8 +734,8 @@ START_TEST(test_g_tree_keys)
 	g_list_free(akeys);
 	
 	for (i=0; i<4; i++) {
-		k = g_new0(u64_t,1);
-		v = g_new0(u64_t,1);
+		k = g_new0(uint64_t,1);
+		v = g_new0(uint64_t,1);
 		*k = i;
 		*v = i;
 		g_tree_insert(a,k,v);
@@ -760,12 +760,12 @@ END_TEST
  * for their construction.
  */
 
-static void tree_add_key(GTree *t, u64_t u)
+static void tree_add_key(GTree *t, uint64_t u)
 {
-	u64_t *k, *v;
+	uint64_t *k, *v;
 
-	k = g_new0(u64_t,1);
-	v = g_new0(u64_t,1);
+	k = g_new0(uint64_t,1);
+	v = g_new0(uint64_t,1);
 	*k = u;
 	*v = u;
 	g_tree_insert(t,k,v);
@@ -773,7 +773,7 @@ static void tree_add_key(GTree *t, u64_t u)
 
 START_TEST(test_g_tree_merge_not)
 {
-	u64_t r = 0;
+	uint64_t r = 0;
 	GTree *a, *b;
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
@@ -808,7 +808,7 @@ END_TEST
 
 START_TEST(test_g_tree_merge_or)
 {
-	u64_t r = 0;
+	uint64_t r = 0;
 	GTree *a, *b;
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
@@ -829,7 +829,7 @@ END_TEST
 
 START_TEST(test_g_tree_merge_and)
 {
-	u64_t r = 0;
+	uint64_t r = 0;
 	GTree *a, *b;
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);

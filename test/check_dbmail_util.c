@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2005-2011 NFG Net Facilities Group BV support@nfg.nl
+ *   Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -56,14 +56,14 @@ void teardown(void)
 }
 START_TEST(test_allocate)
 {
-	u64_t i = 200000;
+	uint64_t i = 200000;
 	GList *l = NULL;
-	u64_t *id;
-	u64_t *rows = g_new0(u64_t, i);
+	uint64_t *id;
+	uint64_t *rows = g_new0(uint64_t, i);
 	g_free(rows);
 
 	while (i-- > 0) {
-		id = g_new0(u64_t, 1);
+		id = g_new0(uint64_t, 1);
 		*id = i;
 		l = g_list_prepend(l, id);
 	}

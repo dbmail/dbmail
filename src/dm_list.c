@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -79,12 +79,12 @@ GList *g_list_slices_u64(GList *list, unsigned limit)
 	list = g_list_first(list);
 	while(list) {
 		slice = g_string_new("");
-		g_string_append_printf(slice,"%llu",*(u64_t *)list->data);
+		g_string_append_printf(slice,"%lu",*(uint64_t *)list->data);
 		for (i=1; i<limit; i++) {
 			if (! g_list_next(list)) 
 				break;
 			list = g_list_next(list);
-			g_string_append_printf(slice,",%llu", *(u64_t *)list->data);
+			g_string_append_printf(slice,",%lu", *(uint64_t *)list->data);
 		}
 		new = g_list_append_printf(new, "%s", slice->str);
 		g_string_free(slice,TRUE);
@@ -135,18 +135,18 @@ GString * g_list_join(GList * list, const gchar * sep)
 }
 GString * g_list_join_u64(GList * list, const gchar * sep)
 {
-	u64_t *token;
+	uint64_t *token;
 	GString *string = g_string_new("");
 	if (sep == NULL)
 		sep="";
 	if (list == NULL)
 		return string;
 	list = g_list_first(list);
-	token = (u64_t*)list->data;
-	g_string_append_printf(string,"%llu",*token);
+	token = (uint64_t*)list->data;
+	g_string_append_printf(string,"%lu",*token);
 	while((list = g_list_next(list))) {
-		token = (u64_t*)list->data;
-		g_string_append_printf(string,"%s%llu", sep,*token);
+		token = (uint64_t*)list->data;
+		g_string_append_printf(string,"%s%lu", sep,*token);
 		if (! g_list_next(list))
 			break;
 	}

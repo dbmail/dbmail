@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -17,8 +17,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  
 */
-#ifndef _DM_CONFIG_H
-#define _DM_CONFIG_H
+#ifndef DM_CONFIG_H
+#define DM_CONFIG_H
 
 /**
  * \brief read configuration from filename
@@ -43,8 +43,8 @@ void config_free(void);
  * \attention value is set to a string beginning with a '\\0' 
  * if no configuration item with name is found in items.
  */
-int config_get_value(const field_t name, const char *service_name,
-                     /*@out@*/ field_t value);
+int config_get_value(const Field_T name, const char *service_name,
+                     /*@out@*/ Field_T value);
 
 /* some common used functions reading config options */
 /**
@@ -62,10 +62,10 @@ void SetTraceLevel(const char *service_name);
 
 void pidfile_create(const char *pidFile, pid_t pid);
 
-void config_get_logfiles(serverConfig_t *config, const char * const service);
+void config_get_logfiles(ServerConfig_T *config, const char * const service);
 
-char * config_get_pidfile(serverConfig_t *config, const char *name);
-char * config_get_statefile(serverConfig_t *config, const char *name);
+char * config_get_pidfile(ServerConfig_T *config, const char *name);
+char * config_get_statefile(ServerConfig_T *config, const char *name);
 
 
 

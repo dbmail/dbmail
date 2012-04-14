@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
  Copyright (C) 2006 Aaron Stone aaron@serendipity.cx
 
  This program is free software; you can redistribute it and/or 
@@ -34,10 +34,10 @@ extern int imap_before_smtp;
 
 int main(int argc, char *argv[])
 {
-	serverConfig_t config;
+	ServerConfig_T config;
 	int result;
 	openlog(PNAME, LOG_PID, LOG_MAIL);
-	memset(&config, 0, sizeof(serverConfig_t));
+	memset(&config, 0, sizeof(ServerConfig_T));
 	result = server_getopt(&config, "IMAP", argc, argv);
 	if (result == -1) goto shutdown;
 	if (result == 1) {

@@ -1,6 +1,6 @@
 /*
  Copyright (C) 2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -43,22 +43,22 @@ static const char acl_right_chars[] = "lrswipkxteacd";
 //{'l','r','s','w','i','p','k','x','t','e','a','c','d'};
 
 /* local functions */
-static ACLRight_t acl_get_right_from_char(char right_char);
-static int acl_change_rights(u64_t userid, u64_t mboxid,
+static ACLRight acl_get_right_from_char(char right_char);
+static int acl_change_rights(uint64_t userid, uint64_t mboxid,
 			     const char *rightsstring, int set);
-static int acl_replace_rights(u64_t userid, u64_t mboxid,
+static int acl_replace_rights(uint64_t userid, uint64_t mboxid,
 			      const char *rightsstring);
-static int acl_set_one_right(u64_t userid, u64_t mboxid,
-			     ACLRight_t right, int set);
-static int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid,
+static int acl_set_one_right(uint64_t userid, uint64_t mboxid,
+			     ACLRight right, int set);
+static int acl_get_rightsstring_identifier(char *identifier, uint64_t mboxid,
 					   /*@out@*/ char *rightsstring);
-static int acl_get_rightsstring(u64_t userid, u64_t mboxid,
+static int acl_get_rightsstring(uint64_t userid, uint64_t mboxid,
 				/*@out@*/ char *rightsstring);
 
 
-int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right)
+int acl_has_right(MailboxState_T S, uint64_t userid, ACLRight right)
 {
-	u64_t anyone_userid;
+	uint64_t anyone_userid;
 	int test;
 	
 	switch(right) {
@@ -98,7 +98,7 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right)
 	return FALSE;
 }
 
-int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
+int acl_set_rights(uint64_t userid, uint64_t mboxid, const char *rightsstring)
 {
 	if (rightsstring[0] == '-')
 		return acl_change_rights(userid, mboxid, rightsstring, 0);
@@ -107,7 +107,7 @@ int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
 	return acl_replace_rights(userid, mboxid, rightsstring);
 }
 
-ACLRight_t acl_get_right_from_char(char right_char)
+ACLRight acl_get_right_from_char(char right_char)
 {
 	switch (right_char) {
 	case 'l':
@@ -139,7 +139,7 @@ ACLRight_t acl_get_right_from_char(char right_char)
 }
 
 int
-acl_change_rights(u64_t userid, u64_t mboxid, const char *rightsstring,
+acl_change_rights(uint64_t userid, uint64_t mboxid, const char *rightsstring,
 		  int set)
 {
 	size_t i;
@@ -165,7 +165,7 @@ acl_change_rights(u64_t userid, u64_t mboxid, const char *rightsstring,
 }
 
 int
-acl_replace_rights(u64_t userid, u64_t mboxid, const char *rights)
+acl_replace_rights(uint64_t userid, uint64_t mboxid, const char *rights)
 {
 	unsigned i;
 	int set;
@@ -173,7 +173,7 @@ acl_replace_rights(u64_t userid, u64_t mboxid, const char *rights)
 
 	rightsstring = g_strndup(rights, 256);
 
-	TRACE(TRACE_DEBUG, "replacing rights for user [%llu], mailbox [%llu] to %s", userid, mboxid, rightsstring);
+	TRACE(TRACE_DEBUG, "replacing rights for user [%lu], mailbox [%lu] to %s", userid, mboxid, rightsstring);
 
 	// RFC 2086 to RFC 4314 mapping
 	if (strchr(rightsstring, (int) 'c')) 
@@ -199,7 +199,7 @@ acl_replace_rights(u64_t userid, u64_t mboxid, const char *rights)
 }
 
 int
-acl_set_one_right(u64_t userid, u64_t mboxid, ACLRight_t right, int set)
+acl_set_one_right(uint64_t userid, uint64_t mboxid, ACLRight right, int set)
 {
 	return db_acl_set_right(userid, mboxid, acl_right_strings[right],
 				set);
@@ -207,15 +207,15 @@ acl_set_one_right(u64_t userid, u64_t mboxid, ACLRight_t right, int set)
 
 
 /*
-int acl_delete_acl(u64_t userid, u64_t mboxid)
+int acl_delete_acl(uint64_t userid, uint64_t mboxid)
 {
 	return db_acl_delete_acl(userid, mboxid);
 }
 */
 
-char *acl_get_acl(u64_t mboxid)
+char *acl_get_acl(uint64_t mboxid)
 {
-	u64_t userid;
+	uint64_t userid;
 	char *username;
 	size_t acl_string_size = 0;
 	size_t acl_strlen;
@@ -230,7 +230,7 @@ char *acl_get_acl(u64_t mboxid)
 	result = db_acl_get_identifier(mboxid, &identifier_list);
 
 	if (result < 0) {
-		TRACE(TRACE_ERR, "error when getting identifier list for mailbox [%llu].", mboxid);
+		TRACE(TRACE_ERR, "error when getting identifier list for mailbox [%lu].", mboxid);
 		g_list_destroy(identifier_list);
 		return NULL;
 	}
@@ -245,7 +245,7 @@ char *acl_get_acl(u64_t mboxid)
 	}
 
 	if ((username = auth_get_userid(userid)) == NULL) {
-		TRACE(TRACE_ERR, "error getting username for user [%llu]", userid);
+		TRACE(TRACE_ERR, "error getting username for user [%lu]", userid);
 		g_list_destroy(identifier_list);
 		return NULL;
 	}
@@ -296,7 +296,7 @@ char *acl_get_acl(u64_t mboxid)
 	return g_strstrip(acl_string);
 }
 
-char *acl_listrights(u64_t userid, u64_t mboxid)
+char *acl_listrights(uint64_t userid, uint64_t mboxid)
 {
 	int result;
 	
@@ -316,7 +316,7 @@ char *acl_listrights(u64_t userid, u64_t mboxid)
 	return g_strdup(acl_right_chars);
 }
 
-char *acl_myrights(u64_t userid, u64_t mboxid)
+char *acl_myrights(uint64_t userid, uint64_t mboxid)
 {
 	char *rightsstring;
 
@@ -335,9 +335,9 @@ char *acl_myrights(u64_t userid, u64_t mboxid)
 }
 
 
-int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid, char *rightsstring)
+int acl_get_rightsstring_identifier(char *identifier, uint64_t mboxid, char *rightsstring)
 {
-	u64_t userid;
+	uint64_t userid;
 
 	assert(rightsstring);
 	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
@@ -350,10 +350,10 @@ int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid, char *rights
 	return acl_get_rightsstring(userid, mboxid, rightsstring);
 }
 
-int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
+int acl_get_rightsstring(uint64_t userid, uint64_t mboxid, char *rightsstring)
 {
 	int result;
-	u64_t owner_idnr;
+	uint64_t owner_idnr;
 	MailboxState_T S;
 	struct ACLMap map;
 
@@ -364,7 +364,7 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 		return result;
 
 	if (owner_idnr == userid) {
-		TRACE(TRACE_DEBUG, "mailbox [%llu] is owned by user [%llu], giving all rights", mboxid, userid);
+		TRACE(TRACE_DEBUG, "mailbox [%lu] is owned by user [%lu], giving all rights", mboxid, userid);
 		g_strlcat(rightsstring, acl_right_chars, NR_ACL_FLAGS+1);
 		return 1;
 	}

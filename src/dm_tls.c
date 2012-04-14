@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
   Copyright (c) 2008 John T. Guthrie III guthrie@counterexample.org
 
   This program is free software; you can redistribute it and/or 
@@ -46,7 +46,7 @@ SSL_CTX *tls_init(void) {
 }
 
 /* load the certificates into the context */
-void tls_load_certs(serverConfig_t *conf) 
+void tls_load_certs(ServerConfig_T *conf) 
 {
 	gboolean e = FALSE;
 	/* load CA file */
@@ -89,7 +89,7 @@ void tls_load_certs(serverConfig_t *conf)
 }
 
 /* load the ciphers into the context */
-void tls_load_ciphers(serverConfig_t *conf) {
+void tls_load_ciphers(ServerConfig_T *conf) {
 	if (conf->tls_ciphers && strlen(conf->tls_ciphers) &&
 	      SSL_CTX_set_cipher_list(tls_context, conf->tls_ciphers) == 0) {
 		TRACE(TRACE_WARNING, "Unable to set any ciphers in list [%s]: %s",

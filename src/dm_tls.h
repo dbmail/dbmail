@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -24,8 +24,8 @@
 
 SSL_CTX *tls_init(void);
 SSL *tls_setup(int);
-void tls_load_certs(serverConfig_t *);
-void tls_load_ciphers(serverConfig_t *);
+void tls_load_certs(ServerConfig_T *);
+void tls_load_ciphers(ServerConfig_T *);
 char *tls_get_error(void);
 
 #endif

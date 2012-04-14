@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2009-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2009-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -54,7 +54,7 @@ static void capa_update(T A)
 
 T Capa_new(void)
 {
-	field_t val;
+	Field_T val;
         char maxcapa[MAX_CAPASIZE];
 	T A;
 	A = g_malloc0(sizeof(*A));

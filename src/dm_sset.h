@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2010-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2010-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -26,8 +26,8 @@
  */
 
 
-#ifndef SSET_H
-#define SSET_H
+#ifndef DM_SSET_H
+#define DM_SSET_H
 
 #define T Sset_T
 

@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -24,11 +24,11 @@
 
 #include "dbmail.h"
 #define THIS_MODULE "sievescript"
-#define DBPFX _db_params.pfx
+#define DBPFX db_params.pfx
 
-extern db_param_t _db_params;
+extern DBParam_T db_params;
 
-int dm_sievescript_getbyname(u64_t user_idnr, char *scriptname, char **script)
+int dm_sievescript_getbyname(uint64_t user_idnr, char *scriptname, char **script)
 {
 	C c; R r; S s; volatile int t = FALSE;
 	assert(scriptname);
@@ -52,12 +52,12 @@ int dm_sievescript_getbyname(u64_t user_idnr, char *scriptname, char **script)
 	return t;
 }
 
-int dm_sievescript_isactive(u64_t user_idnr)
+int dm_sievescript_isactive(uint64_t user_idnr)
 {
 	return dm_sievescript_isactive_byname(user_idnr, NULL);
 }
 
-int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname)
+int dm_sievescript_isactive_byname(uint64_t user_idnr, const char *scriptname)
 {
 	C c; R r; S s; volatile int t = TRUE;
 
@@ -85,7 +85,7 @@ int dm_sievescript_isactive_byname(u64_t user_idnr, const char *scriptname)
 	return t;
 }
 
-int dm_sievescript_get(u64_t user_idnr, char **scriptname)
+int dm_sievescript_get(uint64_t user_idnr, char **scriptname)
 {
 	C c; R r; volatile int t = FALSE;
 	assert(scriptname);
@@ -93,7 +93,7 @@ int dm_sievescript_get(u64_t user_idnr, char **scriptname)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT name from %ssievescripts where owner_idnr = %llu and active = 1", DBPFX, user_idnr);
+		r = db_query(c, "SELECT name from %ssievescripts where owner_idnr = %lu and active = 1", DBPFX, user_idnr);
 		if (db_result_next(r))
 			 *scriptname = g_strdup(db_result_get(r,0));
 
@@ -107,15 +107,15 @@ int dm_sievescript_get(u64_t user_idnr, char **scriptname)
 	return t;
 }
 
-int dm_sievescript_list(u64_t user_idnr, GList **scriptlist)
+int dm_sievescript_list(uint64_t user_idnr, GList **scriptlist)
 {
 	C c; R r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
-		r = db_query(c,"SELECT name,active FROM %ssievescripts WHERE owner_idnr = %llu", DBPFX,user_idnr);
+		r = db_query(c,"SELECT name,active FROM %ssievescripts WHERE owner_idnr = %lu", DBPFX,user_idnr);
 		while (db_result_next(r)) {
-			sievescript_info_t *info = g_new0(sievescript_info_t,1);
+			sievescript_info *info = g_new0(sievescript_info,1);
 			strncpy(info->name, db_result_get(r,0), sizeof(info->name));   
 			info->active = db_result_get_int(r,1);
 			*(GList **)scriptlist = g_list_prepend(*(GList **)scriptlist, info);
@@ -130,7 +130,7 @@ int dm_sievescript_list(u64_t user_idnr, GList **scriptlist)
 	return t;
 }
 
-int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname)
+int dm_sievescript_rename(uint64_t user_idnr, char *scriptname, char *newname)
 {
 	int active = 0;
 	C c; R r; S s; volatile int t = FALSE;
@@ -182,7 +182,7 @@ int dm_sievescript_rename(u64_t user_idnr, char *scriptname, char *newname)
 	return t;
 }
 
-int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script)
+int dm_sievescript_add(uint64_t user_idnr, char *scriptname, char *script)
 {
 	C c; R r; S s; volatile int t = FALSE;
 	assert(scriptname);
@@ -228,7 +228,7 @@ int dm_sievescript_add(u64_t user_idnr, char *scriptname, char *script)
 	return t;
 }
 
-int dm_sievescript_deactivate(u64_t user_idnr, char *scriptname)
+int dm_sievescript_deactivate(uint64_t user_idnr, char *scriptname)
 {
 	C c; S s; volatile gboolean t = FALSE;
 	assert(scriptname);
@@ -248,7 +248,7 @@ int dm_sievescript_deactivate(u64_t user_idnr, char *scriptname)
 	return t;
 }
 
-int dm_sievescript_activate(u64_t user_idnr, char *scriptname)
+int dm_sievescript_activate(uint64_t user_idnr, char *scriptname)
 {
 	C c; S s; volatile gboolean t = FALSE;
 	assert(scriptname);
@@ -280,7 +280,7 @@ int dm_sievescript_activate(u64_t user_idnr, char *scriptname)
 	return t;
 }
 
-int dm_sievescript_delete(u64_t user_idnr, char *scriptname)
+int dm_sievescript_delete(uint64_t user_idnr, char *scriptname)
 {
 	C c; S s; volatile gboolean t = FALSE;
 	assert(scriptname);
@@ -300,24 +300,24 @@ int dm_sievescript_delete(u64_t user_idnr, char *scriptname)
 	return t;
 }
 
-int dm_sievescript_quota_check(u64_t user_idnr, u64_t scriptlen)
+int dm_sievescript_quota_check(uint64_t user_idnr, uint64_t scriptlen)
 {
 	/* TODO function dm_sievescript_quota_check */
-	TRACE(TRACE_DEBUG, "checking %llu sievescript quota with %llu" , user_idnr, scriptlen);
+	TRACE(TRACE_DEBUG, "checking %lu sievescript quota with %lu" , user_idnr, scriptlen);
 	return DM_SUCCESS;
 }
 
-int dm_sievescript_quota_set(u64_t user_idnr, u64_t quotasize)
+int dm_sievescript_quota_set(uint64_t user_idnr, uint64_t quotasize)
 {
 	/* TODO function dm_sievescript_quota_set */
-	TRACE(TRACE_DEBUG, "setting %llu sievescript quota with %llu" , user_idnr, quotasize);
+	TRACE(TRACE_DEBUG, "setting %lu sievescript quota with %lu" , user_idnr, quotasize);
 	return DM_SUCCESS;
 }
 
-int dm_sievescript_quota_get(u64_t user_idnr, u64_t * quotasize)
+int dm_sievescript_quota_get(uint64_t user_idnr, uint64_t * quotasize)
 {
 	/* TODO function dm_sievescript_quota_get */
-	TRACE(TRACE_DEBUG, "getting sievescript quota for %llu" , user_idnr);
+	TRACE(TRACE_DEBUG, "getting sievescript quota for %lu" , user_idnr);
 	*quotasize = 0;
 	return DM_SUCCESS;
 }

@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -31,10 +31,10 @@
 typedef struct T *T;
 
 extern T     Cache_new(void);
-extern u64_t Cache_set_dump(T C, char *buf, int dumptype);
+extern uint64_t Cache_set_dump(T C, char *buf, int dumptype);
 extern void  Cache_clear(T C);
-extern u64_t Cache_update(T C, DbmailMessage *message, int filter);
-extern u64_t Cache_get_size(T C);
+extern uint64_t Cache_update(T C, DbmailMessage *message, int filter);
+extern uint64_t Cache_get_size(T C);
 extern void  Cache_set_memdump(T C, Mem_T M);
 extern Mem_T Cache_get_memdump(T C);
 extern void  Cache_set_tmpdump(T C, Mem_T M);

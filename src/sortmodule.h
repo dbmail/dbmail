@@ -6,22 +6,22 @@
  * (c) 2005 Aaron Stone <aaron@serendipity.cx>
  */
 
-#ifndef SORTMODULE_H
-#define SORTMODULE_H
+#ifndef DM_SORTMODULE_H
+#define DM_SORTMODULE_H
 
 /* Prototypes must match with those in sort.h
  * and in the sorting drivers. */
 typedef struct {
-	sort_result_t *(* process)(u64_t user_idnr, DbmailMessage *message, const char *mailbox);
-	sort_result_t *(* validate)(u64_t user_idnr, char *scriptname);
-	void (* free_result)(sort_result_t *result);
+	SortResult_T *(* process)(uint64_t user_idnr, DbmailMessage *message, const char *mailbox);
+	SortResult_T *(* validate)(uint64_t user_idnr, char *scriptname);
+	void (* free_result)(SortResult_T *result);
 	const char *(* listextensions)(void);
-	int (* get_cancelkeep)(sort_result_t *result);
-	int (* get_reject)(sort_result_t *result);
-	const char *(* get_mailbox)(sort_result_t *result);
-	const char *(* get_errormsg)(sort_result_t *result);
-	int (* get_error)(sort_result_t *result);
-} sort_func_t;
+	int (* get_cancelkeep)(SortResult_T *result);
+	int (* get_reject)(SortResult_T *result);
+	const char *(* get_mailbox)(SortResult_T *result);
+	const char *(* get_errormsg)(SortResult_T *result);
+	int (* get_error)(SortResult_T *result);
+} sort_func;
 
 
 #endif

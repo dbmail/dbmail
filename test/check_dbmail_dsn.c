@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2006  Aaron Stone  <aaron@serendipity.cx>
- *  Copyright (c) 2006-2011 NFG Net Facilities Group BV support@nfg.nl
+ *  Copyright (c) 2006-2012 NFG Net Facilities Group BV support@nfg.nl
  *  
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -40,8 +40,8 @@ extern char *configFile;
 extern int quiet;
 extern int reallyquiet;
 
-u64_t useridnr = 0;
-u64_t useridnr_domain = 0;
+uint64_t useridnr = 0;
+uint64_t useridnr_domain = 0;
 char *username = "testfaildsn";
 char *username_domain = "testfailuser@nonexistantdomain";
 char *username_mailbox = "testfailuser+foomailbox@nonexistantdomain";
@@ -92,7 +92,7 @@ void teardown(void)
 START_TEST(test_resolve_useridnr_exists)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 
@@ -110,7 +110,7 @@ END_TEST
 START_TEST(test_resolve_useridnr_dne)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 	// This useridnr doesn't exist unless you've got a
@@ -129,7 +129,7 @@ END_TEST
 START_TEST(test_resolve_address_dne)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 
@@ -147,7 +147,7 @@ END_TEST
 START_TEST(test_resolve_alias)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 
@@ -165,7 +165,7 @@ END_TEST
 START_TEST(test_resolve_alias_mailbox)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 
@@ -183,7 +183,7 @@ END_TEST
 START_TEST(test_resolve_username)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 
@@ -201,7 +201,7 @@ END_TEST
 START_TEST(test_resolve_username_mailbox)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 
@@ -219,7 +219,7 @@ END_TEST
 START_TEST(test_resolve_domain_catchall)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 
@@ -237,7 +237,7 @@ END_TEST
 START_TEST(test_resolve_userpart_catchall)
 {
 	int res;
-	deliver_to_user_t delivery;
+	Delivery_T delivery;
 
 	dsnuser_init(&delivery);
 

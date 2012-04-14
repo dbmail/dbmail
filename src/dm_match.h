@@ -17,11 +17,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  
 */
-#ifndef _DM_MATCH_H
-#define _DM_MATCH_H
-
-/* $Id$ */
-
+#ifndef DM_MATCH_H
+#define DM_MATCH_H
 
 // See if the needle matches the haystack, given
 // than '?' means zero or one character and '*'

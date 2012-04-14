@@ -26,8 +26,8 @@
  * \author (c) 2000-2003 IC&S
  */
 
-#ifndef _DBMAIL_AUTH_H
-#define _DBMAIL_AUTH_H
+#ifndef DM_AUTH_H
+#define DM_AUTH_H
 
 #include "dbmail.h"
 
@@ -63,7 +63,7 @@ int auth_disconnect(void);
  *    -  0 if user not found
  *    -  1 otherwise
  */
-int auth_user_exists(const char *username, /*@out@*/ u64_t * user_idnr);
+int auth_user_exists(const char *username, /*@out@*/ uint64_t * user_idnr);
 
 /**
  * \brief get username for a user_idnr
@@ -73,7 +73,7 @@ int auth_user_exists(const char *username, /*@out@*/ u64_t * user_idnr);
  *    - username otherwise
  * \attention caller should free username string
  */
-char *auth_get_userid(u64_t user_idnr);
+char *auth_get_userid(uint64_t user_idnr);
 
 /**
  * \brief checks if a user_idnr exists
@@ -83,7 +83,7 @@ char *auth_get_userid(u64_t user_idnr);
  *    - 1 if user doesn't exist
  *    - -1 if something went wrong
  */
-int auth_check_userid(u64_t user_idnr);
+int auth_check_userid(uint64_t user_idnr);
 
 
 /**
@@ -113,7 +113,7 @@ GList * auth_get_known_aliases(void);
  *   - -1 on error
  *   -  1 on success
  */
-int auth_getclientid(u64_t user_idnr, u64_t * client_idnr);
+int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr);
 
 /**
  * \brief get the maximum mail size for a user
@@ -126,7 +126,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr);
  *        maxmail_size of 0.
  *     -  1 otherwise
  */
-int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size);
+int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size);
 
 /**
  * \brief returns a string describing the encryption used for the 
@@ -138,7 +138,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size);
  * \return
  *    - NULL if error
  */
-char *auth_getencryption(u64_t user_idnr);
+char *auth_getencryption(uint64_t user_idnr);
 
 /**
  * \brief as auth_check_user() but adds the numeric ID of the user found to
@@ -165,7 +165,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
  *     -  1 on success
  */
 int auth_adduser(const char *username, const char *password, const char *enctype,
-		 u64_t clientid, u64_t maxmail, u64_t * user_idnr);
+		 uint64_t clientid, uint64_t maxmail, uint64_t * user_idnr);
 /**
  * \brief delete user from the database. Does not delete the user's email!
  * \param username name of user to be deleted
@@ -183,7 +183,7 @@ int auth_delete_user(const char *username);
  *      - -1 on failure
  *      -  0 on success
  */
-int auth_change_username(u64_t user_idnr, const char *new_name);
+int auth_change_username(uint64_t user_idnr, const char *new_name);
 /**
  * \brief change a users password
  * \param user_idnr
@@ -193,7 +193,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name);
  *    - -1 on failure
  *    -  0 on success
  */
-int auth_change_password(u64_t user_idnr,
+int auth_change_password(uint64_t user_idnr,
 			 const char *new_pass, const char *enctype);
 /**
  * \brief change a users client id
@@ -203,7 +203,7 @@ int auth_change_password(u64_t user_idnr,
  *    - -1 on failure
  *    -  0 on success
  */
-int auth_change_clientid(u64_t user_idnr, u64_t new_cid);
+int auth_change_clientid(uint64_t user_idnr, uint64_t new_cid);
 /**
  * \brief change a user's mailbox size (maxmailsize)
  * \param user_idnr
@@ -212,19 +212,19 @@ int auth_change_clientid(u64_t user_idnr, u64_t new_cid);
  *    - -1 on failure
  *    -  0 on success
  */
-int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size);
+int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size);
 /**
  * \brief try to validate a user (used for login to server). 
  * \param username 
  * \param password
  * \param user_idnr will hold the user_idnr after return. Must be a pointer
- * to a valid u64_t variable on call.
+ * to a valid uint64_t variable on call.
  * \return
  *     - -1 on error
  *     -  0 if not validated
  *     -  1 if OK
  */
-int auth_validate(clientbase_t *ci, const char *username, const char *password, u64_t * user_idnr);
+int auth_validate(ClientBase_T *ci, const char *username, const char *password, uint64_t * user_idnr);
 
 /** 
  * \brief try tp validate a user using md5 hash
@@ -236,7 +236,7 @@ int auth_validate(clientbase_t *ci, const char *username, const char *password, 
  *      -  0 if not validated
  *      -  user_idrn if OK
  */
-u64_t auth_md5_validate(clientbase_t *ci, char *username, unsigned char *md5_apop_he,
+uint64_t auth_md5_validate(ClientBase_T *ci, char *username, unsigned char *md5_apop_he,
 			char *apop_stamp);
 
 /**
@@ -259,7 +259,7 @@ char *auth_get_deliver_from_alias(const char *alias);
  * 		- -1 on database failure
  * 		- 0 on success
  */
-GList * auth_get_user_aliases(u64_t user_idnr);
+GList * auth_get_user_aliases(uint64_t user_idnr);
 /**
  * \brief get a list of forwards associated with an external alias
  * \param alias the alias
@@ -280,7 +280,7 @@ GList * auth_get_aliases_ext(const char *alias);
  *        -  0 on success
  *        -  1 if alias already exists for given user
  */
-int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid);
+int auth_addalias(uint64_t user_idnr, const char *alias, uint64_t clientid);
 /**
  * \brief add an alias to deliver to an extern address
  * \param alias the alias
@@ -292,7 +292,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid);
  *        - 1 if deliver_to already exists for given alias
  */
 int auth_addalias_ext(const char *alias, const char *deliver_to,
-		    u64_t clientid);
+		    uint64_t clientid);
 /**
  * \brief remove alias for user
  * \param user_idnr user id
@@ -301,7 +301,7 @@ int auth_addalias_ext(const char *alias, const char *deliver_to,
  *         - -1 on failure
  *         - 0 on success
  */
-int auth_removealias(u64_t user_idnr, const char *alias);
+int auth_removealias(uint64_t user_idnr, const char *alias);
 /**
  * \brief remove external delivery address for an alias
  * \param alias the alias

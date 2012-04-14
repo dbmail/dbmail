@@ -1,6 +1,6 @@
 /*
  Copyright (C) 2004 IC & S dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -26,14 +26,14 @@
 
 #define THIS_MODULE "clientsession"
 
-extern serverConfig_t *server_conf;
+extern ServerConfig_T *server_conf;
 
-ClientSession_t * client_session_new(client_sock *c)
+ClientSession_T * client_session_new(client_sock *c)
 {
 	char unique_id[UID_SIZE];
 
-	ClientSession_t * session = g_new0(ClientSession_t,1);
-	clientbase_t *ci;
+	ClientSession_T * session = g_new0(ClientSession_T,1);
+	ClientBase_T *ci;
 
 	if (c)
 		ci = client_init(c);
@@ -57,7 +57,7 @@ ClientSession_t * client_session_new(client_sock *c)
 	return session;
 }
 
-void client_session_reset(ClientSession_t * session)
+void client_session_reset(ClientSession_T * session)
 {
 	dsnuser_free_list(session->rcpt);
 	session->rcpt = NULL;
@@ -85,7 +85,7 @@ void client_session_reset(ClientSession_t * session)
 	client_session_reset_parser(session);
 }
 
-void client_session_reset_parser(ClientSession_t *session)
+void client_session_reset_parser(ClientSession_T *session)
 {
 	session->parser_state = FALSE;
 	session->command_type = FALSE;
@@ -100,9 +100,9 @@ void client_session_reset_parser(ClientSession_t *session)
 	}
 }
 
-void client_session_bailout(ClientSession_t **session)
+void client_session_bailout(ClientSession_T **session)
 {
-	ClientSession_t *c = *session;
+	ClientSession_T *c = *session;
 
 	if (! c) return;
 	TRACE(TRACE_DEBUG,"[%p]", c);
@@ -121,7 +121,7 @@ void client_session_bailout(ClientSession_t **session)
 void client_session_read(void *arg)
 {
 	int state;
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 	ci_read_cb(session->ci);
 		
@@ -142,7 +142,7 @@ void client_session_read(void *arg)
 	}
 }
 
-void client_session_set_timeout(ClientSession_t *session, int timeout)
+void client_session_set_timeout(ClientSession_T *session, int timeout)
 {
 	if (session && (session->state > CLIENTSTATE_ANY) && session->ci && session->ci->timeout) {
 		int current = session->ci->timeout->tv_sec;
@@ -156,7 +156,7 @@ void client_session_set_timeout(ClientSession_t *session, int timeout)
 
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	if (what == EV_READ)
 		client_session_read(session); // drain the read-event handle
 	else if (what == EV_TIMEOUT && session->ci->cb_time)
@@ -165,7 +165,7 @@ void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 
 void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
 
 	if (session->ci->cb_write)

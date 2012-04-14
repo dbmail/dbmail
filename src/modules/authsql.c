@@ -27,8 +27,8 @@
 #include "dbmail.h"
 #define THIS_MODULE "auth"
 
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern DBParam_T db_params;
+#define DBPFX db_params.pfx
 
 int auth_connect()
 {
@@ -44,7 +44,7 @@ int auth_disconnect()
 	return 0;
 }
 
-int auth_user_exists(const char *username, u64_t * user_idnr)
+int auth_user_exists(const char *username, uint64_t * user_idnr)
 {
 	return db_user_exists(username, user_idnr);
 }
@@ -87,7 +87,7 @@ GList * auth_get_known_aliases(void)
 	return aliases;
 }
 
-int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
+int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr)
 {
 	assert(client_idnr != NULL);
 	*client_idnr = 0;
@@ -95,7 +95,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT client_idnr FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		r = db_query(c, "SELECT client_idnr FROM %susers WHERE user_idnr = %lu",DBPFX, user_idnr);
 		if (db_result_next(r))
 			*client_idnr = db_result_get_u64(r,0);
 	CATCH(SQLException)
@@ -108,7 +108,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	return t;
 }
 
-int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
+int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size)
 {
 	assert(maxmail_size != NULL);
 	*maxmail_size = 0;
@@ -116,7 +116,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT maxmail_size FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		r = db_query(c, "SELECT maxmail_size FROM %susers WHERE user_idnr = %lu",DBPFX, user_idnr);
 		if (db_result_next(r))
 			*maxmail_size = db_result_get_u64(r,0);
 	CATCH(SQLException)
@@ -130,7 +130,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 }
 
 
-char *auth_getencryption(u64_t user_idnr)
+char *auth_getencryption(uint64_t user_idnr)
 {
 	char *res = NULL;
 	C c; R r;
@@ -138,7 +138,7 @@ char *auth_getencryption(u64_t user_idnr)
 	assert(user_idnr > 0);
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT encryption_type FROM %susers WHERE user_idnr = %llu",DBPFX, user_idnr);
+		r = db_query(c, "SELECT encryption_type FROM %susers WHERE user_idnr = %lu",DBPFX, user_idnr);
 		if (db_result_next(r))
 			res = g_strdup(db_result_get(r,0));
 	CATCH(SQLException)
@@ -186,7 +186,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 	int occurences = 0;
 	GList *d = NULL;
 	char *endptr;
-	u64_t id, *uid;
+	uint64_t id, *uid;
 
 	if (checks > 20) {
 		TRACE(TRACE_ERR,"too many checks. Possible loop detected.");
@@ -208,7 +208,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 		id = strtoull(username, &endptr, 10);
 		if (*endptr == 0) {
 			/* numeric deliver-to --> this is a userid */
-			uid = g_new0(u64_t,1);
+			uid = g_new0(uint64_t,1);
 			*uid = id;
 			*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
 
@@ -236,7 +236,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 }
 
 int auth_adduser(const char *username, const char *password, const char *enctype,
-		 u64_t clientid, u64_t maxmail, u64_t * user_idnr)
+		 uint64_t clientid, uint64_t maxmail, uint64_t * user_idnr)
 {
 	*user_idnr=0; 
 	return db_user_create(username, password, enctype, clientid, maxmail, user_idnr);
@@ -249,12 +249,12 @@ int auth_delete_user(const char *username)
 }
 
 
-int auth_change_username(u64_t user_idnr, const char *new_name)
+int auth_change_username(uint64_t user_idnr, const char *new_name)
 {
 	return db_user_rename(user_idnr, new_name);
 }
 
-int auth_change_password(u64_t user_idnr, const char *new_pass, const char *enctype)
+int auth_change_password(uint64_t user_idnr, const char *new_pass, const char *enctype)
 {
 	C c; S s; volatile int t = FALSE;
 
@@ -280,17 +280,17 @@ int auth_change_password(u64_t user_idnr, const char *new_pass, const char *enct
 	return t;
 }
 
-int auth_change_clientid(u64_t user_idnr, u64_t new_cid)
+int auth_change_clientid(uint64_t user_idnr, uint64_t new_cid)
 {
-	return db_update("UPDATE %susers SET client_idnr = %llu WHERE user_idnr=%llu", DBPFX, new_cid, user_idnr);
+	return db_update("UPDATE %susers SET client_idnr = %lu WHERE user_idnr=%lu", DBPFX, new_cid, user_idnr);
 }
 
-int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
+int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 {
 	return db_change_mailboxsize(user_idnr, new_size);
 }
 
-int auth_validate(clientbase_t *ci, const char *username, const char *password, u64_t * user_idnr)
+int auth_validate(ClientBase_T *ci, const char *username, const char *password, uint64_t * user_idnr)
 {
 	int is_validated = 0;
 	char salt[13], cryptres[35], real_username[DM_USERNAME_LEN];
@@ -334,7 +334,7 @@ int auth_validate(clientbase_t *ci, const char *username, const char *password, 
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT passwd, encryption_type FROM %susers WHERE user_idnr = %llu", DBPFX, *user_idnr);
+		r = db_query(c, "SELECT passwd, encryption_type FROM %susers WHERE user_idnr = %lu", DBPFX, *user_idnr);
 		if (db_result_next(r)) {
 			dbpass = g_strdup(db_result_get(r,0));
 			encode = g_strdup(db_result_get(r,1));
@@ -436,12 +436,12 @@ int auth_validate(clientbase_t *ci, const char *username, const char *password, 
 	return (is_validated ? 1 : 0);
 }
 
-u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username,
+uint64_t auth_md5_validate(ClientBase_T *ci UNUSED, char *username,
 		unsigned char *md5_apop_he, char *apop_stamp)
 {
 	/* returns useridnr on OK, 0 on validation failed, -1 on error */
 	char *checkstring = NULL, *md5_apop_we;
-	u64_t user_idnr = 0;
+	uint64_t user_idnr = 0;
 	const char *dbpass;
 	C c; R r;
 	int t = FALSE;
@@ -452,7 +452,7 @@ u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username,
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT passwd FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		r = db_query(c, "SELECT passwd FROM %susers WHERE user_idnr = %lu", DBPFX, user_idnr);
 		if (db_result_next(r)) { /* user found */
 			/* now authenticate using MD5 hash comparisation  */
 			dbpass = db_result_get(r,0); /* value holds the password */
@@ -493,14 +493,14 @@ u64_t auth_md5_validate(clientbase_t *ci UNUSED, char *username,
 	return user_idnr;
 }
 
-char *auth_get_userid(u64_t user_idnr)
+char *auth_get_userid(uint64_t user_idnr)
 {
 	C c; R r;
 	char *result = NULL;
 	c = db_con_get();
 
 	TRY
-		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %lu", DBPFX, user_idnr);
 		if (db_result_next(r))
 			result = g_strdup(db_result_get(r,0));
 	CATCH(SQLException)
@@ -512,13 +512,13 @@ char *auth_get_userid(u64_t user_idnr)
 	return result;
 }
 
-int auth_check_userid(u64_t user_idnr)
+int auth_check_userid(uint64_t user_idnr)
 {
 	C c; R r; gboolean t = TRUE;
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %llu", DBPFX, user_idnr);
+		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %lu", DBPFX, user_idnr);
 		if (db_result_next(r))
 			t = FALSE;
 	CATCH(SQLException)
@@ -530,7 +530,7 @@ int auth_check_userid(u64_t user_idnr)
 	return t;
 }
 
-int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
+int auth_addalias(uint64_t user_idnr, const char *alias, uint64_t clientid)
 {
 	C c; R r; S s; volatile int t = FALSE;
 	INIT_QUERY;
@@ -551,7 +551,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 		r = db_stmt_query(s);
 
 		if (db_result_next(r)) {
-			TRACE(TRACE_INFO, "alias [%s] for user [%llu] already exists", alias, user_idnr);
+			TRACE(TRACE_INFO, "alias [%s] for user [%lu] already exists", alias, user_idnr);
 			t = TRUE;
 		}
 	CATCH(SQLException)
@@ -584,7 +584,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 }
 
 int auth_addalias_ext(const char *alias,
-		    const char *deliver_to, u64_t clientid)
+		    const char *deliver_to, uint64_t clientid)
 {
 	C c; R r; S s; 
 	volatile int t = FALSE;
@@ -650,7 +650,7 @@ int auth_addalias_ext(const char *alias,
 	return t;
 }
 
-int auth_removealias(u64_t user_idnr, const char *alias)
+int auth_removealias(uint64_t user_idnr, const char *alias)
 {
 	C c; S s; gboolean t = FALSE;
 	
@@ -688,17 +688,17 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	return t;
 }
 
-GList * auth_get_user_aliases(u64_t user_idnr)
+GList * auth_get_user_aliases(uint64_t user_idnr)
 {
 	C c; R r;
 	GList *l = NULL;
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT alias FROM %saliases WHERE deliver_to = '%llu' "
+		r = db_query(c, "SELECT alias FROM %saliases WHERE deliver_to = '%lu' "
 				"UNION SELECT a2.alias FROM %saliases a1 JOIN %saliases a2 "
 				"ON (a1.alias = a2.deliver_to) "
-				"WHERE a1.deliver_to='%llu' AND a2.deliver_to IS NOT NULL "
+				"WHERE a1.deliver_to='%lu' AND a2.deliver_to IS NOT NULL "
 				"ORDER BY alias DESC",
 				DBPFX, user_idnr, DBPFX, DBPFX, user_idnr);
 		while (db_result_next(r))

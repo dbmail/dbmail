@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -24,8 +24,8 @@
  * IMAP server command prototypes
  */
 
-#ifndef _IMAP_COMMANDS_H
-#define _IMAP_COMMANDS_H
+#ifndef DM_IMAP_COMMANDS_H
+#define DM_IMAP_COMMANDS_H
 
 #include "dbmail.h"
 #include "dbmail-imapsession.h"

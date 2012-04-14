@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ *   Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -146,13 +146,13 @@ static DbmailMessage  * message_init(const char *message)
 }
 static char *store_and_retrieve(DbmailMessage *m)
 {
-	u64_t physid;
+	uint64_t physid;
 	DbmailMessage *n;
 	char *t;
 
 	dbmail_message_store(m);
 	physid = dbmail_message_get_physid(m);
-	fail_unless(physid != 0,"dbmail_message_store failed. physid [%llu]", physid);
+	fail_unless(physid != 0,"dbmail_message_store failed. physid [%lu]", physid);
 	dbmail_message_free(m);
 
 	n = dbmail_message_new();
@@ -351,7 +351,7 @@ END_TEST
 START_TEST(test_dbmail_message_store2)
 {
 	DbmailMessage *m, *n;
-	u64_t physid;
+	uint64_t physid;
 	char *t;
 	char *expect;
 
@@ -383,12 +383,12 @@ START_TEST(test_dbmail_message_store2)
 END_TEST
 
 
-//DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int filter);
+//DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, uint64_t physid, int filter);
 START_TEST(test_dbmail_message_retrieve)
 {
 	DbmailMessage *m, *n;
 	GString *s;
-	u64_t physid;
+	uint64_t physid;
 
 	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
@@ -615,7 +615,7 @@ START_TEST(test_dbmail_message_encoded)
 	DbmailMessage *m = dbmail_message_new();
 	GString *s = g_string_new(encoded_message_koi);
 	//const char *exp = ":: [ Arrty ] :: [ Roy (L) Stèphanie ]  <over.there@hotmail.com>";
-	u64_t id = 0;
+	uint64_t id = 0;
 
 	m = dbmail_message_init_with_string(m, s);
 

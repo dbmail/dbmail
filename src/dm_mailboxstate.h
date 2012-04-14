@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -18,8 +18,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef MAILBOXSTATE_H
-#define MAILBOXSTATE_H
+#ifndef DM_MAILBOXSTATE_H
+#define DM_MAILBOXSTATE_H
 
 #include "dbmail.h"
 
@@ -27,7 +27,7 @@
 
 typedef struct T *T;
 
-extern T            MailboxState_new(u64_t id);
+extern T            MailboxState_new(uint64_t id);
 
 extern int          MailboxState_info(T);
 extern int          MailboxState_count(T);
@@ -38,17 +38,17 @@ extern int          MailboxState_clear_recent(T);
 extern GTree *      MailboxState_steal_recent(T);
 extern int          MailboxState_merge_recent(T, GTree *);
 
-extern int          MailboxState_removeUid(T, u64_t);
-extern void         MailboxState_addMsginfo(T, u64_t, MessageInfo *);
+extern int          MailboxState_removeUid(T, uint64_t);
+extern void         MailboxState_addMsginfo(T, uint64_t, MessageInfo *);
 extern GTree *      MailboxState_getMsginfo(T);
 extern GTree *      MailboxState_getIds(T);
 extern GTree *      MailboxState_getMsn(T);
 
 
-extern void         MailboxState_setId(T, u64_t);
-extern u64_t        MailboxState_getId(T);
-extern u64_t        MailboxState_getSeq(T);
-extern u64_t        MailboxState_getUidnext(T);
+extern void         MailboxState_setId(T, uint64_t);
+extern uint64_t        MailboxState_getId(T);
+extern uint64_t        MailboxState_getSeq(T);
+extern uint64_t        MailboxState_getUidnext(T);
 extern unsigned	    MailboxState_getExists(T);
 extern unsigned	    MailboxState_getRecent(T);
 extern unsigned     MailboxState_getUnseen(T);
@@ -58,8 +58,8 @@ extern void         MailboxState_setNoChildren(T, gboolean);
 extern gboolean     MailboxState_noChildren(T);
 extern gboolean     MailboxState_noInferiors(T);
 
-extern void         MailboxState_setOwner(T S, u64_t owner_id);
-extern u64_t        MailboxState_getOwner(T S);
+extern void         MailboxState_setOwner(T S, uint64_t owner_id);
+extern uint64_t        MailboxState_getOwner(T S);
 extern void         MailboxState_setPermission(T S, int permission);
 extern unsigned     MailboxState_getPermission(T S);
 extern void         MailboxState_setName(T S, const char *name);
@@ -81,12 +81,12 @@ extern void         MailboxState_free(T *);
 /**
  * \brief check if a user has a certain right to a mailbox
  */
-extern int MailboxState_hasPermission(T, u64_t user_idnr, const char *right_flag);
+extern int MailboxState_hasPermission(T, uint64_t user_idnr, const char *right_flag);
 /**
  * \brief get all permissions on a mailbox for a user
  * 
  */
-extern int MailboxState_getAcl(T, u64_t userid, struct ACLMap *map);
+extern int MailboxState_getAcl(T, uint64_t userid, struct ACLMap *map);
 
 
 #undef T

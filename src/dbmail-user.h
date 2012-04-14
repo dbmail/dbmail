@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -17,8 +17,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef _DBMAIL_USER_H
-#define _DBMAIL_USER_H
+#ifndef DBMAIL_USER_H
+#define DBMAIL_USER_H
 
 #include "dbmail.h"
 
@@ -37,7 +37,7 @@ typedef enum {
 	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
 	MD5_BASE64, MD5_BASE64_RAW, SHADOW, PWTYPE_NULL,
 	DM_WHIRLPOOL, DM_SHA512, DM_SHA256, DM_SHA1, DM_TIGER
-} pwtype_t;
+} pwtype;
 
 int mkpassword(const char * const user, const char * const passwd,
                const char * const passwdtype, const char * const passwdfile,
@@ -62,28 +62,28 @@ struct change_flags {
 int do_add(const char * const user,
            const char * const password,
            const char * const enctype,
-           const u64_t maxmail, const u64_t clientid,
+           const uint64_t maxmail, const uint64_t clientid,
 	   GList * alias_add,
 	   GList * alias_del);
-int do_delete(const u64_t useridnr, const char * const user);
+int do_delete(const uint64_t useridnr, const char * const user);
 int do_show(const char * const user);
-int do_empty(const u64_t useridnr);
+int do_empty(const uint64_t useridnr);
 /* Change operations */
-int do_username(const u64_t useridnr, const char *newuser);
-int do_maxmail(const u64_t useridnr, const u64_t maxmail);
-int do_clientid(const u64_t useridnr, const u64_t clientid);
-int do_password(const u64_t useridnr,
+int do_username(const uint64_t useridnr, const char *newuser);
+int do_maxmail(const uint64_t useridnr, const uint64_t maxmail);
+int do_clientid(const uint64_t useridnr, const uint64_t clientid);
+int do_password(const uint64_t useridnr,
                 const char * const password,
                 const char * const enctype);
-int do_aliases(const u64_t useridnr,
+int do_aliases(const uint64_t useridnr,
                GList * alias_add,
                GList * alias_del);
 /* External forwards */
-int do_forwards(const char *alias, const u64_t clientid,
+int do_forwards(const char *alias, const uint64_t clientid,
                 GList * fwds_add,
                 GList * fwds_del);
 
 /* Helper functions */
-u64_t strtomaxmail(const char * const str);
+uint64_t strtomaxmail(const char * const str);
 
 #endif

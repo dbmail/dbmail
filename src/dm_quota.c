@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -19,28 +19,53 @@
 */
 
 #include "dbmail.h"
-#define THIS_MODULE "quota"
+#include "dm_quota.h"
+
+#define THIS_MODULE "QUOTA"
+
+
+#define T Quota_T
+
+/* A resource type.
+ * RT_STORAGE:  "STORAGE"
+ */
+typedef enum {
+	RT_STORAGE
+} resource_type_t;
+
+/* A resource limit.
+ * type:  the type of the resource
+ * usage: the current usage of the resource
+ * limit: the maximum allowed usage of the resource
+ */
+typedef struct {
+	resource_type_t type;
+	uint64_t usage;
+	uint64_t limit;
+} resource_limit_t;
+
+/* A quota root and its resource limits.
+ * root:        the quota root, e.g. ""
+ * n_resources: the number of limted resources under this quota root
+ * resource[]:  an array with `n_resources' elements, each entry
+ *              describing a resource limit
+ */
+struct T {
+	char *root;
+	int n_resources;
+	resource_limit_t resource[0];
+};
+
 
 /* Allocate a quota structure for `n_resources' resources. 
  * Returns NULL on failure.
  */
-quota_t *quota_alloc(int n_resources)
+T quota_alloc(int n_resources)
 {
-	quota_t *quota;
+	T quota;
 
-	/* We're allocating enough memory off the end of the quota
-	 * structure to accomodate an array of resource_limit structs.
-	 * This is the declaration:
-	 *   resource_limit_t resource[0];
-	 * it's a pretty cool abuse of C to alloc more memory off the end of
-	 * this array and access it way out of bounds into that extra memory!
-	 */
-	quota = g_malloc(sizeof(quota_t) + n_resources * sizeof(resource_limit_t));
-
-	if (quota != NULL) {
-		quota->root = NULL;
-		quota->n_resources = n_resources;
-	}
+	quota = g_malloc0(sizeof(*quota) + n_resources * sizeof(resource_limit_t));
+	quota->n_resources = n_resources;
 
 	return quota;
 }
@@ -52,9 +77,9 @@ quota_t *quota_alloc(int n_resources)
  * usage:        the current usage of the resource.
  * limit:        the usage limit for the resource.
  */
-void quota_set_resource_limit(quota_t * quota, int resource_idx,
+void quota_set_resource_limit(T quota, int resource_idx,
 			      resource_type_t type,
-			      u64_t usage, u64_t limit)
+			      uint64_t usage, uint64_t limit)
 {
 	resource_limit_t *rl = &(quota->resource[resource_idx]);
 	rl->type = type;
@@ -67,18 +92,35 @@ void quota_set_resource_limit(quota_t * quota, int resource_idx,
  * quota: the quota object to modify.
  * root:  the (new) name of the quota root.
  */
-int quota_set_root(quota_t * quota, char *root)
+const char * quota_get_root(T quota)
+{
+	return (const char *)quota->root;
+}
+
+int quota_set_root(T quota, char *root)
 {
 	g_free(quota->root);
 	quota->root = g_strdup(root);
 	return (quota->root == NULL);
 }
 
-/* Free a quota structure. */
-void quota_free(quota_t * quota)
+uint64_t quota_get_limit(T quota)
 {
-	g_free(quota->root);
-	g_free(quota);
+	return quota->resource[0].limit;
+}
+
+uint64_t quota_get_usage(T quota)
+{
+	return quota->resource[0].usage;
+}
+
+/* Free a quota structure. */
+void quota_free(T *quota)
+{
+	T q = *quota;
+	g_free(q->root);
+	g_free(q);
+	q = NULL;
 }
 
 
@@ -91,10 +133,10 @@ void quota_free(quota_t * quota)
  *   mailbox:  the name of the mailbox.
  *   errormsg: will point to an error message if NULL is returned.
  */
-char *quota_get_quotaroot(u64_t useridnr, const char *mailbox,
+const char *quota_get_quotaroot(uint64_t useridnr, const char *mailbox,
 			  char **errormsg)
 {
-	u64_t mailbox_idnr;
+	uint64_t mailbox_idnr;
 
 	if (! db_findmailbox(mailbox, useridnr, &mailbox_idnr)) {
 		*errormsg = "mailbox not found";
@@ -113,10 +155,10 @@ char *quota_get_quotaroot(u64_t useridnr, const char *mailbox,
  *   quotaroot: the quotaroot.
  *   errormsg:  will point to an error message if NULL is returned.
  */
-quota_t *quota_get_quota(u64_t useridnr, char *quotaroot, char **errormsg)
+T quota_get_quota(uint64_t useridnr, char *quotaroot, char **errormsg)
 {
-	quota_t *quota;
-	u64_t maxmail_size, usage;
+	T quota;
+	uint64_t maxmail_size, usage;
 
 	/* Currently, there's only the quota root "". */
 	if (strcmp(quotaroot, "") != 0) {
@@ -139,11 +181,6 @@ quota_t *quota_get_quota(u64_t useridnr, char *quotaroot, char **errormsg)
 
 	/* We support exactly one resource: RT_STORAGE */
 	quota = quota_alloc(1);
-	if (quota == NULL) {
-		TRACE(TRACE_ERR, "out of memory\n");
-		*errormsg = "out of memory";
-		return NULL;
-	}
 
 	/* Set quota root */
 	if (quota_set_root(quota, quotaroot)) {

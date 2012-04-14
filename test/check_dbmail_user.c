@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2005-2011 NFG Net Facilities Group BV support@nfg.nl
+ *   Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -62,7 +62,7 @@ void teardown(void)
 //int do_add(const char * const user,
 //           const char * const password,
 //           const char * const enctype,
-//           const u64_t maxmail, const u64_t clientid,
+//           const uint64_t maxmail, const uint64_t clientid,
 //	   GList * alias_add,
 //	   GList * alias_del);
 
@@ -85,20 +85,20 @@ START_TEST(test_do_show)
 }
 END_TEST
 
-//int do_empty(const u64_t useridnr);
+//int do_empty(const uint64_t useridnr);
 START_TEST(test_do_empty)
 {
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	auth_user_exists("nosuchuser",&user_idnr);
 	//fail_unless(do_empty(user_idnr),"do_empty should have failed");
 }
 END_TEST
 
-//int do_delete(const u64_t useridnr, const char * const user);
+//int do_delete(const uint64_t useridnr, const char * const user);
 START_TEST(test_do_delete)
 {
 	int result;
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	auth_user_exists("testadduser",&user_idnr);
 	fail_unless(user_idnr > 0,"abort test_do_delete: can't find user_idnr");
 	result = do_delete(user_idnr, "testadduser");
@@ -138,22 +138,22 @@ START_TEST(test_dm_match_list)
 END_TEST
 
 /* Change operations */
-//int do_username(const u64_t useridnr, const char *newuser);
-//int do_maxmail(const u64_t useridnr, const u64_t maxmail);
-//int do_clientid(const u64_t useridnr, const u64_t clientid);
-//int do_password(const u64_t useridnr,
+//int do_username(const uint64_t useridnr, const char *newuser);
+//int do_maxmail(const uint64_t useridnr, const uint64_t maxmail);
+//int do_clientid(const uint64_t useridnr, const uint64_t clientid);
+//int do_password(const uint64_t useridnr,
 //                const char * const password,
 //                const char * const enctype);
-//int do_aliases(const u64_t useridnr,
+//int do_aliases(const uint64_t useridnr,
 //               GList * alias_add,
 //               GList * alias_del);
 /* External forwards */
-//int do_forwards(const char *alias, const u64_t clientid,
+//int do_forwards(const char *alias, const uint64_t clientid,
 //                GList * fwds_add,
 //                GList * fwds_del);
 
 /* Helper functions */
-//u64_t strtomaxmail(const char * const str);
+//uint64_t strtomaxmail(const char * const str);
 
 
 Suite *dbmail_common_suite(void)

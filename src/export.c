@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
  Copyright (C) 2007 Aaron Stone aaron@serendity.cx
 
  This program is free software; you can redistribute it and/or 
@@ -28,8 +28,8 @@ char *configFile = DEFAULT_CONFIG_FILE;
 
 #define PNAME "dbmail/export"
 
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern DBParam_T db_params;
+#define DBPFX db_params.pfx
 
 /* UI policy */
 int quiet = 0;
@@ -71,7 +71,7 @@ void do_showhelp(void)
 	);
 }
 
-static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
+static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 		const char *search, int delete_after_dump)
 {
 	FILE *ostream;
@@ -134,8 +134,8 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 			// Flag the selected messages \\Deleted
 			// Following this, dbmail-util -d sets deleted status
 			if (delete_after_dump & 1) {
-				if (db_set_msgflag(*(u64_t *)ids->data, deleted_flag, NULL, IMAPFA_ADD, NULL) < 0) {
-					qerrorf("Error setting flags for message [%llu]\n", *(u64_t *)ids->data);
+				if (db_set_msgflag(*(uint64_t *)ids->data, deleted_flag, NULL, IMAPFA_ADD, NULL) < 0) {
+					qerrorf("Error setting flags for message [%lu]\n", *(uint64_t *)ids->data);
 					result = -1;
 				}
 			}
@@ -143,8 +143,8 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *dumpfile,
 			// Set deleted status on each message
 			// Following this, dbmail-util -p sets purge status
 			if (delete_after_dump & 2) {
-				if (! db_set_message_status(*(u64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
-					qerrorf("Error setting status for message [%llu]\n", *(u64_t *)ids->data);
+				if (! db_set_message_status(*(uint64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
+					qerrorf("Error setting status for message [%lu]\n", *(uint64_t *)ids->data);
 					result = -1;
 				}
 			}
@@ -168,7 +168,7 @@ cleanup:
 	
 static int do_export(char *user, char *base_mailbox, char *basedir, char *outfile, char *search, int delete_after_dump, int recursive)
 {
-	u64_t user_idnr = 0, owner_idnr = 0, mailbox_idnr = 0;
+	uint64_t user_idnr = 0, owner_idnr = 0, mailbox_idnr = 0;
 	char *dumpfile = NULL, *mailbox = NULL, *search_mailbox = NULL, *dir = NULL;
 	GList *children = NULL;
 	int result = 0;
@@ -215,7 +215,7 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 	qerrorf("Exporting [%u] mailboxes for [%s]\n", g_list_length(children), user);
 
 	while (children) {
-		mailbox_idnr = *(u64_t *)children->data;
+		mailbox_idnr = *(uint64_t *)children->data;
 		db_getmailboxname(mailbox_idnr, user_idnr, mailbox);			
 		if (! db_get_mailbox_owner(mailbox_idnr, &owner_idnr)) {
 			qerrorf("Error checking mailbox ownership");

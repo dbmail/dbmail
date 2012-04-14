@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2005-2011 NFG Net Facilities Group BV support@nfg.nl
+ *  Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -35,11 +35,11 @@
 #include "check_dbmail.h"
 
 extern char *configFile;
-extern db_param_t _db_params;
+extern DBParam_T db_params;
 
 
-extern u64_t msgbuf_idx;
-extern u64_t msgbuf_buflen;
+extern uint64_t msgbuf_idx;
+extern uint64_t msgbuf_buflen;
 
 extern char *multipart_message;
 extern char *multipart_message_part;
@@ -68,7 +68,7 @@ void teardown(void)
 
 START_TEST(test_read_config)
 {
-	fail_unless(_db_params.host != NULL, "db_host is NULL");
+	fail_unless(db_params.host != NULL, "db_host is NULL");
 }
 END_TEST
 

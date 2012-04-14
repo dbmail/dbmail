@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -27,10 +27,10 @@
 
 #define THIS_MODULE "clientbase"
 
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern DBParam_T db_params;
+#define DBPFX db_params.pfx
 
-extern serverConfig_t *server_conf;
+extern ServerConfig_T *server_conf;
 extern SSL_CTX *tls_context;
 
 static void dm_tls_error(void)
@@ -56,7 +56,7 @@ static void dm_tls_error(void)
 	TRACE(TRACE_INFO, "%s", ERR_error_string(e, NULL));
 }
 
-static void client_wbuf_clear(clientbase_t *client)
+static void client_wbuf_clear(ClientBase_T *client)
 {
 	if (client->write_buffer) {
 		client->write_buffer = g_string_truncate(client->write_buffer,0);
@@ -65,7 +65,7 @@ static void client_wbuf_clear(clientbase_t *client)
 
 }
 
-static void client_rbuf_clear(clientbase_t *client)
+static void client_rbuf_clear(ClientBase_T *client)
 {
 	if (client->read_buffer) {
 		client->read_buffer = g_string_truncate(client->read_buffer,0);
@@ -73,7 +73,7 @@ static void client_rbuf_clear(clientbase_t *client)
 	}
 }
 
-static void client_rbuf_scale(clientbase_t *self)
+static void client_rbuf_scale(ClientBase_T *self)
 {
 	if (self->read_buffer_offset == self->read_buffer->len) {
 		g_string_truncate(self->read_buffer,0);
@@ -83,7 +83,7 @@ static void client_rbuf_scale(clientbase_t *self)
 
 }
 
-static void client_wbuf_scale(clientbase_t *self)
+static void client_wbuf_scale(ClientBase_T *self)
 {
 	if (self->write_buffer_offset == self->write_buffer->len) {
 		g_string_truncate(self->write_buffer,0);
@@ -97,7 +97,7 @@ static void client_wbuf_scale(clientbase_t *self)
 static int client_error_cb(int sock, int error, void *arg)
 {
 	int r = 0;
-	clientbase_t *client = (clientbase_t *)arg;
+	ClientBase_T *client = (ClientBase_T *)arg;
 	if (client->ssl) {
 		int sslerr = 0;
 		if (! (sslerr = SSL_get_error(client->ssl, error)))
@@ -140,10 +140,10 @@ static int client_error_cb(int sock, int error, void *arg)
 	return r;
 }
 
-clientbase_t * client_init(client_sock *c)
+ClientBase_T * client_init(client_sock *c)
 {
 	int serr;
-	clientbase_t *client	= g_new0(clientbase_t, 1);
+	ClientBase_T *client	= g_new0(ClientBase_T, 1);
 
 	client->timeout         = g_new0(struct timeval,1);
 
@@ -200,21 +200,21 @@ clientbase_t * client_init(client_sock *c)
 	return client;
 }
 
-void ci_cork(clientbase_t *s)
+void ci_cork(ClientBase_T *s)
 {
 	TRACE(TRACE_DEBUG,"[%p]", s);
 	if (s->rev) event_del(s->rev);
 	if (s->wev) event_del(s->wev);
 }
 
-void ci_uncork(clientbase_t *s)
+void ci_uncork(ClientBase_T *s)
 {
 	TRACE(TRACE_DEBUG,"[%p]", s);
 	event_add(s->rev, s->timeout);
 	event_add(s->wev, NULL);
 }
 
-int ci_starttls(clientbase_t *self)
+int ci_starttls(ClientBase_T *self)
 {
 	int e;
 	TRACE(TRACE_DEBUG,"[%p] ssl_state [%d]", self, self->ssl_state);
@@ -249,13 +249,13 @@ int ci_starttls(clientbase_t *self)
 	return DM_SUCCESS;
 }
 
-void ci_write_cb(clientbase_t *self)
+void ci_write_cb(ClientBase_T *self)
 {
 	if (self->write_buffer->len > self->write_buffer_offset)
 		ci_write(self,NULL);
 }
 
-int ci_write(clientbase_t *self, char * msg, ...)
+int ci_write(ClientBase_T *self, char * msg, ...)
 {
 	va_list ap, cp;
 	ssize_t t = 0;
@@ -330,7 +330,7 @@ int ci_write(clientbase_t *self, char * msg, ...)
 }
 
 #define IBUFLEN 65535
-void ci_read_cb(clientbase_t *self)
+void ci_read_cb(ClientBase_T *self)
 {
 	/* 
 	 * read all available data on the input stream
@@ -378,7 +378,7 @@ void ci_read_cb(clientbase_t *self)
 	}
 }
 
-int ci_read(clientbase_t *self, char *buffer, size_t n)
+int ci_read(ClientBase_T *self, char *buffer, size_t n)
 {
 	// fetch data from the read buffer
 	assert(buffer);
@@ -402,7 +402,7 @@ int ci_read(clientbase_t *self, char *buffer, size_t n)
 	return self->len;
 }
 
-int ci_readln(clientbase_t *self, char * buffer)
+int ci_readln(ClientBase_T *self, char * buffer)
 {
 	// fetch a line from the read buffer
 	char *nl;
@@ -432,7 +432,7 @@ int ci_readln(clientbase_t *self, char * buffer)
 }
 
 
-void ci_authlog_init(clientbase_t *self, const char *service, const char *username, const char *status)
+void ci_authlog_init(ClientBase_T *self, const char *service, const char *username, const char *status)
 {
 	if ((! server_conf->authlog) || server_conf->no_daemonize == 1) return;
 	C c; R r; S s;
@@ -465,7 +465,7 @@ void ci_authlog_init(clientbase_t *self, const char *service, const char *userna
 
 }
 
-static void ci_authlog_close(clientbase_t *self)
+static void ci_authlog_close(ClientBase_T *self)
 {
 	C c; S s;
 	if (! self->authlog_id) return;
@@ -488,7 +488,7 @@ static void ci_authlog_close(clientbase_t *self)
 	END_TRY;
 }
 
-void ci_close(clientbase_t *self)
+void ci_close(ClientBase_T *self)
 {
 	assert(self);
 

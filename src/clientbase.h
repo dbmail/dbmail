@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -20,26 +20,26 @@
 /* 
  */
 
-#ifndef _CLIENTBASE_H
-#define _CLIENTBASE_H
+#ifndef DM_CLIENTBASE_H
+#define DM_CLIENTBASE_H
 
 #include "dbmail.h"
  
-clientbase_t * client_init(client_sock *c);
+ClientBase_T * client_init(client_sock *c);
 
-void ci_cork(clientbase_t *);
-void ci_uncork(clientbase_t *);
+void ci_cork(ClientBase_T *);
+void ci_uncork(ClientBase_T *);
 
-int ci_starttls(clientbase_t *);
+int ci_starttls(ClientBase_T *);
 
-void ci_authlog_init(clientbase_t *, const char *, const char *, const char *);
-void ci_write_cb(clientbase_t *);
-int ci_write(clientbase_t *, char *, ...);
+void ci_authlog_init(ClientBase_T *, const char *, const char *, const char *);
+void ci_write_cb(ClientBase_T *);
+int ci_write(ClientBase_T *, char *, ...);
 
-void ci_read_cb(clientbase_t *);
-int ci_read(clientbase_t *, char *, size_t);
-int ci_readln(clientbase_t *, char *);
+void ci_read_cb(ClientBase_T *);
+int ci_read(ClientBase_T *, char *, size_t);
+int ci_readln(ClientBase_T *, char *);
 
-void ci_close(clientbase_t *);
+void ci_close(ClientBase_T *);
 
 #endif

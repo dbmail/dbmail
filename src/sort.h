@@ -20,22 +20,22 @@
 
 /* Headers for sort.c */
 
-#ifndef SORT_H
-#define SORT_H
+#ifndef DM_SORT_H
+#define DM_SORT_H
 
 #define MAX_SIEVE_SCRIPTNAME 100
 
-typedef struct sort_result sort_result_t;
+typedef struct sort_result SortResult_T;
 
-sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message, const char *mailbox);
-sort_result_t *sort_validate(u64_t user_idnr, char *scriptname);
+SortResult_T *sort_process(uint64_t user_idnr, DbmailMessage *message, const char *mailbox);
+SortResult_T *sort_validate(uint64_t user_idnr, char *scriptname);
 const char *sort_listextensions(void);
-void sort_free_result(sort_result_t *sort_result);
+void sort_free_result(SortResult_T *sort_result);
 
-int sort_get_cancelkeep(sort_result_t *sort_result);
-int sort_get_reject(sort_result_t *sort_result);
-const char * sort_get_mailbox(sort_result_t *sort_result);
-const char * sort_get_errormsg(sort_result_t *sort_result);
-int sort_get_error(sort_result_t *sort_result);
+int sort_get_cancelkeep(SortResult_T *sort_result);
+int sort_get_reject(SortResult_T *sort_result);
+const char * sort_get_mailbox(SortResult_T *sort_result);
+const char * sort_get_errormsg(SortResult_T *sort_result);
+int sort_get_error(SortResult_T *sort_result);
 
 #endif

@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -24,13 +24,11 @@
  *
  */
 
-#ifndef _DBMAIL_MESSAGE_H
-#define _DBMAIL_MESSAGE_H
+#ifndef DM_MESSAGE_H
+#define DM_MESSAGE_H
 
 
 #include "dbmail.h"
-
-#define MSGBUF_FORCE_UPDATE -1
 
 /* 
  * preliminary goal is to provide an interface between dbmail and gmime.
@@ -60,13 +58,13 @@ int dbmail_message_store(DbmailMessage *message);
 int dbmail_message_cache_headers(const DbmailMessage *message);
 gboolean dm_message_store(DbmailMessage *m);
 
-DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, u64_t physid, int filter);
+DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, uint64_t physid, int filter);
 
 /*
  * attribute accessors
  */
-void dbmail_message_set_physid(DbmailMessage *self, u64_t physid);
-u64_t dbmail_message_get_physid(const DbmailMessage *self);
+void dbmail_message_set_physid(DbmailMessage *self, uint64_t physid);
+uint64_t dbmail_message_get_physid(const DbmailMessage *self);
 
 void dbmail_message_set_envelope_recipient(DbmailMessage *self, const char *envelope);
 gchar * dbmail_message_get_envelope_recipient(const DbmailMessage *self);
@@ -115,11 +113,11 @@ char * g_mime_object_get_body(const GMimeObject *object);
 
 // from sort.h
 dsn_class_t sort_and_deliver(DbmailMessage *self,
-		const char *destination, u64_t useridnr,
-		const char *mailbox, mailbox_source_t source);
+		const char *destination, uint64_t useridnr,
+		const char *mailbox, mailbox_source source);
 
 dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
-		u64_t useridnr, const char *mailbox, mailbox_source_t source,
+		uint64_t useridnr, const char *mailbox, mailbox_source source,
 		int *msgflags);
 
 // from dm_pipe.h

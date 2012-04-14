@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -28,7 +28,7 @@
 
 #define THIS_MODULE "config"
 
-db_param_t _db_params;
+DBParam_T db_params;
 
 /** dictionary which holds the configuration */
 static GKeyFile *config_dict = NULL;
@@ -69,9 +69,9 @@ void config_free(void)
 /* Return 1 if found, 0 if not. */
 /* This function also strips any... # Trailing comments. */
 /* value is not modified unless something is found. */
-static int config_get_value_once(const field_t field_name,
+static int config_get_value_once(const Field_T field_name,
 		const char * const service_name,
-		field_t value)
+		Field_T value)
 {
 	char *dict_value;
 	int retval = 0;
@@ -94,9 +94,9 @@ static int config_get_value_once(const field_t field_name,
 }
 
 /* FIXME: Always returns 0, which is dandy for debugging. */
-int config_get_value(const field_t field_name,
+int config_get_value(const Field_T field_name,
                      const char * const service_name,
-                     field_t value)
+                     Field_T value)
 {
 	char *key;
 	gssize field_len;
@@ -148,8 +148,8 @@ config_get_value_done:
 
 void SetTraceLevel(const char *service_name)
 {
-	trace_t trace_stderr_int, trace_syslog_int;
-	field_t trace_level, trace_syslog, trace_stderr, syslog_logging_levels, file_logging_levels;
+	Trace_T trace_stderr_int, trace_syslog_int;
+	Field_T trace_level, trace_syslog, trace_stderr, syslog_logging_levels, file_logging_levels;
 
 	/* Warn about the deprecated "trace_level" config item,
 	 * but we will use this value for trace_syslog if needed. */
@@ -240,34 +240,34 @@ void SetTraceLevel(const char *service_name)
 
 void GetDBParams(void)
 {
-	field_t port_string, sock_string, serverid_string, query_time;
-	field_t max_db_connections;
+	Field_T port_string, sock_string, serverid_string, query_time;
+	Field_T max_db_connections;
 
-	if (config_get_value("driver", "DBMAIL", _db_params.driver) < 0)
+	if (config_get_value("driver", "DBMAIL", db_params.driver) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [driver]");
 
-	if (MATCH((const char *)_db_params.driver,"sqlite"))
-		_db_params.db_driver = DM_DRIVER_SQLITE;
-	else if (MATCH((const char *)_db_params.driver,"mysql"))
-		_db_params.db_driver = DM_DRIVER_MYSQL;
-	else if (MATCH((const char *)_db_params.driver,"postgresql"))
-		_db_params.db_driver = DM_DRIVER_POSTGRESQL;
-	else if (MATCH((const char *)_db_params.driver,"oracle"))
-		_db_params.db_driver = DM_DRIVER_ORACLE;
+	if (MATCH((const char *)db_params.driver,"sqlite"))
+		db_params.db_driver = DM_DRIVER_SQLITE;
+	else if (MATCH((const char *)db_params.driver,"mysql"))
+		db_params.db_driver = DM_DRIVER_MYSQL;
+	else if (MATCH((const char *)db_params.driver,"postgresql"))
+		db_params.db_driver = DM_DRIVER_POSTGRESQL;
+	else if (MATCH((const char *)db_params.driver,"oracle"))
+		db_params.db_driver = DM_DRIVER_ORACLE;
 	else
 		TRACE(TRACE_EMERG,"driver not supported");
 
-	if (config_get_value("authdriver", "DBMAIL", _db_params.authdriver) < 0)
+	if (config_get_value("authdriver", "DBMAIL", db_params.authdriver) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [authdriver]");
-	if (config_get_value("sortdriver", "DBMAIL", _db_params.sortdriver) < 0)
+	if (config_get_value("sortdriver", "DBMAIL", db_params.sortdriver) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [sortdriver]");
-	if (config_get_value("host", "DBMAIL", _db_params.host) < 0)
+	if (config_get_value("host", "DBMAIL", db_params.host) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [host]");
-	if (config_get_value("db", "DBMAIL", _db_params.db) < 0) 
+	if (config_get_value("db", "DBMAIL", db_params.db) < 0) 
 		TRACE(TRACE_EMERG, "error getting config! [db]");
-	if (config_get_value("user", "DBMAIL", _db_params.user) < 0) 
+	if (config_get_value("user", "DBMAIL", db_params.user) < 0) 
 		TRACE(TRACE_EMERG, "error getting config! [user]");
-	if (config_get_value("pass", "DBMAIL", _db_params.pass) < 0)
+	if (config_get_value("pass", "DBMAIL", db_params.pass) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [pass]");
 	if (config_get_value("sqlport", "DBMAIL", port_string) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [sqlpost]");
@@ -275,9 +275,9 @@ void GetDBParams(void)
 		TRACE(TRACE_EMERG, "error getting config! [sqlsocket]");
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [serverid]");
-	if (config_get_value("encoding", "DBMAIL", _db_params.encoding) < 0)
+	if (config_get_value("encoding", "DBMAIL", db_params.encoding) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [encoding]");
-	if (config_get_value("table_prefix", "DBMAIL", _db_params.pfx) < 0)
+	if (config_get_value("table_prefix", "DBMAIL", db_params.pfx) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [table_prefix]");
 	if (config_get_value("max_db_connections", "DBMAIL", max_db_connections) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [max_db_connections]");
@@ -285,89 +285,89 @@ void GetDBParams(void)
 	if (config_get_value("query_time_info", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [query_time_info]");
 		if (strlen(query_time) != 0)
-			_db_params.query_time_info = (unsigned int) strtoul(query_time, NULL, 10);
+			db_params.query_time_info = (unsigned int) strtoul(query_time, NULL, 10);
 		else
-			_db_params.query_time_info = 10;
+			db_params.query_time_info = 10;
 
 	if (config_get_value("query_time_notice", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [query_time_notice]");
 		if (strlen(query_time) != 0)
-			_db_params.query_time_notice = (unsigned int) strtoul(query_time, NULL, 10);
+			db_params.query_time_notice = (unsigned int) strtoul(query_time, NULL, 10);
 		else
-			_db_params.query_time_notice = 20;
+			db_params.query_time_notice = 20;
 
 	if (config_get_value("query_time_warning", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [query_time_warning]");
 		if (strlen(query_time) != 0)
-			_db_params.query_time_warning = (unsigned int) strtoul(query_time, NULL, 10);
+			db_params.query_time_warning = (unsigned int) strtoul(query_time, NULL, 10);
 		else
-			_db_params.query_time_warning = 30;
+			db_params.query_time_warning = 30;
 
 	if (config_get_value("query_timeout", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [query_timeout]");
 		if (strlen(query_time) != 0)
-			_db_params.query_timeout = (unsigned int) strtoul(query_time, NULL, 10) * 1000;
+			db_params.query_timeout = (unsigned int) strtoul(query_time, NULL, 10) * 1000;
 		else
-			_db_params.query_timeout = 300000;
+			db_params.query_timeout = 300000;
 
 
-	if (strcmp(_db_params.pfx, "\"\"") == 0) {
+	if (strcmp(db_params.pfx, "\"\"") == 0) {
 		/* FIXME: It appears that when the empty string is quoted
 		 * that the quotes themselves are returned as the value. */
-		g_strlcpy(_db_params.pfx, "", FIELDSIZE);
-	} else if (strlen(_db_params.pfx) == 0) {
+		g_strlcpy(db_params.pfx, "", FIELDSIZE);
+	} else if (strlen(db_params.pfx) == 0) {
 		/* If it's not "" but is zero length, set the default. */
-		g_strlcpy(_db_params.pfx, DEFAULT_DBPFX, FIELDSIZE);
+		g_strlcpy(db_params.pfx, DEFAULT_DBPFX, FIELDSIZE);
 	}
 
 	/* expand ~ in db name to HOME env variable */
-	if ((strlen(_db_params.db) > 0 ) && (_db_params.db[0] == '~')) {
+	if ((strlen(db_params.db) > 0 ) && (db_params.db[0] == '~')) {
 		char *homedir;
-		field_t db;
+		Field_T db;
 		if ((homedir = getenv ("HOME")) == NULL)
 			TRACE(TRACE_EMERG, "can't expand ~ in db name");
-		g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(_db_params.db[1]));
-		g_strlcpy(_db_params.db, db, FIELDSIZE);
+		g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(db_params.db[1]));
+		g_strlcpy(db_params.db, db, FIELDSIZE);
 	}
 
 	/* check if port_string holds a value */
 	if (strlen(port_string) != 0) {
 		errno = 0;
-		_db_params.port =
+		db_params.port =
 		    (unsigned int) strtoul(port_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
 			TRACE(TRACE_EMERG, "wrong value for sqlport in config file [%s]", strerror(errno));
 	} else
-		_db_params.port = 0;
+		db_params.port = 0;
 
 	/* same for sock_string */
 	if (strlen(sock_string) != 0)
-		g_strlcpy(_db_params.sock, sock_string, FIELDSIZE);
+		g_strlcpy(db_params.sock, sock_string, FIELDSIZE);
 	else
-		_db_params.sock[0] = '\0';
+		db_params.sock[0] = '\0';
 
 	/* serverid */
 	if (strlen(serverid_string) != 0) {
-		_db_params.serverid = (unsigned int) strtol(serverid_string, NULL, 10);
+		db_params.serverid = (unsigned int) strtol(serverid_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
 			TRACE(TRACE_EMERG, "serverid invalid in config file");
 	} else {
-		_db_params.serverid = 1;
+		db_params.serverid = 1;
 	}
 	/* max_db_connections */
 	if (strlen(max_db_connections) != 0) {
-		_db_params.max_db_connections = (unsigned int) strtol(max_db_connections, NULL, 10);
+		db_params.max_db_connections = (unsigned int) strtol(max_db_connections, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
 			TRACE(TRACE_EMERG, "max_db_connnections invalid in config file");
 	} else {
-		_db_params.max_db_connections = 10;
+		db_params.max_db_connections = 10;
 	}
 
 }
 
-void config_get_logfiles(serverConfig_t *config, const char * const service)
+void config_get_logfiles(ServerConfig_T *config, const char * const service)
 {
-	field_t val;
+	Field_T val;
 
 	/* logfile */
 	config_get_value("logfile", service, val);
@@ -394,7 +394,7 @@ void config_get_logfiles(serverConfig_t *config, const char * const service)
 	assert(config->pid_dir);
 }
 
-char * config_get_pidfile(serverConfig_t *config, const char *name)
+char * config_get_pidfile(ServerConfig_T *config, const char *name)
 {
 	char *res;
 	GString *s;

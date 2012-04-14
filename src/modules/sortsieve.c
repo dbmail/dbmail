@@ -33,13 +33,13 @@
 struct sort_context {
 	char *s_buf;
 	char *script;
-	u64_t user_idnr;
+	uint64_t user_idnr;
 	DbmailMessage *message;
 	struct sort_result *result;
 	GList *freelist;
 };
 
-/* Returned opaquely as type sort_result_t. */
+/* Returned opaquely as type SortResult_T. */
 struct sort_result {
 	int cancelkeep;
 	const char *mailbox;
@@ -59,7 +59,7 @@ struct sort_sieve_config {
 
 static void sort_sieve_get_config(struct sort_sieve_config *sieve_config)
 {
-	field_t val;
+	Field_T val;
 
 	assert(sieve_config != NULL);
 
@@ -120,25 +120,25 @@ static int send_redirect(DbmailMessage *message, const char *to, const char *fro
 	return send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 }
 
-int send_alert(u64_t user_idnr, char *subject, char *body)
+int send_alert(uint64_t user_idnr, char *subject, char *body)
 {
 	DbmailMessage *new_message;
-	field_t postmaster;
+	Field_T postmaster;
 	char *from;
 	int msgflags[IMAP_NFLAGS];
 
 	// Only send each unique alert once a day.
 	char *tmp = g_strconcat(subject, body, NULL);
 	char *handle = dm_md5(tmp);
-	char *userchar = g_strdup_printf("%llu", user_idnr);
+	char *userchar = g_strdup_printf("%lu", user_idnr);
 	if (db_replycache_validate(userchar, "send_alert", handle, 1) != DM_SUCCESS) {
-		TRACE(TRACE_INFO, "Already sent alert [%s] to user [%llu] today", subject, user_idnr);
+		TRACE(TRACE_INFO, "Already sent alert [%s] to user [%lu] today", subject, user_idnr);
 		g_free(userchar);
 		g_free(handle);
 		g_free(tmp);
 		return 0;
 	} else {
-		TRACE(TRACE_INFO, "Sending alert [%s] to user [%llu]", subject, user_idnr);
+		TRACE(TRACE_INFO, "Sending alert [%s] to user [%lu]", subject, user_idnr);
 		db_replycache_register(userchar, "send_alert", handle);
 		g_free(userchar);
 		g_free(handle);
@@ -166,11 +166,11 @@ int send_alert(u64_t user_idnr, char *subject, char *body)
 
 	// Pre-insert the message and get a new_message->id
 	dbmail_message_store(new_message);
-	u64_t tmpid = new_message->id;
+	uint64_t tmpid = new_message->id;
 
 	if (sort_deliver_to_mailbox(new_message, user_idnr,
 			"INBOX", BOX_BRUTEFORCE, msgflags) != DSN_CLASS_OK) {
-		TRACE(TRACE_ERR, "Unable to deliver alert [%s] to user [%llu]", subject, user_idnr);
+		TRACE(TRACE_ERR, "Unable to deliver alert [%s] to user [%lu]", subject, user_idnr);
 	}
 
 	g_free(to);
@@ -809,7 +809,7 @@ const char * sort_listextensions(void)
 }
 
 /* Return 0 on script OK, 1 on script error, 2 on misc error. */
-sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
+SortResult_T *sort_validate(uint64_t user_idnr, char *scriptname)
 {
 	int res, exitnull = 0;
 	struct sort_result *result = NULL;
@@ -867,7 +867,7 @@ freesieve:
  * such as dbmail-lmtpd, the daemon should
  * finish storing the message and restart.
  * */
-sort_result_t *sort_process(u64_t user_idnr, DbmailMessage *message, const char *mailbox)
+SortResult_T *sort_process(uint64_t user_idnr, DbmailMessage *message, const char *mailbox)
 {
 	int res, exitnull = 0;
 	struct sort_result *result = NULL;
@@ -936,7 +936,7 @@ freesieve:
 
 /* SORT RESULT INTERFACE */
 
-void sort_free_result(sort_result_t *result)
+void sort_free_result(SortResult_T *result)
 {
 	if (result == NULL) return;
 	if (result->errormsg != NULL) 
@@ -946,37 +946,37 @@ void sort_free_result(sort_result_t *result)
 	g_free(result);
 }
 
-int sort_get_cancelkeep(sort_result_t *result)
+int sort_get_cancelkeep(SortResult_T *result)
 {
 	if (result == NULL) return 0;
 	return result->cancelkeep;
 }
 
-const char * sort_get_mailbox(sort_result_t *result)
+const char * sort_get_mailbox(SortResult_T *result)
 {
 	if (result == NULL) return NULL;
 	return result->mailbox;
 }
 
-int sort_get_reject(sort_result_t *result)
+int sort_get_reject(SortResult_T *result)
 {
 	if (result == NULL) return 0;
 	return result->reject;
 }
 
-const char *sort_get_rejectmsg(sort_result_t *result)
+const char *sort_get_rejectmsg(SortResult_T *result)
 {
 	if (result == NULL) return NULL;
 	return result->rejectmsg->str;
 }
 
-int sort_get_error(sort_result_t *result)
+int sort_get_error(SortResult_T *result)
 {
 	if (result == NULL) return 0;
 	return result->errormsg->len;
 }
 
-const char * sort_get_errormsg(sort_result_t *result)
+const char * sort_get_errormsg(SortResult_T *result)
 {
 	if (result == NULL) return NULL;
 	return result->errormsg->str;

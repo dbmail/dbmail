@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 	char buf[READ_SIZE], *returnpath = NULL;
 	GList *userlist = NULL;
 	GList *dsnusers = NULL;
-	deliver_to_user_t *dsnuser;
+	Delivery_T *dsnuser;
 	
 	g_mime_init(0);
 	
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 		case 'u':
 			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to usernames");
 
-			dsnuser = g_new0(deliver_to_user_t,1);
+			dsnuser = g_new0(Delivery_T,1);
 			dsnuser_init(dsnuser);
 			dsnuser->address = g_strdup(optarg);
 			dsnuser->source = BOX_COMMANDLINE;
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 		case 'd':
 			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to email addresses");
 
-			dsnuser = g_new0(deliver_to_user_t,1);
+			dsnuser = g_new0(Delivery_T,1);
 			dsnuser_init(dsnuser);
 			dsnuser->address = g_strdup(optarg);
 			dsnuser->source = BOX_COMMANDLINE;
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
 		/* Loop through the users list, moving the entries into the dsnusers list. */
 		userlist = g_list_first(userlist);
 		while (userlist) {
-			dsnuser = g_new0(deliver_to_user_t,1);
+			dsnuser = g_new0(Delivery_T,1);
 			dsnuser_init(dsnuser);
 			dsnuser->address = g_strdup((char *) userlist->data);
 	
@@ -304,11 +304,11 @@ int main(int argc, char *argv[])
 		/* Loop through the dsnusers list, setting the destination mailbox. */
 		dsnusers = g_list_first(dsnusers);
 		while (dsnusers) {
-			((deliver_to_user_t *)dsnusers->data)->mailbox = g_strdup(deliver_to_mailbox);
+			((Delivery_T *)dsnusers->data)->mailbox = g_strdup(deliver_to_mailbox);
 			if (brute_force) {
-				((deliver_to_user_t *)dsnusers->data)->source = BOX_BRUTEFORCE;
+				((Delivery_T *)dsnusers->data)->source = BOX_BRUTEFORCE;
 			} else {
-				((deliver_to_user_t *)dsnusers->data)->source = BOX_COMMANDLINE;
+				((Delivery_T *)dsnusers->data)->source = BOX_COMMANDLINE;
 			}
 			if (! g_list_next(dsnusers))
 				break;

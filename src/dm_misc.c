@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -109,7 +109,7 @@ int drop_privileges(char *newuser, char *newgroup)
 	return 0;
 }
 
-void create_unique_id(char *target, u64_t message_idnr)
+void create_unique_id(char *target, uint64_t message_idnr)
 {
 	GRand *r = g_rand_new();
 	char *a_message_idnr, *a_rand, *md5_str;
@@ -118,7 +118,7 @@ void create_unique_id(char *target, u64_t message_idnr)
 	g_rand_free(r);
 
 	if (message_idnr != 0) {
-		a_message_idnr = g_strdup_printf("%llu",message_idnr);
+		a_message_idnr = g_strdup_printf("%lu",message_idnr);
 		snprintf(target, UID_SIZE, "%s:%s", a_message_idnr, a_rand);
 		g_free(a_message_idnr);
 	} else {
@@ -134,7 +134,7 @@ void create_unique_id(char *target, u64_t message_idnr)
 	TRACE(TRACE_DEBUG, "created: %s", target);
 }
 
-void create_current_timestring(timestring_t * timestring)
+void create_current_timestring(TimeString_T * timestring)
 {
 	time_t td;
 	struct tm tm;
@@ -144,12 +144,12 @@ void create_current_timestring(timestring_t * timestring)
 
 	memset(&tm,0,sizeof(tm));
 	localtime_r(&td, &tm);	/* get components */
-	strftime((char *) timestring, sizeof(timestring_t),
+	strftime((char *) timestring, sizeof(TimeString_T),
 		 "%Y-%m-%d %H:%M:%S", &tm);
 }
 
-char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
-			    u64_t user_idnr)
+char *mailbox_add_namespace(const char *mailbox_name, uint64_t owner_idnr,
+			    uint64_t user_idnr)
 {
 	char *fq;
 	char *owner;
@@ -635,7 +635,7 @@ int listex_match(const char *p, const char *s,
 	return 1;
 }
 
-u64_t dm_getguid(unsigned int serverid)
+uint64_t dm_getguid(unsigned int serverid)
 {
         char s[30];
         struct timeval tv;
@@ -646,7 +646,7 @@ u64_t dm_getguid(unsigned int serverid)
                 return 0;
 
         snprintf(s,30,"%ld%06ld%02u", tv.tv_sec, tv.tv_usec,serverid);
-        return (u64_t)strtoll(s,NULL,10);
+        return (uint64_t)strtoll(s,NULL,10);
 }
 
 int dm_sock_score(const char *base, const char *test)
@@ -1118,11 +1118,11 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 	return 0;
 }
 
-gint ucmp(const u64_t *a, const u64_t *b)
+gint ucmp(const uint64_t *a, const uint64_t *b)
 {
-	u64_t x,y;
-	x = (u64_t)*a;
-	y = (u64_t)*b;
+	uint64_t x,y;
+	x = (uint64_t)*a;
+	y = (uint64_t)*b;
 	
 	if (x>y)
 		return 1;
@@ -1131,7 +1131,7 @@ gint ucmp(const u64_t *a, const u64_t *b)
 	return -1;
 }
 
-gint ucmpdata(const u64_t *a, const u64_t *b, gpointer data UNUSED)
+gint ucmpdata(const uint64_t *a, const uint64_t *b, gpointer data UNUSED)
 {
 	return ucmp(a,b);
 }
@@ -1148,7 +1148,7 @@ gint dm_strcasecmpdata(gconstpointer a, gconstpointer b, gpointer data UNUSED)
 
 
 /* Read from instream until ".\r\n", discarding what is read. */
-int discard_client_input(clientbase_t *ci)
+int discard_client_input(ClientBase_T *ci)
 {
 	int c = 0, n = 0;
 
@@ -2178,7 +2178,7 @@ char * imap_unescape(char *s)
 	return s;
 }
 
-u64_t dm_strtoull(const char *nptr, char **endptr, int base)
+uint64_t dm_strtoull(const char *nptr, char **endptr, int base)
 {
 	errno = 0;
 	long long int r = strtoll(nptr, endptr, base);
@@ -2234,7 +2234,7 @@ char **base64_decodev(char *str)
 
 char * dm_get_hash_for_string(const char *buf)
 {
-	field_t hash_algorithm;
+	Field_T hash_algorithm;
 	char *digest;
 	static hashid type;
 	static int initialized=0;

@@ -33,7 +33,7 @@
 
 int main(int argc, char *argv[])
 {
-	serverConfig_t config;
+	ServerConfig_T config;
 	int result;
 
 	g_mime_init(0);
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-        memset(&config, 0, sizeof(serverConfig_t));
+        memset(&config, 0, sizeof(ServerConfig_T));
 	result = server_getopt(&config, "HTTP", argc, argv);
 	if (result == -1)
 		goto shutdown;

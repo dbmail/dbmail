@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -17,14 +17,14 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef _DM_ICONV_H
-#define _DM_ICONV_H
+#ifndef DM_ICONV_H
+#define DM_ICONV_H
 
 #include "dbmail.h"
 
 struct DbmailIconv {
-	field_t db_charset;
-	field_t msg_charset;
+	Field_T db_charset;
+	Field_T msg_charset;
 
 	iconv_t to_db;
 	iconv_t from_db;

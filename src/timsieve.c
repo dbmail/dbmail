@@ -61,14 +61,14 @@ typedef enum {
 
 /* Defined in timsieved.c */
 extern const char *sieve_extensions;
-extern serverConfig_t *server_conf;
+extern ServerConfig_T *server_conf;
 
-static int tims(ClientSession_t *session);
-static int tims_tokenizer(ClientSession_t *session, char *buffer);
+static int tims(ClientSession_T *session);
+static int tims_tokenizer(ClientSession_T *session, char *buffer);
 
-static void send_greeting(ClientSession_t *session)
+static void send_greeting(ClientSession_T *session)
 {
-	field_t banner;
+	Field_T banner;
 	GETCONFIGVALUE("banner", "SIEVE", banner);
 	if (! dm_db_ping()) {
 		ci_write(session->ci, "BYE \"database has gone fishing\"\r\n");
@@ -89,7 +89,7 @@ static void tims_handle_input(void *arg)
 {
 	int l = 0;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 
 	ci_cork(session->ci);
 
@@ -118,14 +118,14 @@ static void tims_handle_input(void *arg)
 
 void tims_cb_time(void * arg)
 {
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	session->state = QUIT;
 	ci_write(session->ci, "BYE \"Connection timed out.\"\r\n");
 }
 
 void tims_cb_write(void *arg)
 {
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
 	switch(session->state) {
@@ -142,7 +142,7 @@ void tims_cb_write(void *arg)
 	}
 }
 
-static void reset_callbacks(ClientSession_t *session)
+static void reset_callbacks(ClientSession_T *session)
 {
         session->ci->cb_time = tims_cb_time;
         session->ci->cb_write = tims_cb_write;
@@ -156,7 +156,7 @@ static void reset_callbacks(ClientSession_t *session)
 
 int tims_handle_connection(client_sock *c)
 {
-	ClientSession_t *session = client_session_new(c);
+	ClientSession_T *session = client_session_new(c);
 	session->state = STRT;
 	client_session_set_timeout(session, server_conf->login_timeout);
 	reset_callbacks(session);
@@ -164,7 +164,7 @@ int tims_handle_connection(client_sock *c)
 	return 0;
 }
 
-int tims_error(ClientSession_t * session, const char *formatstring, ...)
+int tims_error(ClientSession_T * session, const char *formatstring, ...)
 {
 	va_list ap, cp;
 	char *s;
@@ -189,7 +189,7 @@ int tims_error(ClientSession_t * session, const char *formatstring, ...)
 }
 
 
-int tims_tokenizer(ClientSession_t *session, char *buffer)
+int tims_tokenizer(ClientSession_T *session, char *buffer)
 {
 	int command_type = 0;
 	char *command, *value = NULL;
@@ -291,7 +291,7 @@ int tims_tokenizer(ClientSession_t *session, char *buffer)
 	return session->parser_state;
 }
 
-int tims(ClientSession_t *session)
+int tims(ClientSession_T *session)
 {
 	/* returns values:
 	 *  0 to quit
@@ -302,8 +302,8 @@ int tims(ClientSession_t *session)
 	size_t scriptlen = 0;
 	int ret;
 	char *script = NULL, *scriptname = NULL;
-	sort_result_t *sort_result = NULL;
-	clientbase_t *ci = session->ci;
+	SortResult_T *sort_result = NULL;
+	ClientBase_T *ci = session->ci;
 
 	TRACE(TRACE_DEBUG,"[%p] [%d][%s]", session, session->command_type, commands[session->command_type]);
 	switch (session->command_type) {
@@ -332,7 +332,7 @@ int tims(ClientSession_t *session)
 		arg = (char *)session->args->data;
 		if (strcasecmp(arg, "PLAIN") == 0) {
 			int i = 0;
-			u64_t useridnr;
+			uint64_t useridnr;
 			if (! g_list_next(session->args))
 				return tims_error(session, "NO \"Missing argument.\"\r\n");	
 			session->args = g_list_next(session->args);
@@ -536,7 +536,7 @@ int tims(ClientSession_t *session)
 			} else {
 				scriptlist = g_list_first(scriptlist);
 				while (scriptlist) {
-					sievescript_info_t *info = (sievescript_info_t *) scriptlist->data;
+					sievescript_info *info = (sievescript_info *) scriptlist->data;
 					ci_write(ci, "\"%s\"%s\r\n", info->name, (info-> active == 1 ?  " ACTIVE" : ""));
 					if (! g_list_next(scriptlist)) break;
 					scriptlist = g_list_next(scriptlist);

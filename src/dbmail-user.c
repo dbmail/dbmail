@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -46,22 +46,22 @@ int quiet = 0;
 
 int do_add(const char * const user,
            const char * const password, const char * const enctype,
-           const u64_t maxmail, const u64_t clientid,
+           const uint64_t maxmail, const uint64_t clientid,
 	   GList * alias_add,
 	   GList * alias_del)
 {
-	u64_t useridnr;
-	u64_t mailbox_idnr;
+	uint64_t useridnr;
+	uint64_t mailbox_idnr;
 	int result;
 
 	if (no_to_all) {
-		qprintf("Pretending to add user %s with password type %s, %llu bytes mailbox limit and clientid %llu\n",
+		qprintf("Pretending to add user %s with password type %s, %lu bytes mailbox limit and clientid %lu\n",
 			user, enctype, maxmail, clientid);
 		return 1;
 	}
 
-	TRACE(TRACE_DEBUG, "Adding user %s with password type %s,%llu "
-		"bytes mailbox limit and clientid %llu... ", 
+	TRACE(TRACE_DEBUG, "Adding user %s with password type %s,%lu "
+		"bytes mailbox limit and clientid %lu... ", 
 		user, enctype, maxmail, clientid);
 
 	if ((result = auth_user_exists(user, &useridnr))) {
@@ -74,7 +74,7 @@ int do_add(const char * const user,
 		return -1;
 	}
 
-	TRACE(TRACE_DEBUG, "Ok, user added id [%llu]\n", useridnr);
+	TRACE(TRACE_DEBUG, "Ok, user added id [%lu]\n", useridnr);
 
 	/* Add an INBOX for the user. */
 	qprintf("Adding INBOX for new user... ");
@@ -101,14 +101,14 @@ int do_add(const char * const user,
 }
 
 /* Change of username */
-int do_username(const u64_t useridnr, const char * const newuser)
+int do_username(const uint64_t useridnr, const char * const newuser)
 {
 	int result = 0;
 
 	assert(newuser);
 
 	if (no_to_all) {
-		qprintf("Pretending to change username of user id number [%llu] to [%s]\n",
+		qprintf("Pretending to change username of user id number [%lu] to [%s]\n",
 			useridnr, newuser);
 		return 1;
 	}
@@ -120,13 +120,13 @@ int do_username(const u64_t useridnr, const char * const newuser)
 }
 
 /* Change of password */
-int do_password(const u64_t useridnr,
+int do_password(const uint64_t useridnr,
                 const char * const password, const char * const enctype)
 {
 	int result = 0;
 	
 	if (no_to_all) {
-		qprintf("Pretending to change password for user id number [%llu]\n",
+		qprintf("Pretending to change password for user id number [%lu]\n",
 			useridnr);
 		return 1;
 	}
@@ -142,7 +142,7 @@ int mkpassword(const char * const user, const char * const passwd,
 	       char ** password, char ** enctype)
 {
 
-	pwtype_t pwtype;
+	pwtype pwdtype;
 	int pwindex = 0;
 	int result = 0;
 	char *entry = NULL;
@@ -160,7 +160,7 @@ int mkpassword(const char * const user, const char * const passwd,
 	};
 
 	/* These must correspond to the easy text names. */
-	const pwtype_t pwtypecodes[] = {
+	const pwtype pwtypecodes[] = {
 		PLAINTEXT, 	PLAINTEXT_RAW, 		CRYPT,		CRYPT_RAW,
 		MD5_HASH, 	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
 		MD5_HASH,	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
@@ -179,8 +179,8 @@ int mkpassword(const char * const user, const char * const passwd,
 				break;
 
 	/* If no search took place, pwindex is 0, PLAINTEXT. */
-	pwtype = pwtypecodes[pwindex];
-	switch (pwtype) {
+	pwdtype = pwtypecodes[pwindex];
+	switch (pwdtype) {
 		case PLAINTEXT:
 		case PLAINTEXT_RAW:
 			null_strncpy(pw, passwd, 129);
@@ -289,12 +289,12 @@ int mkpassword(const char * const user, const char * const passwd,
 }
 
 /* Change of client id. */
-int do_clientid(u64_t useridnr, u64_t clientid)
+int do_clientid(uint64_t useridnr, uint64_t clientid)
 {	
 	int result = 0;
 
 	if (no_to_all) {
-		qprintf("Pretending to change client for user id number [%llu] to client id number [%llu]\n",
+		qprintf("Pretending to change client for user id number [%lu] to client id number [%lu]\n",
 			useridnr, clientid);
 		return 1;
 	}
@@ -306,12 +306,12 @@ int do_clientid(u64_t useridnr, u64_t clientid)
 }
 
 /* Change of quota / max mail. */
-int do_maxmail(u64_t useridnr, u64_t maxmail)
+int do_maxmail(uint64_t useridnr, uint64_t maxmail)
 {
 	int result = 0;
 
 	if (no_to_all) {
-		qprintf("Pretending to change mail quota for user id number [%llu] to [%llu] bytes\n",
+		qprintf("Pretending to change mail quota for user id number [%lu] to [%lu] bytes\n",
 			useridnr, maxmail);
 		return 1;
 	}
@@ -322,7 +322,7 @@ int do_maxmail(u64_t useridnr, u64_t maxmail)
 	return result;
 }
 
-int do_forwards(const char * const alias, const u64_t clientid,
+int do_forwards(const char * const alias, const uint64_t clientid,
                 GList * fwds_add,
                 GList * fwds_del)
 {
@@ -420,17 +420,17 @@ int do_forwards(const char * const alias, const u64_t clientid,
 	return result;
 }
 
-int do_aliases(const u64_t useridnr,
+int do_aliases(const uint64_t useridnr,
                GList * alias_add,
                GList * alias_del)
 {
 	int result = 0;
 	char *alias;
-	u64_t clientid;
+	uint64_t clientid;
 	GList *current_aliases, *matching_aliases, *matching_alias_del;
 
 	if (no_to_all) {
-		qprintf("Pretending to remove aliases for user id number [%llu]\n",
+		qprintf("Pretending to remove aliases for user id number [%lu]\n",
 			useridnr);
 		if (alias_del) {
 			alias_del = g_list_first(alias_del);
@@ -439,7 +439,7 @@ int do_aliases(const u64_t useridnr,
 				alias_del = g_list_next(alias_del);
 			}
 		}
-		qprintf("Pretending to add aliases for user id number [%llu]\n",
+		qprintf("Pretending to add aliases for user id number [%lu]\n",
 			useridnr);
 		if (alias_add) {
 			alias_add = g_list_first(alias_add);
@@ -524,13 +524,13 @@ int do_aliases(const u64_t useridnr,
 }
 
 
-int do_delete(const u64_t useridnr, const char * const name)
+int do_delete(const uint64_t useridnr, const char * const name)
 {
 	int result;
 	GList *aliases = NULL;
 
 	if (no_to_all) {
-		qprintf("Pretending to delete alias [%s] for user id number [%llu]\n",
+		qprintf("Pretending to delete alias [%s] for user id number [%lu]\n",
 			name, useridnr);
 		return 1;
 	}
@@ -553,11 +553,11 @@ int do_delete(const u64_t useridnr, const char * const name)
 
 /* Set concise = 1 for passwd / aliases style output. */
 static void show_alias(const char * const name, int concise);
-static void show_user(u64_t useridnr, int concise);
+static void show_user(uint64_t useridnr, int concise);
 
 int do_show(const char * const name)
 {
-	u64_t useridnr;
+	uint64_t useridnr;
 	GList *users = NULL;
 	GList *aliases = NULL;
 
@@ -637,7 +637,7 @@ static void show_alias(const char * const name, int concise)
 	userids = g_list_first(userids);
 	if (userids) {
 		while (userids) {
-			username = auth_get_userid(*(u64_t *)userids->data);
+			username = auth_get_userid(*(uint64_t *)userids->data);
 			if (!username) {
 				// FIXME: This is a dangling entry. These should be removed
 				// by dbmail-util. This method of identifying dangling aliases
@@ -656,9 +656,9 @@ static void show_alias(const char * const name, int concise)
 }
 
 /* TODO: Non-concise output, like the old dbmail-users used to have. */
-static void show_user(u64_t useridnr, int concise UNUSED)
+static void show_user(uint64_t useridnr, int concise UNUSED)
 {
-	u64_t cid, quotum, quotumused;
+	uint64_t cid, quotum, quotumused;
 	GList *userlist = NULL;
 	char *username;
 
@@ -674,8 +674,8 @@ static void show_user(u64_t useridnr, int concise UNUSED)
 	g_free(username);
 	
 	out = g_list_append_printf(out,"x");
-	out = g_list_append_printf(out,"%llu", useridnr);
-	out = g_list_append_printf(out,"%llu", cid);
+	out = g_list_append_printf(out,"%lu", useridnr);
+	out = g_list_append_printf(out,"%lu", cid);
 	out = g_list_append_printf(out,"%.02f", 
 			(double) quotum / (1024.0 * 1024.0));
 	out = g_list_append_printf(out,"%.02f", 
@@ -700,7 +700,7 @@ static void show_user(u64_t useridnr, int concise UNUSED)
 /*
  * empties the mailbox associated with user 'name'
  */
-int do_empty(u64_t useridnr)
+int do_empty(uint64_t useridnr)
 {
 	int result = 0;
 
@@ -716,16 +716,16 @@ int do_empty(u64_t useridnr)
 		}
 	} else {
 		GList *children = NULL;
-		u64_t owner_idnr;
+		uint64_t owner_idnr;
 		char mailbox[IMAP_MAX_MAILBOX_NAMELEN];
 
-		qprintf("You've requested to delete all mailboxes owned by user number [%llu]:\n", useridnr);
+		qprintf("You've requested to delete all mailboxes owned by user number [%lu]:\n", useridnr);
 
 		db_findmailbox_by_regex(useridnr, "*", &children, 0);
 		children = g_list_first(children);
 
 		while (children) {
-			u64_t *mailbox_id = (u64_t *)children->data;
+			uint64_t *mailbox_id = (uint64_t *)children->data;
 			/* Given a list of mailbox id numbers, check if the
 			 * user actually owns the mailbox (because that means
 			 * it is on the hit list for deletion) and then look up
@@ -833,9 +833,9 @@ char *getToken(char **str, const char *delims)
 	return token;
 }
 
-u64_t strtomaxmail(const char * const str)
+uint64_t strtomaxmail(const char * const str)
 {
-	u64_t maxmail;
+	uint64_t maxmail;
 	char *endptr = NULL;
 
 	maxmail = strtoull(str, &endptr, 10);

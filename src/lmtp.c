@@ -1,6 +1,6 @@
 /*
  Copyright (C) 2004 IC & S dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -28,7 +28,7 @@
 #define QUIT 3
 #define MAX_ERRORS 3
 
-extern serverConfig_t *server_conf;
+extern ServerConfig_T *server_conf;
 
 /* allowed lmtp commands */
 static const char *const commands[] = {
@@ -59,13 +59,13 @@ typedef enum {
 	LMTP_END
 } command_t;
 
-int lmtp(ClientSession_t *session);
+int lmtp(ClientSession_T *session);
 
-static int lmtp_tokenizer(ClientSession_t *session, char *buffer);
+static int lmtp_tokenizer(ClientSession_T *session, char *buffer);
 
-void send_greeting(ClientSession_t *session)
+void send_greeting(ClientSession_T *session)
 {
-	field_t banner;
+	Field_T banner;
 	GETCONFIGVALUE("banner", "LMTP", banner);
 	if (! dm_db_ping()) {
 		ci_write(session->ci, "500 database has gone fishing BYE\r\n");
@@ -81,7 +81,7 @@ void send_greeting(ClientSession_t *session)
 
 static void lmtp_cb_time(void *arg)
 {
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	session->state = QUIT;
 	ci_write(session->ci, "221 Connection timeout BYE\r\n");
 }
@@ -90,7 +90,7 @@ static void lmtp_handle_input(void *arg)
 {
 	int l;
 	char buffer[MAX_LINESIZE];	/* connection buffer */
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	while (TRUE) {
 		memset(buffer, 0, sizeof(buffer));
 
@@ -123,7 +123,7 @@ static void lmtp_handle_input(void *arg)
 
 void lmtp_cb_write(void *arg)
 {
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
 	switch (session->state) {
@@ -140,7 +140,7 @@ void lmtp_cb_write(void *arg)
 	}
 }
 
-static void reset_callbacks(ClientSession_t *session)
+static void reset_callbacks(ClientSession_T *session)
 {
         session->ci->cb_time = lmtp_cb_time;
         session->ci->cb_write = lmtp_cb_write;
@@ -152,7 +152,7 @@ static void reset_callbacks(ClientSession_t *session)
 	ci_uncork(session->ci);
 }
 
-static void lmtp_rset(ClientSession_t *session, gboolean reset_state)
+static void lmtp_rset(ClientSession_T *session, gboolean reset_state)
 {
 	int state = session->state;
 	client_session_reset(session);
@@ -167,14 +167,14 @@ static void lmtp_rset(ClientSession_t *session, gboolean reset_state)
 
 int lmtp_handle_connection(client_sock *c)
 {
-	ClientSession_t *session = client_session_new(c);
+	ClientSession_T *session = client_session_new(c);
 	client_session_set_timeout(session, server_conf->login_timeout);
 	reset_callbacks(session);
         send_greeting(session);
 	return 0;
 }
 
-int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
+int lmtp_error(ClientSession_T * session, const char *formatstring, ...)
 {
 	va_list ap, cp;
 	char *s;
@@ -196,7 +196,7 @@ int lmtp_error(ClientSession_t * session, const char *formatstring, ...)
 	return -1;
 }
 
-int lmtp_tokenizer(ClientSession_t *session, char *buffer)
+int lmtp_tokenizer(ClientSession_T *session, char *buffer)
 {
 	char *command = NULL, *value;
 	int command_type = 0;
@@ -269,10 +269,10 @@ int lmtp_tokenizer(ClientSession_t *session, char *buffer)
 }
 
 
-int lmtp(ClientSession_t * session)
+int lmtp(ClientSession_T * session)
 {
 	DbmailMessage *msg;
-	clientbase_t *ci = session->ci;
+	ClientBase_T *ci = session->ci;
 	int helpcmd;
 	const char *class, *subject, *detail;
 	size_t tmplen = 0, tmppos = 0;
@@ -429,7 +429,7 @@ int lmtp(ClientSession_t * session)
 			return 1;
 		}
 
-		deliver_to_user_t *dsnuser = g_new0(deliver_to_user_t,1);
+		Delivery_T *dsnuser = g_new0(Delivery_T,1);
 
 		dsnuser_init(dsnuser);
 
@@ -478,7 +478,7 @@ int lmtp(ClientSession_t * session)
 		/* The replies MUST be in the order received */
 		session->rcpt = g_list_reverse(session->rcpt);
 		while (session->rcpt) {
-			deliver_to_user_t * dsnuser = (deliver_to_user_t *)session->rcpt->data;
+			Delivery_T * dsnuser = (Delivery_T *)session->rcpt->data;
 			dsn_tostring(dsnuser->dsn, &class, &subject, &detail);
 
 			/* Give a simple OK, otherwise a detailed message. */

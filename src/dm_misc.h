@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -18,8 +18,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef _MISC_H
-#define _MISC_H
+#ifndef DM_MISC_H
+#define DM_MISC_H
 
 #include "dbmail.h"
 
@@ -49,13 +49,13 @@ int drop_privileges(char *newuser, char *newgroup);
  * \param target target string. Length should be UID_SIZE 
  * \param message_idnr message_idnr of message
  */
-void create_unique_id(/*@out@*/ char *target, u64_t message_idnr);
+void create_unique_id(/*@out@*/ char *target, uint64_t message_idnr);
 
 /**
  * \brief create a timestring with the current time.
  * \param timestring an allocated timestring object.
  */
-void create_current_timestring(timestring_t * timestring);
+void create_current_timestring(TimeString_T * timestring);
 
 /**
  * \brief decorate a mailbox name with a namespace if needed
@@ -67,8 +67,8 @@ void create_current_timestring(timestring_t * timestring);
  *     - fully qualified mailbox name otherwise (e.g. #Users/username/INBOX)
  * \note caller should free returned string
  */
-char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
-			    u64_t user_idnr);
+char *mailbox_add_namespace(const char *mailbox_name, uint64_t owner_idnr,
+			    uint64_t user_idnr);
 
 /**
  * \brief remove the namespace from the fully qualified name
@@ -103,8 +103,8 @@ GList * g_string_split(GString * string, const gchar * sep);
 
 char * g_strcasestr(const char *haystack, const char *needle);
 
-gint ucmpdata(const u64_t *a, const u64_t *b, gpointer data);
-gint ucmp(const u64_t *a, const u64_t *b);
+gint ucmpdata(const uint64_t *a, const uint64_t *b, gpointer data);
+gint ucmp(const uint64_t *a, const uint64_t *b);
 gint dm_strcmpdata(gconstpointer a, gconstpointer b, gpointer data);
 gint dm_strcasecmpdata(gconstpointer a, gconstpointer b, gpointer data);
 
@@ -119,7 +119,7 @@ char * dm_shellesc(const char * command);
 void dm_pack_spaces(char *in);
 char * dm_base_subject(const char *subject);
 int listex_match(const char *p, const char *s, const char *x, int flags);
-u64_t dm_getguid(unsigned int serverid);
+uint64_t dm_getguid(unsigned int serverid);
 
 int dm_sock_score(const char *base, const char *test);
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny);
@@ -140,7 +140,7 @@ int check_date(const char *date);
  *      - -1 on error
  *      -  0 on success
  */
-int discard_client_input(clientbase_t *ci);
+int discard_client_input(ClientBase_T *ci);
 
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
@@ -153,7 +153,7 @@ char * imap_get_envelope(GMimeMessage *message);
 GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec);
 char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 
-char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not);
+char * imap_message_fetch_headers(uint64_t physid, const GList *headers, gboolean not);
 
 char * imap_flags_as_string(MailboxState_T S, MessageInfo *msginfo);
 char * imap_cleanup_address(const char *a);
@@ -161,7 +161,7 @@ char * imap_unescape(char *);
 
 char * message_get_charset(GMimeMessage *self);
 
-u64_t dm_strtoull(const char *nptr, char **endptr, int base);
+uint64_t dm_strtoull(const char *nptr, char **endptr, int base);
 
 /* Free the result with g_strfreev. */
 char **base64_decodev(char *in);

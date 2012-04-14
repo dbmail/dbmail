@@ -1,6 +1,6 @@
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -24,6 +24,27 @@
 #define THIS_MODULE "pop3"
 
 #define MAX_ERRORS 3
+
+/* all POP3 commands */
+typedef enum {
+	POP3_QUIT,
+	POP3_USER,
+	POP3_PASS,
+	POP3_STAT,
+	POP3_LIST,
+	POP3_RETR,
+	POP3_DELE,
+	POP3_NOOP,
+	POP3_LAST,
+	POP3_RSET,
+	POP3_UIDL,
+	POP3_APOP,
+	POP3_AUTH,
+	POP3_TOP,
+	POP3_CAPA,
+	POP3_STLS,
+	POP3_FAIL
+} Pop3Cmd;
 
 /* allowed pop3 commands */
 const char *commands[] = {
@@ -49,14 +70,14 @@ const char ValidNetworkChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     ",'\"?_.!|@#$%^&*()-+=~[]{}<>:;\\/ '";
 
-extern serverConfig_t *server_conf;
+extern ServerConfig_T *server_conf;
 extern int pop_before_smtp;
 
-static int pop3(ClientSession_t *session, const char *buffer);
+static int pop3(ClientSession_T *session, const char *buffer);
 
-static void send_greeting(ClientSession_t *session)
+static void send_greeting(ClientSession_T *session)
 {
-	field_t banner;
+	Field_T banner;
 	GETCONFIGVALUE("banner", "POP", banner);
 	if (! dm_db_ping()) {
 		ci_write(session->ci, "+ERR database has gone fishing\r\n");
@@ -71,20 +92,20 @@ static void send_greeting(ClientSession_t *session)
 	}
 }
 
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern DBParam_T db_params;
+#define DBPFX db_params.pfx
 
-static int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
+static int db_createsession(uint64_t user_idnr, ClientSession_T * session_ptr)
 {
 	C c; R r; volatile int t = DM_SUCCESS;
 	struct message *tmpmessage;
 	int message_counter = 0;
 	const char *query_result;
-	u64_t mailbox_idnr;
+	uint64_t mailbox_idnr;
 	INIT_QUERY;
 
 	if (db_find_create_mailbox("INBOX", BOX_DEFAULT, user_idnr, &mailbox_idnr) < 0) {
-		TRACE(TRACE_NOTICE, "find_create INBOX for user [%llu] failed, exiting..", user_idnr);
+		TRACE(TRACE_NOTICE, "find_create INBOX for user [%lu] failed, exiting..", user_idnr);
 		return DM_EQUERY;
 	}
 
@@ -96,7 +117,7 @@ static int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.messagesize, msg.message_idnr, msg.status, "
 		 "msg.unique_id FROM %smessages msg, %sphysmessage pm "
-		 "WHERE msg.mailbox_idnr = %llu "
+		 "WHERE msg.mailbox_idnr = %lu "
 		 "AND msg.status < %d "
 		 "AND msg.physmessage_id = pm.id "
 		 "ORDER BY msg.message_idnr ASC",DBPFX,DBPFX,
@@ -131,7 +152,7 @@ static int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
 
 			session_ptr->totalmessages++;
 			session_ptr->totalsize += tmpmessage->msize;
-			tmpmessage->messageid = (u64_t) message_counter;
+			tmpmessage->messageid = (uint64_t) message_counter;
 
 			session_ptr->messagelst = g_list_prepend(session_ptr->messagelst, tmpmessage);
 
@@ -162,7 +183,7 @@ static int db_createsession(u64_t user_idnr, ClientSession_t * session_ptr)
 	return DM_EGENERAL;
 }
 
-static void db_session_cleanup(ClientSession_t * session_ptr)
+static void db_session_cleanup(ClientSession_T * session_ptr)
 {
 	/* cleanups a session 
 	   removes a list and all references */
@@ -174,9 +195,9 @@ static void db_session_cleanup(ClientSession_t * session_ptr)
 }
 
 
-static void pop3_close(ClientSession_t *session)
+static void pop3_close(ClientSession_T *session)
 {
-	clientbase_t *ci = session->ci;
+	ClientBase_T *ci = session->ci;
 	TRACE(TRACE_DEBUG,"[%p] sessionResult [%d]", session, session->SessionResult);
 
 	session->state = CLIENTSTATE_QUIT;
@@ -184,7 +205,7 @@ static void pop3_close(ClientSession_t *session)
 
 		switch (session->SessionResult) {
 		case 0:
-			TRACE(TRACE_NOTICE, "user %s logging out [messages=%llu, octets=%llu]", 
+			TRACE(TRACE_NOTICE, "user %s logging out [messages=%lu, octets=%lu]", 
 					session->username, 
 					session->virtual_totalmessages, 
 					session->virtual_totalsize);
@@ -223,7 +244,7 @@ static void pop3_close(ClientSession_t *session)
 static void pop3_handle_input(void *arg)
 {
 	char buffer[MAX_LINESIZE];	/* connection buffer */
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 
 	if (session->ci->write_buffer->len) {
 		ci_write(session->ci, NULL);
@@ -239,7 +260,7 @@ static void pop3_handle_input(void *arg)
 
 void pop3_cb_write(void *arg)
 {
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
 	switch (session->state) {
@@ -256,12 +277,12 @@ void pop3_cb_write(void *arg)
 
 void pop3_cb_time(void * arg)
 {
-	ClientSession_t *session = (ClientSession_t *)arg;
+	ClientSession_T *session = (ClientSession_T *)arg;
 	session->state = CLIENTSTATE_QUIT;
 	ci_write(session->ci, "-ERR I'm leaving, you're too slow\r\n");
 }
 
-static void reset_callbacks(ClientSession_t *session)
+static void reset_callbacks(ClientSession_T *session)
 {
         session->ci->cb_time = pop3_cb_time;
         session->ci->cb_write = pop3_cb_write;
@@ -275,7 +296,7 @@ static void reset_callbacks(ClientSession_t *session)
 
 int pop3_handle_connection(client_sock *c)
 {
-	ClientSession_t *session = client_session_new(c);
+	ClientSession_T *session = client_session_new(c);
 	session->state = CLIENTSTATE_INITIAL_CONNECT;
 	client_session_set_timeout(session, server_conf->login_timeout);
         reset_callbacks(session);
@@ -283,11 +304,11 @@ int pop3_handle_connection(client_sock *c)
 	return 0;
 }
 
-int pop3_error(ClientSession_t * session, const char *formatstring, ...)
+int pop3_error(ClientSession_T * session, const char *formatstring, ...)
 {
 	va_list ap, cp;
 	char *s;
-	clientbase_t *ci = session->ci;
+	ClientBase_T *ci = session->ci;
 
 	if (session->error_count >= MAX_ERRORS) {
 		ci_write(ci, "-ERR too many errors\r\n");
@@ -307,9 +328,9 @@ int pop3_error(ClientSession_t * session, const char *formatstring, ...)
 	return 1;
 }
 
-static int _pop3_session_authenticated(ClientSession_t *session, int user_idnr)
+static int _pop3_session_authenticated(ClientSession_T *session, int user_idnr)
 {
-	clientbase_t *ci = session->ci;
+	ClientBase_T *ci = session->ci;
 	int result = 0;
 	session->state = CLIENTSTATE_AUTHENTICATED;
 	ci_authlog_init(ci, THIS_MODULE, (const char *)session->username, AUTHLOG_ACT);
@@ -325,11 +346,11 @@ static int _pop3_session_authenticated(ClientSession_t *session, int user_idnr)
 
 	result = db_createsession(user_idnr, session);
 	if (result == 1) {
-		ci_write(ci, "+OK %s has %llu messages (%llu octets)\r\n", 
+		ci_write(ci, "+OK %s has %lu messages (%lu octets)\r\n", 
 				session->username, 
 				session->virtual_totalmessages, 
 				session->virtual_totalsize);
-		TRACE(TRACE_NOTICE, "user %s logged in [messages=%llu, octets=%llu]", 
+		TRACE(TRACE_NOTICE, "user %s logged in [messages=%lu, octets=%lu]", 
 				session->username, 
 				session->virtual_totalmessages, 
 				session->virtual_totalsize);
@@ -339,19 +360,19 @@ static int _pop3_session_authenticated(ClientSession_t *session, int user_idnr)
 	return result;
 }
 
-int pop3(ClientSession_t *session, const char *buffer)
+int pop3(ClientSession_T *session, const char *buffer)
 {
 	/* returns a 0  on a quit
 	 *           -1  on a failure
 	 *            1  on a success 
 	 */
 	char *command, *value, *searchptr, *enctype, *s;
-	Pop3Cmd_t cmdtype;
+	Pop3Cmd cmdtype;
 	int found = 0, indx = 0, validate_result;
-	u64_t result, top_lines, top_messageid, user_idnr;
+	uint64_t result, top_lines, top_messageid, user_idnr;
 	unsigned char *md5_apop_he;
 	struct message *msg;
-	clientbase_t *ci = session->ci;
+	ClientBase_T *ci = session->ci;
 
 	s = (char *)buffer;
 
@@ -503,7 +524,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 			while (session->messagelst) {
 				msg = (struct message *)session->messagelst->data;
 				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
-					ci_write(ci, "+OK %llu %llu\r\n", msg->messageid,msg->msize);
+					ci_write(ci, "+OK %lu %lu\r\n", msg->messageid,msg->msize);
 					found = 1;
 				}
 				if (! g_list_next(session->messagelst))
@@ -517,14 +538,14 @@ int pop3(ClientSession_t *session, const char *buffer)
 		}
 
 		/* just drop the list */
-		ci_write(ci, "+OK %llu messages (%llu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
+		ci_write(ci, "+OK %lu messages (%lu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
 
 		if (session->virtual_totalmessages > 0) {
 			/* traversing list */
 			while (session->messagelst) {
 				msg = (struct message *)session->messagelst->data;
 				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
-					ci_write(ci, "%llu %llu\r\n", msg->messageid,msg->msize);
+					ci_write(ci, "%lu %lu\r\n", msg->messageid,msg->msize);
 				if (! g_list_next(session->messagelst))
 					break;
 				session->messagelst = g_list_next(session->messagelst);
@@ -537,7 +558,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
-		ci_write(ci, "+OK %llu %llu\r\n", 
+		ci_write(ci, "+OK %lu %lu\r\n", 
 				session->virtual_totalmessages, 
 				session->virtual_totalsize);
 
@@ -561,7 +582,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
 				if (! (s = db_get_message_lines(msg->realmessageid, -2)))
 					return -1;
-				ci_write(ci, "+OK %llu octets\r\n%s", (u64_t)strlen(s), s);
+				ci_write(ci, "+OK %lu octets\r\n%s", (uint64_t)strlen(s), s);
 				ci_write(ci, "\r\n.\r\n");
 				g_free(s);
 				return 1;
@@ -586,7 +607,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 				session->virtual_totalsize -= msg->msize;
 				session->virtual_totalmessages -= 1;
 
-				ci_write(ci, "+OK message %llu deleted\r\n", msg->messageid);
+				ci_write(ci, "+OK message %lu deleted\r\n", msg->messageid);
 				return 1;
 			}
 			if (! g_list_next(session->messagelst))
@@ -613,7 +634,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 			session->messagelst = g_list_next(session->messagelst);
 		}
 
-		ci_write(ci, "+OK %llu messages (%llu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
+		ci_write(ci, "+OK %lu messages (%lu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
 
 		return 1;
 
@@ -627,7 +648,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 			msg = (struct message *)session->messagelst->data;
 			if (msg->virtual_messagestatus == MESSAGE_STATUS_NEW) {
 				/* we need the last message that has been accessed */
-				ci_write(ci, "+OK %llu\r\n", msg->messageid - 1);
+				ci_write(ci, "+OK %lu\r\n", msg->messageid - 1);
 				return 1;
 			}
 			if (! g_list_next(session->messagelst))
@@ -636,7 +657,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 		}
 
 		/* all old messages */
-		ci_write(ci, "+OK %llu\r\n", session->virtual_totalmessages);
+		ci_write(ci, "+OK %lu\r\n", session->virtual_totalmessages);
 
 		return 1;
 
@@ -658,7 +679,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 			while (session->messagelst) {
 				msg = (struct message *)session->messagelst->data;
 				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
-					ci_write(ci, "+OK %llu %s\r\n", msg->messageid,msg->uidl);
+					ci_write(ci, "+OK %lu %s\r\n", msg->messageid,msg->uidl);
 					found = 1;
 				}
 
@@ -680,7 +701,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 			while (session->messagelst) {
 				msg = (struct message *)session->messagelst->data; 
 				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
-					ci_write(ci, "%llu %s\r\n", msg->messageid, msg->uidl);
+					ci_write(ci, "%lu %s\r\n", msg->messageid, msg->uidl);
 
 				if (! g_list_next(session->messagelst))
 					break;
@@ -813,7 +834,7 @@ int pop3(ClientSession_t *session, const char *buffer)
 				char *s = NULL; size_t i;
 				if (! (s = db_get_message_lines(msg->realmessageid, top_lines)))
 					return -1;
-				i = ci_write(ci, "+OK %llu lines of message %llu\r\n%s", top_lines, top_messageid, s);
+				i = ci_write(ci, "+OK %lu lines of message %lu\r\n%s", top_lines, top_messageid, s);
 				ci_write(ci, "\r\n.\r\n");
 				g_free(s);
 				return i;

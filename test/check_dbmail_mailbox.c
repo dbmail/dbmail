@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ *  Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -36,8 +36,8 @@
 
 extern char * multipart_message;
 extern char * configFile;
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern DBParam_T db_params;
+#define DBPFX db_params.pfx
 
 
 
@@ -46,7 +46,7 @@ int imap_before_smtp = 0;
 	
 static void init_testuser1(void) 
 {
-        u64_t user_idnr;
+        uint64_t user_idnr;
 	if (! (auth_user_exists("testuser1",&user_idnr)))
 		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
 }
@@ -56,9 +56,9 @@ static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
 	if (! (key && value))
 		return TRUE;
 
-	u64_t *k = (u64_t *)key;
-	u64_t *v = (u64_t *)value;
-	printf("[%llu: %llu]\n", *k, *v);
+	uint64_t *k = (uint64_t *)key;
+	uint64_t *v = (uint64_t *)value;
+	printf("[%lu: %lu]\n", *k, *v);
 	return FALSE;
 }
 
@@ -69,12 +69,12 @@ void tree_dump(GTree *t)
 	TRACE(TRACE_DEBUG,"done");
 }
 
-static gboolean _node_cat(u64_t *key, u64_t *value, GString **s)
+static gboolean _node_cat(uint64_t *key, uint64_t *value, GString **s)
 {
 	if (! (key && value))
 		return TRUE;
 	
-	g_string_append_printf(*(GString **)s, "[%llu: %llu]\n", *key,*value);
+	g_string_append_printf(*(GString **)s, "[%lu: %lu]\n", *key,*value);
 
 	return FALSE;
 }
@@ -93,9 +93,9 @@ char * tree_as_string(GTree *t)
 	return result;
 }
 
-static u64_t get_mailbox_id(const char *name)
+static uint64_t get_mailbox_id(const char *name)
 {
-	u64_t id, owner;
+	uint64_t id, owner;
 	auth_user_exists("testuser1",&owner);
 	db_find_create_mailbox(name, BOX_COMMANDLINE, owner, &id);
 	return id;
@@ -160,7 +160,7 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 {
 	char *args;
 	char **array;
-	u64_t idx = 0;
+	uint64_t idx = 0;
 	gboolean sorted = 1;
 
 	DbmailMailbox *mb, *mc, *md;
@@ -228,7 +228,7 @@ START_TEST(test_dbmail_mailbox_sort)
 {
 	char *args;
 	char **array;
-	u64_t idx = 0;
+	uint64_t idx = 0;
 	gboolean sorted = 1;
 
 	DbmailMailbox *mb;
@@ -251,7 +251,7 @@ START_TEST(test_dbmail_mailbox_search)
 {
 	char *args;
 	char **array;
-	u64_t idx = 0;
+	uint64_t idx = 0;
 	gboolean sorted = 1;
 	int all, found, notfound;
 	DbmailMailbox *mb;
@@ -368,7 +368,7 @@ END_TEST
 
 START_TEST(test_dbmail_mailbox_search_parsed_1)
 {
-	u64_t idx=0;
+	uint64_t idx=0;
 	gboolean sorted = 0;
 	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	char *args = g_strdup("UID 1 BODY unlikelyaddress@nfg.nl");
@@ -383,7 +383,7 @@ END_TEST
 
 START_TEST(test_dbmail_mailbox_search_parsed_2)
 {
-	u64_t idx=0;
+	uint64_t idx=0;
 	gboolean sorted = 0;
 	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	char *args = g_strdup("UID 1,* BODY the");
@@ -401,7 +401,7 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	char *res;
 	char *args;
 	char **array;
-	u64_t idx = 0;
+	uint64_t idx = 0;
 	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
 	
 	args = g_strdup("HEADER FROM foo.org ( SINCE 1-Jan-2005 )");

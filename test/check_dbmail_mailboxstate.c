@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2005-2011 NFG Net Facilities Group BV support@nfg.nl
+ *   Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -41,9 +41,9 @@ extern char *configFile;
  * the test fixtures
  *
  */
-static u64_t get_mailbox_id(const char *name)
+static uint64_t get_mailbox_id(const char *name)
 {
-	u64_t id, owner;
+	uint64_t id, owner;
 	auth_user_exists("testuser1",&owner);
 	db_find_create_mailbox(name, BOX_COMMANDLINE, owner, &id);
 	return id;
@@ -65,7 +65,7 @@ void teardown(void)
 
 START_TEST(test_createdestroy)
 {
-	u64_t id = get_mailbox_id("INBOX");
+	uint64_t id = get_mailbox_id("INBOX");
 	MailboxState_T M = MailboxState_new(id);
 	MailboxState_free(&M);
 }
@@ -81,11 +81,11 @@ START_TEST(test_mbxinfo)
 {
 	MailboxState_T N, M;
 	GTree *mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
-	u64_t *k1, *k2;
-	u64_t id = get_mailbox_id("INBOX");
+	uint64_t *k1, *k2;
+	uint64_t id = get_mailbox_id("INBOX");
 
-	k1 = g_new0(u64_t,1);
-	k2 = g_new0(u64_t,1);
+	k1 = g_new0(uint64_t,1);
+	k2 = g_new0(uint64_t,1);
 
 	*k1 = id;
 	*k2 = id;

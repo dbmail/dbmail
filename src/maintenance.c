@@ -1,6 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -29,8 +29,8 @@
 #define THIS_MODULE "maintenance"
 #define PNAME "dbmail/maintenance"
 
-extern db_param_t _db_params;
-#define DBPFX _db_params.pfx
+extern DBParam_T db_params;
+#define DBPFX db_params.pfx
 
 /* Loudness and assumptions. */
 int yes_to_all = 0;
@@ -46,7 +46,7 @@ char *configFile = DEFAULT_CONFIG_FILE;
 int has_errors = 0;
 int serious_errors = 0;
 
-static int find_time(const char *timespec, timestring_t *timestring);
+static int find_time(const char *timespec, TimeString_T *timestring);
 static int do_check_integrity(void);
 static int do_purge_deleted(void);
 static int do_set_deleted(void);
@@ -316,10 +316,10 @@ int main(int argc, char *argv[])
 	return has_errors;
 }
 
-static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
+static int db_count_iplog(TimeString_T lasttokeep, uint64_t *rows)
 {
 	C c; R r; volatile int t = DM_SUCCESS;
-	field_t to_date_str;
+	Field_T to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
 
@@ -340,17 +340,17 @@ static int db_count_iplog(timestring_t lasttokeep, u64_t *rows)
 	return t;
 }
 
-static int db_cleanup_iplog(timestring_t lasttokeep)
+static int db_cleanup_iplog(TimeString_T lasttokeep)
 {
-	field_t to_date_str;
+	Field_T to_date_str;
 	char2date_str(lasttokeep, &to_date_str);
 	return db_update("DELETE FROM %spbsp WHERE since < %s", DBPFX, to_date_str);
 }
 
-static int db_count_replycache(timestring_t lasttokeep, u64_t *rows)
+static int db_count_replycache(TimeString_T lasttokeep, uint64_t *rows)
 {
 	C c; R r; volatile int t = FALSE;
-	field_t to_date_str;
+	Field_T to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
 
@@ -371,14 +371,14 @@ static int db_count_replycache(timestring_t lasttokeep, u64_t *rows)
 	return t;
 }
 
-static int db_cleanup_replycache(timestring_t lasttokeep)
+static int db_cleanup_replycache(TimeString_T lasttokeep)
 {
-	field_t to_date_str;
+	Field_T to_date_str;
 	char2date_str(lasttokeep, &to_date_str);
 	return db_update("DELETE FROM %sreplycache WHERE lastseen < %s", DBPFX, to_date_str);
 }
 
-static int db_count_deleted(u64_t * rows)
+static int db_count_deleted(uint64_t * rows)
 {
 	C c; R r; volatile int t = TRUE;
 	assert(rows != NULL); *rows = 0;
@@ -408,7 +408,7 @@ static int db_deleted_purge(void)
 	return db_update("DELETE FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
 }
 
-static int db_deleted_count(u64_t * rows)
+static int db_deleted_count(uint64_t * rows)
 {
 	C c; R r; volatile int t = FALSE;
 	assert(rows); *rows = 0;
@@ -432,7 +432,7 @@ static int db_deleted_count(u64_t * rows)
 
 int do_purge_deleted(void)
 {
-	u64_t deleted_messages;
+	uint64_t deleted_messages;
 
 	if (no_to_all) {
 		qprintf("\nCounting messages with DELETE status...\n");
@@ -441,7 +441,7 @@ int do_purge_deleted(void)
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%llu] messages have DELETE status.\n", deleted_messages);
+		qprintf("Ok. [%lu] messages have DELETE status.\n", deleted_messages);
 	}
 	if (yes_to_all) {
 		qprintf("\nDeleting messages with DELETE status...\n");
@@ -457,7 +457,7 @@ int do_purge_deleted(void)
 
 int do_set_deleted(void)
 {
-	u64_t messages_set_to_delete;
+	uint64_t messages_set_to_delete;
 
 	if (no_to_all) {
 		// TODO: Count messages to delete.
@@ -467,7 +467,7 @@ int do_set_deleted(void)
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%llu] messages need to be set for deletion.\n", messages_set_to_delete);
+		qprintf("Ok. [%lu] messages need to be set for deletion.\n", messages_set_to_delete);
 	}
 	if (yes_to_all) {
 		qprintf("\nSetting DELETE status for deleted messages...\n");
@@ -509,7 +509,7 @@ GList *find_dangling_aliases(const char * const name)
 
 	uids = g_list_first(uids);
 	while (uids) {
-		username = auth_get_userid(*(u64_t *)uids->data);
+		username = auth_get_userid(*(uint64_t *)uids->data);
 		if (!username)
 			dangling = g_list_prepend(dangling, uids->data);
 
@@ -543,7 +543,7 @@ int do_dangling_aliases(void)
 		dangling = g_list_first(dangling);
 		while (dangling) {
 			count++;
-			g_snprintf(deliver_to, 21, "%llu", *(u64_t *)dangling->data);
+			g_snprintf(deliver_to, 21, "%lu", *(uint64_t *)dangling->data);
 			qverbosef("Dangling alias [%s] delivers to nonexistent user [%s]\n",
 				(char *)aliases->data, deliver_to);
 			if (yes_to_all) {
@@ -816,8 +816,8 @@ int do_header_cache(void)
 
 int do_check_iplog(const char *timespec)
 {
-	u64_t log_count;
-	timestring_t timestring;
+	uint64_t log_count;
+	TimeString_T timestring;
 
 	if (find_time(timespec, &timestring) != 0) {
 		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
@@ -833,7 +833,7 @@ int do_check_iplog(const char *timespec)
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%llu] IP entries are older than [%s].\n",
+		qprintf("Ok. [%lu] IP entries are older than [%s].\n",
 		    log_count, timestring);
 	}
 	if (yes_to_all) {
@@ -852,8 +852,8 @@ int do_check_iplog(const char *timespec)
 
 int do_check_replycache(const char *timespec)
 {
-	u64_t log_count;
-	timestring_t timestring;
+	uint64_t log_count;
+	TimeString_T timestring;
 
 	if (find_time(timespec, &timestring) != 0) {
 		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
@@ -869,7 +869,7 @@ int do_check_replycache(const char *timespec)
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%llu] RC entries are older than [%s].\n",
+		qprintf("Ok. [%lu] RC entries are older than [%s].\n",
 		    log_count, timestring);
 	}
 	if (yes_to_all) {
@@ -975,7 +975,7 @@ int do_migrate(int migrate_limit)
  *
  * Returns NULL on error.
  */
-int find_time(const char *timespec, timestring_t *timestring)
+int find_time(const char *timespec, TimeString_T *timestring)
 {
 	time_t td;
 	struct tm tm;
@@ -1055,7 +1055,7 @@ int find_time(const char *timespec, timestring_t *timestring)
 	td -= (hour * 3600L + min * 60L);
 
 	tm = *localtime(&td);	/* get components */
-	strftime((char *) timestring, sizeof(timestring_t),
+	strftime((char *) timestring, sizeof(TimeString_T),
 		 "%Y-%m-%d %H:%M:%S", &tm);
 
 	return 0;

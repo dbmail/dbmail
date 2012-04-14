@@ -33,14 +33,14 @@ const char * sort_listextensions(void)
 	return "";
 }
 
-sort_result_t *sort_validate(u64_t user_idnr UNUSED, char *scriptname UNUSED)
+SortResult_T *sort_validate(uint64_t user_idnr UNUSED, char *scriptname UNUSED)
 {
 	TRACE(TRACE_WARNING, "SIEVE sorting enabled in DELIVERY section of dbmail.conf,"
 			" but this build of DBMail was statically configured without Sieve.");
 	return NULL;
 }
 
-sort_result_t *sort_process(u64_t user_idnr UNUSED, DbmailMessage *message UNUSED, const char *mailbox UNUSED)
+SortResult_T *sort_process(uint64_t user_idnr UNUSED, DbmailMessage *message UNUSED, const char *mailbox UNUSED)
 {
 	TRACE(TRACE_WARNING, "SIEVE sorting enabled in DELIVERY section of dbmail.conf,"
 			" but this build of DBMail was statically configured without Sieve.");
@@ -49,32 +49,32 @@ sort_result_t *sort_process(u64_t user_idnr UNUSED, DbmailMessage *message UNUSE
 
 /* SORT RESULT INTERFACE */
 
-void sort_free_result(sort_result_t *result UNUSED)
+void sort_free_result(SortResult_T *result UNUSED)
 {
 	return;
 }
 
-int sort_get_cancelkeep(sort_result_t *result UNUSED)
+int sort_get_cancelkeep(SortResult_T *result UNUSED)
 {
 	return 0;
 }
 
-int sort_get_reject(sort_result_t *result UNUSED)
+int sort_get_reject(SortResult_T *result UNUSED)
 {
 	return 0;
 }
 
-const char * sort_get_mailbox(sort_result_t *result UNUSED)
+const char * sort_get_mailbox(SortResult_T *result UNUSED)
 {
 	return "";
 }
 
-const char * sort_get_errormsg(sort_result_t *result UNUSED)
+const char * sort_get_errormsg(SortResult_T *result UNUSED)
 {
 	return "";
 }
 
-int sort_get_error(sort_result_t *result UNUSED)
+int sort_get_error(SortResult_T *result UNUSED)
 {
 	return 0;
 }

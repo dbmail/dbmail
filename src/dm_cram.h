@@ -1,6 +1,6 @@
 /*
   
- Copyright (c) 2008-2011 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2008-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -18,8 +18,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef CRAM_H
-#define CRAM_H
+#ifndef DM_CRAM_H
+#define DM_CRAM_H
 
 #include <glib.h>
 

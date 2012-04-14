@@ -1,5 +1,3 @@
-#ifndef _DBMAIL_ACL_H
-#define _DBMAIL_ACL_H
 /*
  Copyright (C) 2004 IC & S  dbmail@ic-s.nl
 
@@ -32,6 +30,9 @@
  * different rights a user can have on a mailbox 
  */
 
+#ifndef DM_ACL_H
+#define DM_ACL_H
+
 #include "dbmailtypes.h"
 #include "dm_mailboxstate.h"
 
@@ -44,7 +45,7 @@
  *     - -1 on error
  *     -  1 on success
  */
-int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring);
+int acl_set_rights(uint64_t userid, uint64_t mboxid, const char *rightsstring);
 
 /**
  * \brief delete identifier, rights pair for selected user for mailbox
@@ -55,7 +56,7 @@ int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring);
  *      -  0 if nothing removed (i.e. no acl was found)
  *      -  1 if acl removed
  */
-//int acl_delete_acl(u64_t userid, u64_t mboxid);
+//int acl_delete_acl(uint64_t userid, uint64_t mboxid);
 #define acl_delete_acl(a,b) db_acl_delete_acl((a),(b))
 
 /**
@@ -68,7 +69,7 @@ int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring);
  *     -  0 if no right
  *     -  1 if user has this right
  */
-int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right);
+int acl_has_right(MailboxState_T S, uint64_t userid, ACLRight right);
 
 /**
  * \brief get complete acl for a mailbox
@@ -78,7 +79,7 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right);
  *     - acl string (list of identifier-rights pairs, might by empty)
  * \note string should be freed by caller
  */
-/*@null@*/ char *acl_get_acl(u64_t mboxid);
+/*@null@*/ char *acl_get_acl(uint64_t mboxid);
 
 /**
  * \brief list rights that may be granted to a user on a mailbox
@@ -89,7 +90,7 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right);
  *     - string of rights otherwise (SEE RFC for details)
  * \note string should be freed by caller
  */
-/*@null@*/ /*@only@*/ char *acl_listrights(u64_t userid, u64_t mboxid);
+/*@null@*/ /*@only@*/ char *acl_listrights(uint64_t userid, uint64_t mboxid);
 
 /**
  * \brief list rights that a user has on a mailbox
@@ -100,6 +101,6 @@ int acl_has_right(MailboxState_T S, u64_t userid, ACLRight_t right);
  *     - string of rights otherwise (SEE RFC)
  * \note string should be freed by caller
  */
-/*@null@*/ char *acl_myrights(u64_t userid, u64_t mboxid);
+/*@null@*/ char *acl_myrights(uint64_t userid, uint64_t mboxid);
 
 #endif

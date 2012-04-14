@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2005-2011 NFG Net Facilities Group BV support@nfg.nl
+ *  Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *  licence: GPLv2
  *  see COPYING for details.
