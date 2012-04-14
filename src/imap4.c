@@ -318,6 +318,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 void imap_handle_input(ImapSession *session)
 {
 	char buffer[MAX_LINESIZE];
+	char *alloc_buf = NULL;
 	int l, result;
 
 	assert(session);
@@ -352,7 +353,10 @@ void imap_handle_input(ImapSession *session)
 	// Otherwise read in rbuff_size amount of data
 	while (TRUE) {
 		char *input = NULL;
-		char *alloc_buf = NULL;
+		if (alloc_buf != NULL) {
+			g_free(alloc_buf);
+			alloc_buf = NULL;
+		}
 
 		memset(buffer, 0, sizeof(buffer));
 
@@ -397,11 +401,6 @@ void imap_handle_input(ImapSession *session)
 			continue;
 		}
 
-		if (alloc_buf != NULL) {
-			g_free(alloc_buf);
-			alloc_buf = NULL;
-		}
-
 		if ( session->parser_state < 0 ) {
 			imap_session_printf(session, "%s BAD parse error\r\n", session->tag);
 			imap_handle_exit(session, 1);
@@ -422,6 +421,11 @@ void imap_handle_input(ImapSession *session)
 			TRACE(TRACE_NOTICE, "session->state: ERROR. abort");
 			break;
 		}
+	}
+
+	if (alloc_buf != NULL) {
+		g_free(alloc_buf);
+		alloc_buf = NULL;
 	}
 
 	return;
