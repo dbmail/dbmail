@@ -140,7 +140,7 @@ void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
-	if (D->data && session) {
+	if (D->data && session && session->ci) {
 		ci_write(session->ci, "%s", (char *)D->data);
 	}
 }

@@ -94,6 +94,7 @@ ImapSession * dbmail_imap_session_new(void)
 	ImapSession * self;
 
 	self = g_new0(ImapSession,1);
+	self->state = CLIENTSTATE_NON_AUTHENTICATED;
 	self->args = g_new0(char *, MAX_ARGS);
 	self->buff = g_string_new("");
 	self->fi = g_new0(fetch_items,1);
@@ -588,7 +589,7 @@ void _send_headers(ImapSession *self, const body_fetch *bodyfetch, gboolean not)
 static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean not)
 {
 	C c; R r; volatile int t = FALSE;
-	GString *q;
+	INIT_QUERY;
 	gchar *fld, *val, *old, *new = NULL;
 	uint64_t *mid;
 	uint64_t id;
@@ -644,8 +645,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		snprintf(range,DEF_FRAGSIZE,"BETWEEN %lu AND %lu", self->msg_idnr, self->hi);
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %lu:%lu ceiling %lu [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
-	q = g_string_new("");
-	g_string_printf(q,"SELECT m.message_idnr, n.headername, v.headervalue "
+	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr, n.headername, v.headervalue "
 			"FROM %sheader h "
 			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
 			"LEFT JOIN %sheadername n ON h.headername_id=n.id "
@@ -659,7 +659,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 	c = db_con_get();	
 	TRY
-		r = db_query(c, q->str);
+		r = db_query(c, query);
 		while (db_result_next(r)) {
 			int l;	
 			const void *blob;
@@ -697,7 +697,6 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		db_con_close(c);
 	END_TRY;
 
-	g_string_free(q,TRUE);
 	if (t == DM_EQUERY) return;
 	
 	self->lo += QUERY_BATCHSIZE;
@@ -812,7 +811,7 @@ static int _imap_show_body_section(body_fetch *bodyfetch, gpointer data)
 static void _fetch_envelopes(ImapSession *self)
 {
 	C c; R r; volatile int t = FALSE;
-	GString *q;
+	INIT_QUERY;
 	gchar *s;
 	uint64_t *mid;
 	uint64_t id;
@@ -842,8 +841,7 @@ static void _fetch_envelopes(ImapSession *self)
 	else
 		snprintf(range,DEF_FRAGSIZE,"BETWEEN %lu AND %lu", self->msg_idnr, self->hi);
 
-        q = g_string_new("");
-	g_string_printf(q,"SELECT message_idnr,envelope "
+	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr,envelope "
 			"FROM %senvelope e "
 			"LEFT JOIN %smessages m USING (physmessage_id) "
 			"WHERE m.mailbox_idnr = %lu "
@@ -852,7 +850,7 @@ static void _fetch_envelopes(ImapSession *self)
 			self->mailbox->id, range);
 	c = db_con_get();
 	TRY
-		r = db_query(c, q->str);
+		r = db_query(c, query);
 		while (db_result_next(r)) {
 			id = db_result_get_u64(r, 0);
 			
@@ -869,7 +867,6 @@ static void _fetch_envelopes(ImapSession *self)
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
-		g_string_free(q,TRUE);
 	END_TRY;
 
 	if (t == DM_EQUERY) return;

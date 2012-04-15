@@ -271,7 +271,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 		case 0:
 			/* only do this in the main thread */
 			if (session->state < CLIENTSTATE_LOGOUT) {
-				if (session->buff) {
+				if (session->buff && session->buff->len > 0) {
 					int e = 0;
 					if ((e = ci_write(session->ci, session->buff->str)) < 0) {
 						TRACE(TRACE_DEBUG,"ci_write returned error [%s]", strerror(e));
@@ -452,19 +452,14 @@ int imap_handle_connection(client_sock *c)
 		ci = client_init(NULL);
 
 	session = dbmail_imap_session_new();
-
-	dbmail_imap_session_set_state(session, CLIENTSTATE_NON_AUTHENTICATED);
-
+	session->ci = ci;
 	event_set(ci->rev, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
 	event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
-
-	session->ci = ci;
 
 	if ((! server_conf->ssl) || (ci->ssl_state == TRUE)) 
 		Capa_remove(session->capa, "STARTTLS");
 
 	reset_callbacks(session);
-	
 	send_greeting(session);
 	
 	return EOF;
