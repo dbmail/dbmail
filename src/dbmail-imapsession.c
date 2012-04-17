@@ -1101,12 +1101,6 @@ int dbmail_imap_session_fetch_get_items(ImapSession *self)
 	
 }
 
-
-int client_is_authenticated(ImapSession * self)
-{
-	return (self->state != CLIENTSTATE_NON_AUTHENTICATED);
-}
-
 /*
  * check_state_and_args()
  *
@@ -1116,46 +1110,6 @@ int client_is_authenticated(ImapSession * self)
  *
  * returns 1 on succes, 0 on failure
  */
-int check_state_and_args(ImapSession * self, int minargs, int maxargs, ClientState_T state)
-{
-	int i;
-
-	if (self->state == CLIENTSTATE_ERROR) return 0;
-
-	/* check state */
-	if (state != CLIENTSTATE_ANY) {
-		if (self->state != state) {
-			if (!  (state == CLIENTSTATE_AUTHENTICATED && self->state == CLIENTSTATE_SELECTED)) {
-				dbmail_imap_session_buff_printf(self, "%s BAD %s command received in invalid state [%d] != [%d]\r\n", 
-					self->tag, self->command, self->state, state);
-				return 0;
-			}
-		}
-	}
-
-	/* check args */
-	for (i = 0; i < minargs; i++) {
-		if (!self->args[self->args_idx+i]) {
-			/* error: need more args */
-			dbmail_imap_session_buff_printf(self, "%s BAD missing argument%s to %s\r\n", self->tag, (minargs == 1) ? "" : "(s)", 
-					self->command);
-			return 0;
-		}
-	}
-
-	for (i = 0; self->args[self->args_idx+i]; i++);
-
-	if (maxargs && (i > maxargs)) {
-		/* error: too many args */
-		dbmail_imap_session_buff_printf(self, "%s BAD too many arguments to %s\r\n", 
-				self->tag, self->command);
-		return 0;
-	}
-
-	/* succes */
-	return 1;
-}
-
 void dbmail_imap_session_buff_clear(ImapSession *self)
 {
 	self->buff = g_string_truncate(self->buff, 0);
@@ -1255,7 +1209,7 @@ int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, c
 
 }
 
-int dbmail_imap_session_prompt(ImapSession * self, char * prompt)
+static int dbmail_imap_session_prompt(ImapSession * self, char * prompt)
 {
 	char *prompt64, *promptcat;
 	
@@ -1270,22 +1224,6 @@ int dbmail_imap_session_prompt(ImapSession * self, char * prompt)
 	g_free(prompt64);
 	g_free(promptcat);
 	
-	return 0;
-}
-
-int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, uint64_t idnr)
-{
-	/* check if mailbox is selectable */
-	int selectable;
-	selectable = db_isselectable(idnr);
-	if (selectable == -1) {
-		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
-	}
-	if (selectable == FALSE) {
-		dbmail_imap_session_buff_printf(self, "%s NO specified mailbox is not selectable\r\n", self->tag);
-		return 1;
-	}
 	return 0;
 }
 
@@ -1685,7 +1623,7 @@ void dbmail_imap_session_bodyfetch_free(ImapSession *self)
 
 }
 
-body_fetch * dbmail_imap_session_bodyfetch_get_last(ImapSession *self) 
+static body_fetch * dbmail_imap_session_bodyfetch_get_last(ImapSession *self) 
 {
 	assert(self->fi);
 	if (! self->fi->bodyfetch) dbmail_imap_session_bodyfetch_new(self);
@@ -1702,13 +1640,6 @@ int dbmail_imap_session_bodyfetch_set_partspec(ImapSession *self, char *partspec
 	memcpy(bodyfetch->partspec,partspec,length);
 	return 0;
 }
-char *dbmail_imap_session_bodyfetch_get_last_partspec(ImapSession *self) 
-{
-	assert(self->fi);
-	body_fetch *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
-	return bodyfetch->partspec;
-}
-
 int dbmail_imap_session_bodyfetch_set_itemtype(ImapSession *self, int itemtype) 
 {
 	assert(self->fi);
@@ -1716,23 +1647,11 @@ int dbmail_imap_session_bodyfetch_set_itemtype(ImapSession *self, int itemtype)
 	bodyfetch->itemtype = itemtype;
 	return 0;
 }
-int dbmail_imap_session_bodyfetch_get_last_itemtype(ImapSession *self) 
-{
-	assert(self->fi);
-	body_fetch *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
-	return bodyfetch->itemtype;
-}
 int dbmail_imap_session_bodyfetch_set_argstart(ImapSession *self) 
 {
 	assert(self->fi);
 	body_fetch *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->argstart = self->args_idx;
-	return bodyfetch->argstart;
-}
-int dbmail_imap_session_bodyfetch_get_last_argstart(ImapSession *self) 
-{
-	assert(self->fi);
-	body_fetch *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->argstart;
 }
 int dbmail_imap_session_bodyfetch_set_argcnt(ImapSession *self) 

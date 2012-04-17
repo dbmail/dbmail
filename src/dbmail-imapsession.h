@@ -55,8 +55,8 @@ typedef struct {
 
 	cmd_t cmd; // command structure (wip)
 	gboolean error; // command result
-	ClientState_T state; // session status 
 	int error_count;
+	ClientState_T state; // session status 
 	Connection_T c; // database-connection;
 } ImapSession;
 
@@ -90,35 +90,23 @@ void dbmail_imap_session_buff_flush(ImapSession *self);
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...);
 
 int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state);
-int client_is_authenticated(ImapSession * self);
-int check_state_and_args(ImapSession * self, int minargs, int maxargs, ClientState_T state);
 int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, const char * password);
-int dbmail_imap_session_prompt(ImapSession * self, char * prompt);
 
 MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t mailbox_idnr);
 
-int dbmail_imap_session_mailbox_get_selectable(ImapSession * self, uint64_t idnr);
-
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
 int dbmail_imap_session_mailbox_expunge(ImapSession *self);
-int dbmail_imap_session_update_recent(ImapSession *self);
 
 int dbmail_imap_session_fetch_get_items(ImapSession *self);
 int dbmail_imap_session_fetch_parse_args(ImapSession * self);
 
 void dbmail_imap_session_bodyfetch_new(ImapSession *self);
 void dbmail_imap_session_bodyfetch_free(ImapSession *self);
-body_fetch * dbmail_imap_session_bodyfetch_get_last(ImapSession *self);
 void dbmail_imap_session_bodyfetch_rewind(ImapSession *self);
 
 int dbmail_imap_session_bodyfetch_set_partspec(ImapSession *self, char *partspec, int length);
-char *dbmail_imap_session_bodyfetch_get_last_partspec(ImapSession *self);
-
 int dbmail_imap_session_bodyfetch_set_itemtype(ImapSession *self, int itemtype);
-int dbmail_imap_session_bodyfetch_get_last_itemtype(ImapSession *self);
-
 int dbmail_imap_session_bodyfetch_set_argstart(ImapSession *self);
-int dbmail_imap_session_bodyfetch_get_last_argstart(ImapSession *self);
 
 int dbmail_imap_session_bodyfetch_set_argcnt(ImapSession *self);
 int dbmail_imap_session_bodyfetch_get_last_argcnt(ImapSession *self);

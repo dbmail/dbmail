@@ -88,6 +88,50 @@ void cmd_free(cmd_t *cmd)
 				"%s OK %s%s completed\r\n", \
 				self->tag, self->use_uid ? "UID " : "", \
 				self->command)
+
+
+static int check_state_and_args(ImapSession * self, int minargs, int maxargs, ClientState_T state)
+{
+	int i;
+
+	if (self->state == CLIENTSTATE_ERROR) return 0;
+
+	/* check state */
+	if (state != CLIENTSTATE_ANY) {
+		if (self->state != state) {
+			if (!  (state == CLIENTSTATE_AUTHENTICATED && self->state == CLIENTSTATE_SELECTED)) {
+				dbmail_imap_session_buff_printf(self, "%s BAD %s command received in invalid state [%d] != [%d]\r\n", 
+					self->tag, self->command, self->state, state);
+				return 0;
+			}
+		}
+	}
+
+	/* check args */
+	for (i = 0; i < minargs; i++) {
+		if (!self->args[self->args_idx+i]) {
+			/* error: need more args */
+			dbmail_imap_session_buff_printf(self, "%s BAD missing argument%s to %s\r\n", self->tag, (minargs == 1) ? "" : "(s)", 
+					self->command);
+			return 0;
+		}
+	}
+
+	for (i = 0; self->args[self->args_idx+i]; i++);
+
+	if (maxargs && (i > maxargs)) {
+		/* error: too many args */
+		dbmail_imap_session_buff_printf(self, "%s BAD too many arguments to %s\r\n", 
+				self->tag, self->command);
+		return 0;
+	}
+
+	/* succes */
+	return 1;
+}
+
+
+
 /*
  * RETURN VALUES _ic_ functions:
  *

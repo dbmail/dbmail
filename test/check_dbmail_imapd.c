@@ -193,12 +193,9 @@ START_TEST(test_imap_bodyfetch)
 	
 	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_octetstart(s), "octetstart init value incorrect");
 	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_octetcnt(s), "octetcnt init value incorrect");
-	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_argstart(s), "argstart init value incorrect");
 	
 	s->args_idx = 23;
 	dbmail_imap_session_bodyfetch_set_argstart(s);
-	result = dbmail_imap_session_bodyfetch_get_last_argstart(s);
-	fail_unless(result==23, "argstart incorrect");
 	
 	dbmail_imap_session_bodyfetch_set_octetstart(s,0);
 	octet = dbmail_imap_session_bodyfetch_get_last_octetstart(s);
