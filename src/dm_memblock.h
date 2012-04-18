@@ -33,8 +33,7 @@
 #define T Mem_T
 typedef struct T *T;
 
-extern T Mem_open(void);
-
+extern T    Mem_open(void);
 extern void Mem_close  (T *M);
 extern int  Mem_write  (T M, const void *data, int size);
 extern int  Mem_read   (T M, void *data, int size);

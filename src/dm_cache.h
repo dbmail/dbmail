@@ -30,16 +30,13 @@
 
 typedef struct T *T;
 
-extern T     Cache_new(void);
-extern uint64_t Cache_set_dump(T C, char *buf, int dumptype);
-extern void  Cache_clear(T C);
+extern T        Cache_new(void);
+extern void     Cache_clear(T C);
 extern uint64_t Cache_update(T C, DbmailMessage *message, int filter);
 extern uint64_t Cache_get_size(T C);
-extern void  Cache_set_memdump(T C, Mem_T M);
-extern Mem_T Cache_get_memdump(T C);
-extern void  Cache_set_tmpdump(T C, Mem_T M);
-extern Mem_T Cache_get_tmpdump(T C);
-extern void  Cache_free(T *C);
+extern Mem_T    Cache_get_memdump(T C);
+extern Mem_T    Cache_get_tmpdump(T C);
+extern void     Cache_free(T *C);
 
 #undef T
 #endif

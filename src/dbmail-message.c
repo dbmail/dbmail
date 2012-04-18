@@ -961,12 +961,9 @@ gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
 	gchar *h;
 	unsigned i = 0;
 
-	h = dbmail_message_to_string(self);
-	i = find_end_of_header(h);
-	h[i] = '\0';
-	h = g_realloc(h, i+1);
-
-	return h;
+	i = find_end_of_header(self->raw_content);
+	h = g_new0(gchar,i+1);
+	return strncpy(h, self->raw_content, i);
 }
 
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
@@ -974,7 +971,6 @@ size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
 	char *s; size_t r;
 
 	s = self->raw_content;
-
 	r = strlen(s);
 
         if (crlf) {
@@ -2220,7 +2216,6 @@ int send_mail(DbmailMessage *message,
 	FILE *mailpipe = NULL;
 	char *escaped_to = NULL;
 	char *escaped_from = NULL;
-	char *message_string = NULL;
 	char *sendmail_command = NULL;
 	Field_T sendmail, postmaster;
 	int result;
@@ -2283,9 +2278,7 @@ int send_mail(DbmailMessage *message,
 			fprintf(mailpipe, "%s\n", preoutput);
 		// fall-through
 	case SENDMESSAGE:
-		message_string = dbmail_message_to_string(message);
-		fprintf(mailpipe, "%s", message_string);
-		g_free(message_string);
+		fprintf(mailpipe, "%s", message->raw_content);
 		break;
 	default:
 		TRACE(TRACE_ERR, "invalid sendwhat in call to send_mail: [%d]", sendwhat);
