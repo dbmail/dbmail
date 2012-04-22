@@ -26,6 +26,7 @@ AC_MSG_RESULT([
  LIBEVENT:                  $EVENTLIB
  OPENSSL:                   $SSLLIB
  ZDB:                       $ZDBLIB
+ JEMALLOC:                  $JEMALLOC
 
 ])
 ])
@@ -270,17 +271,34 @@ if ( test [ "x$lookforldap" != "xno" ] || test [ "x$lookforauthldap" != "xno" ] 
 fi
 ])
 
-AC_DEFUN([DM_CHECK_ZDB], [dnl
+AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
+	AC_ARG_WITH(jemalloc,[  --with-jemalloc=PATH	  path to libjemalloc base directory (e.g. /usr/local or /usr)],
+		[lookforjemalloc="$withval"],[lookforjemalloc="no"])
+	if test [ "x$lookforjemalloc" != "xno" ] ; then
+		CFLAGS="$CFLAGS -I${lookforzdb}/include"
+	fi
+	AC_CHECK_HEADERS([jemalloc.h jemalloc_defs.h],
+		[JEMALLOCLIB="-ljemalloc"], 
+		[JEMALLOCLIB="failed"],
+	[[
+#include <jemalloc.h>
+#include <jemalloc_defs.h>
+	]])
+	if test [ "x$JEMALLOCLIB" = "xfailed" ]; then
+		AC_MSG_ERROR([Could not find jemalloc library.])
+	else
+		LDFLAGS="$LDFLAGS $JEMALLOCLIB"
+	fi
+])
 
+AC_DEFUN([DM_CHECK_ZDB], [dnl
 	AC_ARG_WITH(zdb,[  --with-zdb=PATH	  path to libzdb base directory (e.g. /usr/local or /usr)],
 		[lookforzdb="$withval"],[lookforzdb="no"])
-
 	if test [ "x$lookforzdb" = "xno" ] ; then
 		CFLAGS="$CFLAGS -I${prefix}/include/zdb"
 	else
 		CFLAGS="$CFLAGS -I${lookforzdb}/include/zdb"
 	fi
-
 	AC_CHECK_HEADERS([URL.h ResultSet.h PreparedStatement.h Connection.h ConnectionPool.h SQLException.h],
 		[ZDBLIB="-lzdb"], 
 		[ZDBLIB="failed"],
