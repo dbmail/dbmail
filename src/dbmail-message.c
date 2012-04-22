@@ -727,6 +727,8 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GStri
 	assert(self->raw_content == NULL);
 
 	stream = g_mime_stream_mem_new_with_buffer(str->str, str->len);
+	g_mime_stream_mem_set_owner(stream, TRUE);
+
 	parser = g_mime_parser_new_with_stream(stream);
 	g_object_unref(stream);
 
