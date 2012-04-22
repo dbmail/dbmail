@@ -677,6 +677,7 @@ CPP
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
+am__nodep
 AMDEPBACKSLASH
 AMDEP_FALSE
 AMDEP_TRUE
@@ -770,6 +771,7 @@ with_ldap
 enable_dependency_tracking
 with_sieve
 with_zdb
+with_jemalloc
 with_check
 with_pic
 enable_fast_install
@@ -1424,6 +1426,7 @@ Optional Packages:
   --with-ldap=PATH	  path to LDAP base directory (e.g. /usr/local or /usr)
   --with-sieve=PATH	  path to libSieve base directory (e.g. /usr/local or /usr)
   --with-zdb=PATH	  path to libzdb base directory (e.g. /usr/local or /usr)
+  --with-jemalloc=PATH	  path to libjemalloc base directory (e.g. /usr/local or /usr)
   --with-check=PATH       prefix where check is installed default=auto
   --with-pic              try to use only PIC/non-PIC objects [default=use
                           both]
@@ -2779,11 +2782,11 @@ MAKEINFO=${MAKEINFO-"${am_missing_run}makeinfo"}
 
 # We need awk for the "check" target.  The system "awk" is bad on
 # some platforms.
-# Always define AMTAR for backward compatibility.
+# Always define AMTAR for backward compatibility.  Yes, it's still used
+# in the wild :-(  We should find a proper way to deprecate it ...
+AMTAR='$${TAR-tar}'
 
-AMTAR=${AMTAR-"${am_missing_run}tar"}
-
-am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
+am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
 
 
 
@@ -2997,6 +3000,7 @@ fi
 if test "x$enable_dependency_tracking" != xno; then
   am_depcomp="$ac_aux_dir/depcomp"
   AMDEPBACKSLASH='\'
+  am__nodep='_no'
 fi
  if test "x$enable_dependency_tracking" != xno; then
   AMDEP_TRUE=
@@ -3810,6 +3814,7 @@ else
   # instance it was reported that on HP-UX the gcc test will end up
   # making a dummy file named `D' -- because `-MD' means `put the output
   # in D'.
+  rm -rf conftest.dir
   mkdir conftest.dir
   # Copy depcomp to subdir because otherwise we won't find it if we're
   # using a relative directory.
@@ -3869,7 +3874,7 @@ else
 	break
       fi
       ;;
-    msvisualcpp | msvcmsys)
+    msvc7 | msvc7msys | msvisualcpp | msvcmsys)
       # This compiler won't grok `-c -o', but also, the minuso test has
       # not run yet.  These depmodes are late enough in the game, and
       # so weak that their functioning should not be impacted.
@@ -4960,7 +4965,6 @@ done
 	fi
 
 
-
 # Check whether --with-zdb was given.
 if test "${with_zdb+set}" = set; then :
   withval=$with_zdb; lookforzdb="$withval"
@@ -4968,13 +4972,11 @@ else
   lookforzdb="no"
 fi
 
-
 	if test  "x$lookforzdb" = "xno"  ; then
 		CFLAGS="$CFLAGS -I${prefix}/include/zdb"
 	else
 		CFLAGS="$CFLAGS -I${lookforzdb}/include/zdb"
 	fi
-
 	for ac_header in URL.h ResultSet.h PreparedStatement.h Connection.h ConnectionPool.h SQLException.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
@@ -5002,6 +5004,44 @@ done
 		as_fn_error $? "Could not find ZDB library." "$LINENO" 5
 	else
 		LDFLAGS="$LDFLAGS $ZDBLIB"
+	fi
+
+
+# Check whether --with-jemalloc was given.
+if test "${with_jemalloc+set}" = set; then :
+  withval=$with_jemalloc; lookforjemalloc="$withval"
+else
+  lookforjemalloc="no"
+fi
+
+	if test  "x$lookforjemalloc" = "xno"  ; then
+		CFLAGS="$CFLAGS -I${prefix}/include/jemalloc"
+	else
+		CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
+	fi
+	for ac_header in jemalloc.h jemalloc_defs.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "
+#include <jemalloc.h>
+#include <jemalloc_defs.h>
+
+"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+ JEMALLOCLIB="-ljemalloc"
+else
+  JEMALLOCLIB="failed"
+fi
+
+done
+
+	if test  "x$JEMALLOCLIB" = "xfailed" ; then
+		as_fn_error $? "Could not find jemalloc library." "$LINENO" 5
+	else
+		LDFLAGS="$LDFLAGS $JEMALLOCLIB"
 	fi
 
 
@@ -6012,6 +6052,7 @@ else
   # instance it was reported that on HP-UX the gcc test will end up
   # making a dummy file named `D' -- because `-MD' means `put the output
   # in D'.
+  rm -rf conftest.dir
   mkdir conftest.dir
   # Copy depcomp to subdir because otherwise we won't find it if we're
   # using a relative directory.
@@ -6071,7 +6112,7 @@ else
 	break
       fi
       ;;
-    msvisualcpp | msvcmsys)
+    msvc7 | msvc7msys | msvisualcpp | msvcmsys)
       # This compiler won't grok `-c -o', but also, the minuso test has
       # not run yet.  These depmodes are late enough in the game, and
       # so weak that their functioning should not be impacted.
@@ -6602,8 +6643,8 @@ esac
 
 
 
-macro_version='2.4'
-macro_revision='1.3293'
+macro_version='2.4.2'
+macro_revision='1.3337'
 
 
 
@@ -16116,6 +16157,7 @@ fi
  LIBEVENT:                  $EVENTLIB
  OPENSSL:                   $SSLLIB
  ZDB:                       $ZDBLIB
+ JEMALLOC:                  $JEMALLOCLIB
 
 " >&5
 $as_echo "
@@ -16138,6 +16180,7 @@ $as_echo "
  LIBEVENT:                  $EVENTLIB
  OPENSSL:                   $SSLLIB
  ZDB:                       $ZDBLIB
+ JEMALLOC:                  $JEMALLOCLIB
 
 " >&6; }
 

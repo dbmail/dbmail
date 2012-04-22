@@ -26,7 +26,7 @@ AC_MSG_RESULT([
  LIBEVENT:                  $EVENTLIB
  OPENSSL:                   $SSLLIB
  ZDB:                       $ZDBLIB
- JEMALLOC:                  $JEMALLOC
+ JEMALLOC:                  $JEMALLOCLIB
 
 ])
 ])
@@ -274,8 +274,10 @@ fi
 AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 	AC_ARG_WITH(jemalloc,[  --with-jemalloc=PATH	  path to libjemalloc base directory (e.g. /usr/local or /usr)],
 		[lookforjemalloc="$withval"],[lookforjemalloc="no"])
-	if test [ "x$lookforjemalloc" != "xno" ] ; then
-		CFLAGS="$CFLAGS -I${lookforzdb}/include"
+	if test [ "x$lookforjemalloc" = "xno" ] ; then
+		CFLAGS="$CFLAGS -I${prefix}/include/jemalloc"
+	else
+		CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
 	fi
 	AC_CHECK_HEADERS([jemalloc.h jemalloc_defs.h],
 		[JEMALLOCLIB="-ljemalloc"], 
