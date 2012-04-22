@@ -281,14 +281,12 @@ AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 	fi
 	AC_CHECK_HEADERS([jemalloc.h jemalloc_defs.h],
 		[JEMALLOCLIB="-ljemalloc"], 
-		[JEMALLOCLIB="failed"],
+		[JEMALLOCLIB="no"],
 	[[
 #include <jemalloc.h>
 #include <jemalloc_defs.h>
 	]])
-	if test [ "x$JEMALLOCLIB" = "xfailed" ]; then
-		AC_MSG_ERROR([Could not find jemalloc library.])
-	else
+	if test [ "x$JEMALLOCLIB" != "xno" ]; then
 		LDFLAGS="$LDFLAGS $JEMALLOCLIB"
 	fi
 ])

@@ -5033,14 +5033,12 @@ if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
 _ACEOF
  JEMALLOCLIB="-ljemalloc"
 else
-  JEMALLOCLIB="failed"
+  JEMALLOCLIB="no"
 fi
 
 done
 
-	if test  "x$JEMALLOCLIB" = "xfailed" ; then
-		as_fn_error $? "Could not find jemalloc library." "$LINENO" 5
-	else
+	if test  "x$JEMALLOCLIB" != "xno" ; then
 		LDFLAGS="$LDFLAGS $JEMALLOCLIB"
 	fi
 
