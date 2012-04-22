@@ -131,7 +131,6 @@ enum DBMAIL_MESSAGE_FILTER_TYPES {
 
 typedef struct {
 	uint64_t id;
-	uint64_t physid;
 	time_t internal_date;
 	int internal_date_gmtoff;
 	GString *envelope_recipient;

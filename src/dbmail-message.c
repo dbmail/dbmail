@@ -724,41 +724,40 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GStri
 	GMimeStream *stream;
 
 	assert(self->content == NULL);
+	assert(self->raw_content == NULL);
 
 	stream = g_mime_stream_mem_new_with_buffer(str->str, str->len);
 	parser = g_mime_parser_new_with_stream(stream);
 	g_object_unref(stream);
 
-	if (strncmp(str->str, "From ", 5) == 0) {
-		/* don't use gmime's from scanner since body lines may begin with 'From ' */
-		char *end;
-		if ((end = g_strstr_len(str->str, 80, "\n"))) {
-			size_t l = end - str->str;
-			from = g_strndup(str->str, l);
-			TRACE(TRACE_DEBUG, "From_ [%s]", from);
-		}
-	}
-
 	content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 	if (content) {
 		dbmail_message_set_class(self, DBMAIL_MESSAGE);
-		self->content = content;
-		self->raw_content = dbmail_message_to_string(self);
-		if (from) {
-			dbmail_message_set_internal_date(self, from);
+
+		if (strncmp(str->str, "From ", 5) == 0) {
+			/* don't use gmime's from scanner since body lines may begin with 'From ' */
+			char *end;
+			if ((end = g_strstr_len(str->str, 80, "\n"))) {
+				size_t l = end - str->str;
+				from = g_strndup(str->str, l);
+				TRACE(TRACE_DEBUG, "From_ [%s]", from);
+				dbmail_message_set_internal_date(self, from);
+				g_free(from);
+			}
 		}
-		g_object_unref(parser);
+
+		self->content = content;
+		self->raw_content = g_strdup(str->str);
 	} else {
 		content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
 		if (content) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 			self->content = content;
-			self->raw_content = dbmail_message_to_string(self);
-			g_object_unref(parser);
+			self->raw_content = g_strdup(str->str);
 		}
 	}
+	g_object_unref(parser);
 
-	if (from) g_free(from);
 	_map_headers(self);
 	return self;
 }
@@ -815,15 +814,14 @@ static void _register_header(const char *header, const char *value, gpointer use
 		g_relation_insert(m->headers, hname, hvalue);
 }
 
-void dbmail_message_set_physid(DbmailMessage *self, uint64_t physid)
+void dbmail_message_set_physid(DbmailMessage *self, uint64_t id)
 {
-	self->id = physid;
-	self->physid = physid;
+	self->id = id;
 }
 
 uint64_t dbmail_message_get_physid(const DbmailMessage *self)
 {
-	return self->physid;
+	return self->id;
 }
 
 void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
@@ -1121,7 +1119,7 @@ static int _update_message(DbmailMessage *self)
 	uint64_t rfcsize = (uint64_t)dbmail_message_get_size(self,TRUE);
 
 	if (! db_update("UPDATE %sphysmessage SET messagesize = %lu, rfcsize = %lu WHERE id = %lu", 
-			DBPFX, size, rfcsize, self->physid))
+			DBPFX, size, rfcsize, self->id))
 		return DM_EQUERY;
 
 	if (! db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %lu", 
@@ -1336,7 +1334,7 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 	_header_value_get_id(value, sortfield, datefield, &headervalue_id);
 
 	if (headervalue_id && headername_id)
-		_header_insert(self->physid, headername_id, headervalue_id);
+		_header_insert(self->id, headername_id, headervalue_id);
 
 	g_free(value);
 	g_free(sortfield);
@@ -1346,7 +1344,7 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 int dbmail_message_cache_headers(const DbmailMessage *self)
 {
 	assert(self);
-	assert(self->physid);
+	assert(self->id);
 
 	if (! GMIME_IS_MESSAGE(self->content)) {
 		TRACE(TRACE_ERR,"self->content is not a message");
@@ -1731,7 +1729,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 
 		/* Insert relation between physmessage, header name and header value */
 		if (headervalue_id)
-			_header_insert(self->physid, headername_id, headervalue_id);
+			_header_insert(self->id, headername_id, headervalue_id);
 		else
 			TRACE(TRACE_INFO, "error inserting headervalue. skipping.");
 
@@ -1747,7 +1745,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	return FALSE;
 }
 
-static void insert_field_cache(uint64_t physid, const char *field, const char *value)
+static void insert_field_cache(uint64_t id, const char *field, const char *value)
 {
 	gchar *clean_value;
 	C c; S s;
@@ -1761,7 +1759,7 @@ static void insert_field_cache(uint64_t physid, const char *field, const char *v
 	TRY
 		db_begin_transaction(c);
 		s = db_stmt_prepare(c,"INSERT INTO %s%sfield (physmessage_id, %sfield) VALUES (?,?)", DBPFX, field, field);
-		db_stmt_set_u64(s, 1, physid);
+		db_stmt_set_u64(s, 1, id);
 		db_stmt_set_str(s, 2, clean_value);
 		db_stmt_exec(s);
 		db_commit_transaction(c);
@@ -1796,7 +1794,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	g_free(field);
 
 	if (! refs) {
-		TRACE(TRACE_DEBUG, "reference_decode failed [%lu]", self->physid);
+		TRACE(TRACE_DEBUG, "reference_decode failed [%lu]", self->id);
 		return;
 	}
 	
@@ -1805,7 +1803,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	
 	while (refs->msgid) {
 		if (! g_tree_lookup(tree,refs->msgid)) {
-			insert_field_cache(self->physid, "references", refs->msgid);
+			insert_field_cache(self->id, "references", refs->msgid);
 			g_tree_insert(tree,refs->msgid,refs->msgid);
 		}
 		if (refs->next == NULL)
@@ -1828,7 +1826,7 @@ void dbmail_message_cache_envelope(const DbmailMessage *self)
 	TRY
 		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "INSERT INTO %senvelope (physmessage_id, envelope) VALUES (?,?)", DBPFX);
-		db_stmt_set_u64(s, 1, self->physid);
+		db_stmt_set_u64(s, 1, self->id);
 		db_stmt_set_str(s, 2, envelope);
 		db_stmt_exec(s);
 		db_commit_transaction(c);
