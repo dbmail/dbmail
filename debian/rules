@@ -44,6 +44,7 @@ CFLAGS += -DEXTRA
 
 CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
+	--with-jemalloc=no \
 	$(WITH_CHECK) $(SHARED) $(STATIC) $(MANPAGES) $(WITH_SIEVE) $(WITH_LDAP)
 
 build: stamps/build

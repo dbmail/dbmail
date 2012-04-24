@@ -130,6 +130,9 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* Define if jemalloc will be used. */
+#undef USEJEMALLOC
+
 /* Define if our local getopt will be used. */
 #undef USE_DM_GETOPT
 

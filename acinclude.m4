@@ -273,11 +273,13 @@ fi
 
 AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 	AC_ARG_WITH(jemalloc,[  --with-jemalloc=PATH	  path to libjemalloc base directory (e.g. /usr/local or /usr)],
-		[lookforjemalloc="$withval"],[lookforjemalloc="no"])
-	if test [ "x$lookforjemalloc" = "xno" ] ; then
-		CFLAGS="$CFLAGS -I${prefix}/include/jemalloc"
-	else
-		CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
+		[lookforjemalloc="$withval"],[lookforjemalloc="auto"])
+	if test [ "x$lookforjemalloc" != "xno" ] ; then
+		if test [ "x$lookforjemalloc" = "xauto" ] ; then 
+			CFLAGS="$CFLAGS -I${prefix}/include/jemalloc"
+		else
+			CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
+		fi
 	fi
 	AC_CHECK_HEADERS([jemalloc.h jemalloc_defs.h],
 		[JEMALLOCLIB="-ljemalloc"], 
@@ -288,6 +290,7 @@ AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 	]])
 	if test [ "x$JEMALLOCLIB" != "xno" ]; then
 		LDFLAGS="$LDFLAGS $JEMALLOCLIB"
+		AC_DEFINE([USEJEMALLOC], 1, [Define if jemalloc will be used.])
 	fi
 ])
 

@@ -5011,13 +5011,15 @@ done
 if test "${with_jemalloc+set}" = set; then :
   withval=$with_jemalloc; lookforjemalloc="$withval"
 else
-  lookforjemalloc="no"
+  lookforjemalloc="auto"
 fi
 
-	if test  "x$lookforjemalloc" = "xno"  ; then
-		CFLAGS="$CFLAGS -I${prefix}/include/jemalloc"
-	else
-		CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
+	if test  "x$lookforjemalloc" != "xno"  ; then
+		if test  "x$lookforjemalloc" = "xauto"  ; then
+			CFLAGS="$CFLAGS -I${prefix}/include/jemalloc"
+		else
+			CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
+		fi
 	fi
 	for ac_header in jemalloc.h jemalloc_defs.h
 do :
@@ -5040,6 +5042,9 @@ done
 
 	if test  "x$JEMALLOCLIB" != "xno" ; then
 		LDFLAGS="$LDFLAGS $JEMALLOCLIB"
+
+$as_echo "#define USEJEMALLOC 1" >>confdefs.h
+
 	fi
 
 
