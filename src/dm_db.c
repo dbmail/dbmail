@@ -50,18 +50,26 @@ struct mailbox_match * mailbox_match_new(const char *mailbox)
 {
 	struct mailbox_match *res = g_new0(struct mailbox_match,1);
 	char *sensitive, *insensitive;
-	char ** tmparr;
-	size_t i, len;
-	int verbatim = 0, has_sensitive_part = 0;
-	char p = 0, c = 0;
+	size_t i, j, len;
+	int uscore = 0, verbatim = 0, has_sensitive_part = 0;
+	char p, c;
 
-	tmparr = g_strsplit(mailbox, "_", -1);
-	sensitive = g_strjoinv("\\_",tmparr);
+	len = strlen(mailbox);
+	for (i = 0; i < len; i++)
+		if (mailbox[i] == '_')
+			uscore++;
+
+	sensitive = g_new0(char, len + uscore + 1);
+	j = 0;
+	for (i = 0; i < len; i++) {
+		if (mailbox[i] == '_')
+			sensitive[j++] = '\\';
+		sensitive[j++] = mailbox[i];
+	}
+
 	insensitive = g_strdup(sensitive);
-	g_strfreev(tmparr);
 
  	len = strlen(sensitive);
-
 	for (i = 0; i < len; i++) {
 		c = sensitive[i];
 		if (i>0)
@@ -1751,8 +1759,9 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 	C c; R r; volatile int t = DM_SUCCESS;
 	struct mailbox_match *mailbox_like = NULL;
 	S stmt;
-	GString *qs;
 	int p;
+	INIT_QUERY;
+	const char *frag;
 
 	assert(mailbox_idnr);
 	*mailbox_idnr = 0;
@@ -1760,17 +1769,18 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 	c = db_con_get();
 
 	mailbox_like = mailbox_match_new(name); 
-	qs = g_string_new("");
-	g_string_printf(qs, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr = ? ", DBPFX);
-
 	if (mailbox_like->insensitive)
-		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
+		frag = db_get_sql(SQL_INSENSITIVE_LIKE);
 	if (mailbox_like->sensitive)
-		g_string_append_printf(qs, "AND name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
+		frag = db_get_sql(SQL_SENSITIVE_LIKE);
+
+	snprintf(query, DEF_QUERYSIZE, 
+			"SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr = ? AND name %s ? ", 
+			DBPFX, frag);
 
 	p=1;
 	TRY
-		stmt = db_stmt_prepare(c, qs->str);
+		stmt = db_stmt_prepare(c, query);
 		db_stmt_set_u64(stmt, p++, owner_idnr);
 		if (mailbox_like->insensitive)
 			db_stmt_set_str(stmt, p++, mailbox_like->insensitive);
@@ -1786,9 +1796,9 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 		t = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
-		mailbox_match_free(mailbox_like);
-		g_string_free(qs, TRUE);
 	END_TRY;
+
+	mailbox_match_free(mailbox_like);
 
 	if (t == DM_EQUERY) return FALSE;
 	if (*mailbox_idnr == 0) return FALSE;
@@ -3605,7 +3615,6 @@ int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr
 {
         DbmailMessage *message;
 	int result;
-	char *date = NULL;
 	GString *msgdata_string;
 
 	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
