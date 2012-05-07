@@ -100,9 +100,6 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 
 	l = strlen(message);
 	
-	if (message[l] == '\n')
-		message[l] = '\0';
-
 	if (level & TRACE_STDERR) {
 		time_t now = time(NULL);
 		struct tm tmp;

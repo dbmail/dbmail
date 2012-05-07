@@ -177,7 +177,6 @@ static int server_setup(ServerConfig_T *conf)
 	if (! MATCH(conf->service_name,"IMAP")) 
 		return 0;
 
-	if (! g_thread_supported () ) g_thread_init (NULL);
 	// Asynchronous message queue for receiving messages
 	// from worker threads in the main thread. 
 	//
