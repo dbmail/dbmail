@@ -227,12 +227,21 @@ static void send_greeting(ImapSession *session)
 
 void imap_cb_time(void *arg)
 {
+	Field_T interval;
+	int idle_interval = 10;
 	ImapSession *session = (ImapSession *) arg;
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
 	if ( session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE ) { // session is in a IDLE loop
+		GETCONFIGVALUE("idle_interval", "IMAP", interval);
+		if (strlen(interval) > 0) {
+			int i = atoi(interval);
+			if (i > 0 && i < 1000)
+				idle_interval = i;
+		}
+
 		ci_cork(session->ci);
-		if (! (session->loop++ % 10)) {
+		if (! (++session->loop % idle_interval)) {
 			imap_session_printf(session, "* OK\r\n");
 		}
 		dbmail_imap_session_mailbox_status(session,TRUE);
