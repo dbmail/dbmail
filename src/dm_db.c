@@ -1769,10 +1769,10 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 	c = db_con_get();
 
 	mailbox_like = mailbox_match_new(name); 
-	if (mailbox_like->insensitive)
-		frag = db_get_sql(SQL_INSENSITIVE_LIKE);
 	if (mailbox_like->sensitive)
 		frag = db_get_sql(SQL_SENSITIVE_LIKE);
+	else if (mailbox_like->insensitive)
+		frag = db_get_sql(SQL_INSENSITIVE_LIKE);
 
 	snprintf(query, DEF_QUERYSIZE, 
 			"SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr = ? AND name %s ? ", 
@@ -1782,10 +1782,10 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 	TRY
 		stmt = db_stmt_prepare(c, query);
 		db_stmt_set_u64(stmt, p++, owner_idnr);
-		if (mailbox_like->insensitive)
-			db_stmt_set_str(stmt, p++, mailbox_like->insensitive);
 		if (mailbox_like->sensitive)
 			db_stmt_set_str(stmt, p++, mailbox_like->sensitive);
+		else if (mailbox_like->insensitive)
+			db_stmt_set_str(stmt, p++, mailbox_like->insensitive);
 
 		r = db_stmt_query(stmt);
 		if (db_result_next(r))
