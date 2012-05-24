@@ -428,7 +428,7 @@ then
 	AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
 else
 	AC_MSG_CHECKING([GMime headers])
-	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.6`
+	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.6 2 || ${gmimeconfig} --cflags gmime-2.4`
 	if test -z "$ac_gmime_cflags"
 	then
 		AC_MSG_RESULT([no])
@@ -439,7 +439,7 @@ else
 	fi
 	
         AC_MSG_CHECKING([GMime libraries])
-	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6`
+	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6 || ${gmimeconfig} --cflags gmime-2.4`
 	if test -z "$ac_gmime_libs"
 	then
 		AC_MSG_RESULT([no])
@@ -448,15 +448,15 @@ else
 		LDFLAGS="$LDFLAGS $ac_gmime_libs"
         	AC_MSG_RESULT([$ac_gmime_libs])
 	fi
-	ac_gmime_minvers="2.6.0"
-	AC_MSG_CHECKING([GMime version >= $ac_gmime_minvers])
-	ac_gmime_vers=`${gmimeconfig}  --atleast-version=$ac_gmime_minvers gmime-2.6 && echo yes`
-	if test -z "$ac_gmime_vers"
-	then
-		AC_MSG_ERROR([At least GMime version $ac_gmime_minvers is required.])
-	else
-		AC_MSG_RESULT([$ac_gmime_vers])
-	fi
+dnl	ac_gmime_minvers="2.4.30"
+dnl	AC_MSG_CHECKING([GMime version >= $ac_gmime_minvers])
+dnl	ac_gmime_vers=`${gmimeconfig} --atleast-version=$ac_gmime_minvers gmime-2.6 && echo yes`
+dnl	if test -z "$ac_gmime_vers"
+dnl	then
+dnl		AC_MSG_ERROR([At least GMime version $ac_gmime_minvers is required.])
+dnl	else
+dnl		AC_MSG_RESULT([$ac_gmime_vers])
+dnl	fi
 fi
 ])
 

@@ -4843,7 +4843,7 @@ then
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking GMime headers" >&5
 $as_echo_n "checking GMime headers... " >&6; }
-	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.6`
+	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.6 2 || ${gmimeconfig} --cflags gmime-2.4`
 	if test -z "$ac_gmime_cflags"
 	then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4857,7 +4857,7 @@ $as_echo "$ac_gmime_cflags" >&6; }
 
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking GMime libraries" >&5
 $as_echo_n "checking GMime libraries... " >&6; }
-	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6`
+	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6 || ${gmimeconfig} --cflags gmime-2.4`
 	if test -z "$ac_gmime_libs"
 	then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4867,17 +4867,6 @@ $as_echo "no" >&6; }
 		LDFLAGS="$LDFLAGS $ac_gmime_libs"
         	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_gmime_libs" >&5
 $as_echo "$ac_gmime_libs" >&6; }
-	fi
-	ac_gmime_minvers="2.6.0"
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking GMime version >= $ac_gmime_minvers" >&5
-$as_echo_n "checking GMime version >= $ac_gmime_minvers... " >&6; }
-	ac_gmime_vers=`${gmimeconfig}  --atleast-version=$ac_gmime_minvers gmime-2.6 && echo yes`
-	if test -z "$ac_gmime_vers"
-	then
-		as_fn_error $? "At least GMime version $ac_gmime_minvers is required." "$LINENO" 5
-	else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_gmime_vers" >&5
-$as_echo "$ac_gmime_vers" >&6; }
 	fi
 fi
 
