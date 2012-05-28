@@ -523,6 +523,12 @@ void ci_close(ClientBase_T *self)
 		self->auth = NULL;
 	}
 
+	if (self->ssl) {
+		SSL_shutdown(self->ssl);
+		SSL_free(self->ssl);
+		self->ssl = NULL;
+	}
+
 	g_free(self);
 	
 	self = NULL;
