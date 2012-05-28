@@ -4759,7 +4759,7 @@ then
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking GLib headers" >&5
 $as_echo_n "checking GLib headers... " >&6; }
-	ac_glib_cflags=`${glibconfig} --cflags glib-2.0 --cflags gmodule-2.0`
+	ac_glib_cflags=`${glibconfig} --cflags glib-2.0 --cflags gmodule-2.0 2>/dev/null`
 	if test -z "$ac_glib_cflags"
 	then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4772,7 +4772,7 @@ $as_echo "no" >&6; }
 $as_echo "$ac_glib_cflags" >&6; }
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking Glib libraries" >&5
 $as_echo_n "checking Glib libraries... " >&6; }
-	ac_glib_libs=`${glibconfig} --libs glib-2.0 --libs gmodule-2.0`
+	ac_glib_libs=`${glibconfig} --libs glib-2.0 --libs gmodule-2.0 2>/dev/null`
 	if test -z "$ac_glib_libs"
 	then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4782,15 +4782,11 @@ $as_echo "no" >&6; }
  	ac_glib_minvers="2.16"
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking GLib version >= $ac_glib_minvers" >&5
 $as_echo_n "checking GLib version >= $ac_glib_minvers... " >&6; }
-	ac_glib_vers=`${glibconfig}  --atleast-version=$ac_glib_minvers glib-2.0 && echo yes`
+	ac_glib_vers=`${glibconfig}  --atleast-version=$ac_glib_minvers glib-2.0 2>/dev/null && echo yes`
 	if test -z "$ac_glib_vers"
 	then
 		as_fn_error $? "At least GLib version $ac_glib_minvers is required." "$LINENO" 5
-	else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_glib_vers" >&5
-$as_echo "$ac_glib_vers" >&6; }
 	fi
-
 
 	LDFLAGS="$LDFLAGS $ac_glib_libs"
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_glib_libs" >&5
@@ -4843,7 +4839,7 @@ then
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking GMime headers" >&5
 $as_echo_n "checking GMime headers... " >&6; }
-	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.6 2 || ${gmimeconfig} --cflags gmime-2.4`
+	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.6 2>/dev/null|| ${gmimeconfig} --cflags gmime-2.4 2>/dev/null`
 	if test -z "$ac_gmime_cflags"
 	then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4857,7 +4853,7 @@ $as_echo "$ac_gmime_cflags" >&6; }
 
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking GMime libraries" >&5
 $as_echo_n "checking GMime libraries... " >&6; }
-	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6 || ${gmimeconfig} --cflags gmime-2.4`
+	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6 2>/dev/null|| ${gmimeconfig} --cflags gmime-2.4 2>/dev/null`
 	if test -z "$ac_gmime_libs"
 	then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5

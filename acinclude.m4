@@ -389,7 +389,7 @@ then
 	AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
 else
 	AC_MSG_CHECKING([GLib headers])
-	ac_glib_cflags=`${glibconfig} --cflags glib-2.0 --cflags gmodule-2.0`
+	ac_glib_cflags=`${glibconfig} --cflags glib-2.0 --cflags gmodule-2.0 2>/dev/null`
 	if test -z "$ac_glib_cflags"
 	then
 		AC_MSG_RESULT([no])
@@ -399,7 +399,7 @@ else
 	CFLAGS="$CFLAGS $ac_glib_cflags"
 	AC_MSG_RESULT([$ac_glib_cflags])
         AC_MSG_CHECKING([Glib libraries])
-	ac_glib_libs=`${glibconfig} --libs glib-2.0 --libs gmodule-2.0`
+	ac_glib_libs=`${glibconfig} --libs glib-2.0 --libs gmodule-2.0 2>/dev/null`
 	if test -z "$ac_glib_libs"
 	then
 		AC_MSG_RESULT([no])
@@ -407,14 +407,11 @@ else
 	fi
  	ac_glib_minvers="2.16"
 	AC_MSG_CHECKING([GLib version >= $ac_glib_minvers])
-	ac_glib_vers=`${glibconfig}  --atleast-version=$ac_glib_minvers glib-2.0 && echo yes`
+	ac_glib_vers=`${glibconfig}  --atleast-version=$ac_glib_minvers glib-2.0 2>/dev/null && echo yes`
 	if test -z "$ac_glib_vers"
 	then
 		AC_MSG_ERROR([At least GLib version $ac_glib_minvers is required.])
-	else
-		AC_MSG_RESULT([$ac_glib_vers])
 	fi
-
 
 	LDFLAGS="$LDFLAGS $ac_glib_libs"
         AC_MSG_RESULT([$ac_glib_libs])
@@ -428,7 +425,7 @@ then
 	AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
 else
 	AC_MSG_CHECKING([GMime headers])
-	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.6 2 || ${gmimeconfig} --cflags gmime-2.4`
+	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.6 2>/dev/null|| ${gmimeconfig} --cflags gmime-2.4 2>/dev/null`
 	if test -z "$ac_gmime_cflags"
 	then
 		AC_MSG_RESULT([no])
@@ -439,7 +436,7 @@ else
 	fi
 	
         AC_MSG_CHECKING([GMime libraries])
-	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6 || ${gmimeconfig} --cflags gmime-2.4`
+	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6 2>/dev/null|| ${gmimeconfig} --cflags gmime-2.4 2>/dev/null`
 	if test -z "$ac_gmime_libs"
 	then
 		AC_MSG_RESULT([no])
