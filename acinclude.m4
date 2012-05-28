@@ -436,7 +436,7 @@ else
 	fi
 	
         AC_MSG_CHECKING([GMime libraries])
-	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6 2>/dev/null|| ${gmimeconfig} --cflags gmime-2.4 2>/dev/null`
+	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.6 2>/dev/null|| ${gmimeconfig} --libs gmime-2.4 2>/dev/null`
 	if test -z "$ac_gmime_libs"
 	then
 		AC_MSG_RESULT([no])
