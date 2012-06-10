@@ -1,6 +1,6 @@
 /*
  Copyright (c) 2002 Aaron Stone, aaron@serendipity.cx
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -843,10 +843,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
  		}
   
  		t = g_list_join(l,")(");
- 		g_string_printf(q,"(&(|(objectClass=%s)(objectClass=%s))(|(%s)))", 
-				_ldap_cfg.user_objectclass,
-				_ldap_cfg.forw_objectclass,
-				t->str);
+ 		g_string_printf(q,"(|(%s))", t->str);
  		query = q->str;
  		g_string_free(t,TRUE);
  		g_string_free(q,FALSE);
