@@ -3142,8 +3142,8 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 
 			score = dm_sock_score(clientsock, sockok);
 			if (score > bestscore) {
-				bestlogin = (char *)login;
-				bestuserid = (char *)userid;
+				bestlogin = g_strdup(login);
+				bestuserid = g_strdup(userid);
 				bestscore = score;
 			}
 		}
@@ -3154,6 +3154,8 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 	END_TRY;
 
 	if (! result) {
+		if (bestlogin) g_free(bestlogin);
+		if (bestuserid) g_free(bestuserid);
 		TRACE(TRACE_DEBUG,"access denied");
 		return result;
 	}
@@ -3166,12 +3168,12 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 
 
 	TRACE(TRACE_DEBUG, "bestscore [%d]", bestscore);
-	if (bestscore == 0)
-		return DM_SUCCESS; // no match at all.
-
-	if (bestscore < 0)
+	if (bestscore <= 0) {
+		if (bestlogin) g_free(bestlogin);
+		if (bestuserid) g_free(bestuserid);
 		return DM_EGENERAL;
-	
+	}
+
 	/* use the best matching sockok */
 	login = (const char *)bestlogin;
 	userid = (const char *)bestuserid;
@@ -3181,13 +3183,19 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 	if ((strncmp(login,"ANY",3)==0)) {
 		if (dm_valid_format(userid)==0)
 			snprintf(real_username,DM_USERNAME_LEN,userid,username);
-		else
+		else {
+			if (bestlogin) g_free(bestlogin);
+			if (bestuserid) g_free(bestuserid);
 			return DM_EQUERY;
+		}
 	} else {
 		strncpy(real_username, userid, DM_USERNAME_LEN);
 	}
 	
 	TRACE(TRACE_DEBUG,"[%s] maps to [%s]", username, real_username);
+
+	if (bestlogin) g_free(bestlogin);
+	if (bestuserid) g_free(bestuserid);
 
 	return DM_SUCCESS;
 
