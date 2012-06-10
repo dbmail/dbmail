@@ -1064,7 +1064,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 	if (s->searched) return FALSE;
 
 	q = g_string_new("");
-	g_string_printf(q, "SELECT DISTINCT(message_idnr) FROM %smessages m "
+	g_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			"%s"
 			"WHERE m.mailbox_idnr = %lu AND m.status IN (%d,%d) "
@@ -1186,7 +1186,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 					"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
 					"WHERE mailbox_idnr=? AND status IN (?,?) "
 					"%s "
-					"AND n.headername = lower('%s') AND v.headervalue %s ? "
+					"AND n.headername = '%s' AND v.headervalue %s ? "
 					"ORDER BY message_idnr",
 					DBPFX, DBPFX, DBPFX, DBPFX,
 					inset?inset:"",

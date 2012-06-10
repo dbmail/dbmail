@@ -652,7 +652,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
 			"WHERE m.mailbox_idnr = %lu "
 			"AND m.message_idnr %s "
-			"AND lower(n.headername) %s IN ('%s')",
+			"AND n.headername %s IN ('%s')",
 			DBPFX, DBPFX, DBPFX, DBPFX,
 			self->mailbox->id, range, 
 			not?"NOT":"", bodyfetch->hdrnames);
