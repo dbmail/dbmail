@@ -376,7 +376,7 @@ CREATE VIEW dbmail_subjectfield AS
 WHERE n.headername='subject';
 
 CREATE VIEW dbmail_datefield AS
-        SELECT physmessage_id,datefield
+        SELECT physmessage_id,datefield,sortfield
         FROM dbmail_messages m
         JOIN dbmail_header h USING (physmessage_id)
         JOIN dbmail_headername n ON h.headername_id = n.id

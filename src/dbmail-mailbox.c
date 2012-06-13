@@ -548,12 +548,7 @@ static int _handle_sort_args(DbmailMailbox *self, char **search_keys, search_key
 	} 
 	
 	else if ( MATCH(key, "date") ) {
-		char *tmp = g_strdup_printf("LEFT JOIN dbmail_header h ON m.physmessage_id=h.physmessage_id "
-				"LEFT JOIN dbmail_headername n ON h.headername_id = n.id "
-				"LEFT JOIN dbmail_headervalue v ON v.id=h.headervalue_id ");
-		g_strlcat(value->table, tmp, MAX_SEARCH_LEN);
-		g_free(tmp);
-
+		_append_join(value->table, "datefield");
 		_append_sort(value->order, "sortfield", reverse);
 		(*idx)++;
 	}	
