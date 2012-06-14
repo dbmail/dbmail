@@ -775,7 +775,8 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(len(result[1]) > 0, True)
         self.o.create('testuidcopy')
         result = self.o.uid('COPY', '*', 'testuidcopy')
-        #print result
+        self.assertEquals(result[0], 'OK')
+        result = self.o.uid('THREAD', 'ORDEREDSUBJECT', 'US-ASCII', 'ALL')
         self.assertEquals(result[0], 'OK')
 
     def testUnsubscribe(self):
