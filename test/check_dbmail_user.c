@@ -81,7 +81,7 @@ END_TEST
 START_TEST(test_do_show)
 {
 	fail_unless(do_show("testfailuser")==0,"test_do_show failed");
-//	fail_unless(do_show("nosuchuser"),"do_show should have failed");
+	fail_unless(do_show("nosuchuser"),"do_show should have failed");
 }
 END_TEST
 

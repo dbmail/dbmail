@@ -552,8 +552,8 @@ int do_delete(const uint64_t useridnr, const char * const name)
 }
 
 /* Set concise = 1 for passwd / aliases style output. */
-static void show_alias(const char * const name, int concise);
-static void show_user(uint64_t useridnr, int concise);
+static int show_alias(const char * const name, int concise);
+static int show_user(uint64_t useridnr, int concise);
 
 int do_show(const char * const name)
 {
@@ -597,16 +597,16 @@ int do_show(const char * const name)
 	} else {
 		auth_user_exists(name, &useridnr);
 		if (useridnr == 0) {
-			show_alias(name, 0);
+			return show_alias(name, 0);
 		} else {
-			show_user(useridnr, 0);
+			return show_user(useridnr, 0);
 		}
 	}
 
 	return 0;
 }
 
-static void show_alias(const char * const name, int concise)
+static int show_alias(const char * const name, int concise)
 {
 	int result;
 	char *username;
@@ -618,7 +618,7 @@ static void show_alias(const char * const name, int concise)
 	
 	if (!result) {
 		qerrorf("Nothing found searching for [%s].\n", name);
-		return;
+		return 1;
 	}
 
 	if (forwards) {
@@ -653,10 +653,11 @@ static void show_alias(const char * const name, int concise)
 		}
 		g_list_free(g_list_first(userids));
 	}
+	return 0;
 }
 
 /* TODO: Non-concise output, like the old dbmail-users used to have. */
-static void show_user(uint64_t useridnr, int concise UNUSED)
+static int show_user(uint64_t useridnr, int concise UNUSED)
 {
 	uint64_t cid, quotum, quotumused;
 	GList *userlist = NULL;
@@ -694,6 +695,7 @@ static void show_user(uint64_t useridnr, int concise UNUSED)
 	s = g_list_join(out,":");
 	printf("%s\n", s->str);
 	g_string_free(s,TRUE);
+	return 0;
 }
 
 
