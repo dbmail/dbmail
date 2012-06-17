@@ -345,6 +345,13 @@ START_TEST(test_dbmail_message_store)
 	// FIXME COMPARE(e,t);
 	g_free(e);
 	g_free(t);
+	//-----------------------------------------
+	m = message_init(multipart_apple);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
 }
 END_TEST
 
