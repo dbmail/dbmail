@@ -931,6 +931,58 @@ class testImapServer(unittest.TestCase):
         #self.assertRaises(
         #    self.o.error, self.o.fetch, "1" + " " * 120000, "(Flags)")
 
+    def testBug978(self):
+        """
+        Test http://www.dbmail.org/mantis/view.php?id=978
+        create a hierarchy that's likely to reproduce the error
+        """
+        # create some test folders
+        self.o.create('testfolder1')
+        self.o.create('testfolder2')
+        # check that the server is not dead after a simple list and noop
+        result = self.o.list("", "%")
+        self.assertEqual(result[0], 'OK')
+        result = self.o.noop()
+        self.assertEqual(result[0], 'OK')
+
+        # create hierarchy
+        base_name = "Test folder"
+        self.o.create(base_name)
+        second_level = base_name+"/2012"
+        self.o.create(second_level)
+        subfolders = ['02', '04', '09', '03', '05', '06']
+        for i in subfolders:
+            self.o.create(second_level+"/"+i)
+
+        # run a list command and check the base_name folder in the results
+        result = self.o.list("", "%")
+        self.assertEqual(result[0], 'OK')
+        # find the base_name folder in the results
+        folder = [i for i in result[1] if re.search("\""+re.escape(base_name)+"\"$", i)]
+        self.assertNotEqual([], folder, base_name+' is in the results')
+        folder = folder[0]
+        flags = re.search("^\((.*?)\)", folder).group(1)
+        # check for the \Noselect error
+        self.assertEqual([], [i for i in flags.split(" ") if i.lower() == '\\noselect'], 'noselect is not in attributes for '+base_name)
+
+        # run a list command and check the second_level folder in the results
+        result = self.o.list(base_name+"/", "%")
+        self.assertEqual(result[0], 'OK')
+        # find the second_level folder in the results
+        folder = [i for i in result[1] if re.search("\""+re.escape(second_level)+"\"$", i)]
+        self.assertNotEqual([], folder, second_level+' is in the results')
+        folder = folder[0]
+        flags = re.search("^\((.*?)\)", folder).group(1)
+        # check for the \Noselect error
+        self.assertEqual([], [i for i in flags.split(" ") if i.lower() == '\\noselect'], 'noselect is not in attributes for '+second_level)
+
+        # check whether all subfolders are in the list
+        result = self.o.list(second_level+"/", "%")
+        self.assertEqual(len(subfolders), len(result[1]), 'number of subfolders match')
+        for i in subfolders:
+            folder = [j for j in result[1] if re.search("\""+re.escape(second_level+"/"+i)+"\"$", j)]
+            self.assertNotEqual([], folder, second_level+"/"+i+' is in the results')
+
     def tearDown(self):
         try:
             dirs = []

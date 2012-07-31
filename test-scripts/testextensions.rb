@@ -155,4 +155,68 @@ EOF
 
     imap_logout
   end
+  # test http://www.dbmail.org/mantis/view.php?id=978
+  # create a hierarchy that's likely to reproduce the error
+  def test_list
+    imap_conn
+    # take the first imap user
+    user = IMAP_LOGINS[0]
+    @imap.login(user[:username], user[:password])
+
+    # check that the server is not dead after a simple list
+    @imap.list("", "%")
+    @imap.noop
+
+    # create hierarchy
+    base_name = "Test a"+0.upto(10).map{rand(10)}.join("")
+    @imap.create(base_name)
+    second_level = base_name+"/2012"
+    @imap.create(second_level)
+    subfolders = ['02', '04', '09', '03', '05', '06']
+    subfolders.each do |x|
+      @imap.create(second_level+"/"+x)
+    end
+    
+    res = @imap.list("", "%")
+    folder = res.find{|x| x.name == base_name}
+    assert_not_equal(nil, folder, base_name+' is in the results')
+    # check for the \Noselect error
+    assert_equal(nil, folder.attr.find{|x| x == :Noselect}, 'noselect is not in attributes for '+base_name)
+
+    res = @imap.list(base_name+"/", "%")
+    folder = res.find{|x| x.name == second_level}
+    assert_not_equal(nil, folder, second_level+' is in the results')
+    # check for the \Noselect error
+    assert_equal(nil, folder.attr.find{|x| x == :Noselect}, 'noselect is not in attributes for '+base_name)
+
+    res = @imap.list(second_level+"/", "%")
+    assert_equal(subfolders.size, res.size, 'all subfolders are returned')
+    subfolders.each do |x|
+      folder = res.find{|y| y.name == second_level+"/"+x}
+      assert_not_equal(nil, folder, second_level+"/"+x+' is in the results')
+    end
+
+    subfolders.each do |x|
+      @imap.delete(second_level+"/"+x)
+    end
+    @imap.delete(second_level)
+    @imap.delete(base_name)
+    
+    imap_logout
+
+    # Extra tasks:
+    #
+    # this will be nasty, check in the log, that all problematic memory was freed
+    # you should enable this kind of debugging (from the C code), and clear the log, before running this!
+    # Search for: reserving MailboxState_T pointer, freeing MailboxState_T pointer, reserving dynamic pointer, freeing dynamic pointer
+    #ids = `grep 'reserving MailboxState_T pointer' /var/log/mail.log`.split("\n").map{|x| x.match(/(\d+)\]$/)[1]}.sort
+    #freed_ids = `grep 'freeing MailboxState_T pointer' /var/log/mail.log`.split("\n").map{|x| x.match(/(\d+)\]$/)[1]}.sort
+    #assert_equal([], ids - freed_ids)
+    #assert_equal([], freed_ids - ids)
+    #ids = `grep 'reserving dynamic pointer' /var/log/mail.log`.split("\n").map{|x| x.match(/(\d+)\]$/)[1]}.sort
+    #freed_ids = `grep 'freeing dynamic pointer' /var/log/mail.log`.split("\n").map{|x| x.match(/(\d+)\]$/)[1]}.sort
+    #assert_equal([], ids - freed_ids)
+    #assert_equal([], freed_ids - ids)
+  end
+
 end
