@@ -256,7 +256,7 @@ START_TEST(test_imap_get_structure)
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_apple));
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 1 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 0 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"=?windows-1252?Q?=84Tradition_hat_Potenzial=5C=22=2Edocx?=\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename*\" \"windows-1252''%84Tradition%20hat%20Potenzial%22.docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 3 NIL NIL NIL NIL) \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL) \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL)", 1024);
+	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 2 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 1 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"=?iso-8859-13?q?=A5Tradition?= hat Potenzial\\\".docx\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename\" \"=?iso-8859-13?q?=A5Tradition?= hat Potenzial\\\".docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 4 NIL NIL NIL NIL) \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL) \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL)", 1024);
 
 
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
@@ -873,22 +873,17 @@ Suite *dbmail_suite(void)
 {
 	Suite *s = suite_create("Dbmail Imap");
 	TCase *tc_session = tcase_create("ImapSession");
-	TCase *tc_mime = tcase_create("Mime");
 	TCase *tc_util = tcase_create("Utils");
 	TCase *tc_misc = tcase_create("Misc");
 	
 	suite_add_tcase(s, tc_session);
-	suite_add_tcase(s, tc_mime);
 	suite_add_tcase(s, tc_util);
 	suite_add_tcase(s, tc_misc);
 	
 	tcase_add_checked_fixture(tc_session, setup, teardown);
-	/*
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
-	*/
 	tcase_add_test(tc_session, test_imap_get_structure);
-	/*
 	tcase_add_test(tc_session, test_imap_cleanup_address);
 	tcase_add_test(tc_session, test_internet_address_list_parse_string);
 	tcase_add_test(tc_session, test_imap_get_envelope);
@@ -896,12 +891,8 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_envelope_latin);
 	tcase_add_test(tc_session, test_imap_get_partspec);
-	*/
-
-	tcase_add_checked_fixture(tc_mime, setup, teardown);
 
 	tcase_add_checked_fixture(tc_util, setup, teardown);
-	/*
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_collapse);
 	tcase_add_test(tc_util, test_dbmail_imap_astring_as_string);
@@ -909,11 +900,10 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_g_list_slices_u64);
 	tcase_add_test(tc_util, test_listex_match);
 	tcase_add_test(tc_util, test_date_sql2imap);
-	*/
+
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
-	/*
 	tcase_add_test(tc_misc, test_dm_base_subject);
-	*/
+
 	return s;
 }
 
