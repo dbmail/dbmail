@@ -2886,7 +2886,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	memset(query,0,DEF_QUERYSIZE);
 	pos += snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET ", DBPFX);
 
-	for (i = 0; i < IMAP_NFLAGS; i++) {
+	for (i = 0; flags && i < IMAP_NFLAGS; i++) {
 		if (flags[i])
 			TRACE(TRACE_DEBUG,"set %s", db_flag_desc[i]);
 
