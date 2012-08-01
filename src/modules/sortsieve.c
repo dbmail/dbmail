@@ -169,7 +169,7 @@ int send_alert(u64_t user_idnr, char *subject, char *body)
 	u64_t tmpid = new_message->id;
 
 	if (sort_deliver_to_mailbox(new_message, user_idnr,
-			"INBOX", BOX_BRUTEFORCE, msgflags) != DSN_CLASS_OK) {
+			"INBOX", BOX_BRUTEFORCE, msgflags, NULL) != DSN_CLASS_OK) {
 		TRACE(TRACE_ERR, "Unable to deliver alert [%s] to user [%llu]", subject, user_idnr);
 	}
 
@@ -346,18 +346,26 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
 	extern const char * imap_flag_desc[];
-	char * const * flags;
+	char * const * flaglist;
 	const char * mailbox;
 	int msgflags[IMAP_NFLAGS];
 	int *has_msgflags = NULL;
+	GList *keywords = NULL;
+	char *allflags = NULL;
+	char **flags = NULL;
 
 	mailbox = sieve2_getvalue_string(s, "mailbox");
-	flags = sieve2_getvalue_stringlist(s, "flags");
+	flaglist = sieve2_getvalue_stringlist(s, "flags");
+	allflags = g_strjoinv(" ", (char **)flaglist);
+	flags = g_strsplit(allflags, " ", 0);
 
 	/* This condition exists for the KEEP callback. */
 	if (! mailbox) {
 		mailbox = "INBOX";
 	}
+
+	TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s] flags are [%s]",
+			mailbox, allflags);
 
 	/* If there were any imapflags, set them. */
 	if (flags) {
@@ -367,27 +375,45 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 		// Loop through all script/user-specified flags.
 		for (i = 0; flags[i]; i++) {
 			// Find the ones we support.
+			int baseflag = FALSE;
+			char *flag = strrchr(flags[i], '\\');
+			if (flag) 
+				flag++;
+			else
+				flag = flags[i];
+
 			for (j = 0; imap_flag_desc[j] && j < IMAP_NFLAGS; j++) {
-				if (g_strcasestr(imap_flag_desc[j], flags[i])) {
+				if (g_strcasestr(imap_flag_desc[j], flag)) {
+					TRACE(TRACE_DEBUG, "set baseflag [%s]", flag);
 					// Flag 'em.
 					msgflags[j] = 1;
+					baseflag = TRUE;
 					// Only pass msgflags if we found something.
 					has_msgflags = msgflags;
 				}
 			}
-		}
-	}
+			if (! baseflag) {
+				TRACE(TRACE_DEBUG, "set keyword [%s]", flag);
+				keywords = g_list_append(keywords, g_strdup(flag));
+			}
 
-	TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s] flags are [%s]", mailbox, (char *)flags);
+		}
+		g_strfreev(flags);
+	}
+	g_free(allflags);
+
 
 	/* Don't cancel the keep if there's a problem storing the message. */
 	if (sort_deliver_to_mailbox(m->message, m->user_idnr,
-			mailbox, BOX_SORTING, has_msgflags) != DSN_CLASS_OK) {
+			mailbox, BOX_SORTING, has_msgflags, keywords) != DSN_CLASS_OK) {
 		TRACE(TRACE_ERR, "Could not file message into mailbox; not cancelling keep.");
 		m->result->cancelkeep = 0;
 	} else {
 		m->result->cancelkeep = 1;
 	}
+
+	if (keywords)
+		g_list_destroy(keywords);
 
 	return SIEVE2_OK;
 }

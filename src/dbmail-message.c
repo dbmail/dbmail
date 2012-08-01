@@ -2010,7 +2010,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 	if (source == BOX_BRUTEFORCE) {
 		TRACE(TRACE_NOTICE, "Beginning brute force delivery for user [%llu] to mailbox [%s].",
 				useridnr, mailbox);
-		return sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
+		return sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL, NULL);
 	}
 
 	/* This is the only condition when called from pipe.c, actually. */
@@ -2076,7 +2076,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 		ret = DSN_CLASS_OK;
 		TRACE(TRACE_INFO, "Keep was cancelled. Message may be discarded.");
 	} else {
-		ret = sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
+		ret = sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL, NULL);
 		TRACE(TRACE_INFO, "Keep was not cancelled. Message will be delivered by default.");
 	}
 
@@ -2096,7 +2096,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 
 dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		u64_t useridnr, const char *mailbox, mailbox_source_t source,
-		int *msgflags)
+		int *msgflags, GList *keywords)
 {
 	u64_t mboxidnr, newmsgidnr;
 	field_t val;
@@ -2138,7 +2138,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 				TRACE(TRACE_NOTICE, "already tried to deliver to INBOX");
 				return DSN_CLASS_FAIL;
 			}
-			return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags);
+			return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags, keywords);
 		case 1:
 			// Has right.
 			TRACE(TRACE_INFO, "user [%llu] has right to deliver mail to [%s]",
@@ -2173,10 +2173,10 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	default:
 		TRACE(TRACE_NOTICE, "message id=%llu, size=%zd is inserted", 
 				newmsgidnr, msgsize);
-		if (msgflags) {
+		if (msgflags || keywords) {
 			TRACE(TRACE_NOTICE, "message id=%llu, setting imap flags", 
 				newmsgidnr);
-			db_set_msgflag(newmsgidnr, msgflags, NULL, IMAPFA_ADD, NULL);
+			db_set_msgflag(newmsgidnr, msgflags, keywords, IMAPFA_ADD, NULL);
 			db_mailbox_seq_update(mboxidnr);
 		}
 		message->id = newmsgidnr;

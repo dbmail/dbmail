@@ -120,7 +120,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *self,
 
 dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		u64_t useridnr, const char *mailbox, mailbox_source_t source,
-		int *msgflags);
+		int *msgflags, GList *keywords);
 
 // from dm_pipe.h
 //
