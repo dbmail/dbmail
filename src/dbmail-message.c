@@ -343,7 +343,8 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	char *str = NULL, *internal_date = NULL;
 	char *boundary = NULL;
 	GMimeContentType *mimetype = NULL;
-	char **blist = g_new0(char *,128);
+	int maxdepth = 128;
+	volatile char **blist = g_new0(char *, maxdepth);
 	int prevdepth, depth = 0, order, row = 0, key = 1;
 	volatile int t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
@@ -376,6 +377,13 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			prev_header	= is_header;
 			key		= db_result_get_int(r,0);
 			depth		= db_result_get_int(r,1);
+			while (maxdepth < (depth + 1)) {
+				int newmaxdepth = 2 * depth;
+				blist = g_renew(char *, blist, newmaxdepth);
+				while (maxdepth < newmaxdepth)
+					blist[maxdepth++] = NULL;
+			}
+
 			order		= db_result_get_int(r,2);
 			is_header	= db_result_get_bool(r,3);
 			if (row == 0) 	internal_date = g_strdup(db_result_get(r,4));
@@ -456,7 +464,11 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	g_free(internal_date);
 	g_string_free(m,TRUE);
 	g_string_free(n,TRUE);
-	g_strfreev(blist);
+	while (--maxdepth >= 0) {
+		if (blist[maxdepth])
+			g_free(blist[maxdepth]);
+	}
+	g_free(blist);
 	return self;
 }
 
