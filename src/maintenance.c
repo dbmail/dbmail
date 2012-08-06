@@ -601,7 +601,7 @@ int do_check_integrity(void)
 	 */
 
 	/* part 3 */
-	start = stop;
+	time(&start);
 	qprintf("\n%s DBMAIL physmessage integrity...\n", action);
 	if ((count = db_icheck_physmessages(cleanup)) < 0) {
 		qerrorf("Failed. An error occurred. Please check log.\n");
@@ -752,7 +752,7 @@ static int do_envelope(void)
 		}
 	}
 
-	g_list_free(g_list_first(lost));
+	g_list_destroy(lost);
 
 	time(&stop);
 	qverbosef("--- checking envelope cache took %g seconds\n",
