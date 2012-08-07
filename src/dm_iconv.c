@@ -28,7 +28,7 @@ static GOnce iconv_once = G_ONCE_INIT;
 
 struct DbmailIconv *ic;
 
-static GStaticRecMutex mutex = G_STATIC_REC_MUTEX_INIT;
+G_LOCK_DEFINE_STATIC(mutex);
 
 static void dbmail_iconv_close(void)
 {
@@ -108,9 +108,9 @@ char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 	}
 
 	if (subj==NULL) {
-		LOCK(&mutex);
+		G_LOCK(mutex);
 		subj=g_mime_iconv_strdup(ic->from_msg,str_in);
-		UNLOCK(&mutex);
+		G_UNLOCK(mutex);
 	}
 
 	if (subj==NULL) {
@@ -137,9 +137,9 @@ char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 	if (! g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)) )
 		return g_strdup(str_in);
 
-	LOCK(&mutex);
+	G_LOCK(mutex);
 	subj = g_mime_iconv_strdup(ic->to_db,str_in);
-	UNLOCK(&mutex);
+	G_UNLOCK(mutex);
 
 	if (subj != NULL)
 		return subj;
@@ -155,14 +155,14 @@ char * dbmail_iconv_str_to_db(const char* str_in, const char *charset)
 	if (subj==NULL) {
 		char *subj2;
 
-		LOCK(&mutex);
+		G_LOCK(mutex);
 		subj2 = g_mime_iconv_strdup(ic->from_msg,str_in);
-		UNLOCK(&mutex);
+		G_UNLOCK(mutex);
 
 		if (subj2 != NULL) {
-			LOCK(&mutex);
+			G_LOCK(mutex);
 			subj = g_mime_iconv_strdup(ic->to_db, subj2);
-			UNLOCK(&mutex);
+			G_UNLOCK(mutex);
 			g_free(subj2);
 		}
 	}
@@ -190,9 +190,9 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 		return g_strdup(str_in);
 
 	if (! g_utf8_validate((const char *)str_in,-1,NULL)) {
-		LOCK(&mutex);
+		G_LOCK(mutex);
 		subj = g_mime_iconv_strdup(ic->from_db, str_in);
-		UNLOCK(&mutex);
+		G_UNLOCK(mutex);
 		if (subj != NULL){
 			gchar *subj2;
 			subj2 = g_mime_utils_header_encode_text((const char *)subj);

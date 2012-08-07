@@ -425,13 +425,13 @@ END_TEST
 START_TEST(test_dbmail_message_init_with_string)
 {
 	DbmailMessage *m;
-	GTuples *t;
+	GList *t;
 	
 	m = message_init(multipart_message);
 	
-	t = g_relation_select(m->headers, "Received", 0);
-	fail_unless(t->len==2,"Too few or too many headers in tuple [%d]\n", t->len);
-	g_tuples_destroy(t);
+	t = g_hash_table_lookup(m->headers, "Received");
+	fail_unless(g_list_length(t)==3,"Too few or too many headers in tuple [%d]\n", 
+			g_list_length(t));
 	dbmail_message_free(m);
 	
 //	m = message_init(simple_message_part);
@@ -724,7 +724,7 @@ END_TEST
 
 START_TEST(test_dbmail_message_get_header_repeated)
 {
-	GTuples *headers;
+	GList *headers;
 	GString *s;
 	DbmailMessage *m;
 
@@ -735,17 +735,13 @@ START_TEST(test_dbmail_message_get_header_repeated)
 	headers = dbmail_message_get_header_repeated(m, "Received");
 
 	fail_unless(headers != NULL, "dbmail_message_get_header_repeated failed");
-	fail_unless(headers->len==2, "dbmail_message_get_header_repeated failed");
+	fail_unless(g_list_length(headers)==3, "dbmail_message_get_header_repeated failed");
 	
-	g_tuples_destroy(headers);
-
 	headers = dbmail_message_get_header_repeated(m, "received");
 
 	fail_unless(headers != NULL, "dbmail_message_get_header_repeated failed");
-	fail_unless(headers->len==2, "dbmail_message_get_header_repeated failed");
+	fail_unless(g_list_length(headers)==3, "dbmail_message_get_header_repeated failed");
 	
-	g_tuples_destroy(headers);
-
 	dbmail_message_free(m);
 	g_string_free(s,TRUE);
 }

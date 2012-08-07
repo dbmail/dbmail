@@ -30,7 +30,7 @@ ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 #	export REAL_CLEAN=mrproper
 	export WITH_LDAP=
 	export WITH_SIEVE=
-	CFLAGS = -Wall -g -std=gnu99
+	CFLAGS = -Wall -g
 endif
 ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
 	export WITH_LDAP=--with-ldap

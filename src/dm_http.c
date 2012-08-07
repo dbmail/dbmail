@@ -354,12 +354,14 @@ void Http_getMessages(T R)
 				char *hname = headerlist[i];
 				hname[0] = g_ascii_toupper(hname[0]);
 				TRACE(TRACE_DEBUG,"header: [%s]", headerlist[i]);
-				unsigned j = 0;
-				GTuples * headers = dbmail_message_get_header_repeated(m, headerlist[i]);
-				for (j=0; j<headers->len; j++) {
-					evbuffer_add_printf(buf, "%s: %s\n", hname, (char *)g_tuples_index(headers,j,1));
+				GList * headers = dbmail_message_get_header_repeated(m, headerlist[i]);
+
+				while(headers) {
+					evbuffer_add_printf(buf, "%s: %s\n", hname, (char *)headers->data);
+					if (! g_list_next(headers))
+						break;
+					headers = g_list_next(headers);
 				}
-				g_tuples_destroy(headers);
 				i++;
 			}
 		} else {

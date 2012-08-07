@@ -138,7 +138,7 @@ typedef struct {
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;
 	gchar *raw_content;
-	GRelation *headers;
+	GHashTable *headers;
 	GHashTable *header_dict;
 	GTree *header_name;
 	GTree *header_value;

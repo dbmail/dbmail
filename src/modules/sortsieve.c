@@ -170,7 +170,7 @@ int send_alert(uint64_t user_idnr, char *subject, char *body)
 
 	if (sort_deliver_to_mailbox(new_message, user_idnr,
 			"INBOX", BOX_BRUTEFORCE, msgflags, NULL) != DSN_CLASS_OK) {
-		TRACE(TRACE_ERR, "Unable to deliver alert [%s] to user [%llu]", subject, user_idnr);
+		TRACE(TRACE_ERR, "Unable to deliver alert [%s] to user [%lu]", subject, user_idnr);
 	}
 
 	g_free(to);
@@ -522,17 +522,21 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	struct sort_context *m = (struct sort_context *)my;
 	char *header;
 	char **bodylist;
-	GTuples *headers;
+	GList *headers;
 	unsigned i;
 
 	header = (char *)sieve2_getvalue_string(s, "header");
 	
 	headers = dbmail_message_get_header_repeated(m->message, header);
 	
-	bodylist = g_new0(char *,headers->len+1);
-	for (i=0; i<headers->len; i++)
-		bodylist[i] = (char *)g_tuples_index(headers,i,1);
-	g_tuples_destroy(headers);
+	bodylist = g_new0(char *,g_list_length(headers)+1);
+	i = 0;
+	while (headers) {
+		bodylist[i++] = (char *)headers->data;
+		if (! g_list_next(headers))
+			break;
+		headers = g_list_next(headers);
+	}
 
 	/* We have to free the header array, but not its contents. */
 	m->freelist = g_list_prepend(m->freelist, bodylist);

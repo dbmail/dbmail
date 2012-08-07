@@ -892,7 +892,7 @@ static int user_idnr_is_delivery_user_idnr(uint64_t user_idnr)
 {
 	static int delivery_user_idnr_looked_up = 0;
 	static uint64_t delivery_user_idnr;
-	static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+	G_LOCK_DEFINE_STATIC(mutex);
 
 	if (delivery_user_idnr_looked_up == 0) {
 		uint64_t idnr;
@@ -901,10 +901,10 @@ static int user_idnr_is_delivery_user_idnr(uint64_t user_idnr)
 			TRACE(TRACE_ERR, "error looking up user_idnr for %s", DBMAIL_DELIVERY_USERNAME);
 			return DM_EQUERY;
 		}
-		g_static_mutex_lock(&mutex);
+		G_LOCK(mutex);
 		delivery_user_idnr = idnr;
 		delivery_user_idnr_looked_up = 1;
-		g_static_mutex_unlock(&mutex);
+		G_UNLOCK(mutex);
 	}
 	
 	if (delivery_user_idnr == user_idnr)

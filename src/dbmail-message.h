@@ -94,7 +94,7 @@ void dbmail_message_set_header(DbmailMessage *self, const char *header, const ch
 const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *header);
 
 /* Get all instances of a header. */
-GTuples * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header);
+GList * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header);
 
 void dbmail_message_cache_referencesfield(const DbmailMessage *self);
 void dbmail_message_cache_envelope(const DbmailMessage *self);

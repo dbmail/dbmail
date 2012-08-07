@@ -1340,7 +1340,7 @@ static GList * imap_append_hash_as_string(GList *list, const GMimeParam *hash)
 	while (hash) {
 		size_t len;
 		char *clean1, *clean2, *clean3;
-		gchar *value = g_mime_param_get_value(hash);
+		gchar *value = (char *)g_mime_param_get_value(hash);
 		l = g_list_append_printf(l, "\"%s\"", g_mime_param_get_name(hash));
 		clean1 = value;
 		if (clean1[0] == '"')

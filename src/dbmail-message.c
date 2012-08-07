@@ -299,7 +299,7 @@ static GMimeContentType *find_type(const char *s)
 
 	rest = g_strcasestr(s, "\nContent-type: ");
 	if (! rest) {
-		if ((g_strncasecmp(s, "Content-type: ", 14)) == 0)
+		if ((g_ascii_strncasecmp(s, "Content-type: ", 14)) == 0)
 			rest = (char *)s;
 	}
 	if (! rest) return NULL;
@@ -344,7 +344,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	char *boundary = NULL;
 	GMimeContentType *mimetype = NULL;
 	int maxdepth = 128;
-	volatile char **blist = g_new0(char *, maxdepth);
+	volatile char **blist = g_new0(volatile char *, maxdepth);
 	int prevdepth, depth = 0, order, row = 0, key = 1;
 	volatile int t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
@@ -379,7 +379,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			depth		= db_result_get_int(r,1);
 			while (maxdepth < (depth + 1)) {
 				int newmaxdepth = 2 * depth;
-				blist = g_renew(char *, blist, newmaxdepth);
+				blist = g_renew(volatile char *, blist, newmaxdepth);
 				while (maxdepth < newmaxdepth)
 					blist[maxdepth++] = NULL;
 			}
@@ -406,14 +406,14 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if (is_header && ((boundary = find_boundary(str)) != NULL)) {
 				got_boundary = TRUE;
 				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
-				if (blist[depth]) g_free(blist[depth]);
+				if (blist[depth]) g_free((void *)blist[depth]);
 				blist[depth] = boundary;
 			}
 
 			if (prevdepth > depth && blist[depth]) {
 				dprint("\n--%s at %d--\n", blist[depth], depth);
 				g_string_append_printf(m, "\n--%s--\n", blist[depth]);
-				g_free(blist[depth]);
+				g_free((void *)blist[depth]);
 				blist[depth] = NULL;
 				finalized=TRUE;
 			}
@@ -452,7 +452,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	}
 
 	if (row > 2 && depth > 0 && boundary && blist[0] && !finalized) {
-		if (strcmp(blist[0],boundary)!=0) {
+		if (strcmp((const char *)blist[0],boundary)!=0) {
 			dprint("\n--%s-- final\n", blist[0]);
 			g_string_append_printf(m, "\n--%s--\n\n", blist[0]);
 		} else
@@ -466,7 +466,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	g_string_free(n,TRUE);
 	while (--maxdepth >= 0) {
 		if (blist[maxdepth])
-			g_free(blist[maxdepth]);
+			g_free((void *)blist[maxdepth]);
 	}
 	g_free(blist);
 	return self;
@@ -667,7 +667,7 @@ void dbmail_message_free(DbmailMessage *self)
 		return;
 
 	if (self->headers) {
-		g_relation_destroy(self->headers);
+		g_hash_table_destroy(self->headers);
 		self->headers = NULL;
 	}
 	if (self->content) {
@@ -738,7 +738,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GStri
 	assert(self->content == NULL);
 
 	stream = g_mime_stream_mem_new_with_buffer(str->str, str->len);
-	g_mime_stream_mem_set_owner(stream, TRUE);
+	g_mime_stream_mem_set_owner(GMIME_STREAM_MEM(stream), TRUE);
 
 	parser = g_mime_parser_new_with_stream(stream);
 	g_object_unref(stream);
@@ -786,12 +786,13 @@ static void _map_headers(DbmailMessage *self)
 {
 	GMimeObject *part;
 	assert(self->content);
-	if (self->headers) g_relation_destroy(self->headers);
+	if (self->headers) g_hash_table_destroy(self->headers);
 
-	self->headers = g_relation_new(2);
-
-	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
-	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_case_equal);
+	self->headers = g_hash_table_new_full(
+			(GHashFunc)g_str_hash, 
+			(GEqualFunc)g_str_case_equal,
+			(GDestroyNotify)NULL,
+			(GDestroyNotify)NULL);
 
 	if (GMIME_IS_MESSAGE(self->content)) {
 		char *type = NULL;
@@ -825,8 +826,11 @@ static void _register_header(const char *header, const char *value, gpointer use
 		hvalue = value;
 	}
 	
-	if (m->headers && (! g_relation_exists(m->headers, hname, hvalue)))
-		g_relation_insert(m->headers, hname, hvalue);
+	if (m->headers) {
+		GList *values = g_hash_table_lookup(m->headers, hname);
+		values = g_list_append(values, (void *)hvalue);
+		g_hash_table_insert(m->headers, (void *)hname, (void *)values);
+	}
 }
 
 void dbmail_message_set_physid(DbmailMessage *self, uint64_t physid)
@@ -904,12 +908,12 @@ const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *h
 	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
 
-GTuples * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header)
+GList * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header)
 {
 	const char *hname;
 	if (! (hname = g_tree_lookup(self->header_name,header)))
 		hname = header;
-	return g_relation_select(self->headers, hname, 0);
+	return (GList *)g_hash_table_lookup(self->headers, hname);
 }
 
 GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field_name)
@@ -1627,9 +1631,8 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	uint64_t headername_id;
 	uint64_t headervalue_id;
 	DbmailMessage *self = (DbmailMessage *)user_data;
-	GTuples *values;
+	GList *values;
 	unsigned char *raw;
-	unsigned i;
 	time_t date;
 	volatile gboolean isaddr = 0, isdate = 0, issubject = 0;
 	const char *charset = dbmail_message_get_charset(self);
@@ -1663,17 +1666,20 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	else if (g_ascii_strcasecmp(header,"Date")==0)
 		isdate=1;
 
-	values = g_relation_select(self->headers,header,0);
+	values = g_hash_table_lookup(self->headers,header);
 
-	for (i=0; i<values->len;i++) {
+	while (values) {
 		char *value = NULL;
-		raw = (unsigned char *)g_tuples_index(values,i,1);
+		raw = (unsigned char *)values->data;
 		TRACE(TRACE_DEBUG,"raw header value [%s]", raw);
 
 		value = dbmail_iconv_decode_field((const char *)raw, charset, isaddr);
 
 		if ((! value) || (strlen(value) == 0)) {
 			if (value) g_free(value);
+			if (! g_list_next(values))
+				break;
+			values = g_list_next(values);
 			continue;
 		}
 
@@ -1755,9 +1761,13 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		g_free(datefield); datefield = NULL;
 		emaillist=NULL;
 		date=0;
+
+		if (! g_list_next(values))
+			break;
+
+		values = g_list_next(values);
 	}
 	
-	g_tuples_destroy(values);
 	return FALSE;
 }
 
@@ -2184,7 +2194,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		TRACE(TRACE_NOTICE, "message id=%lu, size=%zd is inserted", 
 				newmsgidnr, msgsize);
 		if (msgflags || keywords) {
-			TRACE(TRACE_NOTICE, "message id=%llu, setting imap flags", 
+			TRACE(TRACE_NOTICE, "message id=%lu, setting imap flags", 
 				newmsgidnr);
 			db_set_msgflag(newmsgidnr, msgflags, keywords, IMAPFA_ADD, NULL);
 			db_mailbox_seq_update(mboxidnr);
