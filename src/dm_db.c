@@ -2565,10 +2565,11 @@ int db_mailbox_has_message_id(uint64_t mailbox_idnr, const char *messageid)
 		"LEFT JOIN %sheadername n ON h.headername_id=n.id "
 		"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
 		"WHERE m.mailbox_idnr=? "
+		"AND m.status < %d "
 		"AND n.headername IN ('resent-message-id','message-id') "
 		"AND %s=? "
 		"AND p.internal_date > %s", DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
-		partial, expire);
+		MESSAGE_STATUS_DELETE, partial, expire);
 	
 	c = db_con_get();
 	TRY
