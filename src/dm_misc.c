@@ -890,16 +890,15 @@ char *date_sql2imap(const char *sqldate)
  * d-mon-yyyy
  * return value is valid until next function call.
  */
-char *date_imap2sql(const char *imapdate)
+int date_imap2sql(const char *imapdate, char *sqldate)
 {
 	struct tm tm;
-	char _sqldate[SQL_INTERNALDATE_LEN + 1];
 	char *last_char;
 	size_t l = strlen(imapdate);
 
 	if ((l < 10) || (l > 11)) {
 		TRACE(TRACE_DEBUG, "invalid size IMAP date [%s]", imapdate);
-		return g_strdup("");
+		return 1;
 	}
 
 	// bsd needs this:
@@ -907,11 +906,11 @@ char *date_imap2sql(const char *imapdate)
 	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
 	if (last_char == NULL || *last_char != '\0') {
 		TRACE(TRACE_DEBUG, "error parsing IMAP date %s", imapdate);
-		return g_strdup("");
+		return 1;
 	}
-	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN+1, "%Y-%m-%d 00:00:00", &tm);
+	(void) strftime(sqldate, SQL_INTERNALDATE_LEN+1, "%Y-%m-%d 00:00:00", &tm);
 
-	return g_strdup(_sqldate);
+	return 0;
 }
 
 

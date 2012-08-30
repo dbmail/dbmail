@@ -425,6 +425,10 @@ static void server_close_sockets(ServerConfig_T *conf)
 		conf->ssl_socketcount=0;
 		if (conf->socket)
 			unlink(conf->socket);
+		g_free(conf->listenSockets);
+		conf->listenSockets = NULL;
+		g_free(conf->ssl_listenSockets);
+		conf->ssl_listenSockets = NULL;
 	}
 }
 

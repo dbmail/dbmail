@@ -516,7 +516,7 @@ END_TEST
 
 START_TEST(test_date_imap2sql)
 {
-	char *r;
+	char r[255];
 	int i = 0;
 	char *in[] = {
 		"01-Jan-2001",
@@ -532,9 +532,9 @@ START_TEST(test_date_imap2sql)
 	};
 
 	while (in[i]) {
-		r = date_imap2sql(in[i]);
+		memset(r, 0, sizeof(r));
+		date_imap2sql(in[i], r);
 		fail_unless(MATCH(out[i], r), "[%s] != [%s]", r, out[i]);
-		g_free(r);
 		i++;
 	}
 

@@ -127,7 +127,7 @@ int dm_valid_format(const char *str);
 
 
 char *date_sql2imap(const char *sqldate);
-char *date_imap2sql(const char *imapdate);
+int date_imap2sql(const char *imapdate, char *sqldate);
 
 int checkmailboxname(const char *s);
 int check_msg_set(const char *s);

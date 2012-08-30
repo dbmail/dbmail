@@ -787,38 +787,45 @@ static int _handle_search_args(DbmailMailbox *self, char **search_keys, uint64_t
 	 */
 
 	else if ( MATCH(key, "before") ) {
-		char *s;
+		char s[255];
+		char *next;
+		memset(s, 0, sizeof(s));
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
-		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
+		next = search_keys[*idx + 1];
+		g_return_val_if_fail(check_date(next),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
-		s = date_imap2sql(search_keys[*idx]);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date < '%s'", s);
-		g_free(s);
+		if (!date_imap2sql(next, s))
+			g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date < '%s'", s);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "on") ) {
-		char *s, *d;
+		char s[255], *d;
+		char *next;
+		memset(s, 0, sizeof(s));
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
-		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
+		next = search_keys[*idx + 1];
+		g_return_val_if_fail(check_date(next),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
-		s = date_imap2sql(search_keys[*idx]);
-		d = g_strdup_printf(db_get_sql(SQL_TO_DATE), "p.internal_date");
-		g_snprintf(value->search, MAX_SEARCH_LEN, "%s = '%s'", d, s);
-		g_free(s);
-		g_free(d);
+		if (!date_imap2sql(next, s)) {
+			d = g_strdup_printf(db_get_sql(SQL_TO_DATE), "p.internal_date");
+			g_snprintf(value->search, MAX_SEARCH_LEN, "%s = '%s'", d, s);
+			g_free(d);
+		}
 		(*idx)++;
 		
 	} else if ( MATCH(key, "since") ) {
-		char *s;
+		char s[255];
+		char *next;
+		memset(s, 0, sizeof(s));
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
-		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
+		next = search_keys[*idx + 1];
+		g_return_val_if_fail(check_date(next),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
-		s = date_imap2sql(search_keys[*idx]);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > '%s'", s);
-		g_free(s);
+		if (!date_imap2sql(next, s))
+			g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > '%s'", s);
 		(*idx)++;
 	}
 
@@ -1105,7 +1112,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 }
 static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 {
-	char *qs, *date, *field, *d;
+	char *qs, *date, *field, dt[255];
 	uint64_t *k, *v, *w;
 	uint64_t id;
 	char gt_lt = 0;
@@ -1137,11 +1144,12 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 			case IST_HDRDATE_BEFORE:
 			
 			field = g_strdup_printf(db_get_sql(SQL_TO_DATE), s->hdrfld);
-			d = date_imap2sql(s->search);
-			qs = g_strdup_printf("'%s'", d);
-			g_free(d);
-			date = g_strdup_printf(db_get_sql(SQL_TO_DATE), qs);
-			g_free(qs);
+			memset(s, 0, sizeof(dt));
+			if (! date_imap2sql(s->search, dt)) {
+				qs = g_strdup_printf("'%s'", dt);
+				date = g_strdup_printf(db_get_sql(SQL_TO_DATE), qs);
+				g_free(qs);
+			}
 
 			if (s->type == IST_HDRDATE_SINCE)
 				op = ">=";
