@@ -118,6 +118,11 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
 	
 	g_thread_pool_push(tpool, D, &err);
+	TRACE(TRACE_INFO, "threads unused %u/%d limits %u/%d",
+			g_thread_pool_get_num_unused_threads(),
+			g_thread_pool_get_max_unused_threads(),
+			g_thread_pool_get_num_threads(tpool),
+			g_thread_pool_get_max_threads(tpool));
 
 	if (err) TRACE(TRACE_EMERG,"g_thread_pool_push failed [%s]", err->message);
 }
@@ -186,7 +191,7 @@ static int server_setup(ServerConfig_T *conf)
 	queue = g_async_queue_new();
 
 	// Create the thread pool
-	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,TRUE,&err)))
+	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,FALSE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
 	// self-pipe used to push the event-loop
