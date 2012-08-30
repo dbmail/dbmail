@@ -1927,7 +1927,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			}
 		}
 
-		self->args[self->args_idx] = g_new0(char,(i - argstart + 10));
+		self->args[self->args_idx] = g_new0(char,(i - argstart + 1));
 		memcpy((void *) self->args[self->args_idx], (void *) &s[argstart], i - argstart);
 		self->args[self->args_idx][i - argstart] = '\0';
 		self->args_idx++;

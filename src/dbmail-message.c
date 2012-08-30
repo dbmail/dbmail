@@ -792,7 +792,7 @@ static void _map_headers(DbmailMessage *self)
 			(GHashFunc)g_str_hash, 
 			(GEqualFunc)g_str_case_equal,
 			(GDestroyNotify)NULL,
-			(GDestroyNotify)g_list_free);
+			(GDestroyNotify)NULL);
 
 	if (GMIME_IS_MESSAGE(self->content)) {
 		char *type = NULL;
