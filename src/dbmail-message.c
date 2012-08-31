@@ -1028,6 +1028,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	 * _mime_retrieve failed. Fall back to messageblks
 	 * interface
 	 */
+	TRACE(TRACE_WARNING, "Deprecation warning. Please migrate the old messageblks using dbmail-util -M");
 	self = store;
 
 	date2char_str("p.internal_date", &frag);

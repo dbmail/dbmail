@@ -927,15 +927,16 @@ int do_migrate(int migrate_limit)
 	int count = 0;
 	DbmailMessage *m;
 	
-	qprintf ("Mirgrate legacy 2.2.x messageblks to mimeparts...\n");
+	qprintf ("Migrate legacy 2.2.x messageblks to mimeparts...\n");
 	if (!yes_to_all) {
 		qprintf ("\tmigration skipped. Use -y option to perform mirgration.\n");
 		return 0;
 	}
-	qprintf ("Preparing to migrate %d physmessages.\n", migrate_limit);
+	qprintf ("Preparing to migrate up to %d physmessages.\n", migrate_limit);
 
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		r = db_query(c, "SELECT DISTINCT(physmessage_id) FROM %smessageblks LIMIT %d", DBPFX, migrate_limit);
 		qprintf ("Migrating %d physmessages...\n", migrate_limit);
 		while (db_result_next(r))
@@ -944,21 +945,16 @@ int do_migrate(int migrate_limit)
 			id = db_result_get_u64(r,0);
 			m = dbmail_message_new();
 			m = dbmail_message_retrieve(m, id, DBMAIL_MESSAGE_FILTER_FULL);
-			if(!dm_message_store(m))
-			{
+			if(! dm_message_store(m)) {
 				if(verbose) qprintf ("%d ",id);
 				db_update("DELETE FROM %smessageblks WHERE physmessage_id = %d", DBPFX, id);
 			}
-			else
-			{
-				if(!verbose) qprintf ("migrating physmessage_id: %d\n",id);
-				qprintf ("failed\n");
-				return -1;
-			}
 			dbmail_message_free(m);
 		}
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		return -1;
 	FINALLY
 		db_con_close(c);
