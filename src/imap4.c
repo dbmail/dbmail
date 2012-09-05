@@ -567,9 +567,22 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 	
 void _ic_cb_leave(gpointer data)
 {
+	int state;
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;
-	TRACE(TRACE_DEBUG,"handling imap session [%p]",session);
+
+	state = session->ci->client_state;
+	TRACE(TRACE_DEBUG,"handling imap session [%p] client_state [%d]",
+			session, state);
+
+	if (state & CLIENT_ERR) {
+		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
+		return;
+	} 
+	if (state & CLIENT_EOF) {
+		imap_session_bailout(session);
+		return;
+	} 
 
 	ci_uncork(session->ci);
 	imap_handle_exit(session, D->status);
