@@ -1,5 +1,8 @@
 # debian specific configuration for dbmail
 
+# work-around for linux/epoll bug in libevent
+export EVENT_NOEPOLL=yes
+
 # comment out to disable the pop3 server
 #START_POP3D=true
 
