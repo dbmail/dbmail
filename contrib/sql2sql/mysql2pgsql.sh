@@ -57,8 +57,11 @@ import_pgsql()
 		mysqldump --compatible=postgresql -t --compact -c dbmail $table|psql dbmail >/dev/null 2>&1
 		echo "done."
 	done
-	echo "  migrate tables: mimeparts, partlists ..."
+	echo "  migrate table: dbmail_mimeparts ..."
 	py-mysql2pgsql -v 2>/dev/null
+	echo -n "  migrate table:  dbmail_partlists..."
+	mysqldump --compatible=postgresql -t --compact -c dbmail dbmail_partlists|psql dbmail >/dev/null 2>&1
+	echo "done."
 	pgsql_sequences
 	return $?
 }

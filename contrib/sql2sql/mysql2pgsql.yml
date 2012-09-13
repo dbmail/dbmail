@@ -22,7 +22,6 @@ destination:
 # if tables is given, only the listed tables will be converted.  leave empty to convert all tables.
 only_tables:
 - dbmail_mimeparts
-- dbmail_partlists
 
 # if supress_data is true, only the schema definition will be exported/migrated, and not the data
 supress_data: false
