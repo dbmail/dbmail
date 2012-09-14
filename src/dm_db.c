@@ -1417,7 +1417,7 @@ int db_update_rfcsize(GList *lost)
 			return DM_EQUERY;
 		}
 
-		if (! (msg = dbmail_message_retrieve(msg, *pmsid, DBMAIL_MESSAGE_FILTER_FULL))) {
+		if (! (msg = dbmail_message_retrieve(msg, *pmsid))) {
 			TRACE(TRACE_WARNING, "error retrieving physmessage: [%lu]", *pmsid);
 			fprintf(stderr,"E");
 		} else {
@@ -1458,7 +1458,7 @@ int db_set_headercache(GList *lost)
 		msg = dbmail_message_new();
 		if (! msg) return DM_EQUERY;
 
-		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_HEAD))) {
+		if (! (msg = dbmail_message_retrieve(msg, pmsgid))) {
 			TRACE(TRACE_WARNING, "error retrieving physmessage: [%lu]", pmsgid);
 			fprintf(stderr,"E");
 		} else {
@@ -1521,7 +1521,7 @@ int db_set_envelope(GList *lost)
 		if (! msg)
 			return DM_EQUERY;
 
-		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_HEAD))) {
+		if (! (msg = dbmail_message_retrieve(msg, pmsgid))) {
 			TRACE(TRACE_WARNING,"error retrieving physmessage: [%lu]", pmsgid);
 			fprintf(stderr,"E");
 		} else {
@@ -1669,7 +1669,7 @@ char * db_get_message_lines(uint64_t message_idnr, long lines)
 		return NULL;
 
 	msg = dbmail_message_new();
-	msg = dbmail_message_retrieve(msg, physmessage_id, DBMAIL_MESSAGE_FILTER_FULL);
+	msg = dbmail_message_retrieve(msg, physmessage_id);
 	hdr = dbmail_message_hdrs_to_string(msg);
 	buf = dbmail_message_body_to_string(msg);
 	dbmail_message_free(msg);

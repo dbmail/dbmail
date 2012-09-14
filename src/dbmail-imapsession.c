@@ -154,7 +154,7 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self, int filter)
 
 	if (! self->message) {
 		DbmailMessage *msg = dbmail_message_new();
-		if ((msg = dbmail_message_retrieve(msg, *physid, filter)) != NULL)
+		if ((msg = dbmail_message_retrieve(msg, *physid)) != NULL)
 			self->message = msg;
 	}
 

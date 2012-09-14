@@ -157,7 +157,7 @@ static char *store_and_retrieve(DbmailMessage *m)
 
 	n = dbmail_message_new();
 	dbmail_message_set_physid(n, physid);
-	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_FULL);
+	n = dbmail_message_retrieve(n,physid);
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
@@ -375,7 +375,7 @@ START_TEST(test_dbmail_message_store2)
 
 	n = dbmail_message_new();
 	dbmail_message_set_physid(n, physid);
-	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_FULL);
+	n = dbmail_message_retrieve(n,physid);
 	fail_unless(n != NULL, "_mime_retrieve failed");
 	
 	t = dbmail_message_to_string(n);
@@ -411,7 +411,7 @@ START_TEST(test_dbmail_message_retrieve)
 	fail_unless(physid > 0, "dbmail_message_get_physid failed");
 	
 	n = dbmail_message_new();
-	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_HEAD);	
+	n = dbmail_message_retrieve(n,physid);	
 	fail_unless(n != NULL, "dbmail_message_retrieve failed");
 	fail_unless(n->content != NULL, "dbmail_message_retrieve failed");
 
@@ -641,7 +641,7 @@ START_TEST(test_dbmail_message_encoded)
 	dbmail_message_free(m);
 
 	m = dbmail_message_new();
-	m = dbmail_message_retrieve(m, id, DBMAIL_MESSAGE_FILTER_FULL);
+	m = dbmail_message_retrieve(m, id);
 	dbmail_message_free(m);
 
 

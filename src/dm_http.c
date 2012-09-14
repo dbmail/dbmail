@@ -312,7 +312,7 @@ void Http_getMessages(T R)
 		return;
 	}
 	buf = evbuffer_new();
-	m = dbmail_message_retrieve(m, pid, DBMAIL_MESSAGE_FILTER_FULL);
+	m = dbmail_message_retrieve(m, pid);
 	if (Request_getMethod(R) == NULL) {
 
 		/*

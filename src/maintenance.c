@@ -978,7 +978,7 @@ int do_migrate(int migrate_limit)
 			count++;
 			id = db_result_get_u64(r,0);
 			m = dbmail_message_new();
-			m = dbmail_message_retrieve(m, id, DBMAIL_MESSAGE_FILTER_FULL);
+			m = dbmail_message_retrieve(m, id);
 			if(! dm_message_store(m)) {
 				if(verbose) qprintf ("%d ",id);
 				db_update("DELETE FROM %smessageblks WHERE physmessage_id = %d", DBPFX, id);

@@ -1066,22 +1066,6 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 
 /*
  *
- * retrieve the message headers as a single mime object
- *
- */
-static DbmailMessage * _fetch_head(DbmailMessage *self)
-{
-	const char *query_template = 	"SELECT b.messageblk, b.is_header, %s "
-		"FROM %smessageblks b "
-		"JOIN %sphysmessage p ON b.physmessage_id=p.id "
-		"WHERE b.physmessage_id = %lu "
-		"AND b.is_header = '1'";
-	return _retrieve(self, query_template);
-
-}
-
-/*
- *
  * retrieve the full message
  *
  */
@@ -1098,26 +1082,15 @@ static DbmailMessage * _fetch_full(DbmailMessage *self)
 /* \brief retrieve message
  * \param empty DbmailMessage
  * \param physmessage_id
- * \param filter (header-only or full message)
  * \return filled DbmailMessage
  */
-DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, uint64_t physid, int filter)
+DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, uint64_t physid)
 {
 	assert(physid);
 	
 	dbmail_message_set_physid(self, physid);
 	
-	switch (filter) {
-		case DBMAIL_MESSAGE_FILTER_HEAD:
-			self = _fetch_head(self);
-			break;
-
-		case DBMAIL_MESSAGE_FILTER_BODY:
-		case DBMAIL_MESSAGE_FILTER_FULL:
-			self = _fetch_full(self);
-			break;
-	}
-	
+	self = _fetch_full(self);
 
 	if ((!self) || (! self->content)) {
 		TRACE(TRACE_ERR, "retrieval failed for physid [%lu]", physid);

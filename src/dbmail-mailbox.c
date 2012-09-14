@@ -205,7 +205,7 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 	while(ids) {
 		physid = *(uint64_t *)ids->data;
 		m = dbmail_message_new();
-		m = dbmail_message_retrieve(m, physid, DBMAIL_MESSAGE_FILTER_FULL);
+		m = dbmail_message_retrieve(m, physid);
 		if (dump_message_to_stream(m, ostream) > 0)
 			count++;
 		dbmail_message_free(m);
