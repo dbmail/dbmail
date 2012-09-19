@@ -45,6 +45,7 @@ static void server_config_load(ServerConfig_T * conf, const char * const service
 static int server_set_sighandler(void);
 void disconnect_all(void);
 
+struct event_base *evbase;
 struct event *sig_int, *sig_hup, *sig_pipe, *sig_term;
 
 struct event *pev = NULL;
@@ -201,8 +202,7 @@ static int server_setup(ServerConfig_T *conf)
 	UNBLOCK(selfpipe[0]);
 	UNBLOCK(selfpipe[1]);
 	
-	pev = g_new0(struct event, 1);
-	event_set(pev, selfpipe[0], EV_READ, dm_queue_drain, NULL);
+	pev = event_new(evbase, selfpipe[0], EV_READ, dm_queue_drain, NULL);
 	event_add(pev, NULL);
 
 	return 0;
@@ -228,10 +228,11 @@ static int server_start_cli(ServerConfig_T *conf)
 	if (MATCH(conf->service_name,"HTTP")) {
 		TRACE(TRACE_DEBUG,"starting httpd cli server...");
 	} else {
-		event_init();
+		evthread_use_pthreads();
+		evbase = event_base_new();
 		if (server_setup(conf)) return -1;
 		conf->ClientHandler(NULL);
-		event_dispatch();
+		event_base_dispatch(evbase);
 	}
 
 	disconnect_all();
@@ -623,7 +624,7 @@ static void server_pidfile(ServerConfig_T *conf)
 int server_run(ServerConfig_T *conf)
 {
 	int i;
-	struct event *evsock;
+	struct event **evsock;
 
 	mainRestart = 0;
 
@@ -648,7 +649,8 @@ int server_run(ServerConfig_T *conf)
 
 	server_conf = conf;
 
-	event_init();
+	evthread_use_pthreads();
+	evbase = event_base_new();
 
 	if (server_setup(conf)) return -1;
 
@@ -675,17 +677,19 @@ int server_run(ServerConfig_T *conf)
 			int k, total;
 			server_create_sockets(conf);
 			total = conf->socketcount + conf->ssl_socketcount;
-			evsock = g_new0(struct event, total);
+			evsock = g_new0(struct event *, total);
 			for (i = 0; i < conf->socketcount; i++) {
 				TRACE(TRACE_DEBUG, "Adding event for plain socket [%d] [%d/%d]", conf->listenSockets[i], i+1, total);
-				event_set(&evsock[i], conf->listenSockets[i], EV_READ, server_sock_cb, &evsock[i]);
-				event_add(&evsock[i], NULL);
+				evsock[i] = event_new(evbase, conf->listenSockets[i], EV_READ, server_sock_cb, NULL);
+				event_assign(evsock[i], evbase, conf->listenSockets[i], EV_READ, server_sock_cb, evsock[i]);
+				event_add(evsock[i], NULL);
 			}
 			k = i+1;
 			for (k = i, i = 0; i < conf->ssl_socketcount; i++, k++) {
 				TRACE(TRACE_DEBUG, "Adding event for ssl socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, total);
-				event_set(&evsock[k], conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, &evsock[k]);
-				event_add(&evsock[k], NULL);
+				evsock[k] = event_new(evbase, conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, NULL);
+				event_assign(evsock[k], evbase, conf->listenSockets[i], EV_READ, server_sock_cb, evsock[k]);
+				event_add(evsock[k], NULL);
 			}
 		}
 	}	
@@ -701,7 +705,7 @@ int server_run(ServerConfig_T *conf)
 
 	TRACE(TRACE_DEBUG,"dispatching event loop...");
 
-	event_dispatch();
+	event_base_dispatch(evbase);
 
 	return 0;
 }

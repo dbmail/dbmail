@@ -194,8 +194,8 @@ ClientBase_T * client_init(client_sock *c)
 
 	client->read_buffer = g_string_new("");
 	client->write_buffer = g_string_new("");
-	client->rev = g_new0(struct event, 1);
-	client->wev = g_new0(struct event, 1);
+	client->rev = NULL;
+	client->wev = NULL;
 
 	return client;
 }
@@ -496,8 +496,14 @@ void ci_close(ClientBase_T *self)
 
 	ci_cork(self);
 
-	g_free(self->rev); self->rev = NULL;
-	g_free(self->wev); self->wev = NULL;
+	if (self->rev) {
+		event_free(self->rev);
+	       	self->rev = NULL;
+	}
+	if (self->wev) {
+		event_free(self->wev);
+	       	self->wev = NULL;
+	}
 
 	if (self->tx > 0) {
 		shutdown(self->tx, SHUT_RDWR);

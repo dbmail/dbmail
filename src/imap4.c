@@ -31,45 +31,100 @@
 /* max number of BAD/NO responses */
 #define MAX_FAULTY_RESPONSES 5
 
-const char *IMAP_COMMANDS[] = {
-	"", "capability", "noop", "logout",
-	"authenticate", "login",
-	"select", "examine", "create", "delete", "rename", "subscribe",
-	"unsubscribe",
-	"list", "lsub", "status", "append",
-	"check", "close", "expunge", "search", "fetch", "store", "copy",
-	"uid", "sort", "getquotaroot", "getquota",
-	"setacl", "deleteacl", "getacl", "listrights", "myrights",
-	"namespace","thread","unselect","idle","starttls", "id",
-	"***NOMORE***"
-};
-
 extern int selfpipe[2];
 extern ServerConfig_T *server_conf;
 extern GAsyncQueue *queue;
+extern struct event_base *evbase;
 
 const char AcceptedTagChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
 
+const char *IMAP_COMMANDS[] = {
+	"",
+       	"capability",
+       	"noop",
+       	"logout",
+	"authenticate",
+       	"login",
+	"select",
+       	"examine",
+       	"create",
+       	"delete",
+       	"rename",
+       	"subscribe",
+	"unsubscribe",
+	"list",
+       	"lsub",
+       	"status",
+       	"append",
+	"check",
+       	"close",
+       	"expunge",
+       	"search",
+       	"fetch",
+       	"store",
+       	"copy",
+	"uid",
+       	"sort",
+       	"getquotaroot",
+       	"getquota",
+	"setacl",
+       	"deleteacl",
+       	"getacl",
+       	"listrights",
+       	"myrights",
+	"namespace",
+	"thread",
+	"unselect",
+	"idle",
+	"starttls",
+       	"id",
+	"***NOMORE***"
+};
 
 const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 	NULL,
-	_ic_capability, _ic_noop, _ic_logout,
-	_ic_authenticate, _ic_login,
-	_ic_select, _ic_examine, _ic_create, _ic_delete, _ic_rename,
-	_ic_subscribe, _ic_unsubscribe, _ic_list, _ic_lsub, _ic_status,
+	_ic_capability, 
+	_ic_noop,
+       	_ic_logout,
+	_ic_authenticate,
+       	_ic_login,
+	_ic_select,
+       	_ic_examine,
+       	_ic_create,
+       	_ic_delete,
+       	_ic_rename,
+	_ic_subscribe,
+       	_ic_unsubscribe,
+       	_ic_list,
+       	_ic_lsub,
+       	_ic_status,
 	_ic_append,
-	_ic_check, _ic_close, _ic_expunge, _ic_search, _ic_fetch,
-	_ic_store, _ic_copy, _ic_uid, _ic_sort,
-	_ic_getquotaroot, _ic_getquota,
-	_ic_setacl, _ic_deleteacl, _ic_getacl, _ic_listrights,
+	_ic_check,
+       	_ic_close,
+       	_ic_expunge,
+       	_ic_search,
+       	_ic_fetch,
+	_ic_store,
+       	_ic_copy,
+       	_ic_uid,
+       	_ic_sort,
+	_ic_getquotaroot,
+       	_ic_getquota,
+	_ic_setacl,
+       	_ic_deleteacl,
+       	_ic_getacl,
+       	_ic_listrights,
 	_ic_myrights,
-	_ic_namespace, _ic_thread, _ic_unselect, _ic_idle, _ic_starttls,
+	_ic_namespace,
+       	_ic_thread,
+       	_ic_unselect,
+       	_ic_idle,
+       	_ic_starttls,
 	_ic_id,
 	NULL
 };
-
 
 /*
  */
@@ -120,7 +175,11 @@ static void imap_session_bailout(ImapSession *session)
 	ci_cork(session->ci);
 
 	if (session->state != CLIENTSTATE_QUIT_QUEUED) {
-		dm_thread_data_push((gpointer)session, imap_session_cleanup_enter, imap_session_cleanup_leave, NULL);
+		dm_thread_data_push(
+				(gpointer)session,
+			       	imap_session_cleanup_enter,
+			       	imap_session_cleanup_leave,
+			       	NULL);
 	}
 }
 
@@ -128,6 +187,8 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	switch(session->state) {
+		case CLIENTSTATE_QUIT_QUEUED:
+			break; // ignore
 		case CLIENTSTATE_LOGOUT:
 		case CLIENTSTATE_ERROR:
 			imap_session_bailout(session);
@@ -446,8 +507,6 @@ static void reset_callbacks(ImapSession *session)
 
 	UNBLOCK(session->ci->rx);
 	UNBLOCK(session->ci->tx);
-
-	ci_uncork(session->ci);
 }
 
 int imap_handle_connection(client_sock *c)
@@ -462,15 +521,18 @@ int imap_handle_connection(client_sock *c)
 
 	session = dbmail_imap_session_new();
 	session->ci = ci;
-	event_set(ci->rev, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
-	event_set(ci->wev, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
+
+	reset_callbacks(session);
+
+	ci->rev = event_new(evbase, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
+	ci->wev = event_new(evbase, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
 
 	if ((! server_conf->ssl) || (ci->ssl_state == TRUE)) 
 		Capa_remove(session->capa, "STARTTLS");
 
-	reset_callbacks(session);
 	send_greeting(session);
-	
+
+	ci_uncork(session->ci);
 	return EOF;
 }
 

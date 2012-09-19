@@ -343,7 +343,7 @@ AC_DEFUN([DM_CHECK_MHASH], [dnl
 ])
 
 AC_DEFUN([DM_CHECK_EVENT], [
-	AC_CHECK_HEADERS([event.h], [EVENTLIB="-levent"],[EVENTLIB="failed"], [#include <sys/types.h>])
+	AC_CHECK_HEADERS([event.h], [EVENTLIB="-levent_pthreads -levent"],[EVENTLIB="failed"], [#include <event2/event.h>])
 	if test [ "x$EVENTLIB" = "xfailed" ]; then
 		AC_MSG_ERROR([Could not find EVENT library.])
 	else

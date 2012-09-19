@@ -82,6 +82,8 @@
 #include <unistd.h>
 #include <mhash.h>
 #include <sys/queue.h>
+#include <event2/event.h>
+#include <event2/thread.h>
 #include <evhttp.h>
 #include <math.h>
 #include <openssl/ssl.h>

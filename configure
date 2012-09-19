@@ -4909,13 +4909,13 @@ done
 
 	for ac_header in event.h
 do :
-  ac_fn_c_check_header_compile "$LINENO" "event.h" "ac_cv_header_event_h" "#include <sys/types.h>
+  ac_fn_c_check_header_compile "$LINENO" "event.h" "ac_cv_header_event_h" "#include <event2/event.h>
 "
 if test "x$ac_cv_header_event_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_EVENT_H 1
 _ACEOF
- EVENTLIB="-levent"
+ EVENTLIB="-levent_pthreads -levent"
 else
   EVENTLIB="failed"
 fi
