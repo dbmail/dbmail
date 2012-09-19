@@ -1281,9 +1281,7 @@ void _ic_append_enter(dm_thread_data *D)
 		TRACE(TRACE_DEBUG, "[%p] internal date [%s] found, next arg [%s]", self, internal_date, self->args[i]);
 	}
 
-
 	if (self->state == CLIENTSTATE_SELECTED && self->mailbox->id == mboxid) {
-		dbmail_imap_session_mailbox_status(self, TRUE);
 		recent = FALSE;
 	}
 	
@@ -1320,6 +1318,10 @@ void _ic_append_enter(dm_thread_data *D)
 		break;
 	}
 
+	if (message_id && self->state == CLIENTSTATE_SELECTED && self->mailbox->id == mboxid) {
+		dbmail_imap_session_mailbox_status(self, TRUE);
+	}
+
 	// MessageInfo
 	info = g_new0(MessageInfo,1);
 	info->uid = message_id;
@@ -1333,10 +1335,6 @@ void _ic_append_enter(dm_thread_data *D)
 
 	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 	MailboxState_addMsginfo(M, message_id, info);
-
-	// show EXISTS and RECENT
-	dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(M));
-	dbmail_imap_session_buff_printf(self, "* %u RECENT\r\n", MailboxState_getRecent(M));
 
 	SESSION_OK;
 	SESSION_RETURN;
