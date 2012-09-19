@@ -183,9 +183,18 @@ static void imap_session_bailout(ImapSession *session)
 	}
 }
 
-void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
+void socket_write_cb(int fd, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
+#ifdef DEBUG
+	TRACE(TRACE_DEBUG,"[%p] on [%d] event: %s%s%s%s", session,
+			(int) fd,
+			(what&EV_TIMEOUT) ? " timeout": "",
+			(what&EV_READ)    ? " read":    "",
+			(what&EV_WRITE)   ? " write":   "",
+			(what&EV_SIGNAL)  ? " signal":  ""
+	     );
+#endif
 	switch(session->state) {
 		case CLIENTSTATE_QUIT_QUEUED:
 			break; // ignore
@@ -231,10 +240,16 @@ void imap_cb_read(void *arg)
 }
 
 
-void socket_read_cb(int fd UNUSED, short what, void *arg)
+void socket_read_cb(int fd, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
-	TRACE(TRACE_DEBUG,"[%p]", session);
+	TRACE(TRACE_DEBUG,"[%p] on [%d] event: %s%s%s%s", session,
+			(int) fd,
+			(what&EV_TIMEOUT) ? " timeout": "",
+			(what&EV_READ)    ? " read":    "",
+			(what&EV_WRITE)   ? " write":   "",
+			(what&EV_SIGNAL)  ? " signal":  ""
+			);
 	if (what == EV_READ)
 		imap_cb_read(session);
 	else if (what == EV_TIMEOUT && session->ci->cb_time)
@@ -522,8 +537,8 @@ int imap_handle_connection(client_sock *c)
 	session = dbmail_imap_session_new();
 	session->ci = ci;
 
-	reset_callbacks(session);
 
+	assert(evbase);
 	ci->rev = event_new(evbase, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
 	ci->wev = event_new(evbase, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
 
@@ -532,7 +547,9 @@ int imap_handle_connection(client_sock *c)
 
 	send_greeting(session);
 
+	reset_callbacks(session);
 	ci_uncork(session->ci);
+
 	return EOF;
 }
 
@@ -634,8 +651,11 @@ void _ic_cb_leave(gpointer data)
 	ImapSession *session = D->session;
 
 	state = session->ci->client_state;
-	TRACE(TRACE_DEBUG,"handling imap session [%p] client_state [%d]",
-			session, state);
+	TRACE(TRACE_DEBUG,"handling imap session [%p] client_state [%s%s]",
+			session,
+		       	(state&CLIENT_ERR)?" error":"",
+			(state&CLIENT_EOF)?" eof":""
+			);
 
 	if (state & CLIENT_ERR) {
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
@@ -674,7 +694,7 @@ static void imap_unescape_args(ImapSession *session)
 		default:
 		break;
 	}
-#if 1
+#ifdef DEBUG
 	for (i = 0; session->args[i]; i++) { 
 		TRACE(TRACE_DEBUG, "[%p] arg[%lu]: '%s'\n", session, i, session->args[i]); 
 	}

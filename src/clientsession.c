@@ -49,6 +49,7 @@ ClientSession_T * client_session_new(client_sock *c)
 	create_unique_id(unique_id, 0);
 	session->apop_stamp = g_strdup_printf("<%s@%s>", unique_id, session->hostname);
 
+	assert(evbase);
         ci->rev = event_new(evbase, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
         ci->wev = event_new(evbase, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
 

@@ -1,5 +1,4 @@
 X login testuser1 test
-X delete newbox
 X list "" *
 X create newbox
 X append newbox {10}

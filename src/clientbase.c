@@ -147,6 +147,8 @@ ClientBase_T * client_init(client_sock *c)
 
 	client->timeout         = g_new0(struct timeval,1);
 
+	client->client          = c;
+
 	client->cb_error        = client_error_cb;
 
 	/* set byte counters to 0 */
@@ -535,8 +537,24 @@ void ci_close(ClientBase_T *self)
 		self->ssl = NULL;
 	}
 
+
+	/* clean-up the client_sock */
+	if (self->client) {
+		if (self->client->caddr)
+			g_free(self->client->caddr);
+		if (self->client->saddr)
+			g_free(self->client->saddr);
+
+		if (self->client->ssl) {
+			SSL_shutdown(self->client->ssl);
+			SSL_free(self->client->ssl);
+		}
+
+		g_free(self->client);
+		self->client = NULL;
+	}
+
 	g_free(self);
-	
 	self = NULL;
 }
 

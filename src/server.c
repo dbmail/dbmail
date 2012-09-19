@@ -45,7 +45,7 @@ static void server_config_load(ServerConfig_T * conf, const char * const service
 static int server_set_sighandler(void);
 void disconnect_all(void);
 
-struct event_base *evbase;
+struct event_base *evbase = NULL;
 struct event *sig_int, *sig_hup, *sig_pipe, *sig_term;
 
 struct event *pev = NULL;
@@ -202,12 +202,19 @@ static int server_setup(ServerConfig_T *conf)
 	UNBLOCK(selfpipe[0]);
 	UNBLOCK(selfpipe[1]);
 	
+	assert(evbase);
 	pev = event_new(evbase, selfpipe[0], EV_READ, dm_queue_drain, NULL);
 	event_add(pev, NULL);
 
 	return 0;
 }
-	
+
+static void _cb_log_event(int severity, const char *msg)
+{
+	assert(0);
+	TRACE(TRACE_WARNING, "%s", msg);
+}
+
 static int server_start_cli(ServerConfig_T *conf)
 {
 	server_conf = conf;
@@ -229,6 +236,11 @@ static int server_start_cli(ServerConfig_T *conf)
 		TRACE(TRACE_DEBUG,"starting httpd cli server...");
 	} else {
 		evthread_use_pthreads();
+#ifdef DEBUG
+		event_enable_debug_mode();
+		event_set_log_callback(_cb_log_event);
+#endif
+
 		evbase = event_base_new();
 		if (server_setup(conf)) return -1;
 		conf->ClientHandler(NULL);
@@ -466,12 +478,18 @@ static void server_create_sockets(ServerConfig_T * conf)
 static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 {
 	client_sock *c = g_new0(client_sock,1);
-	struct sockaddr *caddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
-	struct sockaddr *saddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
+	struct sockaddr *caddr;
+	struct sockaddr *saddr;
 	struct event *ev = (struct event *)arg;
 
-	TRACE(TRACE_DEBUG,"%d %d, %p, ssl:%s", sock, event, arg, ssl?"Y":"N");
-
+#ifdef DEBUG
+	TRACE(TRACE_DEBUG,"%d %s%s%s%s, %p, ssl:%s", sock, 
+			(event&EV_TIMEOUT) ? " timeout" : "", 
+			(event&EV_READ)    ? " read"    : "", 
+			(event&EV_WRITE)   ? " write"   : "", 
+			(event&EV_SIGNAL)  ? " signal"  : "", 
+			arg, ssl?"Y":"N");
+#endif
 	/* accept the active fd */
 	int len = sizeof(*caddr);
 
@@ -487,21 +505,29 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
                                 TRACE(TRACE_ERR, "%s", strerror(serr));
                                 break;
                 }
+		g_free(c);
                 return;
         }
-
+	
+        caddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
 	if (getpeername(c->sock, caddr, (socklen_t *)&len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_INFO, "getpeername::error [%s]", strerror(serr));
+		g_free(caddr);
+		g_free(c);
 		return;
 	}
 
 	c->caddr = caddr;
 	c->caddr_len = len;
 
+        saddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
 	if (getsockname(c->sock, saddr, (socklen_t *)&len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_EMERG, "getsockname::error [%s]", strerror(serr));
+		g_free(saddr);
+		g_free(caddr);
+		g_free(c);
 		return; // fatal 
 	}
 
@@ -514,16 +540,6 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 
 	/* streams are ready, perform handling */
 	server_conf->ClientHandler((client_sock *)c);
-
-	g_free(caddr);
-	g_free(saddr);
-
-	if (c->ssl) {
-		SSL_shutdown(c->ssl);
-		SSL_free(c->ssl);
-	}
-
-	g_free(c);
 
 	/* reschedule */
 	event_add(ev, NULL);
@@ -561,13 +577,21 @@ void server_sig_cb(int fd, short event, void *arg)
 static int server_set_sighandler(void)
 {
 	sigset_t set;
-	sig_int = g_new0(struct event, 1);
-	sig_hup = g_new0(struct event, 1);
-	sig_term = g_new0(struct event, 1);
 
-	signal_set(sig_int, SIGINT, server_sig_cb, sig_int); signal_add(sig_int, NULL);
-	signal_set(sig_hup, SIGHUP, server_sig_cb, sig_hup); signal_add(sig_hup, NULL);
-	signal_set(sig_term, SIGTERM, server_sig_cb, sig_term); signal_add(sig_term, NULL);
+	assert(evbase);
+
+	sig_int = evsignal_new(evbase, SIGINT, server_sig_cb, NULL);
+	evsignal_assign(sig_int, evbase, SIGINT, server_sig_cb, sig_int);
+
+	sig_hup = evsignal_new(evbase, SIGHUP, server_sig_cb, NULL); 
+	evsignal_assign(sig_hup, evbase, SIGHUP, server_sig_cb, sig_hup); 
+
+	sig_term = evsignal_new(evbase, SIGTERM, server_sig_cb, NULL); 
+	evsignal_assign(sig_term, evbase, SIGTERM, server_sig_cb, sig_term); 
+	
+	evsignal_add(sig_int, NULL);
+	evsignal_add(sig_hup, NULL);
+	evsignal_add(sig_term, NULL);
 
 	sigemptyset(&set);
 	sigaddset(&set, SIGPIPE);
@@ -650,6 +674,10 @@ int server_run(ServerConfig_T *conf)
 	server_conf = conf;
 
 	evthread_use_pthreads();
+#ifdef DEBUG
+	event_enable_debug_mode();
+	event_set_log_callback(_cb_log_event);
+#endif
 	evbase = event_base_new();
 
 	if (server_setup(conf)) return -1;

@@ -287,6 +287,7 @@ typedef struct  {
 #define CLIENT_EOF	4
 
 typedef struct {
+	client_sock *client;
 	int rx, tx;			/* read and write filehandles */
 	uint64_t bytes_rx;			/* read byte counter */
 	uint64_t bytes_tx;			/* write byte counter */
