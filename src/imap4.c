@@ -186,6 +186,7 @@ static void imap_session_bailout(ImapSession *session)
 void socket_write_cb(int fd, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
+	ClientState_T state;
 #ifdef DEBUG
 	TRACE(TRACE_DEBUG,"[%p] on [%d] event: %s%s%s%s", session,
 			(int) fd,
@@ -195,7 +196,10 @@ void socket_write_cb(int fd, short what, void *arg)
 			(what&EV_SIGNAL)  ? " signal":  ""
 	     );
 #endif
-	switch(session->state) {
+	g_mutex_lock(&session->lock);
+	state = session->state;
+	g_mutex_unlock(&session->lock);
+	switch(state) {
 		case CLIENTSTATE_QUIT_QUEUED:
 			break; // ignore
 		case CLIENTSTATE_LOGOUT:

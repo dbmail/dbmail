@@ -17,6 +17,7 @@ typedef struct cmd_t *cmd_t;
 
 /* ImapSession definition */
 typedef struct {
+	GMutex lock;
 	ClientBase_T *ci;
 	Capa_T preauth_capa;   // CAPABILITY
 	Capa_T capa;   // CAPABILITY

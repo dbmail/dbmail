@@ -94,6 +94,7 @@ ImapSession * dbmail_imap_session_new(void)
 	ImapSession * self;
 
 	self = g_new0(ImapSession,1);
+	g_mutex_init(&self->lock);
 	self->state = CLIENTSTATE_NON_AUTHENTICATED;
 	self->args = g_new0(char *, MAX_ARGS);
 	self->buff = g_string_new("");
@@ -581,7 +582,9 @@ void _send_headers(ImapSession *self, const body_fetch *bodyfetch, gboolean not)
 	}
 
 	g_string_free(ts,TRUE);
+	ts = NULL;
 	g_free(tmp);
+	tmp = NULL;
 }
 
 
@@ -1524,7 +1527,9 @@ int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 	}
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, self->state, state);
+	g_mutex_lock(&self->lock);
 	self->state = state;
+	g_mutex_unlock(&self->lock);
 
 	return 0;
 }

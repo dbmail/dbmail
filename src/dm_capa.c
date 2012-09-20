@@ -48,6 +48,7 @@ static void capa_update(T A)
 		GString *t = g_list_join(A->current_set, " ");
 		strncpy((char *)A->capabilities, t->str, MAX_CAPASIZE-1);
 		g_string_free(t, TRUE);
+		t = NULL;
 		A->dirty = FALSE;
 	}
 }
