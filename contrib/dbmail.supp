@@ -2,400 +2,43 @@
 {
    dbmail_config/1
    Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_strndup
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_load_from_file
+   ...
    fun:config_read
-   fun:server_config_load
-   fun:server_getopt
-   fun:main
-}
-{
-   dbmail_config/2
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_get_language_names
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_new
-   fun:config_read
-   fun:server_config_load
-   fun:server_getopt
-   fun:main
+   ...
 }
 
 {
-   dbmail_config/3
+   g_mime_init
    Memcheck:Leak
-   fun:memalign
-   fun:posix_memalign
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_slice_alloc
-   fun:g_slist_prepend
-   fun:g_strsplit
-   fun:g_get_language_names
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_new
-   fun:config_read
-   fun:server_config_load
-   fun:server_getopt
-}
-{
-   dbmail_config/4
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_strdup
-   fun:g_get_language_names
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_new
-   fun:config_read
-   fun:server_config_load
-   fun:server_getopt
-   fun:main
-}
-{
-   dbmail_config/5
-   Memcheck:Leak
-   fun:memalign
-   fun:posix_memalign
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_slice_alloc
-   fun:g_slice_alloc0
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_new
-   fun:config_read
-   fun:server_config_load
-   fun:server_getopt
-   fun:main
-}
-{
-   dbmail_config/6
-   Memcheck:Leak
-   fun:memalign
-   fun:posix_memalign
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_slice_alloc
-   fun:g_list_prepend
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_new
-   fun:config_read
-   fun:server_config_load
-   fun:server_getopt
-   fun:main
-}
-{
-   dbmail_config/7
-   Memcheck:Leak
-   fun:memalign
-   fun:posix_memalign
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_slice_alloc
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_load_from_file
-   fun:config_read
-   fun:server_config_load
-   fun:server_getopt
-   fun:main
-}
-{
-   dbmail_config/8
-   Memcheck:Leak
-   fun:memalign
-   fun:posix_memalign
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_slice_alloc
-   fun:g_hash_table_new_full
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_new
-   fun:config_read
-   fun:server_config_load
-   fun:server_getopt
-   fun:main
-}
-{
-   dbmail_config/9
-   Memcheck:Leak
-   fun:memalign
-   fun:posix_memalign
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_slice_alloc
-   fun:g_list_prepend
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_key_file_load_from_file
-   fun:config_read
-   fun:server_config_load
-   fun:server_getopt
+   ...
+   fun:g_mime_init
+   ...
 }
 
 {
-   g_mime_init/static/1
-   Memcheck:Leak
-   fun:malloc
-   fun:realloc
-   fun:g_realloc
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_static
-   fun:g_type_plugin_get_type
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-
-{
-   g_mime_init/static/2
-   Memcheck:Leak
-   fun:malloc
-   fun:realloc
-   fun:g_realloc
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_static
-   fun:g_pointer_type_register_static
-   fun:g_gtype_get_type
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/static/3
-   Memcheck:Leak
-   fun:malloc
-   fun:realloc
-   fun:g_realloc
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_static
-   fun:g_boxed_type_register_static
-   fun:g_value_array_get_type
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/static/4
-   Memcheck:Leak
-   fun:realloc
-   fun:g_realloc
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_static
-   fun:internet_address_list_get_type
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/static/5
-   Memcheck:Leak
-   fun:realloc
-   fun:g_realloc
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_static
-   fun:g_param_type_register_static
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/static/6
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_mime_object_register_type
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/static/7
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_quark_from_string
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_static
-   fun:g_mime_pkcs7_context_get_type
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/static/8
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_static
-   fun:g_mime_filter_enriched_get_type
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-
-{
-   g_mime_init/table/1
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   fun:g_hash_table_new_full
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/table/2
-   Memcheck:Leak
-   fun:memalign
-   fun:posix_memalign
-   obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.3200.3
-   fun:g_slice_alloc
-   fun:g_hash_table_new_full
-   obj:/usr/lib/libgmime-2.6.so.0.600.7
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-
-{
-   g_mime_init/fundamental/1
-   Memcheck:Leak
-   fun:malloc
-   fun:realloc
-   fun:g_realloc
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_fundamental
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/fundamental/2
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_fundamental
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/fundamental/3
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_fundamental
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   g_mime_init/fundamental/4
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_register_fundamental
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-
-{
-   g_mime_init/debug/1
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-
-{
-   g_mime_init/debug/2
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   obj:/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3200.3
-   fun:g_type_init_with_debug_flags
-   fun:g_mime_init
-   fun:server_mainloop
-   fun:main
-}
-{
-   nss/getpwnam
+   nss
    Memcheck:Leak
    fun:malloc
    fun:nss_parse_service_list
-   fun:__nss_database_lookup
-   obj:*
-   fun:getpwnam_r@@GLIBC_2.2.5
-   fun:drop_privileges
-   fun:server_run
-   fun:server_mainloop
-   fun:main
-}
-{
-   nss/getgrnam
-   Memcheck:Leak
-   fun:malloc
-   fun:nss_parse_service_list
-   fun:__nss_database_lookup
-   obj:*
-   fun:getgrnam_r@@GLIBC_2.2.5
-   fun:drop_privileges
-   fun:server_run
-   fun:server_mainloop
-   fun:main
+   ...
 }
 
 {
-   pthreads/calloc
+   zdb
    Memcheck:Leak
    fun:calloc
    fun:_dl_allocate_tls
-   fun:pthread_create@@GLIBC_2.2.5
+   fun:pthread_create@@GLIBC*
    fun:ConnectionPool_start
-   fun:db_connect
-   fun:server_run
-   fun:server_mainloop
-   fun:main
+   ...
 }
+
+{
+   check
+   Memcheck:Leak
+   ...
+   fun:emalloc
+   ...
+}
+
 
