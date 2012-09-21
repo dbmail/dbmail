@@ -227,6 +227,7 @@ void dbmail_imap_session_delete(ImapSession ** s)
 	}
 	
 	g_string_free(self->buff,TRUE);
+	g_mutex_clear(&self->lock);
 	g_free(self);
 	self = NULL;
 }
