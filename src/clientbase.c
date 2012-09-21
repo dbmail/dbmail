@@ -265,6 +265,9 @@ int ci_write(ClientBase_T *self, char * msg, ...)
 	size_t n;
 	char *s;
 
+	if (self->client_state & CLIENT_ERR)
+		return -1;
+
 	if (! (self && self->write_buffer)) {
 		TRACE(TRACE_DEBUG, "called while clientbase is stale");
 		return -1;
@@ -311,7 +314,7 @@ int ci_write(ClientBase_T *self, char * msg, ...)
 			}
 			return e;
 		} else {
-			TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, s);
+			TRACE(TRACE_DEBUG, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, s);
 
 			event_add(self->wev, NULL);
 
