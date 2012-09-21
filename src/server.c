@@ -119,11 +119,12 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	TRACE(TRACE_DEBUG,"[%p] [%p]", D, D->session);
 	
 	g_thread_pool_push(tpool, D, &err);
-	TRACE(TRACE_INFO, "threads unused %u/%d limits %u/%d",
+	TRACE(TRACE_INFO, "threads unused %u/%d limits %u/%d queued jobs %d",
 			g_thread_pool_get_num_unused_threads(),
 			g_thread_pool_get_max_unused_threads(),
 			g_thread_pool_get_num_threads(tpool),
-			g_thread_pool_get_max_threads(tpool));
+			g_thread_pool_get_max_threads(tpool),
+			g_async_queue_length(queue));
 
 	if (err) TRACE(TRACE_EMERG,"g_thread_pool_push failed [%s]", err->message);
 }
