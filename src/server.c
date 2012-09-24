@@ -26,6 +26,7 @@
 
 #include "dbmail.h"
 #include "dm_request.h"
+#include "dm_cache.h"
 #define THIS_MODULE "server"
 
 static char *configFile = DEFAULT_CONFIG_FILE;
@@ -37,6 +38,8 @@ volatile sig_atomic_t alarm_occurred = 0;
 int selfpipe[2];
 GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
+
+Cache_T cache = NULL;
 
 ServerConfig_T *server_conf;
 extern DBParam_T db_params;
@@ -183,6 +186,9 @@ static int server_setup(ServerConfig_T *conf)
 
 	if (! MATCH(conf->service_name,"IMAP")) 
 		return 0;
+
+	// setup a global message cache
+	cache = Cache_new();
 
 	// Asynchronous message queue for receiving messages
 	// from worker threads in the main thread. 
@@ -446,6 +452,7 @@ static void server_exit(void)
 {
 	disconnect_all();
 	server_close_sockets(server_conf);
+	Cache_free(&cache);
 }
 	
 static void server_create_sockets(ServerConfig_T * conf)

@@ -20,188 +20,254 @@
 
 #include "dbmail.h"
 #include "dm_cache.h"
+#include <assert.h>
+#include <sys/queue.h>
+#include <pthread.h>
 
 #define THIS_MODULE "Cache"
 /*
  * cached raw message data
+ *
+ * implement a global message cache as a LIST of Mem_T objects
+ * with reference bookkeeping and TTL
+ *
  */
 #define T Cache_T
 
-struct T {
+#define TTL_SECONDS 30
+#define GC_INTERVAL 10
+
+#define CACHE_LOCK(a) if (pthread_mutex_lock(&(a))) { perror("pthread_mutex_lock failed"); }
+#define CACHE_UNLOCK(a) if (pthread_mutex_unlock(&(a))) { perror("pthread_mutex_unlock failed"); }
+
+LIST_HEAD(listhead, element) head;
+struct listhead *headp;
+struct element {
 	uint64_t id;
+	long ttl;
+	uint64_t ref;
 	uint64_t size;
-	Mem_T memdump;
-	Mem_T tmpdump;
-	int file_dumped;
+	uint64_t header_size;
+	Mem_T mem;
+	LIST_ENTRY(element) elements;
 };
+
+struct T {
+	pthread_mutex_t lock;
+	pthread_cond_t cond;
+	struct listhead elements;
+	volatile int done; // exit flag
+};
+
+pthread_t gc_thread_id;
+
+static void * _gc_callback(void *data)
+{
+	TRACE(TRACE_DEBUG, "start Cache GC thread. sweep interval [%d]",
+			GC_INTERVAL);
+	T C = (T)data;
+	while (1) {
+		CACHE_LOCK(C->lock);
+		if (C->done) {
+			CACHE_UNLOCK(C->lock);
+			return NULL;
+		}
+		CACHE_UNLOCK(C->lock);
+		Cache_gc(C);
+		sleep(GC_INTERVAL);
+	}
+	return NULL;
+}
 
 /* */
 T Cache_new(void)
 {
-	int serr;
 	T C;
 	
-	C = g_malloc0(sizeof(*C));
+	C = (T)calloc(1, sizeof(*C));
+	assert(C);
 
-	C->id = 0;
-	if (! (C->memdump = Mem_open())) {
-		serr = errno;
-		TRACE(TRACE_ERR,"Mem_open() failed [%s]", strerror(serr));
-		g_free(C);
-		errno = serr;
+	if (pthread_mutex_init(&C->lock, NULL)) {
+		perror("pthread_mutex_init failed");
+		free(C);
 		return NULL;
 	}
-	
-	if (! (C->tmpdump = Mem_open())) {
-		serr = errno;
-		TRACE(TRACE_ERR,"Mem_open() failed [%s]", strerror(serr));
-		errno = serr;
-		Mem_close(&C->memdump);
-		g_free(C);
+	if (pthread_cond_init(&C->cond, NULL)) {
+		perror("pthread_cond_init failed");
+		free(C);
+		return NULL;
+	}
+
+	LIST_INIT(&C->elements);
+
+	if (pthread_create(&gc_thread_id, NULL, _gc_callback, C)) {
+		perror("GC thread create failed");
+		free(C);
 		return NULL;
 	}
 
 	return C;
 }
 
-uint64_t Cache_set_dump(T C, char *buf, int dumptype)
+struct element * Cache_find(T C, uint64_t id)
+{
+	assert(C);
+	struct element *E;
+	E = LIST_FIRST(&C->elements);
+	while (E) {
+		if (E->id == id) return E;
+		E = LIST_NEXT(E, elements);
+	}
+	return NULL;
+}
+
+
+
+void Cache_clear(T C, uint64_t id)
+{
+	struct element *E;
+	CACHE_LOCK(C->lock);
+	if (! (E = Cache_find(C, id))) {
+		CACHE_UNLOCK(C->lock);
+		return;
+	}
+
+	LIST_REMOVE(E, elements);
+	CACHE_UNLOCK(C->lock);
+	Mem_close(&E->mem);
+	free(E);
+}
+
+uint64_t Cache_update(T C, DbmailMessage *message)
 {
 	uint64_t outcnt = 0;
-	Mem_T M;
+	char *crlf = NULL;
+	struct element *E;
+	time_t now = time(NULL);
 
-	switch (dumptype) {
-		case IMAP_CACHE_MEMDUMP:
-			M = Cache_get_memdump(C);
-		break;
-		case IMAP_CACHE_TMPDUMP:
-			M = Cache_get_tmpdump(C);
-		break;
-		default:
-			assert(0);
-		break;
+	TRACE(TRACE_DEBUG, "message [%lu]", message->id);
+	CACHE_LOCK(C->lock);
+	E = Cache_find(C, message->id);
+	if (E) {
+		uint64_t size = E->size;
+		E->ttl = now + TTL_SECONDS;
+		CACHE_UNLOCK(C->lock);
+		return size;
 	}
-	
-	assert(M);
-	assert(buf);
 
-	outcnt = strlen(buf);
+	crlf = get_crlf_encoded(message->raw_content);
+	E = (struct element *)calloc(1, sizeof(struct element));
+	assert(E);
 
-	Mem_rewind(M);
-	Mem_write(M, buf, outcnt);
-	Mem_rewind(M);
+	outcnt = strlen(crlf);
 
+	E->ref = 0;
+	E->id = message->id;
+	E->size = outcnt;
+	E->ttl = now + TTL_SECONDS;
+	E->mem = Mem_open();
+
+	Mem_rewind(E->mem);
+	Mem_write(E->mem, crlf, outcnt);
+	Mem_rewind(E->mem);
+
+	LIST_INSERT_HEAD(&C->elements, E, elements);
+	CACHE_UNLOCK(C->lock);
+
+	g_free(crlf);
 	return outcnt;
 }
 
-void Cache_clear(T C)
+uint64_t Cache_get_size(T C, uint64_t id)
 {
-	C->id = 0;
-	C->size = 0;
-	Mem_close(&C->memdump);
-	C->memdump = Mem_open();
-
-	Mem_close(&C->tmpdump);
-	C->tmpdump = Mem_open();
-}
-
-
-uint64_t Cache_update(T C, DbmailMessage *message, int filter)
-{
-	uint64_t tmpcnt = 0, outcnt = 0;
-	char *crlf = NULL, *buf = NULL;
-
-	TRACE(TRACE_DEBUG,"[%p] C->id[%lu] message->id[%lu]", C, C->id, message->id);
-
-	if (C->id != message->id) {
-
-		Cache_clear(C);
-
-		crlf = get_crlf_encoded(message->raw_content);
-
-		outcnt = Cache_set_dump(C,crlf,IMAP_CACHE_MEMDUMP);
-		tmpcnt = Cache_set_dump(C,crlf,IMAP_CACHE_TMPDUMP);
-
-		assert(tmpcnt==outcnt);
-		
-		C->size = outcnt;
-		C->id = message->id;
-		
-		g_free(crlf);
-
+	uint64_t size;
+	struct element *E;
+	assert(C);
+	CACHE_LOCK(C->lock);
+	E = Cache_find(C, id);
+	if (! E) {
+		CACHE_UNLOCK(C->lock);
+		return 0;
 	}
-	
-	switch (filter) {
-		/* for these two update the temp MEM buffer */	
-		case DBMAIL_MESSAGE_FILTER_HEAD:
-			buf = dbmail_message_hdrs_to_string(message);
-			crlf = get_crlf_encoded(buf);
-			outcnt = Cache_set_dump(C,crlf,IMAP_CACHE_TMPDUMP);
-			g_free(buf);
-			g_free(crlf);
-		break;
-		case DBMAIL_MESSAGE_FILTER_BODY:
-			buf = dbmail_message_body_to_string(message);
-			crlf = get_crlf_encoded(buf);
-			outcnt = Cache_set_dump(C,crlf,IMAP_CACHE_TMPDUMP);
-			g_free(buf);
-			g_free(crlf);
-		break;
-		case DBMAIL_MESSAGE_FILTER_FULL:
-			outcnt = C->size;
-			Mem_rewind(C->memdump);
-			Mem_rewind(C->tmpdump);
-			/* done */
-		break;
+	size = E->size;
+	CACHE_UNLOCK(C->lock);
+	return size;
+}
 
+void Cache_get_mem(T C, uint64_t id, Mem_T M)
+{
+	time_t now = time(NULL);
+	struct element *E;
+	assert(C);
+	CACHE_LOCK(C->lock);
+	E = Cache_find(C, id);
+	assert(E);
+	E->ref++;
+	E->ttl = now + TTL_SECONDS;
+	Mem_ref(E->mem, M);
+	CACHE_UNLOCK(C->lock);
+}
+
+void Cache_unref_mem(T C, uint64_t id, Mem_T *M)
+{
+	Mem_T m = *M;
+	struct element *E;
+	assert(C);
+	assert(m);
+	CACHE_LOCK(C->lock);
+	E = Cache_find(C, id);
+	assert(E);
+	E->ref--;
+	CACHE_UNLOCK(C->lock);
+	g_free(m);
+	m = NULL;
+}
+
+/*
+ * garbage collection: sweep the cache for unref-ed 
+ * or expired objects
+ */
+
+void Cache_gc(T C)
+{
+	assert(C);
+	struct element *E;
+	time_t now = time(NULL);
+	CACHE_LOCK(C->lock);
+	E = LIST_FIRST(&C->elements);
+	while (E) {
+		if (E->ttl < now && E->ref <= 0) {
+		       	LIST_REMOVE(E, elements);
+			Mem_close(&E->mem);
+			free(E);
+		}
+		E = LIST_NEXT(E, elements);
 	}
-
-	TRACE(TRACE_DEBUG,"C->size[%lu], outcnt[%lu]", C->size, outcnt);	
-
-	return outcnt;
+	CACHE_UNLOCK(C->lock);
 }
-
-
-void Cache_set_memdump(T C, Mem_T M)
-{
-	assert(C);
-	assert(M);
-	C->memdump = M;
-}
-
-uint64_t Cache_get_size(T C)
-{
-	assert(C);
-	return C->size;
-}
-Mem_T Cache_get_memdump(T C)
-{
-	return C->memdump;
-}
-
-void Cache_set_tmpdump(T C, Mem_T M)
-{
-	assert(C);
-	assert(M);
-	C->tmpdump = M;
-}
-
-Mem_T Cache_get_tmpdump(T C)
-{
-	return C->tmpdump;
-}
-
-
 /*
  * closes the msg cache
  */
 void Cache_free(T *C)
 {
+	struct element *E;
 	T c = *C;
-	c->id = -1;
-	Mem_close(&c->memdump);
-	Mem_close(&c->tmpdump);
+	CACHE_LOCK(c->lock);
+	while (! LIST_EMPTY(&c->elements)) {
+		E = LIST_FIRST(&c->elements);
+		LIST_REMOVE(E, elements);
+		Mem_close(&E->mem);
+		free(E);
+	}
+	CACHE_UNLOCK(c->lock);
+	pthread_mutex_destroy(&c->lock);
+	pthread_cond_destroy(&c->cond);
 	g_free(c);
+	c = NULL;
 	
 }
 
+#undef T
+#undef CACHE_LOCK
+#undef CACHE_UNLOCK
 

@@ -108,7 +108,7 @@ am__libdbmail_la_SOURCES_DIST = dbmail-user.c dbmail-message.c \
 	dm_acl.c dm_misc.c dm_pidfile.c dm_digest.c dm_match.c \
 	dm_iconv.c dm_dsn.c dm_sset.c dm_getopt.c server.c \
 	clientsession.c clientbase.c dm_tls.c dm_http.c dm_request.c \
-	dm_cidr.c authmodule.c sortmodule.c
+	dm_memblock.c dm_cache.c dm_cidr.c authmodule.c sortmodule.c
 @USE_DM_GETOPT_TRUE@am__objects_1 = libdbmail_la-dm_getopt.lo
 am__objects_2 = libdbmail_la-dbmail-user.lo \
 	libdbmail_la-dbmail-message.lo libdbmail_la-dbmail-mailbox.lo \
@@ -124,6 +124,7 @@ am__objects_2 = libdbmail_la-dbmail-user.lo \
 am__objects_3 = libdbmail_la-server.lo libdbmail_la-clientsession.lo \
 	libdbmail_la-clientbase.lo libdbmail_la-dm_tls.lo \
 	libdbmail_la-dm_http.lo libdbmail_la-dm_request.lo \
+	libdbmail_la-dm_memblock.lo libdbmail_la-dm_cache.lo \
 	libdbmail_la-dm_cidr.lo
 @SHARED_TRUE@am__objects_4 = libdbmail_la-authmodule.lo \
 @SHARED_TRUE@	libdbmail_la-sortmodule.lo
@@ -141,9 +142,8 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_dbmail_deliver_OBJECTS = main.$(OBJEXT)
 dbmail_deliver_OBJECTS = $(am_dbmail_deliver_OBJECTS)
 dbmail_deliver_DEPENDENCIES = $(am__DEPENDENCIES_1) libdbmail.la
-am__objects_5 = dm_quota.$(OBJEXT) dm_memblock.$(OBJEXT) \
-	dm_cache.$(OBJEXT) imap4.$(OBJEXT) imapcommands.$(OBJEXT) \
-	dbmail-imapsession.$(OBJEXT)
+am__objects_5 = dm_quota.$(OBJEXT) imap4.$(OBJEXT) \
+	imapcommands.$(OBJEXT) dbmail-imapsession.$(OBJEXT)
 am_dbmail_export_OBJECTS = $(am__objects_5) export.$(OBJEXT)
 dbmail_export_OBJECTS = $(am_dbmail_export_OBJECTS)
 dbmail_export_DEPENDENCIES = $(am__DEPENDENCIES_1) libdbmail.la
@@ -405,11 +405,11 @@ SERVER = server.c \
 	dm_tls.c \
 	dm_http.c \
 	dm_request.c \
+	dm_memblock.c \
+	dm_cache.c \
 	dm_cidr.c
 
 IMAPD = dm_quota.c \
-	dm_memblock.c \
-	dm_cache.c \
 	imap4.c \
 	imapcommands.c \
 	dbmail-imapsession.c
@@ -606,9 +606,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmail-imapsession.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_cache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_http.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_memblock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_quota.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/export.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpd.Po@am__quote@
@@ -622,6 +620,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dbmail-message.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dbmail-user.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_acl.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_cache.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_capa.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_cidr.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_config.Plo@am__quote@
@@ -636,6 +635,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_list.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_mailboxstate.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_match.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_memblock.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_misc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_pidfile.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_request.Plo@am__quote@
@@ -857,6 +857,20 @@ libdbmail_la-dm_request.lo: dm_request.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dm_request.c' object='libdbmail_la-dm_request.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -c -o libdbmail_la-dm_request.lo `test -f 'dm_request.c' || echo '$(srcdir)/'`dm_request.c
+
+libdbmail_la-dm_memblock.lo: dm_memblock.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -MT libdbmail_la-dm_memblock.lo -MD -MP -MF $(DEPDIR)/libdbmail_la-dm_memblock.Tpo -c -o libdbmail_la-dm_memblock.lo `test -f 'dm_memblock.c' || echo '$(srcdir)/'`dm_memblock.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libdbmail_la-dm_memblock.Tpo $(DEPDIR)/libdbmail_la-dm_memblock.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dm_memblock.c' object='libdbmail_la-dm_memblock.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -c -o libdbmail_la-dm_memblock.lo `test -f 'dm_memblock.c' || echo '$(srcdir)/'`dm_memblock.c
+
+libdbmail_la-dm_cache.lo: dm_cache.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -MT libdbmail_la-dm_cache.lo -MD -MP -MF $(DEPDIR)/libdbmail_la-dm_cache.Tpo -c -o libdbmail_la-dm_cache.lo `test -f 'dm_cache.c' || echo '$(srcdir)/'`dm_cache.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libdbmail_la-dm_cache.Tpo $(DEPDIR)/libdbmail_la-dm_cache.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dm_cache.c' object='libdbmail_la-dm_cache.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -c -o libdbmail_la-dm_cache.lo `test -f 'dm_cache.c' || echo '$(srcdir)/'`dm_cache.c
 
 libdbmail_la-dm_cidr.lo: dm_cidr.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -MT libdbmail_la-dm_cidr.lo -MD -MP -MF $(DEPDIR)/libdbmail_la-dm_cidr.Tpo -c -o libdbmail_la-dm_cidr.lo `test -f 'dm_cidr.c' || echo '$(srcdir)/'`dm_cidr.c

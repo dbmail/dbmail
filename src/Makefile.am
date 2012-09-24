@@ -62,11 +62,11 @@ SERVER = server.c \
 	dm_tls.c \
 	dm_http.c \
 	dm_request.c \
+	dm_memblock.c \
+	dm_cache.c \
 	dm_cidr.c
 
 IMAPD = dm_quota.c \
-	dm_memblock.c \
-	dm_cache.c \
 	imap4.c \
 	imapcommands.c \
 	dbmail-imapsession.c

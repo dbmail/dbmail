@@ -45,6 +45,7 @@ host_triplet = @host@
 @WITHCHECK_TRUE@	check_dbmail_misc$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_list$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_memblock$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_cache$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_dsn$(EXEEXT) \
@@ -76,6 +77,7 @@ CONFIG_CLEAN_VPATH_FILES =
 @WITHCHECK_TRUE@	check_dbmail_misc$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_list$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_memblock$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_cache$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_dsn$(EXEEXT) \
@@ -93,6 +95,14 @@ check_dbmail_auth_OBJECTS = $(am_check_dbmail_auth_OBJECTS)
 @WITHCHECK_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) \
 @WITHCHECK_TRUE@	$(top_srcdir)/src/libdbmail.la
 @WITHCHECK_TRUE@check_dbmail_auth_DEPENDENCIES =  \
+@WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
+am__check_dbmail_cache_SOURCES_DIST = check_dbmail_cache.c \
+	$(top_srcdir)/src/dm_cache.c
+@WITHCHECK_TRUE@am_check_dbmail_cache_OBJECTS =  \
+@WITHCHECK_TRUE@	check_dbmail_cache.$(OBJEXT) \
+@WITHCHECK_TRUE@	dm_cache.$(OBJEXT)
+check_dbmail_cache_OBJECTS = $(am_check_dbmail_cache_OBJECTS)
+@WITHCHECK_TRUE@check_dbmail_cache_DEPENDENCIES =  \
 @WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
 am__check_dbmail_capa_SOURCES_DIST = check_dbmail_capa.c
 @WITHCHECK_TRUE@am_check_dbmail_capa_OBJECTS =  \
@@ -213,17 +223,18 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(check_dbmail_auth_SOURCES) $(check_dbmail_capa_SOURCES) \
-	$(check_dbmail_common_SOURCES) $(check_dbmail_db_SOURCES) \
-	$(check_dbmail_deliver_SOURCES) $(check_dbmail_dsn_SOURCES) \
-	$(check_dbmail_imapd_SOURCES) $(check_dbmail_list_SOURCES) \
-	$(check_dbmail_mailbox_SOURCES) \
+SOURCES = $(check_dbmail_auth_SOURCES) $(check_dbmail_cache_SOURCES) \
+	$(check_dbmail_capa_SOURCES) $(check_dbmail_common_SOURCES) \
+	$(check_dbmail_db_SOURCES) $(check_dbmail_deliver_SOURCES) \
+	$(check_dbmail_dsn_SOURCES) $(check_dbmail_imapd_SOURCES) \
+	$(check_dbmail_list_SOURCES) $(check_dbmail_mailbox_SOURCES) \
 	$(check_dbmail_mailboxstate_SOURCES) \
 	$(check_dbmail_memblock_SOURCES) \
 	$(check_dbmail_message_SOURCES) $(check_dbmail_misc_SOURCES) \
 	$(check_dbmail_server_SOURCES) $(check_dbmail_sset_SOURCES) \
 	$(check_dbmail_user_SOURCES) $(check_dbmail_util_SOURCES)
 DIST_SOURCES = $(am__check_dbmail_auth_SOURCES_DIST) \
+	$(am__check_dbmail_cache_SOURCES_DIST) \
 	$(am__check_dbmail_capa_SOURCES_DIST) \
 	$(am__check_dbmail_common_SOURCES_DIST) \
 	$(am__check_dbmail_db_SOURCES_DIST) \
@@ -406,6 +417,9 @@ top_srcdir = @top_srcdir@
 @WITHCHECK_TRUE@check_dbmail_memblock_SOURCES = check_dbmail_memblock.c $(top_srcdir)/src/dm_memblock.c
 @WITHCHECK_TRUE@check_dbmail_memblock_LDADD = $(CHECK_LDADD)
 @WITHCHECK_TRUE@check_dbmail_memblock_INCLUDES = @CHECK_CFLAGS@
+@WITHCHECK_TRUE@check_dbmail_cache_SOURCES = check_dbmail_cache.c $(top_srcdir)/src/dm_cache.c
+@WITHCHECK_TRUE@check_dbmail_cache_LDADD = $(CHECK_LDADD)
+@WITHCHECK_TRUE@check_dbmail_cache_INCLUDES = @CHECK_CFLAGS@
 @WITHCHECK_TRUE@check_dbmail_util_SOURCES = check_dbmail_util.c
 @WITHCHECK_TRUE@check_dbmail_util_LDADD = $(CHECK_LDADD)
 @WITHCHECK_TRUE@check_dbmail_util_INCLUDES = @CHECK_CFLAGS@
@@ -488,6 +502,9 @@ clean-noinstPROGRAMS:
 check_dbmail_auth$(EXEEXT): $(check_dbmail_auth_OBJECTS) $(check_dbmail_auth_DEPENDENCIES) $(EXTRA_check_dbmail_auth_DEPENDENCIES) 
 	@rm -f check_dbmail_auth$(EXEEXT)
 	$(LINK) $(check_dbmail_auth_OBJECTS) $(check_dbmail_auth_LDADD) $(LIBS)
+check_dbmail_cache$(EXEEXT): $(check_dbmail_cache_OBJECTS) $(check_dbmail_cache_DEPENDENCIES) $(EXTRA_check_dbmail_cache_DEPENDENCIES) 
+	@rm -f check_dbmail_cache$(EXEEXT)
+	$(LINK) $(check_dbmail_cache_OBJECTS) $(check_dbmail_cache_LDADD) $(LIBS)
 check_dbmail_capa$(EXEEXT): $(check_dbmail_capa_OBJECTS) $(check_dbmail_capa_DEPENDENCIES) $(EXTRA_check_dbmail_capa_DEPENDENCIES) 
 	@rm -f check_dbmail_capa$(EXEEXT)
 	$(LINK) $(check_dbmail_capa_OBJECTS) $(check_dbmail_capa_LDADD) $(LIBS)
@@ -544,6 +561,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_auth.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_cache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_capa.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_db.Po@am__quote@
@@ -589,20 +607,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-dm_quota.o: $(top_srcdir)/src/dm_quota.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_quota.o -MD -MP -MF $(DEPDIR)/dm_quota.Tpo -c -o dm_quota.o `test -f '$(top_srcdir)/src/dm_quota.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_quota.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_quota.Tpo $(DEPDIR)/dm_quota.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_quota.c' object='dm_quota.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_quota.o `test -f '$(top_srcdir)/src/dm_quota.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_quota.c
-
-dm_quota.obj: $(top_srcdir)/src/dm_quota.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_quota.obj -MD -MP -MF $(DEPDIR)/dm_quota.Tpo -c -o dm_quota.obj `if test -f '$(top_srcdir)/src/dm_quota.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_quota.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_quota.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_quota.Tpo $(DEPDIR)/dm_quota.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_quota.c' object='dm_quota.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_quota.obj `if test -f '$(top_srcdir)/src/dm_quota.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_quota.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_quota.c'; fi`
-
 dm_cache.o: $(top_srcdir)/src/dm_cache.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_cache.o -MD -MP -MF $(DEPDIR)/dm_cache.Tpo -c -o dm_cache.o `test -f '$(top_srcdir)/src/dm_cache.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_cache.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_cache.Tpo $(DEPDIR)/dm_cache.Po
@@ -616,6 +620,20 @@ dm_cache.obj: $(top_srcdir)/src/dm_cache.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_cache.c' object='dm_cache.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_cache.obj `if test -f '$(top_srcdir)/src/dm_cache.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_cache.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_cache.c'; fi`
+
+dm_quota.o: $(top_srcdir)/src/dm_quota.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_quota.o -MD -MP -MF $(DEPDIR)/dm_quota.Tpo -c -o dm_quota.o `test -f '$(top_srcdir)/src/dm_quota.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_quota.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_quota.Tpo $(DEPDIR)/dm_quota.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_quota.c' object='dm_quota.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_quota.o `test -f '$(top_srcdir)/src/dm_quota.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_quota.c
+
+dm_quota.obj: $(top_srcdir)/src/dm_quota.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_quota.obj -MD -MP -MF $(DEPDIR)/dm_quota.Tpo -c -o dm_quota.obj `if test -f '$(top_srcdir)/src/dm_quota.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_quota.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_quota.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_quota.Tpo $(DEPDIR)/dm_quota.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_quota.c' object='dm_quota.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_quota.obj `if test -f '$(top_srcdir)/src/dm_quota.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_quota.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_quota.c'; fi`
 
 dm_memblock.o: $(top_srcdir)/src/dm_memblock.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_memblock.o -MD -MP -MF $(DEPDIR)/dm_memblock.Tpo -c -o dm_memblock.o `test -f '$(top_srcdir)/src/dm_memblock.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_memblock.c

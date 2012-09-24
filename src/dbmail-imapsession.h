@@ -44,7 +44,6 @@ typedef struct {
 	uint64_t ceiling; // upper boundary during prefetching
 
 	DbmailMessage *message;
-	Cache_T cache;  
 
 	uint64_t userid;		/* userID of client in dbase */
 

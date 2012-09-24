@@ -42,6 +42,14 @@ struct T {
 	int pos;
 };
 
+T Mem_new()
+{
+	T M;
+	NEW(M);
+	M->data = NULL;
+	M->pos = 0;
+	return M;
+}
 /*
  * mopen()
  *
@@ -56,6 +64,11 @@ T Mem_open()
 	return M;
 }
 
+void Mem_ref(T M, T N)
+{
+	N->data = M->data;
+	N->pos = 0;
+}
 
 /*
  * mclose()
