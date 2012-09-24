@@ -71,6 +71,7 @@ typedef struct {
 	ClientBase_T ci;
 	gpointer data;				/* payload				*/
 	int status;				/* command result 			*/
+	volatile int busy;
 } dm_thread_data;
 
 /* public methods */

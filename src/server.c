@@ -37,6 +37,7 @@ volatile sig_atomic_t alarm_occurred = 0;
 // thread data
 int selfpipe[2];
 GAsyncQueue *queue;
+GAsyncQueue *dpool;
 GThreadPool *tpool = NULL;
 
 Cache_T cache = NULL;
@@ -110,7 +111,8 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	dm_thread_data *D = g_new0(dm_thread_data,1);
+	dm_thread_data *D = g_async_queue_pop(dpool);
+
 	D->cb_enter	= cb_enter;
 	D->cb_leave     = cb_leave;
 	D->session	= session;
@@ -138,7 +140,7 @@ void dm_thread_data_free(gpointer data)
 	if (D->data) {
 		g_free(D->data); D->data = NULL;
 	}
-	g_free(D); D = NULL;
+	g_async_queue_push(dpool, D);
 }
 
 /* 
@@ -177,10 +179,14 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
  * basic server setup
  *
  */
+#define DPOOL_SIZE 1000
+
 static int server_setup(ServerConfig_T *conf)
 {
+	dm_thread_data *D;
 	GError *err = NULL;
 	guint tpool_size = db_params.max_db_connections;
+	guint i;
 
 	server_set_sighandler();
 
@@ -189,6 +195,15 @@ static int server_setup(ServerConfig_T *conf)
 
 	// setup a global message cache
 	cache = Cache_new();
+
+	// Async queue for pooling dm_thread_data structs
+	D = g_new0(dm_thread_data, DPOOL_SIZE);
+
+	dpool = g_async_queue_new();
+	for (i=0; i<DPOOL_SIZE; i++) {
+		g_async_queue_push(dpool, D);
+		D++;
+	}
 
 	// Asynchronous message queue for receiving messages
 	// from worker threads in the main thread. 

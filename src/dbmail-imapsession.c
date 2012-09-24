@@ -47,6 +47,7 @@ extern volatile sig_atomic_t alarm_occured;
 
 extern int selfpipe[2];
 extern GAsyncQueue *queue;
+extern GAsyncQueue *dpool;
 extern ServerConfig_T *server_conf;
 
 extern Cache_T cache;
@@ -690,9 +691,6 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			if (! g_tree_lookup(self->ids,&id))
 				continue;
 			
-			mid = g_new0(uint64_t,1);
-			*mid = id;
-			
 			fld = (char *)db_result_get(r, 1);
 			blob = db_result_get_blob(r, 2, &l);
 			str = g_new0(char,l+1);
@@ -703,6 +701,10 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			if (! val) {
 				TRACE(TRACE_DEBUG, "[%p] [%lu] no headervalue [%s]", self, id, fld);
 			} else {
+
+				mid = g_new0(uint64_t,1);
+				*mid = id;
+
 				old = g_tree_lookup(bodyfetch->headers, (gconstpointer)mid);
 				new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
 				g_free(val);
@@ -1161,7 +1163,7 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	if (self->state >= CLIENTSTATE_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
-	D = g_new0(dm_thread_data,1);
+	D = g_async_queue_pop(dpool);
 	D->session = self;
 	D->data = (gpointer)self->buff->str;
 	D->cb_leave = dm_thread_data_sendmessage;
