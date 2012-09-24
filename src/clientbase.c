@@ -32,6 +32,7 @@ extern DBParam_T db_params;
 
 extern ServerConfig_T *server_conf;
 extern SSL_CTX *tls_context;
+extern GAsyncQueue *cpool;
 
 static void dm_tls_error(void)
 {
@@ -143,12 +144,12 @@ static int client_error_cb(int sock, int error, void *arg)
 ClientBase_T * client_init(client_sock *c)
 {
 	int serr;
-	ClientBase_T *client	= g_new0(ClientBase_T, 1);
+	ClientBase_T *client;
+
+	client = g_async_queue_pop(cpool);
 
 	client->timeout         = g_new0(struct timeval,1);
-
 	client->client          = c;
-
 	client->cb_error        = client_error_cb;
 
 	/* set byte counters to 0 */
@@ -557,8 +558,7 @@ void ci_close(ClientBase_T *self)
 		self->client = NULL;
 	}
 
-	g_free(self);
-	self = NULL;
+	g_async_queue_push(cpool, self);
 }
 
 

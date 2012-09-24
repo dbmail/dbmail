@@ -38,6 +38,7 @@ volatile sig_atomic_t alarm_occurred = 0;
 int selfpipe[2];
 GAsyncQueue *queue;
 GAsyncQueue *dpool;
+GAsyncQueue *cpool;
 GThreadPool *tpool = NULL;
 
 Cache_T cache = NULL;
@@ -180,10 +181,12 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
  *
  */
 #define DPOOL_SIZE 1000
+#define CPOOL_SIZE 200
 
 static int server_setup(ServerConfig_T *conf)
 {
 	dm_thread_data *D;
+	ClientBase_T *CB;
 	GError *err = NULL;
 	guint tpool_size = db_params.max_db_connections;
 	guint i;
@@ -203,6 +206,14 @@ static int server_setup(ServerConfig_T *conf)
 	for (i=0; i<DPOOL_SIZE; i++) {
 		g_async_queue_push(dpool, D);
 		D++;
+	}
+
+	// Async queue for pooling ClientBase_T data
+	CB = g_new0(ClientBase_T, CPOOL_SIZE);
+	cpool = g_async_queue_new();
+	for (i=0; i<CPOOL_SIZE; i++) {
+		g_async_queue_push(cpool, CB);
+		CB++;
 	}
 
 	// Asynchronous message queue for receiving messages
