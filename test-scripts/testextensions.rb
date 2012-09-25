@@ -1,3 +1,4 @@
+# encoding: utf-8
 # Don't forget to fire up Dbmail's IMAP server before starting this script:
 #  sudo dbmail-imapd
 # Run this file with:
@@ -217,6 +218,35 @@ EOF
     #freed_ids = `grep 'freeing dynamic pointer' /var/log/mail.log`.split("\n").map{|x| x.match(/(\d+)\]$/)[1]}.sort
     #assert_equal([], ids - freed_ids)
     #assert_equal([], freed_ids - ids)
+  end
+
+  # test http://www.dbmail.org/mantis/view.php?id=987
+  def test_list_cyrillic_subfolders
+    imap_conn
+    # take the first imap user
+    user = IMAP_LOGINS[0]
+    @imap.login(user[:username], user[:password])
+
+    # create hierarchy
+    base_name = Net::IMAP.encode_utf7("Київ "+0.upto(10).map{rand(10)}.join(""))
+    @imap.create(base_name)
+    subfolders = [Net::IMAP.encode_utf7('Майдан'), Net::IMAP.encode_utf7('Золоті Ворота')]
+    subfolders.each do |x|
+      @imap.create(base_name+"/"+x)
+    end
+
+    res = @imap.list("", "%")
+    folder = res.find{|x| x.name == base_name}
+    assert_not_equal(nil, folder, base_name+' is in the results')
+    # check for the \Hasnochildren flag - shouldn't be in the flags
+    assert_equal(nil, folder.attr.find{|x| x == :Hasnochildren}, 'hasnochildren is not in attributes for '+base_name)
+
+    subfolders.each do |x|
+      @imap.delete(base_name+"/"+x)
+    end
+    @imap.delete(base_name)
+
+    imap_logout
   end
 
 end

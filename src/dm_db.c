@@ -75,24 +75,41 @@ struct mailbox_match * mailbox_match_new(const char *mailbox)
 		if (i>0)
 			p = sensitive[i-1];
 
+		/**
+		 * RFC 3501 [Page 19]
+		 *
+		 * "&" is used to shift to modified BASE64 and "-" to shift back to
+		 * US-ASCII.
+		 *
+		 * This means, that the change to non-verbatim should occur for the first char
+		 * *after* '-' is detected.
+		 */
+		/* turn off verbatim, just if the last character was finishing the modified BASE64 */
+		switch (p) {
+		case '-':
+			verbatim = 0;
+			break;
+		}
+		/* check for the current char, just once we checked for the last char */
 		switch (c) {
 		case '&':
 			verbatim = 1;
 			has_sensitive_part = 1;
-			break;
-		case '-':
-			verbatim = 0;
 			break;
 		}
 
 		/* verbatim means that the case sensitive part must match
 		 * and the case insensitive part matches anything,
 		 * and vice versa.*/
+		/* Do not replace percentage chars with underscores.
+		 * This function is sometimes called for "Folder/%"-like mailbox names.
+		 * Replacing percentage signs would reduce the number of matches.
+		 */
 		if (verbatim) {
-			if (insensitive[i] != '\\')
+			if (insensitive[i] != '\\' && insensitive[i] != '%')
 				insensitive[i] = '_';
 		} else {
-			if (sensitive[i] != '\\')
+			if (sensitive[i] != '\\' && sensitive[i] != '%')
 				sensitive[i] = '_';
 		}
 	}

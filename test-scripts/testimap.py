@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 # Copyright (C) 2004-2008 Paul J Stevens paul at nfg dot nl
 #
@@ -982,6 +983,30 @@ class testImapServer(unittest.TestCase):
         for i in subfolders:
             folder = [j for j in result[1] if re.search("\""+re.escape(second_level+"/"+i)+"\"$", j)]
             self.assertNotEqual([], folder, second_level+"/"+i+' is in the results')
+
+    def testBug987(self):
+        """
+        Test http://www.dbmail.org/mantis/view.php?id=987
+        create a hierarchy (with Cyrillic folder names) that's reproducing the error
+        """
+        # create hierarchy, it's important to have one Cyrillic parent folder
+        base_name = "&BBoEOARXBDI-" # 'Київ' in utf7-imap
+        self.o.create(base_name)
+        # these folders don't essentially need to be in Cyrillic
+        subfolders = ["&BBwEMAQ5BDQEMAQ9-", "&BBcEPgQ7BD4EQgRW- &BBIEPgRABD4EQgQw-"]  # 'Майдан' and 'Золоті Ворота' in utf7-imap
+        for i in subfolders:
+            self.o.create(base_name+"/"+i)
+
+        # run a list command and check the base_name folder in the results
+        result = self.o.list("", "%")
+        self.assertEqual(result[0], 'OK')
+        # find the base_name folder in the results
+        folder = [i for i in result[1] if re.search("\""+re.escape(base_name)+"\"$", i)]
+        self.assertNotEqual([], folder, base_name+' is in the results')
+        folder = folder[0]
+        flags = re.search("^\((.*?)\)", folder).group(1)
+        # check for the \Hasnochildren flag - shouldn't be in the flags
+        self.assertEqual([], [i for i in flags.split(" ") if i.lower() == '\\hasnochildren'], 'hasnochildren is not in attributes for '+base_name)
 
     def tearDown(self):
         try:
