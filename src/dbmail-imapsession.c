@@ -125,39 +125,37 @@ ImapSession * dbmail_imap_session_new(void)
 
 static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 {
-	uint64_t *physid = NULL;
+	uint64_t *id = NULL;
 
-	TRACE(TRACE_DEBUG,"[%lu]", self->msg_idnr);
-
-	if (! (physid = g_tree_lookup(self->physids, &(self->msg_idnr)))) {
+	if (! (id = g_tree_lookup(self->physids, &(self->msg_idnr)))) {
 		uint64_t *uid;
-		physid = g_new0(uint64_t,1);
+		id = g_new0(uint64_t,1);
 			
-		if ((db_get_physmessage_id(self->msg_idnr, physid)) != DM_SUCCESS) {
+		if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
 			TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%lu]", self->msg_idnr);
-			g_free(physid);
+			g_free(id);
 			return 0;
 		}
 		uid = g_new0(uint64_t, 1);
 		*uid = self->msg_idnr;
-		g_tree_insert(self->physids, uid, physid);
+		g_tree_insert(self->physids, uid, id);
 	}
 		
-	if (self->message && GMIME_IS_MESSAGE(self->message->content)) {
-		if (*physid != self->message->id) {
+	if (self->message) {
+		if (*id != self->message->id) {
 			dbmail_message_free(self->message);
 			self->message = NULL;
 		}
 	}
 
-	assert(physid);
+	assert(id);
 
 	if (! self->message) {
 		uint64_t size;
-		size = Cache_get_size(cache, *physid);
+		size = Cache_get_size(cache, *id);
 		if (! size) {
 			DbmailMessage *msg = dbmail_message_new();
-			if ((msg = dbmail_message_retrieve(msg, *physid)) != NULL)
+			if ((msg = dbmail_message_retrieve(msg, *id)) != NULL)
 				self->message = msg;
 		} else {
 			GString *s;
@@ -165,15 +163,16 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 			gchar *cached = g_new0(char, size);
 			DbmailMessage *msg = dbmail_message_new();
 
-			Cache_get_mem(cache, *physid, M);
+			Cache_get_mem(cache, *id, M);
 			Mem_read(M, cached, size);
 			s = g_string_new_len(cached, size);
 			g_free(cached);
 			msg = dbmail_message_init_with_string(msg, s);
 			self->message = msg;
+			self->message->id = *id;
 
 			g_string_free(s, TRUE);
-			Cache_unref_mem(cache, *physid, &M);
+			Cache_unref_mem(cache, *id, &M);
 		}
 	}
 
@@ -182,6 +181,7 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 		return 0;
 	}
 
+	assert(*id == self->message->id);
 	return Cache_update(cache, self->message);
 }
 
@@ -912,7 +912,6 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 	uint64_t size, bodyoffset;
 	gchar *s = NULL;
 	uint64_t *id = uid;
-	uint64_t physid;
 	gboolean reportflags = FALSE;
 	Mem_T M;
 
@@ -932,17 +931,17 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
 
-	if (! (dbmail_imap_session_message_load(self))) {
-		dbmail_imap_session_buff_clear(self);
-		dbmail_imap_session_buff_printf(self, "\r\n* BYE error loading message\r\n");
-		return -1;
+	if (self->fi->msgparse_needed) {
+		if (! (dbmail_imap_session_message_load(self))) {
+			dbmail_imap_session_buff_clear(self);
+			dbmail_imap_session_buff_printf(self, "\r\n* BYE error loading message\r\n");
+			return -1;
+		}
+
+		M = Mem_new();
+		Cache_get_mem(cache, self->message->id, M);
+		size = Cache_get_size(cache, self->message->id);
 	}
-
-	physid = *(uint64_t *)g_tree_lookup(self->physids, &(self->msg_idnr));
-
-	M = Mem_new();
-	Cache_get_mem(cache, physid, M);
-	size = Cache_get_size(cache, physid);
 
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
@@ -1006,7 +1005,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 	if (self->fi->getBodyTotal || self->fi->getBodyTotalPeek) {
 		SEND_SPACE;
-		uint64_t size = Cache_get_size(cache, physid);
+		uint64_t size = Cache_get_size(cache, self->message->id);
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
 			dbmail_imap_session_buff_printf(self, "BODY[] {%lu}\r\n", size);
 			send_data(self, M, size);
@@ -1062,7 +1061,9 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		self->fi->setseen = 1;
 	}
 
-	Cache_unref_mem(cache, physid, &M);
+	if (self->fi->msgparse_needed) {
+		Cache_unref_mem(cache, self->message->id, &M);
+	}
 
 	_imap_show_body_sections(self);
 
