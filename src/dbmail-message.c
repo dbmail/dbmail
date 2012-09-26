@@ -1117,15 +1117,17 @@ static int _update_message(DbmailMessage *self)
 	uint64_t size    = (uint64_t)dbmail_message_get_size(self,FALSE);
 	uint64_t rfcsize = (uint64_t)dbmail_message_get_size(self,TRUE);
 
+	assert(size);
+	assert(rfcsize);
 	if (! db_update("UPDATE %sphysmessage SET messagesize = %lu, rfcsize = %lu WHERE id = %lu", 
 			DBPFX, size, rfcsize, self->id))
 		return DM_EQUERY;
 
 	if (! db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %lu", 
-			DBPFX, MESSAGE_STATUS_NEW, self->id))
+			DBPFX, MESSAGE_STATUS_NEW, self->msg_idnr))
 		return DM_EQUERY;
 
-	if (! dm_quota_user_inc(db_get_useridnr(self->id), size))
+	if (! dm_quota_user_inc(db_get_useridnr(self->msg_idnr), size))
 		return DM_EQUERY;
 
 	return DM_SUCCESS;
@@ -2178,7 +2180,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 			db_set_msgflag(newmsgidnr, msgflags, keywords, IMAPFA_ADD, NULL);
 			db_mailbox_seq_update(mboxidnr);
 		}
-		message->id = newmsgidnr;
+		message->msg_idnr = newmsgidnr;
 		return DSN_CLASS_OK;
 	}
 }
@@ -2652,7 +2654,7 @@ int insert_messages(DbmailMessage *message, GList *dsnusers)
 		return result;
 	} 
 
-	TRACE(TRACE_DEBUG, "temporary msgidnr is [%lu]", message->id);
+	TRACE(TRACE_DEBUG, "temporary msgidnr is [%lu]", message->msg_idnr);
 
 	config_get_value("QUOTA_FAILURE", "DELIVERY", val);
 	if (MATCH(val, "soft"))

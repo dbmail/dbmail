@@ -3640,8 +3640,8 @@ int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr
 		return DM_EQUERY;
 	}
 
-	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr, recent);
-	db_delete_message(message->id);
+	result = db_copymsg(message->msg_idnr, mailbox_idnr, user_idnr, msg_idnr, recent);
+	db_delete_message(message->msg_idnr);
         dbmail_message_free(message);
 	
         switch (result) {
