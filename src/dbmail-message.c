@@ -1054,6 +1054,11 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 		row++;
 	}
 	db_con_close(c);
+
+	if (row == 0) {
+		g_string_free(m, TRUE);
+		return NULL;
+	}
 	
 	self = dbmail_message_init_with_string(self,m);
 	dbmail_message_set_internal_date(self, internal_date);
@@ -2155,7 +2160,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	}
 
 	// Ok, we have the ACL right, time to deliver the message.
-	switch (db_copymsg(message->id, mboxidnr, useridnr, &newmsgidnr, TRUE)) {
+	switch (db_copymsg(message->msg_idnr, mboxidnr, useridnr, &newmsgidnr, TRUE)) {
 	case -2:
 		TRACE(TRACE_ERR, "error copying message to user [%lu],"
 				"maxmail exceeded", useridnr);

@@ -665,7 +665,7 @@ void _ic_cb_leave(gpointer data)
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 		return;
 	} 
-	if (state & CLIENT_EOF) {
+	if (state & CLIENT_EOF && (session->ci->tx != fileno(stdout))) {
 		imap_session_bailout(session);
 		return;
 	} 

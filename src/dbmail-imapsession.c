@@ -778,10 +778,6 @@ static int _imap_show_body_section(body_fetch *bodyfetch, gpointer data)
 	TRACE(TRACE_DEBUG,"[%p] itemtype [%d] partspec [%s]", self, bodyfetch->itemtype, bodyfetch->partspec);
 	
 	if (self->fi->msgparse_needed) {
-
-		if (! dbmail_imap_session_message_load(self))
-			return 0;
-
 		if (bodyfetch->partspec[0]) {
 			if (bodyfetch->partspec[0] == '0') {
 				dbmail_imap_session_buff_printf(self, "\r\n%s BAD protocol error\r\n", self->tag);
@@ -926,22 +922,19 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 	g_return_val_if_fail(id,-1);
 
-	dbmail_imap_session_buff_printf(self, "* %lu FETCH (", *id);
-
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
 
 	if (self->fi->msgparse_needed) {
-		if (! (dbmail_imap_session_message_load(self))) {
-			dbmail_imap_session_buff_clear(self);
-			dbmail_imap_session_buff_printf(self, "\r\n* BYE error loading message\r\n");
-			return -1;
-		}
+		if (! (dbmail_imap_session_message_load(self)))
+			return 0;
 
 		M = Mem_new();
 		Cache_get_mem(cache, self->message->id, M);
 		size = Cache_get_size(cache, self->message->id);
 	}
+
+	dbmail_imap_session_buff_printf(self, "* %lu FETCH (", *id);
 
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
@@ -1125,6 +1118,7 @@ static gboolean _do_fetch(uint64_t *uid, gpointer UNUSED value, ImapSession *sel
 		self->error = TRUE;
 		return TRUE;
 	}
+	dbmail_imap_session_buff_flush(self);
 
 	return FALSE;
 }
