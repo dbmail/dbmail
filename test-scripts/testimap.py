@@ -95,17 +95,6 @@ def strip_crlf(s):
     return string.replace(s, '\r', '')
 
 
-def getFreshbox(name):
-    assert(name)
-    cmd = './contrib/mailbox2dbmail/mailbox2dbmail ' \
-            '-u testuser1 -t mbox -m test-scripts/testbox ' \
-            '-b "%s" -p ./src/dbmail-deliver ' \
-            '-f /etc/dbmail/dbmail.conf' % name
-    s, o = commands.getstatusoutput(cmd)
-    if s:
-        raise Exception(o)
-
-
 class testImapServer(unittest.TestCase):
     maxDiff = None
 
@@ -236,7 +225,11 @@ class testImapServer(unittest.TestCase):
             contains a list of `EXPUNGE' message numbers in order received.
         """
 
-        getFreshbox('testexpungebox')
+        self.o.create('testexpungebox')
+        for i in range(0, 11):
+            self.o.append('testexpungebox', '\Flagged Userflag',
+                          "\" 3-Mar-2006 07:15:00 +0200 \"",
+                          str(TESTMSG['strict822']))
 
         p = getsock()
         #p.debug = 4
@@ -244,8 +237,6 @@ class testImapServer(unittest.TestCase):
 
         self.o.select('testexpungebox')
         p.select('testexpungebox')
-
-        time.sleep(1)
 
         self.o.store('5:*', '+FLAGS', '\Deleted')
         msnlist = self.o.expunge()[1]
@@ -527,8 +518,12 @@ class testImapServer(unittest.TestCase):
             messages, else value of `RECENT' response.
         """
         readonly = 1
+        self.o.create('recenttestbox')
+        for i in range(0, 11):
+            self.o.append('recenttestbox', '\Flagged Userflag',
+                          "\" 3-Mar-2006 07:15:00 +0200 \"",
+                          str(TESTMSG['strict822']))
 
-        getFreshbox('recenttestbox')
         self.o.select('recenttestbox', readonly)
         result = self.o.untagged_responses
         self.assertEquals(

@@ -1029,6 +1029,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		while (i) {
 			c = buff[0];
 			if (c == '\n' && ((p1 == '\n') || (p1 == '\r' && p2 == '\n'))) {
+				bodyoffset++;
 				break;
 			}
 			p2 = p1;
