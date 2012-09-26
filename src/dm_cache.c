@@ -47,7 +47,6 @@ struct element {
 	long ttl;
 	uint64_t ref;
 	uint64_t size;
-	uint64_t header_size;
 	Mem_T mem;
 	LIST_ENTRY(element) elements;
 };
@@ -56,26 +55,28 @@ struct T {
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
 	struct listhead elements;
+	uint64_t size;
 	volatile int done; // exit flag
 };
 
 pthread_t gc_thread_id;
+
+static void Cache_gc(T C);
 
 static void * _gc_callback(void *data)
 {
 	TRACE(TRACE_DEBUG, "start Cache GC thread. sweep interval [%d]",
 			GC_INTERVAL);
 	T C = (T)data;
-	while (1) {
-		CACHE_LOCK(C->lock);
-		if (C->done) {
-			CACHE_UNLOCK(C->lock);
-			return NULL;
-		}
-		CACHE_UNLOCK(C->lock);
+	CACHE_LOCK(C->lock);
+	while (! C->done) {
+		struct timespec wait = {0,0};
+		wait.tv_sec = time(NULL) + GC_INTERVAL;
+		pthread_cond_timedwait(&C->cond, &C->lock, &wait);
+		if (C->done) break;
 		Cache_gc(C);
-		sleep(GC_INTERVAL);
 	}
+	CACHE_UNLOCK(C->lock);
 	return NULL;
 }
 
@@ -109,7 +110,7 @@ T Cache_new(void)
 	return C;
 }
 
-struct element * Cache_find(T C, uint64_t id)
+static struct element * Cache_find(T C, uint64_t id)
 {
 	assert(C);
 	struct element *E;
@@ -121,7 +122,13 @@ struct element * Cache_find(T C, uint64_t id)
 	return NULL;
 }
 
-
+static void Cache_remove(T C, struct element *E)
+{
+	LIST_REMOVE(E, elements);
+	Mem_close(&E->mem);
+	C->size -= (E->size + sizeof(*E));
+	free(E);
+}
 
 void Cache_clear(T C, uint64_t id)
 {
@@ -132,10 +139,8 @@ void Cache_clear(T C, uint64_t id)
 		return;
 	}
 
-	LIST_REMOVE(E, elements);
+	Cache_remove(C, E);
 	CACHE_UNLOCK(C->lock);
-	Mem_close(&E->mem);
-	free(E);
 }
 
 uint64_t Cache_update(T C, DbmailMessage *message)
@@ -170,6 +175,8 @@ uint64_t Cache_update(T C, DbmailMessage *message)
 	Mem_rewind(E->mem);
 	Mem_write(E->mem, crlf, outcnt);
 	Mem_rewind(E->mem);
+
+	C->size += outcnt + sizeof(*E);
 
 	LIST_INSERT_HEAD(&C->elements, E, elements);
 	CACHE_UNLOCK(C->lock);
@@ -210,6 +217,7 @@ void Cache_get_mem(T C, uint64_t id, Mem_T M)
 
 void Cache_unref_mem(T C, uint64_t id, Mem_T *M)
 {
+	time_t now = time(NULL);
 	Mem_T m = *M;
 	struct element *E;
 	assert(C);
@@ -218,6 +226,8 @@ void Cache_unref_mem(T C, uint64_t id, Mem_T *M)
 	E = Cache_find(C, id);
 	assert(E);
 	E->ref--;
+	if (E->ttl < now && E->ref <= 0)
+		Cache_remove(C, E);
 	CACHE_UNLOCK(C->lock);
 	g_free(m);
 	m = NULL;
@@ -233,17 +243,14 @@ void Cache_gc(T C)
 	assert(C);
 	struct element *E;
 	time_t now = time(NULL);
-	CACHE_LOCK(C->lock);
+	TRACE(TRACE_DEBUG, "running GC");
+	if (C->done) return;
 	E = LIST_FIRST(&C->elements);
 	while (E) {
-		if (E->ttl < now && E->ref <= 0) {
-		       	LIST_REMOVE(E, elements);
-			Mem_close(&E->mem);
-			free(E);
-		}
+		if (E->ttl < now && E->ref <= 0)
+			Cache_remove(C, E);
 		E = LIST_NEXT(E, elements);
 	}
-	CACHE_UNLOCK(C->lock);
 }
 /*
  * closes the msg cache
@@ -253,15 +260,17 @@ void Cache_free(T *C)
 	struct element *E;
 	T c = *C;
 	CACHE_LOCK(c->lock);
+	c->done = true;
 	while (! LIST_EMPTY(&c->elements)) {
 		E = LIST_FIRST(&c->elements);
-		LIST_REMOVE(E, elements);
-		Mem_close(&E->mem);
-		free(E);
+		Cache_remove(c, E);
 	}
 	CACHE_UNLOCK(c->lock);
-	pthread_mutex_destroy(&c->lock);
+	pthread_cond_signal(&c->cond);
+	pthread_join(gc_thread_id, NULL);
+
 	pthread_cond_destroy(&c->cond);
+	pthread_mutex_destroy(&c->lock);
 	g_free(c);
 	c = NULL;
 	

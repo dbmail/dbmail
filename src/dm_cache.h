@@ -33,7 +33,6 @@ extern uint64_t Cache_update(T C, DbmailMessage *message);
 extern uint64_t Cache_get_size(T C, uint64_t message_idnr);
 extern void     Cache_get_mem(T C, uint64_t message_idnr, Mem_T);
 extern void     Cache_unref_mem(T C, uint64_t message_idnr, Mem_T *);
-extern void     Cache_gc(T C);
 extern void     Cache_free(T *C);
 
 #undef T
