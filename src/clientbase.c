@@ -146,7 +146,16 @@ ClientBase_T * client_init(client_sock *c)
 	int serr;
 	ClientBase_T *client;
 
-	client = g_async_queue_pop(cpool);
+	client = g_async_queue_try_pop(cpool);
+	if (! client) {
+		TRACE(TRACE_WARNING, "cpool depleted");
+		guint i;
+		client = g_new0(ClientBase_T, CPOOL_SIZE);
+		for (i=0; i<CPOOL_SIZE; i++) {
+			g_async_queue_push(cpool, client++);
+		}
+		client = g_async_queue_pop(cpool);
+	}
 
 	client->timeout         = g_new0(struct timeval,1);
 	client->client          = c;
@@ -287,12 +296,17 @@ int ci_write(ClientBase_T *self, char * msg, ...)
 	}
 
 	n = self->write_buffer->len - self->write_buffer_offset;
+	if (n == 0) {
+		TRACE(TRACE_DEBUG, "write_buffer is empty [%ld]", self->write_buffer->len);
+		return 0;
+	}
 
 	while (n > 0) {
 		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
 
 		s = self->write_buffer->str + self->write_buffer_offset;
 
+		TRACE(TRACE_DEBUG, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, s);
 
 		if (self->ssl) {
 			if (! self->tls_wbuf_n) {
@@ -315,8 +329,6 @@ int ci_write(ClientBase_T *self, char * msg, ...)
 			}
 			return e;
 		} else {
-			TRACE(TRACE_DEBUG, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, s);
-
 			event_add(self->wev, NULL);
 
 			self->bytes_tx += t;	// Update our byte counter
@@ -356,10 +368,10 @@ void ci_read_cb(ClientBase_T *self)
 		memset(ibuf, 0, sizeof(ibuf));
 		if (self->ssl) {
 			t = SSL_read(self->ssl, ibuf, sizeof(ibuf)-1);
-			TRACE(TRACE_DEBUG, "[%p] [%ld]", self, t);
 		} else {
 			t = read(self->rx, ibuf, sizeof(ibuf)-1);
 		}
+		TRACE(TRACE_DEBUG, "[%p] [%ld]", self, t);
 
 		if (t < 0) {
 			int e = errno;

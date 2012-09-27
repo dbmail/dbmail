@@ -1159,7 +1159,19 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	if (self->state >= CLIENTSTATE_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
-	D = g_async_queue_pop(dpool);
+	D = g_async_queue_try_pop(dpool);
+	if (! D) {
+		guint i;
+		TRACE(TRACE_WARNING, "dpool depleted");
+		D = g_new0(dm_thread_data, DPOOL_SIZE);
+		for (i=0; i<DPOOL_SIZE; i++) {
+			g_async_queue_push(dpool, D++);
+		}
+
+		D = g_async_queue_pop(dpool);
+	}
+
+
 	D->session = self;
 	D->data = (gpointer)self->buff->str;
 	D->cb_leave = dm_thread_data_sendmessage;

@@ -187,18 +187,19 @@ void socket_write_cb(int fd, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	ClientState_T state;
+	g_mutex_lock(&session->lock);
+	state = session->state;
+	g_mutex_unlock(&session->lock);
 #ifdef DEBUG
-	TRACE(TRACE_DEBUG,"[%p] on [%d] event: %s%s%s%s", session,
+	TRACE(TRACE_DEBUG,"[%p] on [%d] state [%d] event: %s%s%s%s", session,
 			(int) fd,
+			state,
 			(what&EV_TIMEOUT) ? " timeout": "",
 			(what&EV_READ)    ? " read":    "",
 			(what&EV_WRITE)   ? " write":   "",
 			(what&EV_SIGNAL)  ? " signal":  ""
 	     );
 #endif
-	g_mutex_lock(&session->lock);
-	state = session->state;
-	g_mutex_unlock(&session->lock);
 	switch(state) {
 		case CLIENTSTATE_QUIT_QUEUED:
 			break; // ignore
@@ -226,13 +227,14 @@ void imap_cb_read(void *arg)
 
 	int state = session->ci->client_state;
 
-	TRACE(TRACE_DEBUG,"state [%d] reading %d: %ld/%ld", state, enough, have, need);
+	TRACE(TRACE_DEBUG,"state [%d] enough %d: %ld/%ld", state, enough, have, need);
 	if (state & CLIENT_ERR) {
 		ci_cork(session->ci);
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 		return;
 	} 
 	if (state & CLIENT_EOF) {
+		ci_cork(session->ci);
 		if (enough)
 			imap_handle_input(session);
 		else

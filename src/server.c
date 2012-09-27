@@ -100,6 +100,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 {
 	GError *err = NULL;
 	ImapSession *s;
+	dm_thread_data *D;
 
 	assert(session);
 	assert(cb_enter);
@@ -112,7 +113,16 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	dm_thread_data *D = g_async_queue_pop(dpool);
+	D = g_async_queue_try_pop(dpool);
+	if (! D) {
+		TRACE(TRACE_WARNING, "dpool depleted");
+		guint i;
+		D = g_new0(dm_thread_data, DPOOL_SIZE);
+		for (i=0; i<DPOOL_SIZE; i++) {
+			g_async_queue_push(dpool, D++);
+		}
+		D = g_async_queue_pop(dpool);
+	}
 
 	D->cb_enter	= cb_enter;
 	D->cb_leave     = cb_leave;
@@ -180,8 +190,6 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
  * basic server setup
  *
  */
-#define DPOOL_SIZE 1000
-#define CPOOL_SIZE 200
 
 static int server_setup(ServerConfig_T *conf)
 {
@@ -200,20 +208,17 @@ static int server_setup(ServerConfig_T *conf)
 	cache = Cache_new();
 
 	// Async queue for pooling dm_thread_data structs
-	D = g_new0(dm_thread_data, DPOOL_SIZE);
-
 	dpool = g_async_queue_new();
+	D = g_new0(dm_thread_data, DPOOL_SIZE);
 	for (i=0; i<DPOOL_SIZE; i++) {
-		g_async_queue_push(dpool, D);
-		D++;
+		g_async_queue_push(dpool, D++);
 	}
 
 	// Async queue for pooling ClientBase_T data
-	CB = g_new0(ClientBase_T, CPOOL_SIZE);
 	cpool = g_async_queue_new();
+	CB = g_new0(ClientBase_T, CPOOL_SIZE);
 	for (i=0; i<CPOOL_SIZE; i++) {
-		g_async_queue_push(cpool, CB);
-		CB++;
+		g_async_queue_push(cpool, CB++);
 	}
 
 	// Asynchronous message queue for receiving messages

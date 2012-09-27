@@ -243,14 +243,15 @@ void Cache_gc(T C)
 	assert(C);
 	struct element *E;
 	time_t now = time(NULL);
-	TRACE(TRACE_DEBUG, "running GC");
 	if (C->done) return;
+	TRACE(TRACE_DEBUG, "running GC ...");
 	E = LIST_FIRST(&C->elements);
 	while (E) {
 		if (E->ttl < now && E->ref <= 0)
 			Cache_remove(C, E);
 		E = LIST_NEXT(E, elements);
 	}
+	TRACE(TRACE_DEBUG, "running GC finished.");
 }
 /*
  * closes the msg cache
