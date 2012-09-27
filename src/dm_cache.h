@@ -21,7 +21,7 @@
 #ifndef DM_CACHE_H
 #define DM_CACHE_H
 
-#include "dm_memblock.h"
+#include "dm_stream.h"
 
 #define T Cache_T
 
@@ -31,8 +31,8 @@ extern T        Cache_new(void);
 extern void     Cache_clear(T C, uint64_t message_idnr);
 extern uint64_t Cache_update(T C, DbmailMessage *message);
 extern uint64_t Cache_get_size(T C, uint64_t message_idnr);
-extern void     Cache_get_mem(T C, uint64_t message_idnr, Mem_T);
-extern void     Cache_unref_mem(T C, uint64_t message_idnr, Mem_T *);
+extern void     Cache_get_mem(T C, uint64_t message_idnr, Stream_T);
+extern void     Cache_unref_mem(T C, uint64_t message_idnr, Stream_T *);
 extern void     Cache_free(T *C);
 
 #undef T

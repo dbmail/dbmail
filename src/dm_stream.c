@@ -19,9 +19,9 @@
 */
 
 /*
- * dm_memblock.c
+ * dm_stream.c
  *
- * implementations of functions declared in dm_memblock.h
+ * implementations of functions declared in dm_stream.h
  */
 
 #include <glib.h>
@@ -29,9 +29,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "dm_memblock.h"
+#include "dm_stream.h"
 
-#define T Mem_T
+#define T Stream_T
 
 #define NEW(x) x = g_malloc0( sizeof(*x) )
 
@@ -42,7 +42,7 @@ struct T {
 	int pos;
 };
 
-T Mem_new()
+T Stream_new()
 {
 	T M;
 	NEW(M);
@@ -50,12 +50,8 @@ T Mem_new()
 	M->pos = 0;
 	return M;
 }
-/*
- * mopen()
- *
- * opens a mem-structure
- */
-T Mem_open()
+
+T Stream_open()
 {
 	T M;
 	NEW(M);
@@ -64,19 +60,13 @@ T Mem_open()
 	return M;
 }
 
-void Mem_ref(T M, T N)
+void Stream_ref(T M, T N)
 {
 	N->data = M->data;
 	N->pos = 0;
 }
 
-/*
- * mclose()
- *
- * closes a mem structure
- *
- */
-void Mem_close(T *M)
+void Stream_close(T *M)
 {
 	T m = *M;
 	assert(M && m);
@@ -88,13 +78,7 @@ void Mem_close(T *M)
 	return;
 }
 
-
-/*
- * mwrite()
- *
- * writes size bytes of data to the memory associated with m
- */
-int Mem_write(T M, const void *data, int size)
+int Stream_write(T M, const void *data, int size)
 {
 	guint remove = M->data->len - M->pos;
 	if (remove > 0) M->data = g_byte_array_remove_range(M->data, M->pos, remove);
@@ -102,27 +86,18 @@ int Mem_write(T M, const void *data, int size)
 	return size;
 }
 
-/*
- * mread()
- *
- * reads up to size bytes from m into data
- *
- * returns the number of bytes actually read
- */
-int Mem_read(T M, void *data, int size)
+int Stream_read(T M, void *data, int size)
 {
 	assert(M);
 	int read = min((int)M->data->len, size);
 	memmove(data, M->data->data+M->pos, read);
-	Mem_seek(M, read, SEEK_CUR);
+	Stream_seek(M, read, SEEK_CUR);
 	return read;
 	
 }
 
 
 /*
- * mseek()
- *
  * moves the current pos in m offset bytes according to whence:
  * SEEK_SET seek from the beginning
  * SEEK_CUR seek from the current pos
@@ -130,13 +105,13 @@ int Mem_read(T M, void *data, int size)
  *
  * returns 0 on succes, -1 on error
  */
-int Mem_seek(T M, long offset, int whence)
+int Stream_seek(T M, long offset, int whence)
 {
 	assert(M);
 	switch (whence) {
 		case SEEK_SET:
 			M->pos = 0;
-			return Mem_seek(M, offset, SEEK_CUR);
+			return Stream_seek(M, offset, SEEK_CUR);
 
 		case SEEK_CUR:
 			M->pos += offset;
@@ -148,7 +123,7 @@ int Mem_seek(T M, long offset, int whence)
 
 		case SEEK_END:
 			M->pos = M->data->len;
-			return Mem_seek(M, offset, SEEK_CUR);
+			return Stream_seek(M, offset, SEEK_CUR);
 
 		default:
 			return -1;
@@ -156,16 +131,4 @@ int Mem_seek(T M, long offset, int whence)
 
 	return 0;
 }
-
-
-/*
- * mrewind()
- *
- * equivalent to mseek(m, 0, SEEK_SET)
- */
-void Mem_rewind(T M)
-{
-	Mem_seek(M, 0, SEEK_SET);
-}
-
 

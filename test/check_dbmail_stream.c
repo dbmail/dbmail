@@ -27,7 +27,7 @@
 
 #include <check.h>
 #include "check_dbmail.h"
-#include "dm_memblock.h"
+#include "dm_stream.h"
 
 /*
  *
@@ -47,9 +47,9 @@ void teardown(void)
 
 START_TEST(test_mem_open) 
 {
-	Mem_T M = Mem_open();
+	Stream_T M = Stream_open();
 	fail_unless(M != NULL);
-	Mem_close(&M);
+	Stream_close(&M);
 	fail_unless(M == NULL);
 }
 END_TEST
@@ -60,31 +60,31 @@ START_TEST(test_mem_write)
 	char indata[100];
 	char *instr = "abcdefghijklmnopqrstuvwxyz";
 	char out[4096];
-	Mem_T M;
+	Stream_T M;
 
 	memset(indata, 'a', sizeof(indata));
 
-	M = Mem_open();
-	Mem_write(M,indata,100);
-	Mem_write(M,indata,100);
-	Mem_close(&M);
+	M = Stream_open();
+	Stream_write(M,indata,100);
+	Stream_write(M,indata,100);
+	Stream_close(&M);
 
-	M = Mem_open();
-	Mem_write(M, instr, 20);
-
-	memset(out, 0, sizeof(out));
-	Mem_read(M, out, 10);
-	fail_unless(MATCH(out,"abcdefghij"), "Mem_read failed");
+	M = Stream_open();
+	Stream_write(M, instr, 20);
 
 	memset(out, 0, sizeof(out));
-	Mem_read(M, out, 2);
-	fail_unless(MATCH(out,"kl"), "Mem_read failed");
+	Stream_read(M, out, 10);
+	fail_unless(MATCH(out,"abcdefghij"), "Stream_read failed");
 
 	memset(out, 0, sizeof(out));
-	Mem_read(M, out, 2);
-	fail_unless(MATCH(out,"mn"), "Mem_read failed");
+	Stream_read(M, out, 2);
+	fail_unless(MATCH(out,"kl"), "Stream_read failed");
+
+	memset(out, 0, sizeof(out));
+	Stream_read(M, out, 2);
+	fail_unless(MATCH(out,"mn"), "Stream_read failed");
 	
-	Mem_close(&M);
+	Stream_close(&M);
 }
 END_TEST
 
@@ -98,29 +98,29 @@ START_TEST(test_mem_read)
 	memset(outdata, '\0', sizeof(outdata));
 	memset(indata, 'a', DATASIZE);
 
-	Mem_T M = Mem_open();
-	Mem_write(M,indata,DATASIZE);
-	Mem_rewind(M);
-	l = Mem_read(M,outdata,DATASIZE);
+	Stream_T M = Stream_open();
+	Stream_write(M,indata,DATASIZE);
+	Stream_rewind(M);
+	l = Stream_read(M,outdata,DATASIZE);
 
-	fail_unless(l==DATASIZE, "Mem_read failed: %d != %d", l, DATASIZE);
-	fail_unless(strcmp(indata,outdata)==0,"Mem_read failed\n[%s]\n[%s]\n", indata, outdata);
+	fail_unless(l==DATASIZE, "Stream_read failed: %d != %d", l, DATASIZE);
+	fail_unless(strcmp(indata,outdata)==0,"Stream_read failed\n[%s]\n[%s]\n", indata, outdata);
 
-	Mem_close(&M);
+	Stream_close(&M);
 }
 END_TEST
 
-Suite *dbmail_memblock_suite(void)
+Suite *dbmail_stream_suite(void)
 {
-	Suite *s = suite_create("Dbmail Memblock");
-	TCase *tc_memblock = tcase_create("Memblock");
+	Suite *s = suite_create("Dbmail Stream");
+	TCase *tc_stream = tcase_create("Stream");
 	
-	suite_add_tcase(s, tc_memblock);
+	suite_add_tcase(s, tc_stream);
 	
-	tcase_add_checked_fixture(tc_memblock, setup, teardown);
-	tcase_add_test(tc_memblock, test_mem_open);
-	tcase_add_test(tc_memblock, test_mem_write);
-	tcase_add_test(tc_memblock, test_mem_read);
+	tcase_add_checked_fixture(tc_stream, setup, teardown);
+	tcase_add_test(tc_stream, test_mem_open);
+	tcase_add_test(tc_stream, test_mem_write);
+	tcase_add_test(tc_stream, test_mem_read);
 	
 	return s;
 }
@@ -128,7 +128,7 @@ Suite *dbmail_memblock_suite(void)
 int main(void)
 {
 	int nf;
-	Suite *s = dbmail_memblock_suite();
+	Suite *s = dbmail_stream_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);

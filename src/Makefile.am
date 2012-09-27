@@ -62,7 +62,7 @@ SERVER = server.c \
 	dm_tls.c \
 	dm_http.c \
 	dm_request.c \
-	dm_memblock.c \
+	dm_stream.c \
 	dm_cache.c \
 	dm_cidr.c
 

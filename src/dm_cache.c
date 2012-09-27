@@ -28,7 +28,7 @@
 /*
  * cached raw message data
  *
- * implement a global message cache as a LIST of Mem_T objects
+ * implement a global message cache as a LIST of Stream_T objects
  * with reference bookkeeping and TTL
  *
  */
@@ -47,7 +47,7 @@ struct element {
 	long ttl;
 	uint64_t ref;
 	uint64_t size;
-	Mem_T mem;
+	Stream_T mem;
 	LIST_ENTRY(element) elements;
 };
 
@@ -125,7 +125,7 @@ static struct element * Cache_find(T C, uint64_t id)
 static void Cache_remove(T C, struct element *E)
 {
 	LIST_REMOVE(E, elements);
-	Mem_close(&E->mem);
+	Stream_close(&E->mem);
 	C->size -= (E->size + sizeof(*E));
 	free(E);
 }
@@ -170,11 +170,11 @@ uint64_t Cache_update(T C, DbmailMessage *message)
 	E->id = message->id;
 	E->size = outcnt;
 	E->ttl = now + TTL_SECONDS;
-	E->mem = Mem_open();
+	E->mem = Stream_open();
 
-	Mem_rewind(E->mem);
-	Mem_write(E->mem, crlf, outcnt);
-	Mem_rewind(E->mem);
+	Stream_rewind(E->mem);
+	Stream_write(E->mem, crlf, outcnt);
+	Stream_rewind(E->mem);
 
 	C->size += outcnt + sizeof(*E);
 
@@ -201,7 +201,7 @@ uint64_t Cache_get_size(T C, uint64_t id)
 	return size;
 }
 
-void Cache_get_mem(T C, uint64_t id, Mem_T M)
+void Cache_get_mem(T C, uint64_t id, Stream_T M)
 {
 	time_t now = time(NULL);
 	struct element *E;
@@ -211,14 +211,14 @@ void Cache_get_mem(T C, uint64_t id, Mem_T M)
 	assert(E);
 	E->ref++;
 	E->ttl = now + TTL_SECONDS;
-	Mem_ref(E->mem, M);
+	Stream_ref(E->mem, M);
 	CACHE_UNLOCK(C->lock);
 }
 
-void Cache_unref_mem(T C, uint64_t id, Mem_T *M)
+void Cache_unref_mem(T C, uint64_t id, Stream_T *M)
 {
 	time_t now = time(NULL);
-	Mem_T m = *M;
+	Stream_T m = *M;
 	struct element *E;
 	assert(C);
 	assert(m);

@@ -24,7 +24,7 @@ TESTS=check_dbmail_common \
 	check_dbmail_auth \
 	check_dbmail_misc \
 	check_dbmail_list \
-	check_dbmail_memblock \
+	check_dbmail_stream \
 	check_dbmail_cache \
 	check_dbmail_user \
 	check_dbmail_util \
@@ -35,7 +35,7 @@ TESTS=check_dbmail_common \
 
 IMAPD = $(top_srcdir)/src/dm_quota.c \
         $(top_srcdir)/src/dm_cache.c \
-        $(top_srcdir)/src/dm_memblock.c \
+        $(top_srcdir)/src/dm_stream.c \
         $(top_srcdir)/src/imap4.c \
         $(top_srcdir)/src/imapcommands.c \
         $(top_srcdir)/src/dbmail-imapsession.c
@@ -58,9 +58,9 @@ check_dbmail_list_SOURCES=check_dbmail_list.c
 check_dbmail_list_LDADD=$(CHECK_LDADD)
 check_dbmail_list_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_memblock_SOURCES=check_dbmail_memblock.c $(top_srcdir)/src/dm_memblock.c
-check_dbmail_memblock_LDADD=$(CHECK_LDADD)
-check_dbmail_memblock_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_stream_SOURCES=check_dbmail_stream.c $(top_srcdir)/src/dm_stream.c
+check_dbmail_stream_LDADD=$(CHECK_LDADD)
+check_dbmail_stream_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_cache_SOURCES=check_dbmail_cache.c $(top_srcdir)/src/dm_cache.c
 check_dbmail_cache_LDADD=$(CHECK_LDADD)

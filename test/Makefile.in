@@ -44,7 +44,7 @@ host_triplet = @host@
 @WITHCHECK_TRUE@	check_dbmail_auth$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_misc$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_list$(EXEEXT) \
-@WITHCHECK_TRUE@	check_dbmail_memblock$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_stream$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_cache$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
@@ -76,7 +76,7 @@ CONFIG_CLEAN_VPATH_FILES =
 @WITHCHECK_TRUE@	check_dbmail_auth$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_misc$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_list$(EXEEXT) \
-@WITHCHECK_TRUE@	check_dbmail_memblock$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_stream$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_cache$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
@@ -133,11 +133,11 @@ am__check_dbmail_dsn_SOURCES_DIST = check_dbmail_dsn.c
 check_dbmail_dsn_OBJECTS = $(am_check_dbmail_dsn_OBJECTS)
 @WITHCHECK_TRUE@check_dbmail_dsn_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am__check_dbmail_imapd_SOURCES_DIST = $(top_srcdir)/src/dm_quota.c \
-	$(top_srcdir)/src/dm_cache.c $(top_srcdir)/src/dm_memblock.c \
+	$(top_srcdir)/src/dm_cache.c $(top_srcdir)/src/dm_stream.c \
 	$(top_srcdir)/src/imap4.c $(top_srcdir)/src/imapcommands.c \
 	$(top_srcdir)/src/dbmail-imapsession.c check_dbmail_imapd.c
 @WITHCHECK_TRUE@am__objects_1 = dm_quota.$(OBJEXT) dm_cache.$(OBJEXT) \
-@WITHCHECK_TRUE@	dm_memblock.$(OBJEXT) imap4.$(OBJEXT) \
+@WITHCHECK_TRUE@	dm_stream.$(OBJEXT) imap4.$(OBJEXT) \
 @WITHCHECK_TRUE@	imapcommands.$(OBJEXT) \
 @WITHCHECK_TRUE@	dbmail-imapsession.$(OBJEXT)
 @WITHCHECK_TRUE@am_check_dbmail_imapd_OBJECTS = $(am__objects_1) \
@@ -165,14 +165,6 @@ check_dbmail_mailboxstate_OBJECTS =  \
 	$(am_check_dbmail_mailboxstate_OBJECTS)
 @WITHCHECK_TRUE@check_dbmail_mailboxstate_DEPENDENCIES =  \
 @WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
-am__check_dbmail_memblock_SOURCES_DIST = check_dbmail_memblock.c \
-	$(top_srcdir)/src/dm_memblock.c
-@WITHCHECK_TRUE@am_check_dbmail_memblock_OBJECTS =  \
-@WITHCHECK_TRUE@	check_dbmail_memblock.$(OBJEXT) \
-@WITHCHECK_TRUE@	dm_memblock.$(OBJEXT)
-check_dbmail_memblock_OBJECTS = $(am_check_dbmail_memblock_OBJECTS)
-@WITHCHECK_TRUE@check_dbmail_memblock_DEPENDENCIES =  \
-@WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
 am__check_dbmail_message_SOURCES_DIST = check_dbmail_message.c
 @WITHCHECK_TRUE@am_check_dbmail_message_OBJECTS =  \
 @WITHCHECK_TRUE@	check_dbmail_message.$(OBJEXT)
@@ -197,6 +189,14 @@ am__check_dbmail_sset_SOURCES_DIST = check_dbmail_sset.c \
 @WITHCHECK_TRUE@	check_dbmail_sset.$(OBJEXT) dm_sset.$(OBJEXT)
 check_dbmail_sset_OBJECTS = $(am_check_dbmail_sset_OBJECTS)
 @WITHCHECK_TRUE@check_dbmail_sset_DEPENDENCIES =  \
+@WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
+am__check_dbmail_stream_SOURCES_DIST = check_dbmail_stream.c \
+	$(top_srcdir)/src/dm_stream.c
+@WITHCHECK_TRUE@am_check_dbmail_stream_OBJECTS =  \
+@WITHCHECK_TRUE@	check_dbmail_stream.$(OBJEXT) \
+@WITHCHECK_TRUE@	dm_stream.$(OBJEXT)
+check_dbmail_stream_OBJECTS = $(am_check_dbmail_stream_OBJECTS)
+@WITHCHECK_TRUE@check_dbmail_stream_DEPENDENCIES =  \
 @WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
 am__check_dbmail_user_SOURCES_DIST = check_dbmail_user.c
 @WITHCHECK_TRUE@am_check_dbmail_user_OBJECTS =  \
@@ -229,10 +229,10 @@ SOURCES = $(check_dbmail_auth_SOURCES) $(check_dbmail_cache_SOURCES) \
 	$(check_dbmail_dsn_SOURCES) $(check_dbmail_imapd_SOURCES) \
 	$(check_dbmail_list_SOURCES) $(check_dbmail_mailbox_SOURCES) \
 	$(check_dbmail_mailboxstate_SOURCES) \
-	$(check_dbmail_memblock_SOURCES) \
 	$(check_dbmail_message_SOURCES) $(check_dbmail_misc_SOURCES) \
 	$(check_dbmail_server_SOURCES) $(check_dbmail_sset_SOURCES) \
-	$(check_dbmail_user_SOURCES) $(check_dbmail_util_SOURCES)
+	$(check_dbmail_stream_SOURCES) $(check_dbmail_user_SOURCES) \
+	$(check_dbmail_util_SOURCES)
 DIST_SOURCES = $(am__check_dbmail_auth_SOURCES_DIST) \
 	$(am__check_dbmail_cache_SOURCES_DIST) \
 	$(am__check_dbmail_capa_SOURCES_DIST) \
@@ -244,11 +244,11 @@ DIST_SOURCES = $(am__check_dbmail_auth_SOURCES_DIST) \
 	$(am__check_dbmail_list_SOURCES_DIST) \
 	$(am__check_dbmail_mailbox_SOURCES_DIST) \
 	$(am__check_dbmail_mailboxstate_SOURCES_DIST) \
-	$(am__check_dbmail_memblock_SOURCES_DIST) \
 	$(am__check_dbmail_message_SOURCES_DIST) \
 	$(am__check_dbmail_misc_SOURCES_DIST) \
 	$(am__check_dbmail_server_SOURCES_DIST) \
 	$(am__check_dbmail_sset_SOURCES_DIST) \
+	$(am__check_dbmail_stream_SOURCES_DIST) \
 	$(am__check_dbmail_user_SOURCES_DIST) \
 	$(am__check_dbmail_util_SOURCES_DIST)
 ETAGS = etags
@@ -397,7 +397,7 @@ top_srcdir = @top_srcdir@
 @WITHCHECK_TRUE@CHECK_LDADD = $(STATIC_MODULES) $(top_srcdir)/src/libdbmail.la @CHECK_LIBS@
 @WITHCHECK_TRUE@IMAPD = $(top_srcdir)/src/dm_quota.c \
 @WITHCHECK_TRUE@        $(top_srcdir)/src/dm_cache.c \
-@WITHCHECK_TRUE@        $(top_srcdir)/src/dm_memblock.c \
+@WITHCHECK_TRUE@        $(top_srcdir)/src/dm_stream.c \
 @WITHCHECK_TRUE@        $(top_srcdir)/src/imap4.c \
 @WITHCHECK_TRUE@        $(top_srcdir)/src/imapcommands.c \
 @WITHCHECK_TRUE@        $(top_srcdir)/src/dbmail-imapsession.c
@@ -414,9 +414,9 @@ top_srcdir = @top_srcdir@
 @WITHCHECK_TRUE@check_dbmail_list_SOURCES = check_dbmail_list.c
 @WITHCHECK_TRUE@check_dbmail_list_LDADD = $(CHECK_LDADD)
 @WITHCHECK_TRUE@check_dbmail_list_INCLUDES = @CHECK_CFLAGS@
-@WITHCHECK_TRUE@check_dbmail_memblock_SOURCES = check_dbmail_memblock.c $(top_srcdir)/src/dm_memblock.c
-@WITHCHECK_TRUE@check_dbmail_memblock_LDADD = $(CHECK_LDADD)
-@WITHCHECK_TRUE@check_dbmail_memblock_INCLUDES = @CHECK_CFLAGS@
+@WITHCHECK_TRUE@check_dbmail_stream_SOURCES = check_dbmail_stream.c $(top_srcdir)/src/dm_stream.c
+@WITHCHECK_TRUE@check_dbmail_stream_LDADD = $(CHECK_LDADD)
+@WITHCHECK_TRUE@check_dbmail_stream_INCLUDES = @CHECK_CFLAGS@
 @WITHCHECK_TRUE@check_dbmail_cache_SOURCES = check_dbmail_cache.c $(top_srcdir)/src/dm_cache.c
 @WITHCHECK_TRUE@check_dbmail_cache_LDADD = $(CHECK_LDADD)
 @WITHCHECK_TRUE@check_dbmail_cache_INCLUDES = @CHECK_CFLAGS@
@@ -532,9 +532,6 @@ check_dbmail_mailbox$(EXEEXT): $(check_dbmail_mailbox_OBJECTS) $(check_dbmail_ma
 check_dbmail_mailboxstate$(EXEEXT): $(check_dbmail_mailboxstate_OBJECTS) $(check_dbmail_mailboxstate_DEPENDENCIES) $(EXTRA_check_dbmail_mailboxstate_DEPENDENCIES) 
 	@rm -f check_dbmail_mailboxstate$(EXEEXT)
 	$(LINK) $(check_dbmail_mailboxstate_OBJECTS) $(check_dbmail_mailboxstate_LDADD) $(LIBS)
-check_dbmail_memblock$(EXEEXT): $(check_dbmail_memblock_OBJECTS) $(check_dbmail_memblock_DEPENDENCIES) $(EXTRA_check_dbmail_memblock_DEPENDENCIES) 
-	@rm -f check_dbmail_memblock$(EXEEXT)
-	$(LINK) $(check_dbmail_memblock_OBJECTS) $(check_dbmail_memblock_LDADD) $(LIBS)
 check_dbmail_message$(EXEEXT): $(check_dbmail_message_OBJECTS) $(check_dbmail_message_DEPENDENCIES) $(EXTRA_check_dbmail_message_DEPENDENCIES) 
 	@rm -f check_dbmail_message$(EXEEXT)
 	$(LINK) $(check_dbmail_message_OBJECTS) $(check_dbmail_message_LDADD) $(LIBS)
@@ -547,6 +544,9 @@ check_dbmail_server$(EXEEXT): $(check_dbmail_server_OBJECTS) $(check_dbmail_serv
 check_dbmail_sset$(EXEEXT): $(check_dbmail_sset_OBJECTS) $(check_dbmail_sset_DEPENDENCIES) $(EXTRA_check_dbmail_sset_DEPENDENCIES) 
 	@rm -f check_dbmail_sset$(EXEEXT)
 	$(LINK) $(check_dbmail_sset_OBJECTS) $(check_dbmail_sset_LDADD) $(LIBS)
+check_dbmail_stream$(EXEEXT): $(check_dbmail_stream_OBJECTS) $(check_dbmail_stream_DEPENDENCIES) $(EXTRA_check_dbmail_stream_DEPENDENCIES) 
+	@rm -f check_dbmail_stream$(EXEEXT)
+	$(LINK) $(check_dbmail_stream_OBJECTS) $(check_dbmail_stream_LDADD) $(LIBS)
 check_dbmail_user$(EXEEXT): $(check_dbmail_user_OBJECTS) $(check_dbmail_user_DEPENDENCIES) $(EXTRA_check_dbmail_user_DEPENDENCIES) 
 	@rm -f check_dbmail_user$(EXEEXT)
 	$(LINK) $(check_dbmail_user_OBJECTS) $(check_dbmail_user_LDADD) $(LIBS)
@@ -571,18 +571,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_list.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_mailbox.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_mailboxstate.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_memblock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_message.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_misc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_server.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_sset.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_stream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_user.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_util.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmail-imapsession.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_cache.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_memblock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_quota.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_sset.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_stream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/imap4.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/imapcommands.Po@am__quote@
 
@@ -635,19 +635,19 @@ dm_quota.obj: $(top_srcdir)/src/dm_quota.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_quota.obj `if test -f '$(top_srcdir)/src/dm_quota.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_quota.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_quota.c'; fi`
 
-dm_memblock.o: $(top_srcdir)/src/dm_memblock.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_memblock.o -MD -MP -MF $(DEPDIR)/dm_memblock.Tpo -c -o dm_memblock.o `test -f '$(top_srcdir)/src/dm_memblock.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_memblock.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_memblock.Tpo $(DEPDIR)/dm_memblock.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_memblock.c' object='dm_memblock.o' libtool=no @AMDEPBACKSLASH@
+dm_stream.o: $(top_srcdir)/src/dm_stream.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_stream.o -MD -MP -MF $(DEPDIR)/dm_stream.Tpo -c -o dm_stream.o `test -f '$(top_srcdir)/src/dm_stream.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_stream.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_stream.Tpo $(DEPDIR)/dm_stream.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_stream.c' object='dm_stream.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_memblock.o `test -f '$(top_srcdir)/src/dm_memblock.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_memblock.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_stream.o `test -f '$(top_srcdir)/src/dm_stream.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_stream.c
 
-dm_memblock.obj: $(top_srcdir)/src/dm_memblock.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_memblock.obj -MD -MP -MF $(DEPDIR)/dm_memblock.Tpo -c -o dm_memblock.obj `if test -f '$(top_srcdir)/src/dm_memblock.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_memblock.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_memblock.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_memblock.Tpo $(DEPDIR)/dm_memblock.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_memblock.c' object='dm_memblock.obj' libtool=no @AMDEPBACKSLASH@
+dm_stream.obj: $(top_srcdir)/src/dm_stream.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_stream.obj -MD -MP -MF $(DEPDIR)/dm_stream.Tpo -c -o dm_stream.obj `if test -f '$(top_srcdir)/src/dm_stream.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_stream.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_stream.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_stream.Tpo $(DEPDIR)/dm_stream.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_stream.c' object='dm_stream.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_memblock.obj `if test -f '$(top_srcdir)/src/dm_memblock.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_memblock.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_memblock.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_stream.obj `if test -f '$(top_srcdir)/src/dm_stream.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_stream.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_stream.c'; fi`
 
 imap4.o: $(top_srcdir)/src/imap4.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT imap4.o -MD -MP -MF $(DEPDIR)/imap4.Tpo -c -o imap4.o `test -f '$(top_srcdir)/src/imap4.c' || echo '$(srcdir)/'`$(top_srcdir)/src/imap4.c

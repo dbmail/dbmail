@@ -57,7 +57,7 @@ extern Cache_T cache;
  * sends cnt bytes from a MEM structure to a FILE stream
  * uses a simple buffering system
  */
-static void send_data(ImapSession *self, Mem_T M, int cnt)
+static void send_data(ImapSession *self, Stream_T M, int cnt)
 {
 	char buf[SEND_BUF_SIZE];
 	size_t l;
@@ -67,14 +67,14 @@ static void send_data(ImapSession *self, Mem_T M, int cnt)
 	TRACE(TRACE_DEBUG,"[%p] M [%p] cnt [%d]", self, M, cnt);
 	while (cnt >= SEND_BUF_SIZE) {
 		memset(buf,0,sizeof(buf));
-		l = Mem_read(M, buf, SEND_BUF_SIZE-1);
+		l = Stream_read(M, buf, SEND_BUF_SIZE-1);
 		if (l>0) dbmail_imap_session_buff_printf(self, "%s", buf);
 		cnt -= l;
 	}
 
 	if (cnt > 0) {
 		memset(buf,0,sizeof(buf));
-		l = Mem_read(M, buf, cnt);
+		l = Stream_read(M, buf, cnt);
 		if (l>0) dbmail_imap_session_buff_printf(self, "%s", buf);
 		cnt -= l;
 	}
@@ -159,12 +159,12 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 				self->message = msg;
 		} else {
 			GString *s;
-			Mem_T M = Mem_new();
+			Stream_T M = Stream_new();
 			gchar *cached = g_new0(char, size);
 			DbmailMessage *msg = dbmail_message_new();
 
 			Cache_get_mem(cache, *id, M);
-			Mem_read(M, cached, size);
+			Stream_read(M, cached, size);
 			s = g_string_new_len(cached, size);
 			g_free(cached);
 			msg = dbmail_message_init_with_string(msg, s);
@@ -909,7 +909,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 	gchar *s = NULL;
 	uint64_t *id = uid;
 	gboolean reportflags = FALSE;
-	Mem_T M;
+	Stream_T M;
 
 	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), uid);
 
@@ -929,7 +929,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		if (! (dbmail_imap_session_message_load(self)))
 			return 0;
 
-		M = Mem_new();
+		M = Stream_new();
 		Cache_get_mem(cache, self->message->id, M);
 		size = Cache_get_size(cache, self->message->id);
 	}
@@ -1003,7 +1003,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 			dbmail_imap_session_buff_printf(self, "BODY[] {%lu}\r\n", size);
 			send_data(self, M, size);
 		} else {
-			Mem_seek(M, dbmail_imap_session_bodyfetch_get_last_octetstart(self), SEEK_SET);
+			Stream_seek(M, dbmail_imap_session_bodyfetch_get_last_octetstart(self), SEEK_SET);
 			size = (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) >
 			     (((long long)size) - dbmail_imap_session_bodyfetch_get_last_octetstart(self)))
 			    ? (((long long)size) - dbmail_imap_session_bodyfetch_get_last_octetstart(self)) 
@@ -1023,8 +1023,8 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		char buff[2], c = 0, p1 = 0, p2 = 0;
 
 		memset(buff, 0, sizeof(buff));
-		Mem_rewind(M);
-		i = Mem_read(M, buff, 1);
+		Stream_rewind(M);
+		i = Stream_read(M, buff, 1);
 
 		while (i) {
 			c = buff[0];
@@ -1035,21 +1035,21 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 			p2 = p1;
 			p1 = c;
 			memset(buff, 0, sizeof(buff));
-			i = Mem_read(M, buff, 1);
+			i = Stream_read(M, buff, 1);
 			bodyoffset++;
 		}
 	}
 
 	if (self->fi->getRFC822Header) {
 		SEND_SPACE;
-		Mem_rewind(M);
+		Stream_rewind(M);
 		dbmail_imap_session_buff_printf(self, "RFC822.HEADER {%lu}\r\n", bodyoffset);
 		send_data(self, M, bodyoffset);
 	}
 
 	if (self->fi->getRFC822Text) {
 		SEND_SPACE;
-		Mem_seek(M, bodyoffset, SEEK_SET);
+		Stream_seek(M, bodyoffset, SEEK_SET);
 		dbmail_imap_session_buff_printf(self, "RFC822.TEXT {%lu}\r\n", size-bodyoffset);
 		send_data(self, M, size-bodyoffset);
 		self->fi->setseen = 1;

@@ -20,27 +20,25 @@
 */
 
 /*
- * dm_memblock.h
+ * dm_stream.h
  *
- * definitions & declarations for an interface that makes function calls
- * similar to those using FILE*'s possible but now no files but memory blocks
- * are used.
  */
 
-#ifndef DM_MEMBLOCK_H
-#define DM_MEMBLOCK_H
+#ifndef DM_STREAM_H
+#define DM_STREAM_H
 
-#define T Mem_T
+#define T Stream_T
 typedef struct T *T;
 
-extern T    Mem_new(void);
-extern T    Mem_open(void);
-extern void Mem_ref    (T M, T N); 
-extern void Mem_close  (T *M);
-extern int  Mem_write  (T M, const void *data, int size);
-extern int  Mem_read   (T M, void *data, int size);
-extern int  Mem_seek   (T M, long offset, int whence);
-extern void Mem_rewind (T M);
+extern T    Stream_new(void);
+extern T    Stream_open(void);
+extern void Stream_ref    (T M, T N); 
+extern void Stream_close  (T *M);
+extern int  Stream_write  (T M, const void *data, int size);
+extern int  Stream_read   (T M, void *data, int size);
+extern int  Stream_seek   (T M, long offset, int whence);
+
+#define Stream_rewind(M) Stream_seek(M, 0, SEEK_SET)
 
 #undef T
 

@@ -120,10 +120,10 @@ END_TEST
 
 START_TEST(test_cache_get_mem)
 {
-	Mem_T M;
+	Stream_T M;
 	DbmailMessage *m;
         m = message_init(multipart_message);
-	M = Mem_new();
+	M = Stream_new();
 	Cache_update(Cache, m);
 	Cache_get_mem(Cache, m->id, M);
 	Cache_unref_mem(Cache, m->id, &M);
