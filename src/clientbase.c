@@ -165,6 +165,10 @@ ClientBase_T * client_init(client_sock *c)
 	client->bytes_rx = 0;
 	client->bytes_tx = 0;
 
+	/* ssl */
+	client->ssl = NULL;
+	client->ssl_state = FALSE;
+
 	/* make streams */
 	if (c == NULL) {
 		client->rx		= STDIN_FILENO;
@@ -551,6 +555,7 @@ void ci_close(ClientBase_T *self)
 		SSL_shutdown(self->ssl);
 		SSL_free(self->ssl);
 		self->ssl = NULL;
+		self->ssl_state = FALSE;
 	}
 
 
