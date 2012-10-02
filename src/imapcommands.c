@@ -82,13 +82,20 @@ void cmd_free(cmd_t *cmd)
 	} \
 	return;
 
-#define SESSION_OK \
+/* Macro for OK answers with optional response code */
+#define SESSION_OK_COMMON(RESP_CODE_FORMAT, RESP_CODE_VALUE) \
 	if (self->state != CLIENTSTATE_ERROR) \
 		dbmail_imap_session_buff_printf(self, \
-				"%s OK %s%s completed\r\n", \
-				self->tag, self->use_uid ? "UID " : "", \
+				"%s OK " RESP_CODE_FORMAT "%s%s completed\r\n", \
+				self->tag, RESP_CODE_VALUE, self->use_uid ? "UID " : "", \
 				self->command)
 
+/* The original SESSION_OK macro has been refactored to SESSION_OK_COMMON */
+#define SESSION_OK \
+	SESSION_OK_COMMON("%s", "")
+
+#define SESSION_OK_WITH_RESP_CODE(VALUE) \
+	SESSION_OK_COMMON("[%s] ", VALUE)
 
 static int check_state_and_args(ImapSession * self, int minargs, int maxargs, ClientState_T state)
 {
@@ -1355,7 +1362,13 @@ void _ic_append_enter(dm_thread_data *D)
 	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 	MailboxState_addMsginfo(M, message_id, info);
 
-	SESSION_OK;
+	// create a buffer
+	// strlen("APPENDUID  ") + sizeof(uint64_t)*2 < 1024
+	char buffer[1024];
+	memset(buffer, 0, sizeof(buffer));
+	// copy the response code parameters to it
+	g_snprintf(buffer, 1024, "APPENDUID %llu %llu", mboxid, message_id);
+	SESSION_OK_WITH_RESP_CODE(buffer);
 	SESSION_RETURN;
 }
 

@@ -38,6 +38,7 @@ import string
 import time
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
+from pyparsing import nestedExpr
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
@@ -63,7 +64,7 @@ def getMessageStrict():
     m.add_header("From", """"somewhere.foo" <somewher@foo.org>""")
     m.add_header("CC", """"somewher@foo.org", "other@bar.org" """)
     m.add_header("In-Reply-To",
-                 """"Message from "Test User" <testuser@test.org> """ \
+                 """"Message from "Test User" <testuser@test.org> """
                  """of "Sat, 14 Dec 2002 09:17:00 CST." """)
     m.add_header("Date", "Mon, 26 Sep 2005 13:26:39 +0200")
     m.add_header("Subject", """dbmail "test" message""")
@@ -95,6 +96,55 @@ def strip_crlf(s):
     return string.replace(s, '\r', '')
 
 
+def getFreshbox(name):
+    assert(name)
+    cmd = './contrib/mailbox2dbmail/mailbox2dbmail ' \
+            '-u testuser1 -t mbox -m test-scripts/testbox ' \
+            '-b "%s" -p ./src/dbmail-deliver ' \
+            '-f /etc/dbmail/dbmail.conf' % name
+    s, o = commands.getstatusoutput(cmd)
+    if s:
+        raise Exception(o)
+
+
+def parse_parenthesized_list_internal(struct):
+    """Internal parsing function for parenthesized lists"""
+    # do we have an internal structure?
+    if not isinstance(struct, str):
+        # we need to parse an internal structure
+        # loop through each element, and create a dictionary from them
+        params = {}
+        actual_elem = None
+        i = 0
+        for elem in struct:
+            # odd elements are keys
+            if i % 2 == 0:
+                actual_elem = elem
+            # even elements are values
+            else:
+                # call ourselves recursively
+                params[actual_elem] = parse_parenthesized_list_internal(elem)
+            i += 1
+        return params
+    else:
+        return struct
+
+
+def parse_parenthesized_list(s):
+    """Parse a parethesized list
+
+    Test me with:
+    print parse_parenthesized_list('(A (C 1 D 2) B 5)')
+    print parse_parenthesized_list('(A 2 B 5)')
+    """
+    # first get the string into an iterable structure
+    struct = nestedExpr().parseString(s)
+    # remove the unnecessary top-level structure
+    struct = struct[0]
+    # then call internal parsing for it
+    return parse_parenthesized_list_internal(struct)
+
+
 class testImapServer(unittest.TestCase):
     maxDiff = None
 
@@ -116,16 +166,47 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(
             self.o.append('INBOX', (), "",
                           str(TESTMSG['strict822']))[0], 'OK')
+        # delete remembered response code
+        self.o.response('APPENDUID')
         # check for TRYCREATE
         result = self.o.append('nosuchbox', (), "",
                              str(TESTMSG['strict822']))
         self.assertEquals(result[0], 'NO')
         self.assertEquals(result[1][0][:11], '[TRYCREATE]')
-        # test flags
+
+        # test appending with flags
+        # start with creating a test folder for appending
         self.o.create('testappend')
+
+        # retrieve uidvalidity and uidnext for the new folder
+        #  (will be needed for checking response code)
+        result = self.o.status("testappend", '(UIDVALIDITY UIDNEXT)')
+        response_data = result[1][0]
+        # get the string containing response parameter values
+        left_parenthesis = response_data.find("(")
+        self.assertNotEqual(left_parenthesis, -1)
+        # parse response parameter values
+        responses = parse_parenthesized_list(response_data[left_parenthesis:])
+        old_uid_validity = responses["UIDVALIDITY"]
+        old_uid_next = responses["UIDNEXT"]
+
+        # append the message
         self.o.append('testappend', '\Flagged Userflag',
                       "\" 3-Mar-2006 07:15:00 +0200 \"",
                       str(TESTMSG['strict822']))
+        # check response code
+        code_name, code_data = self.o.response('APPENDUID')
+        # check the answer's format
+        self.assertEqual(code_name, 'APPENDUID')
+        uid_validity, uid_set = code_data[0].split(" ")
+        self.assertRegexpMatches(uid_validity, "^\d+$")
+        self.assertRegexpMatches(uid_set, "^\d+$")
+        #The next line would be necessary in case of multiappend
+        #self.assertRegexpMatches(uid_set, "^\d+(:\d+)?(,\d+(:\d+)?)*$") # based on the BNF in rfc4315
+        # check whether the uid_validity and uid_next match
+        self.assertEqual(uid_validity, old_uid_validity)  # 'Uidvalidity matches'
+        self.assertLessEqual(int(old_uid_next), int(uid_set)) # 'The appended message\'s uid is higher than the last uid_next value'
+
         result = self.o.select('testappend')
         id = result[1][0]
         self.assertEquals(int(id), 1)
@@ -415,9 +496,9 @@ class testImapServer(unittest.TestCase):
         result = self.setUp("testuser1", "test")
         self.assertEquals(result,
                           ('OK',
-                           ['[CAPABILITY IMAP4rev1 ACL ' \
-                            'RIGHTS=texk NAMESPACE CHILDREN SORT ' \
-                            'QUOTA THREAD=ORDEREDSUBJECT UNSELECT ' \
+                           ['[CAPABILITY IMAP4rev1 ACL '
+                            'RIGHTS=texk NAMESPACE CHILDREN SORT '
+                            'QUOTA THREAD=ORDEREDSUBJECT UNSELECT '
                             'IDLE STARTTLS ID] User testuser1 authenticated']))
         self.failUnlessRaises(Exception, self.setUp, "testuser1", "blah")
 
@@ -433,9 +514,9 @@ class testImapServer(unittest.TestCase):
         result = o.login_cram_md5("testuser1", "test")
         self.assertEquals(result,
                           ('OK',
-                           ['[CAPABILITY IMAP4rev1 ACL ' \
-                            'RIGHTS=texk NAMESPACE CHILDREN SORT ' \
-                            'QUOTA THREAD=ORDEREDSUBJECT UNSELECT ' \
+                           ['[CAPABILITY IMAP4rev1 ACL '
+                            'RIGHTS=texk NAMESPACE CHILDREN SORT '
+                            'QUOTA THREAD=ORDEREDSUBJECT UNSELECT '
                             'IDLE STARTTLS ID] User testuser1 authenticated']))
         o = getsock()
         o.debug = DEBUG
@@ -469,13 +550,13 @@ class testImapServer(unittest.TestCase):
             self.o.create(mailbox)
             self.o.subscribe(mailbox)
         result = self.o.lsub()[1]
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6] \
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6]
                           in result, True)
         result = self.o.lsub('""', '"*"')[1]
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2] \
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2]
                           in result, True)
         result = self.o.lsub('"%s/"' % mailboxes[1])[1]
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2] \
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2]
                           in result, True)
 
     def testNoop(self):
@@ -633,7 +714,7 @@ class testImapServer(unittest.TestCase):
                       str(TESTMSG['strict822']))
         self.o.select('testflag')
         self.assertEquals(
-            'Userflag' in \
+            'Userflag' in
             self.o.untagged_responses['PERMANENTFLAGS'][0].split(' '), True)
 
     def testSetacl(self):
@@ -649,7 +730,7 @@ class testImapServer(unittest.TestCase):
         p = getsock()
         p.login('testuser2', 'test'), ('OK', ['LOGIN completed'])
         self.assertEquals(
-            '(\\hasnochildren) "/" "#Users/testuser1/testaclbox"' in \
+            '(\\hasnochildren) "/" "#Users/testuser1/testaclbox"' in
             p.list()[1], True)
         p.logout()
         self.o.delete('testaclbox')
