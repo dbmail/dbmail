@@ -1930,6 +1930,7 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 	cmd_t cmd = self->cmd;
 	uint64_t newid;
 	int result;
+	uint64_t *new_ids_element = NULL;
 
 	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid, TRUE);
 	if (result == -1) {
@@ -1940,6 +1941,13 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 		dbmail_imap_session_buff_printf(self, "%s NO quotum would exceed\r\n", self->tag);
 		return TRUE;
 	}
+	// insert the new uid to the new_ids collection
+	// reserve memory for the new element in new_ids
+	new_ids_element = g_new0(uint64_t,1);
+	*new_ids_element = newid;
+	TRACE(TRACE_DEBUG, "copied message with old uid %d to new uid %d", *id, *new_ids_element);
+	// prepending is faster then appending
+	self->new_ids = g_list_prepend(self->new_ids, new_ids_element);
 	return FALSE;
 }
 
@@ -1953,9 +1961,17 @@ static void _ic_copy_enter(dm_thread_data *D)
 	cmd_t cmd;
 	const char *src, *dst;
 
-
 	src = p_string_str(self->args[self->args_idx]);
 	dst = p_string_str(self->args[self->args_idx+1]);
+
+	// Old ids as a list (instead of a tree)
+	GList *old_ids;
+	// Old ids as string
+	GString *old_ids_buff = g_string_new("");
+	// New ids as string
+	GString *new_ids_buff = g_string_new("");
+	// GString buffer for the whole response code
+	GString *buffer = g_string_new("");
 
 	/* check if destination mailbox exists */
 	if (! db_findmailbox(dst, self->userid, &destmboxid)) {
@@ -1997,7 +2013,30 @@ static void _ic_copy_enter(dm_thread_data *D)
 	if (MailboxState_getId(self->mailbox->mbstate) == destmboxid)
 		dbmail_imap_session_mailbox_status(self, TRUE);
 
-	SESSION_OK;
+	// we prepended elements to the new_ids GList, let's now reverse them
+	self->new_ids = g_list_reverse(self->new_ids);
+	// convert them to string (into a buffer)
+	new_ids_buff = g_list_join_u64(self->new_ids,",");
+	// get old ids as a list
+	old_ids = g_tree_keys(self->ids);
+	// convert them to string (into a buffer)
+	old_ids_buff = g_list_join_u64(old_ids,",");
+	// copy the parameters to the response code buffer
+	g_string_printf(buffer, "COPYUID %llu %s %s", destmboxid, old_ids_buff->str, new_ids_buff->str);
+	SESSION_OK_WITH_RESP_CODE(buffer->str);
+	// clean up
+	// for old_ids free just the list itself, because the elements are reserved in self->ids (and will be freed later)
+	g_list_free(g_list_first(old_ids));
+	// free the old_ids string buffer
+	g_string_free(old_ids_buff,TRUE);
+	// for self->new_ids free as a whole construct, because elements were reserved for this container
+	g_list_destroy(self->new_ids);
+	// free the new_ids string buffer
+	g_string_free(new_ids_buff,TRUE);
+	// set the new_ids reference to NULL
+	self->new_ids = NULL;
+	// free the response code string buffer
+	g_string_free(buffer, TRUE);
 	SESSION_RETURN;
 }
 

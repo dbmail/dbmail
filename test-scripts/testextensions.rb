@@ -4,6 +4,8 @@
 #  ruby test-scripts/testextensions.rb
 require "test/unit"
 require "net/imap"
+# load the time extensions (for Time.now.prev_month)
+require "active_support/all"
 
 class MyIMAP < Net::IMAP
   #@@debug = true
@@ -56,6 +58,7 @@ class TestImap < Test::Unit::TestCase
     {:username => 'username', :password => 'password'},
     {:username => 'username', :password => 'password'}
   ]
+  IMAP_COPYTO = 'Test'
 
   def imap_conn
     Net::IMAP.debug = true
@@ -99,6 +102,57 @@ EOF
     # check whether the uid_validity and uid_next match
     assert_equal(old_uid_validity, uid_validity.to_i, 'Uidvalidity matches')
     assert(old_uid_next.to_i <= uid_set.to_i, 'The appended message\'s uid is higher than the last uid_next value')
+    imap_logout
+  end
+
+  def test_copy
+    imap_conn
+    # take the first imap user
+    user = IMAP_LOGINS[0]
+    @imap.login(user[:username], user[:password])
+
+    # check for regressions, see whether noop returns what it was returning before the extensions
+    res = @imap.noop
+    assert_equal("NOOP completed", res.data.text, 'NOOP regression test')
+    # check what's the uid_next value and uidvalidity in the target folder
+    @imap.select(IMAP_COPYTO)
+    old_uid_validity = @imap.responses["UIDVALIDITY"][-1]
+    old_uid_next = @imap.responses["UIDNEXT"][-1]
+
+    # switch to the inbox folder
+    @imap.select("inbox")
+    # find messages that were sent in the last month
+    # Set up the search keys
+    search_keys = ['SENTSINCE', Time.now.prev_month.strftime("%e-%b-%Y")]
+    # Search on imap, returns the uids
+    uids = @imap.uid_search(search_keys)
+    # Get the last 4 messages (or less)
+    uids = uids.slice(uids.size > 4 ? uids.size - 4 : 0, 4) # do it this way, because slice returns nil for indexes out of range
+    # assert that there are any uids, if this fails it's rather the test data's "bug" than the application's
+    assert(!uids.empty?, 'There are uids')
+
+    res = @imap.uid_copy(uids, IMAP_COPYTO)
+    code = res.data.code
+
+    assert_respond_to(code, 'name', 'Response code responds to name')
+    assert_respond_to(code, 'data', 'Response code responds to data')
+    # check the format of the answer
+    assert_equal("COPYUID", code.name)
+    uid_validity, orig_uids, new_uids = code.data.split(" ")
+    assert_match(/^\d+$/, uid_validity)
+    assert_match(/^\d+(:\d+)?(,\d+(:\d+)?)*$/, orig_uids) # based on the BNF in rfc4315
+    assert_match(/^\d+(:\d+)?(,\d+(:\d+)?)*$/, new_uids) # based on the BNF in rfc4315
+    orig_uids = @imap.format_imap_to_internal(orig_uids)
+    new_uids = @imap.format_imap_to_internal(new_uids)
+
+    assert_equal(old_uid_validity, uid_validity.to_i, 'Uidvalidity matches')
+    assert_equal(uids.sort, orig_uids.sort, 'Old uids returned by UID COPY match the ones that we actually copied')
+    assert_equal(orig_uids.size, new_uids.size, 'Old and new uids have the same number of elements')
+    new_uids.each do |x|
+      # check whether all new uids are above the last seen uid_next value
+      assert(old_uid_next.to_i <= x.to_i, x.to_s+': the copied message\'s uid is higher than the last uid_next value ('+old_uid_next.to_s+')')
+    end
+
     imap_logout
   end
 end

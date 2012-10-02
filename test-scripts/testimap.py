@@ -257,15 +257,74 @@ class testImapServer(unittest.TestCase):
         """
         self.o.create('testcopy1')
         self.o.create('testcopy2')
+        # insert some messages to the origin folder
         for i in range(1, 20):
             self.o.append('testcopy1', "", "",
                           str(TESTMSG['strict822']))
+
+        # check what's the uid_next value and uidvalidity in the target folder
+        self.o.select('testcopy2')
+        responses = self.o.untagged_responses
+        old_uid_validity = responses["UIDVALIDITY"][-1]
+        old_uid_next = responses["UIDNEXT"][-1]
+
+        # switch to origin folder
         self.o.select('testcopy1')
+        # get the recent message's id
         id = self.o.recent()[1][0]
-        self.assertEquals(self.o.copy(id, 'testcopy2'),
-                          ('OK', ['COPY completed']))
-        self.assertEquals(self.o.copy('1:*', 'testcopy2'),
-                          ('OK', ['COPY completed']))
+        # get the message's original uid
+        result = self.o.fetch(id, "(UID)")
+        response_data = result[1][0]
+        uid = parse_parenthesized_list(response_data[response_data.find("("):])['UID']
+        # copy the recent message from the origin folder
+        result = self.o.copy(id, 'testcopy2')
+        self.assertEquals(result[0], 'OK')
+
+        # check copy's response code
+        code_name, code_data = self.o.response('COPYUID')
+        # check the response code's format
+        self.assertEqual(code_name, 'COPYUID')
+        uid_validity, orig_uids, new_uids = code_data[0].split(" ")
+        self.assertRegexpMatches(uid_validity, "^\d+$")
+        self.assertRegexpMatches(orig_uids, "^\d+$")  # we copied just one message
+        self.assertRegexpMatches(new_uids, "^\d+$")  # we copied just one message
+        # check whether response code elements match
+        self.assertEqual(uid_validity, old_uid_validity)  # 'Uidvalidity matches'
+        self.assertEqual(orig_uids, uid)  # 'Old uid returned by UID COPY matches the one that we actually copied'
+        self.assertLessEqual(int(old_uid_next), int(new_uids)) # 'The copied message\'s uid is higher than the last uid_next value'
+
+        # check again what's the uid_next value and uidvalidity in the target folder
+        self.o.select('testcopy2')
+        responses = self.o.untagged_responses
+        old_uid_validity = responses["UIDVALIDITY"][-1]
+        old_uid_next = responses["UIDNEXT"][-1]
+
+        # switch to origin folder
+        self.o.select('testcopy1')
+        # get the uids of all messages
+        result = self.o.fetch('1:*', "(UID)")
+        uids = [parse_parenthesized_list(x[x.find("("):])['UID'] for x in result[1]]
+        # copy them
+        result = self.o.copy('1:*', 'testcopy2')
+        self.assertEquals(result[0], 'OK')
+
+        # check copy's response code
+        code_name, code_data = self.o.response('COPYUID')
+        # check the response code's format
+        self.assertEqual(code_name, 'COPYUID')
+        uid_validity, orig_uids, new_uids = code_data[0].split(" ")
+        self.assertRegexpMatches(uid_validity, "^\d+$")
+        self.assertRegexpMatches(orig_uids, "^\d+(:\d+)?(,\d+(:\d+)?)*$")
+        self.assertRegexpMatches(new_uids, "^\d+(:\d+)?(,\d+(:\d+)?)*$")
+        orig_uids = orig_uids.split(',')
+        new_uids = new_uids.split(',')
+        # check whether response code elements match
+        self.assertEqual(uid_validity, old_uid_validity)  # 'Uidvalidity matches'
+        self.assertEqual(orig_uids.sort(), uids.sort()) # 'Old uids returned by UID COPY match the ones that we actually copied')
+        self.assertEqual(len(new_uids), len(orig_uids)) # 'Old and new uids have the same number of elements'
+        for i in new_uids:
+            # check whether all new uids are above the last seen uid_next value
+            self.assertLessEqual(int(old_uid_next), int(i))
 
     def testCreate(self):
         """

@@ -54,6 +54,7 @@ typedef struct {
 	uint64_t userid;		/* userID of client in dbase */
 
 	GTree *ids;
+	GList *new_ids; // store new uids after a COPY command
 	GTree *physids;		// cache physmessage_ids for uids 
 	GTree *envelopes;
 	GTree *mbxinfo; 	// cache MailboxState_T 
