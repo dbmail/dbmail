@@ -52,6 +52,9 @@ void disconnect_all(void);
 
 struct event_base *evbase = NULL;
 struct event *sig_int, *sig_hup, *sig_pipe, *sig_term;
+#if DEBUG
+struct event *sig_usr;
+#endif
 
 struct event *pev = NULL;
 SSL_CTX *tls_context;
@@ -607,6 +610,9 @@ void server_sig_cb(int fd, short event, void *arg)
 			mainRestart = 1;
 		case SIGPIPE: // ignore
 		break;
+		case SIGUSR1:
+			g_mem_profile();
+		break;
 		default:
 			exit(0);
 		break;
@@ -631,6 +637,12 @@ static int server_set_sighandler(void)
 	evsignal_add(sig_int, NULL);
 	evsignal_add(sig_hup, NULL);
 	evsignal_add(sig_term, NULL);
+
+#if DEBUG
+	sig_usr = evsignal_new(evbase, SIGUSR1, server_sig_cb, NULL); 
+	evsignal_assign(sig_usr, evbase, SIGUSR1, server_sig_cb, sig_usr); 
+	evsignal_add(sig_usr, NULL);
+#endif
 
 	sigemptyset(&set);
 	sigaddset(&set, SIGPIPE);
