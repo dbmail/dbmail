@@ -53,7 +53,8 @@ COMMON = dbmail-user.c \
 	dm_match.c \
 	dm_iconv.c \
 	dm_dsn.c \
-	dm_sset.c $(DM_GETOPT)
+	dm_sset.c \
+	dm_mempool.c $(DM_GETOPT)
 	
 
 SERVER = server.c \

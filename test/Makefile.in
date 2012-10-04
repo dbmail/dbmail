@@ -46,6 +46,7 @@ host_triplet = @host@
 @WITHCHECK_TRUE@	check_dbmail_list$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_stream$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_cache$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_mempool$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_dsn$(EXEEXT) \
@@ -78,6 +79,7 @@ CONFIG_CLEAN_VPATH_FILES =
 @WITHCHECK_TRUE@	check_dbmail_list$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_stream$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_cache$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_mempool$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_dsn$(EXEEXT) \
@@ -165,6 +167,12 @@ check_dbmail_mailboxstate_OBJECTS =  \
 	$(am_check_dbmail_mailboxstate_OBJECTS)
 @WITHCHECK_TRUE@check_dbmail_mailboxstate_DEPENDENCIES =  \
 @WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
+am__check_dbmail_mempool_SOURCES_DIST = check_dbmail_mempool.c
+@WITHCHECK_TRUE@am_check_dbmail_mempool_OBJECTS =  \
+@WITHCHECK_TRUE@	check_dbmail_mempool.$(OBJEXT)
+check_dbmail_mempool_OBJECTS = $(am_check_dbmail_mempool_OBJECTS)
+@WITHCHECK_TRUE@check_dbmail_mempool_DEPENDENCIES =  \
+@WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
 am__check_dbmail_message_SOURCES_DIST = check_dbmail_message.c
 @WITHCHECK_TRUE@am_check_dbmail_message_OBJECTS =  \
 @WITHCHECK_TRUE@	check_dbmail_message.$(OBJEXT)
@@ -229,6 +237,7 @@ SOURCES = $(check_dbmail_auth_SOURCES) $(check_dbmail_cache_SOURCES) \
 	$(check_dbmail_dsn_SOURCES) $(check_dbmail_imapd_SOURCES) \
 	$(check_dbmail_list_SOURCES) $(check_dbmail_mailbox_SOURCES) \
 	$(check_dbmail_mailboxstate_SOURCES) \
+	$(check_dbmail_mempool_SOURCES) \
 	$(check_dbmail_message_SOURCES) $(check_dbmail_misc_SOURCES) \
 	$(check_dbmail_server_SOURCES) $(check_dbmail_sset_SOURCES) \
 	$(check_dbmail_stream_SOURCES) $(check_dbmail_user_SOURCES) \
@@ -244,6 +253,7 @@ DIST_SOURCES = $(am__check_dbmail_auth_SOURCES_DIST) \
 	$(am__check_dbmail_list_SOURCES_DIST) \
 	$(am__check_dbmail_mailbox_SOURCES_DIST) \
 	$(am__check_dbmail_mailboxstate_SOURCES_DIST) \
+	$(am__check_dbmail_mempool_SOURCES_DIST) \
 	$(am__check_dbmail_message_SOURCES_DIST) \
 	$(am__check_dbmail_misc_SOURCES_DIST) \
 	$(am__check_dbmail_server_SOURCES_DIST) \
@@ -420,6 +430,9 @@ top_srcdir = @top_srcdir@
 @WITHCHECK_TRUE@check_dbmail_cache_SOURCES = check_dbmail_cache.c $(top_srcdir)/src/dm_cache.c
 @WITHCHECK_TRUE@check_dbmail_cache_LDADD = $(CHECK_LDADD)
 @WITHCHECK_TRUE@check_dbmail_cache_INCLUDES = @CHECK_CFLAGS@
+@WITHCHECK_TRUE@check_dbmail_mempool_SOURCES = check_dbmail_mempool.c
+@WITHCHECK_TRUE@check_dbmail_mempool_LDADD = $(CHECK_LDADD)
+@WITHCHECK_TRUE@check_dbmail_mempool_INCLUDES = @CHECK_CFLAGS@
 @WITHCHECK_TRUE@check_dbmail_util_SOURCES = check_dbmail_util.c
 @WITHCHECK_TRUE@check_dbmail_util_LDADD = $(CHECK_LDADD)
 @WITHCHECK_TRUE@check_dbmail_util_INCLUDES = @CHECK_CFLAGS@
@@ -532,6 +545,9 @@ check_dbmail_mailbox$(EXEEXT): $(check_dbmail_mailbox_OBJECTS) $(check_dbmail_ma
 check_dbmail_mailboxstate$(EXEEXT): $(check_dbmail_mailboxstate_OBJECTS) $(check_dbmail_mailboxstate_DEPENDENCIES) $(EXTRA_check_dbmail_mailboxstate_DEPENDENCIES) 
 	@rm -f check_dbmail_mailboxstate$(EXEEXT)
 	$(LINK) $(check_dbmail_mailboxstate_OBJECTS) $(check_dbmail_mailboxstate_LDADD) $(LIBS)
+check_dbmail_mempool$(EXEEXT): $(check_dbmail_mempool_OBJECTS) $(check_dbmail_mempool_DEPENDENCIES) $(EXTRA_check_dbmail_mempool_DEPENDENCIES) 
+	@rm -f check_dbmail_mempool$(EXEEXT)
+	$(LINK) $(check_dbmail_mempool_OBJECTS) $(check_dbmail_mempool_LDADD) $(LIBS)
 check_dbmail_message$(EXEEXT): $(check_dbmail_message_OBJECTS) $(check_dbmail_message_DEPENDENCIES) $(EXTRA_check_dbmail_message_DEPENDENCIES) 
 	@rm -f check_dbmail_message$(EXEEXT)
 	$(LINK) $(check_dbmail_message_OBJECTS) $(check_dbmail_message_LDADD) $(LIBS)
@@ -571,6 +587,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_list.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_mailbox.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_mailboxstate.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_mempool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_message.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_misc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_server.Po@am__quote@

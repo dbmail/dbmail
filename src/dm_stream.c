@@ -132,3 +132,5 @@ int Stream_seek(T M, long offset, int whence)
 	return 0;
 }
 
+#undef T
+#undef NEW

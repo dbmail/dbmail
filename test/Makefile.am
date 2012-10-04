@@ -26,6 +26,7 @@ TESTS=check_dbmail_common \
 	check_dbmail_list \
 	check_dbmail_stream \
 	check_dbmail_cache \
+	check_dbmail_mempool \
 	check_dbmail_user \
 	check_dbmail_util \
 	check_dbmail_dsn \
@@ -65,6 +66,10 @@ check_dbmail_stream_INCLUDES=@CHECK_CFLAGS@
 check_dbmail_cache_SOURCES=check_dbmail_cache.c $(top_srcdir)/src/dm_cache.c
 check_dbmail_cache_LDADD=$(CHECK_LDADD)
 check_dbmail_cache_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_mempool_SOURCES=check_dbmail_mempool.c
+check_dbmail_mempool_LDADD=$(CHECK_LDADD)
+check_dbmail_mempool_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_util_SOURCES=check_dbmail_util.c
 check_dbmail_util_LDADD=$(CHECK_LDADD)
