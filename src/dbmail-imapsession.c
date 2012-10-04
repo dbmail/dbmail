@@ -27,6 +27,7 @@
 
 #include "dbmail.h"
 #include "dm_cache.h"
+#include "dm_mempool.h"
 
 #define THIS_MODULE "imap"
 #define BUFLEN 2048
@@ -47,7 +48,7 @@ extern volatile sig_atomic_t alarm_occured;
 
 extern int selfpipe[2];
 extern GAsyncQueue *queue;
-extern GAsyncQueue *dpool;
+extern Mempool_T dpool;
 extern ServerConfig_T *server_conf;
 
 extern Cache_T cache;
@@ -1154,18 +1155,7 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	if (self->state >= CLIENTSTATE_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
-	D = g_async_queue_try_pop(dpool);
-	if (! D) {
-		guint i;
-		TRACE(TRACE_WARNING, "dpool depleted");
-		D = g_new0(dm_thread_data, DPOOL_SIZE);
-		for (i=0; i<DPOOL_SIZE; i++) {
-			g_async_queue_push(dpool, D++);
-		}
-
-		D = g_async_queue_pop(dpool);
-	}
-
+	D = mempool_pop(dpool);
 
 	D->session = self;
 	D->data = (gpointer)self->buff->str;

@@ -22,8 +22,9 @@
  *
  */
 
-#include "dbmail.h"
 #include <openssl/err.h>
+#include "dbmail.h"
+#include "dm_mempool.h"
 
 #define THIS_MODULE "clientbase"
 
@@ -32,7 +33,7 @@ extern DBParam_T db_params;
 
 extern ServerConfig_T *server_conf;
 extern SSL_CTX *tls_context;
-extern GAsyncQueue *cpool;
+extern Mempool_T cpool;
 
 static void dm_tls_error(void)
 {
@@ -146,16 +147,7 @@ ClientBase_T * client_init(client_sock *c)
 	int serr;
 	ClientBase_T *client;
 
-	client = g_async_queue_try_pop(cpool);
-	if (! client) {
-		TRACE(TRACE_WARNING, "cpool depleted");
-		guint i;
-		client = g_new0(ClientBase_T, CPOOL_SIZE);
-		for (i=0; i<CPOOL_SIZE; i++) {
-			g_async_queue_push(cpool, client++);
-		}
-		client = g_async_queue_pop(cpool);
-	}
+	client = mempool_pop(cpool);
 
 	client->timeout         = g_new0(struct timeval,1);
 	client->client          = c;
@@ -575,7 +567,7 @@ void ci_close(ClientBase_T *self)
 		self->client = NULL;
 	}
 
-	g_async_queue_push(cpool, self);
+	mempool_push(cpool, self);
 }
 
 

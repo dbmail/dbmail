@@ -27,6 +27,8 @@
 #include "dbmail.h"
 #include "dm_request.h"
 #include "dm_cache.h"
+#include "dm_mempool.h"
+
 #define THIS_MODULE "server"
 
 static char *configFile = DEFAULT_CONFIG_FILE;
@@ -37,8 +39,8 @@ volatile sig_atomic_t alarm_occurred = 0;
 // thread data
 int selfpipe[2];
 GAsyncQueue *queue;
-GAsyncQueue *dpool;
-GAsyncQueue *cpool;
+Mempool_T dpool;
+Mempool_T cpool;
 GThreadPool *tpool = NULL;
 
 Cache_T cache = NULL;
@@ -116,16 +118,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	D = g_async_queue_try_pop(dpool);
-	if (! D) {
-		TRACE(TRACE_WARNING, "dpool depleted");
-		guint i;
-		D = g_new0(dm_thread_data, DPOOL_SIZE);
-		for (i=0; i<DPOOL_SIZE; i++) {
-			g_async_queue_push(dpool, D++);
-		}
-		D = g_async_queue_pop(dpool);
-	}
+	D = mempool_pop(dpool);
 
 	D->cb_enter	= cb_enter;
 	D->cb_leave     = cb_leave;
@@ -154,7 +147,7 @@ void dm_thread_data_free(gpointer data)
 	if (D->data) {
 		g_free(D->data); D->data = NULL;
 	}
-	g_async_queue_push(dpool, D);
+	mempool_push(dpool, D);
 }
 
 /* 
@@ -196,11 +189,8 @@ static void dm_thread_dispatch(gpointer data, gpointer user_data)
 
 static int server_setup(ServerConfig_T *conf)
 {
-	dm_thread_data *D;
-	ClientBase_T *CB;
 	GError *err = NULL;
 	guint tpool_size = db_params.max_db_connections;
-	guint i;
 
 	server_set_sighandler();
 
@@ -210,19 +200,9 @@ static int server_setup(ServerConfig_T *conf)
 	// setup a global message cache
 	cache = Cache_new();
 
-	// Async queue for pooling dm_thread_data structs
-	dpool = g_async_queue_new();
-	D = g_new0(dm_thread_data, DPOOL_SIZE);
-	for (i=0; i<DPOOL_SIZE; i++) {
-		g_async_queue_push(dpool, D++);
-	}
-
-	// Async queue for pooling ClientBase_T data
-	cpool = g_async_queue_new();
-	CB = g_new0(ClientBase_T, CPOOL_SIZE);
-	for (i=0; i<CPOOL_SIZE; i++) {
-		g_async_queue_push(cpool, CB++);
-	}
+	// A couple of type-specific memory pools
+	dpool = mempool_new(DPOOL_SIZE, sizeof(dm_thread_data));
+	cpool = mempool_new(CPOOL_SIZE, sizeof(ClientBase_T));
 
 	// Asynchronous message queue for receiving messages
 	// from worker threads in the main thread. 

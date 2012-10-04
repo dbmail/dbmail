@@ -65,6 +65,35 @@ START_TEST(test_mempool_pop)
 }
 END_TEST
 
+START_TEST(test_mempool_push)
+{
+	struct test_data {
+		void *data;
+		char key[128];
+		uint64_t id;
+	};
+
+	Mempool_T M = mempool_new(512, sizeof(uint64_t));
+	for (int i = 0; i < 1024; i++) {
+		uint64_t *i = mempool_pop(M);
+		fail_unless(i != NULL);
+		mempool_push(M, i);
+	}
+	mempool_free(&M);
+
+	struct test_data *data;
+	M = mempool_new(512, sizeof(*data));
+	for (int i = 0; i < 1024; i++) {
+		struct test_data *data = mempool_pop(M);
+		fail_unless(data != NULL);
+		mempool_push(M, data);
+	}
+	mempool_free(&M);
+}
+END_TEST
+
+
+
 Suite *dbmail_mempool_suite(void)
 {
 	Suite *s = suite_create("Dbmail Mempool");
@@ -75,6 +104,7 @@ Suite *dbmail_mempool_suite(void)
 	tcase_add_checked_fixture(tc_mempool, setup, teardown);
 	tcase_add_test(tc_mempool, test_mempool_new);
 	tcase_add_test(tc_mempool, test_mempool_pop);
+	tcase_add_test(tc_mempool, test_mempool_push);
 	
 	return s;
 }
