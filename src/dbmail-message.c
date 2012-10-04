@@ -340,7 +340,7 @@ static char * find_boundary(const char *s)
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
 	C c; R r;
-	char *str = NULL, *internal_date = NULL;
+	char *internal_date = NULL;
 	char *boundary = NULL;
 	GMimeContentType *mimetype = NULL;
 	int maxdepth = 128;
@@ -389,13 +389,10 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if (row == 0) 	internal_date = g_strdup(db_result_get(r,4));
 			blob		= db_result_get_blob(r,5,&l);
 
-			str 		= g_new0(char,l+1);
-			str		= strncpy(str,blob,l);
-			str[l]		= 0;
 			if (is_header) {
 				prev_boundary = got_boundary;
 				prev_is_message = is_message;
-				if ((mimetype = find_type(str))) {
+				if ((mimetype = find_type((char *)blob))) {
 					is_message = g_mime_content_type_is_type(mimetype, "message", "rfc822");
 					g_object_unref(mimetype);
 				}
@@ -403,7 +400,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 			got_boundary = FALSE;
 
-			if (is_header && ((boundary = find_boundary(str)) != NULL)) {
+			if (is_header && ((boundary = find_boundary((char *)blob)) != NULL)) {
 				got_boundary = TRUE;
 				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
 				if (blist[depth]) g_free((void *)blist[depth]);
@@ -426,14 +423,13 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				g_string_append_printf(m, "\n--%s\n", boundary);
 			}
 
-			g_string_append(m, str);
+			g_string_append(m, (char *)blob);
 			dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 
-				is_header, depth, key, order, str);
+				is_header, depth, key, order, (char *)blob);
 
 			if (is_header)
 				g_string_append_printf(m,"\n");
 			
-			g_free(str);
 			row++;
 		}
 	CATCH(SQLException)
