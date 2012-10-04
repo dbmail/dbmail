@@ -85,17 +85,16 @@ T Cache_new(void)
 {
 	T C;
 	
-	C = (T)calloc(1, sizeof(*C));
-	assert(C);
+	C = (T)g_malloc0(sizeof(*C));
 
 	if (pthread_mutex_init(&C->lock, NULL)) {
 		perror("pthread_mutex_init failed");
-		free(C);
+		g_free(C);
 		return NULL;
 	}
 	if (pthread_cond_init(&C->cond, NULL)) {
 		perror("pthread_cond_init failed");
-		free(C);
+		g_free(C);
 		return NULL;
 	}
 
@@ -103,7 +102,7 @@ T Cache_new(void)
 
 	if (pthread_create(&gc_thread_id, NULL, _gc_callback, C)) {
 		perror("GC thread create failed");
-		free(C);
+		g_free(C);
 		return NULL;
 	}
 
@@ -127,7 +126,7 @@ static void Cache_remove(T C, struct element *E)
 	LIST_REMOVE(E, elements);
 	Stream_close(&E->mem);
 	C->size -= (E->size + sizeof(*E));
-	free(E);
+	g_free(E);
 }
 
 void Cache_clear(T C, uint64_t id)
@@ -161,7 +160,7 @@ uint64_t Cache_update(T C, DbmailMessage *message)
 	}
 
 	crlf = get_crlf_encoded(message->raw_content);
-	E = (struct element *)calloc(1, sizeof(struct element));
+	E = (struct element *)g_malloc0(sizeof(struct element));
 	assert(E);
 
 	outcnt = strlen(crlf);

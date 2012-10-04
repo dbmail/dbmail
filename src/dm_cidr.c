@@ -40,8 +40,8 @@ T cidr_new(const char *str)
 	assert(str != NULL);
 	
 	self = (T)g_malloc0(sizeof(*self));
-	self->sock_str = strdup(str);
-	self->socket = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+	self->sock_str = g_strdup(str);
+	self->socket = (struct sockaddr_in *)g_malloc0(sizeof(struct sockaddr_in));
 	self->mask = 32;
 
 	addr = g_strdup(str);
@@ -86,8 +86,8 @@ T cidr_new(const char *str)
 	self->socket->sin_family = AF_INET;
 	self->socket->sin_port = strtol(port,NULL,10);
 	if (! inet_aton(addr,&self->socket->sin_addr)) {
-		free(haddr);
-		free(hport);
+		g_free(haddr);
+		g_free(hport);
 		cidr_free(&self);
 		return NULL;
 	}
@@ -95,8 +95,8 @@ T cidr_new(const char *str)
 	if (self->socket->sin_addr.s_addr == 0)
 		self->mask = 0;
 		
-	free(haddr);
-	free(hport);
+	g_free(haddr);
+	g_free(hport);
 	
 	TRACE(TRACE_DEBUG,"%s", cidr_repr(self));
 	return self;
@@ -151,10 +151,10 @@ void cidr_free(T *self)
 	if (! s) return;
 
 	if (s->socket)
-		free(s->socket);
+		g_free(s->socket);
 	if (s->sock_str)
-		free(s->sock_str);
-	if (s) free(s);
+		g_free(s->sock_str);
+	if (s) g_free(s);
 
 	s = NULL;
 }
