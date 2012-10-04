@@ -21,7 +21,6 @@
 #include "dbmail.h"
 #include "dm_cache.h"
 #include <assert.h>
-#include <sys/queue.h>
 #include <pthread.h>
 
 #define THIS_MODULE "Cache"
@@ -40,21 +39,18 @@
 #define CACHE_LOCK(a) if (pthread_mutex_lock(&(a))) { perror("pthread_mutex_lock failed"); }
 #define CACHE_UNLOCK(a) if (pthread_mutex_unlock(&(a))) { perror("pthread_mutex_unlock failed"); }
 
-LIST_HEAD(listhead, element) head;
-struct listhead *headp;
 struct element {
 	uint64_t id;
-	long ttl;
-	uint64_t ref;
 	uint64_t size;
+	unsigned ttl;
+	unsigned ref;
 	Stream_T mem;
-	LIST_ENTRY(element) elements;
 };
 
 struct T {
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
-	struct listhead elements;
+	GList *elements;
 	uint64_t size;
 	volatile int done; // exit flag
 };
@@ -98,7 +94,7 @@ T Cache_new(void)
 		return NULL;
 	}
 
-	LIST_INIT(&C->elements);
+	C->elements = NULL;
 
 	if (pthread_create(&gc_thread_id, NULL, _gc_callback, C)) {
 		perror("GC thread create failed");
@@ -112,18 +108,21 @@ T Cache_new(void)
 static struct element * Cache_find(T C, uint64_t id)
 {
 	assert(C);
-	struct element *E;
-	E = LIST_FIRST(&C->elements);
-	while (E) {
+	struct element *E = NULL;
+	GList *elements = C->elements;
+	elements = g_list_first(elements);
+	while (elements) {
+		E = elements->data;
 		if (E->id == id) return E;
-		E = LIST_NEXT(E, elements);
+		if (! g_list_next(elements)) break;
+		elements = g_list_next(elements);
 	}
 	return NULL;
 }
 
 static void Cache_remove(T C, struct element *E)
 {
-	LIST_REMOVE(E, elements);
+	C->elements = g_list_remove(C->elements, E);
 	Stream_close(&E->mem);
 	C->size -= (E->size + sizeof(*E));
 	g_free(E);
@@ -177,7 +176,7 @@ uint64_t Cache_update(T C, DbmailMessage *message)
 
 	C->size += outcnt + sizeof(*E);
 
-	LIST_INSERT_HEAD(&C->elements, E, elements);
+	C->elements = g_list_append(C->elements, E);
 	CACHE_UNLOCK(C->lock);
 
 	g_free(crlf);
@@ -240,15 +239,18 @@ void Cache_unref_mem(T C, uint64_t id, Stream_T *M)
 void Cache_gc(T C)
 {
 	assert(C);
-	struct element *E;
+	struct element *E = NULL;
 	time_t now = time(NULL);
+	GList *elements;
 	if (C->done) return;
+	elements = g_list_first(C->elements);
 	TRACE(TRACE_DEBUG, "running GC ...");
-	E = LIST_FIRST(&C->elements);
-	while (E) {
+	while (elements) {
+		E = elements->data;
 		if (E->ttl < now && E->ref <= 0)
 			Cache_remove(C, E);
-		E = LIST_NEXT(E, elements);
+		if (! g_list_next(elements)) break;
+		elements = g_list_next(elements);
 	}
 	TRACE(TRACE_DEBUG, "running GC finished.");
 }
@@ -257,13 +259,17 @@ void Cache_gc(T C)
  */
 void Cache_free(T *C)
 {
-	struct element *E;
+	struct element *E = NULL;
+	GList *elements;
 	T c = *C;
 	CACHE_LOCK(c->lock);
 	c->done = true;
-	while (! LIST_EMPTY(&c->elements)) {
-		E = LIST_FIRST(&c->elements);
+	elements = g_list_first(c->elements);
+	while (elements) {
+		E = elements->data;
 		Cache_remove(c, E);
+		if (! g_list_next(elements)) break;
+		elements = g_list_next(elements);
 	}
 	CACHE_UNLOCK(c->lock);
 	pthread_cond_signal(&c->cond);
