@@ -6,7 +6,13 @@
    fun:config_read
    ...
 }
-
+{
+   dbmail_config/2
+   Memcheck:Leak
+   ...
+   fun:g_key_file_free
+   ...
+}
 {
    g_mime_init
    Memcheck:Leak
