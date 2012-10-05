@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
 	}
 
 	msg = dbmail_message_new();
-	if (! (msg = dbmail_message_init_with_string(msg, raw))) {
+	if (! (msg = dbmail_message_init_with_string(msg, raw->str))) {
 		TRACE(TRACE_ERR, "error reading message");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;

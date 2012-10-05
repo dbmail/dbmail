@@ -58,7 +58,7 @@ B bucket_new(size_t size, size_t blocksize)
 	MB->blocksize = blocksize;
 	MB->queue = g_async_queue_new();
 	for (size_t i=0; i<MB->size; i++) {
-		data = g_malloc0(blocksize);
+		data = g_slice_alloc0(blocksize);
 		g_async_queue_push(MB->queue, data);
 	}
 	return MB;
@@ -69,8 +69,9 @@ void * bucket_pop(B MB)
 	void *data = g_async_queue_try_pop(MB->queue);
 	if (! data) {
 		M_LOCK(MB->lock);
+		TRACE(TRACE_WARNING, "empty bucket for [%ld]", MB->blocksize);
 		for (size_t i = 0; i<MB->size; i++) {
-			data = g_malloc0(MB->blocksize);
+			data = g_slice_alloc0(MB->blocksize);
 			g_async_queue_push(MB->queue, data);
 		}
 		MB->size *= 2;
@@ -92,7 +93,7 @@ void bucket_free(B *MB)
 	M_LOCK(mb->lock);
 	data = g_async_queue_try_pop(mb->queue);
 	while (data) {
-		g_free(data);
+		g_slice_free1(mb->blocksize, data);
 		data = g_async_queue_try_pop(mb->queue);
 	}
 	g_async_queue_unref(mb->queue);
@@ -130,16 +131,17 @@ M mempool_init(void)
 
 void * mempool_pop(M MP, size_t blocksize)
 {
-	M_LOCK(MP->lock);
 	B MB = g_tree_lookup(MP->buckets, &blocksize);
 	if (MB == NULL) {
+		TRACE(TRACE_WARNING, "missing bucket for [%ld]", blocksize);
 		MB = bucket_new(INIT_BUCKETSIZE, blocksize);
 		assert(MB);
 		size_t *key = g_new0(size_t,1);
 		*key = blocksize;
+		M_LOCK(MP->lock);
 		g_tree_insert(MP->buckets, key, MB);
+		M_UNLOCK(MP->lock);
 	}
-	M_UNLOCK(MP->lock);
 	return bucket_pop(MB);
 }
 

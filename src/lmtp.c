@@ -462,7 +462,7 @@ int lmtp(ClientSession_T * session)
 	/* Here's where it gets really exciting! */
 	case LMTP_DATA:
 		msg = dbmail_message_new();
-		dbmail_message_init_with_string(msg, session->rbuff);
+		dbmail_message_init_with_string(msg, session->rbuff->str);
 		dbmail_message_set_header(msg, "Return-Path", (char *)session->from->data);
 		g_string_truncate(session->rbuff,0);
 		g_string_maybe_shrink(session->rbuff);

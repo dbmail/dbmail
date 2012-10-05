@@ -105,12 +105,10 @@ START_TEST(test_insert_messages)
 	int result;
 	DbmailMessage *message;
 	GList *dsnusers = NULL;
-	GString *tmp;
 	Delivery_T *dsnuser = g_new0(Delivery_T,1);
 	
 	message = dbmail_message_new();
-	tmp = g_string_new(multipart_message);
-	message = dbmail_message_init_with_string(message,tmp);
+	message = dbmail_message_init_with_string(message,multipart_message);
 
 	dsnuser_init(dsnuser);
 	dsnuser->address = g_strdup("testuser1");
@@ -121,7 +119,6 @@ START_TEST(test_insert_messages)
 	fail_unless(result==0,"insert_messages failed");
 
 	dsnuser_free_list(dsnusers);
-	g_string_free(tmp,TRUE);
 	dbmail_message_free(message);
 }
 END_TEST

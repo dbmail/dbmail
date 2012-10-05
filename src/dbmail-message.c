@@ -455,7 +455,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			g_string_append_printf(m, "\n");
 	}
 	
-	self = dbmail_message_init_with_string(self,m);
+	self = dbmail_message_init_with_string(self,m->str);
 	dbmail_message_set_internal_date(self, internal_date);
 	g_free(internal_date);
 	g_string_free(m,TRUE);
@@ -721,10 +721,10 @@ int dbmail_message_get_class(const DbmailMessage *self)
 
 /* \brief initialize a previously created DbmailMessage using a GString
  * \param the empty DbmailMessage
- * \param GString *content contains the raw message
+ * \param char *content contains the raw message
  * \return the filled DbmailMessage
  */
-DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GString *str)
+DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char *str)
 {
 	GMimeObject *content;
 	GMimeParser *parser;
@@ -733,18 +733,18 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GStri
 
 	assert(self->content == NULL);
 
-	stream = g_mime_stream_mem_new_with_buffer(str->str, str->len);
+	stream = g_mime_stream_mem_new_with_buffer(str, strlen(str));
 	g_mime_stream_mem_set_owner(GMIME_STREAM_MEM(stream), TRUE);
 
 	parser = g_mime_parser_new_with_stream(stream);
 	g_object_unref(stream);
 
-	if (strncmp(str->str, "From ", 5) == 0) {
+	if (strncmp(str, "From ", 5) == 0) {
 		/* don't use gmime's from scanner since body lines may begin with 'From ' */
 		char *end;
-		if ((end = g_strstr_len(str->str, 80, "\n"))) {
-			size_t l = end - str->str;
-			from = g_strndup(str->str, l);
+		if ((end = g_strstr_len(str, 80, "\n"))) {
+			size_t l = end - str;
+			from = g_strndup(str, l);
 			TRACE(TRACE_DEBUG, "From_ [%s]", from);
 		}
 	}
@@ -1056,7 +1056,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 		return NULL;
 	}
 	
-	self = dbmail_message_init_with_string(self,m);
+	self = dbmail_message_init_with_string(self,m->str);
 	dbmail_message_set_internal_date(self, internal_date);
 
 	if (internal_date) g_free(internal_date);

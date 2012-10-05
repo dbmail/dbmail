@@ -168,7 +168,7 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 			Stream_read(M, cached, size);
 			s = g_string_new_len(cached, size);
 			g_free(cached);
-			msg = dbmail_message_init_with_string(msg, s);
+			msg = dbmail_message_init_with_string(msg, s->str);
 			self->message = msg;
 			self->message->id = *id;
 

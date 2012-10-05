@@ -3624,16 +3624,12 @@ int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr
 {
         DbmailMessage *message;
 	int result;
-	GString *msgdata_string;
 
 	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
 
-	msgdata_string = g_string_new(msgdata);
-
         message = dbmail_message_new();
-        message = dbmail_message_init_with_string(message, msgdata_string);
+        message = dbmail_message_init_with_string(message, msgdata);
 	dbmail_message_set_internal_date(message, (char *)internal_date);
-	g_string_free(msgdata_string, TRUE); 
         
         if (dbmail_message_store(message) < 0) {
 		dbmail_message_free(message);

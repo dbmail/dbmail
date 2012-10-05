@@ -36,14 +36,11 @@ static Cache_T Cache = NULL;
 
 static DbmailMessage  * message_init(const char *message)
 {
-	GString *s;
 	DbmailMessage *m;
 
-	s = g_string_new(message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, s);
+	m = dbmail_message_init_with_string(m, message);
 	dbmail_message_store(m);
-	g_string_free(s,TRUE);
 
 	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
 

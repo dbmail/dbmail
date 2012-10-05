@@ -465,6 +465,7 @@ static void server_exit(void)
 	disconnect_all();
 	server_close_sockets(server_conf);
 	Cache_free(&cache);
+	mempool_close(&mpool);
 }
 	
 static void server_create_sockets(ServerConfig_T * conf)

@@ -45,7 +45,7 @@
  */
 
 DbmailMessage * dbmail_message_new(void);
-DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const GString *content);
+DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char *content);
 DbmailMessage * dbmail_message_construct(DbmailMessage *self, 
 		const gchar *sender, const gchar *recipient, 
 		const gchar *subject, const gchar *body);

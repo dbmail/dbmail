@@ -131,13 +131,10 @@ FILE *i;
 
 static DbmailMessage  * message_init(const char *message)
 {
-	GString *s;
 	DbmailMessage *m;
 
-	s = g_string_new(message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, s);
-	g_string_free(s,TRUE);
+	m = dbmail_message_init_with_string(m, message);
 
 	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
 
@@ -394,12 +391,10 @@ END_TEST
 START_TEST(test_dbmail_message_retrieve)
 {
 	DbmailMessage *m, *n;
-	GString *s;
 	uint64_t physid;
 
-	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, s);
+	m = dbmail_message_init_with_string(m, multipart_message);
 	fail_unless(m != NULL, "dbmail_message_init_with_string failed");
 
 	dbmail_message_set_header(m, 
@@ -417,7 +412,6 @@ START_TEST(test_dbmail_message_retrieve)
 
 	dbmail_message_free(m);
 	dbmail_message_free(n);
-	g_string_free(s,TRUE);
 
 }
 END_TEST
@@ -433,22 +427,15 @@ START_TEST(test_dbmail_message_init_with_string)
 	fail_unless(g_list_length(t)==3,"Too few or too many headers in tuple [%d]\n", 
 			g_list_length(t));
 	dbmail_message_free(m);
-	
-//	m = message_init(simple_message_part);
-//	fail_unless(dbmail_message_get_class(m)==DBMAIL_MESSAGE_PART, "init_with string failed");
-//	dbmail_message_free(m);
 }
 END_TEST
 
 START_TEST(test_dbmail_message_get_internal_date)
 {
 	DbmailMessage *m;
-	GString *s;
-
-	s = g_string_new(rfc822);
 
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, s);
+	m = dbmail_message_init_with_string(m, rfc822);
 	// From_ contains: Wed Sep 14 16:47:48 2005
 	const char *expect = "2005-09-14 16:47:48";
 	const char *expect03 = "2003-09-14 16:47:48";
@@ -480,7 +467,6 @@ START_TEST(test_dbmail_message_get_internal_date)
 	fail_unless(MATCH(expect75,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect75, result);
 	g_free(result);
 
-	g_string_free(s,TRUE);
 	dbmail_message_free(m);
 	
 }
@@ -519,17 +505,14 @@ END_TEST
 START_TEST(test_dbmail_message_hdrs_to_string)
 {
 	char *result;
-	GString *s;
 	DbmailMessage *m;
 	
-	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-        m = dbmail_message_init_with_string(m, s);
+        m = dbmail_message_init_with_string(m, multipart_message);
 
 	result = dbmail_message_hdrs_to_string(m);
 	fail_unless(strlen(result)==676, "dbmail_message_hdrs_to_string failed [%d] != [634]\n[%s]\n", strlen(result), result);
 	
-	g_string_free(s,TRUE);
         dbmail_message_free(m);
 	g_free(result);
 }
@@ -540,27 +523,22 @@ END_TEST
 START_TEST(test_dbmail_message_body_to_string)
 {
 	char *result;
-	GString *s;
 	DbmailMessage *m;
 	
-	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-        m = dbmail_message_init_with_string(m,s);
+        m = dbmail_message_init_with_string(m,multipart_message);
 	result = dbmail_message_body_to_string(m);
 	fail_unless(strlen(result)==1057, "dbmail_message_body_to_string failed [%d] != [1057]\n[%s]\n", strlen(result),result);
 	
         dbmail_message_free(m);
-	g_string_free(s,TRUE);
 	g_free(result);
 
-	s = g_string_new(outlook_multipart);
 	m = dbmail_message_new();
-        m = dbmail_message_init_with_string(m,s);
+        m = dbmail_message_init_with_string(m,outlook_multipart);
 	result = dbmail_message_body_to_string(m);
 	fail_unless(strlen(result)==330, "dbmail_message_body_to_string failed [330 != %d:%s]", strlen(result), result);
 	
         dbmail_message_free(m);
-	g_string_free(s,TRUE);
 	g_free(result);
 
 	
@@ -578,14 +556,11 @@ END_TEST
 START_TEST(test_dbmail_message_set_header)
 {
 	DbmailMessage *m;
-	GString *s;
-	s =  g_string_new(multipart_message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,s);
+	m = dbmail_message_init_with_string(m,multipart_message);
 	dbmail_message_set_header(m, "X-Foobar","Foo Bar");
 	fail_unless(dbmail_message_get_header(m, "X-Foobar")!=NULL, "set_header failed");
 	dbmail_message_free(m);
-	g_string_free(s,TRUE);
 }
 END_TEST
 
@@ -594,13 +569,10 @@ START_TEST(test_dbmail_message_get_header)
 	char *t;
 	DbmailMessage *h = dbmail_message_new();
 	DbmailMessage *m = dbmail_message_new();
-	GString *s, *j;
 	
-	s = g_string_new(multipart_message);
-	m = dbmail_message_init_with_string(m, s);
+	m = dbmail_message_init_with_string(m, multipart_message);
 	t = dbmail_message_hdrs_to_string(m);
-	j = g_string_new(t);
-	h = dbmail_message_init_with_string(h, j);
+	h = dbmail_message_init_with_string(h, t);
 	g_free(t);
 	
 	fail_unless(dbmail_message_get_header(m, "X-Foobar")==NULL, "get_header failed on full message");
@@ -611,30 +583,22 @@ START_TEST(test_dbmail_message_get_header)
 	
 	dbmail_message_free(m);
 	dbmail_message_free(h);
-	g_string_free(s,TRUE);
-	g_string_free(j,TRUE);
-
 }
 END_TEST
 
 START_TEST(test_dbmail_message_encoded)
 {
 	DbmailMessage *m = dbmail_message_new();
-	GString *s = g_string_new(encoded_message_koi);
 	//const char *exp = ":: [ Arrty ] :: [ Roy (L) Stèphanie ]  <over.there@hotmail.com>";
 	uint64_t id = 0;
 
-	m = dbmail_message_init_with_string(m, s);
-
+	m = dbmail_message_init_with_string(m, encoded_message_koi);
 	fail_unless(strcmp(dbmail_message_get_header(m,"From"),"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=<bad@foo.ru>")==0, 
 			"dbmail_message_get_header failed for koi-8 encoded header");
 	dbmail_message_free(m);
 
-
 	m = dbmail_message_new();
-	g_string_printf(s, "%s", utf7_header);
-	m = dbmail_message_init_with_string(m, s);
-	g_string_free(s, TRUE);
+	m = dbmail_message_init_with_string(m, utf7_header);
 
 	dbmail_message_store(m);
 	id = dbmail_message_get_physid(m);
@@ -643,26 +607,21 @@ START_TEST(test_dbmail_message_encoded)
 	m = dbmail_message_new();
 	m = dbmail_message_retrieve(m, id);
 	dbmail_message_free(m);
-
-
 }
 END_TEST
+
 START_TEST(test_dbmail_message_8bit)
 {
 	DbmailMessage *m = dbmail_message_new();
-	GString *s = g_string_new(raw_message_koi);
 
-	m = dbmail_message_init_with_string(m, s);
-	g_string_free(s,TRUE);
+	m = dbmail_message_init_with_string(m, raw_message_koi);
 
 	dbmail_message_store(m);
 	dbmail_message_free(m);
 
 	/* */
 	m = dbmail_message_new();
-	s = g_string_new(encoded_message_utf8);
-	m = dbmail_message_init_with_string(m, s);
-	g_string_free(s, TRUE);
+	m = dbmail_message_init_with_string(m, encoded_message_utf8);
 
 	dbmail_message_store(m);
 	dbmail_message_free(m);
@@ -673,41 +632,35 @@ START_TEST(test_dbmail_message_cache_headers)
 {
 	DbmailMessage *m = dbmail_message_new();
 	char *s = g_new0(char,20);
-	GString *j =  g_string_new(multipart_message);
-	m = dbmail_message_init_with_string(m,j);
+	m = dbmail_message_init_with_string(m,multipart_message);
 	dbmail_message_set_header(m, 
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
 	dbmail_message_free(m);
-	g_string_free(j,TRUE);
 
 	sprintf(s,"%.*s",10,"abcdefghijklmnopqrstuvwxyz");
 	fail_unless(MATCH(s,"abcdefghij"),"string truncate failed");
 	g_free(s);
 
 	m = dbmail_message_new();
-	j = g_string_new(multipart_message);
-	m = dbmail_message_init_with_string(m,j);
+	m = dbmail_message_init_with_string(m,multipart_message);
 	dbmail_message_set_header(m,
 			"Subject",
 			"=?utf-8?Q?[xxxxxxxxxxxxxxxxxx.xx_0000747]:_=C3=84nderungen_an_der_Artikel?= =?utf-8?Q?-Detailseite?="
 			);
 	dbmail_message_store(m);
 	dbmail_message_free(m);
-	g_string_free(j,TRUE);
 }
 END_TEST
 
 START_TEST(test_dbmail_message_get_header_addresses)
 {
 	GList * result;
-	GString *s;
 	DbmailMessage *m;
 
-	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,s);
+	m = dbmail_message_init_with_string(m,multipart_message);
 	
 	result = dbmail_message_get_header_addresses(m, "Cc");
 	result = g_list_first(result);
@@ -718,19 +671,16 @@ START_TEST(test_dbmail_message_get_header_addresses)
 
 	g_list_destroy(result);
 	dbmail_message_free(m);
-	g_string_free(s,TRUE);
 }
 END_TEST
 
 START_TEST(test_dbmail_message_get_header_repeated)
 {
 	GList *headers;
-	GString *s;
 	DbmailMessage *m;
 
-	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,s);
+	m = dbmail_message_init_with_string(m,multipart_message);
 	
 	headers = dbmail_message_get_header_repeated(m, "Received");
 
@@ -743,7 +693,6 @@ START_TEST(test_dbmail_message_get_header_repeated)
 	fail_unless(g_list_length(headers)==3, "dbmail_message_get_header_repeated failed");
 	
 	dbmail_message_free(m);
-	g_string_free(s,TRUE);
 }
 END_TEST
 
@@ -803,7 +752,7 @@ START_TEST(test_dbmail_message_get_size)
 
 	/* */
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(rfc822));
+	m = dbmail_message_init_with_string(m, rfc822);
 
 	i = dbmail_message_get_size(m, FALSE);
 	fail_unless(i==277, "dbmail_message_get_size failed");
@@ -814,7 +763,7 @@ START_TEST(test_dbmail_message_get_size)
 
 	/* */
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new("From: paul\n\n"));
+	m = dbmail_message_init_with_string(m, "From: paul\n\n");
 
 	i = dbmail_message_get_size(m, FALSE);
 	fail_unless(i==12, "dbmail_message_get_size failed [%d]", i);
