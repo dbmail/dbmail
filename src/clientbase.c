@@ -33,7 +33,7 @@ extern DBParam_T db_params;
 
 extern ServerConfig_T *server_conf;
 extern SSL_CTX *tls_context;
-extern Mempool_T cpool;
+extern Mempool_T mpool;
 
 static void dm_tls_error(void)
 {
@@ -147,7 +147,7 @@ ClientBase_T * client_init(client_sock *c)
 	int serr;
 	ClientBase_T *client;
 
-	client = mempool_pop(cpool);
+	client = mempool_pop(mpool, sizeof(*client));
 
 	client->timeout         = g_new0(struct timeval,1);
 	client->client          = c;
@@ -567,7 +567,7 @@ void ci_close(ClientBase_T *self)
 		self->client = NULL;
 	}
 
-	mempool_push(cpool, self);
+	mempool_push(mpool, self, sizeof(*self));
 }
 
 

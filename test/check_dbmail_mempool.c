@@ -47,21 +47,21 @@ void teardown(void)
 
 START_TEST(test_mempool_new)
 {
-	Mempool_T M = mempool_new(512, sizeof(uint64_t));
+	Mempool_T M = mempool_init();
 	fail_unless(M != NULL);
-	mempool_free(&M);
+	mempool_close(&M);
 }
 END_TEST
 
 START_TEST(test_mempool_pop)
 {
-	Mempool_T M = mempool_new(512, sizeof(uint64_t));
+	Mempool_T M = mempool_init();
 	for (int i = 0; i < 1024; i++) {
-		uint64_t *i = mempool_pop(M);
+		uint64_t *i = mempool_pop(M, sizeof(uint64_t));
 		fail_unless(i != NULL);
 		g_free(i);
 	}
-	mempool_free(&M);
+	mempool_close(&M);
 }
 END_TEST
 
@@ -73,22 +73,20 @@ START_TEST(test_mempool_push)
 		uint64_t id;
 	};
 
-	Mempool_T M = mempool_new(512, sizeof(uint64_t));
+	Mempool_T M = mempool_init();
 	for (int i = 0; i < 1024; i++) {
-		uint64_t *i = mempool_pop(M);
+		uint64_t *i = mempool_pop(M, sizeof(uint64_t));
 		fail_unless(i != NULL);
-		mempool_push(M, i);
+		mempool_push(M, i, sizeof(*i));
 	}
-	mempool_free(&M);
 
 	struct test_data *data;
-	M = mempool_new(512, sizeof(*data));
 	for (int i = 0; i < 1024; i++) {
-		struct test_data *data = mempool_pop(M);
+		data = mempool_pop(M, sizeof(*data));
 		fail_unless(data != NULL);
-		mempool_push(M, data);
+		mempool_push(M, data, sizeof(*data));
 	}
-	mempool_free(&M);
+	mempool_close(&M);
 }
 END_TEST
 

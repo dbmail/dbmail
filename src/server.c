@@ -39,8 +39,7 @@ volatile sig_atomic_t alarm_occurred = 0;
 // thread data
 int selfpipe[2];
 GAsyncQueue *queue;
-Mempool_T dpool;
-Mempool_T cpool;
+Mempool_T mpool;
 GThreadPool *tpool = NULL;
 
 Cache_T cache = NULL;
@@ -118,7 +117,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	D = mempool_pop(dpool);
+	D = mempool_pop(mpool, sizeof(*D));
 
 	D->cb_enter	= cb_enter;
 	D->cb_leave     = cb_leave;
@@ -147,7 +146,7 @@ void dm_thread_data_free(gpointer data)
 	if (D->data) {
 		g_free(D->data); D->data = NULL;
 	}
-	mempool_push(dpool, D);
+	mempool_push(mpool, D, sizeof(*D));
 }
 
 /* 
@@ -200,9 +199,8 @@ static int server_setup(ServerConfig_T *conf)
 	// setup a global message cache
 	cache = Cache_new();
 
-	// A couple of type-specific memory pools
-	dpool = mempool_new(DPOOL_SIZE, sizeof(dm_thread_data));
-	cpool = mempool_new(CPOOL_SIZE, sizeof(ClientBase_T));
+	// 
+	mpool = mempool_init();
 
 	// Asynchronous message queue for receiving messages
 	// from worker threads in the main thread. 

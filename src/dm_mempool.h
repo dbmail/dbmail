@@ -20,17 +20,17 @@
 #ifndef DM_MEMPOOL_H
 #define DM_MEMPOOL_H
 /*
- * provide simple type specific memory pools of pre-allocated structs
+ * provide simple memory pool
  */
-#define T Mempool_T
+#define M Mempool_T
 
-typedef struct T *T;
+typedef struct M *M;
 
-extern T      mempool_new(size_t, size_t);
-extern void * mempool_pop(T);
-extern void   mempool_push(T, void *);
-extern void   mempool_free(T *);
+extern M      mempool_init(void);
+extern void * mempool_pop(M, size_t);
+extern void   mempool_push(M, void *, size_t);
+extern void   mempool_close(M *);
 
-#undef T
+#undef M
 
 #endif

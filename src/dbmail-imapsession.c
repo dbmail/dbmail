@@ -48,7 +48,7 @@ extern volatile sig_atomic_t alarm_occured;
 
 extern int selfpipe[2];
 extern GAsyncQueue *queue;
-extern Mempool_T dpool;
+extern Mempool_T mpool;
 extern ServerConfig_T *server_conf;
 
 extern Cache_T cache;
@@ -1155,7 +1155,7 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 	if (self->state >= CLIENTSTATE_LOGOUT) return;
 	if (self->buff->len < 1) return;
 
-	D = mempool_pop(dpool);
+	D = mempool_pop(mpool, sizeof(*D));
 
 	D->session = self;
 	D->data = (gpointer)self->buff->str;
