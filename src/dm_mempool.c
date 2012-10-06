@@ -46,8 +46,10 @@ B bucket_new(size_t size, size_t blocksize)
 	B MB;
 	assert(size > 0);
 	void *data;
+	size_t i;
 	NEW(MB);
 
+	TRACE(TRACE_WARNING, "new bucket for [%ld]", blocksize);
 	if (pthread_mutex_init(&MB->lock, NULL)) {
 		perror("pthread_mutex_init failed");
 		g_free(MB);
@@ -57,7 +59,7 @@ B bucket_new(size_t size, size_t blocksize)
 	MB->size = size;
 	MB->blocksize = blocksize;
 	MB->queue = g_async_queue_new();
-	for (size_t i=0; i<MB->size; i++) {
+	for (i=0; i<MB->size; i++) {
 		data = g_slice_alloc0(blocksize);
 		g_async_queue_push(MB->queue, data);
 	}
@@ -68,9 +70,10 @@ void * bucket_pop(B MB)
 {
 	void *data = g_async_queue_try_pop(MB->queue);
 	if (! data) {
+		size_t i;
 		M_LOCK(MB->lock);
 		TRACE(TRACE_WARNING, "empty bucket for [%ld]", MB->blocksize);
-		for (size_t i = 0; i<MB->size; i++) {
+		for (i = 0; i<MB->size; i++) {
 			data = g_slice_alloc0(MB->blocksize);
 			g_async_queue_push(MB->queue, data);
 		}
