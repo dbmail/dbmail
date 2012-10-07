@@ -54,6 +54,7 @@ COMMON = dbmail-user.c \
 	dm_iconv.c \
 	dm_dsn.c \
 	dm_sset.c \
+	$(top_srcdir)/src/mpool/mpool.c \
 	dm_mempool.c $(DM_GETOPT)
 	
 

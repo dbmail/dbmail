@@ -106,10 +106,10 @@ am__libdbmail_la_SOURCES_DIST = dbmail-user.c dbmail-message.c \
 	dbmail-mailbox.c dm_mailboxstate.c dm_cram.c dm_capa.c \
 	dm_config.c dm_debug.c dm_list.c dm_db.c dm_sievescript.c \
 	dm_acl.c dm_misc.c dm_pidfile.c dm_digest.c dm_match.c \
-	dm_iconv.c dm_dsn.c dm_sset.c dm_mempool.c dm_getopt.c \
-	server.c clientsession.c clientbase.c dm_tls.c dm_http.c \
-	dm_request.c dm_stream.c dm_cache.c dm_cidr.c authmodule.c \
-	sortmodule.c
+	dm_iconv.c dm_dsn.c dm_sset.c $(top_srcdir)/src/mpool/mpool.c \
+	dm_mempool.c dm_getopt.c server.c clientsession.c clientbase.c \
+	dm_tls.c dm_http.c dm_request.c dm_stream.c dm_cache.c \
+	dm_cidr.c authmodule.c sortmodule.c
 @USE_DM_GETOPT_TRUE@am__objects_1 = libdbmail_la-dm_getopt.lo
 am__objects_2 = libdbmail_la-dbmail-user.lo \
 	libdbmail_la-dbmail-message.lo libdbmail_la-dbmail-mailbox.lo \
@@ -121,7 +121,8 @@ am__objects_2 = libdbmail_la-dbmail-user.lo \
 	libdbmail_la-dm_pidfile.lo libdbmail_la-dm_digest.lo \
 	libdbmail_la-dm_match.lo libdbmail_la-dm_iconv.lo \
 	libdbmail_la-dm_dsn.lo libdbmail_la-dm_sset.lo \
-	libdbmail_la-dm_mempool.lo $(am__objects_1)
+	libdbmail_la-mpool.lo libdbmail_la-dm_mempool.lo \
+	$(am__objects_1)
 am__objects_3 = libdbmail_la-server.lo libdbmail_la-clientsession.lo \
 	libdbmail_la-clientbase.lo libdbmail_la-dm_tls.lo \
 	libdbmail_la-dm_http.lo libdbmail_la-dm_request.lo \
@@ -399,6 +400,7 @@ COMMON = dbmail-user.c \
 	dm_iconv.c \
 	dm_dsn.c \
 	dm_sset.c \
+	$(top_srcdir)/src/mpool/mpool.c \
 	dm_mempool.c $(DM_GETOPT)
 
 SERVER = server.c \
@@ -645,6 +647,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_sset.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_stream.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_tls.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-mpool.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-server.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-sortmodule.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lmtp.Po@am__quote@
@@ -811,6 +814,13 @@ libdbmail_la-dm_sset.lo: dm_sset.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dm_sset.c' object='libdbmail_la-dm_sset.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -c -o libdbmail_la-dm_sset.lo `test -f 'dm_sset.c' || echo '$(srcdir)/'`dm_sset.c
+
+libdbmail_la-mpool.lo: $(top_srcdir)/src/mpool/mpool.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -MT libdbmail_la-mpool.lo -MD -MP -MF $(DEPDIR)/libdbmail_la-mpool.Tpo -c -o libdbmail_la-mpool.lo `test -f '$(top_srcdir)/src/mpool/mpool.c' || echo '$(srcdir)/'`$(top_srcdir)/src/mpool/mpool.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libdbmail_la-mpool.Tpo $(DEPDIR)/libdbmail_la-mpool.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/mpool/mpool.c' object='libdbmail_la-mpool.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -c -o libdbmail_la-mpool.lo `test -f '$(top_srcdir)/src/mpool/mpool.c' || echo '$(srcdir)/'`$(top_srcdir)/src/mpool/mpool.c
 
 libdbmail_la-dm_mempool.lo: dm_mempool.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -MT libdbmail_la-dm_mempool.lo -MD -MP -MF $(DEPDIR)/libdbmail_la-dm_mempool.Tpo -c -o libdbmail_la-dm_mempool.lo `test -f 'dm_mempool.c' || echo '$(srcdir)/'`dm_mempool.c
