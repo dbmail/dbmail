@@ -34,8 +34,9 @@ struct M {
 M mempool_init(void)
 {
 	M MP;
-	NEW(MP);
-	MP->pool = mpool_open(0,0,0,NULL);
+	mpool_t *mp = mpool_open(0,0,0,NULL);
+	MP = mpool_calloc(mp, 1, sizeof(*MP), NULL);
+	MP->pool = mp;
 	return MP;
 }
 
@@ -51,9 +52,9 @@ void mempool_push(M MP, void *block, size_t blocksize)
 
 void mempool_close(M *MP) 
 {
-	M mp = *MP;
-	mpool_close(mp->pool);
-	g_free(mp);
+	M m = *MP;
+	mpool_t *mp = m->pool;
+	mpool_close(mp);
 	mp = NULL;
 }
 
