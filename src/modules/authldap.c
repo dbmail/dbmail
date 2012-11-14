@@ -37,7 +37,7 @@ typedef struct _ldap_cfg {
 	Field_T user_objectclass, forw_objectclass;
 	Field_T cn_string;
 	Field_T field_uid, field_cid, min_cid, max_cid, field_nid, min_nid, max_nid;
-	Field_T field_mail, field_mailalt, mailaltprefix;
+	Field_T field_mail;
 	Field_T field_maxmail, field_passwd;
 	Field_T field_fwd, field_fwdsave, field_fwdtarget, fwdtargetprefix;
 	Field_T field_members;
@@ -1285,12 +1285,9 @@ uint64_t auth_md5_validate(ClientBase_T *ci UNUSED, char *username UNUSED,
  * \attention aliases list needs to be empty.
  *            which sets list->start to NULL.
  */
-
-
-
 GList * auth_get_user_aliases(uint64_t user_idnr)
 {
-	const char *fields[] = { _ldap_cfg.field_mail, NULL };
+	char **fields =  g_strsplit(_ldap_cfg.field_mail, 0);
 	GString *t = g_string_new("");
 	GList *aliases = NULL;
 	GList *entlist, *fldlist, *attlist;
@@ -1309,6 +1306,7 @@ GList * auth_get_user_aliases(uint64_t user_idnr)
 		dm_ldap_freeresult(entlist);
 	}
 	g_string_free(t,TRUE);
+	g_strfreev(fields);
 	return aliases;
 }
 
@@ -1326,24 +1324,30 @@ GList * auth_get_user_aliases(uint64_t user_idnr)
 
 GList * auth_get_aliases_ext(const char *alias)
 {
+	int i = 0;
 	const char *fields[] = { _ldap_cfg.field_fwdtarget, NULL };
+	char **field_mail = g_strsplit(_ldap_cfg.field_mail,0);
 	GString *t = g_string_new("");
 	GList *aliases = NULL;
 	GList *entlist, *fldlist, *attlist;
 	
-	g_string_printf(t,"%s=%s", _ldap_cfg.field_mail, alias);
-	if ((entlist = __auth_get_every_match(t->str, fields))) {
-		entlist = g_list_first(entlist);
-		fldlist = g_list_first(entlist->data);
-		attlist = g_list_first(fldlist->data);
-		while (attlist) {
-			aliases = g_list_append(aliases, g_strdup(attlist->data));
-			if (! g_list_next(attlist))
-				break;
-			attlist = g_list_next(attlist);
+	while (field_mail[i]) {
+		g_string_printf(t,"%s=%s", field_mail[i], alias);
+		if ((entlist = __auth_get_every_match(t->str, fields))) {
+			entlist = g_list_first(entlist);
+			fldlist = g_list_first(entlist->data);
+			attlist = g_list_first(fldlist->data);
+			while (attlist) {
+				aliases = g_list_append(aliases, g_strdup(attlist->data));
+				if (! g_list_next(attlist))
+					break;
+				attlist = g_list_next(attlist);
+			}
+			dm_ldap_freeresult(entlist);
 		}
-		dm_ldap_freeresult(entlist);
+		i++;
 	}
+	g_strfreev(field_mail);
 	g_string_free(t,TRUE);
 	return aliases;
 }
