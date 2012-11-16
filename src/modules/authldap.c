@@ -1287,7 +1287,7 @@ uint64_t auth_md5_validate(ClientBase_T *ci UNUSED, char *username UNUSED,
  */
 GList * auth_get_user_aliases(uint64_t user_idnr)
 {
-	char **fields =  g_strsplit(_ldap_cfg.field_mail, 0);
+	char **fields =  g_strsplit(_ldap_cfg.field_mail,",",0);
 	GString *t = g_string_new("");
 	GList *aliases = NULL;
 	GList *entlist, *fldlist, *attlist;
@@ -1326,7 +1326,7 @@ GList * auth_get_aliases_ext(const char *alias)
 {
 	int i = 0;
 	const char *fields[] = { _ldap_cfg.field_fwdtarget, NULL };
-	char **field_mail = g_strsplit(_ldap_cfg.field_mail,0);
+	char **field_mail = g_strsplit(_ldap_cfg.field_mail,",",0);
 	GString *t = g_string_new("");
 	GList *aliases = NULL;
 	GList *entlist, *fldlist, *attlist;
