@@ -42,17 +42,20 @@ extern char *configFile;
  *
  */
 Capa_T A;
+Mempool_T pool;
 
 void setup(void)
 {
 	configure_debug(255,0);
 	config_read(configFile);
-	A = Capa_new();
+	pool = mempool_open();
+	A = Capa_new(pool);
 }
 
 void teardown(void)
 {
 	Capa_free(&A);
+	mempool_close(&pool);
 }
 
 START_TEST(test_capa_new)

@@ -21,13 +21,13 @@
 #ifndef DM_DIGEST_H
 #define DM_DIGEST_H
 
-char *dm_digest(const unsigned char * hash, hashid type);
-char *dm_tiger(const char * const s);
-char *dm_sha1(const char * const s);
-char *dm_sha256(const char * const s);
-char *dm_sha512(const char * const s);
-char *dm_whirlpool(const char * const s);
-char *dm_md5(const char * const s);
-char *dm_md5_base64(const char * const s);
+int dm_digest(const unsigned char * hash, hashid type, char *);
+int dm_tiger(const char * const s, char *);
+int dm_sha1(const char * const s, char *);
+int dm_sha256(const char * const s, char *);
+int dm_sha512(const char * const s, char *);
+int dm_whirlpool(const char * const s, char *);
+int dm_md5(const char * const s, char *);
+int dm_md5_base64(const char * const s, char *);
 
 #endif

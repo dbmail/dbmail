@@ -99,7 +99,7 @@ static int send_vacation(DbmailMessage *message,
 		return 0;
 	}
 
-	DbmailMessage *new_message = dbmail_message_new();
+	DbmailMessage *new_message = dbmail_message_new(message->pool);
 	new_message = dbmail_message_construct(new_message, to, from, subject, body);
 	dbmail_message_set_header(new_message, "X-DBMail-Vacation", handle);
 
@@ -129,19 +129,20 @@ int send_alert(uint64_t user_idnr, char *subject, char *body)
 
 	// Only send each unique alert once a day.
 	char *tmp = g_strconcat(subject, body, NULL);
-	char *handle = dm_md5(tmp);
 	char *userchar = g_strdup_printf("%lu", user_idnr);
+	char handle[FIELDSIZE];
+
+	memset(handle, 0, sizeof(handle));
+       	dm_md5(tmp, handle);
 	if (db_replycache_validate(userchar, "send_alert", handle, 1) != DM_SUCCESS) {
 		TRACE(TRACE_INFO, "Already sent alert [%s] to user [%lu] today", subject, user_idnr);
 		g_free(userchar);
-		g_free(handle);
 		g_free(tmp);
 		return 0;
 	} else {
 		TRACE(TRACE_INFO, "Sending alert [%s] to user [%lu]", subject, user_idnr);
 		db_replycache_register(userchar, "send_alert", handle);
 		g_free(userchar);
-		g_free(handle);
 		g_free(tmp);
 	}
 
@@ -161,7 +162,7 @@ int send_alert(uint64_t user_idnr, char *subject, char *body)
 	// Get the user's login name.
 	char *to = auth_get_userid(user_idnr);
 
-	new_message = dbmail_message_new();
+	new_message = dbmail_message_new(NULL);
 	new_message = dbmail_message_construct(new_message, to, from, subject, body);
 
 	// Pre-insert the message and get a new_message->id
@@ -201,7 +202,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	struct sort_context *m = (struct sort_context *)my;
 	const char *message, *subject, *fromaddr, *handle;
 	const char *rc_to, *rc_from;
-	char *rc_handle;
+	char rc_handle[FIELDSIZE];
 	int days, mime;
 
 	days = sieve2_getvalue_int(s, "days");
@@ -219,7 +220,8 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (days < 1) days = 1;
 	if (days > 30) days = 30;
 
-	rc_handle = dm_md5((char * const) handle);
+	memset(rc_handle, 0, sizeof(rc_handle));
+	dm_md5((char * const) handle, rc_handle);
 
 	// FIXME: should be validated as a user might try
 	// to forge an address from their script.
@@ -227,7 +229,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (!rc_from)
 		rc_from = dbmail_message_get_header(m->message, "Delivered-To");
 	if (!rc_from)
-		rc_from = m->message->envelope_recipient->str;
+		rc_from = p_string_str(m->message->envelope_recipient);
 
 	rc_to = dbmail_message_get_header(m->message, "Reply-To");
 	if (!rc_to)
@@ -242,8 +244,6 @@ int sort_vacation(sieve2_context_t *s, void *my)
 		TRACE(TRACE_INFO, "Vacation suppressed to [%s] from [%s] handle [%s] repeat days [%d]",
 			rc_to, rc_from, rc_handle, days);
 	}
-
-	g_free(rc_handle);
 
 	m->result->cancelkeep = 0;
 	return SIEVE2_OK;
@@ -275,7 +275,7 @@ int sort_notify(sieve2_context_t *s, void *my)
 	if (!rc_from)
 		rc_from = dbmail_message_get_header(m->message, "Delivered-To");
 	if (!rc_from)
-		rc_from = m->message->envelope_recipient->str;
+		rc_from = p_string_str(m->message->envelope_recipient);
 
 	rc_to = dbmail_message_get_header(m->message, "Reply-To");
 	if (!rc_to)
@@ -305,7 +305,7 @@ int sort_redirect(sieve2_context_t *s, void *my)
 	 * recipient changed. As a fallback, we'll use the redirecting user. */
 	from = dbmail_message_get_header(m->message, "Return-Path");
 	if (!from)
-		from = m->message->envelope_recipient->str;
+		from = p_string_str(m->message->envelope_recipient);
 
 	if (send_redirect(m->message, to, from) != 0) {
 		return SIEVE2_ERROR_FAIL;
@@ -537,6 +537,7 @@ int sort_getheader(sieve2_context_t *s, void *my)
 			break;
 		headers = g_list_next(headers);
 	}
+	g_list_free(g_list_first(headers));
 
 	/* We have to free the header array, but not its contents. */
 	m->freelist = g_list_prepend(m->freelist, bodylist);

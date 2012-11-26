@@ -76,7 +76,7 @@ int db_disconnect(void);
 
 void log_query_time(char *query, struct timeval before, struct timeval after);
 
-S db_stmt_prepare(C c,const char *query, ...);
+PreparedStatement_T db_stmt_prepare(Connection_T, const char *, ...);
 int db_stmt_set_str(S stmt, int index, const char *x);
 int db_stmt_set_int(S stmt, int index, int x);
 int db_stmt_set_u64(S stmt, int index, uint64_t x);
@@ -764,5 +764,11 @@ char * db_returning(const char *s);
 int db_mailbox_seq_update(uint64_t mailbox_id);
 
 int db_rehash_store(void);
+
+#undef P
+#undef S
+#undef R
+#undef C
+#undef U
 
 #endif

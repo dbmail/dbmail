@@ -22,18 +22,15 @@
 #define DM_CAPA_H
 
 #include <glib.h>
+#include "dm_mempool.h"
 
-#define T Capa_T
+typedef struct Capa_T *Capa_T;
 
-typedef struct T *T;
-
-extern T               Capa_new(void);
-extern const gchar *   Capa_as_string(T);
-extern gboolean        Capa_match(T, const char *); 
-extern void            Capa_add(T, const char *);
-extern void            Capa_remove(T, const char *);
-extern void            Capa_free(T *);
-
-#undef T
+extern Capa_T          Capa_new(Mempool_T);
+extern const gchar *   Capa_as_string(Capa_T);
+extern gboolean        Capa_match(Capa_T, const char *); 
+extern void            Capa_add(Capa_T, const char *);
+extern void            Capa_remove(Capa_T, const char *);
+extern void            Capa_free(Capa_T *);
 
 #endif

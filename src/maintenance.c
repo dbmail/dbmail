@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
 
 static int db_count_iplog(TimeString_T lasttokeep, uint64_t *rows)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	Field_T to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
@@ -383,7 +383,7 @@ static int db_cleanup_iplog(TimeString_T lasttokeep)
 
 static int db_count_replycache(TimeString_T lasttokeep, uint64_t *rows)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 	Field_T to_date_str;
 	assert(rows != NULL);
 	*rows = 0;
@@ -414,7 +414,7 @@ static int db_cleanup_replycache(TimeString_T lasttokeep)
 
 static int db_count_deleted(uint64_t * rows)
 {
-	C c; R r; volatile int t = TRUE;
+	Connection_T c; ResultSet_T r; volatile int t = TRUE;
 	assert(rows != NULL); *rows = 0;
 
 	c = db_con_get();
@@ -444,7 +444,7 @@ static int db_deleted_purge(void)
 
 static int db_deleted_count(uint64_t * rows)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 	assert(rows); *rows = 0;
 
 	c = db_con_get();
@@ -956,7 +956,7 @@ int do_rehash(void)
 
 int do_migrate(int migrate_limit)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	int id = 0;
 	int count = 0;
 	DbmailMessage *m;
@@ -977,7 +977,7 @@ int do_migrate(int migrate_limit)
 		{
 			count++;
 			id = db_result_get_u64(r,0);
-			m = dbmail_message_new();
+			m = dbmail_message_new(NULL);
 			m = dbmail_message_retrieve(m, id);
 			if(! dm_message_store(m)) {
 				if(verbose) qprintf ("%d ",id);
@@ -1094,7 +1094,7 @@ int find_time(const char *timespec, TimeString_T *timestring)
 /* Delete message from mailbox if it is Trash and the message date less then passed date */
 int do_erase_old(int days, char * mbtrash_name)
 {
-	C c; S s; R r;
+	Connection_T c; PreparedStatement_T s; ResultSet_T r;
 	char expire [DEF_FRAGSIZE];
 	memset(expire,0,sizeof(expire));
 	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), days);
@@ -1131,7 +1131,7 @@ int do_erase_old(int days, char * mbtrash_name)
 /* Move message to Trash if the message is in INBOX mailbox and date less then passed date. */
 int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
 {
-	C c; R r; R r1; S s; S s1; S s2;
+	Connection_T c; ResultSet_T r; ResultSet_T r1; PreparedStatement_T s; PreparedStatement_T s1; PreparedStatement_T s2;
 	int skip = 1;
 	char expire [DEF_FRAGSIZE];
         uint64_t mailbox_to;

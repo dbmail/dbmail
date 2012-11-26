@@ -29,6 +29,12 @@
 
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
+#define P ConnectionPool_T
+#define S PreparedStatement_T
+#define R ResultSet_T
+#define C Connection_T
+#define U URL_T
+
 
 int auth_connect()
 {
@@ -269,7 +275,8 @@ int auth_change_password(uint64_t user_idnr, const char *new_pass, const char *e
 		db_stmt_set_str(s, 1, new_pass);
 		db_stmt_set_str(s, 2, enctype?enctype:"");
 		db_stmt_set_u64(s, 3, user_idnr);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -294,7 +301,8 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 {
 	int is_validated = 0;
 	char salt[13], cryptres[35], real_username[DM_USERNAME_LEN];
-	char *hashstr, *dbpass = NULL, *encode = NULL;
+	char *dbpass = NULL, *encode = NULL;
+	char hashstr[FIELDSIZE];
 	const char *tuser;
 	int result, t = FALSE;
 	C c; R r;
@@ -302,6 +310,7 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 	memset(salt,0,sizeof(salt));
 	memset(cryptres,0,sizeof(cryptres));
 	memset(real_username,0,sizeof(real_username));
+	memset(hashstr, 0, sizeof(hashstr));
 
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
@@ -376,9 +385,8 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 		/* get password */
 		if (strncmp(dbpass, "$1$", 3)) {
 			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-			hashstr = dm_md5(password);
+			dm_md5(password, hashstr);
 			is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-			g_free(hashstr);
 		} else {
 			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
 			strncpy(salt, dbpass, 12);
@@ -390,39 +398,32 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 		}
 	} else if (strcasecmp(encode, "md5sum") == 0) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-		hashstr = dm_md5(password);
+		dm_md5(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-		g_free(hashstr);
 	} else if (strcasecmp(encode, "md5base64") == 0) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
-		hashstr = dm_md5_base64(password);
+		dm_md5_base64(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-		g_free(hashstr);
 	} else if (strcasecmp(encode, "whirlpool") == 0) {
 		TRACE(TRACE_DEBUG, "validating using WHIRLPOOL hash comparison");
-		hashstr = dm_whirlpool(password);
+		dm_whirlpool(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
-		g_free(hashstr);
 	} else if (strcasecmp(encode, "sha512") == 0) {
 		TRACE(TRACE_DEBUG, "validating using SHA-512 hash comparison");
-		hashstr = dm_sha512(password);
+		dm_sha512(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
-		g_free(hashstr);
 	} else if (strcasecmp(encode, "sha256") == 0) {
 		TRACE(TRACE_DEBUG, "validating using SHA-256 hash comparison");
-		hashstr = dm_sha256(password);
+		dm_sha256(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 64) == 0) ? 1 : 0;
-		g_free(hashstr);
 	} else if (strcasecmp(encode, "sha1") == 0) {
 		TRACE(TRACE_DEBUG, "validating using SHA-1 hash comparison");
-		hashstr = dm_sha1(password);
+		dm_sha1(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-		g_free(hashstr);
 	} else if (strcasecmp(encode, "tiger") == 0) {
 		TRACE(TRACE_DEBUG, "validating using TIGER hash comparison");
-		hashstr = dm_tiger(password);
+		dm_tiger(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 48) == 0) ? 1 : 0;
-		g_free(hashstr);
 	}
 
 	if (dbpass) g_free(dbpass);
@@ -440,7 +441,8 @@ uint64_t auth_md5_validate(ClientBase_T *ci UNUSED, char *username,
 		unsigned char *md5_apop_he, char *apop_stamp)
 {
 	/* returns useridnr on OK, 0 on validation failed, -1 on error */
-	char *checkstring = NULL, *md5_apop_we;
+	char checkstring[FIELDSIZE];
+	char hash[FIELDSIZE];
 	uint64_t user_idnr = 0;
 	const char *dbpass;
 	C c; R r;
@@ -459,18 +461,19 @@ uint64_t auth_md5_validate(ClientBase_T *ci UNUSED, char *username,
 
 			TRACE(TRACE_DEBUG, "apop_stamp=[%s], userpw=[%s]", apop_stamp, dbpass);
 
-			checkstring = g_strdup_printf("%s%s", apop_stamp, dbpass);
-			md5_apop_we = dm_md5(checkstring);
+			memset(hash, 0, sizeof(hash));
+			memset(checkstring, 0, sizeof(checkstring));
+			g_snprintf(checkstring, FIELDSIZE-1, "%s%s", apop_stamp, dbpass);
+			dm_md5(checkstring, hash);
 
-			TRACE(TRACE_DEBUG, "checkstring for md5 [%s] -> result [%s]", checkstring, md5_apop_we);
-			TRACE(TRACE_DEBUG, "validating md5_apop_we=[%s] md5_apop_he=[%s]", md5_apop_we, md5_apop_he);
+			TRACE(TRACE_DEBUG, "checkstring for md5 [%s] -> result [%s]", checkstring, hash);
+			TRACE(TRACE_DEBUG, "validating md5_apop_we=[%s] md5_apop_he=[%s]", hash, md5_apop_he);
 
-			if (strcmp((char *)md5_apop_he, md5_apop_we) == 0) {
+			if (strcmp((char *)md5_apop_he, hash) == 0) {
 				TRACE(TRACE_NOTICE, "user [%s] is validated using APOP", username);
 			} else {
 				user_idnr = 0; // failed
 			}
-			g_free(md5_apop_we);
 		} else {
 			user_idnr = 0;
 		}
@@ -487,8 +490,6 @@ uint64_t auth_md5_validate(ClientBase_T *ci UNUSED, char *username,
 		TRACE(TRACE_NOTICE, "user [%s] could not be validated", username);
 	else
 		db_user_log_login(user_idnr);
-
-	if (checkstring) g_free(checkstring);
 
 	return user_idnr;
 }
@@ -572,7 +573,8 @@ int auth_addalias(uint64_t user_idnr, const char *alias, uint64_t clientid)
 		db_stmt_set_u64(s, 2, user_idnr);
 		db_stmt_set_u64(s, 3, clientid);
 
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -639,7 +641,8 @@ int auth_addalias_ext(const char *alias,
 		db_stmt_set_str(s, 2, deliver_to);
 		db_stmt_set_u64(s, 3, clientid);
 
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -659,7 +662,8 @@ int auth_removealias(uint64_t user_idnr, const char *alias)
 		s = db_stmt_prepare(c, "DELETE FROM %saliases WHERE deliver_to=? AND lower(alias) = lower(?)",DBPFX);
 		db_stmt_set_u64(s, 1, user_idnr);
 		db_stmt_set_str(s, 2, alias);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
@@ -678,7 +682,8 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 		s = db_stmt_prepare(c, "DELETE FROM %saliases WHERE lower(deliver_to) = lower(?) AND lower(alias) = lower(?)", DBPFX);
 		db_stmt_set_str(s, 1, deliver_to);
 		db_stmt_set_str(s, 2, alias);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
@@ -735,4 +740,11 @@ gboolean auth_requires_shadow_user(void)
 {
 	return FALSE;
 }
+
+#undef P
+#undef S
+#undef R
+#undef C
+#undef U
+
 

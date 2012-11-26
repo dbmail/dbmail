@@ -87,7 +87,8 @@ int main(int argc, char *argv[])
 	DbmailMessage *msg = NULL;
 	char buf[READ_SIZE], *returnpath = NULL;
 	GList *userlist = NULL;
-	GList *dsnusers = NULL;
+	Mempool_T pool = mempool_open();
+	List_T dsnusers = p_list_new(pool);
 	Delivery_T *dsnuser;
 	
 	g_mime_init(0);
@@ -158,7 +159,7 @@ int main(int argc, char *argv[])
 			dsnuser->address = g_strdup(optarg);
 			dsnuser->source = BOX_COMMANDLINE;
 
-			dsnusers = g_list_prepend(dsnusers, dsnuser);
+			dsnusers = p_list_prepend(dsnusers, dsnuser);
 
 			break;
 
@@ -170,7 +171,7 @@ int main(int argc, char *argv[])
 			dsnuser->address = g_strdup(optarg);
 			dsnuser->source = BOX_COMMANDLINE;
 
-			dsnusers = g_list_prepend(dsnusers, dsnuser);
+			dsnusers = p_list_prepend(dsnusers, dsnuser);
 
 			break;
 
@@ -250,7 +251,7 @@ int main(int argc, char *argv[])
 		memset(buf, 0, sizeof(buf));
 	}
 
-	msg = dbmail_message_new();
+	msg = dbmail_message_new(NULL);
 	if (! (msg = dbmail_message_init_with_string(msg, raw->str))) {
 		TRACE(TRACE_ERR, "error reading message");
 		exitcode = EX_TEMPFAIL;
@@ -290,7 +291,7 @@ int main(int argc, char *argv[])
 			dsnuser_init(dsnuser);
 			dsnuser->address = g_strdup((char *) userlist->data);
 	
-			dsnusers = g_list_prepend(dsnusers, dsnuser);
+			dsnusers = p_list_prepend(dsnusers, dsnuser);
 
 			if (! g_list_next(userlist))
 				break;
@@ -302,17 +303,17 @@ int main(int argc, char *argv[])
 	if (deliver_to_mailbox != NULL) {
 		TRACE(TRACE_DEBUG, "setting mailbox for all deliveries to [%s]", deliver_to_mailbox);
 		/* Loop through the dsnusers list, setting the destination mailbox. */
-		dsnusers = g_list_first(dsnusers);
+		dsnusers = p_list_first(dsnusers);
 		while (dsnusers) {
-			((Delivery_T *)dsnusers->data)->mailbox = g_strdup(deliver_to_mailbox);
+			((Delivery_T *)p_list_data(dsnusers))->mailbox = g_strdup(deliver_to_mailbox);
 			if (brute_force) {
-				((Delivery_T *)dsnusers->data)->source = BOX_BRUTEFORCE;
+				((Delivery_T *)p_list_data(dsnusers))->source = BOX_BRUTEFORCE;
 			} else {
-				((Delivery_T *)dsnusers->data)->source = BOX_COMMANDLINE;
+				((Delivery_T *)p_list_data(dsnusers))->source = BOX_COMMANDLINE;
 			}
-			if (! g_list_next(dsnusers))
+			if (! p_list_next(dsnusers))
 				break;
-			dsnusers = g_list_next(dsnusers);
+			dsnusers = p_list_next(dsnusers);
 		}
 	}
 
@@ -378,20 +379,17 @@ int main(int argc, char *argv[])
 
 	if (raw)
 		g_string_free(raw, TRUE);
+
 	dbmail_message_free(msg);
 	dsnuser_free_list(dsnusers);
 	g_list_destroy(userlist);
 	g_free(returnpath);
-
-	TRACE(TRACE_DEBUG, "program memory free");
+	mempool_close(&pool);
 
 	db_disconnect();
 	auth_disconnect();
 	config_free();
-
 	g_mime_shutdown();
-
-	TRACE(TRACE_DEBUG, "library memory free");
 
 	return exitcode;
 }

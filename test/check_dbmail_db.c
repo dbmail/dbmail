@@ -115,7 +115,7 @@ void teardown(void)
 
 START_TEST(test_db_stmt_prepare)
 {
-	C c; S s;
+	Connection_T c; PreparedStatement_T s;
 	c = db_con_get();
 	s = db_stmt_prepare(c, "SELECT 1=1");
 	fail_unless(s != NULL, "db_stmt_prepare failed");
@@ -126,7 +126,7 @@ END_TEST
 
 START_TEST(test_db_stmt_set_str)
 {
-	C c; S s; R r;
+	Connection_T c; PreparedStatement_T s; ResultSet_T r;
 	c = db_con_get();
 	s = db_stmt_prepare(c, "select user_idnr from dbmail_users where userid=?");
 	fail_unless(s != NULL, "db_stmt_prepare failed");
@@ -142,7 +142,7 @@ END_TEST
 
 START_TEST(test_Connection_executeQuery)
 {
-	C c; R r = NULL;
+	Connection_T c; ResultSet_T r = NULL;
 
 	c = db_con_get();
 	TRY

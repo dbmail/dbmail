@@ -296,7 +296,7 @@ char *acl_get_acl(uint64_t mboxid)
 	return g_strstrip(acl_string);
 }
 
-char *acl_listrights(uint64_t userid, uint64_t mboxid)
+const char *acl_listrights(uint64_t userid, uint64_t mboxid)
 {
 	int result;
 	
@@ -309,11 +309,11 @@ char *acl_listrights(uint64_t userid, uint64_t mboxid)
 		/* user is not owner. User will never be granted any right
 		   by default, but may be granted any right by setting the
 		   right ACL */
-		return g_strdup("\"\" l r s w i p k x t e a c d");
+		return "\"\" l r s w i p k x t e a c d";
 	}
 
 	/* user is owner, User will always be granted all rights */
-	return g_strdup(acl_right_chars);
+	return acl_right_chars;
 }
 
 char *acl_myrights(uint64_t userid, uint64_t mboxid)
@@ -370,7 +370,7 @@ int acl_get_rightsstring(uint64_t userid, uint64_t mboxid, char *rightsstring)
 	}
 	
 	memset(&map, '\0', sizeof(struct ACLMap));
-	S = MailboxState_new(mboxid);
+	S = MailboxState_new(NULL, mboxid);
 	MailboxState_setOwner(S, owner_idnr);
 	result = MailboxState_getAcl(S, userid, &map);
 	MailboxState_free(&S);

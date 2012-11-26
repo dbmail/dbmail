@@ -30,7 +30,7 @@ extern DBParam_T db_params;
 
 int dm_sievescript_getbyname(uint64_t user_idnr, char *scriptname, char **script)
 {
-	C c; R r; S s; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = FALSE;
 	assert(scriptname);
 				
 	c = db_con_get();
@@ -59,7 +59,7 @@ int dm_sievescript_isactive(uint64_t user_idnr)
 
 int dm_sievescript_isactive_byname(uint64_t user_idnr, const char *scriptname)
 {
-	C c; R r; S s; volatile int t = TRUE;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = TRUE;
 
 	c = db_con_get();
 	TRY
@@ -87,7 +87,7 @@ int dm_sievescript_isactive_byname(uint64_t user_idnr, const char *scriptname)
 
 int dm_sievescript_get(uint64_t user_idnr, char **scriptname)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 	assert(scriptname);
 	*scriptname = NULL;
 
@@ -109,7 +109,7 @@ int dm_sievescript_get(uint64_t user_idnr, char **scriptname)
 
 int dm_sievescript_list(uint64_t user_idnr, GList **scriptlist)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -133,7 +133,7 @@ int dm_sievescript_list(uint64_t user_idnr, GList **scriptlist)
 int dm_sievescript_rename(uint64_t user_idnr, char *scriptname, char *newname)
 {
 	int active = 0;
-	C c; R r; S s; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = FALSE;
 	assert(scriptname);
 
 	/* 
@@ -184,7 +184,7 @@ int dm_sievescript_rename(uint64_t user_idnr, char *scriptname, char *newname)
 
 int dm_sievescript_add(uint64_t user_idnr, char *scriptname, char *script)
 {
-	C c; R r; S s; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = FALSE;
 	assert(scriptname);
 
 	c = db_con_get();
@@ -230,7 +230,7 @@ int dm_sievescript_add(uint64_t user_idnr, char *scriptname, char *script)
 
 int dm_sievescript_deactivate(uint64_t user_idnr, char *scriptname)
 {
-	C c; S s; volatile gboolean t = FALSE;
+	Connection_T c; PreparedStatement_T s; volatile gboolean t = FALSE;
 	assert(scriptname);
 
 	c = db_con_get();
@@ -238,7 +238,8 @@ int dm_sievescript_deactivate(uint64_t user_idnr, char *scriptname)
 		s = db_stmt_prepare(c, "UPDATE %ssievescripts set active = 0 where owner_idnr = ? and name = ?", DBPFX);
 		db_stmt_set_u64(s, 1, user_idnr);
 		db_stmt_set_str(s, 2, scriptname);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
@@ -250,7 +251,7 @@ int dm_sievescript_deactivate(uint64_t user_idnr, char *scriptname)
 
 int dm_sievescript_activate(uint64_t user_idnr, char *scriptname)
 {
-	C c; S s; volatile gboolean t = FALSE;
+	Connection_T c; PreparedStatement_T s; volatile gboolean t = FALSE;
 	assert(scriptname);
 
 	c = db_con_get();
@@ -282,7 +283,7 @@ int dm_sievescript_activate(uint64_t user_idnr, char *scriptname)
 
 int dm_sievescript_delete(uint64_t user_idnr, char *scriptname)
 {
-	C c; S s; volatile gboolean t = FALSE;
+	Connection_T c; PreparedStatement_T s; volatile gboolean t = FALSE;
 	assert(scriptname);
 
 	c = db_con_get();
@@ -290,7 +291,8 @@ int dm_sievescript_delete(uint64_t user_idnr, char *scriptname)
 		s = db_stmt_prepare(c,"DELETE FROM %ssievescripts WHERE owner_idnr = ? AND name = ?", DBPFX);
 		db_stmt_set_u64(s, 1, user_idnr);
 		db_stmt_set_str(s, 2, scriptname);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY

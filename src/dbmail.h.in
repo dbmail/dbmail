@@ -102,9 +102,10 @@
 
 #include "dm_cram.h"
 #include "dm_capa.h"
+#include "dm_string.h"
+#include "dm_list.h"
 #include "dbmailtypes.h"
 #include "dm_config.h"
-#include "dm_list.h"
 #include "dm_debug.h"
 #include "dm_dsn.h"
 #include "dm_acl.h"

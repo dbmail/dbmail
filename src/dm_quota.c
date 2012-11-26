@@ -26,6 +26,8 @@
 
 #define T Quota_T
 
+#define QUOTA_ROOT_SIZE 128
+
 /* A resource type.
  * RT_STORAGE:  "STORAGE"
  */
@@ -51,7 +53,7 @@ typedef struct {
  *              describing a resource limit
  */
 struct T {
-	char *root;
+	char root[QUOTA_ROOT_SIZE];
 	int n_resources;
 	resource_limit_t resource[0];
 };
@@ -97,11 +99,11 @@ const char * quota_get_root(T quota)
 	return (const char *)quota->root;
 }
 
-int quota_set_root(T quota, char *root)
+int quota_set_root(T quota, const char *root)
 {
-	g_free(quota->root);
-	quota->root = g_strdup(root);
-	return (quota->root == NULL);
+	memset(quota->root, 0, sizeof(quota->root));
+	g_strlcpy(quota->root, root, sizeof(quota->root));
+	return 0;
 }
 
 uint64_t quota_get_limit(T quota)
@@ -118,7 +120,6 @@ uint64_t quota_get_usage(T quota)
 void quota_free(T *quota)
 {
 	T q = *quota;
-	g_free(q->root);
 	g_free(q);
 	q = NULL;
 }
@@ -155,7 +156,7 @@ const char *quota_get_quotaroot(uint64_t useridnr, const char *mailbox,
  *   quotaroot: the quotaroot.
  *   errormsg:  will point to an error message if NULL is returned.
  */
-T quota_get_quota(uint64_t useridnr, char *quotaroot, char **errormsg)
+T quota_get_quota(uint64_t useridnr, const char *quotaroot, char **errormsg)
 {
 	T quota;
 	uint64_t maxmail_size, usage;

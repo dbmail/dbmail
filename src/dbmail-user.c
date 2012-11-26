@@ -146,7 +146,7 @@ int mkpassword(const char * const user, const char * const passwd,
 	int pwindex = 0;
 	int result = 0;
 	char *entry = NULL;
-	char *hashstr = NULL;
+	char hashstr[FIELDSIZE];
 	char pw[130];
 
 	/* These are the easy text names. */
@@ -204,8 +204,9 @@ int mkpassword(const char * const user, const char * const passwd,
 			*enctype = "md5";
 			break;
 		case MD5_DIGEST:
-			hashstr = dm_md5(passwd);
-			null_strncpy(pw, hashstr, 129);
+			memset(hashstr, 0, sizeof(hashstr));
+			dm_md5(passwd, hashstr);
+			strncpy(pw, hashstr, 129);
 			*enctype = "md5sum";
 			break;
 		case MD5_DIGEST_RAW:
@@ -213,12 +214,9 @@ int mkpassword(const char * const user, const char * const passwd,
 			*enctype = "md5sum";
 			break;
 		case MD5_BASE64:
-			{
-			hashstr = dm_md5_base64(passwd);
-			null_strncpy(pw, hashstr, 129);
+			dm_md5_base64(passwd, hashstr);
+			strncpy(pw, hashstr, 129);
 			*enctype = "md5base64";
-			g_free(hashstr);
-			}
 			break;
 		case MD5_BASE64_RAW:
 			null_strncpy(pw, passwd, 129);
@@ -251,28 +249,28 @@ int mkpassword(const char * const user, const char * const passwd,
 			}
 			break;
 		case DM_WHIRLPOOL:
-			hashstr = dm_whirlpool(passwd);
-			null_strncpy(pw, hashstr, 129);
+			dm_whirlpool(passwd, hashstr);
+			strncpy(pw, hashstr, 129);
 			*enctype = "whirlpool";
 			break;
 		case DM_SHA512:
-			hashstr = dm_sha512(passwd);
-			null_strncpy(pw, hashstr, 129);
+			dm_sha512(passwd, hashstr);
+			strncpy(pw, hashstr, 129);
 			*enctype = "sha512";
 			break;
 		case DM_SHA256:
-			hashstr = dm_sha256(passwd);
-			null_strncpy(pw, hashstr, 129);
+			dm_sha256(passwd, hashstr);
+			strncpy(pw, hashstr, 129);
 			*enctype = "sha256";
 			break;
 		case DM_SHA1:
-			hashstr = dm_sha1(passwd);
-			null_strncpy(pw, hashstr, 129);
+			dm_sha1(passwd, hashstr);
+			strncpy(pw, hashstr, 129);
 			*enctype = "sha1";
 			break;
 		case DM_TIGER:
-			hashstr = dm_tiger(passwd);
-			null_strncpy(pw, hashstr, 129);
+			dm_tiger(passwd, hashstr);
+			strncpy(pw, hashstr, 129);
 			*enctype = "tiger";
 			break;
 		default:

@@ -47,7 +47,7 @@ void teardown(void)
 
 START_TEST(test_mempool_new)
 {
-	Mempool_T M = mempool_init();
+	Mempool_T M = mempool_open();
 	fail_unless(M != NULL);
 	mempool_close(&M);
 }
@@ -55,11 +55,11 @@ END_TEST
 
 START_TEST(test_mempool_pop)
 {
-	Mempool_T M = mempool_init();
+	Mempool_T M = mempool_open();
 	for (int i = 0; i < 1024; i++) {
 		uint64_t *i = mempool_pop(M, sizeof(uint64_t));
 		fail_unless(i != NULL);
-		g_free(i);
+		mempool_push(M, i, sizeof(uint64_t));
 	}
 	mempool_close(&M);
 }
@@ -73,7 +73,7 @@ START_TEST(test_mempool_push)
 		uint64_t id;
 	};
 
-	Mempool_T M = mempool_init();
+	Mempool_T M = mempool_open();
 	for (int i = 0; i < 1024; i++) {
 		uint64_t *i = mempool_pop(M, sizeof(uint64_t));
 		fail_unless(i != NULL);

@@ -387,19 +387,22 @@ static int address_is_domain_catchall(Delivery_T *delivery)
 
 static int address_is_userpart_catchall(Delivery_T *delivery)
 {
-	char *userpart = g_strdup(delivery->address);
+	char *userpart;
 	char *userpartcut;
 	int userpart_count;
 
 	if (!delivery->address)
 		return 0;
 
+	userpart = g_strdup(delivery->address);
 	TRACE(TRACE_INFO, "user [%s] checking for userpart forwards.", userpart);
 
 	userpartcut = strchr(userpart, '@');
 
-	if (userpartcut == NULL)
+	if (userpartcut == NULL) {
+		g_free(userpart);
 		return 0;
+	}
 
 	/* Stomp _after_ the @-sign. */
 	*(userpartcut + 1) = '\0';
@@ -410,22 +413,26 @@ static int address_is_userpart_catchall(Delivery_T *delivery)
 	userpart_count = auth_check_user_ext(userpart, &delivery->userids, &delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "userpart [%s] found total of [%d] aliases", userpart, userpart_count);
 
+	g_free(userpart);
+
 	if (userpart_count == 0)
 		return 0;
 
 	return 1;
 }
 
-void dsnuser_free_list(GList *deliveries)
+void dsnuser_free_list(List_T deliveries)
 {
-	deliveries = g_list_first(deliveries);
+	deliveries = p_list_first(deliveries);
 	while (deliveries) {
-		dsnuser_free((Delivery_T *) deliveries->data);
-		g_free((Delivery_T *) deliveries->data);
-		if (! g_list_next(deliveries)) break;
-		deliveries = g_list_next(deliveries);
+		dsnuser_free((Delivery_T *)p_list_data(deliveries));
+		g_free((Delivery_T *) p_list_data(deliveries));
+		if (! p_list_next(deliveries))
+			break;
+		deliveries = p_list_next(deliveries);
 	}
-	g_list_free(g_list_first(deliveries));
+	deliveries = p_list_first(deliveries);
+	p_list_free(&deliveries);
 }
 
 dsn_class_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
@@ -441,16 +448,16 @@ dsn_class_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
 	return DSN_CLASS_NONE;
 }
 
-dsn_class_t dsnuser_worstcase_list(GList *deliveries)
+dsn_class_t dsnuser_worstcase_list(List_T deliveries)
 {
 	delivery_status_t dsn;
 	int ok = 0, temp = 0, fail = 0, fail_quota = 0;
 
-	deliveries = g_list_first(deliveries);
+	deliveries = p_list_first(deliveries);
 	
 	/* Get one reasonable error code for everyone. */
 	while (deliveries) {
-		dsn = ((Delivery_T *) deliveries->data)->dsn;
+		dsn = ((Delivery_T *)p_list_data(deliveries))->dsn;
 		switch (dsn.class) {
 		case DSN_CLASS_OK:	/* Success. */
 			ok = 1;
@@ -468,9 +475,9 @@ dsn_class_t dsnuser_worstcase_list(GList *deliveries)
 		case DSN_CLASS_NONE:	/* Nothing doing. */
 			break;
 		}
-		if (! g_list_next(deliveries))
+		if (! p_list_next(deliveries))
 			break;
-		deliveries = g_list_next(deliveries);
+		deliveries = p_list_next(deliveries);
 	}
 
 	/* If we never made it into the list, all zeroes will
@@ -478,19 +485,19 @@ dsn_class_t dsnuser_worstcase_list(GList *deliveries)
 	return dsnuser_worstcase_int(ok, temp, fail, fail_quota);
 }
 
-int dsnuser_resolve_list(GList *deliveries)
+int dsnuser_resolve_list(List_T deliveries)
 {
 	int ret;
 
-	deliveries = g_list_first(deliveries);
+	deliveries = p_list_first(deliveries);
 
 	/* Loop through the users list */
 	while (deliveries) {
-		if ((ret = dsnuser_resolve((Delivery_T *) deliveries->data)) != 0)
+		if ((ret = dsnuser_resolve((Delivery_T *)p_list_data(deliveries))) != 0)
 			return ret;
-		if (! g_list_next(deliveries))
+		if (! p_list_next(deliveries))
 			break;
-		deliveries = g_list_next(deliveries);
+		deliveries = p_list_next(deliveries);
 	}
 
 	return 0;

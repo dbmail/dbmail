@@ -26,7 +26,6 @@
 
 #include "dbmail.h"
 #include "dm_request.h"
-#include "dm_cache.h"
 #include "dm_mempool.h"
 
 #define THIS_MODULE "server"
@@ -39,13 +38,11 @@ volatile sig_atomic_t alarm_occurred = 0;
 // thread data
 int selfpipe[2];
 GAsyncQueue *queue;
-Mempool_T mpool;
 GThreadPool *tpool = NULL;
-
-Cache_T cache = NULL;
 
 ServerConfig_T *server_conf;
 extern DBParam_T db_params;
+Mempool_T td_pool;
 
 static void server_config_load(ServerConfig_T * conf, const char * const service);
 static int server_set_sighandler(void);
@@ -104,6 +101,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 {
 	GError *err = NULL;
 	ImapSession *s;
+	Mempool_T pool;
 	dm_thread_data *D;
 
 	assert(session);
@@ -117,8 +115,11 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	D = mempool_pop(mpool, sizeof(*D));
-
+	pool = td_pool;
+	D = mempool_pop(pool, sizeof(dm_thread_data));
+	D->magic        = DM_THREAD_DATA_MAGIC;
+	D->status       = 0;
+	D->pool         = pool;
 	D->cb_enter	= cb_enter;
 	D->cb_leave     = cb_leave;
 	D->session	= session;
@@ -135,18 +136,21 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 			g_thread_pool_get_max_unused_threads(),
 			g_thread_pool_get_num_threads(tpool),
 			g_thread_pool_get_max_threads(tpool),
-			g_async_queue_length(queue));
+			g_thread_pool_unprocessed(tpool));
 
 	if (err) TRACE(TRACE_EMERG,"g_thread_pool_push failed [%s]", err->message);
 }
 
 void dm_thread_data_free(gpointer data)
 {
+	Mempool_T pool;
 	dm_thread_data *D = (dm_thread_data *)data;
-	if (D->data) {
-		g_free(D->data); D->data = NULL;
-	}
-	mempool_push(mpool, D, sizeof(*D));
+	if (D->magic != DM_THREAD_DATA_MAGIC)
+		return;
+
+	pool = D->pool;
+	if (pool)
+		mempool_push(pool, D, sizeof(dm_thread_data));
 }
 
 /* 
@@ -159,7 +163,11 @@ void dm_thread_data_sendmessage(gpointer data)
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
 	if (D->data && session && session->ci) {
-		ci_write(session->ci, "%s", (char *)D->data);
+		String_T buf = D->data;
+		Mempool_T pool = session->ci->sock->pool;
+		ci_write(session->ci, "%s", p_string_str(buf));
+		p_string_free(buf, TRUE);
+		mempool_push(pool, D, sizeof(dm_thread_data));
 	}
 }
 
@@ -196,12 +204,6 @@ static int server_setup(ServerConfig_T *conf)
 	if (! MATCH(conf->service_name,"IMAP")) 
 		return 0;
 
-	// setup a global message cache
-	cache = Cache_new();
-
-	// 
-	mpool = mempool_init();
-
 	// Asynchronous message queue for receiving messages
 	// from worker threads in the main thread. 
 	//
@@ -210,8 +212,10 @@ static int server_setup(ServerConfig_T *conf)
 	// Dbmail only needs and uses a single eventbase for now.
 	queue = g_async_queue_new();
 
+	td_pool = mempool_open();
+
 	// Create the thread pool
-	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,FALSE,&err)))
+	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
 	// self-pipe used to push the event-loop
@@ -228,9 +232,8 @@ static int server_setup(ServerConfig_T *conf)
 	return 0;
 }
 
-static void _cb_log_event(int severity, const char *msg)
+static void _cb_log_event(int UNUSED severity, const char *msg)
 {
-	assert(0);
 	TRACE(TRACE_WARNING, "%s", msg);
 }
 
@@ -254,6 +257,9 @@ static int server_start_cli(ServerConfig_T *conf)
 	if (MATCH(conf->service_name,"HTTP")) {
 		TRACE(TRACE_DEBUG,"starting httpd cli server...");
 	} else {
+		Mempool_T pool = mempool_open();
+		client_sock *c = mempool_pop(pool, sizeof(client_sock));
+		c->pool = pool;
 		evthread_use_pthreads();
 #ifdef DEBUG
 		event_enable_debug_mode();
@@ -262,7 +268,7 @@ static int server_start_cli(ServerConfig_T *conf)
 
 		evbase = event_base_new();
 		if (server_setup(conf)) return -1;
-		conf->ClientHandler(NULL);
+		conf->ClientHandler(c);
 		event_base_dispatch(evbase);
 	}
 
@@ -457,6 +463,9 @@ static void server_close_sockets(ServerConfig_T *conf)
 		conf->ssl_socketcount=0;
 		if (conf->socket)
 			unlink(conf->socket);
+
+		g_free(conf->listenSockets);
+		g_free(conf->ssl_listenSockets);
 	}
 }
 
@@ -464,8 +473,7 @@ static void server_exit(void)
 {
 	disconnect_all();
 	server_close_sockets(server_conf);
-	Cache_free(&cache);
-	mempool_close(&mpool);
+	mempool_close(&td_pool);
 }
 	
 static void server_create_sockets(ServerConfig_T * conf)
@@ -498,7 +506,9 @@ static void server_create_sockets(ServerConfig_T * conf)
 
 static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 {
-	client_sock *c = g_new0(client_sock,1);
+	Mempool_T pool = mempool_open();
+	client_sock *c = mempool_pop(pool, sizeof(client_sock));
+	c->pool = pool;
 	struct sockaddr *caddr;
 	struct sockaddr *saddr;
 	struct event *ev = (struct event *)arg;
@@ -520,35 +530,32 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
                         case ECONNABORTED:
                         case EPROTO:
                         case EINTR:
-                                TRACE(TRACE_DEBUG, "%s", strerror(serr));
+                                TRACE(TRACE_DEBUG, "%d:%s", serr, strerror(serr));
                                 break;
                         default:
-                                TRACE(TRACE_ERR, "%s", strerror(serr));
+                                TRACE(TRACE_ERR, "%d:%s", serr, strerror(serr));
                                 break;
                 }
-		g_free(c);
+		mempool_close(&pool);
                 return;
         }
 	
-        caddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
+        caddr = mempool_pop(c->pool, sizeof(struct sockaddr_storage));
 	if (getpeername(c->sock, caddr, (socklen_t *)&len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_INFO, "getpeername::error [%s]", strerror(serr));
-		g_free(caddr);
-		g_free(c);
+		mempool_close(&pool);
 		return;
 	}
 
 	c->caddr = caddr;
 	c->caddr_len = len;
 
-        saddr = (struct sockaddr *)g_new0(struct sockaddr_storage, 1);
+        saddr = mempool_pop(c->pool, sizeof(struct sockaddr_storage));
 	if (getsockname(c->sock, saddr, (socklen_t *)&len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_EMERG, "getsockname::error [%s]", strerror(serr));
-		g_free(saddr);
-		g_free(caddr);
-		g_free(c);
+		mempool_close(&pool);
 		return; // fatal 
 	}
 
@@ -617,7 +624,7 @@ static int server_set_sighandler(void)
 	evsignal_add(sig_hup, NULL);
 	evsignal_add(sig_term, NULL);
 
-#if DEBUG
+#if MEMDEBUG
 	sig_usr = evsignal_new(evbase, SIGUSR1, server_sig_cb, NULL); 
 	evsignal_assign(sig_usr, evbase, SIGUSR1, server_sig_cb, sig_usr); 
 	evsignal_add(sig_usr, NULL);

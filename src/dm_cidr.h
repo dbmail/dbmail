@@ -26,10 +26,10 @@
 
 typedef struct T *T;
 
-extern T      cidr_new(const char *str);
-extern char * cidr_repr(T);
-extern int    cidr_match(T, T);
-extern void   cidr_free(T *);
+extern T             cidr_new(const char *str);
+extern const char *  cidr_repr(T);
+extern int           cidr_match(T, T);
+extern void          cidr_free(T *);
 
 #undef T
 

@@ -127,7 +127,7 @@ int dm_valid_format(const char *str);
 
 
 char *date_sql2imap(const char *sqldate);
-char *date_imap2sql(const char *imapdate);
+int date_imap2sql(const char *imapdate, char *);
 
 int checkmailboxname(const char *s);
 int check_msg_set(const char *s);
@@ -157,17 +157,16 @@ char * imap_message_fetch_headers(uint64_t physid, const GList *headers, gboolea
 
 char * imap_flags_as_string(MailboxState_T S, MessageInfo *msginfo);
 char * imap_cleanup_address(const char *a);
-char * imap_unescape(char *);
 
-char * message_get_charset(GMimeMessage *self);
+const char * message_get_charset(GMimeMessage *self);
 
 uint64_t dm_strtoull(const char *nptr, char **endptr, int base);
 
 /* Free the result with g_strfreev. */
 char **base64_decodev(char *in);
 
-/* return an allocated string containing the cryptographic checksum for buf */
-char * dm_get_hash_for_string(const char *buf);
+/* create a string containing the cryptographic checksum for buf */
+int dm_get_hash_for_string(const char *buf, char *hash);
 
 char * dm_base64_decode(const gchar *s, size_t *len);
 

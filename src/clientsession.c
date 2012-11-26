@@ -31,10 +31,12 @@ extern struct event_base *evbase;
 
 ClientSession_T * client_session_new(client_sock *c)
 {
+	ClientBase_T *ci;
+
 	char unique_id[UID_SIZE];
 
-	ClientSession_T * session = g_new0(ClientSession_T,1);
-	ClientBase_T *ci;
+	ClientSession_T * session = mempool_pop(c->pool, sizeof(ClientSession_T));
+	session->pool = c->pool;
 
 	if (c)
 		ci = client_init(c);
@@ -54,18 +56,30 @@ ClientSession_T * client_session_new(client_sock *c)
         ci->wev = event_new(evbase, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
 
 	session->ci = ci;
-	session->rbuff = g_string_new("");
+	session->rbuff = p_string_new(session->pool, "");
+	session->messagelst = p_list_new(session->pool);
+	session->args = p_list_new(session->pool);
 
 	return session;
 }
 
 void client_session_reset(ClientSession_T * session)
 {
-	dsnuser_free_list(session->rcpt);
-	session->rcpt = NULL;
+	List_T from;
 
-	g_list_destroy(session->from);
-	session->from = NULL;
+	dsnuser_free_list(session->rcpt);
+	session->rcpt = p_list_new(session->pool);
+
+	from = p_list_first(session->from);
+	while (from) {
+		String_T s = p_list_data(from);
+		p_string_free(s, TRUE);
+		from = p_list_next(from);
+	}
+	from = p_list_first(session->from);
+	p_list_free(&from);
+
+	session->from = p_list_new(session->pool);
 
 	if (session->apop_stamp) {
 		g_free(session->apop_stamp);
@@ -92,13 +106,12 @@ void client_session_reset_parser(ClientSession_T *session)
 	session->parser_state = FALSE;
 	session->command_type = FALSE;
 	if (session->rbuff) {
-		g_string_truncate(session->rbuff,0);
-		g_string_maybe_shrink(session->rbuff);
+		p_string_truncate(session->rbuff,0);
 	}
 
 	if (session->args) {
-		g_list_destroy(session->args);
-		session->args = NULL;
+		List_T args = session->args;
+		p_list_free(&args);
 	}
 }
 
@@ -115,9 +128,6 @@ void client_session_bailout(ClientSession_T **session)
 	client_session_reset(c);
 	c->state = CLIENTSTATE_ANY;
 	ci_close(c->ci);
-	c->ci = NULL;
-	g_free(c);
-	c = NULL;
 }
 
 void client_session_read(void *arg)
@@ -134,7 +144,7 @@ void client_session_read(void *arg)
 	} else if (state & CLIENT_EOF) {
 		TRACE(TRACE_NOTICE,"reached EOF");
 		event_del(session->ci->rev);
-		if (session->ci->read_buffer->len < 1)
+		if (p_string_len(session->ci->read_buffer) < 1)
 			client_session_bailout(&session);
 		else 
 			session->handle_input(session);

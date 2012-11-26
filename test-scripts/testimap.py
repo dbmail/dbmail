@@ -267,20 +267,20 @@ class testImapServer(unittest.TestCase):
         # OE query
         result = self.o.fetch(
             id,
-            "(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority " \
-            "X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE " \
+            "(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority "
+            "X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE "
             "RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(len(result[1]), 5)
-        expect = [(' (("somewhere.foo" NIL "somewher" "foo.org")) ' \
-                   '(("somewhere.foo" NIL "somewher" "foo.org")) ' \
-                   '(("somewhere.foo" NIL "somewher" "foo.org")) ' \
-                   '(("test user" NIL "testuser" "foo.org")) ' \
-                   '((NIL NIL "somewher" "foo.org")(NIL NIL "other" ' \
-                   '"bar.org")) NIL {81}', '"Message from "Test User" ' \
-                   '<testuser@test.org> of "Sat, 14 Dec 2002 09:17:00 ' \
+        expect = [(' (("somewhere.foo" NIL "somewher" "foo.org")) '
+                   '(("somewhere.foo" NIL "somewher" "foo.org")) '
+                   '(("somewhere.foo" NIL "somewher" "foo.org")) '
+                   '(("test user" NIL "testuser" "foo.org")) '
+                   '((NIL NIL "somewher" "foo.org")(NIL NIL "other" '
+                   '"bar.org")) NIL {81}', '"Message from "Test User" '
+                   '<testuser@test.org> of "Sat, 14 Dec 2002 09:17:00 '
                    'CST."'),
                   (' {36}', '<"114.5862946l.21522l.0l"@localhost>'),
-                  (') BODY[HEADER.FIELDS (References X-Ref X-Priority ' \
+                  (') BODY[HEADER.FIELDS (References X-Ref X-Priority '
                    'X-MSMail-Priority X-MSOESRec Newsgroups)] {2}',
                    '\r\n'), ')']
         self.assertEquals(result[1][1:], expect)
@@ -302,15 +302,15 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0], 'OK')
 
         result = self.o.fetch(id, "(ENVELOPE)")
-        expect = [('1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" ' \
+        expect = [('1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" '
                    '{21}', 'dbmail "test" message'),
-                  (' (("somewhere.foo" NIL "somewher" "foo.org")) ' \
-                   '(("somewhere.foo" NIL "somewher" "foo.org")) ' \
-                   '(("somewhere.foo" NIL "somewher" "foo.org")) ' \
-                   '(("test user" NIL "testuser" "foo.org")) ' \
-                   '((NIL NIL "somewher" "foo.org")(NIL NIL "other" ' \
+                  (' (("somewhere.foo" NIL "somewher" "foo.org")) '
+                   '(("somewhere.foo" NIL "somewher" "foo.org")) '
+                   '(("somewhere.foo" NIL "somewher" "foo.org")) '
+                   '(("test user" NIL "testuser" "foo.org")) '
+                   '((NIL NIL "somewher" "foo.org")(NIL NIL "other" '
                    '"bar.org")) NIL {81}',
-                   '"Message from "Test User" <testuser@test.org> ' \
+                   '"Message from "Test User" <testuser@test.org> '
                    'of "Sat, 14 Dec 2002 09:17:00 CST."'),
                   (' {36}', '<"114.5862946l.21522l.0l"@localhost>'), '))']
         self.assertEquals(result[0], 'OK')
@@ -329,8 +329,8 @@ class testImapServer(unittest.TestCase):
 
         # TB query
         result = self.o.fetch(
-            id, "(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS " \
-            "(From To Cc Subject Date Message-ID Priority X-Priority " \
+            id, "(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS "
+            "(From To Cc Subject Date Message-ID Priority X-Priority "
             "References Newsgroups In-Reply-To Content-Type)])")
         self.assertEquals(result[0], 'OK')
 

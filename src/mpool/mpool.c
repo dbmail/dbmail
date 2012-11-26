@@ -237,7 +237,7 @@ static	void	*alloc_pages(mpool_t *mp_p, const unsigned int page_n,
   
   size = SIZE_OF_PAGES(mp_p, page_n);
   
-#ifdef DEBUG
+#ifdef MDEBUG
   (void)printf("allocating %u pages or %lu bytes\n", page_n, size);
 #endif
   
@@ -411,7 +411,7 @@ static	int	free_pointer(mpool_t *mp_p, void *addr,
   unsigned long	real_size;
   mpool_free_t	free_pnt;
   
-#ifdef DEBUG
+#ifdef MDEBUG
   (void)printf("freeing a block at %lx of %lu bytes\n", (long)addr, size);
 #endif
   
@@ -641,7 +641,7 @@ static	void	*get_space(mpool_t *mp_p, const unsigned long byte_size,
     
     free_addr = FIRST_ADDR_IN_BLOCK(block_p);
     
-#ifdef DEBUG
+#ifdef MDEBUG
     (void)printf("had to allocate space for %lx of %lu bytes\n",
 		 (long)free_addr, size);
 #endif
@@ -683,7 +683,7 @@ static	void	*get_space(mpool_t *mp_p, const unsigned long byte_size,
       }
     }
     
-#ifdef DEBUG
+#ifdef MDEBUG
     (void)printf("found a free block at %lx of %lu bytes\n",
 		 (long)free_addr, left + size);
 #endif

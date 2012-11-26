@@ -55,7 +55,7 @@ static void start_clock(void)
 	st_time = times(&st_cpu);
 }
 
-static void end_clock(char *msg)
+static void end_clock(char * UNUSED msg)
 {
 	en_time = times(&en_cpu);
 	/*

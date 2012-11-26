@@ -78,24 +78,29 @@ static const char * Trace_To_text(Trace_T level)
  *
  */
 
-#define SYSLOGFORMAT "[%p] %s:[%s] %s(+%d): %s"
+#define SYSLOGFORMAT "%s:[%s] %s(+%d): %s"
 #define STDERRFORMAT "%s %s %s[%d]: [%p] %s:[%s] %s(+%d): %s"
+#define MESSAGESIZE 120
+
 void trace(Trace_T level, const char * module, const char * function, int line, const char *formatstring, ...)
 {
 	Trace_T syslog_level;
 	va_list ap, cp;
 
-	gchar *message = NULL;
+	char message[MESSAGESIZE];
+
 	static int configured=0;
-	size_t l, maxlen=120;
+	size_t l;
 
 	/* Return now if we're not logging anything. */
 	if ( !(level & TRACE_STDERR) && !(level & TRACE_SYSLOG))
 		return;
 
+	memset(message, 0, sizeof(message));
+
 	va_start(ap, formatstring);
 	va_copy(cp, ap);
-	message = g_strdup_vprintf(formatstring, cp);
+	vsnprintf(message, MESSAGESIZE-1, formatstring, cp);
 	va_end(cp);
 
 	l = strlen(message);
@@ -158,11 +163,8 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 				syslog_level = LOG_DEBUG;
 				break;
 		}
-		size_t w = min(l,maxlen);
-		message[w] = '\0';
-		syslog(syslog_level, SYSLOGFORMAT, g_thread_self(), Trace_To_text(level), module, function, line, message);
+		syslog(syslog_level, SYSLOGFORMAT, Trace_To_text(level), module, function, line, message);
 	}
-	g_free(message);
 
 	/* Bail out on fatal errors. */
 	if (level == TRACE_EMERG)

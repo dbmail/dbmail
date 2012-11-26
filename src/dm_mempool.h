@@ -26,8 +26,9 @@
 
 typedef struct M *M;
 
-extern M      mempool_init(void);
+extern M      mempool_open(void);
 extern void * mempool_pop(M, size_t);
+extern void * mempool_resize(M, void *, size_t, size_t);
 extern void   mempool_push(M, void *, size_t);
 extern void   mempool_close(M *);
 

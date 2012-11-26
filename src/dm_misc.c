@@ -111,25 +111,16 @@ int drop_privileges(char *newuser, char *newgroup)
 
 void create_unique_id(char *target, uint64_t message_idnr)
 {
-	GRand *r = g_rand_new();
-	char *a_message_idnr, *a_rand, *md5_str;
-
-	a_rand = g_strdup_printf("%d",g_rand_int(r));
-	g_rand_free(r);
-
+	char md5_str[FIELDSIZE];
 	if (message_idnr != 0) {
-		a_message_idnr = g_strdup_printf("%lu",message_idnr);
-		snprintf(target, UID_SIZE, "%s:%s", a_message_idnr, a_rand);
-		g_free(a_message_idnr);
+		snprintf(target, UID_SIZE, "%lu:%ld", message_idnr, random());
 	} else {
-		snprintf(target, UID_SIZE, "%s", a_rand);
+		snprintf(target, UID_SIZE, "%ld", random());
 	}
 
-	g_free(a_rand);
-
-	md5_str = dm_md5(target);
+	memset(md5_str, 0, sizeof(md5_str));
+	dm_md5(target, md5_str);
 	snprintf(target, UID_SIZE, "%s", md5_str);
-	g_free(md5_str);
 
 	TRACE(TRACE_DEBUG, "created: %s", target);
 }
@@ -384,17 +375,17 @@ GList * g_string_split(GString * string, const gchar * sep)
 {
 	GList * list = NULL;
 	char **array;
-	int i, len = 0;
+	int i = 0;
 	
 	if (string->len == 0)
 		return NULL;
 	
 	array = (char **)g_strsplit((const gchar *)string->str, sep, 0);
-	while(array[len++]);
-	len--;
-	for (i=0; i<len; i++)
-		list = g_list_append(list,g_strdup(array[i]));
-	g_strfreev(array);
+	while(array[i])
+		list = g_list_append(list,array[i++]);
+
+	g_free(array);
+
 	return list;
 }
 char * g_strcasestr(const char *haystack, const char *needle)
@@ -890,16 +881,17 @@ char *date_sql2imap(const char *sqldate)
  * d-mon-yyyy
  * return value is valid until next function call.
  */
-char *date_imap2sql(const char *imapdate)
+int date_imap2sql(const char *imapdate, char *sqldate)
 {
 	struct tm tm;
-	char _sqldate[SQL_INTERNALDATE_LEN + 1];
 	char *last_char;
 	size_t l = strlen(imapdate);
 
+	assert(sqldate);
+
 	if ((l < 10) || (l > 11)) {
 		TRACE(TRACE_DEBUG, "invalid size IMAP date [%s]", imapdate);
-		return g_strdup("");
+		return 1;
 	}
 
 	// bsd needs this:
@@ -907,11 +899,11 @@ char *date_imap2sql(const char *imapdate)
 	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
 	if (last_char == NULL || *last_char != '\0') {
 		TRACE(TRACE_DEBUG, "error parsing IMAP date %s", imapdate);
-		return g_strdup("");
+		return 1;
 	}
-	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN+1, "%Y-%m-%d 00:00:00", &tm);
+	(void) strftime(sqldate, SQL_INTERNALDATE_LEN, "%Y-%m-%d 00:00:00", &tm);
 
-	return g_strdup(_sqldate);
+	return 0;
 }
 
 
@@ -1352,13 +1344,16 @@ static GList * imap_append_hash_as_string(GList *list, const GMimeParam *hash)
 
 		clean2 = g_strcompress(clean1);
 
-		value = g_mime_utils_header_encode_text(clean2);
-		clean3 = g_strescape(value, NULL);
+		if (g_mime_utils_text_is_8bit((const unsigned char *)clean2, strlen(clean2))) {
+			value = g_mime_utils_header_encode_text(clean2);
+			g_free(clean2);
+			clean2 = value;
+		}
+		clean3 = g_strescape(clean2, NULL);
+		g_free(clean2);
 
 		l = g_list_append_printf(l, "\"%s\"", clean3);
 
-		g_free(value);
-		g_free(clean2);
 		g_free(clean3);
 		hash = g_mime_param_next(hash);
 	}
@@ -1835,7 +1830,8 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 	const char *result;
 	char *t;
 	InternetAddressList *alist;
-	char *result_enc, *charset;
+	char *result_enc;
+	const char *charset;
 	
 	charset = message_get_charset(message);
 
@@ -1852,7 +1848,6 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 		list = g_list_append_printf(list,"NIL");
 	}
 
-	g_free(charset);
 	return list;
 }
 
@@ -1861,16 +1856,15 @@ static void  get_msg_charset_frompart(GMimeObject UNUSED *parent, GMimeObject *p
 {
 	const char *charset=NULL;
 	if (*((char **)data)==NULL && (charset=g_mime_object_get_content_type_parameter(part,"charset"))) {
-	        *((char **)data)=g_strdup(charset);
+	        *((char **)data)=(char *)charset;
 	}
 	return;
 }
 
-
-char * message_get_charset(GMimeMessage *message)
+const char * message_get_charset(GMimeMessage *message)
 {
 	GMimeObject *mime_part=NULL;
-	char *mess_charset=NULL;
+	const char *mess_charset=NULL;
 
 	if (message)
 		mime_part=g_mime_message_get_mime_part(message);
@@ -1878,9 +1872,10 @@ char * message_get_charset(GMimeMessage *message)
 	if (mime_part) {
 		const char * charset = NULL;
 		if ((charset=g_mime_object_get_content_type_parameter(mime_part,"charset")))
-			mess_charset=g_strdup(charset);
+			mess_charset = charset;
 	}
-	if (mess_charset==NULL)
+
+	if (mess_charset == NULL)
 		g_mime_message_foreach(message,get_msg_charset_frompart,&mess_charset);
 
 	return mess_charset;
@@ -1917,12 +1912,17 @@ char * imap_get_envelope(GMimeMessage *message)
 	result = (char *)g_mime_object_get_header(GMIME_OBJECT(message),"Subject");
 
 	if (result) {
-		char *charset = message_get_charset(message);
+		const char *charset = message_get_charset(message);
 		char * subj = dbmail_iconv_str_to_utf8(result, charset);
-		g_free(charset);
-		s = g_mime_utils_header_encode_text((const char *)subj);
-		t = dbmail_imap_astring_as_string(s);
-		g_free(s);
+		TRACE(TRACE_DEBUG, "[%s] [%s] -> [%s]", charset, result, subj);
+		if (g_mime_utils_text_is_8bit((unsigned char *)subj, strlen(subj))) {
+			s = g_mime_utils_header_encode_text((const char *)subj);
+			TRACE(TRACE_DEBUG, "[%s] -> [%s]", subj, s);
+			g_free(subj);
+			subj = s;
+		}
+		t = dbmail_imap_astring_as_string(subj);
+		TRACE(TRACE_DEBUG, "[%s] -> [%s]", subj, t);
 		g_free(subj);
 		list = g_list_append_printf(list,"%s", t);
 		g_free(t);
@@ -2174,33 +2174,6 @@ char * imap_cleanup_address(const char *a)
 	return r;
 }
 
-#define DEBUG_UNESCAPE 0
-
-char * imap_unescape(char *s)
-{
-	char *head = s, *this = s, *next = s;
-#if DEBUG_UNESCAPE
-	char *orig = g_strdup(s);
-#endif
-	while (*this) {
-		next = this+1;
-		if (*this && *next && (*this == '\\') && (*next == '"' || *next == '\\')) {
-			this++;
-			continue;
-		}
-		*head++ = *this++;
-	}
-	*head = 0;
-
-#if DEBUG_UNESCAPE
-	if (! MATCH(s, orig))
-		TRACE(TRACE_DEBUG, "[%s] -> [%s]", orig, s);
-	g_free(orig);
-#endif
-
-	return s;
-}
-
 uint64_t dm_strtoull(const char *nptr, char **endptr, int base)
 {
 	errno = 0;
@@ -2255,12 +2228,12 @@ char **base64_decodev(char *str)
 	return ret;
 }
 
-char * dm_get_hash_for_string(const char *buf)
+int dm_get_hash_for_string(const char *buf, char *digest)
 {
 	Field_T hash_algorithm;
-	char *digest;
 	static hashid type;
 	static int initialized=0;
+	int result=0;
 
 	if (! initialized) {
 		if (config_get_value("hash_algorithm", "DBMAIL", hash_algorithm) < 0)
@@ -2287,30 +2260,30 @@ char * dm_get_hash_for_string(const char *buf)
 
 	switch(type) {
 		case MHASH_MD5:
-			digest=dm_md5(buf);
+			result=dm_md5(buf,digest);
 		break;
 		case MHASH_SHA1:
-			digest=dm_sha1(buf);		
+			result=dm_sha1(buf,digest);		
 		break;
 		case MHASH_SHA256:
-			digest=dm_sha256(buf);		
+			result=dm_sha256(buf,digest);		
 		break;
 		case MHASH_SHA512:
-			digest=dm_sha512(buf);		
+			result=dm_sha512(buf,digest);		
 		break;
 		case MHASH_WHIRLPOOL:
-			digest=dm_whirlpool(buf);		
+			result=dm_whirlpool(buf,digest);		
 		break;
 		case MHASH_TIGER:
-			digest=dm_tiger(buf);
+			result=dm_tiger(buf,digest);
 		break;
 		default:
-			digest=NULL;
+			result=1;
 			TRACE(TRACE_EMERG,"unhandled hash algorithm");
 		break;
 	}
 
-	return digest;
+	return result;
 }
 
 gchar *get_crlf_encoded_opt(const char *in, int dots)

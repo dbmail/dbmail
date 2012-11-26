@@ -32,6 +32,8 @@ extern const char *imap_flag_desc_escaped[];
 #define T MailboxState_T
 
 struct T {
+	Mempool_T pool;
+	gboolean freepool;
 	uint64_t id;
 	uint64_t uidnext;
 	uint64_t owner_id;
@@ -50,7 +52,7 @@ struct T {
 	gboolean is_users;
 	gboolean is_inbox;
 	//
-	char *name;
+	String_T name;
 	GTree *keywords;
 	GTree *msginfo;
 	GTree *ids;
@@ -58,7 +60,7 @@ struct T {
 	GTree *recent_queue;
 };
 
-static void state_load_metadata(T M, C c);
+static void state_load_metadata(T M, Connection_T c);
 static void MailboxState_setMsginfo(T M, GTree *msginfo);
 /* */
 
@@ -76,14 +78,14 @@ static void MessageInfo_free(MessageInfo *m)
 	g_free(m);
 }
 
-static T state_load_messages(T M, C c)
+static T state_load_messages(T M, Connection_T c)
 {
 	unsigned nrows = 0, i = 0, j;
 	const char *query_result, *keyword;
 	MessageInfo *result;
 	GTree *msginfo;
 	uint64_t *uid, id = 0;
-	R r;
+	ResultSet_T r;
 	Field_T frag;
 	INIT_QUERY;
 
@@ -166,19 +168,32 @@ static T state_load_messages(T M, C c)
 	return M;
 }
 
-
-T MailboxState_new(uint64_t id)
+gboolean _compare_data(gconstpointer a, gconstpointer b, gpointer UNUSED data)
 {
-	T M; C c;
-	volatile int t = DM_SUCCESS;
+	return strcmp((const char *)a,(const char *)b);
+}
 
-	M = g_malloc0(sizeof(*M));
-	M->id = id;
+T MailboxState_new(Mempool_T pool, uint64_t id)
+{
+	T M; Connection_T c;
+	volatile int t = DM_SUCCESS;
+	gboolean freepool = FALSE;
+
+	if (! pool) {
+		pool = mempool_open();
+		freepool = TRUE;
+	}
+
+	M = mempool_pop(pool, sizeof(*M));
+	M->pool = pool;
+	M->freepool = freepool;
+
 	if (! id) return M;
 
-	M->recent_queue = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,NULL);
+	M->id = id;
+	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
+	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 
-	M->keywords = g_tree_new_full((GCompareDataFunc)dm_strcasecmpdata, NULL,(GDestroyNotify)g_free,NULL);
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c); // we need read-committed isolation
@@ -328,17 +343,15 @@ unsigned MailboxState_getPermission(T M)
 
 void MailboxState_setName(T M, const char *name)
 {
-	char *old = M->name;
-	M->name = g_strdup(name);
-	if (old) {
-		g_free(old);
-		old = NULL;
-	}
+	String_T old = M->name;
+	M->name = p_string_new(M->pool, name);
+	if (old)
+		p_string_free(old, TRUE);
 }
 
 const char * MailboxState_getName(T M)
 {
-	return M->name;
+	return p_string_str(M->name);
 }
 
 void MailboxState_setIsUsers(T M, gboolean t)
@@ -401,11 +414,18 @@ unsigned MailboxState_getUnseen(T M)
 	return M->unseen;
 }
 
+static gboolean _free_recent_queue(gpointer key, gpointer UNUSED value, gpointer data)
+{
+	T M = (T)data;
+	mempool_push(M->pool, key, sizeof(uint64_t));
+	return FALSE;
+}
+
 void MailboxState_free(T *M)
 {
 	T s = *M;
-	if (s->name) g_free(s->name);
-	s->name = NULL;
+	if (s->name) 
+		p_string_free(s->name, TRUE);
 
 	g_tree_destroy(s->keywords);
 	s->keywords = NULL;
@@ -419,16 +439,25 @@ void MailboxState_free(T *M)
 	if (s->msginfo) g_tree_destroy(s->msginfo);
 	s->msginfo = NULL;
 
-	if (s->recent_queue) g_tree_destroy(s->recent_queue);
+	if (s->recent_queue) {
+		g_tree_foreach(s->recent_queue, (GTraverseFunc)_free_recent_queue, s);
+		g_tree_destroy(s->recent_queue);
+	}
 	s->recent_queue = NULL;
 
-	g_free(s);
+	if (s->freepool) {
+		Mempool_T pool = s->pool;
+		mempool_close(&pool);
+	} else {
+		mempool_push(s->pool, s, sizeof(*s));
+	}
+
 	s = NULL;
 }
 
-static void db_getmailbox_permission(T M, C c)
+static void db_getmailbox_permission(T M, Connection_T c)
 {
-	R r;
+	ResultSet_T r;
 	g_return_if_fail(M->id);
 
 	r = db_query(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %lu",
@@ -437,15 +466,15 @@ static void db_getmailbox_permission(T M, C c)
 		M->permission = db_result_get_int(r, 0);
 }
 
-static void db_getmailbox_info(T M, C c)
+static void db_getmailbox_info(T M, Connection_T c)
 {
 	/* query mailbox for LIST results */
-	R r;
+	ResultSet_T r;
 	char *mbxname, *name, *pattern;
 	struct mailbox_match *mailbox_like = NULL;
 	GString *fqname, *qs;
 	int i=0, prml;
-	S stmt;
+	PreparedStatement_T stmt;
 	INIT_QUERY;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -523,9 +552,9 @@ static void db_getmailbox_info(T M, C c)
 	g_string_free(qs, TRUE);
 }
 
-static void db_getmailbox_count(T M, C c)
+static void db_getmailbox_count(T M, Connection_T c)
 {
-	R r; 
+	ResultSet_T r; 
 	unsigned result[3];
 
 	result[0] = result[1] = result[2] = 0;
@@ -572,9 +601,9 @@ static void db_getmailbox_count(T M, C c)
 		M->uidnext = 1;
 }
 
-static void db_getmailbox_keywords(T M, C c)
+static void db_getmailbox_keywords(T M, Connection_T c)
 {
-	R r; 
+	ResultSet_T r; 
 	const char *key;
 
 	r = db_query(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
@@ -588,16 +617,16 @@ static void db_getmailbox_keywords(T M, C c)
 	}
 }
 
-static void db_getmailbox_seq(T M, C c)
+static void db_getmailbox_seq(T M, Connection_T c)
 {
-	R r; 
+	ResultSet_T r; 
 
 	r = db_query(c, "SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=%lu", DBPFX, M->id);
 	if (db_result_next(r)) {
 		if (! M->name)
-			M->name = g_strdup(db_result_get(r, 0));
+			M->name = p_string_new(M->pool, db_result_get(r, 0));
 		M->seq = db_result_get_u64(r,1);
-		TRACE(TRACE_DEBUG,"id: [%lu] name: [%s] seq [%lu]", M->id, M->name, M->seq);
+		TRACE(TRACE_DEBUG,"id: [%lu] name: [%s] seq [%lu]", M->id, p_string_str(M->name), M->seq);
 	} else {
 		TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%lu]", M->id);
 	}
@@ -606,7 +635,7 @@ static void db_getmailbox_seq(T M, C c)
 int MailboxState_info(T M)
 {
 	volatile int t = DM_SUCCESS;
-	C c = db_con_get();
+	Connection_T c = db_con_get();
 	TRY
 		db_begin_transaction(c);
 		db_getmailbox_info(M, c);
@@ -621,7 +650,7 @@ int MailboxState_info(T M)
 	return t;
 }
 
-static void state_load_metadata(T M, C c)
+static void state_load_metadata(T M, Connection_T c)
 {
 	uint64_t oldseq;
 
@@ -638,12 +667,12 @@ static void state_load_metadata(T M, C c)
 	db_getmailbox_info(M, c);
 
 	TRACE(TRACE_DEBUG, "[%s] exists [%d] recent [%d]", 
-			M->name, M->exists, M->recent);
+			p_string_str(M->name), M->exists, M->recent);
 }
 
 int MailboxState_count(T M)
 {
-	C c;
+	Connection_T c;
 	volatile int t = DM_SUCCESS;
 
 	c = db_con_get();
@@ -682,7 +711,7 @@ char * MailboxState_flags(T M)
 
 int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	volatile int result = FALSE;
 	uint64_t owner_id, mboxid;
 
@@ -728,7 +757,7 @@ int MailboxState_getAcl(T M, uint64_t userid, struct ACLMap *map)
 	volatile int t = DM_SUCCESS;
 	gboolean gotrow = FALSE;
 	uint64_t anyone;
-	C c; R r; S s;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 
 	g_return_val_if_fail(MailboxState_getId(M),DM_EGENERAL); 
 
@@ -783,7 +812,7 @@ int MailboxState_getAcl(T M, uint64_t userid, struct ACLMap *map)
 static gboolean mailbox_build_recent(uint64_t *uid, MessageInfo *msginfo, T M)
 {
 	if (msginfo->flags[IMAP_FLAG_RECENT]) {
-		uint64_t *copy = g_new0(uint64_t,1);
+		uint64_t *copy = mempool_pop(M->pool, sizeof(uint64_t));
 		*copy = *uid;
 		g_tree_insert(M->recent_queue, copy, copy);
 	}
@@ -805,7 +834,7 @@ int MailboxState_build_recent(T M)
 static int _update_recent(GList *slices)
 {
 	INIT_QUERY;
-	C c;
+	Connection_T c;
 	volatile int t = FALSE;
 
 	if (! (slices = g_list_first(slices)))
@@ -859,6 +888,11 @@ int MailboxState_flush_recent(T M)
 static gboolean mailbox_clear_recent(uint64_t *uid, MessageInfo *msginfo, T M)
 {
 	msginfo->flags[IMAP_FLAG_RECENT] = 0;
+	gpointer value;
+	gpointer orig_key;
+	if (g_tree_lookup_extended(M->recent_queue, uid, &orig_key, &value)) {
+		mempool_push(M->pool, orig_key, sizeof(uint64_t));
+	}
 	g_tree_remove(M->recent_queue, uid);
 	return FALSE;
 }
@@ -909,6 +943,7 @@ GTree * MailboxState_steal_recent(T M)
 int MailboxState_merge_recent(T M, GTree *recent_queue)
 {
 	g_tree_merge(M->recent_queue, recent_queue, IST_SUBSEARCH_OR);
+	g_tree_foreach(recent_queue, (GTraverseFunc)_free_recent_queue, M);
 	g_tree_destroy(recent_queue);
 	M->recent = g_tree_nnodes(M->recent_queue);
 	return 0;

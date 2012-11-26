@@ -90,18 +90,20 @@ gboolean Cram_decode(T C, const char * response)
 gboolean Cram_verify(T C, const char *credentials)
 {
 	gboolean r = FALSE;
-	unsigned char d[1024];
-	memset(d,0,sizeof(d));
+	unsigned char d[FIELDSIZE];
+	char hash[FIELDSIZE];
+
+	memset(d, 0, sizeof(d));
+	memset(hash, 0, sizeof(hash));
 
 	MHASH ctx = mhash_hmac_init(MHASH_MD5, (void *)credentials, strlen(credentials), mhash_get_hash_pblock(MHASH_MD5));
 	mhash(ctx, C->challenge, strlen(C->challenge));
 	mhash_hmac_deinit(ctx, (gpointer)d);
-	char *result = dm_digest(d, MHASH_MD5);
+	dm_digest(d, MHASH_MD5, hash);
 
-	if (strncmp(C->response, result, strlen(C->response))==0)
+	if (strncmp(C->response, hash, strlen(C->response))==0)
 		r = TRUE;
 
-	g_free(result);
 	return r;
 }
 

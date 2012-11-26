@@ -44,7 +44,7 @@
  * initializers
  */
 
-DbmailMessage * dbmail_message_new(void);
+DbmailMessage * dbmail_message_new(Mempool_T);
 DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char *content);
 DbmailMessage * dbmail_message_construct(DbmailMessage *self, 
 		const gchar *sender, const gchar *recipient, 
@@ -67,7 +67,7 @@ void dbmail_message_set_physid(DbmailMessage *self, uint64_t physid);
 uint64_t dbmail_message_get_physid(const DbmailMessage *self);
 
 void dbmail_message_set_envelope_recipient(DbmailMessage *self, const char *envelope);
-gchar * dbmail_message_get_envelope_recipient(const DbmailMessage *self);
+const char * dbmail_message_get_envelope_recipient(const DbmailMessage *self);
 	
 void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date);
 gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear);
@@ -79,7 +79,7 @@ gchar * dbmail_message_to_string(const DbmailMessage *self);
 gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self);
 gchar * dbmail_message_body_to_string(const DbmailMessage *self);
 
-char * dbmail_message_get_charset(DbmailMessage *self);
+const char * dbmail_message_get_charset(DbmailMessage *self);
 
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf);
 
@@ -108,7 +108,8 @@ void dbmail_message_free(DbmailMessage *self);
 
 /* move these elsewhere: */
 
-unsigned find_end_of_header(const char *h);
+unsigned find_end_of_header(const char *);
+
 char * g_mime_object_get_body(const GMimeObject *object);
 
 // from sort.h
@@ -137,7 +138,7 @@ enum sendwhat {
  * \brief Inserts a message in the database.
  * \return 0
  */
-int insert_messages(DbmailMessage *message, GList *dsnusers);
+int insert_messages(DbmailMessage *message, List_T dsnusers);
 int send_mail(DbmailMessage *message,
 		const char *to, const char *from,
 		const char *preoutput,

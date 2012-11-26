@@ -133,54 +133,16 @@ static int imap4_tokenizer(ImapSession *, char *);
 static int imap4(ImapSession *);
 static void imap_handle_input(ImapSession *);
 
-static void imap_session_cleanup_enter(dm_thread_data *D)
-{
-	ImapSession *session = D->session;
-
-	if ((! session->state) || session->state == CLIENTSTATE_QUIT_QUEUED)
-		return;
-
-	dbmail_imap_session_set_state(session, CLIENTSTATE_QUIT_QUEUED);
-	D->session->command_state = TRUE;
-	g_async_queue_push(queue, (gpointer)D);
-	if (selfpipe[1] > -1) {
-		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; }
-	}
-	return;
-}
-
-static void imap_session_cleanup_leave(dm_thread_data *D)
-{
-	ImapSession *session = D->session;
-	TRACE(TRACE_DEBUG,"[%p] ci [%p] state [%d]", session, session->ci, session->state);
-
-	if (session->state != CLIENTSTATE_QUIT_QUEUED)
-		return;
-
-	ci_close(session->ci);
-	session->ci = NULL;
-	dbmail_imap_session_delete(&session);
-
-	// brute force:
-	if (server_conf->no_daemonize == 1) _exit(0);
-
-}
-
 static void imap_session_bailout(ImapSession *session)
 {
+	ClientBase_T *ci;
 	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
 
 	assert(session && session->ci);
+	ci = session->ci;
 
-	ci_cork(session->ci);
-
-	if (session->state != CLIENTSTATE_QUIT_QUEUED) {
-		dm_thread_data_push(
-				(gpointer)session,
-			       	imap_session_cleanup_enter,
-			       	imap_session_cleanup_leave,
-			       	NULL);
-	}
+	dbmail_imap_session_delete(&session);
+	ci_close(ci);
 }
 
 void socket_write_cb(int fd, short what, void *arg)
@@ -220,7 +182,7 @@ void imap_cb_read(void *arg)
 
 	ci_read_cb(session->ci);
 
-	size_t have = session->ci->read_buffer->len;
+	size_t have = p_string_len(session->ci->read_buffer);
 	size_t need = session->ci->rbuff_size;
 
 	int enough = (need>0?(have >= need):(have > 0));
@@ -273,21 +235,22 @@ static int imap_session_printf(ImapSession * self, char * message, ...)
         size_t l;
 	int e = 0;
 
+	p_string_truncate(self->buff, 0);
+
         assert(message);
         va_start(ap, message);
 	va_copy(cp, ap);
-        g_string_vprintf(self->buff, message, cp);
+        p_string_append_vprintf(self->buff, message, cp);
         va_end(cp);
 
-	if ((e = ci_write(self->ci, self->buff->str)) < 0) {
+	if ((e = ci_write(self->ci, (char *)p_string_str(self->buff))) < 0) {
 		TRACE(TRACE_DEBUG, "ci_write failed [%s]", strerror(e));
 		dbmail_imap_session_set_state(self,CLIENTSTATE_ERROR);
 		return e;
 	}
 
-        l = self->buff->len;
-	self->buff = g_string_truncate(self->buff, 0);
-	g_string_maybe_shrink(self->buff);
+        l = p_string_len(self->buff);
+	p_string_truncate(self->buff, 0);
 
         return (int)l;
 }
@@ -362,16 +325,16 @@ static void imap_handle_exit(ImapSession *session, int status)
 		case 0:
 			/* only do this in the main thread */
 			if (session->state < CLIENTSTATE_LOGOUT) {
-				if (session->buff && session->buff->len > 0) {
+				if (session->buff && p_string_len(session->buff) > 0) {
 					int e = 0;
-					if ((e = ci_write(session->ci, session->buff->str)) < 0) {
+					if ((e = ci_write(session->ci, (char *)p_string_str(session->buff))) < 0) {
 						TRACE(TRACE_DEBUG,"ci_write returned error [%s]", strerror(e));
 						dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 						return;
 					}
 					dbmail_imap_session_buff_clear(session);
 				}
-				if ((session->ci->write_buffer->len - session->ci->write_buffer_offset) > 0) {
+				if ((p_string_len(session->ci->write_buffer) - session->ci->write_buffer_offset) > 0) {
 					ci_write(session->ci, NULL);
 				} else if (session->command_state == TRUE) {
 					dbmail_imap_session_reset(session);
@@ -381,7 +344,7 @@ static void imap_handle_exit(ImapSession *session, int status)
 			}				
 
 			// handle buffered pending input
-			if (session->ci->read_buffer->len > 0)
+			if (p_string_len(session->ci->read_buffer) > 0)
 				imap_handle_input(session);
 		
 			break;
@@ -410,6 +373,7 @@ void imap_handle_input(ImapSession *session)
 {
 	char buffer[MAX_LINESIZE];
 	char *alloc_buf = NULL;
+	size_t alloc_size = 0;
 	int l, result;
 
 	assert(session);
@@ -417,14 +381,14 @@ void imap_handle_input(ImapSession *session)
 	assert(session->ci->write_buffer);
 
 	// first flush the output buffer
-	if (session->ci->write_buffer->len) {
+	if (p_string_len(session->ci->write_buffer)) {
 		TRACE(TRACE_DEBUG,"[%p] write buffer not empty", session);
 		ci_write(session->ci, NULL);
 		return;
 	}
 
 	// nothing left to handle
-	if (session->ci->read_buffer->len == 0) {
+	if (p_string_len(session->ci->read_buffer) == 0) {
 		TRACE(TRACE_DEBUG,"[%p] read buffer empty", session);
 		return;
 	}
@@ -445,8 +409,9 @@ void imap_handle_input(ImapSession *session)
 	while (TRUE) {
 		char *input = NULL;
 		if (alloc_buf != NULL) {
-			g_free(alloc_buf);
+			mempool_push(session->pool, alloc_buf, alloc_size);
 			alloc_buf = NULL;
+			alloc_size = 0;
 		}
 
 		memset(buffer, 0, sizeof(buffer));
@@ -454,7 +419,8 @@ void imap_handle_input(ImapSession *session)
 		if (session->ci->rbuff_size <= 0) {
 			l = ci_readln(session->ci, buffer);
 		} else {
-			alloc_buf = g_new0(char, session->ci->rbuff_size+1);
+			alloc_size = session->ci->rbuff_size+1;
+			alloc_buf = mempool_pop(session->pool, alloc_size);
 			l = ci_read(session->ci, alloc_buf, session->ci->rbuff_size);
 		}
 
@@ -486,8 +452,9 @@ void imap_handle_input(ImapSession *session)
 
 		if (! imap4_tokenizer(session, input)) {
 			if (alloc_buf != NULL) {
-				g_free(alloc_buf);
+				mempool_push(session->pool, alloc_buf, alloc_size);
 				alloc_buf = NULL;
+				alloc_size = 0;
 			}
 			continue;
 		}
@@ -515,8 +482,9 @@ void imap_handle_input(ImapSession *session)
 	}
 
 	if (alloc_buf != NULL) {
-		g_free(alloc_buf);
+		mempool_push(session->pool, alloc_buf, alloc_size);
 		alloc_buf = NULL;
+		alloc_size = 0;
 	}
 
 	return;
@@ -535,20 +503,16 @@ int imap_handle_connection(client_sock *c)
 	ImapSession *session;
 	ClientBase_T *ci;
 
-	if (c)
-		ci = client_init(c);
-	else
-		ci = client_init(NULL);
+	ci = client_init(c);
 
-	session = dbmail_imap_session_new();
+	session = dbmail_imap_session_new(c->pool);
 	session->ci = ci;
-
 
 	assert(evbase);
 	ci->rev = event_new(evbase, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
 	ci->wev = event_new(evbase, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
 
-	if ((! server_conf->ssl) || (ci->ssl_state == TRUE)) 
+	if ((! server_conf->ssl) || (ci->sock->ssl_state == TRUE)) 
 		Capa_remove(session->capa, "STARTTLS");
 
 	send_greeting(session);
@@ -562,15 +526,9 @@ int imap_handle_connection(client_sock *c)
 void dbmail_imap_session_reset(ImapSession *session)
 {
 	TRACE(TRACE_DEBUG,"[%p]", session);
-	if (session->tag) {
-		g_free(session->tag);
-		session->tag = NULL;
-	}
 
-	if (session->command) {
-		g_free(session->command);
-		session->command = NULL;
-	}
+	memset(session->tag, 0, sizeof(session->tag));
+	memset(session->command, 0, sizeof(session->command));
 
 	session->use_uid = 0;
 	session->command_type = 0;
@@ -586,7 +544,7 @@ void dbmail_imap_session_reset(ImapSession *session)
 
 int imap4_tokenizer (ImapSession *session, char *buffer)
 {
-	char *tag = NULL, *cpy, *command;
+	char *cpy;
 	size_t i = 0;
 		
 	if (!(*buffer))
@@ -596,7 +554,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 	cpy = buffer;
 
 	/* fetch the tag and command */
-	if (! session->tag) {
+	if (! *session->tag) {
 
 		if (strcmp(buffer,"\n")==0 || strcmp(buffer,"\r\n")==0)
 			return 0;
@@ -616,9 +574,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 			return 0;
 		}
 
-		tag = g_strndup(cpy,i);	/* set tag */
-		dbmail_imap_session_set_tag(session,tag);
-		g_free(tag);
+		strncpy(session->tag, cpy, min(i, sizeof(session->tag)));
 
 		cpy[i] = '\0';
 		cpy = cpy + i + 1;	/* cpy points to command now */
@@ -633,10 +589,8 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 		// command
 		i = stridx(cpy, ' ');	/* find next space */
 
-		command = g_strndup(cpy,i);	/* set command */
-		strip_crlf(command);
-		dbmail_imap_session_set_command(session,command);
-		g_free(command);
+		strncpy(session->command, cpy, min(i, sizeof(session->command)));
+		strip_crlf(session->command);
 
 		cpy = cpy + i;	/* cpy points to args now */
 
@@ -694,7 +648,7 @@ static void imap_unescape_args(ImapSession *session)
 		case IMAP_COMM_LOGIN:
 
 		for (i = 0; session->args[i]; i++) { 
-			imap_unescape(session->args[i]);
+			p_string_unescape(session->args[i]);
 		}
 		break;
 		default:
@@ -702,7 +656,7 @@ static void imap_unescape_args(ImapSession *session)
 	}
 #ifdef DEBUG
 	for (i = 0; session->args[i]; i++) { 
-		TRACE(TRACE_DEBUG, "[%p] arg[%lu]: '%s'\n", session, i, session->args[i]); 
+		TRACE(TRACE_DEBUG, "[%p] arg[%lu]: '%s'\n", session, i, p_string_str(session->args[i])); 
 	}
 #endif
 
@@ -726,7 +680,7 @@ int imap4(ImapSession *session)
 		return 0;
 
 	session->command_state=TRUE; // set command-is-done-state while doing some checks
-	if (! (session->tag && session->command)) {
+	if (! (session->tag[0] && session->command[0])) {
 		TRACE(TRACE_ERR,"no tag or command");
 		return 1;
 	}

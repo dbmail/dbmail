@@ -81,7 +81,7 @@ void set_dsn(delivery_status_t *dsn,
 int dsnuser_init(Delivery_T * dsnuser);
 
 void dsnuser_free(Delivery_T * dsnuser);
-void dsnuser_free_list(GList *deliveries);
+void dsnuser_free_list(List_T deliveries);
 
 /**
  * \brief Loop through the list of delivery addresses
@@ -95,7 +95,7 @@ void dsnuser_free_list(GList *deliveries);
  *   - 0 on success
  *   - -1 on failure
  */
-int dsnuser_resolve_list(GList *deliveries);
+int dsnuser_resolve_list(List_T deliveries);
 
 /**
  * \brief The dsnuser structure should have either a useridnr or
@@ -119,7 +119,7 @@ int dsnuser_resolve(Delivery_T *dsnuser);
  * \return
  *   - see dsn_class_t for details.
  */
-dsn_class_t dsnuser_worstcase_list(GList *deliveries);
+dsn_class_t dsnuser_worstcase_list(List_T deliveries);
 
 /**
  * \brief Given true/false values for each of the three

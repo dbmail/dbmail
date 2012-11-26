@@ -104,15 +104,16 @@ START_TEST(test_insert_messages)
 {
 	int result;
 	DbmailMessage *message;
-	GList *dsnusers = NULL;
+	Mempool_T pool = mempool_open();
+	List_T dsnusers = p_list_new(pool);
 	Delivery_T *dsnuser = g_new0(Delivery_T,1);
 	
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message,multipart_message);
 
 	dsnuser_init(dsnuser);
 	dsnuser->address = g_strdup("testuser1");
-	dsnusers = g_list_prepend(dsnusers, dsnuser);
+	dsnusers = p_list_prepend(dsnusers, dsnuser);
 	
 	result = insert_messages(message, dsnusers);
 
@@ -120,6 +121,7 @@ START_TEST(test_insert_messages)
 
 	dsnuser_free_list(dsnusers);
 	dbmail_message_free(message);
+	mempool_close(&pool);
 }
 END_TEST
 /**
@@ -511,6 +513,8 @@ START_TEST(test_auth_validate)
 	result = auth_validate(ci,"testuser1","wqer",&user_idnr);
 	fail_unless(result==FALSE,"auth_validate negative failure");
 	fail_unless(user_idnr == 0,"auth_validate shouldn't find user_idnr");
+
+	g_free(ci);
 }
 END_TEST
 /** 
@@ -942,6 +946,7 @@ START_TEST(test_zap_between_center)
 			&newaddress, &newaddress_len, &zapped_len);
 
 	fail_unless(strcmp("suc+@cess", newaddress)==0,
+
 			"zap_between is center broken. "
 			"Should be suc+@cess: %s", newaddress);
 

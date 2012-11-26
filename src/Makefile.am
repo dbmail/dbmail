@@ -54,6 +54,7 @@ COMMON = dbmail-user.c \
 	dm_iconv.c \
 	dm_dsn.c \
 	dm_sset.c \
+	dm_string.c \
 	$(top_srcdir)/src/mpool/mpool.c \
 	dm_mempool.c $(DM_GETOPT)
 	
@@ -64,8 +65,6 @@ SERVER = server.c \
 	dm_tls.c \
 	dm_http.c \
 	dm_request.c \
-	dm_stream.c \
-	dm_cache.c \
 	dm_cidr.c
 
 IMAPD = dm_quota.c \

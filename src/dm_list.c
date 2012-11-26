@@ -18,13 +18,150 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* 
- *
- * functions to create lists and add/delete items */
 
 #include "dbmail.h"
 
+/*
+ * pool based list implementation
+ *
+ */
 
+#define T List_T
+
+struct T {
+	Mempool_T pool;
+	T prev;
+	T next;
+	void *data;
+};
+
+T _alloc_list(Mempool_T pool)
+{
+	assert(pool);
+	T L;
+       	L = mempool_pop(pool, sizeof(*L));
+	L->pool = pool;
+	return L;
+}
+
+T p_list_new(Mempool_T pool)
+{
+	return _alloc_list(pool);
+}
+
+#define ISEMPTY(l) (l->next == NULL && \
+			l->prev == NULL && \
+			l->data == NULL)
+T p_list_append(T L, void *data)
+{
+	assert(L);
+	if ISEMPTY(L) {
+		L->data = data;
+		return L;
+	}
+	L = p_list_last(L);
+	T new = _alloc_list(L->pool);
+	new->data = data;
+	new->prev = L;
+	L->next = new;
+	return new;
+}
+
+T p_list_prepend(T L, void *data)
+{
+	assert(L);
+	if ISEMPTY(L) {
+		L->data = data;
+		return L;
+	}
+	L = p_list_first(L);
+	T new = _alloc_list(L->pool);
+	new->data = data;
+	new->next = L;
+	L->prev = new;
+	return new;
+}
+
+T p_list_last(T L)
+{
+	assert(L);
+	T last = L;
+	while (last->next)
+		last = last->next;
+	return last;
+}
+
+T p_list_first(T L)
+{
+	assert(L);
+	T first = L;
+	while (first->prev)
+		first = first->prev;
+	return first;
+}
+
+T p_list_previous(T L)
+{
+	assert(L);
+	return L->prev;
+}
+
+T p_list_next(T L)
+{
+	assert(L);
+	return L->next;
+}
+
+size_t p_list_length(T L)
+{
+	size_t length = 0;
+	while (L) {
+		length++;
+		L = L->next;
+	}
+	return length;
+}
+
+void * p_list_data(T L)
+{
+	assert(L);
+	return L->data;
+}
+
+void   p_list_free(T *L)
+{
+	T l = *L;
+	Mempool_T pool = l->pool;
+	while (l) {
+		T ll = l;
+		l = ll->next;
+		mempool_push(pool, ll, sizeof(*ll));
+	}
+}
+
+T p_list_remove(T L, T E)
+{
+	if (E) {
+		L = p_list_first(L);
+		if (E->prev)
+			E->prev->next = E->next;
+		if (E->next)
+			E->next->prev = E->prev;
+
+		if (L == E) 
+			L = L->next;
+
+		E->next = NULL;
+		E->prev = NULL;
+	}
+
+	return L;
+}
+
+#undef T
+
+
+/* GList helper functions */
 void g_list_destroy(GList *l)
 {
 	if (! l) return;

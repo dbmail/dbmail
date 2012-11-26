@@ -148,15 +148,15 @@ GTree * global_cache = NULL;
 /////////////////////////////////////////////////////////////////////////////
 
 /* globals for now... */
-P pool = NULL;
-U url = NULL;
+ConnectionPool_T pool = NULL;
+URL_T url = NULL;
 int db_connected = 0; // 0 = not called, 1 = new url but not pool, 2 = new url and pool, but not tested, 3 = tested and ok
 
 /* This is the first db_* call anybody should make. */
 int db_connect(void)
 {
 	int sweepInterval = 60;
-	C c;
+	Connection_T c;
 	GString *dsn = g_string_new("");
 	g_string_append_printf(dsn,"%s://",db_params.driver);
 	if (db_params.host)
@@ -238,9 +238,9 @@ int db_disconnect(void)
 	return 0;
 }
 
-C db_con_get(void)
+Connection_T db_con_get(void)
 {
-	int i=0, k=0; C c;
+	int i=0, k=0; Connection_T c;
 	while (i++<30) {
 		c = ConnectionPool_getConnection(pool);
 		if (c) break;
@@ -267,7 +267,7 @@ C db_con_get(void)
 
 gboolean dm_db_ping(void)
 {
-	C c; gboolean t;
+	Connection_T c; gboolean t;
 	c = db_con_get();
 	t = Connection_ping(c);
 	db_con_close(c);
@@ -277,14 +277,14 @@ gboolean dm_db_ping(void)
 	return t;
 }
 
-void db_con_close(C c)
+void db_con_close(Connection_T c)
 {
 	TRACE(TRACE_DATABASE,"[%p] connection to pool", c);
 	Connection_close(c);
 	return;
 }
 
-void db_con_clear(C c)
+void db_con_clear(Connection_T c)
 {
 	TRACE(TRACE_DATABASE,"[%p] connection cleared", c);
 	Connection_clear(c);
@@ -305,7 +305,7 @@ void log_query_time(char *query, struct timeval before, struct timeval after)
 	return;
 }
 
-gboolean db_exec(C c, const char *q, ...)
+gboolean db_exec(Connection_T c, const char *q, ...)
 {
 	struct timeval before, after;
 	volatile gboolean result = FALSE;
@@ -334,10 +334,10 @@ gboolean db_exec(C c, const char *q, ...)
 	return result;
 }
 
-R db_query(C c, const char *q, ...)
+ResultSet_T db_query(Connection_T c, const char *q, ...)
 {
 	struct timeval before, after;
-	R r = NULL;
+	ResultSet_T r = NULL;
 	volatile gboolean result = FALSE;
 	va_list ap, cp;
 	char *query;
@@ -366,11 +366,9 @@ R db_query(C c, const char *q, ...)
 	return r;
 }
 
-
-
 gboolean db_update(const char *q, ...)
 {
-	C c; volatile gboolean result = FALSE;
+	Connection_T c; volatile gboolean result = FALSE;
 	va_list ap, cp;
 	INIT_QUERY;
 
@@ -394,16 +392,16 @@ gboolean db_update(const char *q, ...)
 	return result;
 }
 
-S db_stmt_prepare(C c, const char *q, ...)
+PreparedStatement_T db_stmt_prepare(Connection_T c, const char *q, ...)
 {
 	va_list ap, cp;
 	char *query;
-	S s;
+	PreparedStatement_T s;
 
 	va_start(ap, q);
 	va_copy(cp, ap);
-        query = g_strdup_vprintf(q, cp);
-        va_end(cp);
+	query = g_strdup_vprintf(q, cp);
+	va_end(cp);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	s = Connection_prepareStatement(c, "%s", (const char *)query);
@@ -411,25 +409,25 @@ S db_stmt_prepare(C c, const char *q, ...)
 	return s;
 }
 
-int db_stmt_set_str(S s, int index, const char *x)
+int db_stmt_set_str(PreparedStatement_T s, int index, const char *x)
 {
 	TRACE(TRACE_DATABASE,"[%p] %d:[%s]", s, index, x);
 	PreparedStatement_setString(s, index, x);
 	return TRUE;
 }
-int db_stmt_set_int(S s, int index, int x)
+int db_stmt_set_int(PreparedStatement_T s, int index, int x)
 {
 	TRACE(TRACE_DATABASE,"[%p] %d:[%d]", s, index, x);
 	PreparedStatement_setInt(s, index, x);
 	return TRUE;
 }
-int db_stmt_set_u64(S s, int index, uint64_t x)
+int db_stmt_set_u64(PreparedStatement_T s, int index, uint64_t x)
 {	
 	TRACE(TRACE_DATABASE,"[%p] %d:[%lu]", s, index, x);
 	PreparedStatement_setLLong(s, index, (long long)x);
 	return TRUE;
 }
-int db_stmt_set_blob(S s, int index, const void *x, int size)
+int db_stmt_set_blob(PreparedStatement_T s, int index, const void *x, int size)
 {
 	if (size > 200)
 		TRACE(TRACE_DATABASE,"[%p] %d:[blob of length %d]", s, index, size);
@@ -438,44 +436,53 @@ int db_stmt_set_blob(S s, int index, const void *x, int size)
 	PreparedStatement_setBlob(s, index, x, size);
 	return TRUE;
 }
-gboolean db_stmt_exec(S s)
+
+inline gboolean db_stmt_exec(PreparedStatement_T s)
 {
 	PreparedStatement_execute(s);
 	return TRUE;
 }
-R db_stmt_query(S s)
+
+inline ResultSet_T db_stmt_query(PreparedStatement_T s)
 {
 	return PreparedStatement_executeQuery(s);
 }
-int db_result_next(R r)
+
+int db_result_next(ResultSet_T r)
 {
 	if (r)
 		return ResultSet_next(r);
 	else
 		return FALSE;
 }
-unsigned db_num_fields(R r)
+
+inline unsigned db_num_fields(ResultSet_T r)
 {
 	return (unsigned)ResultSet_getColumnCount(r);
 }
-const char * db_result_get(R r, unsigned field)
+
+const char * db_result_get(ResultSet_T r, unsigned field)
 {
 	const char * val = ResultSet_getString(r, field+1);
 	return val ? val : "";
 }
-int db_result_get_int(R r, unsigned field)
+
+inline int db_result_get_int(ResultSet_T r, unsigned field)
 {
 	return ResultSet_getInt(r, field+1);
 }
-int db_result_get_bool(R r, unsigned field)
+
+inline int db_result_get_bool(ResultSet_T r, unsigned field)
 {
 	return (ResultSet_getInt(r, field+1) ? 1 : 0);
 }
-uint64_t db_result_get_u64(R r, unsigned field)
+
+inline uint64_t db_result_get_u64(ResultSet_T r, unsigned field)
 {
 	return (uint64_t)(ResultSet_getLLong(r, field+1));
 }
-const void * db_result_get_blob(R r, unsigned field, int *size)
+
+const void * db_result_get_blob(ResultSet_T r, unsigned field, int *size)
 {
 	const char * val = ResultSet_getBlob(r, field+1, size);
 	if (!val) {
@@ -484,7 +491,7 @@ const void * db_result_get_blob(R r, unsigned field, int *size)
 	return val;
 }
 
-uint64_t db_insert_result(C c, R r)
+uint64_t db_insert_result(Connection_T c, ResultSet_T r)
 {
 	uint64_t id = 0;
 
@@ -506,9 +513,9 @@ uint64_t db_insert_result(C c, R r)
 	return id;
 }
 
-uint64_t db_get_pk(C c, const char *table)
+uint64_t db_get_pk(Connection_T c, const char *table)
 {
-	R r;
+	ResultSet_T r;
 	uint64_t id = 0;
 	r = db_query(c, "SELECT sq_%s%s.CURRVAL FROM DUAL", DBPFX, table);
 	if (db_result_next(r))
@@ -517,14 +524,14 @@ uint64_t db_get_pk(C c, const char *table)
 	return id;
 }
 
-int db_begin_transaction(C c)
+int db_begin_transaction(Connection_T c)
 {
 	TRACE(TRACE_DATABASE,"BEGIN");
 	Connection_beginTransaction(c);
 	return DM_SUCCESS;
 }
 
-int db_commit_transaction(C c)
+int db_commit_transaction(Connection_T c)
 {
 	TRACE(TRACE_DATABASE,"COMMIT");
 	Connection_commit(c);
@@ -532,19 +539,19 @@ int db_commit_transaction(C c)
 }
 
 
-int db_rollback_transaction(C c)
+int db_rollback_transaction(Connection_T c)
 {
 	TRACE(TRACE_DATABASE,"ROLLBACK");
 	Connection_rollback(c);
 	return DM_SUCCESS;
 }
 
-int db_savepoint(C UNUSED c, const char UNUSED *id)
+int db_savepoint(Connection_T UNUSED c, const char UNUSED *id)
 {
 	return 0;
 }
 
-int db_savepoint_rollback(C UNUSED c, const char UNUSED *id)
+int db_savepoint_rollback(Connection_T UNUSED c, const char UNUSED *id)
 {
 	return 0;
 }
@@ -805,7 +812,7 @@ char *db_returning(const char *s)
 /*
  * check to make sure the database has been upgraded
  */
-static void check_table_exists(C c, const char *table, const char *errormessage)
+static void check_table_exists(Connection_T c, const char *table, const char *errormessage)
 {
 	if (! db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, table))
 		TRACE(TRACE_EMERG, "%s", errormessage);
@@ -813,7 +820,7 @@ static void check_table_exists(C c, const char *table, const char *errormessage)
 
 int db_check_version(void)
 {
-	C c = db_con_get();
+	Connection_T c = db_con_get();
 	volatile int ok = 0;
 	TRY
 		check_table_exists(c, "physmessage", "pre-2.0 database incompatible. You need to run the conversion script");
@@ -840,7 +847,7 @@ int db_check_version(void)
 int db_use_usermap(void)
 {
 	int use_usermap = TRUE;
-	C c = db_con_get();
+	Connection_T c = db_con_get();
 	TRY
 		if (! db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "usermap"))
 			use_usermap = FALSE;
@@ -856,7 +863,7 @@ int db_use_usermap(void)
 
 int db_get_physmessage_id(uint64_t message_idnr, uint64_t * physmessage_id)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	assert(physmessage_id != NULL);
 	*physmessage_id = 0;
 
@@ -921,7 +928,7 @@ static int user_idnr_is_delivery_user_idnr(uint64_t user_idnr)
 
 int dm_quota_user_get(uint64_t user_idnr, uint64_t *size)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	assert(size != NULL);
 
 	c = db_con_get();
@@ -960,7 +967,7 @@ int dm_quota_user_dec(uint64_t user_idnr, uint64_t size)
 static int dm_quota_user_validate(uint64_t user_idnr, uint64_t msg_size)
 {
 	uint64_t maxmail_size;
-	C c; R r; volatile gboolean t = TRUE;
+	Connection_T c; ResultSet_T r; volatile gboolean t = TRUE;
 
 	if (auth_getmaxmailsize(user_idnr, &maxmail_size) == -1) {
 		TRACE(TRACE_ERR, "auth_getmaxmailsize() failed\n");
@@ -991,7 +998,7 @@ static int dm_quota_user_validate(uint64_t user_idnr, uint64_t msg_size)
 
 int dm_quota_rebuild_user(uint64_t user_idnr)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	uint64_t quotum = 0;
 
 	c = db_con_get();
@@ -1031,7 +1038,7 @@ struct used_quota {
 
 int dm_quota_rebuild()
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 
 	GList *quota = NULL;
 	struct used_quota *q;
@@ -1091,7 +1098,7 @@ int dm_quota_rebuild()
 
 int db_get_notify_address(uint64_t user_idnr, char **notify_address)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	const char *query_result = NULL;
 	volatile int t = DM_EGENERAL;
 
@@ -1119,7 +1126,7 @@ int db_get_notify_address(uint64_t user_idnr, char **notify_address)
 
 int db_get_reply_body(uint64_t user_idnr, char **reply_body)
 {
-	C c; R r; S s;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	const char *query_result;
 	volatile int t = DM_EGENERAL;
 	*reply_body = NULL;
@@ -1152,7 +1159,7 @@ int db_get_reply_body(uint64_t user_idnr, char **reply_body)
 
 uint64_t db_get_useridnr(uint64_t message_idnr)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	uint64_t user_idnr = 0;
 	c = db_con_get();
 	TRY
@@ -1174,7 +1181,7 @@ uint64_t db_get_useridnr(uint64_t message_idnr)
 
 int db_log_ip(const char *ip)
 {
-	C c; R r; S s; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = DM_SUCCESS;
 	uint64_t id = 0;
 	
 	c = db_con_get();
@@ -1219,7 +1226,7 @@ int db_cleanup(void)
 
 int db_empty_mailbox(uint64_t user_idnr)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	GList *mboxids = NULL;
 	uint64_t *id;
 	unsigned i = 0;
@@ -1268,7 +1275,7 @@ int db_empty_mailbox(uint64_t user_idnr)
 
 int db_icheck_physmessages(gboolean cleanup)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	GList *ids = NULL;
 
 	c = db_con_get();
@@ -1304,7 +1311,7 @@ int db_icheck_physmessages(gboolean cleanup)
 
 int db_icheck_partlists(gboolean cleanup)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	GList *ids = NULL;
 
 	c = db_con_get();
@@ -1341,7 +1348,7 @@ int db_icheck_partlists(gboolean cleanup)
 
 int db_icheck_mimeparts(gboolean cleanup)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	GList *ids = NULL;
 
 	c = db_con_get();
@@ -1377,7 +1384,7 @@ int db_icheck_mimeparts(gboolean cleanup)
 
 int db_icheck_rfcsize(GList  **lost)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	uint64_t *id;
 	
 	c = db_con_get();
@@ -1400,7 +1407,7 @@ int db_icheck_rfcsize(GList  **lost)
 
 int db_update_rfcsize(GList *lost) 
 {
-	C c;
+	Connection_T c;
 	uint64_t *pmsid;
 	DbmailMessage *msg;
 	if (! lost)
@@ -1412,7 +1419,7 @@ int db_update_rfcsize(GList *lost)
 	while(lost) {
 		pmsid = (uint64_t *)lost->data;
 		
-		if (! (msg = dbmail_message_new())) {
+		if (! (msg = dbmail_message_new(NULL))) {
 			db_con_close(c);
 			return DM_EQUERY;
 		}
@@ -1447,16 +1454,21 @@ int db_set_headercache(GList *lost)
 	uint64_t pmsgid;
 	uint64_t *id;
 	DbmailMessage *msg;
+	Mempool_T pool;
 	if (! lost)
 		return DM_SUCCESS;
 
+	pool = mempool_open();
 	lost = g_list_first(lost);
 	while (lost) {
 		id = (uint64_t *)lost->data;
 		pmsgid = *id;
 		
-		msg = dbmail_message_new();
-		if (! msg) return DM_EQUERY;
+		msg = dbmail_message_new(pool);
+		if (! msg) {
+		       mempool_close(&pool);	
+		       return DM_EQUERY;
+		}
 
 		if (! (msg = dbmail_message_retrieve(msg, pmsgid))) {
 			TRACE(TRACE_WARNING, "error retrieving physmessage: [%lu]", pmsgid);
@@ -1474,13 +1486,15 @@ int db_set_headercache(GList *lost)
 		if (! g_list_next(lost)) break;
 		lost = g_list_next(lost);
 	}
+	mempool_close(&pool);
+
 	return DM_SUCCESS;
 }
 
 		
 int db_icheck_headercache(GList **lost)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	uint64_t *id;
 
 	c = db_con_get();
@@ -1509,17 +1523,21 @@ int db_set_envelope(GList *lost)
 	uint64_t pmsgid;
 	uint64_t *id;
 	DbmailMessage *msg;
+	Mempool_T pool;
 	if (! lost)
 		return DM_SUCCESS;
 
+	pool = mempool_open();
 	lost = g_list_first(lost);
 	while (lost) {
 		id = (uint64_t *)lost->data;
 		pmsgid = *id;
 		
-		msg = dbmail_message_new();
-		if (! msg)
+		msg = dbmail_message_new(pool);
+		if (! msg) {
+			mempool_close(&pool);
 			return DM_EQUERY;
+		}
 
 		if (! (msg = dbmail_message_retrieve(msg, pmsgid))) {
 			TRACE(TRACE_WARNING,"error retrieving physmessage: [%lu]", pmsgid);
@@ -1532,13 +1550,15 @@ int db_set_envelope(GList *lost)
 		if (! g_list_next(lost)) break;
 		lost = g_list_next(lost);
 	}
+
+	mempool_close(&pool);
 	return DM_SUCCESS;
 }
 
 		
 int db_icheck_envelope(GList **lost)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	uint64_t *id;
 
 	c = db_con_get();
@@ -1588,7 +1608,7 @@ static int mailbox_empty(uint64_t mailbox_idnr)
 /** get the total size of messages in a mailbox. Does not work recursively! */
 int db_get_mailbox_size(uint64_t mailbox_idnr, int only_deleted, uint64_t * mailbox_size)
 {
-	C c; R r = NULL; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r = NULL; volatile int t = DM_SUCCESS;
 	assert(mailbox_size != NULL);
 	*mailbox_size = 0;
 
@@ -1668,7 +1688,7 @@ char * db_get_message_lines(uint64_t message_idnr, long lines)
 	if (db_get_physmessage_id(message_idnr, &physmessage_id) != DM_SUCCESS)
 		return NULL;
 
-	msg = dbmail_message_new();
+	msg = dbmail_message_new(NULL);
 	msg = dbmail_message_retrieve(msg, physmessage_id);
 	hdr = dbmail_message_hdrs_to_string(msg);
 	buf = dbmail_message_body_to_string(msg);
@@ -1706,19 +1726,16 @@ char * db_get_message_lines(uint64_t message_idnr, long lines)
 
 int db_update_pop(ClientSession_T * session_ptr)
 {
-	C c; volatile int t = DM_SUCCESS;
-	GList *messagelst = NULL;
+	Connection_T c; volatile int t = DM_SUCCESS;
 	uint64_t user_idnr = 0;
 	INIT_QUERY;
 
-	/* get first element in list */
-
 	c = db_con_get();
 	TRY
-		messagelst = g_list_first(session_ptr->messagelst);
-		while (messagelst) {
+		session_ptr->messagelst = p_list_first(session_ptr->messagelst);
+		while (session_ptr->messagelst) {
 			/* check if they need an update in the database */
-			struct message *msg = (struct message *)messagelst->data;
+			struct message *msg = (struct message *)p_list_data(session_ptr->messagelst);
 			if (msg->virtual_messagestatus != msg->messagestatus) {
 				/* use one message to get the user_idnr that goes with the messages */
 				if (user_idnr == 0) user_idnr = db_get_useridnr(msg->realmessageid);
@@ -1729,8 +1746,10 @@ int db_update_pop(ClientSession_T * session_ptr)
 						MESSAGE_STATUS_DELETE);
 			}
 
-			if (! g_list_next(messagelst)) break;
-			messagelst = g_list_next(messagelst);
+			if (! p_list_next(session_ptr->messagelst))
+				break;
+
+			session_ptr->messagelst = p_list_next(session_ptr->messagelst);
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -1756,9 +1775,9 @@ int db_update_pop(ClientSession_T * session_ptr)
 static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 			 uint64_t * mailbox_idnr)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	struct mailbox_match *mailbox_like = NULL;
-	S stmt;
+	PreparedStatement_T stmt;
 	int p;
 	INIT_QUERY;
 	const char *frag;
@@ -1858,14 +1877,14 @@ int db_findmailbox(const char *fq_name, uint64_t owner_idnr, uint64_t * mailbox_
 
 static int mailboxes_by_regex(uint64_t user_idnr, int only_subscribed, const char * pattern, GList ** mailboxes)
 {
-	C c; R r; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	uint64_t search_user_idnr = user_idnr;
 	char *spattern;
 	char *namespace, *username;
 	struct mailbox_match *mailbox_like = NULL;
 	GString *qs;
 	int n_rows = 0;
-	S stmt;
+	PreparedStatement_T stmt;
 	int prml;
 	
 	assert(mailboxes != NULL);
@@ -2001,7 +2020,7 @@ int db_findmailbox_by_regex(uint64_t owner_idnr, const char *pattern, GList ** c
 int mailbox_is_writable(uint64_t mailbox_idnr)
 {
 	int result = TRUE;
-	MailboxState_T M = MailboxState_new(mailbox_idnr);
+	MailboxState_T M = MailboxState_new(NULL, mailbox_idnr);
 	if (MailboxState_getPermission(M) != IMAPPERM_READWRITE) {
 		TRACE(TRACE_INFO, "read-only mailbox");
 		result = FALSE;
@@ -2096,7 +2115,7 @@ GList * db_imap_split_mailbox(const char *mailbox, uint64_t owner_idnr, const ch
 		}
 
 		/* Prepend a mailbox struct onto the list. */
-		MailboxState_T M = MailboxState_new(mboxid);
+		MailboxState_T M = MailboxState_new(NULL, mboxid);
 		MailboxState_setName(M, cpy);
 		MailboxState_setIsUsers(M, is_users);
 		MailboxState_setIsPublic(M, is_public);
@@ -2294,7 +2313,7 @@ int db_createmailbox(const char * name, uint64_t owner_idnr, uint64_t * mailbox_
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 	volatile int result = DM_SUCCESS;
-	C c; R r; S s;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	INIT_QUERY;
 
 	if (auth_requires_shadow_user()) {
@@ -2411,7 +2430,7 @@ int db_find_create_mailbox(const char *name, mailbox_source source,
 int db_listmailboxchildren(uint64_t mailbox_idnr, uint64_t user_idnr, GList ** children)
 {
 	struct mailbox_match *mailbox_like = NULL;
-	C c; R r; S s; volatile int t = DM_SUCCESS;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = DM_SUCCESS;
 	GString *qs;
 	int prml;
 
@@ -2479,7 +2498,7 @@ int db_listmailboxchildren(uint64_t mailbox_idnr, uint64_t user_idnr, GList ** c
 
 int db_isselectable(uint64_t mailbox_idnr)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -2501,7 +2520,7 @@ int db_isselectable(uint64_t mailbox_idnr)
 
 int db_noinferiors(uint64_t mailbox_idnr)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -2522,7 +2541,7 @@ int db_noinferiors(uint64_t mailbox_idnr)
 
 int db_movemsg(uint64_t mailbox_to, uint64_t mailbox_from)
 {
-	C c; volatile int t = DM_SUCCESS;
+	Connection_T c; volatile int t = DM_SUCCESS;
 	c = db_con_get();
 	TRY
 		db_exec(c, "UPDATE %smessages SET mailbox_idnr=%lu WHERE mailbox_idnr=%lu", 
@@ -2546,7 +2565,7 @@ int db_movemsg(uint64_t mailbox_to, uint64_t mailbox_from)
 int db_mailbox_has_message_id(uint64_t mailbox_idnr, const char *messageid)
 {
 	int rows = 0;
-	C c; R r; S s;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	char expire[DEF_FRAGSIZE], partial[DEF_FRAGSIZE];
 	INIT_QUERY;
 
@@ -2591,7 +2610,7 @@ int db_mailbox_has_message_id(uint64_t mailbox_idnr, const char *messageid)
 
 static uint64_t message_get_size(uint64_t message_idnr)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	uint64_t size = 0;
 
 	c = db_con_get();
@@ -2613,7 +2632,7 @@ static uint64_t message_get_size(uint64_t message_idnr)
 int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 	       uint64_t * newmsg_idnr, gboolean recent)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	uint64_t msgsize;
 	char *frag;
 	int valid=FALSE;
@@ -2691,7 +2710,7 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 
 int db_getmailboxname(uint64_t mailbox_idnr, uint64_t user_idnr, char *name)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	char *tmp_name = NULL, *tmp_fq_name;
 	int result;
 	size_t tmp_fq_name_len;
@@ -2734,7 +2753,7 @@ int db_getmailboxname(uint64_t mailbox_idnr, uint64_t user_idnr, char *name)
 
 int db_setmailboxname(uint64_t mailbox_idnr, const char *name)
 {
-	C c; S s; volatile int t = DM_SUCCESS;
+	Connection_T c; PreparedStatement_T s; volatile int t = DM_SUCCESS;
 
 	c = db_con_get();
 	TRY
@@ -2755,7 +2774,7 @@ int db_setmailboxname(uint64_t mailbox_idnr, const char *name)
 
 int db_subscribe(uint64_t mailbox_idnr, uint64_t user_idnr)
 {
-	C c; S s; R r; volatile int t = TRUE;
+	Connection_T c; PreparedStatement_T s; ResultSet_T r; volatile int t = TRUE;
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
@@ -2767,7 +2786,8 @@ int db_subscribe(uint64_t mailbox_idnr, uint64_t user_idnr)
 			s = db_stmt_prepare(c, "INSERT INTO %ssubscription (user_id, mailbox_id) VALUES (?, ?)", DBPFX);
 			db_stmt_set_u64(s,1,user_idnr);
 			db_stmt_set_u64(s,2,mailbox_idnr);
-			t = db_stmt_exec(s);
+			db_stmt_exec(s);
+			t = TRUE;
 		}
 		db_commit_transaction(c);
 	CATCH(SQLException)
@@ -2788,7 +2808,7 @@ int db_unsubscribe(uint64_t mailbox_idnr, uint64_t user_idnr)
 
 int db_get_msgflag(const char *flag_name, uint64_t msg_idnr)
 {
-	C c; R r;
+	Connection_T c; ResultSet_T r;
 	char the_flag_name[DEF_QUERYSIZE / 2];	/* should be sufficient ;) */
 	int val = 0;
 
@@ -2823,9 +2843,9 @@ int db_get_msgflag(const char *flag_name, uint64_t msg_idnr)
 	return val;
 }
 
-static void db_set_msgkeywords(C c, uint64_t msg_idnr, GList *keywords, int action_type, MessageInfo *msginfo)
+static void db_set_msgkeywords(Connection_T c, uint64_t msg_idnr, GList *keywords, int action_type, MessageInfo *msginfo)
 {
-	S s;
+	PreparedStatement_T s;
 	INIT_QUERY;
 
 	if (action_type == IMAPFA_REMOVE) {
@@ -2879,7 +2899,7 @@ static void db_set_msgkeywords(C c, uint64_t msg_idnr, GList *keywords, int acti
 
 int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo)
 {
-	C c; int t = DM_SUCCESS;
+	Connection_T c; int t = DM_SUCCESS;
 	size_t i, pos = 0;
 	volatile int seen = 0;
 	INIT_QUERY;
@@ -2944,7 +2964,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 
 static int db_acl_has_acl(uint64_t userid, uint64_t mboxid)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -3012,7 +3032,7 @@ int db_acl_delete_acl(uint64_t userid, uint64_t mboxid)
 
 int db_acl_get_identifier(uint64_t mboxid, GList **identifier_list)
 {
-	C c; R r; volatile int t = TRUE;
+	Connection_T c; ResultSet_T r; volatile int t = TRUE;
 
 	c = db_con_get();
 	TRY
@@ -3034,7 +3054,7 @@ int db_acl_get_identifier(uint64_t mboxid, GList **identifier_list)
 
 int db_get_mailbox_owner(uint64_t mboxid, uint64_t * owner_id)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 	assert(owner_id != NULL);
 	*owner_id = 0;
 
@@ -3058,7 +3078,7 @@ int db_get_mailbox_owner(uint64_t mboxid, uint64_t * owner_id)
 
 int db_user_is_mailbox_owner(uint64_t userid, uint64_t mboxid)
 {
-	C c; R r; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 
 	c = db_con_get();
 	TRY
@@ -3104,7 +3124,7 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 	int result = TRUE;
 	int score, bestscore = -1;
 	char *bestlogin = NULL, *bestuserid = NULL;
-	C c; R r; S s;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	INIT_QUERY;
 
 	memset(clientsock,0,DM_SOCKADDR_LEN);
@@ -3203,7 +3223,7 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 }
 int db_user_exists(const char *username, uint64_t * user_idnr) 
 {
-	C c; R r; S s;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 
 	assert(username);
 	assert(user_idnr);
@@ -3234,7 +3254,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 		 uint64_t clientid, uint64_t maxmail, uint64_t * user_idnr) 
 {
 	INIT_QUERY;
-	C c; R r; S s; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = FALSE;
 	char *encoding = NULL, *frag;
 	uint64_t id, existing_user_idnr = 0;
 
@@ -3315,14 +3335,15 @@ int db_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 
 int db_user_delete(const char * username)
 {
-	C c; S s; volatile int t = FALSE;
+	Connection_T c; PreparedStatement_T s; volatile int t = FALSE;
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "DELETE FROM %susers WHERE userid = ?", DBPFX);
 		db_stmt_set_str(s, 1, username);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
 		db_commit_transaction(c);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
@@ -3334,15 +3355,16 @@ int db_user_delete(const char * username)
 
 int db_user_rename(uint64_t user_idnr, const char *new_name) 
 {
-	C c; S s; volatile gboolean t = FALSE;
+	Connection_T c; PreparedStatement_T s; volatile gboolean t = FALSE;
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "UPDATE %susers SET userid = ? WHERE user_idnr= ?", DBPFX);
 		db_stmt_set_str(s, 1, new_name);
 		db_stmt_set_u64(s, 2, user_idnr);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
 		db_commit_transaction(c);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
@@ -3401,7 +3423,7 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	char *tmp_to = NULL;
 	char *tmp_from = NULL;
 	char *tmp_handle = NULL;
-	C c; R r; S s; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = FALSE;
 	INIT_QUERY;
 
 	tmp_to = g_strndup(to, REPLYCACHE_WIDTH);
@@ -3453,8 +3475,9 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 		db_stmt_set_str(s, 1, tmp_to);
 		db_stmt_set_str(s, 2, tmp_from);
 		db_stmt_set_str(s, 3, tmp_handle);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
 		db_commit_transaction(c);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
@@ -3471,7 +3494,7 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 
 int db_replycache_unregister(const char *to, const char *from, const char *handle)
 {
-	C c; S s; volatile gboolean t = FALSE;
+	Connection_T c; PreparedStatement_T s; volatile gboolean t = FALSE;
 	INIT_QUERY;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -3488,8 +3511,9 @@ int db_replycache_unregister(const char *to, const char *from, const char *handl
 		db_stmt_set_str(s, 1, to);
 		db_stmt_set_str(s, 2, from);
 		db_stmt_set_str(s, 3, handle);
-		t = db_stmt_exec(s);
+		db_stmt_exec(s);
 		db_commit_transaction(c);
+		t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
@@ -3507,7 +3531,7 @@ int db_replycache_validate(const char *to, const char *from,
 		const char *handle, int days)
 {
 	GString *tmp = g_string_new("");
-	C c; R r; S s; volatile int t = FALSE;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = FALSE;
 	INIT_QUERY;
 
 	g_string_printf(tmp, db_get_sql(SQL_EXPIRE), days);
@@ -3556,9 +3580,9 @@ int db_mailbox_seq_update(uint64_t mailbox_id)
 int db_rehash_store(void)
 {
 	GList *ids = NULL;
-	C c; S s; R r; volatile int t = FALSE;
+	Connection_T c; PreparedStatement_T s; ResultSet_T r; volatile int t = FALSE;
 	const char *buf;
-	char *hash;
+	char hash[FIELDSIZE];
 
 	c = db_con_get();
 	TRY
@@ -3593,7 +3617,8 @@ int db_rehash_store(void)
 			r = db_stmt_query(s);
 			db_result_next(r);
 			buf = db_result_get(r, 0);
-			hash = dm_get_hash_for_string(buf);
+			memset(hash, 0, sizeof(hash));
+			dm_get_hash_for_string(buf, hash);
 
 			db_con_clear(c);
 			s = db_stmt_prepare(c, "UPDATE %smimeparts SET hash=? WHERE id=?", DBPFX);
@@ -3601,7 +3626,6 @@ int db_rehash_store(void)
 			db_stmt_set_u64(s, 2, *id);
 			db_stmt_exec(s);
 
-			g_free(hash);
 			if (! g_list_next(ids)) break;
 			ids = g_list_next(ids);
 		}
@@ -3627,7 +3651,7 @@ int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr
 
 	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
 
-        message = dbmail_message_new();
+        message = dbmail_message_new(NULL);
         message = dbmail_message_init_with_string(message, msgdata);
 	dbmail_message_set_internal_date(message, (char *)internal_date);
         

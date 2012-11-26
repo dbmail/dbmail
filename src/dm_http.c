@@ -101,7 +101,7 @@ void Http_getUsers(T R)
 				}
 
 				/* Check if the user has ACL delete rights to this mailbox */
-				M = MailboxState_new(mboxid);
+				M = MailboxState_new(NULL, mboxid);
 				access = acl_has_right(M, id, ACL_RIGHT_DELETE);
 				if (access != 1) {
 					Request_error(R, HTTP_BADREQUEST, "NO permission denied");
@@ -181,7 +181,7 @@ void Http_getUsers(T R)
 		Request_setContentType(R,"application/json; charset=utf-8");
 		evbuffer_add_printf(buf, "{\"mailboxes\": {\n");
 		while (mailboxes->data) {
-			MailboxState_T b = MailboxState_new(*((uint64_t *)mailboxes->data));
+			MailboxState_T b = MailboxState_new(NULL, *((uint64_t *)mailboxes->data));
 			MailboxState_setOwner(b, id);
 			//if (MailboxState_reload(b) == DM_SUCCESS)
 			evbuffer_add_printf(buf, "    \"%lu\":{\"name\":\"%s\",\"exists\":%u}", MailboxState_getId(b), MailboxState_getName(b), MailboxState_getExists(b));
@@ -240,7 +240,7 @@ void Http_getMailboxes(T R)
 
 		const char *msg;
 		uint64_t msg_id = 0;
-		MailboxState_T b = MailboxState_new(id);
+		MailboxState_T b = MailboxState_new(NULL, id);
 		unsigned exists = MailboxState_getExists(b);
 
 		if ((msg = evhttp_find_header(Request_getPOST(R),"message"))) {
@@ -259,7 +259,7 @@ void Http_getMailboxes(T R)
 		 * C < GET /mailboxes/876/messages
 		 */
 
-		MailboxState_T b = MailboxState_new(id);
+		MailboxState_T b = MailboxState_new(NULL, id);
 		GTree *msns = MailboxState_getMsn(b);
 		GList *ids = g_tree_keys(msns);
 		GTree *msginfo = MailboxState_getMsginfo(b);
@@ -294,7 +294,7 @@ void Http_getMailboxes(T R)
 
 void Http_getMessages(T R)
 {
-	DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new(NULL);
 	struct evbuffer *buf;
 	uint64_t pid;
 	uint64_t id = 0;
@@ -363,6 +363,7 @@ void Http_getMessages(T R)
 					headers = g_list_next(headers);
 				}
 				i++;
+				g_list_free(g_list_first(headers));
 			}
 		} else {
 

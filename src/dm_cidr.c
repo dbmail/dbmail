@@ -27,6 +27,7 @@ struct T {
 	char *sock_str;
 	struct sockaddr_in *socket;
 	short int mask;
+	const char repr[FIELDSIZE];
 };
 
 T cidr_new(const char *str)
@@ -97,14 +98,8 @@ T cidr_new(const char *str)
 		
 	g_free(haddr);
 	g_free(hport);
-	
-	TRACE(TRACE_DEBUG,"%s", cidr_repr(self));
-	return self;
-}
 
-char * cidr_repr(T self)
-{
-	return g_strdup_printf("struct cidrfilter {\n"
+	g_snprintf((char *)self->repr, FIELDSIZE-1, "struct cidrfilter {\n"
 			"\tsock_str: %s;\n"
 			"\tsocket->sin_addr: %s;\n"
 			"\tsocket->sin_port: %d;\n"
@@ -115,6 +110,14 @@ char * cidr_repr(T self)
 			self->socket->sin_port,
 			self->mask
 			);
+
+	TRACE(TRACE_DEBUG,"%s", cidr_repr(self));
+	return self;
+}
+
+const char * cidr_repr(T self)
+{
+	return self->repr;
 }
 
 int cidr_match(T base, T test)

@@ -31,34 +31,59 @@
 #define MAX_CAPASIZE 1024
 
 struct T {
+	Mempool_T pool;
 	const char capabilities[MAX_CAPASIZE];
-	GList *max_set;
-	GList *current_set;
+	List_T max_set;
+	List_T current_set;
 	gboolean dirty;
 };
 
-static GList *capa_search(GList *set, const char *c)
+static List_T capa_search(List_T set, const char *c)
 {
-	return g_list_find_custom(set, c, (GCompareFunc)strcasecmp);
+	List_T found = NULL;
+	List_T first = p_list_first(set);
+	String_T S;
+	char *s;
+	while (first) {
+		S = p_list_data(first);
+		s = (char *)p_string_str(S);
+		if (strcasecmp(s, c)==0) {
+			found = first;
+			break;
+		}
+		first = p_list_next(first);
+	}
+	return found;
 }
 
 static void capa_update(T A)
 {
-	if (A->dirty) {
-		GString *t = g_list_join(A->current_set, " ");
-		strncpy((char *)A->capabilities, t->str, MAX_CAPASIZE-1);
-		g_string_free(t, TRUE);
-		t = NULL;
-		A->dirty = FALSE;
+	if (! A->dirty)
+		return;
+
+	String_T t = p_string_new(A->pool, "");
+	List_T L = p_list_first(A->current_set);
+	while (L) {
+		String_T S = p_list_data(L);
+		char *s = (char *)p_string_str(S);
+		p_string_append(t, s);
+		L = p_list_next(L);
+		if (L)
+			p_string_append(t, " ");
 	}
+	strncpy((char *)A->capabilities, p_string_str(t), MAX_CAPASIZE-1);
+	p_string_free(t, TRUE);
+	t = NULL;
+	A->dirty = FALSE;
 }
 
-T Capa_new(void)
+T Capa_new(Mempool_T pool)
 {
 	Field_T val;
         char maxcapa[MAX_CAPASIZE];
 	T A;
-	A = g_malloc0(sizeof(*A));
+	A = mempool_pop(pool, sizeof(*A));
+	A->pool = pool;
 	char **v, **h;
 
 	memset(&maxcapa,0,sizeof(maxcapa));
@@ -69,16 +94,18 @@ T Capa_new(void)
 	else
 		strncpy((char *)maxcapa, IMAP_CAPABILITY_STRING, MAX_CAPASIZE-1);
 
-	A->max_set = NULL;
-	A->current_set = NULL;
+	A->max_set = p_list_new(A->pool);
+	A->current_set = p_list_new(A->pool);
 
 	h = v = g_strsplit(maxcapa, " ", -1);
 	while (*v) {
-	       A->max_set = g_list_append(A->max_set, *v);
-	       A->current_set = g_list_append(A->current_set, *v++);
+		String_T S = p_string_new(A->pool, *v++);
+		A->max_set = p_list_append(A->max_set, S);
+		A->current_set = p_list_append(A->current_set, S);
+		assert(A->current_set);
 	}
 
-	g_free(h);
+	g_strfreev(h);
 
 	A->dirty = TRUE;
 	return A;
@@ -97,29 +124,46 @@ gboolean Capa_match(T A, const char *c)
 
 void Capa_add(T A, const char *c)
 {
-	GList *element = capa_search(A->max_set, c);
+	List_T element = capa_search(A->max_set, c);
 	if (element) {
-		A->current_set = g_list_append(A->current_set, element->data);
+		A->current_set = p_list_append(A->current_set, 
+				p_list_data(element));
+		assert(A->current_set);
 		A->dirty = TRUE;
 	}
 }
 
 void Capa_remove(T A, const char * c)
 {
-	GList *element = capa_search(A->current_set, c);
+	List_T element = capa_search(A->current_set, c);
 	if (element) {
-		A->current_set = g_list_remove_link(A->current_set, element);
-		g_list_free(element);
+		A->current_set = p_list_remove(A->current_set, element);
+		p_list_free(&element);
+		assert(A->current_set);
 		A->dirty = TRUE;
 	}
 }
 
 void Capa_free(T *A)
 {
+	Mempool_T pool;
 	T c = *A;
-	if (c->current_set) g_list_free(g_list_first(c->current_set));
-	if (c->max_set) g_list_destroy(c->max_set);
-	if (c) g_free(c);
+	List_T curr, first;
+
+	first = p_list_first(c->current_set);
+	p_list_free(&first);
+
+	first = p_list_first(c->max_set);
+	curr = first;
+	while (curr) {
+		String_T data = p_list_data(curr);
+		p_string_free(data, TRUE);
+		curr = p_list_next(curr);
+	}
+	p_list_free(&first);
+
+	pool = c->pool;
+	mempool_push(pool, c, sizeof(*c));
 	c = NULL;
 }
 

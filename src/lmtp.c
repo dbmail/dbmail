@@ -23,9 +23,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "lmtp"
 
-#define STRT 1
-#define AUTH 2
-#define QUIT 3
 #define MAX_ERRORS 3
 
 extern ServerConfig_T *server_conf;
@@ -69,7 +66,7 @@ void send_greeting(ClientSession_T *session)
 	GETCONFIGVALUE("banner", "LMTP", banner);
 	if (! dm_db_ping()) {
 		ci_write(session->ci, "500 database has gone fishing BYE\r\n");
-		session->state = QUIT;
+		session->state = CLIENTSTATE_QUIT;
 		return;
 	}
 
@@ -82,7 +79,7 @@ void send_greeting(ClientSession_T *session)
 static void lmtp_cb_time(void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	session->state = QUIT;
+	session->state = CLIENTSTATE_QUIT;
 	ci_write(session->ci, "221 Connection timeout BYE\r\n");
 }
 		
@@ -127,11 +124,11 @@ void lmtp_cb_write(void *arg)
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
 	switch (session->state) {
-		case QUIT:
+		case CLIENTSTATE_QUIT:
 			client_session_bailout(&session);
 			break;
 		default:
-			if (session->ci->write_buffer->len > session->ci->write_buffer_offset) {
+			if (p_string_len(session->ci->write_buffer) > session->ci->write_buffer_offset) {
 				ci_write(session->ci,NULL);
 				break;
 			}
@@ -157,7 +154,7 @@ static void lmtp_rset(ClientSession_T *session, gboolean reset_state)
 	int state = session->state;
 	client_session_reset(session);
 	if (reset_state)
-		session->state = AUTH;
+		session->state = CLIENTSTATE_AUTHENTICATED;
 	else
 		session->state = state;
 }
@@ -235,19 +232,22 @@ int lmtp_tokenizer(ClientSession_T *session, char *buffer)
 		}
 		session->command_type = command_type;
 
-		if (value) session->args = g_list_append(session->args, g_strdup(value));
+		if (value) {
+			String_T s = p_string_new(session->pool, value);
+			session->args = p_list_append(session->args, s);
+		}
 
 	}
 
 	if (session->command_type == LMTP_DATA) {
 		if (command) {
-			if (session->state != AUTH) {
+			if (session->state != CLIENTSTATE_AUTHENTICATED) {
 				return lmtp_error(session, "550 Command out of sequence\r\n");
 			}
-			if (g_list_length(session->rcpt) < 1) {
+			if (p_list_length(session->rcpt) < 1) {
 				return lmtp_error(session, "503 No valid recipients\r\n");
 			}
-			if (g_list_length(session->from) < 1) {
+			if (p_list_length(session->from) < 1) {
 				return lmtp_error(session, "554 No valid sender.\r\n");
 			}
 			ci_write(session->ci, "354 Start mail input; end with <CRLF>.<CRLF>\r\n");
@@ -257,9 +257,9 @@ int lmtp_tokenizer(ClientSession_T *session, char *buffer)
 		if (strncmp(buffer,".\n",2)==0 || strncmp(buffer,".\r\n",3)==0)
 			session->parser_state = TRUE;
 		else if (strncmp(buffer,".",1)==0)
-			g_string_append(session->rbuff, &buffer[1]);
+			p_string_append(session->rbuff, &buffer[1]);
 		else
-			g_string_append(session->rbuff, buffer);
+			p_string_append(session->rbuff, buffer);
 	} else
 		session->parser_state = TRUE;
 
@@ -282,7 +282,7 @@ int lmtp(ClientSession_T * session)
 
 	case LMTP_QUIT:
 		ci_write(ci, "221 %s BYE\r\n", session->hostname);
-		session->state = QUIT;
+		session->state = CLIENTSTATE_QUIT;
 		return 1;
 
 	case LMTP_NOOP:
@@ -309,18 +309,20 @@ int lmtp(ClientSession_T * session)
 				 * "250-BINARYMIME\r\n"
 				 * */
 		client_session_reset(session);
-		session->state = AUTH;
+		session->state = CLIENTSTATE_AUTHENTICATED;
 		client_session_set_timeout(session, server_conf->timeout);
 
 		return 1;
 
 	case LMTP_HELP:
 	
-		session->args = g_list_first(session->args);
-		if (session->args && session->args->data)
-			arg = (char *)session->args->data;
-		else
+		session->args = p_list_first(session->args);
+		if (p_list_data(session->args)) {
+			String_T s = p_list_data(session->args);
+			arg = (char *)p_string_str(s);
+		} else {
 			arg = NULL;
+		}
 
 		if (arg == NULL)
 			helpcmd = LMTP_END;
@@ -357,11 +359,11 @@ int lmtp(ClientSession_T * session)
 		/* We need to LHLO first because the client
 		 * needs to know what extensions we support.
 		 * */
-		if (session->state != AUTH) {
+		if (session->state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "550 Command out of sequence.\r\n");
 			return 1;
 		} 
-		if (g_list_length(session->from) > 0) {
+		if (p_list_length(session->from) > 0) {
 			ci_write(ci, "500 Sender already received. Use RSET to clear.\r\n");
 			return 1;
 		}
@@ -370,10 +372,17 @@ int lmtp(ClientSession_T * session)
 		 * just find something between angle brackets!
 		 * */
 
-		session->args = g_list_first(session->args);
-		if (! (session->args && session->args->data))
+		session->args = p_list_first(session->args);
+		if (p_list_data(session->args)) {
+			String_T s = p_list_data(session->args);
+			arg = (char *)p_string_str(s);
+		} else {
+			arg = NULL;
+		}
+
+
+		if (! arg)
 			return 1;
-		arg = (char *)session->args->data;
 
 		if (find_bounded(arg, '<', '>', &tmpaddr, &tmplen, &tmppos) < 0) {
 			ci_write(ci, "500 No address found. Missing <> boundries.\r\n");
@@ -406,23 +415,31 @@ int lmtp(ClientSession_T * session)
 			}
 		}
 
-		session->from = g_list_prepend(session->from, g_strdup(tmpaddr));
-		ci_write(ci, "250 Sender <%s> OK\r\n", (char *)(session->from->data));
-
+		String_T s = p_string_new(session->pool, tmpaddr);
 		g_free(tmpaddr);
+
+		ci_write(ci, "250 Sender <%s> OK\r\n", p_string_str(s));
+
+		session->from = p_list_prepend(session->from, s);
 
 		return 1;
 
 	case LMTP_RCPT:
-		if (session->state != AUTH) {
+		if (session->state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "550 Command out of sequence.\r\n");
 			return 1;
 		} 
 
-		session->args = g_list_first(session->args);
-		if (! (session->args && session->args->data))
+		session->args = p_list_first(session->args);
+		if (p_list_data(session->args)) {
+			String_T s = p_list_data(session->args);
+			arg = (char *)p_string_str(s);
+		} else {
+			arg = NULL;
+		}
+
+		if (! arg)
 			return 1;
-		arg = (char *)session->args->data;
 
 		if (find_bounded(arg, '<', '>', &tmpaddr, &tmplen, &tmppos) < 0 || tmplen < 1) {
 			ci_write(ci, "500 No address found. Missing <> boundries or address is null.\r\n");
@@ -449,7 +466,7 @@ int lmtp(ClientSession_T * session)
 		switch (dsnuser->dsn.class) {
 			case DSN_CLASS_OK:
 				ci_write(ci, "250 Recipient <%s> OK\r\n", dsnuser->address);
-				session->rcpt = g_list_prepend(session->rcpt, dsnuser);
+				session->rcpt = p_list_append(session->rcpt, dsnuser);
 				break;
 			default:
 				ci_write(ci, "550 Recipient <%s> FAIL\r\n", dsnuser->address);
@@ -461,11 +478,11 @@ int lmtp(ClientSession_T * session)
 
 	/* Here's where it gets really exciting! */
 	case LMTP_DATA:
-		msg = dbmail_message_new();
-		dbmail_message_init_with_string(msg, session->rbuff->str);
-		dbmail_message_set_header(msg, "Return-Path", (char *)session->from->data);
-		g_string_truncate(session->rbuff,0);
-		g_string_maybe_shrink(session->rbuff);
+		msg = dbmail_message_new(NULL);
+		dbmail_message_init_with_string(msg, p_string_str(session->rbuff));
+		dbmail_message_set_header(msg, "Return-Path", 
+				(char *)p_string_str(p_list_data(session->from)));
+		p_string_truncate(session->rbuff,0);
 
 		if (insert_messages(msg, session->rcpt) == -1) {
 			ci_write(ci, "430 Message not received\r\n");
@@ -476,9 +493,8 @@ int lmtp(ClientSession_T * session)
 		 * that of the status of each of the remaining recipients. */
 
 		/* The replies MUST be in the order received */
-		session->rcpt = g_list_reverse(session->rcpt);
 		while (session->rcpt) {
-			Delivery_T * dsnuser = (Delivery_T *)session->rcpt->data;
+			Delivery_T * dsnuser = (Delivery_T *)p_list_data(session->rcpt);
 			dsn_tostring(dsnuser->dsn, &class, &subject, &detail);
 
 			/* Give a simple OK, otherwise a detailed message. */
@@ -494,8 +510,9 @@ int lmtp(ClientSession_T * session)
 							dsnuser->address, class, subject, detail);
 			}
 
-			if (! g_list_next(session->rcpt)) break;
-			session->rcpt = g_list_next(session->rcpt);
+			if (! p_list_next(session->rcpt))
+				break;
+			session->rcpt = p_list_next(session->rcpt);
 		}
 		dbmail_message_free(msg);
 		/* Reset the session after a successful delivery;

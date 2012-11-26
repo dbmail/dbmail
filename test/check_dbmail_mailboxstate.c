@@ -66,7 +66,7 @@ void teardown(void)
 START_TEST(test_createdestroy)
 {
 	uint64_t id = get_mailbox_id("INBOX");
-	MailboxState_T M = MailboxState_new(id);
+	MailboxState_T M = MailboxState_new(NULL, id);
 	MailboxState_free(&M);
 }
 END_TEST
@@ -90,10 +90,10 @@ START_TEST(test_mbxinfo)
 	*k1 = id;
 	*k2 = id;
 
-	N = MailboxState_new(id);
+	N = MailboxState_new(NULL, id);
 	g_tree_replace(mbxinfo, k1, N);
 
-	M = MailboxState_new(id);
+	M = MailboxState_new(NULL, id);
 	g_tree_replace(mbxinfo, k2, M);
 
 	g_tree_destroy(mbxinfo);

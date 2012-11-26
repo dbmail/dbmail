@@ -169,6 +169,7 @@ START_TEST(test_mailbox_remove_namespace)
 		fail_unless( ((namespace == NULL && expected[i][0] == NULL) || strcmp(namespace, expected[i][0])==0),
 			"\nmailbox_remove_namespace failed on [%s] [%s] != [%s]\n" , patterns[i], namespace, expected[i][0]);
 		g_free(t);
+		g_free(username);
 	}
 
 }
@@ -301,20 +302,24 @@ START_TEST(test_g_list_merge)
 	g_list_merge(&a, b, IMAPFA_ADD, (GCompareFunc)g_ascii_strcasecmp);
 	s = dbmail_imap_plist_as_string(a);
 	fail_unless(MATCH(s,"(A B C D)"), "g_list_merge ADD failed 1");
+	g_free(s);
 
 	b = g_list_append(b, g_strdup("A"));
 
 	g_list_merge(&a, b, IMAPFA_ADD, (GCompareFunc)g_ascii_strcasecmp);
 	s = dbmail_imap_plist_as_string(a);
 	fail_unless(MATCH(s,"(A B C D)"), "g_list_merge ADD failed 2");
+	g_free(s);
 
 	g_list_merge(&a, b, IMAPFA_REMOVE, (GCompareFunc)g_ascii_strcasecmp);
 	s = dbmail_imap_plist_as_string(a);
 	fail_unless(MATCH(s,"(B C)"), "g_list_merge REMOVE failed");
+	g_free(s);
 
 	g_list_merge(&a, b, IMAPFA_REPLACE, (GCompareFunc)g_ascii_strcasecmp);
 	s = dbmail_imap_plist_as_string(a);
 	fail_unless(MATCH(s,"(D A)"), "g_list_merge REPLACE failed");
+	g_free(s);
 }
 END_TEST
 
@@ -361,13 +366,19 @@ START_TEST(test_base64_decodev)
 	fail_unless(MATCH(result[0],"proxy"), "base64_decodev failed");
 	fail_unless(MATCH(result[1],"user"), "base64_decodev failed");
 	fail_unless(MATCH(result[2],"pass"), "base64_decodev failed");
+
+	g_strfreev(result);
+	g_free(out);
 	
 }
 END_TEST
 
-#define S1(a,b) fail_unless(MATCH(dm_sha1((a)),(b)), "sha1 failed [%s] != [%s]", dm_sha1(a), b)
+#define S1(a,b) \
+	memset(hash,0,sizeof(hash)); dm_sha1((a),hash); \
+	fail_unless(MATCH(hash,(b)), "sha1 failed [%s] != [%s]", hash, b)
 START_TEST(test_sha1)
 {
+	char hash[FIELDSIZE]; 
 	// test vectors from https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
 	S1("", "da39a3ee5e6b4b0d3255bfef95601890afd80709");
 	S1("a", "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8");
@@ -375,9 +386,12 @@ START_TEST(test_sha1)
 }
 END_TEST
 
-#define S2(a,b) fail_unless(MATCH(dm_sha256((a)),(b)), "sha256 failed [%s] != [%s]", dm_sha256(a), b)
+#define S2(a,b) \
+	memset(hash,0,sizeof(hash)); dm_sha256((a),hash); \
+	fail_unless(MATCH(hash,(b)), "sha256 failed [%s] != [%s]", hash, b)
 START_TEST(test_sha256)
 {
+	char hash[FIELDSIZE]; 
 	// test vectors from https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
 	S2("", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 	S2("a", "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb");
@@ -385,9 +399,12 @@ START_TEST(test_sha256)
 }
 END_TEST
 
-#define S3(a,b) fail_unless(MATCH(dm_sha512((a)),(b)), "sha512 failed [%s] != [%s]", dm_sha512(a), b)
+#define S3(a,b) \
+	memset(hash,0,sizeof(hash)); dm_sha512((a),hash); \
+	fail_unless(MATCH(hash,(b)), "sha512 failed [%s] != [%s]", hash, b)
 START_TEST(test_sha512)
 {
+	char hash[FIELDSIZE]; 
 	// test vectors from https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
 	S3("", "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
 	S3("a", "1f40fc92da241694750979ee6cf582f2d5d7d28e18335de05abc54d0560e0f5302860c652bf08d560252aa5e74210546f369fbbbce8c12cfc7957b2652fe9a75");
@@ -395,28 +412,36 @@ START_TEST(test_sha512)
 }
 END_TEST
 
-
-#define M(a,b) fail_unless(MATCH(dm_md5((a)),(b)), "md5 failed [%s] != [%s]", dm_md5(a), b)
+#define M(a,b) \
+	memset(hash,0,sizeof(hash)); dm_md5((a),hash); \
+	fail_unless(MATCH(hash,(b)), "md5 failed [%s] != [%s]", hash, b)
 START_TEST(test_md5)
 {
+	char hash[FIELDSIZE]; 
 	M("","d41d8cd98f00b204e9800998ecf8427e");
 	M("a","0cc175b9c0f1b6a831c399e269772661");
 	M("abc", "900150983cd24fb0d6963f7d28e17f72");
 }
 END_TEST
 
-#define T(a,b) fail_unless(MATCH(dm_tiger((a)),(b)), "tiger failed [%s] != [%s]", dm_tiger(a), b)
+#define T(a,b) \
+	memset(hash,0,sizeof(hash)); dm_tiger((a),hash); \
+	fail_unless(MATCH(hash,(b)), "tiger failed [%s] != [%s]", hash, b)
 START_TEST(test_tiger)
 {
+	char hash[FIELDSIZE]; 
 	T("","3293ac630c13f0245f92bbb1766e16167a4e58492dde73f3");
 	T("a","77befbef2e7ef8ab2ec8f93bf587a7fc613e247f5f247809");
 	T("abc","2aab1484e8c158f2bfb8c5ff41b57a525129131c957b5f93");
 }
 END_TEST
 
-#define W(a,b) fail_unless(MATCH(dm_whirlpool((a)),(b)), "whirlpool failed\n[%s] !=\n[%s]", dm_whirlpool(a), b)
+#define W(a,b) \
+	memset(hash,0,sizeof(hash)); dm_whirlpool((a),hash); \
+	fail_unless(MATCH(hash,(b)), "whirlpool failed [%s] != [%s]", hash, b)
 START_TEST(test_whirlpool)
 {
+	char hash[FIELDSIZE]; 
 	// the whirlpool test vectors are taken from the reference implementation (iso-test-vectors.txt)
 	W("","19fa61d75522a4669b44e39c1d2e1726c530232130d407f89afee0964997f7a73e83be698b288febcf88e3e03c4f0757ea8964e59b63d93708b138cc42a66eb3");
 	W("a","8aca2602792aec6f11a67206531fb7d7f0dff59413145e6973c45001d0087b42d11bc645413aeff63a42391a39145a591a92200d560195e53b478584fdae231a");
@@ -478,45 +503,9 @@ START_TEST(test_get_crlf_encoded_opt2)
 }
 END_TEST
 
-START_TEST(test_imap_unescape)
-{
-	char *r;
-	char *in[] = {
-		"",
-		"test",
-		"test'",
-		"test '",
-		"test \\",
-		"test \\\"",
-		"test \\\\",
-		"test \\s \\\"",
-		NULL
-	};
-	char *out[] = {
-		"",
-		"test",
-		"test'",
-		"test '",
-		"test \\",
-		"test \"",
-		"test \\",
-		"test \\s \"",
-		NULL
-	};
-
-	int i=0;
-	while (in[i]) {
-		r = imap_unescape(g_strdup(in[i]));
-		fail_unless(MATCH(out[i], r), "[%s] != [%s]", r, out[i]);
-		g_free(r);
-		i++;
-	}
-}
-END_TEST
-
 START_TEST(test_date_imap2sql)
 {
-	char *r;
+	char r[SQL_INTERNALDATE_LEN];
 	int i = 0;
 	char *in[] = {
 		"01-Jan-2001",
@@ -532,9 +521,9 @@ START_TEST(test_date_imap2sql)
 	};
 
 	while (in[i]) {
-		r = date_imap2sql(in[i]);
+		memset(r, 0, sizeof(r));
+		date_imap2sql(in[i], r);
 		fail_unless(MATCH(out[i], r), "[%s] != [%s]", r, out[i]);
-		g_free(r);
 		i++;
 	}
 
@@ -593,7 +582,6 @@ Suite *dbmail_misc_suite(void)
 	tcase_add_test(tc_misc, test_tiger);
 	tcase_add_test(tc_misc, test_get_crlf_encoded_opt1);
 	tcase_add_test(tc_misc, test_get_crlf_encoded_opt2);
-	tcase_add_test(tc_misc, test_imap_unescape);
 	tcase_add_test(tc_misc, test_date_imap2sql);
 	tcase_add_test(tc_misc, test_date_sql2imap);
 

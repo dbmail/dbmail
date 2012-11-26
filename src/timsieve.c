@@ -23,9 +23,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "timsieved"
 
-#define STRT 1
-#define AUTH 2
-#define QUIT 3
 #define MAX_ERRORS 3
 
 /* allowed timsieve commands */
@@ -72,7 +69,7 @@ static void send_greeting(ClientSession_T *session)
 	GETCONFIGVALUE("banner", "SIEVE", banner);
 	if (! dm_db_ping()) {
 		ci_write(session->ci, "BYE \"database has gone fishing\"\r\n");
-		session->state = QUIT;
+		session->state = CLIENTSTATE_QUIT;
 		return;
 	}
 
@@ -112,14 +109,14 @@ static void tims_handle_input(void *arg)
 		}
 	}
 
-	if (session->state < QUIT)
+	if (session->state < CLIENTSTATE_QUIT)
 		ci_uncork(session->ci);
 }
 
 void tims_cb_time(void * arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	session->state = QUIT;
+	session->state = CLIENTSTATE_QUIT;
 	ci_write(session->ci, "BYE \"Connection timed out.\"\r\n");
 }
 
@@ -129,11 +126,11 @@ void tims_cb_write(void *arg)
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 
 	switch(session->state) {
-		case QUIT:
+		case CLIENTSTATE_QUIT:
 			client_session_bailout(&session);
 			break;
 		default:
-			if (session->ci->write_buffer->len > session->ci->write_buffer_offset) {
+			if (p_string_len(session->ci->write_buffer) > session->ci->write_buffer_offset) {
 				ci_write(session->ci,NULL);
 				break;
 			}
@@ -157,7 +154,7 @@ static void reset_callbacks(ClientSession_T *session)
 int tims_handle_connection(client_sock *c)
 {
 	ClientSession_T *session = client_session_new(c);
-	session->state = STRT;
+	session->state = CLIENTSTATE_NON_AUTHENTICATED;
 	client_session_set_timeout(session, server_conf->login_timeout);
 	reset_callbacks(session);
 	send_greeting(session);
@@ -225,11 +222,12 @@ int tims_tokenizer(ClientSession_T *session, char *buffer)
 	if (session->ci->rbuff_size) {
 		size_t l = strlen(buffer);
 		size_t n = min(session->ci->rbuff_size, l);
-		g_string_append_len(session->rbuff, buffer, n);
+		p_string_append_len(session->rbuff, buffer, n);
 		session->ci->rbuff_size -= n;
 		if (! session->ci->rbuff_size) {
-			session->args = g_list_append(session->args, g_strdup(session->rbuff->str));
-			g_string_printf(session->rbuff,"%s","");
+			String_T s = p_string_new(session->pool, p_string_str(session->rbuff));
+			session->args = p_list_append(session->args, s);
+			p_string_printf(session->rbuff, "%s", "");
 			session->parser_state = TRUE;
 		}
 		TRACE(TRACE_DEBUG, "state [%d], size [%ld]", session->parser_state, session->ci->rbuff_size);
@@ -241,16 +239,15 @@ int tims_tokenizer(ClientSession_T *session, char *buffer)
 		int i = 0;
 		char p = 0, c = 0;
 		gboolean inquote = FALSE;
-		GString *t = g_string_new("");
+		String_T t = p_string_new(session->pool, "");
 		while ((c = s[i++])) {
 			if (inquote) {
 				if (c == '"' && p != '\\') {
-					session->args = g_list_append(session->args, t->str);
-					g_string_free(t, FALSE);
-					t = g_string_new("");
+					session->args = p_list_append(session->args, t);
+					t = p_string_new(session->pool, "");
 					inquote = FALSE;
 				} else {
-					g_string_append_c(t,c);
+					p_string_append_len(t, &c, 1);
 				}
 				p = c;
 				continue;
@@ -268,24 +265,24 @@ int tims_tokenizer(ClientSession_T *session, char *buffer)
 				session->ci->rbuff_size = strtoull(s+i, NULL, 10);
 				return FALSE;
 			}
-			g_string_append_c(t,c);
+			p_string_append_len(t, &c, 1);
 			p = c;
 		}
-		if (t->len) {
-			session->args = g_list_append(session->args, t->str);
-			g_string_free(t,FALSE);
+		if (p_string_len(t)) {
+			session->args = p_list_append(session->args, t);
+			t = p_string_new(session->pool, "");
 		}
 	} 
 	session->parser_state = TRUE;
 	
-	session->args = g_list_first(session->args);
+	session->args = p_list_first(session->args);
 	while (session->args) {
-		TRACE(TRACE_DEBUG,"arg: [%s]", (char *)session->args->data);			
-		if (! g_list_next(session->args))
+		String_T s = p_list_data(session->args);
+		TRACE(TRACE_DEBUG,"arg: [%s]", (char *)p_string_str(s));			
+		if (! p_list_next(session->args))
 			break;
-		session->args = g_list_next(session->args);
+		session->args = p_list_next(session->args);
 	}
-	//session->args = g_list_append(session->args,g_strdup(value));
 	TRACE(TRACE_DEBUG, "[%p] cmd [%d], state [%d] [%s]", session, session->command_type, session->parser_state, buffer);
 
 	return session->parser_state;
@@ -309,7 +306,7 @@ int tims(ClientSession_T *session)
 	switch (session->command_type) {
 	case TIMS_LOUT:
 		ci_write(ci, "OK \"Bye.\"\r\n");
-		session->state = QUIT;
+		session->state = CLIENTSTATE_QUIT;
 		return 1;
 		
 	case TIMS_STLS:
@@ -325,18 +322,26 @@ int tims(ClientSession_T *session)
 		 * which means that the command we accept will look
 		 * like this: Authenticate "PLAIN" "base64-password"
 		 * */
-		session->args = g_list_first(session->args);
-		if (! (session->args && session->args->data))
+		session->args = p_list_first(session->args);
+		if (p_list_data(session->args)) {
+			String_T s = p_list_data(session->args);
+			arg = (char *)p_string_str(s);
+		} else {
+			arg = NULL;
+		}
+
+
+		if (! arg)
 			return 1;
 
-		arg = (char *)session->args->data;
 		if (strcasecmp(arg, "PLAIN") == 0) {
 			int i = 0;
 			uint64_t useridnr;
-			if (! g_list_next(session->args))
+			String_T s;
+			if (! p_list_next(session->args))
 				return tims_error(session, "NO \"Missing argument.\"\r\n");	
-			session->args = g_list_next(session->args);
-			arg = (char *)session->args->data;
+			s = p_list_data(session->args);
+			arg = (char *)p_string_str(s);
 
 			char **tmp64 = NULL;
 
@@ -356,7 +361,7 @@ int tims(ClientSession_T *session)
 				ci_authlog_init(ci, THIS_MODULE, tmp64[1], AUTHLOG_ACT);
 
 				ci_write(ci, "OK\r\n");
-				session->state = AUTH;
+				session->state = CLIENTSTATE_AUTHENTICATED;
 				session->useridnr = useridnr;
 				session->username = g_strdup(tmp64[1]);
 				session->password = g_strdup(tmp64[2]);
@@ -375,20 +380,27 @@ int tims(ClientSession_T *session)
 		return 1;
 
 	case TIMS_PUTS:
-		if (session->state != AUTH) {
+		if (session->state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
 		
-		session->args = g_list_first(session->args);
-		if (! (session->args && session->args->data))
+		session->args = p_list_first(session->args);
+		if (p_list_data(session->args)) {
+			arg = (char *)p_string_str(p_list_data(session->args));
+		} else {
+			arg = NULL;
+		}
+
+
+		if (! arg)
 			return 1;
 
-		scriptname = (char *)session->args->data;
-		session->args = g_list_next(session->args);
+		scriptname = arg;
+		session->args = p_list_next(session->args);
 		assert(session->args);
 
-		script = (char *)session->args->data;
+		script = (char *)p_string_str(p_list_data(session->args));
 
 		scriptlen = strlen(script);
 		TRACE(TRACE_INFO, "Client sending script of length [%ld]", scriptlen);
@@ -423,7 +435,7 @@ int tims(ClientSession_T *session)
 		break;
 		
 	case TIMS_SETS:
-		if (session->state != AUTH) {
+		if (session->state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
@@ -431,9 +443,9 @@ int tims(ClientSession_T *session)
 
 		scriptname = NULL;
 
-		session->args = g_list_first(session->args);
-		if ((session->args && session->args->data))
-			scriptname = (char *)session->args->data;
+		session->args = p_list_first(session->args);
+		if ((session->args && p_list_data(session->args)))
+			scriptname = (char *)p_string_str(p_list_data(session->args));
 
 		if (strlen(scriptname)) {
 			if (! dm_sievescript_activate(session->useridnr, scriptname))
@@ -455,16 +467,16 @@ int tims(ClientSession_T *session)
 		return 1;
 		
 	case TIMS_GETS:
-		if (session->state != AUTH) {
+		if (session->state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
 		
-		session->args = g_list_first(session->args);
-		if (! (session->args && session->args->data))
+		session->args = p_list_first(session->args);
+		if (! (session->args && p_list_data(session->args)))
 			return 1;
 
-		scriptname = (char *)session->args->data;
+		scriptname = (char *)p_string_str(p_list_data(session->args));
 
 		if (! strlen(scriptname))
 			return tims_error(session, "NO \"Script name required.\"\r\n");
@@ -484,16 +496,16 @@ int tims(ClientSession_T *session)
 		return 1;
 		
 	case TIMS_DELS:
-		if (session->state != AUTH) {
+		if (session->state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
 		
-		session->args = g_list_first(session->args);
-		if (! (session->args && session->args->data))
+		session->args = p_list_first(session->args);
+		if (! (session->args && p_list_data(session->args)))
 			return 1;
 
-		scriptname = (char *)session->args->data;
+		scriptname = (char *)p_string_str(p_list_data(session->args));
 
 		if (! strlen(scriptname))
 			return tims_error(session, "NO \"Script name required.\"\r\n");
@@ -506,7 +518,7 @@ int tims(ClientSession_T *session)
 		return 1;
 
 	case TIMS_SPAC:
-		if (session->state != AUTH) {
+		if (session->state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
@@ -520,7 +532,7 @@ int tims(ClientSession_T *session)
 		return 1;
 		
 	case TIMS_LIST:
-		if (session->state != AUTH) {
+		if (session->state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}

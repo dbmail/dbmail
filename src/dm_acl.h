@@ -79,7 +79,7 @@ int acl_has_right(MailboxState_T S, uint64_t userid, ACLRight right);
  *     - acl string (list of identifier-rights pairs, might by empty)
  * \note string should be freed by caller
  */
-/*@null@*/ char *acl_get_acl(uint64_t mboxid);
+char *acl_get_acl(uint64_t mboxid);
 
 /**
  * \brief list rights that may be granted to a user on a mailbox
@@ -90,7 +90,7 @@ int acl_has_right(MailboxState_T S, uint64_t userid, ACLRight right);
  *     - string of rights otherwise (SEE RFC for details)
  * \note string should be freed by caller
  */
-/*@null@*/ /*@only@*/ char *acl_listrights(uint64_t userid, uint64_t mboxid);
+const char *acl_listrights(uint64_t userid, uint64_t mboxid);
 
 /**
  * \brief list rights that a user has on a mailbox

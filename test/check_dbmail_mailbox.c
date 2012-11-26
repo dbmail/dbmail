@@ -131,7 +131,7 @@ void teardown(void)
 
 START_TEST(test_dbmail_mailbox_new)
 {
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(NULL, get_mailbox_id("INBOX"));
 	fail_unless(mb!=NULL, "dbmail_mailbox_new failed");
 	dbmail_mailbox_free(mb);
 }
@@ -139,7 +139,7 @@ END_TEST
 
 START_TEST(test_dbmail_mailbox_free)
 {
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(NULL, get_mailbox_id("INBOX"));
 	dbmail_mailbox_free(mb);
 }
 END_TEST
@@ -148,7 +148,7 @@ START_TEST(test_dbmail_mailbox_dump)
 {
 	int c = 0;
 	FILE *o = fopen("/dev/null","w");
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(NULL, get_mailbox_id("INBOX"));
 	c = dbmail_mailbox_dump(mb,o);
 	fail_unless(c>=0,"dbmail_mailbox_dump failed");
 	dbmail_mailbox_free(mb);
@@ -156,259 +156,265 @@ START_TEST(test_dbmail_mailbox_dump)
 }
 END_TEST
 
+static String_T * _build_search_keys(Mempool_T pool, const char *args, size_t *size)
+{
+	int idx;
+	String_T *search_keys;
+	int arglen = 0;
+	char **array;
+	array = g_strsplit(args," ",0);
+
+	while (array[arglen++]);
+	*size = sizeof(String_T) * arglen;
+	search_keys = (String_T *)mempool_pop(pool, *size);
+	for (idx=0; idx<arglen && array[idx]; idx++) {
+		search_keys[idx] = p_string_new(pool, array[idx]);
+	}
+	g_strfreev(array);
+	return search_keys;
+}
+
+	
 START_TEST(test_dbmail_mailbox_build_imap_search)
 {
-	char *args;
-	char **array;
-	uint64_t idx = 0;
+	String_T *search_keys;
 	gboolean sorted = 1;
+	size_t size;
+	uint64_t idx;
 
+	Mempool_T pool = mempool_open();
 	DbmailMailbox *mb, *mc, *md;
 	
 	// first case
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
-			"HEADER FROM paul@nfg.nl SINCE 1-Feb-1994");
-	array = g_strsplit(args," ",0);
-	g_free(args);
-	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	search_keys = _build_search_keys(pool, "( arrival cc date reverse from size subject to ) us-ascii "
+			"HEADER FROM paul@nfg.nl SINCE 1-Feb-1994", &size);
 
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+
+	idx = 0;
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
+	mempool_push(pool, search_keys, size);
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
 	
 	// second case
 	idx = 0;
-	mc = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("( arrival ) ( cc ) us-ascii HEADER FROM paul@nfg.nl "
-			"SINCE 1-Feb-1990");
-	array = g_strsplit(args," ",0);
-	g_free(args);
-
-	dbmail_mailbox_build_imap_search(mc, array, &idx, sorted);
+	mc = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "( arrival ) ( cc ) us-ascii HEADER FROM paul@nfg.nl "
+			"SINCE 1-Feb-1990", &size);
+	
+	idx = 0;
+	dbmail_mailbox_build_imap_search(mc, search_keys, &idx, sorted);
+	mempool_push(pool, search_keys, size);
 	
 	dbmail_mailbox_free(mc);
-	g_strfreev(array);
 	
 	// third case
 	idx = 0;
-	md = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
+	md = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "( arrival cc date reverse from size subject to ) us-ascii "
 			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test "
-			"HEADER SUBJECT foo )");
-	array = g_strsplit(args," ",0);
-	g_free(args);
-
-	dbmail_mailbox_build_imap_search(md, array, &idx, sorted);
+			"HEADER SUBJECT foo )", &size);
+	dbmail_mailbox_build_imap_search(md, search_keys, &idx, sorted);
 	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, 
 			"build_search: tree too shallow");
 	
+	mempool_push(pool, search_keys, size);
 	dbmail_mailbox_free(md);
-	g_strfreev(array);
 
 	// fourth case
 	idx = 0;
-	md = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("1,* ( arrival cc date reverse from size subject to ) us-ascii "
+	md = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "1,* ( arrival cc date reverse from size subject to ) us-ascii "
 			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test "
-			"HEADER SUBJECT foo )");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+			"HEADER SUBJECT foo )", &size);
 
-	dbmail_mailbox_build_imap_search(md, array, &idx, 1);
+	dbmail_mailbox_build_imap_search(md, search_keys, &idx, 1);
 	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, 
 			"build_search: tree too shallow");
 	
 	dbmail_mailbox_free(md);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
+	mempool_close(&pool);
 }
 END_TEST
 
 START_TEST(test_dbmail_mailbox_sort)
 {
-	char *args;
-	char **array;
+	String_T *search_keys;
+	size_t size;
 	uint64_t idx = 0;
 	gboolean sorted = 1;
 
 	DbmailMailbox *mb;
+	Mempool_T pool = mempool_open();
 	
 	// first case
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii HEADER FROM test SINCE 1-Feb-1994");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool,
+			"( arrival cc date reverse from size subject to )"
+		       " us-ascii HEADER FROM test SINCE 1-Feb-1994", &size);
 	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_sort(mb);
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
+	mempool_close(&pool);
 }
 END_TEST
 
 START_TEST(test_dbmail_mailbox_search)
 {
-	char *args;
-	char **array;
+	String_T *search_keys;
+	size_t size;
 	uint64_t idx = 0;
 	gboolean sorted = 1;
 	int all, found, notfound;
 	DbmailMailbox *mb;
+	Mempool_T pool = mempool_open();
 	
 	// first case
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
-			"HEADER FROM foo SINCE 1-Feb-1994 ( SENTSINCE 1-Feb-1995 OR BEFORE 1-Jan-2006 SINCE 1-Jan-2005 )");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "( arrival cc date reverse from size subject to ) us-ascii "
+			"HEADER FROM foo SINCE 1-Feb-1994 ( SENTSINCE 1-Feb-1995 OR BEFORE 1-Jan-2006 SINCE 1-Jan-2005 )",
+			&size);
 	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_sort(mb);
 	dbmail_mailbox_search(mb);
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
 
 	// second case
 	//
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("1:*");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "1:*", &size);
 	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_search(mb);
 	all = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
 	
+	//
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("1:* TEXT @");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "1:* TEXT @", &size);
 	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_search(mb);
 	found = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
 	
+	//
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("1:* NOT TEXT @");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "1:* NOT TEXT @", &size);
 	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_search(mb);
 	notfound = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
 
 	fail_unless((all - found) == notfound, "dbmail_mailbox_search failed: SEARCH NOT (all: %d, found: %d, notfound: %d)", all, found, notfound);
 	
 	// third case
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("UID 1,* BODY paul@nfg.nl");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "UID 1,* BODY paul@nfg.nl", &size);
 	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_search(mb);
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
 
 	// 
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("1");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "1", &size);
 	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_search(mb);
 	found = g_tree_nnodes(mb->found);
 	fail_unless(found==1,"dbmail_mailbox_search failed: SEARCH UID 1");
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
 
 	// 
 	idx=0;
 	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	args = g_strdup("OR FROM myclient SUBJECT myclient");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	search_keys = _build_search_keys(pool, "OR FROM myclient SUBJECT myclient", &size);
 	
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_search(mb);
 //	found = g_tree_nnodes(mb->ids);
 //	fail_unless(found==1,"dbmail_mailbox_search failed: SEARCH UID 1");
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
-
-
+	mempool_push(pool, search_keys, size);
+	mempool_close(&pool);
 }
 END_TEST
 
 START_TEST(test_dbmail_mailbox_search_parsed_1)
 {
 	uint64_t idx=0;
+	size_t size;
 	gboolean sorted = 0;
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	char *args = g_strdup("UID 1 BODY unlikelyaddress@nfg.nl");
-	char **array = g_strsplit(args," ",0);
-	g_free(args);
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	Mempool_T pool = mempool_open();
+	DbmailMailbox *mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	String_T *search_keys = _build_search_keys(pool, "UID 1 BODY unlikelyaddress@nfg.nl", &size);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_search(mb);
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
+	mempool_close(&pool);
 }
 END_TEST
 
 START_TEST(test_dbmail_mailbox_search_parsed_2)
 {
+	size_t size;
 	uint64_t idx=0;
 	gboolean sorted = 0;
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
-	char *args = g_strdup("UID 1,* BODY the");
-	char **array = g_strsplit(args," ",0);
-	g_free(args);
-	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	Mempool_T pool = mempool_open();
+	DbmailMailbox *mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
+	String_T *search_keys = _build_search_keys(pool, "UID 1,* BODY the", &size);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, sorted);
 	dbmail_mailbox_search(mb);
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
+	mempool_close(&pool);
 }
 END_TEST
 
 START_TEST(test_dbmail_mailbox_orderedsubject)
 {
 	char *res;
-	char *args;
-	char **array;
 	uint64_t idx = 0;
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	size_t size;
+	String_T *search_keys;
+	Mempool_T pool = mempool_open();
+	DbmailMailbox *mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
 	
-	args = g_strdup("HEADER FROM foo.org ( SINCE 1-Jan-2005 )");
-	array = g_strsplit(args," ",0);
-	g_free(args);
+	search_keys = _build_search_keys(pool, "HEADER FROM foo.org ( SINCE 1-Jan-2005 )", &size);
 
-	dbmail_mailbox_build_imap_search(mb, array, &idx, 0);
+	dbmail_mailbox_build_imap_search(mb, search_keys, &idx, 0);
 	dbmail_mailbox_search(mb);
 	
 	dbmail_mailbox_set_uid(mb,TRUE);
@@ -422,7 +428,8 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	g_free(res);
 	
 	dbmail_mailbox_free(mb);
-	g_strfreev(array);
+	mempool_push(pool, search_keys, size);
+	mempool_close(&pool);
 
 }
 END_TEST
@@ -430,7 +437,7 @@ START_TEST(test_dbmail_mailbox_get_set)
 {
 	guint c, d, r;
 	GTree *set;
-	DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id("INBOX"));
+	DbmailMailbox *mb = dbmail_mailbox_new(NULL, get_mailbox_id("INBOX"));
 	dbmail_mailbox_set_uid(mb,TRUE);
 	r = dbmail_mailbox_open(mb);
 
@@ -493,7 +500,7 @@ START_TEST(test_dbmail_mailbox_get_set)
 
 
 	// empty box
-	mb = dbmail_mailbox_new(get_mailbox_id("empty"));
+	mb = dbmail_mailbox_new(NULL, get_mailbox_id("empty"));
 	dbmail_mailbox_open(mb);
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);

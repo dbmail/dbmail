@@ -23,10 +23,9 @@
 
 static const char hex[] = "0123456789abcdef";
 
-char * dm_digest(const unsigned char * hash, hashid type)
+int dm_digest(const unsigned char * hash, hashid type, char *out)
 {
-	char *buffer = g_new0(char,256);
-	char *buf = buffer;
+	char *buf = out;
 	size_t i, j;
 
 	for (i = 0; i < mhash_get_block_size(type); i++) {
@@ -43,7 +42,7 @@ char * dm_digest(const unsigned char * hash, hashid type)
 	}
 	*buf = '\0';
 
-	return buffer;
+	return 0;
 }
 
 static void dm_hash(const unsigned char * buf, hashid type, gpointer data)
@@ -53,52 +52,52 @@ static void dm_hash(const unsigned char * buf, hashid type, gpointer data)
 	mhash_deinit(td, data);
 }
 
-#define DM_HASH(x, t) \
-	g_return_val_if_fail(x != NULL, NULL); \
+#define DM_HASH(x, t, out) \
+	g_return_val_if_fail(x != NULL, 1); \
 	unsigned char h[1024]; \
-	char *d = NULL; \
 	memset(h,'\0', sizeof(h)); \
 	dm_hash((unsigned char *)x, t, (gpointer)h); \
-	d = dm_digest(h, t); \
-	return d
+	return dm_digest(h, t, out)
 
-char * dm_whirlpool(const char * const s)
+int dm_whirlpool(const char * const s, char *out)
 {
-	DM_HASH(s, MHASH_WHIRLPOOL);
+	DM_HASH(s, MHASH_WHIRLPOOL, out);
 }
 
-char * dm_sha512(const char * const s)
+int dm_sha512(const char * const s, char *out)
 {
-	DM_HASH(s, MHASH_SHA512);
+	DM_HASH(s, MHASH_SHA512, out);
 }
 
-char * dm_sha256(const char * const s)
+int dm_sha256(const char * const s, char *out)
 {
-	DM_HASH(s, MHASH_SHA256);
+	DM_HASH(s, MHASH_SHA256, out);
 }
 
-char * dm_sha1(const char * const s)
+int dm_sha1(const char * const s, char *out)
 {
-	DM_HASH(s, MHASH_SHA1);
+	DM_HASH(s, MHASH_SHA1, out);
 }
 
-char * dm_tiger(const char * const s)
+int dm_tiger(const char * const s, char *out)
 {
-	DM_HASH(s, MHASH_TIGER);
+	DM_HASH(s, MHASH_TIGER, out);
 }
 
-char *dm_md5(const char * const s)
+int dm_md5(const char * const s, char *out)
 {
-	DM_HASH(s, MHASH_MD5);
+	DM_HASH(s, MHASH_MD5, out);
 }
 
-char *dm_md5_base64(const char * const s)
+int dm_md5_base64(const char * const s, char *out)
 {
-	g_return_val_if_fail(s != NULL, NULL);
+	char *enc;
+	g_return_val_if_fail(s != NULL, 1);
 	unsigned char h[2048];
 	memset(h,'\0', sizeof(h));
 	dm_hash((unsigned char *)s, MHASH_MD5, h);
-	char *d = g_base64_encode(h, sizeof(h));
-	return d;
+	enc = g_base64_encode(h, sizeof(h));
+	g_strlcpy(out, enc, FIELDSIZE);
+	return 0;
 }
 

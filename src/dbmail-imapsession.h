@@ -8,7 +8,6 @@
 #define DM_COMMANDCHANNEL_H
 
 #include "dbmail.h"
-#include "dm_cache.h"
 
 // command state during idle command
 #define IDLE -1 
@@ -17,31 +16,34 @@ typedef struct cmd_t *cmd_t;
 
 /* ImapSession definition */
 typedef struct {
+	Mempool_T pool;
 	GMutex lock;
 	ClientBase_T *ci;
 	Capa_T preauth_capa;   // CAPABILITY
-	Capa_T capa;   // CAPABILITY
-	char *tag;
-	char *command;
+	Capa_T capa;           // CAPABILITY
+	char tag[16];
+	char command[16];
 	int command_type;
 	int command_state;
 
 	gboolean use_uid;
-	uint64_t msg_idnr;  // replace this with a GList
+	uint64_t msg_idnr;
 
-	GString *buff; // output buffer
+	String_T buff;         // output buffer
 
 	int parser_state;
-	char **args;
+	String_T *args;
 	uint64_t args_idx;
 
-	int loop; // idle loop counter
-	fetch_items *fi;
+	int loop;              // IDLE loop counter
 
-	DbmailMailbox *mailbox;	/* currently selected mailbox */
-	uint64_t lo; // lower boundary for message ids
-	uint64_t hi; // upper boundary for message ids
-	uint64_t ceiling; // upper boundary during prefetching
+	fetch_items *fi;       // FETCH
+	search_order order;    // SORT/SEARCH
+
+	DbmailMailbox *mailbox; // currently selected mailbox
+	uint64_t lo;            // lower boundary for message ids
+	uint64_t hi;            // upper boundary for message ids
+	uint64_t ceiling;       // upper boundary during prefetching
 
 	DbmailMessage *message;
 
@@ -65,18 +67,20 @@ typedef int (*IMAP_COMMAND_HANDLER) (ImapSession *);
 
 /* thread data */
 typedef struct {
+#define DM_THREAD_DATA_MAGIC 0x5af8d
+	unsigned int magic;
+	Mempool_T pool;
 	void (* cb_enter)(gpointer);		/* callback on thread entry		*/
 	void (* cb_leave)(gpointer);		/* callback on thread exit		*/
 	ImapSession *session;
-	gpointer data;				/* payload				*/
+	gpointer data;                          /* payload */
 	volatile int status;			/* command result 			*/
 } dm_thread_data;
 
 /* public methods */
 
-ImapSession * dbmail_imap_session_new(void);
-ImapSession * dbmail_imap_session_set_tag(ImapSession * self, char * tag);
-ImapSession * dbmail_imap_session_set_command(ImapSession * self, char * command);
+ImapSession * dbmail_imap_session_new(Mempool_T);
+ImapSession * dbmail_imap_session_set_command(ImapSession * self, const char * command);
 
 void dbmail_imap_session_reset(ImapSession *session);
 
@@ -99,22 +103,7 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self);
 int dbmail_imap_session_fetch_get_items(ImapSession *self);
 int dbmail_imap_session_fetch_parse_args(ImapSession * self);
 
-void dbmail_imap_session_bodyfetch_new(ImapSession *self);
 void dbmail_imap_session_bodyfetch_free(ImapSession *self);
-void dbmail_imap_session_bodyfetch_rewind(ImapSession *self);
-
-int dbmail_imap_session_bodyfetch_set_partspec(ImapSession *self, char *partspec, int length);
-int dbmail_imap_session_bodyfetch_set_itemtype(ImapSession *self, int itemtype);
-int dbmail_imap_session_bodyfetch_set_argstart(ImapSession *self);
-
-int dbmail_imap_session_bodyfetch_set_argcnt(ImapSession *self);
-int dbmail_imap_session_bodyfetch_get_last_argcnt(ImapSession *self);
-
-int dbmail_imap_session_bodyfetch_set_octetstart(ImapSession *self, guint64 octet);
-guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(ImapSession *self);
-
-int dbmail_imap_session_bodyfetch_set_octetcnt(ImapSession *self, guint64 octet);
-guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(ImapSession *self);
 
 int imap4_tokenizer_main(ImapSession *self, const char *buffer);
 

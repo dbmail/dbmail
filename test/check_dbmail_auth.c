@@ -42,13 +42,21 @@ extern int reallyquiet;
 
 static ClientBase_T * ci_new(void)
 {
-	ClientBase_T *ci = g_new0(ClientBase_T,1);
+	Mempool_T pool = mempool_open();
+	ClientBase_T *ci = mempool_pop(pool, sizeof(ClientBase_T));
 	FILE *fd = fopen("/dev/null","w");
 	ci->rx = fileno(stdin);
 	ci->tx = fileno(fd);
+	ci->pool = pool;
 	return ci;
 }
 
+static void ci_delete(ClientBase_T *ci)
+{
+	Mempool_T pool = ci->pool;
+	mempool_push(pool, ci, sizeof(ClientBase_T));
+	mempool_close(&pool);
+}
 
 /*
  *
@@ -82,6 +90,7 @@ START_TEST(test_auth_validate)
 	result = auth_validate(ci, "nosuchtestuser", "testnosuchlogin", &user_idnr);
 	fail_unless(result==0,"auth_validate failed [%d]", result);
 
+	ci_delete(ci);
 }
 END_TEST
 

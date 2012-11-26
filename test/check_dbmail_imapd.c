@@ -177,62 +177,41 @@ static void ci_free_writable(ClientBase_T *ci)
 START_TEST(test_imap_session_new)
 {
 	ImapSession *s;
-	s = dbmail_imap_session_new();
+	Mempool_T pool = mempool_open();
+	s = dbmail_imap_session_new(pool);
 	fail_unless(s!=NULL, "Failed to initialize imapsession");
 	dbmail_imap_session_delete(&s);
+	mempool_close(&pool);
 }
 END_TEST
 
-START_TEST(test_imap_bodyfetch)
-{
-	int result;
-	guint64 octet;
-	ImapSession *s = dbmail_imap_session_new();
-
-	dbmail_imap_session_bodyfetch_new(s);
-	
-	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_octetstart(s), "octetstart init value incorrect");
-	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_octetcnt(s), "octetcnt init value incorrect");
-	
-	s->args_idx = 23;
-	dbmail_imap_session_bodyfetch_set_argstart(s);
-	
-	dbmail_imap_session_bodyfetch_set_octetstart(s,0);
-	octet = dbmail_imap_session_bodyfetch_get_last_octetstart(s);
-	fail_unless(octet==0, "octetstart incorrect");
-	
-	dbmail_imap_session_bodyfetch_set_octetcnt(s,12288);
-	octet = dbmail_imap_session_bodyfetch_get_last_octetcnt(s);
-	fail_unless(octet==12288, "octetcnt incorrect");
-	
-	dbmail_imap_session_delete(&s);
-		
-}
-END_TEST
 START_TEST(test_imap_get_structure)
 {
 	DbmailMessage *message;
+	char *body;
 	char *result;
 	char *expect = g_new0(char,1024);
 
 	/* bare bones */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, simple);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	dbmail_message_free(message);
 	g_free(result);
 
 	/* text/plain */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 4 NIL NIL NIL NIL)",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n[%s]\n", result, expect, g_mime_object_get_body(message->content));
+	body = g_mime_object_get_body(message->content);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n[%s]\n", result, expect, body);
+	g_free(body);
 	g_free(result);
 	dbmail_message_free(message);
 
 	/* multipart */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_message);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL \"7BIT\" 30 3 NIL (\"inline\" NIL) NIL NIL)"
@@ -243,7 +222,7 @@ START_TEST(test_imap_get_structure)
 	dbmail_message_free(message);
 
 	/* multipart alternative */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_alternative);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"(((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 281 10 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 759 17 NIL NIL NIL NIL) \"alternative\" (\"boundary\" \"------------040302030903000400040101\") NIL NIL NIL)(\"image\" \"jpeg\" (\"name\" \"jesse_2.jpg\") NIL NIL \"base64\" 262 NIL (\"inline\" (\"filename\" \"jesse_2.jpg\")) NIL NIL) \"mixed\" (\"boundary\" \"------------050000030206040804030909\") NIL NIL NIL)",1024);
@@ -253,11 +232,10 @@ START_TEST(test_imap_get_structure)
 	dbmail_message_free(message);
 	
 	/* multipart apple */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_apple);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 2 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 1 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"=?iso-8859-13?q?=A5Tradition?= hat Potenzial\\\".docx\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename\" \"=?iso-8859-13?q?=A5Tradition?= hat Potenzial\\\".docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 4 NIL NIL NIL NIL) \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL) \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL)", 1024);
-
 
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
 	g_free(result);
@@ -354,7 +332,7 @@ START_TEST(test_imap_get_envelope)
 	expect = g_new0(char, 1024);
 	
 	/* text/plain */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
@@ -365,7 +343,7 @@ START_TEST(test_imap_get_envelope)
 	result = NULL;
 
 	/* bare bones message */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, simple);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
@@ -377,7 +355,7 @@ START_TEST(test_imap_get_envelope)
 	result = NULL;
 
 	/* bare bones message with group addresses*/
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, simple_groups);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
@@ -390,7 +368,7 @@ START_TEST(test_imap_get_envelope)
 	result = NULL;
 
 	/* bare message with broken From address*/
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, broken_message3);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
@@ -418,7 +396,7 @@ START_TEST(test_imap_get_envelope_8bit_id)
 	expect = g_new0(char, 1024);
 	
 	/* text/plain */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 	dbmail_message_set_header(message,"Message-ID",msgid);
 	
@@ -442,7 +420,7 @@ START_TEST(test_imap_get_envelope_koi)
 {
 	char *t;
 	const char *exp = "(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"test\" ((\"=?iso-8859-5?b?sN3i3t0gvdXl3uDe6Njl?=\" NIL \"bad\" \"foo.ru\")) ((\"=?iso-8859-5?b?sN3i3t0gvdXl3uDe6Njl?=\" NIL \"bad\" \"foo.ru\")) ((\"=?iso-8859-5?b?sN3i3t0gvdXl3uDe6Njl?=\" NIL \"bad\" \"foo.ru\")) ((NIL NIL \"nobody\" \"foo.ru\")) NIL NIL NIL NIL)";
-	DbmailMessage *m = dbmail_message_new();
+	DbmailMessage *m = dbmail_message_new(NULL);
 
 	m = dbmail_message_init_with_string(m, encoded_message_koi);
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
@@ -497,7 +475,7 @@ START_TEST(test_imap_get_envelope_latin)
 	DbmailMessage *m;
 
 	/*  */
-	m = dbmail_message_new();
+	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, encoded_message_latin_1);
 	
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
@@ -510,7 +488,7 @@ START_TEST(test_imap_get_envelope_latin)
 	dbmail_message_free(m);
 
 	/*  */
-	m = dbmail_message_new();
+	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, encoded_message_latin_2);
 	
 	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
@@ -521,7 +499,7 @@ START_TEST(test_imap_get_envelope_latin)
 	dbmail_message_free(m);
 
 	/*  */
-	m = dbmail_message_new();
+	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, encoded_message_utf8);
 
 	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?utf-8?b?w6nDqcOp?=\" ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
@@ -543,7 +521,7 @@ START_TEST(test_imap_get_partspec)
 	char *result, *expect;
 	
 	/* text/plain */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
@@ -575,7 +553,7 @@ START_TEST(test_imap_get_partspec)
 
 	/* multipart */
 	
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_message);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1");
@@ -617,7 +595,7 @@ START_TEST(test_imap_get_partspec)
 	dbmail_message_free(message);
 	
 	/* multipart mixed */
-	message = dbmail_message_new();
+	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_mixed);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.HEADER");
@@ -862,8 +840,8 @@ Suite *dbmail_suite(void)
 	suite_add_tcase(s, tc_misc);
 	
 	tcase_add_checked_fixture(tc_session, setup, teardown);
+
 	tcase_add_test(tc_session, test_imap_session_new);
-	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_cleanup_address);
 	tcase_add_test(tc_session, test_internet_address_list_parse_string);
@@ -871,6 +849,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_envelope_8bit_id);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_envelope_latin);
+	
 	tcase_add_test(tc_session, test_imap_get_partspec);
 
 	tcase_add_checked_fixture(tc_util, setup, teardown);

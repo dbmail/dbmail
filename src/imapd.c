@@ -31,17 +31,11 @@
 #define PNAME "dbmail/imap4d"
 
 extern int imap_before_smtp;
-#if DEBUG
-extern GMemVTable *glib_mem_profiler_table;
-#endif
 
 int main(int argc, char *argv[])
 {
 	ServerConfig_T config;
 	int result;
-#if DEBUG
-	g_mem_set_vtable(glib_mem_profiler_table);
-#endif
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	memset(&config, 0, sizeof(ServerConfig_T));
 	result = server_getopt(&config, "IMAP", argc, argv);

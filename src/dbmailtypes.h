@@ -31,6 +31,7 @@
 #define DBMAILTYPES_H
 
 #include "dbmail.h"
+#include "dm_mempool.h"
 
 // start worker threads per client
 //#define DM_CLIENT_THREADS
@@ -130,23 +131,35 @@ enum DBMAIL_MESSAGE_FILTER_TYPES {
 };
 
 typedef struct {
+	// Memory Pool
+	Mempool_T pool;
+	gboolean freepool;
+
+	// ID
 	uint64_t id;
 	uint64_t msg_idnr;
+	
+	// scanned values
+	const char *charset;
 	time_t internal_date;
 	int internal_date_gmtoff;
-	GString *envelope_recipient;
+	String_T envelope_recipient;
+	
+	// Data access
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;
-	gchar *raw_content;
-	GHashTable *headers;
+	GMimeStream *stream;
+
+	// Mappings
 	GHashTable *header_dict;
 	GTree *header_name;
 	GTree *header_value;
-	gchar *charset;
+	
+	// storage 
 	int part_key;
 	int part_depth;
 	int part_order;
-	FILE *tmp;
+	
 } DbmailMessage;
 
 /**********************************************************************
@@ -254,12 +267,12 @@ enum IMAP4_FLAG_ACTIONS {
 };
 
 enum BODY_FETCH_ITEM_TYPES { 
-	BFIT_TEXT, 
-	BFIT_HEADER, 
-	BFIT_MIME,
-	BFIT_HEADER_FIELDS,
-	BFIT_HEADER_FIELDS_NOT, 
-	BFIT_TEXT_SILENT
+	BFIT_TEXT               = 1, 
+	BFIT_HEADER             = 2, 
+	BFIT_MIME               = 3,
+	BFIT_HEADER_FIELDS      = 4,
+	BFIT_HEADER_FIELDS_NOT  = 5, 
+	BFIT_TEXT_SILENT        = 6
 };
 
 
@@ -268,6 +281,7 @@ enum BODY_FETCH_ITEM_TYPES {
 
 // client_thread
 typedef struct  {
+	Mempool_T pool;
 	int sock;
 	SSL *ssl;                       /* SSL/TLS context for this client */
 	gboolean ssl_state;		/* SSL_accept done or not */
@@ -287,12 +301,11 @@ typedef struct  {
 #define CLIENT_EOF	4
 
 typedef struct {
-	client_sock *client;
-	int rx, tx;			/* read and write filehandles */
-	uint64_t bytes_rx;			/* read byte counter */
-	uint64_t bytes_tx;			/* write byte counter */
-	SSL *ssl;                       /* SSL/TLS context for this client */
-	gboolean ssl_state;		/* SSL_accept done or not */
+	Mempool_T pool;
+	client_sock *sock;
+	int rx, tx;                     /* read and write filehandles */
+	uint64_t bytes_rx;		/* read byte counter */
+	uint64_t bytes_tx;		/* write byte counter */
 	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
 
 	struct event *pev;		/* self-pipe event */
@@ -322,10 +335,10 @@ typedef struct {
 	size_t tls_wbuf_n;		/* number of octets to write during tls session */
 
 	size_t rbuff_size;              /* size of string-literals */
-	GString *read_buffer;		/* input buffer */
+	String_T read_buffer;		/* input buffer */
 	size_t read_buffer_offset;	/* input buffer offset */
 
-	GString *write_buffer;		/* output buffer */
+	String_T write_buffer;		/* output buffer */
 	size_t write_buffer_offset;	/* output buffer offset */
 
 	size_t len;			/* crlf decoded octets read by last ci_read(ln) call */
@@ -337,6 +350,7 @@ struct http_sock {
 };
 
 typedef struct {
+	Mempool_T pool;
 	ClientBase_T *ci;
 	ClientState_T state;			/**< session state */
 	void (*handle_input) (void *);
@@ -348,9 +362,9 @@ typedef struct {
 	int parser_state;
 	int command_state;
 	int command_type;		/* command type */
-	GList *args;			/* command args (allocated char *) */
+	List_T args;			/* command args (allocated char *) */
 
-	GString *rbuff;			/* input buffer */
+	String_T rbuff;			/* input buffer */
 
 	char *username;
 	char *password;
@@ -363,9 +377,9 @@ typedef struct {
 	uint64_t totalmessages; 		/**< number of messages */
 	uint64_t virtual_totalmessages;
 
-	GList *messagelst;		/** list of messages */
-	GList *from;			// lmtp senders
-	GList *rcpt;			// lmtp recipients
+	List_T messagelst;		/** list of messages */
+	List_T from;			// lmtp senders
+	List_T rcpt;			// lmtp recipients
 } ClientSession_T;
 
 typedef struct {
@@ -388,10 +402,13 @@ typedef struct {
 	int backlog;
 	int resolveIP;
 	struct evhttp *evh;		// http server
-	Field_T service_name, process_name;
-	Field_T serverUser, serverGroup;
+	Field_T service_name;
+        Field_T process_name;
+	Field_T serverUser;
+        Field_T serverGroup;
 	Field_T socket;
-	Field_T log, error_log;
+	Field_T log;
+	Field_T error_log;
 	Field_T pid_dir;
         Field_T tls_cafile;
         Field_T tls_cert;
@@ -418,7 +435,7 @@ typedef struct {
 /* length of database date string 
    YYYY-MM-DD HH:MM:SS
    1234567890123456789 */
-#define SQL_INTERNALDATE_LEN 19
+#define SQL_INTERNALDATE_LEN 20
 
 /* max length of number/dots part specifier */
 #define IMAP_MAX_PARTSPEC_LEN 100
@@ -488,8 +505,6 @@ typedef struct {
 
 
 typedef struct {
-	GList *bodyfetch;
-
 	gboolean noseen;		/* set the seen flag ? */
 	gboolean msgparse_needed;
 	gboolean hdrparse_needed;
@@ -512,6 +527,8 @@ typedef struct {
 	gboolean getRFC822;
 	gboolean getBodyTotal;
 	gboolean getBodyTotalPeek;
+
+	List_T bodyfetch;
 } fetch_items;
 
 /************************************************************************ 

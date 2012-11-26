@@ -30,7 +30,7 @@ extern uint64_t         quota_get_usage(T);
 extern uint64_t         quota_get_limit(T);
 extern void 		quota_free(T *);
 extern const char *     quota_get_root(T);
-extern T 		quota_get_quota(uint64_t, char *, char **);
+extern T 		quota_get_quota(uint64_t, const char *, char **);
 
 #undef T
 
