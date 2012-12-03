@@ -101,11 +101,9 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 {
 	GError *err = NULL;
 	ImapSession *s;
-	Mempool_T pool;
 	dm_thread_data *D;
 
 	assert(session);
-	assert(cb_enter);
 
 	s = (ImapSession *)session;
 
@@ -115,15 +113,14 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	pool = td_pool;
-	D = mempool_pop(pool, sizeof(dm_thread_data));
-	D->magic        = DM_THREAD_DATA_MAGIC;
-	D->status       = 0;
-	D->pool         = pool;
-	D->cb_enter	= cb_enter;
-	D->cb_leave     = cb_leave;
-	D->session	= session;
-	D->data         = data;
+	D = mempool_pop(td_pool, sizeof(*D));
+	D->magic    = DM_THREAD_DATA_MAGIC;
+	D->status   = 0;
+	D->pool     = td_pool;
+	D->cb_enter = cb_enter;
+	D->cb_leave = cb_leave;
+	D->session  = session;
+	D->data     = data;
 
 	// we're not done until we're done
 	D->session->command_state = FALSE; 
@@ -143,14 +140,8 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 
 void dm_thread_data_free(gpointer data)
 {
-	Mempool_T pool;
 	dm_thread_data *D = (dm_thread_data *)data;
-	if (D->magic != DM_THREAD_DATA_MAGIC)
-		return;
-
-	pool = D->pool;
-	if (pool)
-		mempool_push(pool, D, sizeof(dm_thread_data));
+	mempool_push(td_pool, D, sizeof(dm_thread_data));
 }
 
 /* 
@@ -162,13 +153,11 @@ void dm_thread_data_sendmessage(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
-	if (D->data && session && session->ci) {
-		String_T buf = D->data;
-		Mempool_T pool = session->ci->sock->pool;
-		ci_write(session->ci, "%s", p_string_str(buf));
-		p_string_free(buf, TRUE);
-		mempool_push(pool, D, sizeof(dm_thread_data));
-	}
+	String_T buf = D->data;
+
+	ci_write(session->ci, "%s", p_string_str(buf));
+
+	p_string_free(buf, TRUE);
 }
 
 /* 
@@ -588,8 +577,9 @@ static void server_sock_ssl_cb(int sock, short event, void *arg)
 void server_sig_cb(int fd, short event, void *arg)
 {
 	struct event *ev = arg;
+	int signum = EVENT_SIGNAL(ev);
 	
-	TRACE(TRACE_DEBUG,"fd [%d], event [%d], signal [%d]", fd, event, EVENT_SIGNAL(ev));
+	TRACE(TRACE_DEBUG,"fd [%d], event [%d], signal [%s]", fd, event, strsignal(signum));
 
 	switch (EVENT_SIGNAL(ev)) {
 		case SIGHUP: // TODO: reload config

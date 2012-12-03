@@ -369,6 +369,14 @@ static void imap_handle_exit(ImapSession *session, int status)
 	}
 }
 
+#define FREE_ALLOC_BUF \
+	if (alloc_buf != NULL) { \
+		mempool_push(session->pool, alloc_buf, alloc_size); \
+		alloc_buf = NULL; \
+		alloc_size = 0; \
+	}
+
+
 void imap_handle_input(ImapSession *session)
 {
 	char buffer[MAX_LINESIZE];
@@ -408,12 +416,7 @@ void imap_handle_input(ImapSession *session)
 	// Otherwise read in rbuff_size amount of data
 	while (TRUE) {
 		char *input = NULL;
-		if (alloc_buf != NULL) {
-			mempool_push(session->pool, alloc_buf, alloc_size);
-			alloc_buf = NULL;
-			alloc_size = 0;
-		}
-
+		FREE_ALLOC_BUF
 		memset(buffer, 0, sizeof(buffer));
 
 		if (session->ci->rbuff_size <= 0) {
@@ -451,11 +454,7 @@ void imap_handle_input(ImapSession *session)
 			input = buffer;
 
 		if (! imap4_tokenizer(session, input)) {
-			if (alloc_buf != NULL) {
-				mempool_push(session->pool, alloc_buf, alloc_size);
-				alloc_buf = NULL;
-				alloc_size = 0;
-			}
+			FREE_ALLOC_BUF
 			continue;
 		}
 
@@ -468,8 +467,7 @@ void imap_handle_input(ImapSession *session)
 		if ( session->parser_state ) {
 			result = imap4(session);
 			TRACE(TRACE_DEBUG,"imap4 returned [%d]", result);
-
-			if (result || (session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE)) { 
+			if (result || (session->command_type == IMAP_COMM_IDLE && session->command_state == IDLE)) { 
 				imap_handle_exit(session, result);
 			}
 			break;
@@ -481,11 +479,7 @@ void imap_handle_input(ImapSession *session)
 		}
 	}
 
-	if (alloc_buf != NULL) {
-		mempool_push(session->pool, alloc_buf, alloc_size);
-		alloc_buf = NULL;
-		alloc_size = 0;
-	}
+	FREE_ALLOC_BUF
 
 	return;
 }

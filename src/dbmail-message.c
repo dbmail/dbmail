@@ -731,14 +731,16 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 	GMimeParser *parser;
 #define FROMLINE 80
 	char from[FROMLINE];
+	size_t buflen = strlen(str);
 
 	assert(self->content == NULL);
 
-	self->stream = g_mime_stream_mem_new_with_buffer(str, strlen(str));
-	g_mime_stream_mem_set_owner(GMIME_STREAM_MEM(self->stream), TRUE);
+	self->stream = g_mime_stream_file_new(tmpfile());
+	//self->stream = g_mime_stream_mem_new();
+	g_mime_stream_write(self->stream, str, buflen);
+	g_mime_stream_reset(self->stream);
 
 	parser = g_mime_parser_new_with_stream(self->stream);
-
 
 	memset(from, 0, sizeof(from));
 	if (strncmp(str, "From ", 5) == 0) {
@@ -832,8 +834,7 @@ const char * dbmail_message_get_envelope_recipient(const DbmailMessage *self)
 void dbmail_message_set_header(DbmailMessage *self, const char *header, const char *value)
 {
 	g_mime_object_set_header(GMIME_OBJECT(self->content), header, value);
-	g_object_unref(self->stream);
-	self->stream = g_mime_stream_mem_new();
+	g_mime_stream_reset(self->stream);
 	g_mime_object_write_to_stream(GMIME_OBJECT(self->content), self->stream);
 }
 
@@ -1883,7 +1884,6 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	g_object_unref(fstream);
 
 	content = g_mime_data_wrapper_new_with_stream(stream, encoding);
-	g_object_unref(stream);
 	g_mime_part_set_content_object(mime_part, content);
 	g_object_unref(content);
 	

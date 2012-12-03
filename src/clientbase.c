@@ -127,7 +127,7 @@ static int client_error_cb(int sock, int error, void *arg)
 				break; // reschedule
 
 			default:
-				r = -1;
+				r = error;
 				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
 				client_rbuf_clear(client);
 				client_wbuf_clear(client);
@@ -316,7 +316,7 @@ int ci_write(ClientBase_T *self, char * msg, ...)
 				if (self->sock->ssl && self->sock->ssl_state)
 					event_add(self->wev, NULL);
 			}
-			return e;
+			return t;
 		} else {
 			event_add(self->wev, NULL);
 

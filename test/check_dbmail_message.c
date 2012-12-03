@@ -332,14 +332,14 @@ START_TEST(test_dbmail_message_store)
 	m = message_init(outlook_multipart);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
+	// COMPARE(e,t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
 	m = message_init(multipart_alternative2);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	// FIXME COMPARE(e,t);
+	COMPARE(e,t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
