@@ -36,6 +36,7 @@
 
 extern char *configFile;
 extern DBParam_T db_params;
+extern Mempool_T queue_pool;
 
 #define DBPFX db_params.pfx
 
@@ -62,6 +63,7 @@ void init_testuser1(void)
 	
 void setup(void)
 {
+	queue_pool = mempool_open();
 	configure_debug(255,0);
 	config_read(configFile);
 	GetDBParams();
@@ -76,6 +78,7 @@ void teardown(void)
 	auth_disconnect();
 	db_disconnect();
 	config_free();
+	mempool_close(&queue_pool);
 }
 
 START_TEST(test_dbmail_imap_plist_as_string)

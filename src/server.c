@@ -42,7 +42,7 @@ GThreadPool *tpool = NULL;
 
 ServerConfig_T *server_conf;
 extern DBParam_T db_params;
-Mempool_T td_pool;
+Mempool_T queue_pool;
 
 static void server_config_load(ServerConfig_T * conf, const char * const service);
 static int server_set_sighandler(void);
@@ -96,6 +96,24 @@ void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
  * push a job to the thread pool
  *
  */
+	
+void dm_queue_push(void *cb, void *session, void *data)
+{
+	dm_thread_data *D;
+	D = mempool_pop(queue_pool, sizeof(*D));
+	D->magic    = DM_THREAD_DATA_MAGIC;
+	D->status   = 0;
+	D->pool     = queue_pool;
+	D->cb_enter = NULL;
+	D->cb_leave = cb;
+	D->session  = session;
+	D->data     = data;
+
+        g_async_queue_push(queue, (gpointer)D);
+        if (selfpipe[1] > -1)
+		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
+}
+
 
 void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave, gpointer data)
 {
@@ -113,10 +131,10 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 	if (s->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	D = mempool_pop(td_pool, sizeof(*D));
+	D = mempool_pop(queue_pool, sizeof(*D));
 	D->magic    = DM_THREAD_DATA_MAGIC;
 	D->status   = 0;
-	D->pool     = td_pool;
+	D->pool     = queue_pool;
 	D->cb_enter = cb_enter;
 	D->cb_leave = cb_leave;
 	D->session  = session;
@@ -141,7 +159,7 @@ void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave,
 void dm_thread_data_free(gpointer data)
 {
 	dm_thread_data *D = (dm_thread_data *)data;
-	mempool_push(td_pool, D, sizeof(dm_thread_data));
+	mempool_push(queue_pool, D, sizeof(dm_thread_data));
 }
 
 /* 
@@ -201,7 +219,7 @@ static int server_setup(ServerConfig_T *conf)
 	// Dbmail only needs and uses a single eventbase for now.
 	queue = g_async_queue_new();
 
-	td_pool = mempool_open();
+	queue_pool = mempool_open();
 
 	// Create the thread pool
 	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,TRUE,&err)))
@@ -462,7 +480,7 @@ static void server_exit(void)
 {
 	disconnect_all();
 	server_close_sockets(server_conf);
-	mempool_close(&td_pool);
+	mempool_close(&queue_pool);
 }
 	
 static void server_create_sockets(ServerConfig_T * conf)

@@ -38,7 +38,7 @@
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
-extern Mempool_T td_pool;
+extern Mempool_T queue_pool;
 
 gboolean imap_feature_idle_status = FALSE;
 
@@ -102,7 +102,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	ImapSession * self;
 	self = mempool_pop(pool, sizeof(ImapSession));
 
-	self->buff = p_string_new(td_pool, "");
+	self->buff = p_string_new(queue_pool, "");
 
 	self->pool = pool;
 
@@ -1211,27 +1211,9 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 
 	gpointer session = self;
 	gpointer data = self->buff;
-	self->buff = p_string_new(td_pool, "");
-#if 0
-	dm_thread_data_push(session, NULL, dm_thread_data_sendmessage, data);
-#endif
+	self->buff = p_string_new(queue_pool, "");
 
-#if 1
-	dm_thread_data *D;
-	D = mempool_pop(td_pool, sizeof(*D));
-	D->magic    = DM_THREAD_DATA_MAGIC;
-	D->status   = 0;
-	D->pool     = td_pool;
-	D->cb_enter = NULL;
-	D->cb_leave = dm_thread_data_sendmessage;
-	D->session  = session;
-	D->data     = data;
-
-        g_async_queue_push(queue, (gpointer)D);
-        if (selfpipe[1] > -1)
-		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
-#endif
-
+	dm_queue_push(dm_thread_data_sendmessage, session, data);
 }
 
 #define IMAP_BUF_SIZE 4096

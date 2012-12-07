@@ -133,16 +133,24 @@ static int imap4_tokenizer(ImapSession *, char *);
 static int imap4(ImapSession *);
 static void imap_handle_input(ImapSession *);
 
-static void imap_session_bailout(ImapSession *session)
+void imap_cleanup_deferred(gpointer data)
 {
-	ClientBase_T *ci;
-	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
-
-	assert(session && session->ci);
-	ci = session->ci;
+	dm_thread_data *D = (dm_thread_data *)data;
+	ImapSession *session = (ImapSession *)D->session;
+	ClientBase_T *ci = session->ci;
 
 	dbmail_imap_session_delete(&session);
 	ci_close(ci);
+}
+
+
+static void imap_session_bailout(ImapSession *session)
+{
+	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
+
+	assert(session && session->ci);
+	dm_queue_push(imap_cleanup_deferred, session, NULL);
+
 }
 
 void socket_write_cb(int fd, short what, void *arg)
@@ -224,6 +232,29 @@ void socket_read_cb(int fd, short what, void *arg)
 		session->ci->cb_time(session);
 	
 }
+
+
+// helpers
+//
+static void imap_session_reset(ImapSession *session)
+{
+	TRACE(TRACE_DEBUG,"[%p]", session);
+
+	memset(session->tag, 0, sizeof(session->tag));
+	memset(session->command, 0, sizeof(session->command));
+
+	session->use_uid = 0;
+	session->command_type = 0;
+	session->command_state = FALSE;
+	session->parser_state = FALSE;
+	dbmail_imap_session_args_free(session, FALSE);
+
+	session->ci->timeout->tv_sec = server_conf->timeout; 
+	ci_uncork(session->ci);
+	
+	return;
+}
+
 
 /* 
  * only the main thread may write to the network event
@@ -308,6 +339,55 @@ static int checktag(const char *s)
 	return 1;
 }
 
+static void imap_handle_abort(ImapSession *session)
+{
+	dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);	/* fatal error occurred, kick this user */
+	imap_session_reset(session);
+	imap_session_bailout(session);
+}
+
+static void imap_handle_continue(ImapSession *session)
+{
+	/* only do this in the main thread */
+	if (session->state < CLIENTSTATE_LOGOUT) {
+		if (session->buff && p_string_len(session->buff) > 0) {
+			int e = 0;
+			if ((e = ci_write(session->ci, (char *)p_string_str(session->buff))) < 0) {
+				TRACE(TRACE_DEBUG,"ci_write returned error [%s]", strerror(e));
+				dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
+				return;
+			}
+			dbmail_imap_session_buff_clear(session);
+		}
+		if ((p_string_len(session->ci->write_buffer) - session->ci->write_buffer_offset) > 0) {
+			ci_write(session->ci, NULL);
+		} else if (session->command_state == TRUE) {
+			imap_session_reset(session);
+		}
+	} else {
+		dbmail_imap_session_buff_clear(session);
+	}				
+
+	// handle buffered pending input
+	if (p_string_len(session->ci->read_buffer) > 0)
+		imap_handle_input(session);
+}
+
+static void imap_handle_retry(ImapSession *session)
+{
+	session->command_state = TRUE;
+	dbmail_imap_session_buff_flush(session);
+	session->error_count++;	/* server returned BAD or NO response */
+	imap_session_reset(session);
+}
+
+static void imap_handle_done(ImapSession *session)
+{
+	/* only do this in the main thread */
+	imap_session_printf(session, "* BYE\r\n");
+	imap_session_printf(session, "%s OK LOGOUT completed\r\n", session->tag);
+}
+
 static void imap_handle_exit(ImapSession *session, int status)
 {
 	if (! session) return;
@@ -317,53 +397,22 @@ static void imap_handle_exit(ImapSession *session, int status)
 
 	switch(status) {
 		case -1:
-			dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);	/* fatal error occurred, kick this user */
-			dbmail_imap_session_reset(session);
-			imap_session_bailout(session);
+			imap_handle_abort(session);
 			break;
 
 		case 0:
-			/* only do this in the main thread */
-			if (session->state < CLIENTSTATE_LOGOUT) {
-				if (session->buff && p_string_len(session->buff) > 0) {
-					int e = 0;
-					if ((e = ci_write(session->ci, (char *)p_string_str(session->buff))) < 0) {
-						TRACE(TRACE_DEBUG,"ci_write returned error [%s]", strerror(e));
-						dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
-						return;
-					}
-					dbmail_imap_session_buff_clear(session);
-				}
-				if ((p_string_len(session->ci->write_buffer) - session->ci->write_buffer_offset) > 0) {
-					ci_write(session->ci, NULL);
-				} else if (session->command_state == TRUE) {
-					dbmail_imap_session_reset(session);
-				}
-			} else {
-				dbmail_imap_session_buff_clear(session);
-			}				
-
-			// handle buffered pending input
-			if (p_string_len(session->ci->read_buffer) > 0)
-				imap_handle_input(session);
-		
+			imap_handle_continue(session);
 			break;
 		case 1:
-			session->command_state = TRUE;
-			dbmail_imap_session_buff_flush(session);
-			session->error_count++;	/* server returned BAD or NO response */
-			dbmail_imap_session_reset(session);
+			imap_handle_retry(session);
 			break;
 
 		case 2:
-			/* only do this in the main thread */
-			imap_session_printf(session, "* BYE\r\n");
-			imap_session_printf(session, "%s OK LOGOUT completed\r\n", session->tag);
+			imap_handle_done(session);
 			break;
 
-		case 3:
-			/* returning from starttls */
-			dbmail_imap_session_reset(session);
+		case 3: /* returning from starttls */
+			imap_session_reset(session);
 			break;
 
 	}
@@ -409,7 +458,7 @@ void imap_handle_input(ImapSession *session)
 
 	// reset if we're done with the previous command
 	if (session->command_state == TRUE)
-		dbmail_imap_session_reset(session);
+		imap_session_reset(session);
 
 
 	// Read in a line at a time if we don't have a string literal size defined
@@ -443,7 +492,7 @@ void imap_handle_input(ImapSession *session)
 				imap_session_printf(session,"%s BAD Expecting DONE\r\n", session->tag);
 
 			session->command_state = TRUE; // done
-			dbmail_imap_session_reset(session);
+			imap_session_reset(session);
 
 			continue;
 		}
@@ -460,7 +509,7 @@ void imap_handle_input(ImapSession *session)
 
 		if ( session->parser_state < 0 ) {
 			imap_session_printf(session, "%s BAD parse error\r\n", session->tag);
-			imap_handle_exit(session, 1);
+			imap_handle_retry(session);
 			break;
 		}
 
@@ -516,26 +565,6 @@ int imap_handle_connection(client_sock *c)
 
 	return EOF;
 }
-
-void dbmail_imap_session_reset(ImapSession *session)
-{
-	TRACE(TRACE_DEBUG,"[%p]", session);
-
-	memset(session->tag, 0, sizeof(session->tag));
-	memset(session->command, 0, sizeof(session->command));
-
-	session->use_uid = 0;
-	session->command_type = 0;
-	session->command_state = FALSE;
-	session->parser_state = FALSE;
-	dbmail_imap_session_args_free(session, FALSE);
-
-	session->ci->timeout->tv_sec = server_conf->timeout; 
-	ci_uncork(session->ci);
-	
-	return;
-}
-
 int imap4_tokenizer (ImapSession *session, char *buffer)
 {
 	char *cpy;
