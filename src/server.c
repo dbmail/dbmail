@@ -30,32 +30,39 @@
 
 #define THIS_MODULE "server"
 
-static char *configFile = DEFAULT_CONFIG_FILE;
 
 volatile sig_atomic_t mainRestart = 0;
-volatile sig_atomic_t alarm_occurred = 0;
 
 // thread data
-int selfpipe[2];
+Mempool_T    queue_pool;
 GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
 
-ServerConfig_T *server_conf;
-extern DBParam_T db_params;
-Mempool_T queue_pool;
+char             configFile[FIELDSIZE];
+ServerConfig_T   *server_conf;
+extern DBParam_T  db_params;
 
 static void server_config_load(ServerConfig_T * conf, const char * const service);
 static int server_set_sighandler(void);
 void disconnect_all(void);
 
 struct event_base *evbase = NULL;
-struct event *sig_int, *sig_hup, *sig_pipe, *sig_term;
-#if DEBUG
+struct event *sig_int;
+struct event *sig_hup;
+struct event *sig_pipe;
+struct event *sig_term;
+#if MEMDEBUG
 struct event *sig_usr;
 #endif
 
+/*
+ * self-pipe event
+ */
+int selfpipe[2];
 struct event *pev = NULL;
-SSL_CTX *tls_context;
+
+
+extern SSL_CTX *tls_context;
 
 /* 
  *
@@ -92,11 +99,11 @@ void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
 	event_add(pev, NULL);
 }
 
-/* 
- * push a job to the thread pool
+/*
+ * push a job to the queue
  *
  */
-	
+
 void dm_queue_push(void *cb, void *session, void *data)
 {
 	dm_thread_data *D;
@@ -114,6 +121,10 @@ void dm_queue_push(void *cb, void *session, void *data)
 		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
 }
 
+/* 
+ * push a job to the thread pool
+ *
+ */
 
 void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave, gpointer data)
 {
@@ -658,19 +669,19 @@ void disconnect_all(void)
 	config_free();
 
 	if (tpool) { 
-		g_thread_pool_free(tpool,TRUE,FALSE);
+		g_thread_pool_free(tpool, TRUE, TRUE);
 		tpool = NULL;
 	}
 	if (sig_int) {
-		g_free(sig_int);
+		free(sig_int);
 		sig_int = NULL;
 	}
 	if (sig_hup) {
-		g_free(sig_hup);
+		free(sig_hup);
 		sig_hup = NULL;
 	}
 	if (sig_term) {
-		g_free(sig_term);
+		free(sig_term);
 		sig_term = NULL;
 	}
 }
@@ -824,7 +835,9 @@ static void server_config_free(ServerConfig_T * config)
 int server_getopt(ServerConfig_T *config, const char *service, int argc, char *argv[])
 {
 	int opt;
-	configFile = g_strdup(DEFAULT_CONFIG_FILE);
+	memset(configFile, 0, sizeof(configFile));
+
+	g_strlcpy(configFile,DEFAULT_CONFIG_FILE, FIELDSIZE-1);
 
 	server_config_free(config);
 
@@ -858,8 +871,7 @@ int server_getopt(ServerConfig_T *config, const char *service, int argc, char *a
 			break;
 		case 'f':
 			if (optarg && strlen(optarg) > 0) {
-                                g_free(configFile);
-				configFile = g_strdup(optarg);
+				g_strlcpy(configFile, optarg, FIELDSIZE-1);
 			} else {
 				fprintf(stderr, "%s: -f requires a filename argument\n\n", argv[0]);
 				return 1;

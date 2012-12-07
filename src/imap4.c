@@ -168,9 +168,8 @@ void socket_write_cb(int fd, short what, void *arg)
 	state = session->state;
 	g_mutex_unlock(&session->lock);
 #ifdef DEBUG
-	TRACE(TRACE_DEBUG,"[%p] on [%d] state [%d] event: %s%s%s%s", session,
-			(int) fd,
-			state,
+	TRACE(TRACE_DEBUG,"[%p] on [%d] state [%d] event:%s%s%s%s", session,
+			(int) fd, state,
 			(what&EV_TIMEOUT) ? " timeout": "",
 			(what&EV_READ)    ? " read":    "",
 			(what&EV_WRITE)   ? " write":   "",
@@ -190,7 +189,6 @@ void socket_write_cb(int fd, short what, void *arg)
 	}
 }
 
-
 void imap_cb_read(void *arg)
 {
 	ImapSession *session = (ImapSession *) arg;
@@ -201,24 +199,20 @@ void imap_cb_read(void *arg)
 	size_t need = session->ci->rbuff_size;
 
 	int enough = (need>0?(have >= need):(have > 0));
-
 	int state = session->ci->client_state;
 
 	TRACE(TRACE_DEBUG,"state [%d] enough %d: %ld/%ld", state, enough, have, need);
+
 	if (state & CLIENT_ERR) {
 		ci_cork(session->ci);
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
-		return;
-	} 
-	if (state & CLIENT_EOF) {
+	} else if (state & CLIENT_EOF) {
 		ci_cork(session->ci);
 		if (enough)
 			imap_handle_input(session);
 		else
 			imap_session_bailout(session);
-		return;
-	} 
-	if (have > 0)
+	} else if (have > 0)
 		imap_handle_input(session);
 }
 
@@ -226,6 +220,7 @@ void imap_cb_read(void *arg)
 void socket_read_cb(int fd, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
+#if DEBUG
 	TRACE(TRACE_DEBUG,"[%p] on [%d] event: %s%s%s%s", session,
 			(int) fd,
 			(what&EV_TIMEOUT) ? " timeout": "",
@@ -233,6 +228,7 @@ void socket_read_cb(int fd, short what, void *arg)
 			(what&EV_WRITE)   ? " write":   "",
 			(what&EV_SIGNAL)  ? " signal":  ""
 			);
+#endif
 	if (what == EV_READ)
 		imap_cb_read(session);
 	else if (what == EV_TIMEOUT && session->ci->cb_time)
@@ -299,10 +295,13 @@ static void send_greeting(ImapSession *session)
 	Field_T banner;
 	GETCONFIGVALUE("banner", "IMAP", banner);
 	if (strlen(banner) > 0)
-		imap_session_printf(session, "* OK [CAPABILITY %s] %s\r\n", Capa_as_string(session->preauth_capa), banner);
+		imap_session_printf(session, "* OK [CAPABILITY %s] %s\r\n",
+			       	Capa_as_string(session->preauth_capa), banner);
 	else
-		imap_session_printf(session, "* OK [CAPABILITY %s] dbmail %s ready.\r\n", Capa_as_string(session->preauth_capa), VERSION);
-	dbmail_imap_session_set_state(session,CLIENTSTATE_NON_AUTHENTICATED);
+		imap_session_printf(session, "* OK [CAPABILITY %s] dbmail %s ready.\r\n",
+			       	Capa_as_string(session->preauth_capa), VERSION);
+
+	dbmail_imap_session_set_state(session, CLIENTSTATE_NON_AUTHENTICATED);
 }
 
 /*
@@ -315,7 +314,8 @@ void imap_cb_time(void *arg)
 	ImapSession *session = (ImapSession *) arg;
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
-	if ( session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE ) { // session is in a IDLE loop
+	if ( session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE ) {
+	       	// session is in a IDLE loop
 		GETCONFIGVALUE("idle_interval", "IMAP", interval);
 		if (strlen(interval) > 0) {
 			int i = atoi(interval);
@@ -341,7 +341,8 @@ static int checktag(const char *s)
 {
 	int i;
 	for (i = 0; s[i]; i++) {
-		if (!strchr(AcceptedTagChars, s[i])) return 0;
+		if (!strchr(AcceptedTagChars, s[i]))
+		       	return 0;
 	}
 	return 1;
 }
@@ -355,7 +356,6 @@ static void imap_handle_abort(ImapSession *session)
 
 static void imap_handle_continue(ImapSession *session)
 {
-	/* only do this in the main thread */
 	if (session->state < CLIENTSTATE_LOGOUT) {
 		if (session->buff && p_string_len(session->buff) > 0) {
 			int e = 0;
@@ -407,22 +407,18 @@ static void imap_handle_exit(ImapSession *session, int status)
 		case -1:
 			imap_handle_abort(session);
 			break;
-
 		case 0:
 			imap_handle_continue(session);
 			break;
 		case 1:
 			imap_handle_retry(session);
 			break;
-
 		case 2:
 			imap_handle_done(session);
 			break;
-
 		case 3: /* returning from starttls */
 			imap_session_reset(session);
 			break;
-
 	}
 }
 
@@ -441,9 +437,7 @@ void imap_handle_input(ImapSession *session)
 	size_t alloc_size = 0;
 	int l, result;
 
-	assert(session);
-	assert(session->ci);
-	assert(session->ci->write_buffer);
+	assert(session && session->ci && session->ci->write_buffer);
 
 	// first flush the output buffer
 	if (p_string_len(session->ci->write_buffer)) {
@@ -540,6 +534,7 @@ void imap_handle_input(ImapSession *session)
 
 	return;
 }
+
 static void reset_callbacks(ImapSession *session)
 {
 	session->ci->cb_time = imap_cb_time;
@@ -573,6 +568,7 @@ int imap_handle_connection(client_sock *c)
 
 	return EOF;
 }
+
 int imap4_tokenizer (ImapSession *session, char *buffer)
 {
 	char *cpy;
@@ -587,7 +583,7 @@ int imap4_tokenizer (ImapSession *session, char *buffer)
 	/* fetch the tag and command */
 	if (! *session->tag) {
 
-		if (strcmp(buffer,"\n")==0 || strcmp(buffer,"\r\n")==0)
+		if (strncmp(buffer, "\n", 1)==0 || strncmp(buffer, "\r\n", 2)==0)
 			return 0;
 
 		session->parser_state = 0;
