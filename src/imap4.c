@@ -135,12 +135,17 @@ static void imap_handle_input(ImapSession *);
 
 void imap_cleanup_deferred(gpointer data)
 {
+	int rx;
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = (ImapSession *)D->session;
 	ClientBase_T *ci = session->ci;
 
 	dbmail_imap_session_delete(&session);
+	rx = ci->rx;
 	ci_close(ci);
+
+	if (rx == STDIN_FILENO)
+		exit(0);
 }
 
 
@@ -150,7 +155,6 @@ static void imap_session_bailout(ImapSession *session)
 
 	assert(session && session->ci);
 	dm_queue_push(imap_cleanup_deferred, session, NULL);
-
 }
 
 void socket_write_cb(int fd, short what, void *arg)
@@ -386,6 +390,7 @@ static void imap_handle_done(ImapSession *session)
 	/* only do this in the main thread */
 	imap_session_printf(session, "* BYE\r\n");
 	imap_session_printf(session, "%s OK LOGOUT completed\r\n", session->tag);
+	imap_session_bailout(session);
 }
 
 static void imap_handle_exit(ImapSession *session, int status)
@@ -642,10 +647,6 @@ void _ic_cb_leave(gpointer data)
 
 	if (state & CLIENT_ERR) {
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
-		return;
-	} 
-	if (state & CLIENT_EOF && (session->ci->tx != fileno(stdout))) {
-		imap_session_bailout(session);
 		return;
 	} 
 

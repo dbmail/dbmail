@@ -210,7 +210,9 @@ void ci_cork(ClientBase_T *s)
 void ci_uncork(ClientBase_T *s)
 {
 	TRACE(TRACE_DEBUG,"[%p]", s);
-	event_add(s->rev, s->timeout);
+
+	if (! (s->client_state & CLIENT_EOF))
+		event_add(s->rev, s->timeout);
 	event_add(s->wev, NULL);
 }
 
@@ -499,7 +501,8 @@ void ci_close(ClientBase_T *self)
 {
 	assert(self);
 
-	TRACE(TRACE_DEBUG, "closing clientbase [%p]", self);
+	TRACE(TRACE_DEBUG, "closing clientbase [%p] [%d] [%d]", self,
+			self->tx, self->rx);
 
 	ci_cork(self);
 
@@ -512,12 +515,17 @@ void ci_close(ClientBase_T *self)
 	       	self->wev = NULL;
 	}
 
-	if (self->tx > 0) {
-		shutdown(self->tx, SHUT_RDWR);
-		close(self->tx);
+	if (self->tx >= 0) {
+		if ((self->tx > 1) && (shutdown(self->tx, SHUT_WR)))
+			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
+		if (close(self->tx))
+			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
 	}
 	if (self->rx >= 0) {
-		close(self->rx);
+		if ((self->rx > 1) && (shutdown(self->rx, SHUT_RD)))
+			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
+		if (close(self->rx))
+			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
 	}
 
 	ci_authlog_close(self);
