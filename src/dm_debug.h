@@ -54,6 +54,7 @@ typedef enum {
 
 
 #define TRACE(level, fmt...) trace(level, THIS_MODULE, __func__, __LINE__, fmt)
+void TabortHandler(const char *error);
 void trace(Trace_T level, const char * module, const char * function, int line, const char *formatstring, ...) PRINTF_ARGS(5, 6);
 
 void configure_debug(Trace_T trace_syslog, Trace_T trace_stderr);

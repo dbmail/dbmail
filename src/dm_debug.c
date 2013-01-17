@@ -36,6 +36,14 @@ static Trace_T TRACE_SYSLOG = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR
 static Trace_T TRACE_STDERR = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
 
 /*
+ * libzdb abort handler to handle logs correctly
+ */
+void TabortHandler(const char *error)
+{
+	trace(TRACE_CRIT, "libzdb", __func__, __LINE__, error);
+}
+
+/*
  * configure the debug settings
  */
 void configure_debug(Trace_T trace_syslog, Trace_T trace_stderr)

@@ -212,6 +212,7 @@ int db_connect(void)
 	ConnectionPool_setReaper(pool, sweepInterval);
 	TRACE(TRACE_DATABASE, "run a database connection reaper thread every [%d] seconds", sweepInterval);
 
+	ConnectionPool_setAbortHandler(pool, TabortHandler);
 	ConnectionPool_start(pool);
 	TRACE(TRACE_DATABASE, "database connection pool started with [%d] connections, max [%d]", 
 		ConnectionPool_getInitialConnections(pool), ConnectionPool_getMaxConnections(pool));
