@@ -47,13 +47,14 @@ static int server_set_sighandler(void);
 void disconnect_all(void);
 
 struct event_base *evbase = NULL;
-struct event *sig_int;
-struct event *sig_hup;
-struct event *sig_pipe;
-struct event *sig_term;
-#if MEMDEBUG
-struct event *sig_usr;
-#endif
+struct event *sig_int = NULL;
+struct event *sig_hup = NULL;
+struct event *sig_term = NULL;
+struct event *sig_pipe = NULL;
+struct event *sig_usr = NULL;
+struct event *pev = NULL;
+
+SSL_CTX *tls_context;
 
 FILE *fstdout = NULL;
 FILE *fstderr = NULL;
@@ -62,10 +63,6 @@ FILE *fnull = NULL;
  * self-pipe event
  */
 int selfpipe[2];
-struct event *pev = NULL;
-
-
-extern SSL_CTX *tls_context;
 
 /* 
  *
@@ -542,6 +539,7 @@ static void server_create_sockets(ServerConfig_T * conf)
 static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 {
 	Mempool_T pool;
+	client_sock *c;
 	int csock;
 	struct sockaddr *caddr;
 	struct sockaddr *saddr;
@@ -564,6 +562,7 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
                         case ECONNABORTED:
                         case EPROTO:
                         case EINTR:
+                        case EAGAIN:
                                 TRACE(TRACE_DEBUG, "%d:%s", serr, strerror(serr));
                                 break;
                         default:
@@ -574,8 +573,7 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
         }
 	
 	pool = mempool_open();
-
-	client_sock *c = mempool_pop(pool, sizeof(client_sock));
+	c = mempool_pop(pool, sizeof(client_sock));
 	c->pool = pool;
 	c->sock = csock;
         caddr = mempool_pop(c->pool, sizeof(struct sockaddr_storage));
@@ -632,9 +630,9 @@ static void server_sock_ssl_cb(int sock, short event, void *arg)
 void server_sig_cb(int fd, short event, void *arg)
 {
 	struct event *ev = arg;
-	int signum = EVENT_SIGNAL(ev);
 	
-	TRACE(TRACE_DEBUG,"fd [%d], event [%d], signal [%s]", fd, event, strsignal(signum));
+	TRACE(TRACE_DEBUG, "fd %d, event %d, %s", 
+			fd, event, strsignal(EVENT_SIGNAL(ev)));
 
 	switch (EVENT_SIGNAL(ev)) {
 		case SIGHUP: // TODO: reload config
@@ -652,33 +650,30 @@ void server_sig_cb(int fd, short event, void *arg)
 
 static int server_set_sighandler(void)
 {
-	sigset_t set;
-
 	assert(evbase);
 
 	sig_int = evsignal_new(evbase, SIGINT, server_sig_cb, NULL);
 	evsignal_assign(sig_int, evbase, SIGINT, server_sig_cb, sig_int);
+	evsignal_add(sig_int, NULL);
 
 	sig_hup = evsignal_new(evbase, SIGHUP, server_sig_cb, NULL); 
 	evsignal_assign(sig_hup, evbase, SIGHUP, server_sig_cb, sig_hup); 
+	evsignal_add(sig_hup, NULL);
 
 	sig_term = evsignal_new(evbase, SIGTERM, server_sig_cb, NULL); 
 	evsignal_assign(sig_term, evbase, SIGTERM, server_sig_cb, sig_term); 
-	
-	evsignal_add(sig_int, NULL);
-	evsignal_add(sig_hup, NULL);
 	evsignal_add(sig_term, NULL);
+	
+	sig_pipe = evsignal_new(evbase, SIGPIPE, server_sig_cb, NULL);
+	evsignal_assign(sig_pipe, evbase, SIGPIPE, server_sig_cb, sig_pipe);
+	evsignal_add(sig_pipe, NULL);
 
 #if MEMDEBUG
 	sig_usr = evsignal_new(evbase, SIGUSR1, server_sig_cb, NULL); 
 	evsignal_assign(sig_usr, evbase, SIGUSR1, server_sig_cb, sig_usr); 
 	evsignal_add(sig_usr, NULL);
 #endif
-
-	sigemptyset(&set);
-	sigaddset(&set, SIGPIPE);
-	pthread_sigmask(SIG_BLOCK, &set, NULL);
-
+	
 	TRACE(TRACE_INFO, "signal handler placed");
 
 	return 0;
@@ -709,6 +704,16 @@ void disconnect_all(void)
 	if (sig_term) {
 		event_free(sig_term);
 		sig_term = NULL;
+	}
+#if MEMDEBUG
+	if (sig_usr) {
+		free(sig_usr);
+		sig_usr = NULL;
+	}
+#endif
+	if (sig_pipe) {
+		free(sig_pipe);
+		sig_pipe = NULL;
 	}
 }
 

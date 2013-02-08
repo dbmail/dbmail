@@ -44,7 +44,7 @@ M mempool_open(void)
 	if (! env_mpool) {
 		char *dm_pool = getenv("DM_POOL");
 		if (MATCH(dm_pool, "yes"))
-			use_mpool = FALSE;
+			use_mpool = TRUE;
 		env_mpool = TRUE;
 	}
 	if (use_mpool)

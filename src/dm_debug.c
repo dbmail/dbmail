@@ -167,8 +167,8 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 	}
 
 	/* Bail out on fatal errors. */
-	if (level == TRACE_EMERG)
-		exit(EX_TEMPFAIL);
+//	if (level == TRACE_EMERG)
+//		exit(EX_TEMPFAIL);
 }
 
 

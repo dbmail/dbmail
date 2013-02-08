@@ -184,6 +184,7 @@ START_TEST(test_imap_session_new)
 	s = dbmail_imap_session_new(pool);
 	fail_unless(s!=NULL, "Failed to initialize imapsession");
 	dbmail_imap_session_delete(&s);
+	mempool_close(&pool);
 }
 END_TEST
 
