@@ -77,7 +77,7 @@ START_TEST(test_string_assign)
 	for (i=1; i<1000; i++) {
 		if (i % 2) {
 			p_string_assign(S, ABCD);
-			fail_unless(MATCH(ABCD, p_string_str(S)));
+			fail_unless(MATCH(ABCD, p_string_str(S)), p_string_str(S));
 		} else {
 			p_string_assign(S, "test");
 			fail_unless(MATCH("test", p_string_str(S)));

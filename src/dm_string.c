@@ -91,6 +91,7 @@ T p_string_assign(T S, const char *s)
 		S->len = l;
 		S->str = mempool_resize(S->pool, S->str, oldsize, SIZE(S));
 	}
+	memset(S->str, 0, SIZE(S));
 	memcpy(S->str, s, l);
 	S->used = l;
 	return S;
