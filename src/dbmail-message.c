@@ -328,7 +328,9 @@ static char * find_boundary(const char *s)
 
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
-	Connection_T c; ResultSet_T r;
+	PreparedStatement_T stmt;
+	Connection_T c;
+       	ResultSet_T r;
 	char internal_date[SQL_INTERNALDATE_LEN];
 	char *boundary = NULL;
 	GMimeContentType *mimetype = NULL;
@@ -349,12 +351,15 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,%s "
-			"FROM %smimeparts p "
-			"JOIN %spartlists l ON p.id = l.part_id "
-			"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
-			"WHERE l.physmessage_id = %lu ORDER BY l.part_key,l.part_order ASC", 
-			frag, p_string_str(n), DBPFX, DBPFX, DBPFX, dbmail_message_get_physid(self));
+		stmt = db_stmt_prepare(c,
+			       	"SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,%s "
+				"FROM %smimeparts p "
+				"JOIN %spartlists l ON p.id = l.part_id "
+				"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
+				"WHERE l.physmessage_id = ? ORDER BY l.part_key,l.part_order ASC", 
+				frag, p_string_str(n), DBPFX, DBPFX, DBPFX);
+		db_stmt_set_u64(stmt, 1, self->id);
+		r = db_stmt_query(stmt);
 		
 		m = p_string_new(self->pool, "");
 
@@ -1924,7 +1929,9 @@ static int get_mailbox_from_filters(DbmailMessage *message, uint64_t useridnr, c
 {
 	int t = FALSE;
 	uint64_t anyone = 0;
-	Connection_T c; ResultSet_T r;
+	PreparedStatement_T stmt;
+	Connection_T c;
+       	ResultSet_T r;
 			
 	TRACE(TRACE_INFO, "default mailbox [%s]", mailbox);
 	
@@ -1936,16 +1943,21 @@ static int get_mailbox_from_filters(DbmailMessage *message, uint64_t useridnr, c
 	c = db_con_get();
 
 	TRY
-		r = db_query(c, "SELECT f.mailbox,f.headername,f.headervalue FROM %sfilters f "
-			"JOIN %sheadername n ON f.headername=n.headername "
-			"JOIN %sheader h ON h.headername_id = n.id "
-			"join %sheadervalue v on v.id=h.headervalue_id "
-			"WHERE v.headervalue %s f.headervalue "
-			"AND h.physmessage_id=%lu "
-			"AND f.user_id in (%lu,%lu)", 
-			DBPFX, DBPFX, DBPFX, DBPFX,
-			db_get_sql(SQL_INSENSITIVE_LIKE),
-			dbmail_message_get_physid(message), anyone, useridnr);
+		stmt = db_stmt_prepare(c,
+			       	"SELECT f.mailbox,f.headername,f.headervalue FROM %sfilters f "
+				"JOIN %sheadername n ON f.headername=n.headername "
+				"JOIN %sheader h ON h.headername_id = n.id "
+				"join %sheadervalue v on v.id=h.headervalue_id "
+				"WHERE v.headervalue %s f.headervalue "
+				"AND h.physmessage_id=? "
+				"AND f.user_id in (?,?)", 
+				DBPFX, DBPFX, DBPFX, DBPFX,
+				db_get_sql(SQL_INSENSITIVE_LIKE));
+		db_stmt_set_u64(stmt, 1, message->id);
+		db_stmt_set_u64(stmt, 2, anyone);
+		db_stmt_set_u64(stmt, 3, useridnr);
+		r = db_stmt_query(stmt);
+
 		if (db_result_next(r)) {
 			const char *hn, *hv;
 			strncpy(into, db_result_get(r,0), into_n);

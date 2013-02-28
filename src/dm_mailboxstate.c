@@ -86,6 +86,7 @@ static T state_load_messages(T M, Connection_T c)
 	GTree *msginfo;
 	uint64_t *uid, id = 0;
 	ResultSet_T r;
+	PreparedStatement_T stmt;
 	Field_T frag;
 	INIT_QUERY;
 
@@ -94,12 +95,14 @@ static T state_load_messages(T M, Connection_T c)
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
 			"draft_flag, recent_flag, %s, rfcsize, message_idnr FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
-			"WHERE m.mailbox_idnr = %lu AND m.status IN (%d,%d) ORDER BY message_idnr ASC",
-			frag, DBPFX, DBPFX, M->id, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+			"WHERE m.mailbox_idnr = ? AND m.status IN (%d,%d) ORDER BY message_idnr ASC",
+			frag, DBPFX, DBPFX, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
 
-	r = db_query(c,query);
+	stmt = db_stmt_prepare(c, query);
+	db_stmt_set_u64(stmt, 1, M->id);
+	r = db_stmt_query(stmt);
 
 	i = 0;
 	while (db_result_next(r)) {
@@ -147,12 +150,15 @@ static T state_load_messages(T M, Connection_T c)
 		"SELECT k.message_idnr, keyword FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 		"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-		"WHERE b.mailbox_idnr = %lu AND m.status IN (%d,%d)",
+		"WHERE b.mailbox_idnr = ? AND m.status IN (%d,%d)",
 		DBPFX, DBPFX, DBPFX,
-		M->id, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+		MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	nrows = 0;
-	r = db_query(c,query);
+	stmt = db_stmt_prepare(c, query);
+	db_stmt_set_u64(stmt, 1, M->id);
+	r = db_stmt_query(stmt);
+
 	while (db_result_next(r)) {
 		nrows++;
 		id = db_result_get_u64(r,0);
@@ -459,10 +465,15 @@ void MailboxState_free(T *M)
 static void db_getmailbox_permission(T M, Connection_T c)
 {
 	ResultSet_T r;
+	PreparedStatement_T stmt;
 	g_return_if_fail(M->id);
 
-	r = db_query(c, "SELECT permission FROM %smailboxes WHERE mailbox_idnr = %lu",
-			DBPFX, M->id);
+	stmt = db_stmt_prepare(c,
+			"SELECT permission FROM %smailboxes WHERE mailbox_idnr = ?",
+			DBPFX);
+	db_stmt_set_u64(stmt, 1, M->id);
+	r = db_stmt_query(stmt);
+
 	if (db_result_next(r))
 		M->permission = db_result_get_int(r, 0);
 }
@@ -476,17 +487,17 @@ static void db_getmailbox_info(T M, Connection_T c)
 	GString *fqname, *qs;
 	int i=0, prml;
 	PreparedStatement_T stmt;
-	INIT_QUERY;
 
-	snprintf(query, DEF_QUERYSIZE,
+	stmt = db_stmt_prepare(c, 
 		 "SELECT "
 		 "CASE WHEN user_id IS NULL THEN 0 ELSE 1 END, " // subscription
 		 "owner_idnr, name, no_select, no_inferiors "
 		 "FROM %smailboxes b LEFT OUTER JOIN %ssubscription s ON "
-		 "b.mailbox_idnr = s.mailbox_id WHERE b.mailbox_idnr = %lu",
-		 DBPFX, DBPFX, M->id);
+		 "b.mailbox_idnr = s.mailbox_id WHERE b.mailbox_idnr = ?",
+		 DBPFX, DBPFX);
+	db_stmt_set_u64(stmt, 1, M->id);
+	r = db_stmt_query(stmt);
 
-	r = db_query(c, query);
 	if (db_result_next(r)) {
 
 		/* subsciption */
@@ -556,6 +567,7 @@ static void db_getmailbox_info(T M, Connection_T c)
 static void db_getmailbox_count(T M, Connection_T c)
 {
 	ResultSet_T r; 
+	PreparedStatement_T stmt;
 	unsigned result[3];
 
 	result[0] = result[1] = result[2] = 0;
@@ -563,15 +575,22 @@ static void db_getmailbox_count(T M, Connection_T c)
 	g_return_if_fail(M->id);
 
 	/* count messages */
-	r = db_query(c, "SELECT 0,COUNT(*) FROM %smessages WHERE mailbox_idnr=%lu "
+	stmt = db_stmt_prepare(c,
+		       	"SELECT 0,COUNT(*) FROM %smessages WHERE mailbox_idnr=? "
 			"AND (status < %d) UNION "
-			"SELECT 1,COUNT(*) FROM %smessages WHERE mailbox_idnr=%lu "
+			"SELECT 1,COUNT(*) FROM %smessages WHERE mailbox_idnr=? "
 			"AND (status < %d) AND seen_flag=1 UNION "
-			"SELECT 2,COUNT(*) FROM %smessages WHERE mailbox_idnr=%lu "
+			"SELECT 2,COUNT(*) FROM %smessages WHERE mailbox_idnr=? "
 			"AND (status < %d) AND recent_flag=1",
-			DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-			DBPFX, M->id, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-			DBPFX, M->id, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+			DBPFX, MESSAGE_STATUS_DELETE,
+			DBPFX, MESSAGE_STATUS_DELETE,
+			DBPFX, MESSAGE_STATUS_DELETE);
+	db_stmt_set_u64(stmt, 1, M->id);
+	db_stmt_set_u64(stmt, 2, M->id);
+	db_stmt_set_u64(stmt, 3, M->id);
+
+	r = db_stmt_query(stmt);
+
 	if (db_result_next(r))
 		result[db_result_get_int(r,0)] = (unsigned)db_result_get_int(r,1);
 	if (db_result_next(r))
@@ -595,7 +614,13 @@ static void db_getmailbox_count(T M, Connection_T c)
 		return;
 	}
 
-	r = db_query(c, "SELECT MAX(message_idnr)+1 FROM %smessages WHERE mailbox_idnr=%lu",DBPFX, M->id);
+	db_con_clear(c);
+	stmt = db_stmt_prepare(c,
+			"SELECT MAX(message_idnr)+1 FROM %smessages WHERE mailbox_idnr=?",
+			DBPFX);
+	db_stmt_set_u64(stmt, 1, M->id);
+	r = db_stmt_query(stmt);
+
 	if (db_result_next(r))
 		M->uidnext = db_result_get_u64(r,0);
 	else
@@ -605,12 +630,16 @@ static void db_getmailbox_count(T M, Connection_T c)
 static void db_getmailbox_keywords(T M, Connection_T c)
 {
 	ResultSet_T r; 
+	PreparedStatement_T stmt;
 	const char *key;
 
-	r = db_query(c, "SELECT DISTINCT(keyword) FROM %skeywords k "
+	stmt = db_stmt_prepare(c,
+			"SELECT DISTINCT(keyword) FROM %skeywords k "
 			"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 			"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-			"WHERE b.mailbox_idnr=%lu", DBPFX, DBPFX, DBPFX, M->id);
+			"WHERE b.mailbox_idnr=?", DBPFX, DBPFX, DBPFX);
+	db_stmt_set_u64(stmt, 1, M->id);
+	r = db_stmt_query(stmt);
 
 	while (db_result_next(r)) {
 		key = g_strdup(db_result_get(r,0));
@@ -621,8 +650,14 @@ static void db_getmailbox_keywords(T M, Connection_T c)
 static void db_getmailbox_seq(T M, Connection_T c)
 {
 	ResultSet_T r; 
+	PreparedStatement_T stmt;
 
-	r = db_query(c, "SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=%lu", DBPFX, M->id);
+	stmt = db_stmt_prepare(c,
+		       	"SELECT name,seq FROM %smailboxes WHERE mailbox_idnr=?",
+		       	DBPFX);
+	db_stmt_set_u64(stmt, 1, M->id);
+	r = db_stmt_query(stmt);
+
 	if (db_result_next(r)) {
 		if (! M->name)
 			M->name = p_string_new(M->pool, db_result_get(r, 0));
@@ -712,7 +747,9 @@ char * MailboxState_flags(T M)
 
 int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 {
-	Connection_T c; ResultSet_T r;
+	PreparedStatement_T stmt;
+	Connection_T c;
+       	ResultSet_T r;
 	volatile int result = FALSE;
 	uint64_t owner_id, mboxid;
 
@@ -739,7 +776,14 @@ int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 	result = FALSE;
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT * FROM %sacl WHERE user_id = %lu AND mailbox_id = %lu AND %s = 1", DBPFX, userid, mboxid, right_flag);
+		stmt = db_stmt_prepare(c,
+			       	"SELECT * FROM %sacl WHERE "
+				"user_id = ? AND mailbox_id = ? AND %s = 1", 
+				DBPFX, right_flag);
+		db_stmt_set_u64(stmt, 1, userid);
+		db_stmt_set_u64(stmt, 2, mboxid);
+		r = db_stmt_query(stmt);
+
 		if (db_result_next(r))
 			result = TRUE;
 	CATCH(SQLException)

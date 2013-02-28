@@ -180,20 +180,24 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 	DbmailMessage *m;
 	GTree *uids;
 	int count = 0;
-	Connection_T c; ResultSet_T r; volatile int t = FALSE;
-	INIT_QUERY;
+	PreparedStatement_T stmt;
+	Connection_T c; 
+	ResultSet_T r;
+       	volatile int t = FALSE;
 
 	uids = MailboxState_getIds(self->mbstate);
 
-	snprintf(query,DEF_QUERYSIZE,"SELECT id,message_idnr FROM %sphysmessage p "
-		"LEFT JOIN %smessages m ON p.id=m.physmessage_id "
-		"LEFT JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
-		"WHERE b.mailbox_idnr=%lu ORDER BY message_idnr",
-		DBPFX,DBPFX,DBPFX,self->id);
-
 	c = db_con_get();
 	TRY
-		r = db_query(c,query);
+		stmt = db_stmt_prepare(c,
+				"SELECT id,message_idnr FROM %sphysmessage p "
+				"LEFT JOIN %smessages m ON p.id=m.physmessage_id "
+				"LEFT JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
+				"WHERE b.mailbox_idnr=? ORDER BY message_idnr",
+				DBPFX,DBPFX,DBPFX);
+		db_stmt_set_u64(stmt, 1, self->id);
+		r = db_stmt_query(stmt);
+
 		ids = p_list_new(self->pool);
 		while (db_result_next(r)) {
 			physid = db_result_get_u64(r,0);
@@ -303,29 +307,32 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 	uint64_t *id, *msn;
 	GTree *tree;
 	GString *threads;
-	Connection_T c; ResultSet_T r; volatile int t = FALSE;
-	INIT_QUERY;
-	
-	/* thread-roots (ordered) */
-	snprintf(query, DEF_QUERYSIZE, "SELECT min(m.message_idnr),v.sortfield "
-			"FROM %smessages m "
-			"LEFT JOIN %sheader h USING (physmessage_id) "
-			"LEFT JOIN %sheadername n ON h.headername_id = n.id "
-			"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
-			"WHERE m.mailbox_idnr=%lu "
-			"AND n.headername = 'subject' AND m.status IN (%d,%d) "
-			"GROUP BY v.sortfield",
-			DBPFX, DBPFX, DBPFX, DBPFX,
-			dbmail_mailbox_get_id(self),
-			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+	PreparedStatement_T stmt;
+	Connection_T c;
+       	ResultSet_T r;
+       	volatile int t = FALSE;
 
 	tree = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,(GDestroyNotify)g_free, NULL);
 
 	t = FALSE;
 	c = db_con_get();
 	TRY
+		/* thread-roots (ordered) */
+		stmt = db_stmt_prepare(c,
+				"SELECT min(m.message_idnr),v.sortfield "
+				"FROM %smessages m "
+				"LEFT JOIN %sheader h USING (physmessage_id) "
+				"LEFT JOIN %sheadername n ON h.headername_id = n.id "
+				"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
+				"WHERE m.mailbox_idnr=? "
+				"AND n.headername = 'subject' AND m.status IN (%d,%d) "
+				"GROUP BY v.sortfield",
+				DBPFX, DBPFX, DBPFX, DBPFX,
+				MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+		db_stmt_set_u64(stmt, 1, self->id);
+		r = db_stmt_query(stmt);
+
 		i=0;
-		r = db_query(c,query);
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);
@@ -347,23 +354,23 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self)
 
 	db_con_clear(c);
 		
-	memset(query,0,DEF_QUERYSIZE);
-	/* full threads (unordered) */
-	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr,v.sortfield "
-			"FROM %smessages m "
-			"LEFT JOIN %sheader h USING (physmessage_id) "
-			"LEFT JOIN %sheadername n ON h.headername_id = n.id "
-			"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
-			"WHERE m.mailbox_idnr = %lu "
-			"AND n.headername = 'subject' AND m.status IN (%d,%d) "
-			"ORDER BY v.sortfield, v.datefield",
-			DBPFX, DBPFX, DBPFX, DBPFX,
-			dbmail_mailbox_get_id(self),
-			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-		
 	TRY
+		/* full threads (unordered) */
+		stmt = db_stmt_prepare(c, 
+				"SELECT m.message_idnr,v.sortfield "
+				"FROM %smessages m "
+				"LEFT JOIN %sheader h USING (physmessage_id) "
+				"LEFT JOIN %sheadername n ON h.headername_id = n.id "
+				"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
+				"WHERE m.mailbox_idnr = ? "
+				"AND n.headername = 'subject' AND m.status IN (%d,%d) "
+				"ORDER BY v.sortfield, v.datefield",
+				DBPFX, DBPFX, DBPFX, DBPFX,
+				MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+		db_stmt_set_u64(stmt, 1, self->id);
+		r = db_stmt_query(stmt);
+
 		i=0;
-		r = db_query(c,query);
 		while (db_result_next(r)) {
 			i++;
 			idnr = db_result_get_u64(r,0);

@@ -863,14 +863,21 @@ int db_use_usermap(void)
 
 int db_get_physmessage_id(uint64_t message_idnr, uint64_t * physmessage_id)
 {
-	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
+	PreparedStatement_T stmt;
+	Connection_T c;
+       	ResultSet_T r; 
+	volatile int t = DM_SUCCESS;
 	assert(physmessage_id != NULL);
 	*physmessage_id = 0;
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT physmessage_id FROM %smessages WHERE message_idnr = %lu", 
-				DBPFX, message_idnr);
+		stmt = db_stmt_prepare(c,
+			       	"SELECT physmessage_id FROM %smessages WHERE message_idnr = ?", 
+				DBPFX);
+		db_stmt_set_u64(stmt, 1, message_idnr);
+		r = db_stmt_query(stmt);
+
 		if (db_result_next(r))
 			*physmessage_id = db_result_get_u64(r, 0);
 	CATCH(SQLException)
@@ -928,12 +935,19 @@ static int user_idnr_is_delivery_user_idnr(uint64_t user_idnr)
 
 int dm_quota_user_get(uint64_t user_idnr, uint64_t *size)
 {
-	Connection_T c; ResultSet_T r;
+	PreparedStatement_T stmt;
+	Connection_T c;
+       	ResultSet_T r;
 	assert(size != NULL);
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT curmail_size FROM %susers WHERE user_idnr = %lu", DBPFX, user_idnr);
+		stmt = db_stmt_prepare(c,
+				"SELECT curmail_size FROM %susers WHERE user_idnr = ?",
+			       	DBPFX);
+		db_stmt_set_u64(stmt, 1, user_idnr);
+		r = db_stmt_query(stmt);
+
 		if (db_result_next(r))
 			*size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
@@ -1608,16 +1622,23 @@ static int mailbox_empty(uint64_t mailbox_idnr)
 /** get the total size of messages in a mailbox. Does not work recursively! */
 int db_get_mailbox_size(uint64_t mailbox_idnr, int only_deleted, uint64_t * mailbox_size)
 {
-	Connection_T c; ResultSet_T r = NULL; volatile int t = DM_SUCCESS;
+	PreparedStatement_T stmt;
+	Connection_T c;
+       	ResultSet_T r = NULL;
+       	volatile int t = DM_SUCCESS;
 	assert(mailbox_size != NULL);
 	*mailbox_size = 0;
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT COALESCE(SUM(pm.messagesize),0) FROM %smessages msg, %sphysmessage pm "
-				"WHERE msg.physmessage_id = pm.id AND msg.mailbox_idnr = %lu "
-				"AND msg.status < %d %s", DBPFX,DBPFX, mailbox_idnr, MESSAGE_STATUS_DELETE,
+		stmt = db_stmt_prepare(c,
+			       	"SELECT COALESCE(SUM(pm.messagesize),0) FROM %smessages msg, %sphysmessage pm "
+				"WHERE msg.physmessage_id = pm.id AND msg.mailbox_idnr = ? "
+				"AND msg.status < %d %s", DBPFX,DBPFX, MESSAGE_STATUS_DELETE,
 				only_deleted?"AND msg.deleted_flag = 1":"");
+		db_stmt_set_u64(stmt, 1, mailbox_idnr);
+		r = db_stmt_query(stmt);
+
 		if (db_result_next(r))
 			*mailbox_size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
