@@ -72,20 +72,20 @@ static void client_rbuf_clear(ClientBase_T *client)
 	}
 }
 
-static void client_rbuf_scale(ClientBase_T *self)
+static void client_rbuf_scale(ClientBase_T *client)
 {
-	if (self->read_buffer_offset == p_string_len(self->read_buffer)) {
-		p_string_truncate(self->read_buffer,0);
-		self->read_buffer_offset = 0;
+	if (client->read_buffer_offset == p_string_len(client->read_buffer)) {
+		p_string_truncate(client->read_buffer,0);
+		client->read_buffer_offset = 0;
 	}
 
 }
 
-static void client_wbuf_scale(ClientBase_T *self)
+static void client_wbuf_scale(ClientBase_T *client)
 {
-	if (self->write_buffer_offset == p_string_len(self->write_buffer)) {
-		p_string_truncate(self->write_buffer,0);
-		self->write_buffer_offset = 0;
+	if (client->write_buffer_offset == p_string_len(client->write_buffer)) {
+		p_string_truncate(client->write_buffer,0);
+		client->write_buffer_offset = 0;
 	}
 
 }
@@ -142,7 +142,7 @@ ClientBase_T * client_init(client_sock *c)
 	int serr;
 	ClientBase_T *client;
 
-	client           = mempool_pop(c->pool, sizeof(*client));
+	client           = mempool_pop(c->pool, sizeof(ClientBase_T));
 	client->pool     = c->pool;
 	client->timeout  = mempool_pop(client->pool, sizeof(struct timeval));
 	client->sock     = c;
@@ -216,49 +216,49 @@ void ci_uncork(ClientBase_T *s)
 	event_add(s->wev, NULL);
 }
 
-int ci_starttls(ClientBase_T *self)
+int ci_starttls(ClientBase_T *client)
 {
 	int e;
-	TRACE(TRACE_DEBUG,"[%p] ssl_state [%d]", self, self->sock->ssl_state);
-	if (self->sock->ssl && self->sock->ssl_state > 0) {
+	TRACE(TRACE_DEBUG,"[%p] ssl_state [%d]", client, client->sock->ssl_state);
+	if (client->sock->ssl && client->sock->ssl_state > 0) {
 		TRACE(TRACE_WARNING, "ssl already initialized");
 		return DM_EGENERAL;
 	}
 
-	if (! self->sock->ssl) {
-		self->sock->ssl_state = FALSE;
-		if (! (self->sock->ssl = tls_setup(self->tx))) {
+	if (! client->sock->ssl) {
+		client->sock->ssl_state = FALSE;
+		if (! (client->sock->ssl = tls_setup(client->tx))) {
 			return DM_EGENERAL;
 		}
 	}
-	if (! self->sock->ssl_state) {
-		if ((e = SSL_accept(self->sock->ssl)) != 1) {
+	if (! client->sock->ssl_state) {
+		if ((e = SSL_accept(client->sock->ssl)) != 1) {
 			int e2;
-			if ((e2 = self->cb_error(self->rx, e, (void *)self))) {
-				SSL_shutdown(self->sock->ssl);
-				SSL_free(self->sock->ssl);
-				self->sock->ssl = NULL;
+			if ((e2 = client->cb_error(client->rx, e, (void *)client))) {
+				SSL_shutdown(client->sock->ssl);
+				SSL_free(client->sock->ssl);
+				client->sock->ssl = NULL;
 				return DM_EGENERAL;
 			} else {
 				return e;
 			}
 		}
 		TRACE(TRACE_INFO,"[%p] SSL handshake successful using %s", 
-				self->sock->ssl, SSL_get_cipher(self->sock->ssl));
-		self->sock->ssl_state = TRUE;
-		ci_write(self,NULL);
+				client->sock->ssl, SSL_get_cipher(client->sock->ssl));
+		client->sock->ssl_state = TRUE;
+		ci_write(client,NULL);
 	}
 
 	return DM_SUCCESS;
 }
 
-void ci_write_cb(ClientBase_T *self)
+void ci_write_cb(ClientBase_T *client)
 {
-	if (p_string_len(self->write_buffer) > self->write_buffer_offset)
-		ci_write(self,NULL);
+	if (p_string_len(client->write_buffer) > client->write_buffer_offset)
+		ci_write(client,NULL);
 }
 
-int ci_write(ClientBase_T *self, char * msg, ...)
+int ci_write(ClientBase_T *client, char * msg, ...)
 {
 	va_list ap, cp;
 	ssize_t t = 0;
@@ -266,10 +266,10 @@ int ci_write(ClientBase_T *self, char * msg, ...)
 	size_t n;
 	char *s;
 
-	if (self->client_state & CLIENT_ERR)
+	if (client->client_state & CLIENT_ERR)
 		return -1;
 
-	if (! (self && self->write_buffer)) {
+	if (! (client && client->write_buffer)) {
 		TRACE(TRACE_DEBUG, "called while clientbase is stale");
 		return -1;
 	}
@@ -277,69 +277,69 @@ int ci_write(ClientBase_T *self, char * msg, ...)
 	if (msg) {
 		va_start(ap, msg);
 		va_copy(cp, ap);
-		p_string_append_vprintf(self->write_buffer, msg, cp);
+		p_string_append_vprintf(client->write_buffer, msg, cp);
 		va_end(cp);
 	}
 	
-	if (p_string_len(self->write_buffer) < 1) { 
-		TRACE(TRACE_DEBUG, "write_buffer is empty [%ld]", p_string_len(self->write_buffer));
+	if (p_string_len(client->write_buffer) < 1) { 
+		TRACE(TRACE_DEBUG, "write_buffer is empty [%ld]", p_string_len(client->write_buffer));
 		return 0;
 	}
 
-	n = p_string_len(self->write_buffer) - self->write_buffer_offset;
+	n = p_string_len(client->write_buffer) - client->write_buffer_offset;
 	if (n == 0) {
-		TRACE(TRACE_DEBUG, "write_buffer is empty [%ld]", p_string_len(self->write_buffer));
+		TRACE(TRACE_DEBUG, "write_buffer is empty [%ld]", p_string_len(client->write_buffer));
 		return 0;
 	}
 
 	while (n > 0) {
 		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
 
-		s = (char *)p_string_str(self->write_buffer) + self->write_buffer_offset;
+		s = (char *)p_string_str(client->write_buffer) + client->write_buffer_offset;
 
-		TRACE(TRACE_DEBUG, "[%p] S > [%ld/%ld:%s]", self, t, p_string_len(self->write_buffer), s);
+		TRACE(TRACE_DEBUG, "[%p] S > [%ld/%ld:%s]", client, t, p_string_len(client->write_buffer), s);
 
-		if (self->sock->ssl) {
-			if (! self->tls_wbuf_n) {
-				strncpy(self->tls_wbuf, s, n);
-				self->tls_wbuf_n = n;
+		if (client->sock->ssl) {
+			if (! client->tls_wbuf_n) {
+				strncpy(client->tls_wbuf, s, n);
+				client->tls_wbuf_n = n;
 			}
-			t = SSL_write(self->sock->ssl, (gconstpointer)self->tls_wbuf, self->tls_wbuf_n);
+			t = SSL_write(client->sock->ssl, (gconstpointer)client->tls_wbuf, client->tls_wbuf_n);
 			e = t;
 		} else {
-			t = write(self->tx, (gconstpointer)s, n);
+			t = write(client->tx, (gconstpointer)s, n);
 			e = errno;
 		}
 
 		if (t == -1) {
-			if ((e = self->cb_error(self->tx, e, (void *)self))) {
-				self->client_state |= CLIENT_ERR;
+			if ((e = client->cb_error(client->tx, e, (void *)client))) {
+				client->client_state |= CLIENT_ERR;
 			} else {
-				if (self->sock->ssl && self->sock->ssl_state)
-					event_add(self->wev, NULL);
+				if (client->sock->ssl && client->sock->ssl_state)
+					event_add(client->wev, NULL);
 			}
 			return t;
 		} else {
-			event_add(self->wev, NULL);
+			event_add(client->wev, NULL);
 
-			self->bytes_tx += t;	// Update our byte counter
-			self->write_buffer_offset += t;
-			client_wbuf_scale(self);
+			client->bytes_tx += t;	// Update our byte counter
+			client->write_buffer_offset += t;
+			client_wbuf_scale(client);
 
-			if (self->sock->ssl) {
-				memset(self->tls_wbuf, '\0', TLS_SEGMENT);
-				self->tls_wbuf_n = 0;
+			if (client->sock->ssl) {
+				memset(client->tls_wbuf, '\0', TLS_SEGMENT);
+				client->tls_wbuf_n = 0;
 			}
 		}
 
-		n = p_string_len(self->write_buffer) - self->write_buffer_offset;
+		n = p_string_len(client->write_buffer) - client->write_buffer_offset;
 	}
 
 	return 0;
 }
 
 #define IBUFLEN 65535
-void ci_read_cb(ClientBase_T *self)
+void ci_read_cb(ClientBase_T *client)
 {
 	/* 
 	 * read all available data on the input stream
@@ -348,53 +348,53 @@ void ci_read_cb(ClientBase_T *self)
 	ssize_t t = 0;
 	char ibuf[IBUFLEN];
 
-	TRACE(TRACE_DEBUG,"[%p] reset timeout [%ld]", self, self->timeout->tv_sec); 
+	TRACE(TRACE_DEBUG,"[%p] reset timeout [%ld]", client, client->timeout->tv_sec); 
 
-	if (self->sock->ssl && self->sock->ssl_state == FALSE) {
-		ci_starttls(self);
+	if (client->sock->ssl && client->sock->ssl_state == FALSE) {
+		ci_starttls(client);
 		return;
 	}
 
 	while (TRUE) {
 		memset(ibuf, 0, sizeof(ibuf));
-		if (self->sock->ssl) {
-			t = SSL_read(self->sock->ssl, ibuf, sizeof(ibuf)-1);
+		if (client->sock->ssl) {
+			t = SSL_read(client->sock->ssl, ibuf, sizeof(ibuf)-1);
 		} else {
-			t = read(self->rx, ibuf, sizeof(ibuf)-1);
+			t = read(client->rx, ibuf, sizeof(ibuf)-1);
 		}
-		TRACE(TRACE_DEBUG, "[%p] [%ld]", self, t);
+		TRACE(TRACE_DEBUG, "[%p] [%ld]", client, t);
 
 		if (t < 0) {
 			int e = errno;
-			if ((e = self->cb_error(self->rx, e, (void *)self)))
-				self->client_state |= CLIENT_ERR;
+			if ((e = client->cb_error(client->rx, e, (void *)client)))
+				client->client_state |= CLIENT_ERR;
 			else
-				self->client_state |= CLIENT_AGAIN;
+				client->client_state |= CLIENT_AGAIN;
 			break;
 
 		} else if (t == 0) {
 			int e = errno;
-			if (self->sock->ssl)
-				self->cb_error(self->rx, e, (void *)self);
-			self->client_state |= CLIENT_EOF;
+			if (client->sock->ssl)
+				client->cb_error(client->rx, e, (void *)client);
+			client->client_state |= CLIENT_EOF;
 			break;
 
 		} else if (t > 0) {
-			self->bytes_rx += t;	// Update our byte counter
-			self->client_state = CLIENT_OK; 
-			p_string_append_len(self->read_buffer, ibuf, t);
+			client->bytes_rx += t;	// Update our byte counter
+			client->client_state = CLIENT_OK; 
+			p_string_append_len(client->read_buffer, ibuf, t);
 		}
 	}
 }
 
-int ci_read(ClientBase_T *self, char *buffer, size_t n)
+int ci_read(ClientBase_T *client, char *buffer, size_t n)
 {
 	// fetch data from the read buffer
 	assert(buffer);
 
-	self->len = 0;
-	char *s = (char *)p_string_str(self->read_buffer) + self->read_buffer_offset;
-	if ((self->read_buffer_offset + n) <= p_string_len(self->read_buffer)) {
+	client->len = 0;
+	char *s = (char *)p_string_str(client->read_buffer) + client->read_buffer_offset;
+	if ((client->read_buffer_offset + n) <= p_string_len(client->read_buffer)) {
 		/*
 		size_t j,k = 0;
 
@@ -403,51 +403,51 @@ int ci_read(ClientBase_T *self, char *buffer, size_t n)
 			buffer[k++] = s[j];
 		*/
 		memcpy(buffer, s, n);
-		self->read_buffer_offset += n;
-		self->len += n;
-		client_rbuf_scale(self);
+		client->read_buffer_offset += n;
+		client->len += n;
+		client_rbuf_scale(client);
 	}
 
-	return self->len;
+	return client->len;
 }
 
-int ci_readln(ClientBase_T *self, char * buffer)
+int ci_readln(ClientBase_T *client, char * buffer)
 {
 	// fetch a line from the read buffer
 	char *nl;
 
 	assert(buffer);
 
-	self->len = 0;
-	char *s = (char *)p_string_str(self->read_buffer) + self->read_buffer_offset;
+	client->len = 0;
+	char *s = (char *)p_string_str(client->read_buffer) + client->read_buffer_offset;
 	if ((nl = g_strstr_len(s, -1, "\n"))) {
 		size_t j, k = 0, l;
 		l = stridx(s, '\n');
 		if (l >= MAX_LINESIZE) {
 			TRACE(TRACE_WARNING, "insane line-length [%ld]", l);
-			self->client_state = CLIENT_ERR;
+			client->client_state = CLIENT_ERR;
 			return 0;
 		}
 		for (j=0; j<=l; j++)
 			buffer[k++] = s[j];
-		self->read_buffer_offset += l+1;
-		self->len = k;
-		TRACE(TRACE_INFO, "[%p] C < [%ld:%s]", self, self->len, buffer);
+		client->read_buffer_offset += l+1;
+		client->len = k;
+		TRACE(TRACE_INFO, "[%p] C < [%ld:%s]", client, client->len, buffer);
 
-		client_rbuf_scale(self);
+		client_rbuf_scale(client);
 	}
 
-	return self->len;
+	return client->len;
 }
 
 
-void ci_authlog_init(ClientBase_T *self, const char *service, const char *username, const char *status)
+void ci_authlog_init(ClientBase_T *client, const char *service, const char *username, const char *status)
 {
 	if ((! server_conf->authlog) || server_conf->no_daemonize == 1) return;
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	char *frag = db_returning("id");
-	const char *user = self->auth?Cram_getUsername(self->auth):username;
+	const char *user = client->auth?Cram_getUsername(client->auth):username;
 	c = db_con_get();
 	TRY
 
@@ -457,15 +457,15 @@ void ci_authlog_init(ClientBase_T *self, const char *service, const char *userna
 		g_free(frag);
 		db_stmt_set_str(s, 1, user);
 		db_stmt_set_str(s, 2, service);
-		db_stmt_set_str(s, 3, (char *)self->src_ip);
-		db_stmt_set_int(s, 4, atoi(self->src_port));
-		db_stmt_set_str(s, 5, (char *)self->dst_ip);
-		db_stmt_set_int(s, 6, atoi(self->dst_port));
+		db_stmt_set_str(s, 3, (char *)client->src_ip);
+		db_stmt_set_int(s, 4, atoi(client->src_port));
+		db_stmt_set_str(s, 5, (char *)client->dst_ip);
+		db_stmt_set_int(s, 6, atoi(client->dst_port));
 		db_stmt_set_str(s, 7, status);
 
 		r = db_stmt_query(s);
 		
-		if(strcmp(AUTHLOG_ERR,status)!=0) self->authlog_id = db_insert_result(c, r);
+		if(strcmp(AUTHLOG_ERR,status)!=0) client->authlog_id = db_insert_result(c, r);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
@@ -474,10 +474,10 @@ void ci_authlog_init(ClientBase_T *self, const char *service, const char *userna
 
 }
 
-static void ci_authlog_close(ClientBase_T *self)
+static void ci_authlog_close(ClientBase_T *client)
 {
 	Connection_T c; PreparedStatement_T s;
-	if (! self->authlog_id) return;
+	if (! client->authlog_id) return;
 	if ((! server_conf->authlog) || server_conf->no_daemonize) return;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	c = db_con_get();
@@ -485,9 +485,9 @@ static void ci_authlog_close(ClientBase_T *self)
 		s = db_stmt_prepare(c, "UPDATE %sauthlog SET logout_time=%s, status=?, bytes_rx=?, bytes_tx=? "
 		"WHERE id=?", DBPFX, now);
 		db_stmt_set_str(s, 1, AUTHLOG_FIN);
-		db_stmt_set_u64(s, 2, self->bytes_rx);
-		db_stmt_set_u64(s, 3, self->bytes_tx);
-		db_stmt_set_u64(s, 4, self->authlog_id);
+		db_stmt_set_u64(s, 2, client->bytes_rx);
+		db_stmt_set_u64(s, 3, client->bytes_tx);
+		db_stmt_set_u64(s, 4, client->authlog_id);
 
 		db_stmt_exec(s);
 	CATCH(SQLException)
@@ -497,57 +497,54 @@ static void ci_authlog_close(ClientBase_T *self)
 	END_TRY;
 }
 
-void ci_close(ClientBase_T *self)
+void ci_close(ClientBase_T *client)
 {
-	assert(self);
+	assert(client);
 
-	TRACE(TRACE_DEBUG, "closing clientbase [%p] [%d] [%d]", self,
-			self->tx, self->rx);
+	TRACE(TRACE_DEBUG, "closing clientbase [%p] [%d] [%d]", client,
+			client->tx, client->rx);
 
-	ci_cork(self);
+	ci_cork(client);
 
-	if (self->rev) {
-		event_free(self->rev);
-	       	self->rev = NULL;
+	if (client->rev) {
+		event_free(client->rev);
+	       	client->rev = NULL;
 	}
-	if (self->wev) {
-		event_free(self->wev);
-	       	self->wev = NULL;
-	}
-
-	if (self->tx >= 0) {
-		if ((self->tx > 1) && (shutdown(self->tx, SHUT_WR)))
-			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
-		if (close(self->tx))
-			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
-	}
-	if (self->rx >= 0) {
-		if ((self->rx > 1) && (shutdown(self->rx, SHUT_RD)))
-			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
-		if (close(self->rx))
-			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
+	if (client->wev) {
+		event_free(client->wev);
+	       	client->wev = NULL;
 	}
 
-	ci_authlog_close(self);
-	self->tx = -1;
-	self->rx = -1;
+	if ((client->sock->sock > 1) && (shutdown(client->sock->sock, SHUT_RDWR)))
+		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
+	if (client->tx >= 0 && (close(client->tx)))
+		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
+	if (client->rx >= 0 && (close(client->rx)))
+			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
 
-	if (self->auth) {
-		Cram_T c = self->auth;
+	ci_authlog_close(client);
+	client->tx = -1;
+	client->rx = -1;
+
+	if (client->auth) {
+		Cram_T c = client->auth;
 		Cram_free(&c);
-		self->auth = NULL;
+		client->auth = NULL;
 	}
 
-	if (self->sock->ssl) {
-		SSL_shutdown(self->sock->ssl);
-		SSL_free(self->sock->ssl);
+	if (client->sock->ssl) {
+		SSL_shutdown(client->sock->ssl);
+		SSL_free(client->sock->ssl);
 	}
 
-	p_string_free(self->read_buffer, TRUE);
-	p_string_free(self->write_buffer, TRUE);
-	Mempool_T pool = self->pool;
-	mempool_push(pool, self, sizeof(ClientBase_T));
-	mempool_close(&pool);
+	p_string_free(client->read_buffer, TRUE);
+	p_string_free(client->write_buffer, TRUE);
+	Mempool_T pool = client->pool;
+	mempool_push(pool, client->timeout, sizeof(struct timeval));
+	mempool_push(pool, client->sock->caddr, sizeof(struct sockaddr_storage));
+	mempool_push(pool, client->sock->saddr, sizeof(struct sockaddr_storage));
+	mempool_push(pool, client->sock, sizeof(client_sock));
+	mempool_push(pool, client, sizeof(ClientBase_T));
 }
 
 

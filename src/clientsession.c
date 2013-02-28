@@ -67,17 +67,21 @@ void client_session_reset(ClientSession_T * session)
 {
 	List_T from;
 
-	dsnuser_free_list(session->rcpt);
+	if (session->rcpt)
+		dsnuser_free_list(session->rcpt);
+
 	session->rcpt = p_list_new(session->pool);
 
-	from = p_list_first(session->from);
-	while (from) {
-		String_T s = p_list_data(from);
-		p_string_free(s, TRUE);
-		from = p_list_next(from);
+	if (session->from) {
+		from = p_list_first(session->from);
+		while (from) {
+			String_T s = p_list_data(from);
+			if (s) p_string_free(s, TRUE);
+			from = p_list_next(from);
+		}
+		from = p_list_first(session->from);
+		p_list_free(&from);
 	}
-	from = p_list_first(session->from);
-	p_list_free(&from);
 
 	session->from = p_list_new(session->pool);
 
@@ -110,24 +114,99 @@ void client_session_reset_parser(ClientSession_T *session)
 	}
 
 	if (session->args) {
-		List_T args = session->args;
+		List_T args = p_list_first(session->args);
+		while (p_list_data(args)) {
+			String_T s = p_list_data(args);
+			p_string_free(s, TRUE);
+			if (! p_list_next(args))
+				break;
+			args = p_list_next(args);
+		}
 		p_list_free(&args);
 	}
+	session->args = p_list_new(session->pool);
 }
 
 void client_session_bailout(ClientSession_T **session)
 {
 	ClientSession_T *c = *session;
+	Mempool_T pool;
+	List_T args = NULL;
+	List_T from = NULL;
+	List_T rcpt = NULL;
+	List_T messagelst = NULL;
 
 	if (! c) return;
 	TRACE(TRACE_DEBUG,"[%p]", c);
-
 	// brute force:
 	if (server_conf->no_daemonize == 1) _exit(0);
 
 	client_session_reset(c);
 	c->state = CLIENTSTATE_ANY;
 	ci_close(c->ci);
+
+	p_string_free(c->rbuff, TRUE);
+
+	if (c->from) {
+		from = p_list_first(c->from);
+		while (p_list_data(from)) {
+			String_T s = p_list_data(from);
+			p_string_free(s, TRUE);
+			if (! p_list_next(from))
+				break;
+			from = p_list_next(from);
+		}
+		from = p_list_first(from);
+		p_list_free(&from);
+	}
+	
+	if (c->rcpt) {
+		rcpt = p_list_first(c->rcpt);
+		while (p_list_data(rcpt)) {
+			Delivery_T *s = p_list_data(rcpt);
+			g_free(s);
+			if (! p_list_next(rcpt))
+				break;
+			rcpt = p_list_next(rcpt);
+		}
+		rcpt = p_list_first(rcpt);
+		p_list_free(&rcpt);
+	}
+	
+	if (c->args) {
+		args = p_list_first(c->args);
+		while (p_list_data(args)) {
+			String_T s = p_list_data(args);
+			p_string_free(s, TRUE);
+			if (! p_list_next(args))
+				break;
+			args = p_list_next(args);
+		}
+		args = p_list_first(args);
+		p_list_free(&args);
+	}
+
+	if (c->messagelst) {
+		messagelst = p_list_first(c->messagelst);
+		while (p_list_data(messagelst)) {
+			struct message *m = p_list_data(messagelst);
+			mempool_push(c->pool, m, sizeof(struct message));
+			if (! p_list_next(messagelst))
+				break;
+			messagelst = p_list_next(messagelst);
+		}
+		messagelst = p_list_first(messagelst);
+		p_list_free(&messagelst);
+	}
+
+	c->args = NULL;
+	c->from = NULL;
+	c->rcpt = NULL;
+	c->messagelst = NULL;
+
+	pool = c->pool;
+	mempool_push(pool, c, sizeof(ClientSession_T));
+	mempool_close(&pool);
 }
 
 void client_session_read(void *arg)

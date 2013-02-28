@@ -423,10 +423,15 @@ static int address_is_userpart_catchall(Delivery_T *delivery)
 
 void dsnuser_free_list(List_T deliveries)
 {
+	if (! deliveries)
+		return;
 	deliveries = p_list_first(deliveries);
 	while (deliveries) {
-		dsnuser_free((Delivery_T *)p_list_data(deliveries));
-		g_free((Delivery_T *) p_list_data(deliveries));
+		Delivery_T * dsnuser = (Delivery_T *)p_list_data(deliveries);
+		if (dsnuser) {
+			dsnuser_free(dsnuser);
+			g_free(dsnuser);
+		}
 		if (! p_list_next(deliveries))
 			break;
 		deliveries = p_list_next(deliveries);

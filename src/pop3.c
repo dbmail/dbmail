@@ -95,7 +95,7 @@ static void send_greeting(ClientSession_T *session)
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
-static int db_createsession(uint64_t user_idnr, ClientSession_T * session_ptr)
+static int db_createsession(uint64_t user_idnr, ClientSession_T * session)
 {
 	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	struct message *tmpmessage;
@@ -127,8 +127,8 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session_ptr)
 	TRY
 		r = db_query(c, query);
 
-		session_ptr->totalmessages = 0;
-		session_ptr->totalsize = 0;
+		session->totalmessages = 0;
+		session->totalsize = 0;
 
 		/* messagecounter is total message, +1 tot end at message 1 */
 		message_counter = 1;
@@ -136,7 +136,7 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session_ptr)
 		/* filling the list */
 		TRACE(TRACE_DEBUG, "adding items to list");
 		while (db_result_next(r)) {
-			tmpmessage = mempool_pop(session_ptr->pool, sizeof(struct message));
+			tmpmessage = mempool_pop(session->pool, sizeof(struct message));
 			/* message size */
 			tmpmessage->msize = db_result_get_u64(r,0);
 			/* real message id */
@@ -150,11 +150,11 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session_ptr)
 			if (query_result)
 				strncpy(tmpmessage->uidl, query_result, UID_SIZE);
 
-			session_ptr->totalmessages++;
-			session_ptr->totalsize += tmpmessage->msize;
+			session->totalmessages++;
+			session->totalsize += tmpmessage->msize;
 			tmpmessage->messageid = (uint64_t) message_counter;
 
-			session_ptr->messagelst = p_list_append(session_ptr->messagelst, tmpmessage);
+			session->messagelst = p_list_append(session->messagelst, tmpmessage);
 
 			message_counter++;
 		}
@@ -174,31 +174,11 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session_ptr)
 	TRACE(TRACE_DEBUG, "adding succesful");
 
 	/* setting all virtual values */
-	session_ptr->virtual_totalmessages = session_ptr->totalmessages;
-	session_ptr->virtual_totalsize = session_ptr->totalsize;
+	session->virtual_totalmessages = session->totalmessages;
+	session->virtual_totalsize = session->totalsize;
 
 	return DM_EGENERAL;
 }
-
-static void db_session_cleanup(ClientSession_T * session_ptr)
-{
-	/* cleanups a session 
-	   removes a list and all references */
-	session_ptr->totalsize = 0;
-	session_ptr->virtual_totalsize = 0;
-	session_ptr->totalmessages = 0;
-	session_ptr->virtual_totalmessages = 0;
-	List_T head, msgs = session_ptr->messagelst;
-	msgs = p_list_first(msgs);
-	head = msgs;
-	while (msgs) {
-		struct message *data = p_list_data(msgs);
-		mempool_push(session_ptr->pool, data, sizeof(struct message));
-		msgs = p_list_next(msgs);
-	}
-	p_list_free(&head);
-}
-
 
 static void pop3_close(ClientSession_T *session)
 {
@@ -270,7 +250,6 @@ void pop3_cb_write(void *arg)
 
 	switch (session->state) {
 		case CLIENTSTATE_QUIT:
-			db_session_cleanup(session);
 			client_session_bailout(&session);
 			break;
 		default:
@@ -373,7 +352,9 @@ int pop3(ClientSession_T *session, const char *buffer)
 	 */
 	char *command, *value, *searchptr, *enctype, *s;
 	Pop3Cmd cmdtype;
-	int found = 0, indx = 0, validate_result;
+	int found = 0;
+	//int indx = 0;
+	int validate_result;
 	uint64_t result, top_lines, top_messageid, user_idnr;
 	unsigned char *md5_apop_he;
 	struct message *msg;
@@ -384,12 +365,14 @@ int pop3(ClientSession_T *session, const char *buffer)
 	strip_crlf(s);
 	g_strstrip(s);
 
-	/* check for command issued */
-	while (strchr(ValidNetworkChars, s[indx++]))
-		;
-
 	TRACE(TRACE_DEBUG, "incoming buffer: [%s]", s);
 	if (! strlen(s)) return 1;
+
+	/* check for command issued */
+	/*
+	while (strchr(ValidNetworkChars, s[indx++]))
+		;
+		*/
 
 	command = s;
 

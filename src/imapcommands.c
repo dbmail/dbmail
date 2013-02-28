@@ -1652,7 +1652,7 @@ static void _ic_fetch_enter(dm_thread_data *D)
 		result = dbmail_imap_session_fetch_get_items(self);
 	}
 
-	dbmail_imap_session_fetch_free(self);
+	dbmail_imap_session_fetch_free(self, FALSE);
 	dbmail_imap_session_args_free(self, FALSE);
 
 	MailboxState_flush_recent(self->mailbox->mbstate);

@@ -445,11 +445,12 @@ void MailboxState_free(T *M)
 	}
 	s->recent_queue = NULL;
 
-	if (s->freepool) {
-		Mempool_T pool = s->pool;
+	gboolean freepool = s->freepool;
+	Mempool_T pool = s->pool;
+	mempool_push(pool, s, sizeof(*s));
+
+	if (freepool) {
 		mempool_close(&pool);
-	} else {
-		mempool_push(s->pool, s, sizeof(*s));
 	}
 
 	s = NULL;

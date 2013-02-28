@@ -55,6 +55,9 @@ struct event *sig_term;
 struct event *sig_usr;
 #endif
 
+FILE *fstdout = NULL;
+FILE *fstderr = NULL;
+FILE *fnull = NULL;
 /*
  * self-pipe event
  */
@@ -311,17 +314,21 @@ static void reopen_logs(ServerConfig_T *conf)
 {
 	int serr;
 
-	if (! (freopen(conf->log, "a", stdout))) {
+	if (fstdout) fclose(fstdout);
+	if (fstderr) fclose(fstderr);
+	if (fnull) fclose(fnull);
+
+	if (! (fstdout = freopen(conf->log, "a", stdout))) {
 		serr = errno;
 		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
 	}
 
-	if (! (freopen(conf->error_log, "a", stderr))) {
+	if (! (fstderr = freopen(conf->error_log, "a", stderr))) {
 		serr = errno;
 		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
 	}
 
-	if (! (freopen("/dev/null", "r", stdin))) {
+	if (! (fnull = freopen("/dev/null", "r", stdin))) {
 		serr = errno;
 		TRACE(TRACE_ERR, "freopen failed on stdin [%s]", strerror(serr));
 	}
@@ -333,15 +340,19 @@ static void reopen_logs_fatal(ServerConfig_T *conf)
 {
 	int serr;
 
-	if (! (freopen(conf->log, "a", stdout))) {
+	if (fstdout) fclose(fstdout);
+	if (fstderr) fclose(fstderr);
+	if (fnull) fclose(fnull);
+
+	if (! (fstdout = freopen(conf->log, "a", stdout))) {
 		serr = errno;
 		TRACE(TRACE_EMERG, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
 	}
-	if (! (freopen(conf->error_log, "a", stderr))) {
+	if (! (fstdout = freopen(conf->error_log, "a", stderr))) {
 		serr = errno;
 		TRACE(TRACE_EMERG, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
 	}
-	if (! (freopen("/dev/null", "r", stdin))) {
+	if (! (fstdout = freopen("/dev/null", "r", stdin))) {
 		serr = errno;
 		TRACE(TRACE_EMERG, "freopen failed on stdin [%s]", strerror(serr));
 	}
@@ -491,7 +502,13 @@ static void server_exit(void)
 {
 	disconnect_all();
 	server_close_sockets(server_conf);
-	mempool_close(&queue_pool);
+	event_base_free(evbase);
+
+	if (fstdout) fclose(fstdout);
+	if (fstderr) fclose(fstderr);
+	if (fnull) fclose(fnull);
+	closelog();
+	//mempool_close(&queue_pool);
 }
 	
 static void server_create_sockets(ServerConfig_T * conf)
@@ -524,9 +541,8 @@ static void server_create_sockets(ServerConfig_T * conf)
 
 static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 {
-	Mempool_T pool = mempool_open();
-	client_sock *c = mempool_pop(pool, sizeof(client_sock));
-	c->pool = pool;
+	Mempool_T pool;
+	int csock;
 	struct sockaddr *caddr;
 	struct sockaddr *saddr;
 	struct event *ev = (struct event *)arg;
@@ -542,7 +558,7 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 	/* accept the active fd */
 	int len = sizeof(*caddr);
 
-	if ((c->sock = accept(sock, NULL, NULL)) < 0) {
+	if ((csock = accept(sock, NULL, NULL)) < 0) {
                 int serr=errno;
                 switch(serr) {
                         case ECONNABORTED:
@@ -554,28 +570,39 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
                                 TRACE(TRACE_ERR, "%d:%s", serr, strerror(serr));
                                 break;
                 }
-		mempool_close(&pool);
                 return;
         }
 	
+	pool = mempool_open();
+
+	client_sock *c = mempool_pop(pool, sizeof(client_sock));
+	c->pool = pool;
+	c->sock = csock;
         caddr = mempool_pop(c->pool, sizeof(struct sockaddr_storage));
 	if (getpeername(c->sock, caddr, (socklen_t *)&len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_INFO, "getpeername::error [%s]", strerror(serr));
+		mempool_push(pool, caddr, sizeof(struct sockaddr_storage));
+		mempool_push(pool, c, sizeof(client_sock));
 		mempool_close(&pool);
+		close(csock);
 		return;
 	}
-
-	c->caddr = caddr;
-	c->caddr_len = len;
 
         saddr = mempool_pop(c->pool, sizeof(struct sockaddr_storage));
 	if (getsockname(c->sock, saddr, (socklen_t *)&len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_EMERG, "getsockname::error [%s]", strerror(serr));
+		mempool_push(pool, caddr, sizeof(struct sockaddr_storage));
+		mempool_push(pool, saddr, sizeof(struct sockaddr_storage));
+		mempool_push(pool, c, sizeof(client_sock));
 		mempool_close(&pool);
+		close(csock);
 		return; // fatal 
 	}
+
+	c->caddr = caddr;
+	c->caddr_len = len;
 
 	c->saddr = saddr;
 	c->saddr_len = len;
@@ -589,7 +616,6 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 
 	/* reschedule */
 	event_add(ev, NULL);
-
 }
 
 static void server_sock_cb(int sock, short event, void *arg)
@@ -673,15 +699,15 @@ void disconnect_all(void)
 		tpool = NULL;
 	}
 	if (sig_int) {
-		free(sig_int);
+		event_free(sig_int);
 		sig_int = NULL;
 	}
 	if (sig_hup) {
-		free(sig_hup);
+		event_free(sig_hup);
 		sig_hup = NULL;
 	}
 	if (sig_term) {
-		free(sig_term);
+		event_free(sig_term);
 		sig_term = NULL;
 	}
 }

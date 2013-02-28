@@ -140,9 +140,10 @@ void imap_cleanup_deferred(gpointer data)
 	ImapSession *session = (ImapSession *)D->session;
 	ClientBase_T *ci = session->ci;
 
-	dbmail_imap_session_delete(&session);
 	rx = ci->rx;
 	ci_close(ci);
+
+	dbmail_imap_session_delete(&session);
 
 	if (rx == STDIN_FILENO)
 		exit(0);
@@ -204,8 +205,8 @@ void imap_cb_read(void *arg)
 	TRACE(TRACE_DEBUG,"state [%d] enough %d: %ld/%ld", state, enough, have, need);
 
 	if (state & CLIENT_ERR) {
-		ci_cork(session->ci);
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
+		imap_session_bailout(session);
 	} else if (state & CLIENT_EOF) {
 		ci_cork(session->ci);
 		if (enough)

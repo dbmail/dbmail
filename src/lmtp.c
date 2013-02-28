@@ -480,8 +480,9 @@ int lmtp(ClientSession_T * session)
 	case LMTP_DATA:
 		msg = dbmail_message_new(NULL);
 		dbmail_message_init_with_string(msg, p_string_str(session->rbuff));
-		dbmail_message_set_header(msg, "Return-Path", 
-				(char *)p_string_str(p_list_data(session->from)));
+		if (p_list_data(session->from))
+			dbmail_message_set_header(msg, "Return-Path", 
+					(char *)p_string_str(p_list_data(session->from)));
 		p_string_truncate(session->rbuff,0);
 
 		if (insert_messages(msg, session->rcpt) == -1) {

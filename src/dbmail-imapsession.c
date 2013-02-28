@@ -199,7 +199,7 @@ void dbmail_imap_session_delete(ImapSession ** s)
 	Capa_free(&self->capa);
 
 	dbmail_imap_session_args_free(self, TRUE);
-	dbmail_imap_session_fetch_free(self);
+	dbmail_imap_session_fetch_free(self, TRUE);
 
 	if (self->mailbox) {
 		dbmail_mailbox_free(self->mailbox);
@@ -218,14 +218,16 @@ void dbmail_imap_session_delete(ImapSession ** s)
 		g_tree_destroy(self->physids);
 		self->physids = NULL;
 	}
+	p_string_free(self->buff, TRUE);
 	
 	g_mutex_clear(&self->lock);
 	pool = self->pool;
 	mempool_push(pool, self, sizeof(ImapSession));
+	mempool_close(&pool);
 	self = NULL;
 }
 
-void dbmail_imap_session_fetch_free(ImapSession *self) 
+void dbmail_imap_session_fetch_free(ImapSession *self, gboolean all) 
 {
 	if (self->envelopes) {
 		g_tree_destroy(self->envelopes);
@@ -242,7 +244,10 @@ void dbmail_imap_session_fetch_free(ImapSession *self)
 	if (self->fi->bodyfetch) {
 		dbmail_imap_session_bodyfetch_free(self);
 	}
-	memset(self->fi, 0, sizeof(fetch_items));
+	if (all)
+		mempool_push(self->pool, self->fi, sizeof(fetch_items));
+	else
+		memset(self->fi, 0, sizeof(fetch_items));
 }
 
 void dbmail_imap_session_args_free(ImapSession *self, gboolean all)
