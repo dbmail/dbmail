@@ -748,11 +748,11 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			if (! val) {
 				TRACE(TRACE_DEBUG, "[%p] [%lu] no headervalue [%s]", self, id, fld);
 			} else {
-
 				mid = g_new0(uint64_t,1);
 				*mid = id;
 
 				old = g_tree_lookup(bodyfetch->headers, (gconstpointer)mid);
+				fld[0] = toupper(fld[0]);
 				new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
 				g_free(val);
 				g_tree_insert(bodyfetch->headers,mid,new);

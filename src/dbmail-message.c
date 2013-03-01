@@ -1589,7 +1589,7 @@ static GString * _header_addresses(InternetAddressList *ialist)
 			const char *addr = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
 
 			if (name)
-				g_string_append_printf(store, "\"%s\" ", name);
+				g_string_append_printf(store, "%s ", name);
 			if (addr)
 				g_string_append_printf(store, "%s%s%s", 
 						name?"<":"", 
