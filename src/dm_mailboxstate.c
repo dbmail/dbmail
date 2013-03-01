@@ -936,9 +936,9 @@ static gboolean mailbox_clear_recent(uint64_t *uid, MessageInfo *msginfo, T M)
 	gpointer value;
 	gpointer orig_key;
 	if (g_tree_lookup_extended(M->recent_queue, uid, &orig_key, &value)) {
+		g_tree_remove(M->recent_queue, orig_key);
 		mempool_push(M->pool, orig_key, sizeof(uint64_t));
 	}
-	g_tree_remove(M->recent_queue, uid);
 	return FALSE;
 }
 
