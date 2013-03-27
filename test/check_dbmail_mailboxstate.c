@@ -36,6 +36,10 @@
 
 extern char *configFile;
 
+#define TESTBOX "testbox.TMP"
+uint64_t testboxid = 0;
+uint64_t testuserid = 0;
+
 /*
  *
  * the test fixtures
@@ -43,10 +47,20 @@ extern char *configFile;
  */
 static uint64_t get_mailbox_id(const char *name)
 {
-	uint64_t id, owner;
-	auth_user_exists("testuser1",&owner);
-	db_find_create_mailbox(name, BOX_COMMANDLINE, owner, &id);
+	uint64_t id;
+	auth_user_exists("testuser1",&testuserid);
+	db_find_create_mailbox(name, BOX_COMMANDLINE, testuserid, &id);
 	return id;
+}
+
+static void insert_message(void)
+{
+	uint64_t newmsgidnr = 0;
+	DbmailMessage *message;
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message,multipart_message);
+	dbmail_message_store(message);
+	db_copymsg(message->msg_idnr, testboxid, testuserid, &newmsgidnr, TRUE);
 }
 
 void setup(void)
@@ -56,10 +70,13 @@ void setup(void)
 	GetDBParams();
 	db_connect();
 	auth_connect();
+	g_mime_init(0);
+	testboxid = get_mailbox_id(TESTBOX);
 }
 
 void teardown(void)
 {
+	db_delete_mailbox(testboxid, 0, 0);
 	db_disconnect();
 }
 
@@ -68,6 +85,23 @@ START_TEST(test_createdestroy)
 	uint64_t id = get_mailbox_id("INBOX");
 	MailboxState_T M = MailboxState_new(NULL, id);
 	MailboxState_free(&M);
+}
+END_TEST
+
+START_TEST(test_metadata)
+{
+	MailboxState_T M = MailboxState_new(NULL, testboxid);
+	fail_unless(MailboxState_getUnseen(M) == 0);
+	fail_unless(MailboxState_getRecent(M) == 0);
+	fail_unless(MailboxState_getExists(M) == 0);
+
+	insert_message();
+
+	MailboxState_count(M);
+
+	fail_unless(MailboxState_getUnseen(M) == 1);
+	fail_unless(MailboxState_getRecent(M) == 1);
+	fail_unless(MailboxState_getExists(M) == 1);
 }
 END_TEST
 
@@ -110,6 +144,7 @@ Suite *dbmail_common_suite(void)
 	
 	tcase_add_checked_fixture(tc_state, setup, teardown);
 	tcase_add_test(tc_state, test_createdestroy);
+	tcase_add_test(tc_state, test_metadata);
 	tcase_add_test(tc_state, test_mbxinfo);
 
 	return s;
