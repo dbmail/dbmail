@@ -272,7 +272,7 @@ int main(int argc, char *argv[])
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
-	g_mime_init(0);
+	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */

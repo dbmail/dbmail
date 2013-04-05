@@ -187,7 +187,7 @@ START_TEST(test_dbmail_message_store)
 {
 	DbmailMessage *m;
 	char *t, *e;
-
+	
 	//-----------------------------------------
 	m = message_init("From: paul\n");
 	e = dbmail_message_to_string(m);
@@ -349,6 +349,13 @@ START_TEST(test_dbmail_message_store)
 	COMPARE(e,t);
 	g_free(e);
 	g_free(t);
+	//-----------------------------------------
+	m = message_init(long_quopri_subject);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	g_free(e);
+	g_free(t);
 }
 END_TEST
 
@@ -493,13 +500,6 @@ START_TEST(test_dbmail_message_to_string)
 }
 END_TEST
     
-//DbmailMessage * dbmail_message_init_with_stream(DbmailMessage *self, GMimeStream *stream, int type);
-/*
-START_TEST(test_dbmail_message_init_with_stream)
-{
-}
-END_TEST
-*/
 //gchar * dbmail_message_hdrs_to_string(DbmailMessage *self);
 
 START_TEST(test_dbmail_message_hdrs_to_string)
@@ -555,12 +555,48 @@ END_TEST
 
 START_TEST(test_dbmail_message_set_header)
 {
+	char *res = NULL;
 	DbmailMessage *m;
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m,multipart_message);
 	dbmail_message_set_header(m, "X-Foobar","Foo Bar");
 	fail_unless(dbmail_message_get_header(m, "X-Foobar")!=NULL, "set_header failed");
 	dbmail_message_free(m);
+	//
+	m = dbmail_message_new(NULL);
+	m = dbmail_message_init_with_string(m, encoded_message_utf8);
+	res = dbmail_message_to_string(m);
+	fail_unless(MATCH(encoded_message_utf8, res), "to_string failed");
+	dbmail_message_set_header(m, "X-Foobar", "Test");
+
+	g_mime_object_remove_header(GMIME_OBJECT(m->content), "X-Foobar");
+	res = dbmail_message_to_string(m);
+	fail_unless(MATCH(encoded_message_utf8, res), "to_string failed \n[%s] != \n[%s]\n", encoded_message_utf8, res);
+
+	g_free(res);
+	dbmail_message_free(m);
+	//
+
+	m = dbmail_message_new(NULL);
+	m = dbmail_message_init_with_string(m, long_quopri_subject);
+	res = dbmail_message_to_string(m);
+	fail_unless(MATCH(long_quopri_subject, res), "to_string failed");
+	g_free(res);
+	
+	dbmail_message_set_header(m, "X-Foo", "Test");
+
+	res = dbmail_message_to_string(m);
+	fail_unless(! MATCH(long_quopri_subject, res), "to_string failed");
+	g_free(res);
+
+	g_mime_object_remove_header(GMIME_OBJECT(m->content), "X-Foo");
+	res = dbmail_message_to_string(m);
+	fail_unless(MATCH(long_quopri_subject, res), "to_string failed \n[%s] != \n[%s]\n", long_quopri_subject, res);
+	g_free(res);
+
+	dbmail_message_free(m);
+	//
+
 }
 END_TEST
 
@@ -783,7 +819,6 @@ Suite *dbmail_message_suite(void)
 	
 	suite_add_tcase(s, tc_message);
 	tcase_add_checked_fixture(tc_message, setup, teardown);
-
 	tcase_add_test(tc_message, test_dbmail_message_new);
 	tcase_add_test(tc_message, test_dbmail_message_set_class);
 	tcase_add_test(tc_message, test_dbmail_message_get_class);
@@ -794,10 +829,8 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_retrieve);
 	tcase_add_test(tc_message, test_dbmail_message_init_with_string);
 	tcase_add_test(tc_message, test_dbmail_message_to_string);
-//	tcase_add_test(tc_message, test_dbmail_message_init_with_stream);
 	tcase_add_test(tc_message, test_dbmail_message_hdrs_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_body_to_string);
-	tcase_add_test(tc_message, test_dbmail_message_set_header);
 	tcase_add_test(tc_message, test_dbmail_message_set_header);
 	tcase_add_test(tc_message, test_dbmail_message_get_header);
 	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
@@ -809,14 +842,13 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_construct);
 	tcase_add_test(tc_message, test_dbmail_message_get_size);
 	tcase_add_test(tc_message, test_encoding);
-
 	return s;
 }
 
 int main(void)
 {
 	int nf;
-	g_mime_init(0);
+	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 	Suite *s = dbmail_message_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);

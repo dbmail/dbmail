@@ -18,6 +18,7 @@ char *simple = "From nobody Wed Sep 14 16:47:48 2005\n"
 	"X-Foo: bar\n"
 	"Message-Id: <1199706209l.3020l.0l@(none)>\n"
 	"Subject: dbmail test message\n"
+	"MIME-Version: 1.0\n"
 	"\n"
 	"\n"
 	"    this is a test message\n"
@@ -1243,3 +1244,9 @@ char * multipart_apple = "Subject: Re: Einladung\n"
 	"--Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0--\n"
 	"\n";
 
+char *long_quopri_subject = "From: test\n"
+	"To: test2\n"
+	"Subject: qqqq wwwwwww [eee 1234]=?UTF-8?Q?=20=D0=95=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=20=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=20=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=20=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC=D0=BC?=\n"
+	"MIME-Version: 1.0\n"
+	"\n"
+	"123\n";

@@ -52,7 +52,7 @@ void setup(void)
 	GetDBParams();
 	db_connect();
 	auth_connect();
-	g_mime_init(0);
+	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 }
 
 void teardown(void)

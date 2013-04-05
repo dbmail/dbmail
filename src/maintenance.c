@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 	char * mbtrash_name;
 	char * mbinbox_name;
 
-	g_mime_init(0);
+	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
