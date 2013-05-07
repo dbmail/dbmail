@@ -1324,52 +1324,108 @@ static void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean
 static void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean extension);
 
 
-static GList * imap_append_hash_as_string(GList *list, const GMimeParam *hash)
+static GList * imap_append_hash_as_string(GList *list, const char *type)
 {
+	size_t i = 0;
+	char curr = 0;
+	char name[512];
+	char value[1024];
+	char *head = (char *)type;
 	GList *l = NULL;
-	char *s;
 
-	while (hash) {
-		size_t len;
-		char *clean1, *clean2, *clean3;
-		gchar *value = (char *)g_mime_param_get_value(hash);
-		l = g_list_append_printf(l, "\"%s\"", g_mime_param_get_name(hash));
-		clean1 = value;
-		if (clean1[0] == '"')
-			clean1++;
+	if (! type)
+		return list;
 
-		len = strlen(clean1);
-		if (clean1[len-1] == '"')
-			clean1[len-1] = '\0';
-
-		clean2 = g_strcompress(clean1);
-
-		if (g_mime_utils_text_is_8bit((const unsigned char *)clean2, strlen(clean2))) {
-			value = g_mime_utils_header_encode_text(clean2);
-			g_free(clean2);
-			clean2 = value;
+	while (type[i]) {
+		curr = type[i++];
+		if (curr == ';') {
+			break;
 		}
-		clean3 = g_strescape(clean2, NULL);
-		g_free(clean2);
+	}
 
-		l = g_list_append_printf(l, "\"%s\"", clean3);
+	while (type[i]) {
+		curr = type[i];
+		if ((curr == '\n') || (curr == ' ') || (curr == '\t')) {
+			i++;
+			continue;
+		}
+		break;
+	}
 
-		g_free(clean3);
-		hash = g_mime_param_next(hash);
+	head += i;
+
+	int offset = 0;
+	int inname = 1;
+	TRACE(TRACE_DEBUG, "analyse [%s]", head);
+	while (head) {
+		curr = head[offset];
+		if ((! curr) && (offset==0))
+			break;
+		if (curr == '=' && inname) {
+			memset(name, 0, sizeof(name));
+			strncpy(name, head, offset);
+			g_strstrip(name);
+			head += offset+1;
+			inname = 0;
+			offset = 0;
+			TRACE(TRACE_DEBUG, "name: %s", name);
+			l = g_list_append_printf(l, "\"%s\"", name);
+			continue;
+		} else if ((! curr) || (curr == ';')) {
+			size_t len;
+			char *clean1, *clean2, *clean3;
+			memset(value, 0, sizeof(value));
+			strncpy(value, head, offset);
+			head += offset+1;
+			inname = 1;
+			offset = 0;
+
+			clean1 = value;
+			if (clean1[0] == '"')
+				clean1++;
+
+			len = strlen(clean1);
+			if (clean1[len-1] == '"')
+				clean1[len-1] = '\0';
+
+			clean2 = g_strcompress(clean1);
+
+			if (g_mime_utils_text_is_8bit((const unsigned char *)clean2, strlen(clean2))) {
+				clean1 = g_mime_utils_header_encode_text(clean2);
+				g_free(clean2);
+				clean2 = clean1;
+			}
+			clean3 = g_strescape(clean2, NULL);
+			g_free(clean2);
+
+			TRACE(TRACE_DEBUG, "value: %s", value);
+			TRACE(TRACE_DEBUG, "clean: %s", clean3);
+			l = g_list_append_printf(l, "\"%s\"", clean3);
+
+			g_free(clean3);
+
+			if (! curr)
+				break;
+		}
+		offset ++;
 	}
 
 	if (l) {
-		s = dbmail_imap_plist_as_string(l);
+		char *s = dbmail_imap_plist_as_string(l);
+		TRACE(TRACE_DEBUG, "plist from content-type: %s", s);
 		list = g_list_append_printf(list, "%s", s);
 		g_free(s);
 		
 		g_list_destroy(l);
 	} else {
+		TRACE(TRACE_DEBUG, "plist from content-type: NIL");
 		list = g_list_append_printf(list, "NIL");
 	}
 	
+
 	return list;
 }
+
 static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 {
 	GList *t = NULL;
@@ -1383,8 +1439,7 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 				g_mime_content_disposition_get_disposition(disposition));
 		
 		/* paramlist */
-		t = imap_append_hash_as_string(t,
-				g_mime_content_disposition_get_params(disposition));
+		t = imap_append_hash_as_string(t, disp);
 
 		g_object_unref(disposition);
 		
@@ -1498,6 +1553,7 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	multipart = GMIME_MULTIPART(object);
 	i = g_mime_multipart_get_count(multipart);
 	
+	
 	b = g_mime_content_type_to_string(type);
 	TRACE(TRACE_DEBUG,"parse [%d] parts for [%s] with boundary [%s]", 
 			i, b, g_mime_multipart_get_boundary(multipart));
@@ -1516,7 +1572,8 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	if (extension) {
 		/* paramlist */
 		list = imap_append_hash_as_string(list, 
-				g_mime_content_type_get_params(type));
+				g_mime_object_get_header(object, "Content-Type"));
+
 		/* disposition */
 		list = imap_append_disposition_as_string(list, object);
 		/* language */
@@ -1561,7 +1618,7 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	list = g_list_append_printf(list,"\"%s\"", type->subtype);
 	/* paramlist */
 	list = imap_append_hash_as_string(list, 
-			g_mime_content_type_get_params((GMimeContentType *)type));
+			g_mime_object_get_header(object, "Content-Type"));
 	/* body id */
 	if ((result = (char *)g_mime_object_get_content_id(object)))
 		list = g_list_append_printf(list,"\"%s\"", result);
@@ -1618,7 +1675,7 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	list = g_list_append_printf(list,"\"%s\"", type->subtype);
 	/* paramlist */
 	list = imap_append_hash_as_string(list, 
-			g_mime_content_type_get_params(type));
+			g_mime_object_get_header(object, "Content-Type"));
 	/* body id */
 	if ((result = (char *)g_mime_object_get_content_id(object)))
 		list = g_list_append_printf(list,"\"%s\"", result);

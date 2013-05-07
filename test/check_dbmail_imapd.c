@@ -233,17 +233,28 @@ START_TEST(test_imap_get_structure)
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
 	g_free(result);
 	dbmail_message_free(message);
-	
+
 	/* multipart apple */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_apple);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 2 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 1 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"=?iso-8859-13?q?=A5Tradition?= hat Potenzial\\\".docx\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename\" \"=?iso-8859-13?q?=A5Tradition?= hat Potenzial\\\".docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 4 NIL NIL NIL NIL) \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL) \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL)", 1024);
+	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 2 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 1 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"=?windows-1252?Q?=84Tradition_hat_Potenzial=5C=22=2Edocx?=\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename*\" \"windows-1252''%84Tradition%20hat%20Potenzial%22.docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 4 NIL NIL NIL NIL) \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL) \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL)", 1024);
 
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
 	g_free(result);
 	dbmail_message_free(message);
 	
+	/* rfc2231 encoded content-disposition */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_message7);
+	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"7bit\" 9 2 NIL NIL NIL NIL)(\"image\" \"png\" (\"name\" \"=?UTF-8?B?cGjDtm5ueS5wbmc=?=\") NIL NIL \"base64\" 225 NIL (\"attachment\" (\"filename*\" \"UTF-8''%70%68%C3%B6%6E%6E%79%2E%70%6E%67\")) NIL NIL) \"mixed\" (\"boundary\" \"------------000706040608020005040505\") NIL NIL NIL)", 1024);
+
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
+	g_free(result);
+	dbmail_message_free(message);
+
+	/* done */
 	g_free(expect);
 }
 END_TEST
