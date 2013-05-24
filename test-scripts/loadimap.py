@@ -41,6 +41,7 @@ class IMAPClient:
         self.conn = imaplib.IMAP4(self._hostname, self._port)
         self.conn.debug = DEBUG
         self.conn.login(USERNAME, PASSWORD)
+        self.conn.create(IMAPBOX)
 
     def append(self, message):
         self.conn.append(IMAPBOX, (), "", message)
