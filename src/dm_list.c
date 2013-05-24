@@ -115,6 +115,8 @@ T p_list_next(T L)
 size_t p_list_length(T L)
 {
 	size_t length = 0;
+	if (ISEMPTY(L))
+		return length;
 	while (L) {
 		length++;
 		L = L->next;
