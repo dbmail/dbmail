@@ -88,8 +88,6 @@ static void tims_handle_input(void *arg)
 	char buffer[MAX_LINESIZE];	/* connection buffer */
 	ClientSession_T *session = (ClientSession_T *)arg;
 
-	ci_cork(session->ci);
-
 	while (TRUE) {
 		memset(buffer, 0, sizeof(buffer));
 		l = ci_readln(session->ci, buffer);
@@ -109,8 +107,7 @@ static void tims_handle_input(void *arg)
 		}
 	}
 
-	if (session->state < CLIENTSTATE_QUIT)
-		ci_uncork(session->ci);
+	TRACE(TRACE_DEBUG,"[%p] done", session);
 }
 
 void tims_cb_time(void * arg)
@@ -278,6 +275,8 @@ int tims_tokenizer(ClientSession_T *session, char *buffer)
 	session->args = p_list_first(session->args);
 	while (session->args) {
 		String_T s = p_list_data(session->args);
+		if (! s)
+			break;
 		TRACE(TRACE_DEBUG,"arg: [%s]", (char *)p_string_str(s));			
 		if (! p_list_next(session->args))
 			break;
@@ -338,9 +337,11 @@ int tims(ClientSession_T *session)
 			int i = 0;
 			uint64_t useridnr;
 			String_T s;
-			if (! p_list_next(session->args))
+			List_T L = session->args;
+			if (! p_list_next(L))
 				return tims_error(session, "NO \"Missing argument.\"\r\n");	
-			s = p_list_data(session->args);
+			L = p_list_next(L);
+			s = p_list_data(L);
 			arg = (char *)p_string_str(s);
 
 			char **tmp64 = NULL;
