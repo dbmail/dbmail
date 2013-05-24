@@ -59,6 +59,7 @@ ClientSession_T * client_session_new(client_sock *c)
 	session->rbuff = p_string_new(session->pool, "");
 	session->messagelst = p_list_new(session->pool);
 	session->args = p_list_new(session->pool);
+	session->from = p_list_new(session->pool);
 
 	return session;
 }
