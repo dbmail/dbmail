@@ -122,15 +122,16 @@ END_TEST
 START_TEST(test_p_list_newfree)
 {
 	int i;
+	const char *data = "data";
 	List_T L = p_list_new(pool);
 	fail_unless(L != NULL);
 	p_list_free(&L);
 	L = p_list_new(pool);
 	for (i=0; i<100; i++)
-		L = p_list_prepend(L, NULL);
+		L = p_list_prepend(L, (void *)data);
 	L = p_list_last(L);
 	for (i=0; i<100; i++)
-		L = p_list_append(L, NULL);
+		L = p_list_append(L, (void *)data);
 	L = p_list_first(L);
 	p_list_free(&L);
 }
@@ -208,11 +209,13 @@ END_TEST
 
 START_TEST(test_p_list_previous)
 {
+	const char *data = "data";
+
 	List_T N, L = p_list_new(pool);
 	N = p_list_previous(L);
 	fail_unless(N == NULL);
 
-	N = p_list_prepend(L, NULL);
+	N = p_list_prepend(L, (void *)data);
 	fail_unless(N != NULL);
 	fail_unless(N == L);
 
@@ -223,11 +226,12 @@ END_TEST
 
 START_TEST(test_p_list_next)
 {
+	const char *data = "data";
 	List_T N, L = p_list_new(pool);
 	N = p_list_next(L);
 	fail_unless(N == NULL);
 
-	N = p_list_append(L, NULL);
+	N = p_list_append(L, (void *)data);
 	fail_unless(N != NULL);
 	fail_unless(L == N);
 
@@ -275,15 +279,15 @@ Suite *dbmail_list_suite(void)
 	tcase_add_checked_fixture(tc_list, setup, teardown);
 	tcase_add_test(tc_list, test_dbmail_list_dedup);
 	tcase_add_test(tc_list, test_p_list_newfree);
-	tcase_add_test(tc_list, test_p_list_length);
 	tcase_add_test(tc_list, test_p_list_append);
 	tcase_add_test(tc_list, test_p_list_prepend);
 	tcase_add_test(tc_list, test_p_list_last);
 	tcase_add_test(tc_list, test_p_list_first);
 	tcase_add_test(tc_list, test_p_list_previous);
 	tcase_add_test(tc_list, test_p_list_next);
-	tcase_add_test(tc_list, test_p_list_data);
 	tcase_add_test(tc_list, test_p_list_remove);
+	tcase_add_test(tc_list, test_p_list_length);
+	tcase_add_test(tc_list, test_p_list_data);
 
 	
 	return s;
