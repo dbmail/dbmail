@@ -2212,7 +2212,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source source,
 	/* Check if mailbox already exists. */
 	if (db_findmailbox(mailbox, owner_idnr, mailbox_idnr)) {
 		*message = "Mailbox already exists";
-		TRACE(TRACE_ERR, "Asked to create mailbox [%s] which already exists. Aborting create.", mailbox);
+		TRACE(TRACE_NOTICE, "Asked to create mailbox [%s] which already exists. Aborting create.", mailbox);
 		return DM_EGENERAL;
 	}
 
