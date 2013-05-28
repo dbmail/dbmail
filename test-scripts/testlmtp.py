@@ -40,10 +40,14 @@ class LMTPClient:
         return self.conn.docmd('LHLO', hostname)
 
     def send(self, fromaddr, toaddrs, message):
-        self.conn.mail(fromaddr)
-        self.conn.rcpt(toaddrs)
-        self.conn.data(message)
-        self.conn.rset()
+        r = self.conn.mail(fromaddr)
+        assert(r[0] == 250)
+        r = self.conn.rcpt(toaddrs)
+        assert(r[0] == 250)
+        r = self.conn.data(message)
+        assert(r[0] == 215)
+        r = self.conn.rset()
+        assert(r[0] == 250)
 
     def quit(self):
         return self.conn.quit()
@@ -53,7 +57,8 @@ def frontloader(*args):
     tid = args[0]
     tlocks[tid].acquire()
     c = LMTPClient('localhost', 10024)
-    c.lhlo('host')
+    r = c.lhlo('host')
+    assert(r[0] == 250)
     mb = mailbox.mbox(MAILBOX, factory=None, create=False)
     i = 1
     while i < MESSAGES:
