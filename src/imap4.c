@@ -361,7 +361,8 @@ static void imap_handle_continue(ImapSession *session)
 		if (session->buff && p_string_len(session->buff) > 0) {
 			int e = 0;
 			if ((e = ci_write(session->ci, (char *)p_string_str(session->buff))) < 0) {
-				TRACE(TRACE_DEBUG,"ci_write returned error [%s]", strerror(e));
+				int serr = errno;
+				TRACE(TRACE_DEBUG,"ci_write returned error [%s]", strerror(serr));
 				dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
 				return;
 			}

@@ -266,8 +266,10 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	size_t n;
 	char *s;
 
-	if (client->client_state & CLIENT_ERR)
+	if (client->client_state & CLIENT_ERR) {
+		TRACE(TRACE_DEBUG, "called while clientbase in error state");
 		return -1;
+	}
 
 	if (! (client && client->write_buffer)) {
 		TRACE(TRACE_DEBUG, "called while clientbase is stale");
@@ -318,7 +320,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 				if (client->sock->ssl && client->sock->ssl_state)
 					event_add(client->wev, NULL);
 			}
-			return t;
+			return 0;
 		} else {
 			event_add(client->wev, NULL);
 
