@@ -46,7 +46,7 @@
 #define UID_SIZE 70
 #define IPNUM_LEN 32
 #define IPLEN 32
-#define BACKLOG 16
+#define BACKLOG 128
 
 #define DM_SOCKADDR_LEN 108
 #define DM_USERNAME_LEN 100
