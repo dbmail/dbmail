@@ -1056,6 +1056,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 		config->backlog = BACKLOG;
 	} else if ((config->backlog = atoi(val)) <= 0)
 		TRACE(TRACE_EMERG, "value for BACKLOG is invalid: [%d]", config->backlog);
+	TRACE(TRACE_DEBUG, "%s backlog [%d]", service, config->backlog);
 
 	/* read items: RESOLVE_IP */
 	config_get_value("RESOLVE_IP", service, val);
