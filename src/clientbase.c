@@ -307,7 +307,7 @@ int ci_write(ClientBase_T *self, char * msg, ...)
 				if (self->ssl && self->ssl_state)
 					event_add(self->wev, NULL);
 			}
-			return e;
+			return 0;
 		} else {
 			TRACE(TRACE_INFO, "[%p] S > [%ld/%ld:%s]", self, t, self->write_buffer->len, s);
 
