@@ -1475,7 +1475,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 	if (self->state != CLIENTSTATE_SELECTED) return FALSE;
 
 	if (update) {
-		unsigned oldseq;
+		unsigned oldseq, newseq;
 		uint64_t olduidnext;
 		char *oldflags, *newflags;
 
@@ -1485,10 +1485,19 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		oldexists = MailboxState_getExists(M);
 		olduidnext = MailboxState_getUidnext(M);
 
-                // re-read flags and counters
-		N = MailboxState_new(self->pool, self->mailbox->id);
+                // check the mailbox sequence without a 
+		// full reload
+		N = MailboxState_new(self->pool, 0);
+		MailboxState_setId(N, self->mailbox->id);
+		newseq = MailboxState_getSeq(N);
+		MailboxState_free(&N);
+		N = NULL;
 
-		if (oldseq != MailboxState_getSeq(N)) {
+		if (oldseq != newseq) {
+			TRACE(TRACE_DEBUG, "seq: [%u] -> [%u]", oldseq, newseq);
+			// do a full reload: re-read flags and counters
+			N = MailboxState_new(self->pool, self->mailbox->id);
+
 			// rebuild uid/msn trees
 			// ATTN: new messages shouldn't be visible in any way to a 
 			// client session until it has been announced with EXISTS
@@ -1554,16 +1563,15 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 {
 	MailboxState_T M = NULL;
 	uint64_t *id;
+/*
 	int reload = FALSE;
-
 	switch (self->command_type) {
 		case IMAP_COMM_SELECT:
 		case IMAP_COMM_EXAMINE:
 			reload = TRUE;
 			break;
 	}
-	
-	TRACE(TRACE_DEBUG, "[%p] mailbox_id [%lu]", self, mailbox_id);
+	TRACE(TRACE_DEBUG, "[%p] mailbox_id [%lu] reload [%d]", self, mailbox_id, reload);
 
 	if (reload) {
 		id = g_new0(uint64_t,1);
@@ -1571,6 +1579,8 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 		M = MailboxState_new(self->pool, mailbox_id);
 		g_tree_replace(self->mbxinfo, id, M);
 	} else if (self->mailbox && self->mailbox->mbstate && (MailboxState_getId(self->mailbox->mbstate) == mailbox_id)) {
+*/	
+	if (self->mailbox && self->mailbox->mbstate && (MailboxState_getId(self->mailbox->mbstate) == mailbox_id)) {
 		// selected state
 		M = self->mailbox->mbstate;
 	} else {
@@ -1580,7 +1590,23 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			*id = mailbox_id;
 			M = MailboxState_new(self->pool, mailbox_id);
 			g_tree_replace(self->mbxinfo, id, M);
+		} else {
+			unsigned newseq = 0, oldseq = 0;
+			MailboxState_T N = NULL;
+			N = MailboxState_new(self->pool, 0);
+			MailboxState_setId(N, mailbox_id);
+			oldseq = MailboxState_getSeq(M);
+			newseq = MailboxState_getSeq(N);
+			MailboxState_free(&N);
+			if (oldseq < newseq) {
+				id = g_new0(uint64_t, 1);
+				*id = mailbox_id;
+				M = MailboxState_new(self->pool, mailbox_id);
+				g_tree_replace(self->mbxinfo, id, M);
+			}
 		}
+
+
 	}
 
 	assert(M);

@@ -60,6 +60,7 @@ struct T {
 	GTree *recent_queue;
 };
    
+static void db_getmailbox_seq(T M, Connection_T c);
 static void db_getmailbox_permission(T M, Connection_T c);
 static void state_load_metadata(T M, Connection_T c);
 static void MailboxState_setMsginfo(T M, GTree *msginfo);
@@ -309,6 +310,17 @@ uint64_t MailboxState_getId(T M)
 
 uint64_t MailboxState_getSeq(T M)
 {
+ 	if (! M->seq) {
+		Connection_T c = db_con_get();
+		TRY
+			db_getmailbox_seq(M, c);
+		CATCH(SQLException)
+			LOG_SQLERROR;
+		FINALLY
+			db_con_close(c);
+		END_TRY;
+	}
+ 
 	return M->seq;
 }
 
@@ -653,7 +665,7 @@ static void db_getmailbox_keywords(T M, Connection_T c)
 	}
 }
 
-static void db_getmailbox_seq(T M, Connection_T c)
+void db_getmailbox_seq(T M, Connection_T c)
 {
 	ResultSet_T r; 
 	PreparedStatement_T stmt;
