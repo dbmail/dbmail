@@ -59,7 +59,8 @@ struct T {
 	GTree *msn;
 	GTree *recent_queue;
 };
-
+   
+static void db_getmailbox_permission(T M, Connection_T c);
 static void state_load_metadata(T M, Connection_T c);
 static void MailboxState_setMsginfo(T M, GTree *msginfo);
 /* */
@@ -344,6 +345,16 @@ void MailboxState_setPermission(T M, int permission)
 
 unsigned MailboxState_getPermission(T M)
 {
+	if (! M->permission) {
+		Connection_T c = db_con_get();
+		TRY
+			db_getmailbox_permission(M, c);
+		CATCH(SQLException)
+			LOG_SQLERROR;
+		FINALLY
+			db_con_close(c);
+		END_TRY;
+	}
 	return M->permission;
 }
 
@@ -462,7 +473,7 @@ void MailboxState_free(T *M)
 	s = NULL;
 }
 
-static void db_getmailbox_permission(T M, Connection_T c)
+void db_getmailbox_permission(T M, Connection_T c)
 {
 	ResultSet_T r;
 	PreparedStatement_T stmt;

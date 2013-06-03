@@ -2101,7 +2101,9 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		int permission;
 		TRACE(TRACE_DEBUG, "Checking if we have the right to post incoming messages");
         
-		MailboxState_T S = MailboxState_new(NULL, mboxidnr);
+		// don't load the full mailbox state
+		MailboxState_T S = MailboxState_new(NULL, 0);
+		MailboxState_setId(S, mboxidnr);
 		permission = acl_has_right(S, useridnr, ACL_RIGHT_POST);
 		MailboxState_free(&S);
 		
