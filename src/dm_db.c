@@ -2257,9 +2257,11 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source source,
 					skip_and_free = DM_EQUERY;
 				} else {
 					/* Subscribe to the newly created mailbox. */
-					if (! db_subscribe(created_mboxid, owner_idnr)) {
-						*message = "General error while subscribing";
-						skip_and_free = DM_EGENERAL;
+					if (source != BOX_IMAP) {
+						if (! db_subscribe(created_mboxid, owner_idnr)) {
+							*message = "General error while subscribing";
+							skip_and_free = DM_EGENERAL;
+						}
 					}
 					MailboxState_setPermission(M, IMAPPERM_READWRITE);
 				}
@@ -2355,8 +2357,8 @@ int db_createmailbox(const char * name, uint64_t owner_idnr, uint64_t * mailbox_
 
 	frag = db_returning("mailbox_idnr");
 	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO %smailboxes (name, owner_idnr,permission)"
-		 " VALUES (?, ?, %d) %s", DBPFX,
+		 "INSERT INTO %smailboxes (name,owner_idnr,permission,seq)"
+		 " VALUES (?, ?, %d, 1) %s", DBPFX,
 		 IMAPPERM_READWRITE, frag);
 	g_free(frag);
 

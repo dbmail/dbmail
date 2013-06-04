@@ -327,8 +327,11 @@ uint64_t MailboxState_getSeq(T M)
 unsigned MailboxState_getExists(T M)
 {
 	int real = g_tree_nnodes(M->msginfo);
-	if (real > (int)M->exists)
+	if (real > (int)M->exists) {
+		TRACE(TRACE_DEBUG, "[%lu] exists [%u] -> [%d]",
+				M->id, M->exists, real);
 		M->exists = (unsigned)real;
+	}
 	return M->exists;
 }
 

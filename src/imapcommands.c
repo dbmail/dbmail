@@ -493,7 +493,7 @@ void _ic_create_enter(dm_thread_data *D)
 	const char *message;
 	SESSION_GET;
 
-	result = db_mailbox_create_with_parents(p_string_str(self->args[self->args_idx]), BOX_COMMANDLINE, self->userid, &mboxid, &message);
+	result = db_mailbox_create_with_parents(p_string_str(self->args[self->args_idx]), BOX_IMAP, self->userid, &mboxid, &message);
 
 	if (result > 0)
 		dbmail_imap_session_buff_printf(self, "%s NO %s\r\n", self->tag, message);

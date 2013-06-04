@@ -1352,12 +1352,11 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 	nl = MailboxState_message_flags(N, new);
 	newflags = dbmail_imap_plist_as_string(nl);
 
-	TRACE(TRACE_DEBUG, "oldflags [%s] newflags [%s]", oldflags, newflags);
-
 	g_list_destroy(ol);
 	g_list_destroy(nl);
 
 	if (oldflags && (! MATCH(oldflags, newflags))) {
+		TRACE(TRACE_DEBUG, "flags [%s] -> [%s]", oldflags, newflags);
 		char *t = NULL;
 		if (self->use_uid) t = g_strdup_printf(" UID %lu", *uid);
 		dbmail_imap_session_buff_printf(self, "* %lu FETCH (FLAGS %s%s)\r\n", 
@@ -1413,7 +1412,7 @@ static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 	if (ids) {
 		uid = (uint64_t *)ids->data;
 		msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), uid);
-		if (msn && (*msn > MailboxState_getExists(N))) {
+		if (msn && (*msn > MailboxState_getExists(M))) {
 			TRACE(TRACE_DEBUG,"exists new [%d] old: [%d]", MailboxState_getExists(N), MailboxState_getExists(M)); 
 			dbmail_imap_session_buff_printf(self, "* %d EXISTS\r\n", MailboxState_getExists(M));
 		}
@@ -1535,9 +1534,6 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 	// never decrease without first sending expunge !!
 	if (N) {
-		if (MailboxState_getExists(N) > MailboxState_getExists(M))
-			showexists = TRUE;
-
 		if (showexists && MailboxState_getExists(N)) 
 			dbmail_imap_session_buff_printf(self, "* %u EXISTS\r\n", MailboxState_getExists(N));
 

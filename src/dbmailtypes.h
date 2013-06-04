@@ -630,7 +630,8 @@ typedef enum {
 	BOX_BRUTEFORCE,  /* Autocreate, no perms checks and skip Sieve scripts. */
 	BOX_COMMANDLINE, /* Autocreate. */
 	BOX_SORTING,     /* Autocreate. */
-	BOX_DEFAULT      /* Autocreate. */
+	BOX_DEFAULT,     /* Autocreate. */
+	BOX_IMAP         /* Autocreate, no subscribe */
 } mailbox_source;
 
 typedef enum {
