@@ -722,8 +722,8 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 #define IMAP_SET_SEARCH		(*idx)++; \
 		if ((p = dbmail_iconv_str_to_db(p_string_str(search_keys[*idx]), self->charset)) == NULL) {  \
 			TRACE(TRACE_WARNING, "search_key [%s] is not charset [%s]", p_string_str(search_keys[*idx]), self->charset); \
-			strncpy(value->search, p_string_str(search_keys[*idx]), MAX_SEARCH_LEN); \
 		} else { \
+			strncpy(value->search, p, MAX_SEARCH_LEN); \
 			g_free(p); \
 		} \
 		g_free(t); \
