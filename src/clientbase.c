@@ -281,6 +281,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 		va_copy(cp, ap);
 		p_string_append_vprintf(client->write_buffer, msg, cp);
 		va_end(cp);
+		va_end(ap);
 	}
 	
 	if (p_string_len(client->write_buffer) < 1) { 

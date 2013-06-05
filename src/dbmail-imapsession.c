@@ -1245,6 +1245,7 @@ int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
 	va_copy(cp, ap);
         p_string_append_vprintf(self->buff, message, cp);
         va_end(cp);
+        va_end(ap);
 
         l = p_string_len(self->buff);
 

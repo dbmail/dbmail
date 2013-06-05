@@ -302,6 +302,7 @@ GList * g_list_append_printf(GList * list, const char * format, ...)
 	va_copy(cp, ap);
 	list = g_list_append(list, g_strdup_vprintf(format, cp));
 	va_end(cp);
+	va_end(ap);
 	return list;
 }
 

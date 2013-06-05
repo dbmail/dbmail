@@ -186,6 +186,7 @@ int lmtp_error(ClientSession_T * session, const char *formatstring, ...)
 	va_copy(cp, ap);
 	s = g_strdup_vprintf(formatstring, cp);
 	va_end(cp);
+	va_end(ap);
 	ci_write(session->ci, s);
 	g_free(s);
 

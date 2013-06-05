@@ -277,6 +277,7 @@ static int imap_session_printf(ImapSession * self, char * message, ...)
 	va_copy(cp, ap);
         p_string_append_vprintf(self->buff, message, cp);
         va_end(cp);
+        va_end(ap);
 
 	if ((e = ci_write(self->ci, (char *)p_string_str(self->buff))) < 0) {
 		TRACE(TRACE_DEBUG, "ci_write failed [%s]", strerror(e));

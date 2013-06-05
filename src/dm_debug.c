@@ -102,6 +102,7 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 	va_copy(cp, ap);
 	vsnprintf(message, MESSAGESIZE-1, formatstring, cp);
 	va_end(cp);
+	va_end(ap);
 
 	l = strlen(message);
 	

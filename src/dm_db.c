@@ -316,6 +316,7 @@ gboolean db_exec(Connection_T c, const char *q, ...)
 	va_copy(cp, ap);
         query = g_strdup_vprintf(q, cp);
         va_end(cp);
+        va_end(ap);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
@@ -346,6 +347,7 @@ ResultSet_T db_query(Connection_T c, const char *q, ...)
 	va_copy(cp, ap);
         query = g_strdup_vprintf(q, cp);
         va_end(cp);
+        va_end(ap);
 
 	g_strstrip(query);
 
@@ -376,6 +378,7 @@ gboolean db_update(const char *q, ...)
 	va_copy(cp, ap);
         vsnprintf(query, DEF_QUERYSIZE, q, cp);
         va_end(cp);
+        va_end(ap);
 
 	c = db_con_get();
 	TRY
@@ -402,6 +405,7 @@ PreparedStatement_T db_stmt_prepare(Connection_T c, const char *q, ...)
 	va_copy(cp, ap);
 	query = g_strdup_vprintf(q, cp);
 	va_end(cp);
+	va_end(ap);
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	s = Connection_prepareStatement(c, "%s", (const char *)query);
