@@ -74,6 +74,7 @@ static void MailboxState_uid_msn_new(T M)
 	if (M->ids) g_tree_destroy(M->ids);
 	M->ids = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,NULL,(GDestroyNotify)g_free);
 }
+
 static void MessageInfo_free(MessageInfo *m)
 {
 	g_list_destroy(m->keywords);
@@ -651,8 +652,7 @@ static void db_getmailbox_count(T M, Connection_T c)
 static void db_getmailbox_keywords(T M, Connection_T c)
 {
 	ResultSet_T r; 
-	PreparedStatement_T stmt;
-	const char *key;
+	PreparedStatement_T stmt; 
 
 	stmt = db_stmt_prepare(c,
 			"SELECT DISTINCT(keyword) FROM %skeywords k "
@@ -662,10 +662,8 @@ static void db_getmailbox_keywords(T M, Connection_T c)
 	db_stmt_set_u64(stmt, 1, M->id);
 	r = db_stmt_query(stmt);
 
-	while (db_result_next(r)) {
-		key = g_strdup(db_result_get(r,0));
-		g_tree_insert(M->keywords, (gpointer)key, (gpointer)key);
-	}
+	while (db_result_next(r))
+		MailboxState_addKeyword(M, db_result_get(r, 0));
 }
 
 void db_getmailbox_seq(T M, Connection_T c)
