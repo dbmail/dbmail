@@ -223,8 +223,10 @@ void dbmail_imap_session_delete(ImapSession ** s)
 		self->buff = NULL;
 	}
 	if (self->fi) {
-		if (self->fi->bodyfetch)
+		if (self->fi->bodyfetch) {
+			self->fi->bodyfetch = p_list_first(self->fi->bodyfetch);
 			p_list_free(&self->fi->bodyfetch);
+		}
 		mempool_push(self->pool, self->fi, sizeof(fetch_items));
 		self->fi = NULL;
 	}
