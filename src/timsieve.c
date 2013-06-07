@@ -228,7 +228,7 @@ int tims_tokenizer(ClientSession_T *session, char *buffer)
 			p_string_printf(session->rbuff, "%s", "");
 			session->parser_state = TRUE;
 		}
-		TRACE(TRACE_DEBUG, "state [%d], size [%ld]", session->parser_state, session->ci->rbuff_size);
+		TRACE(TRACE_DEBUG, "state [%d], size [%" PRIu64 "]", session->parser_state, session->ci->rbuff_size);
 		return session->parser_state;
 	}
 
@@ -296,7 +296,7 @@ int tims(ClientSession_T *session)
 	 *  1 on success */
 	
 	char *arg;
-	size_t scriptlen = 0;
+	uint64_t scriptlen = 0;
 	int ret;
 	char *script = NULL, *scriptname = NULL;
 	SortResult_T *sort_result = NULL;
@@ -404,8 +404,8 @@ int tims(ClientSession_T *session)
 
 		script = (char *)p_string_str(p_list_data(session->args));
 
-		scriptlen = strlen(script);
-		TRACE(TRACE_INFO, "Client sending script of length [%ld]", scriptlen);
+		scriptlen = (uint64_t)strlen(script);
+		TRACE(TRACE_INFO, "Client sending script of length [%" PRIu64 "]", scriptlen);
 		if (scriptlen >= UINT_MAX)
 			return tims_error(session, "NO \"Invalid script length.\"\r\n");
 

@@ -201,7 +201,7 @@ static uint64_t blob_insert(const char *buf, const char *hash)
 		db_con_close(c);
 	END_TRY;
 
-	TRACE(TRACE_DEBUG,"inserted id [%lu]", id);
+	TRACE(TRACE_DEBUG,"inserted id [%" PRIu64 "]", id);
 	g_free(frag);
 
 	return id;
@@ -214,7 +214,7 @@ static int register_blob(DbmailMessage *m, uint64_t id, gboolean is_header)
 	TRY
 		db_begin_transaction(c);
 		t = db_exec(c, "INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
-				"VALUES (%lu,%d,%d,%d,%d,%lu)", DBPFX,
+				"VALUES (%" PRIu64 ",%d,%d,%d,%d,%" PRIu64 ")", DBPFX,
 				dbmail_message_get_physid(m), is_header, m->part_key, m->part_depth, m->part_order, id);	
 		db_commit_transaction(c);
 	CATCH(SQLException)
@@ -1017,7 +1017,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	 * _mime_retrieve failed. Fall back to messageblks
 	 * interface
 	 */
-	TRACE(TRACE_WARNING, "[%lu] Deprecation warning. Please migrate the old messageblks using dbmail-util -M",
+	TRACE(TRACE_WARNING, "[%" PRIu64 "] Deprecation warning. Please migrate the old messageblks using dbmail-util -M",
 			dbmail_message_get_physid(store));
 	self = store;
 
@@ -1069,7 +1069,7 @@ static DbmailMessage * _fetch_full(DbmailMessage *self)
 	const char *query_template = "SELECT b.messageblk, b.is_header, %s "
 		"FROM %smessageblks b "
 		"JOIN %sphysmessage p ON b.physmessage_id=p.id "
-		"WHERE b.physmessage_id = %lu "
+		"WHERE b.physmessage_id = %" PRIu64 " "
 		"ORDER BY b.messageblk_idnr";
 	return _retrieve(self, query_template);
 }
@@ -1088,7 +1088,7 @@ DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, uint64_t physid)
 	self = _fetch_full(self);
 
 	if ((!self) || (! self->content)) {
-		TRACE(TRACE_ERR, "retrieval failed for physid [%lu]", physid);
+		TRACE(TRACE_ERR, "retrieval failed for physid [%" PRIu64 "]", physid);
 		return NULL;
 	}
 
@@ -1109,11 +1109,11 @@ static int _update_message(DbmailMessage *self)
 
 	assert(size);
 	assert(rfcsize);
-	if (! db_update("UPDATE %sphysmessage SET messagesize = %lu, rfcsize = %lu WHERE id = %lu", 
+	if (! db_update("UPDATE %sphysmessage SET messagesize = %" PRIu64 ", rfcsize = %" PRIu64 " WHERE id = %" PRIu64 "", 
 			DBPFX, size, rfcsize, self->id))
 		return DM_EQUERY;
 
-	if (! db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %lu", 
+	if (! db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %" PRIu64 "", 
 			DBPFX, MESSAGE_STATUS_NEW, self->msg_idnr))
 		return DM_EQUERY;
 
@@ -1229,10 +1229,10 @@ static void insert_physmessage(DbmailMessage *self, Connection_T c)
 		id = db_insert_result(c, r);
 
 	if (! id) {
-		TRACE(TRACE_ERR,"no physmessage_id [%lu]", id);
+		TRACE(TRACE_ERR,"no physmessage_id [%" PRIu64 "]", id);
 	} else {
 		dbmail_message_set_physid(self, id);
-		TRACE(TRACE_DEBUG,"new physmessage_id [%lu]", id);
+		TRACE(TRACE_DEBUG,"new physmessage_id [%" PRIu64 "]", id);
 	}
 }
 
@@ -1269,7 +1269,7 @@ int _message_insert(DbmailMessage *self,
 				db_exec(c, "INSERT INTO "
 						"%smessages(mailbox_idnr, physmessage_id, unique_id,"
 						"recent_flag, status) "
-						"VALUES (%lu, %lu, '%s', 1, %d)",
+						"VALUES (%" PRIu64 ", %" PRIu64 ", '%s', 1, %d)",
 						DBPFX, mailboxid, dbmail_message_get_physid(self), unique_id,
 						MESSAGE_STATUS_INSERT);
 				self->msg_idnr = db_get_pk(c, "messages");
@@ -1278,13 +1278,13 @@ int _message_insert(DbmailMessage *self,
 				r = db_query(c, "INSERT INTO "
 						"%smessages(mailbox_idnr, physmessage_id, unique_id,"
 						"recent_flag, status) "
-						"VALUES (%lu, %lu, '%s', 1, %d) %s",
+						"VALUES (%" PRIu64 ", %" PRIu64 ", '%s', 1, %d) %s",
 						DBPFX, mailboxid, dbmail_message_get_physid(self), unique_id,
 						MESSAGE_STATUS_INSERT, frag);
 				g_free(frag);
 				self->msg_idnr = db_insert_result(c, r);
 		}
-		TRACE(TRACE_DEBUG,"new message_idnr [%lu]", self->msg_idnr);
+		TRACE(TRACE_DEBUG,"new message_idnr [%" PRIu64 "]", self->msg_idnr);
 
 		t = DM_SUCCESS;
 		db_commit_transaction(c);
@@ -1496,7 +1496,7 @@ static uint64_t _header_value_insert(Connection_T c, const char *value, const ch
 		r = db_stmt_query(s);
 		id = db_insert_result(c, r);
 	}
-	TRACE(TRACE_DATABASE,"new headervalue.id [%lu]", id);
+	TRACE(TRACE_DATABASE,"new headervalue.id [%" PRIu64 "]", id);
 
 	return id;
 }
@@ -1775,7 +1775,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	g_free(field);
 
 	if (! refs) {
-		TRACE(TRACE_DEBUG, "reference_decode failed [%lu]", self->id);
+		TRACE(TRACE_DEBUG, "reference_decode failed [%" PRIu64 "]", self->id);
 		return;
 	}
 	
@@ -1990,7 +1990,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 	 * We skip the Sieve scripts, and down the call
 	 * chain we don't check permissions on the mailbox. */
 	if (source == BOX_BRUTEFORCE) {
-		TRACE(TRACE_NOTICE, "Beginning brute force delivery for user [%lu] to mailbox [%s].",
+		TRACE(TRACE_NOTICE, "Beginning brute force delivery for user [%" PRIu64 "] to mailbox [%s].",
 				useridnr, mailbox);
 		return sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL, NULL);
 	}
@@ -2009,7 +2009,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 		}
 	}
 
-	TRACE(TRACE_INFO, "Destination [%s] useridnr [%lu], mailbox [%s], source [%d]",
+	TRACE(TRACE_INFO, "Destination [%s] useridnr [%" PRIu64 "], mailbox [%s], source [%d]",
 			destination, useridnr, mailbox, source);
 	
 	/* Subaddress. */
@@ -2084,7 +2084,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	Field_T val;
 	size_t msgsize = (uint64_t)dbmail_message_get_size(message, FALSE);
 
-	TRACE(TRACE_INFO,"useridnr [%lu] mailbox [%s]", useridnr, mailbox);
+	TRACE(TRACE_INFO,"useridnr [%" PRIu64 "] mailbox [%s]", useridnr, mailbox);
 
 	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
 		TRACE(TRACE_ERR, "mailbox [%s] not found", mailbox);
@@ -2109,12 +2109,12 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		
 		switch (permission) {
 		case -1:
-			TRACE(TRACE_NOTICE, "error retrieving right for [%lu] to deliver mail to [%s]",
+			TRACE(TRACE_NOTICE, "error retrieving right for [%" PRIu64 "] to deliver mail to [%s]",
 					useridnr, mailbox);
 			return DSN_CLASS_TEMP;
 		case 0:
 			// No right.
-			TRACE(TRACE_NOTICE, "user [%lu] does not have right to deliver mail to [%s]",
+			TRACE(TRACE_NOTICE, "user [%" PRIu64 "] does not have right to deliver mail to [%s]",
 					useridnr, mailbox);
 			// Switch to INBOX.
 			if (strcmp(mailbox, "INBOX") == 0) {
@@ -2125,7 +2125,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 			return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags, keywords);
 		case 1:
 			// Has right.
-			TRACE(TRACE_INFO, "user [%lu] has right to deliver mail to [%s]",
+			TRACE(TRACE_INFO, "user [%" PRIu64 "] has right to deliver mail to [%s]",
 					useridnr, mailbox);
 			break;
 		default:
@@ -2147,18 +2147,18 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	// Ok, we have the ACL right, time to deliver the message.
 	switch (db_copymsg(message->msg_idnr, mboxidnr, useridnr, &newmsgidnr, TRUE)) {
 	case -2:
-		TRACE(TRACE_ERR, "error copying message to user [%lu],"
+		TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "],"
 				"maxmail exceeded", useridnr);
 		return DSN_CLASS_QUOTA;
 	case -1:
-		TRACE(TRACE_ERR, "error copying message to user [%lu]", 
+		TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "]", 
 				useridnr);
 		return DSN_CLASS_TEMP;
 	default:
-		TRACE(TRACE_NOTICE, "message id=%lu, size=%zd is inserted", 
+		TRACE(TRACE_NOTICE, "message id=%" PRIu64 ", size=%zd is inserted", 
 				newmsgidnr, msgsize);
 		if (msgflags || keywords) {
-			TRACE(TRACE_NOTICE, "message id=%lu, setting imap flags", 
+			TRACE(TRACE_NOTICE, "message id=%" PRIu64 ", setting imap flags", 
 				newmsgidnr);
 			db_set_msgflag(newmsgidnr, msgflags, keywords, IMAPFA_ADD, NULL);
 			db_mailbox_seq_update(mboxidnr);
@@ -2641,7 +2641,7 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 		return result;
 	} 
 
-	TRACE(TRACE_DEBUG, "temporary msgidnr is [%lu]", message->msg_idnr);
+	TRACE(TRACE_DEBUG, "temporary msgidnr is [%" PRIu64 "]", message->msg_idnr);
 
 	config_get_value("QUOTA_FAILURE", "DELIVERY", val);
 	if (MATCH(val, "soft"))
@@ -2674,23 +2674,23 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 		while (userids) {
 			uint64_t *useridnr = (uint64_t *) userids->data;
 
-			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%lu]", *useridnr);
+			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%" PRIu64 "]", *useridnr);
 			switch (sort_and_deliver(message, delivery->address, *useridnr, delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
-				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%lu]", *useridnr);
+				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%" PRIu64 "]", *useridnr);
 				ok = 1;
 				break;
 			case DSN_CLASS_FAIL:
-				TRACE(TRACE_ERR, "permanent failure sort_and_deliver for useridnr [%lu]", *useridnr);
+				TRACE(TRACE_ERR, "permanent failure sort_and_deliver for useridnr [%" PRIu64 "]", *useridnr);
 				fail = 1;
 				break;
 			case DSN_CLASS_QUOTA:
-				TRACE(TRACE_NOTICE, "mailbox over quota, message rejected for useridnr [%lu]", *useridnr);
+				TRACE(TRACE_NOTICE, "mailbox over quota, message rejected for useridnr [%" PRIu64 "]", *useridnr);
 				fail_quota = 1;
 				break;
 			case DSN_CLASS_TEMP:
 			default:
-				TRACE(TRACE_ERR, "unknown temporary failure in sort_and_deliver for useridnr [%lu]", *useridnr);
+				TRACE(TRACE_ERR, "unknown temporary failure in sort_and_deliver for useridnr [%" PRIu64 "]", *useridnr);
 				temp = 1;
 				break;
 			}
@@ -2766,7 +2766,7 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
 	if (! db_delete_message(tmpid)) 
-		TRACE(TRACE_ERR, "failed to delete temporary message [%lu]", tmpid);
+		TRACE(TRACE_ERR, "failed to delete temporary message [%" PRIu64 "]", tmpid);
 	TRACE(TRACE_DEBUG, "temporary message deleted from database. Done.");
 
 	return 0;

@@ -129,18 +129,18 @@ int send_alert(uint64_t user_idnr, char *subject, char *body)
 
 	// Only send each unique alert once a day.
 	char *tmp = g_strconcat(subject, body, NULL);
-	char *userchar = g_strdup_printf("%lu", user_idnr);
+	char *userchar = g_strdup_printf("%" PRIu64 "", user_idnr);
 	char handle[FIELDSIZE];
 
 	memset(handle, 0, sizeof(handle));
        	dm_md5(tmp, handle);
 	if (db_replycache_validate(userchar, "send_alert", handle, 1) != DM_SUCCESS) {
-		TRACE(TRACE_INFO, "Already sent alert [%s] to user [%lu] today", subject, user_idnr);
+		TRACE(TRACE_INFO, "Already sent alert [%s] to user [%" PRIu64 "] today", subject, user_idnr);
 		g_free(userchar);
 		g_free(tmp);
 		return 0;
 	} else {
-		TRACE(TRACE_INFO, "Sending alert [%s] to user [%lu]", subject, user_idnr);
+		TRACE(TRACE_INFO, "Sending alert [%s] to user [%" PRIu64 "]", subject, user_idnr);
 		db_replycache_register(userchar, "send_alert", handle);
 		g_free(userchar);
 		g_free(tmp);
@@ -171,7 +171,7 @@ int send_alert(uint64_t user_idnr, char *subject, char *body)
 
 	if (sort_deliver_to_mailbox(new_message, user_idnr,
 			"INBOX", BOX_BRUTEFORCE, msgflags, NULL) != DSN_CLASS_OK) {
-		TRACE(TRACE_ERR, "Unable to deliver alert [%s] to user [%lu]", subject, user_idnr);
+		TRACE(TRACE_ERR, "Unable to deliver alert [%s] to user [%" PRIu64 "]", subject, user_idnr);
 	}
 
 	g_free(to);

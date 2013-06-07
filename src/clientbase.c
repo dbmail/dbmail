@@ -261,9 +261,9 @@ void ci_write_cb(ClientBase_T *client)
 int ci_write(ClientBase_T *client, char * msg, ...)
 {
 	va_list ap, cp;
-	ssize_t t = 0;
+	int64_t t = 0;
 	int e = 0;
-	size_t n;
+	uint64_t n;
 	char *s;
 
 	if (client->client_state & CLIENT_ERR) {
@@ -285,13 +285,13 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	}
 	
 	if (p_string_len(client->write_buffer) < 1) { 
-		TRACE(TRACE_DEBUG, "write_buffer is empty [%ld]", p_string_len(client->write_buffer));
+		TRACE(TRACE_DEBUG, "write_buffer is empty [%" PRIu64 "]", p_string_len(client->write_buffer));
 		return 0;
 	}
 
 	n = p_string_len(client->write_buffer) - client->write_buffer_offset;
 	if (n == 0) {
-		TRACE(TRACE_DEBUG, "write_buffer is empty [%ld]", p_string_len(client->write_buffer));
+		TRACE(TRACE_DEBUG, "write_buffer is empty [%" PRIu64 "]", p_string_len(client->write_buffer));
 		return 0;
 	}
 
@@ -300,17 +300,17 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 
 		s = (char *)p_string_str(client->write_buffer) + client->write_buffer_offset;
 
-		TRACE(TRACE_DEBUG, "[%p] S > [%ld/%ld:%s]", client, t, p_string_len(client->write_buffer), s);
+		TRACE(TRACE_DEBUG, "[%p] S > [%" PRId64 "/%" PRIu64 ":%s]", client, t, p_string_len(client->write_buffer), s);
 
 		if (client->sock->ssl) {
 			if (! client->tls_wbuf_n) {
 				strncpy(client->tls_wbuf, s, n);
 				client->tls_wbuf_n = n;
 			}
-			t = SSL_write(client->sock->ssl, (gconstpointer)client->tls_wbuf, client->tls_wbuf_n);
+			t = (int64_t)SSL_write(client->sock->ssl, (gconstpointer)client->tls_wbuf, client->tls_wbuf_n);
 			e = t;
 		} else {
-			t = write(client->tx, (gconstpointer)s, n);
+			t = (int64_t)write(client->tx, (gconstpointer)s, n);
 			e = errno;
 		}
 
@@ -348,7 +348,7 @@ void ci_read_cb(ClientBase_T *client)
 	 * read all available data on the input stream
 	 * and store in in read_buffer
 	 */
-	ssize_t t = 0;
+	int64_t t = 0;
 	char ibuf[IBUFLEN];
 
 	TRACE(TRACE_DEBUG,"[%p] reset timeout [%ld]", client, client->timeout->tv_sec); 
@@ -361,11 +361,11 @@ void ci_read_cb(ClientBase_T *client)
 	while (TRUE) {
 		memset(ibuf, 0, sizeof(ibuf));
 		if (client->sock->ssl) {
-			t = SSL_read(client->sock->ssl, ibuf, sizeof(ibuf)-1);
+			t = (int64_t)SSL_read(client->sock->ssl, ibuf, sizeof(ibuf)-1);
 		} else {
-			t = read(client->rx, ibuf, sizeof(ibuf)-1);
+			t = (int64_t)read(client->rx, ibuf, sizeof(ibuf)-1);
 		}
-		TRACE(TRACE_DEBUG, "[%p] [%ld]", client, t);
+		TRACE(TRACE_DEBUG, "[%p] [%" PRId64 "]", client, t);
 
 		if (t < 0) {
 			int e = errno;
@@ -424,10 +424,10 @@ int ci_readln(ClientBase_T *client, char * buffer)
 	client->len = 0;
 	char *s = (char *)p_string_str(client->read_buffer) + client->read_buffer_offset;
 	if ((nl = g_strstr_len(s, -1, "\n"))) {
-		size_t j, k = 0, l;
+		uint64_t j, k = 0, l;
 		l = stridx(s, '\n');
 		if (l >= MAX_LINESIZE) {
-			TRACE(TRACE_WARNING, "insane line-length [%ld]", l);
+			TRACE(TRACE_WARNING, "insane line-length [%" PRIu64 "]", l);
 			client->client_state = CLIENT_ERR;
 			return 0;
 		}
@@ -435,7 +435,7 @@ int ci_readln(ClientBase_T *client, char * buffer)
 			buffer[k++] = s[j];
 		client->read_buffer_offset += l+1;
 		client->len = k;
-		TRACE(TRACE_INFO, "[%p] C < [%ld:%s]", client, client->len, buffer);
+		TRACE(TRACE_INFO, "[%p] C < [%" PRIu64 ":%s]", client, client->len, buffer);
 
 		client_rbuf_scale(client);
 	}

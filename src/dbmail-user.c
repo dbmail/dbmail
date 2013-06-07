@@ -55,13 +55,13 @@ int do_add(const char * const user,
 	int result;
 
 	if (no_to_all) {
-		qprintf("Pretending to add user %s with password type %s, %lu bytes mailbox limit and clientid %lu\n",
+		qprintf("Pretending to add user %s with password type %s, %" PRIu64 " bytes mailbox limit and clientid %" PRIu64 "\n",
 			user, enctype, maxmail, clientid);
 		return 1;
 	}
 
-	TRACE(TRACE_DEBUG, "Adding user %s with password type %s,%lu "
-		"bytes mailbox limit and clientid %lu... ", 
+	TRACE(TRACE_DEBUG, "Adding user %s with password type %s,%" PRIu64 " "
+		"bytes mailbox limit and clientid %" PRIu64 "... ", 
 		user, enctype, maxmail, clientid);
 
 	if ((result = auth_user_exists(user, &useridnr))) {
@@ -74,7 +74,7 @@ int do_add(const char * const user,
 		return -1;
 	}
 
-	TRACE(TRACE_DEBUG, "Ok, user added id [%lu]\n", useridnr);
+	TRACE(TRACE_DEBUG, "Ok, user added id [%" PRIu64 "]\n", useridnr);
 
 	/* Add an INBOX for the user. */
 	qprintf("Adding INBOX for new user... ");
@@ -108,7 +108,7 @@ int do_username(const uint64_t useridnr, const char * const newuser)
 	assert(newuser);
 
 	if (no_to_all) {
-		qprintf("Pretending to change username of user id number [%lu] to [%s]\n",
+		qprintf("Pretending to change username of user id number [%" PRIu64 "] to [%s]\n",
 			useridnr, newuser);
 		return 1;
 	}
@@ -126,7 +126,7 @@ int do_password(const uint64_t useridnr,
 	int result = 0;
 	
 	if (no_to_all) {
-		qprintf("Pretending to change password for user id number [%lu]\n",
+		qprintf("Pretending to change password for user id number [%" PRIu64 "]\n",
 			useridnr);
 		return 1;
 	}
@@ -292,7 +292,7 @@ int do_clientid(uint64_t useridnr, uint64_t clientid)
 	int result = 0;
 
 	if (no_to_all) {
-		qprintf("Pretending to change client for user id number [%lu] to client id number [%lu]\n",
+		qprintf("Pretending to change client for user id number [%" PRIu64 "] to client id number [%" PRIu64 "]\n",
 			useridnr, clientid);
 		return 1;
 	}
@@ -309,7 +309,7 @@ int do_maxmail(uint64_t useridnr, uint64_t maxmail)
 	int result = 0;
 
 	if (no_to_all) {
-		qprintf("Pretending to change mail quota for user id number [%lu] to [%lu] bytes\n",
+		qprintf("Pretending to change mail quota for user id number [%" PRIu64 "] to [%" PRIu64 "] bytes\n",
 			useridnr, maxmail);
 		return 1;
 	}
@@ -428,7 +428,7 @@ int do_aliases(const uint64_t useridnr,
 	GList *current_aliases, *matching_aliases, *matching_alias_del;
 
 	if (no_to_all) {
-		qprintf("Pretending to remove aliases for user id number [%lu]\n",
+		qprintf("Pretending to remove aliases for user id number [%" PRIu64 "]\n",
 			useridnr);
 		if (alias_del) {
 			alias_del = g_list_first(alias_del);
@@ -437,7 +437,7 @@ int do_aliases(const uint64_t useridnr,
 				alias_del = g_list_next(alias_del);
 			}
 		}
-		qprintf("Pretending to add aliases for user id number [%lu]\n",
+		qprintf("Pretending to add aliases for user id number [%" PRIu64 "]\n",
 			useridnr);
 		if (alias_add) {
 			alias_add = g_list_first(alias_add);
@@ -528,7 +528,7 @@ int do_delete(const uint64_t useridnr, const char * const name)
 	GList *aliases = NULL;
 
 	if (no_to_all) {
-		qprintf("Pretending to delete alias [%s] for user id number [%lu]\n",
+		qprintf("Pretending to delete alias [%s] for user id number [%" PRIu64 "]\n",
 			name, useridnr);
 		return 1;
 	}
@@ -673,8 +673,8 @@ static int show_user(uint64_t useridnr, int concise UNUSED)
 	g_free(username);
 	
 	out = g_list_append_printf(out,"x");
-	out = g_list_append_printf(out,"%lu", useridnr);
-	out = g_list_append_printf(out,"%lu", cid);
+	out = g_list_append_printf(out,"%" PRIu64 "", useridnr);
+	out = g_list_append_printf(out,"%" PRIu64 "", cid);
 	out = g_list_append_printf(out,"%.02f", 
 			(double) quotum / (1024.0 * 1024.0));
 	out = g_list_append_printf(out,"%.02f", 
@@ -719,7 +719,7 @@ int do_empty(uint64_t useridnr)
 		uint64_t owner_idnr;
 		char mailbox[IMAP_MAX_MAILBOX_NAMELEN];
 
-		qprintf("You've requested to delete all mailboxes owned by user number [%lu]:\n", useridnr);
+		qprintf("You've requested to delete all mailboxes owned by user number [%" PRIu64 "]:\n", useridnr);
 
 		db_findmailbox_by_regex(useridnr, "*", &children, 0);
 		children = g_list_first(children);

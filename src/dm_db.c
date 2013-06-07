@@ -427,7 +427,7 @@ int db_stmt_set_int(PreparedStatement_T s, int index, int x)
 }
 int db_stmt_set_u64(PreparedStatement_T s, int index, uint64_t x)
 {	
-	TRACE(TRACE_DATABASE,"[%p] %d:[%lu]", s, index, x);
+	TRACE(TRACE_DATABASE,"[%p] %d:[%" PRIu64 "]", s, index, x);
 	PreparedStatement_setLLong(s, index, (long long)x);
 	return TRUE;
 }
@@ -966,19 +966,19 @@ int dm_quota_user_get(uint64_t user_idnr, uint64_t *size)
 int dm_quota_user_set(uint64_t user_idnr, uint64_t size)
 {
 	NOT_DELIVERY_USER
-	return db_update("UPDATE %susers SET curmail_size = %lu WHERE user_idnr = %lu", 
+	return db_update("UPDATE %susers SET curmail_size = %" PRIu64 " WHERE user_idnr = %" PRIu64 "", 
 			DBPFX, size, user_idnr);
 }
 int dm_quota_user_inc(uint64_t user_idnr, uint64_t size)
 {
 	NOT_DELIVERY_USER
-	return db_update("UPDATE %susers SET curmail_size = curmail_size + %lu WHERE user_idnr = %lu", 
+	return db_update("UPDATE %susers SET curmail_size = curmail_size + %" PRIu64 " WHERE user_idnr = %" PRIu64 "", 
 			DBPFX, size, user_idnr);
 }
 int dm_quota_user_dec(uint64_t user_idnr, uint64_t size)
 {
 	NOT_DELIVERY_USER
-	return db_update("UPDATE %susers SET curmail_size = CASE WHEN curmail_size >= %lu THEN curmail_size - %lu ELSE 0 END WHERE user_idnr = %lu", 
+	return db_update("UPDATE %susers SET curmail_size = CASE WHEN curmail_size >= %" PRIu64 " THEN curmail_size - %" PRIu64 " ELSE 0 END WHERE user_idnr = %" PRIu64 "", 
 			DBPFX, size, size, user_idnr);
 }
 
@@ -998,8 +998,8 @@ static int dm_quota_user_validate(uint64_t user_idnr, uint64_t msg_size)
 	c = db_con_get();
 
 	TRY
-		r = db_query(c, "SELECT 1 FROM %susers WHERE user_idnr = %lu "
-				"AND (curmail_size + %lu > %lu)", 
+		r = db_query(c, "SELECT 1 FROM %susers WHERE user_idnr = %" PRIu64 " "
+				"AND (curmail_size + %" PRIu64 " > %" PRIu64 ")", 
 				DBPFX, user_idnr, msg_size, maxmail_size);
 		if (! r)
 			t = DM_EQUERY;
@@ -1025,7 +1025,7 @@ int dm_quota_rebuild_user(uint64_t user_idnr)
 			 "FROM %sphysmessage pm, %smessages m, %smailboxes mb "
 			 "WHERE m.physmessage_id = pm.id "
 			 "AND m.mailbox_idnr = mb.mailbox_idnr "
-			 "AND mb.owner_idnr = %lu " "AND m.status < %d",
+			 "AND mb.owner_idnr = %" PRIu64 " " "AND m.status < %d",
 			 DBPFX,DBPFX,DBPFX,user_idnr, MESSAGE_STATUS_DELETE);
 
 		if (db_result_next(r))
@@ -1042,7 +1042,7 @@ int dm_quota_rebuild_user(uint64_t user_idnr)
 
 	if (t == DM_EQUERY) return t;
 
-	TRACE(TRACE_DEBUG, "found quotum usage of [%lu] bytes", quotum);
+	TRACE(TRACE_DEBUG, "found quotum usage of [%" PRIu64 "] bytes", quotum);
 	/* now insert the used quotum into the users table */
 	if (! dm_quota_user_set(user_idnr, quotum)) 
 		return DM_EQUERY;
@@ -1123,7 +1123,7 @@ int db_get_notify_address(uint64_t user_idnr, char **notify_address)
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT notify_address "
-				"FROM %sauto_notifications WHERE user_idnr = %lu",
+				"FROM %sauto_notifications WHERE user_idnr = %" PRIu64 "",
 				DBPFX,user_idnr);
 		if (db_result_next(r)) {
 			query_result = db_result_get(r, 0);
@@ -1183,7 +1183,7 @@ uint64_t db_get_useridnr(uint64_t message_idnr)
 	TRY
 		r = db_query(c, "SELECT %smailboxes.owner_idnr FROM %smailboxes, %smessages "
 				"WHERE %smailboxes.mailbox_idnr = %smessages.mailbox_idnr "
-				"AND %smessages.message_idnr = %lu", DBPFX,DBPFX,DBPFX,
+				"AND %smessages.message_idnr = %" PRIu64 "", DBPFX,DBPFX,DBPFX,
 				DBPFX,DBPFX,DBPFX,message_idnr);
 		if (db_result_next(r))
 			user_idnr = db_result_get_u64(r, 0);
@@ -1253,7 +1253,7 @@ int db_empty_mailbox(uint64_t user_idnr)
 	c = db_con_get();
 
 	TRY
-		r = db_query(c, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr=%lu", 
+		r = db_query(c, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr=%" PRIu64 "", 
 				DBPFX, user_idnr);
 		while (db_result_next(r)) {
 			i++;
@@ -1270,7 +1270,7 @@ int db_empty_mailbox(uint64_t user_idnr)
 	END_TRY;
 
 	if (i == 0) {
-		TRACE(TRACE_WARNING, "user [%lu] does not have any mailboxes?", user_idnr);
+		TRACE(TRACE_WARNING, "user [%" PRIu64 "] does not have any mailboxes?", user_idnr);
 		return t;
 	}
 
@@ -1278,7 +1278,7 @@ int db_empty_mailbox(uint64_t user_idnr)
 	while (mboxids) {
 		id = mboxids->data;
 		if (db_delete_mailbox(*id, 1, 1)) {
-			TRACE(TRACE_ERR, "error emptying mailbox [%lu]", *id);
+			TRACE(TRACE_ERR, "error emptying mailbox [%" PRIu64 "]", *id);
 			result = -1;
 			break;
 		}
@@ -1308,7 +1308,7 @@ int db_icheck_physmessages(gboolean cleanup)
 		if (cleanup) {
 			while(ids) {
 				db_begin_transaction(c);
-				db_exec(c, "DELETE FROM %sphysmessage WHERE id = %lu", DBPFX, *(uint64_t *)ids->data);
+				db_exec(c, "DELETE FROM %sphysmessage WHERE id = %" PRIu64 "", DBPFX, *(uint64_t *)ids->data);
 				db_commit_transaction(c);
 				if (! g_list_next(ids)) break;
 				ids = g_list_next(ids);
@@ -1345,7 +1345,7 @@ int db_icheck_partlists(gboolean cleanup)
 		if (cleanup) {
 			while(ids) {
 				db_begin_transaction(c);
-				db_exec(c, "DELETE FROM %spartlists WHERE physmessage_id = %lu", DBPFX, *(uint64_t *)ids->data);
+				db_exec(c, "DELETE FROM %spartlists WHERE physmessage_id = %" PRIu64 "", DBPFX, *(uint64_t *)ids->data);
 				db_commit_transaction(c);
 				if (! g_list_next(ids)) break;
 				ids = g_list_next(ids);
@@ -1381,7 +1381,7 @@ int db_icheck_mimeparts(gboolean cleanup)
 		if (cleanup) {
 			while(ids) {
 				db_begin_transaction(c);
-				db_exec(c, "DELETE FROM %smimeparts WHERE id = %lu", DBPFX, *(uint64_t *)ids->data);
+				db_exec(c, "DELETE FROM %smimeparts WHERE id = %" PRIu64 "", DBPFX, *(uint64_t *)ids->data);
 				db_commit_transaction(c);
 				if (! g_list_next(ids)) break;
 				ids = g_list_next(ids);
@@ -1443,12 +1443,12 @@ int db_update_rfcsize(GList *lost)
 		}
 
 		if (! (msg = dbmail_message_retrieve(msg, *pmsid))) {
-			TRACE(TRACE_WARNING, "error retrieving physmessage: [%lu]", *pmsid);
+			TRACE(TRACE_WARNING, "error retrieving physmessage: [%" PRIu64 "]", *pmsid);
 			fprintf(stderr,"E");
 		} else {
 			TRY
 				db_begin_transaction(c);
-				db_exec(c, "UPDATE %sphysmessage SET rfcsize = %lu WHERE id = %lu", 
+				db_exec(c, "UPDATE %sphysmessage SET rfcsize = %" PRIu64 " WHERE id = %" PRIu64 "", 
 					DBPFX, (uint64_t)dbmail_message_get_size(msg,TRUE), *pmsid);
 				db_commit_transaction(c);
 				fprintf(stderr,".");
@@ -1489,11 +1489,11 @@ int db_set_headercache(GList *lost)
 		}
 
 		if (! (msg = dbmail_message_retrieve(msg, pmsgid))) {
-			TRACE(TRACE_WARNING, "error retrieving physmessage: [%lu]", pmsgid);
+			TRACE(TRACE_WARNING, "error retrieving physmessage: [%" PRIu64 "]", pmsgid);
 			fprintf(stderr,"E");
 		} else {
 			if (dbmail_message_cache_headers(msg) != 0) {
-				TRACE(TRACE_WARNING,"error caching headers for physmessage: [%lu]", 
+				TRACE(TRACE_WARNING,"error caching headers for physmessage: [%" PRIu64 "]", 
 					pmsgid);
 				fprintf(stderr,"E");
 			} else {
@@ -1558,7 +1558,7 @@ int db_set_envelope(GList *lost)
 		}
 
 		if (! (msg = dbmail_message_retrieve(msg, pmsgid))) {
-			TRACE(TRACE_WARNING,"error retrieving physmessage: [%lu]", pmsgid);
+			TRACE(TRACE_WARNING,"error retrieving physmessage: [%" PRIu64 "]", pmsgid);
 			fprintf(stderr,"E");
 		} else {
 			dbmail_message_cache_envelope(msg);
@@ -1601,25 +1601,25 @@ int db_icheck_envelope(GList **lost)
 
 int db_set_message_status(uint64_t message_idnr, MessageStatus_T status)
 {
-	return db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %lu", 
+	return db_update("UPDATE %smessages SET status = %d WHERE message_idnr = %" PRIu64 "", 
 			DBPFX, status, message_idnr);
 }
 
 int db_delete_message(uint64_t message_idnr)
 {
-	return db_update("DELETE FROM %smessages WHERE message_idnr = %lu", 
+	return db_update("DELETE FROM %smessages WHERE message_idnr = %" PRIu64 "", 
 			DBPFX, message_idnr);
 }
 
 static int mailbox_delete(uint64_t mailbox_idnr)
 {
-	return db_update("DELETE FROM %smailboxes WHERE mailbox_idnr = %lu", 
+	return db_update("DELETE FROM %smailboxes WHERE mailbox_idnr = %" PRIu64 "", 
 			DBPFX, mailbox_idnr);
 }
 
 static int mailbox_empty(uint64_t mailbox_idnr)
 {
-	return db_update("DELETE FROM %smessages WHERE mailbox_idnr = %lu", 
+	return db_update("DELETE FROM %smessages WHERE mailbox_idnr = %" PRIu64 "", 
 			DBPFX, mailbox_idnr);
 }
 
@@ -1660,15 +1660,15 @@ int db_delete_mailbox(uint64_t mailbox_idnr, int only_empty, int update_curmail_
 	int result;
 	uint64_t mailbox_size = 0;
 
-	TRACE(TRACE_DEBUG,"mailbox_idnr [%lu] only_empty [%d] update_curmail_size [%d]", mailbox_idnr, only_empty, update_curmail_size);
+	TRACE(TRACE_DEBUG,"mailbox_idnr [%" PRIu64 "] only_empty [%d] update_curmail_size [%d]", mailbox_idnr, only_empty, update_curmail_size);
 	/* get the user_idnr of the owner of the mailbox */
 	result = db_get_mailbox_owner(mailbox_idnr, &user_idnr);
 	if (result == DM_EQUERY) {
-		TRACE(TRACE_ERR, "cannot find owner of mailbox for mailbox [%lu]", mailbox_idnr);
+		TRACE(TRACE_ERR, "cannot find owner of mailbox for mailbox [%" PRIu64 "]", mailbox_idnr);
 		return DM_EQUERY;
 	}
 	if (result == 0) {
-		TRACE(TRACE_ERR, "unable to find owner of mailbox [%lu]", mailbox_idnr);
+		TRACE(TRACE_ERR, "unable to find owner of mailbox [%" PRIu64 "]", mailbox_idnr);
 		return DM_EGENERAL;
 	}
 
@@ -1766,7 +1766,7 @@ int db_update_pop(ClientSession_T * session_ptr)
 				if (user_idnr == 0) user_idnr = db_get_useridnr(msg->realmessageid);
 
 				/* yes they need an update, do the query */
-				db_exec(c, "UPDATE %smessages set status=%d WHERE message_idnr=%lu AND status < %d",
+				db_exec(c, "UPDATE %smessages set status=%d WHERE message_idnr=%" PRIu64 " AND status < %d",
 						DBPFX, msg->virtual_messagestatus, msg->realmessageid, 
 						MESSAGE_STATUS_DELETE);
 			}
@@ -1790,7 +1790,7 @@ int db_update_pop(ClientSession_T * session_ptr)
 	 * recalculated */
 	if (user_idnr != 0) {
 		if (dm_quota_rebuild_user(user_idnr) == -1) {
-			TRACE(TRACE_ERR, "Could not calculate quotum used for user [%lu]", user_idnr);
+			TRACE(TRACE_ERR, "Could not calculate quotum used for user [%" PRIu64 "]", user_idnr);
 			return DM_EQUERY;
 		}
 	}
@@ -1893,7 +1893,7 @@ int db_findmailbox(const char *fq_name, uint64_t owner_idnr, uint64_t * mailbox_
 	}
 
 	if (! (result = db_findmailbox_owner(simple_name, owner_idnr, mailbox_idnr)))
-		TRACE(TRACE_INFO, "no mailbox [%s] for owner [%lu]", simple_name, owner_idnr);
+		TRACE(TRACE_INFO, "no mailbox [%s] for owner [%" PRIu64 "]", simple_name, owner_idnr);
 
 	g_free(mbox);
 	g_free(username);
@@ -2203,7 +2203,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source source,
 	assert(mailbox_idnr);
 	assert(message);
 	
-	TRACE(TRACE_INFO, "Creating mailbox [%s] source [%d] for user [%lu]",
+	TRACE(TRACE_INFO, "Creating mailbox [%s] source [%d] for user [%" PRIu64 "]",
 			mailbox, source, owner_idnr);
 
 	/* Check if new name is valid. */
@@ -2291,7 +2291,7 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source source,
 
 		if (source != BOX_BRUTEFORCE) {
 			TRACE(TRACE_DEBUG, "Checking if we have the right to "
-				"create mailboxes under mailbox [%lu]", MailboxState_getId(M));
+				"create mailboxes under mailbox [%" PRIu64 "]", MailboxState_getId(M));
 
 			/* Mailbox does exist, failure if no_inferiors flag set. */
 			result = db_noinferiors(MailboxState_getId(M));
@@ -2344,10 +2344,10 @@ int db_createmailbox(const char * name, uint64_t owner_idnr, uint64_t * mailbox_
 	INIT_QUERY;
 
 	if (auth_requires_shadow_user()) {
-		TRACE(TRACE_DEBUG, "creating shadow user for [%lu]",
+		TRACE(TRACE_DEBUG, "creating shadow user for [%" PRIu64 "]",
 				owner_idnr);
 		if ((db_user_find_create(owner_idnr) < 0)) {
-			TRACE(TRACE_ERR, "unable to find or create sql shadow account for useridnr [%lu]", 
+			TRACE(TRACE_ERR, "unable to find or create sql shadow account for useridnr [%" PRIu64 "]", 
 					owner_idnr);
 			return DM_EQUERY;
 		}
@@ -2381,7 +2381,7 @@ int db_createmailbox(const char * name, uint64_t owner_idnr, uint64_t * mailbox_
 			*mailbox_idnr = db_insert_result(c, r);
 		}
 		db_commit_transaction(c);
-		TRACE(TRACE_DEBUG, "created mailbox with idnr [%lu] for user [%lu]",
+		TRACE(TRACE_DEBUG, "created mailbox with idnr [%" PRIu64 "] for user [%" PRIu64 "]",
 				*mailbox_idnr, owner_idnr);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -2397,7 +2397,7 @@ int db_createmailbox(const char * name, uint64_t owner_idnr, uint64_t * mailbox_
 
 int db_mailbox_set_permission(uint64_t mailbox_id, int permission)
 {
-	return db_update("UPDATE %smailboxes SET permission=%d WHERE mailbox_idnr=%lu", 
+	return db_update("UPDATE %smailboxes SET permission=%d WHERE mailbox_idnr=%" PRIu64 "", 
 			DBPFX, permission, mailbox_id);
 }
 
@@ -2466,7 +2466,7 @@ int db_listmailboxchildren(uint64_t mailbox_idnr, uint64_t user_idnr, GList ** c
 	/* retrieve the name of this mailbox */
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%lu AND owner_idnr=%lu",
+		r = db_query(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%" PRIu64 " AND owner_idnr=%" PRIu64 "",
 				DBPFX, mailbox_idnr, user_idnr);
 		if (db_result_next(r)) {
 			char *pattern = g_strdup_printf("%s/%%", db_result_get(r,0));
@@ -2529,7 +2529,7 @@ int db_isselectable(uint64_t mailbox_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT no_select FROM %smailboxes WHERE mailbox_idnr = %lu", 
+		r = db_query(c, "SELECT no_select FROM %smailboxes WHERE mailbox_idnr = %" PRIu64 "", 
 				DBPFX, mailbox_idnr);
 		if (db_result_next(r)) 
 			t = db_result_get_bool(r, 0);
@@ -2552,7 +2552,7 @@ int db_noinferiors(uint64_t mailbox_idnr)
 	c = db_con_get();
 	TRY
 
-		r = db_query(c, "SELECT no_inferiors FROM %smailboxes WHERE mailbox_idnr=%lu", 
+		r = db_query(c, "SELECT no_inferiors FROM %smailboxes WHERE mailbox_idnr=%" PRIu64 "", 
 				DBPFX, mailbox_idnr);
 		if (db_result_next(r))
 			t = db_result_get_bool(r, 0);
@@ -2571,7 +2571,7 @@ int db_movemsg(uint64_t mailbox_to, uint64_t mailbox_from)
 	Connection_T c; volatile int t = DM_SUCCESS;
 	c = db_con_get();
 	TRY
-		db_exec(c, "UPDATE %smessages SET mailbox_idnr=%lu WHERE mailbox_idnr=%lu", 
+		db_exec(c, "UPDATE %smessages SET mailbox_idnr=%" PRIu64 " WHERE mailbox_idnr=%" PRIu64 "", 
 				DBPFX, mailbox_to, mailbox_from);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -2644,7 +2644,7 @@ static uint64_t message_get_size(uint64_t message_idnr)
 	TRY
 		r = db_query(c, "SELECT pm.messagesize FROM %sphysmessage pm, %smessages msg "
 				"WHERE pm.id = msg.physmessage_id "
-				"AND message_idnr = %lu",DBPFX,DBPFX, message_idnr);
+				"AND message_idnr = %" PRIu64 "",DBPFX,DBPFX, message_idnr);
 		if (db_result_next(r))
 			size = db_result_get_u64(r, 0);
 	CATCH(SQLException)
@@ -2667,7 +2667,7 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 
 	/* Get the size of the message to be copied. */
 	if (! (msgsize = message_get_size(msg_idnr))) {
-		TRACE(TRACE_ERR, "error getting size for message [%lu]", msg_idnr);
+		TRACE(TRACE_ERR, "error getting size for message [%" PRIu64 "]", msg_idnr);
 		return DM_EQUERY;
 	}
 
@@ -2676,7 +2676,7 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 		return DM_EQUERY;
 
 	if (! valid) {
-		TRACE(TRACE_INFO, "user [%lu] would exceed quotum", user_idnr);
+		TRACE(TRACE_INFO, "user [%" PRIu64 "] would exceed quotum", user_idnr);
 		return -2;
 	}
 
@@ -2691,14 +2691,14 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 		if (db_params.db_driver == DM_DRIVER_ORACLE) {
 			db_exec(c, "INSERT INTO %smessages ("
 				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
-				" SELECT %lu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,%d,draft_flag,'%s',status"
-				" FROM %smessages WHERE message_idnr = %lu %s",DBPFX, mailbox_to, recent, unique_id, DBPFX, msg_idnr, frag);
+				" SELECT %" PRIu64 ",physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,%d,draft_flag,'%s',status"
+				" FROM %smessages WHERE message_idnr = %" PRIu64 " %s",DBPFX, mailbox_to, recent, unique_id, DBPFX, msg_idnr, frag);
 			*newmsg_idnr = db_get_pk(c, "messages");
 		} else {
 			r = db_query(c, "INSERT INTO %smessages ("
 				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
-				" SELECT %lu,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,%d,draft_flag,'%s',status"
-				" FROM %smessages WHERE message_idnr = %lu %s",DBPFX, mailbox_to, recent, unique_id, DBPFX, msg_idnr, frag);
+				" SELECT %" PRIu64 ",physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,%d,draft_flag,'%s',status"
+				" FROM %smessages WHERE message_idnr = %" PRIu64 " %s",DBPFX, mailbox_to, recent, unique_id, DBPFX, msg_idnr, frag);
 			*newmsg_idnr = db_insert_result(c, r);
 		}
 		db_commit_transaction(c);
@@ -2718,7 +2718,7 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 	TRY
 		db_begin_transaction(c);
 		db_exec(c, "INSERT INTO %skeywords (message_idnr, keyword) "
-			"SELECT %lu,keyword from %skeywords WHERE message_idnr=%lu", 
+			"SELECT %" PRIu64 ",keyword from %skeywords WHERE message_idnr=%" PRIu64 "", 
 			DBPFX, *newmsg_idnr, DBPFX, msg_idnr);
 		db_commit_transaction(c);
 	CATCH(SQLException)
@@ -2752,7 +2752,7 @@ int db_getmailboxname(uint64_t mailbox_idnr, uint64_t user_idnr, char *name)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%lu",
+		r = db_query(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%" PRIu64 "",
 				DBPFX, mailbox_idnr);
 		if (db_result_next(r))
 			tmp_name = g_strdup(db_result_get(r, 0));
@@ -2830,7 +2830,7 @@ int db_subscribe(uint64_t mailbox_idnr, uint64_t user_idnr)
 
 int db_unsubscribe(uint64_t mailbox_idnr, uint64_t user_idnr)
 {
-	return db_update("DELETE FROM %ssubscription WHERE user_id=%lu AND mailbox_id=%lu", DBPFX, user_idnr, mailbox_idnr);
+	return db_update("DELETE FROM %ssubscription WHERE user_id=%" PRIu64 " AND mailbox_id=%" PRIu64 "", DBPFX, user_idnr, mailbox_idnr);
 }
 
 int db_get_msgflag(const char *flag_name, uint64_t msg_idnr)
@@ -2857,7 +2857,7 @@ int db_get_msgflag(const char *flag_name, uint64_t msg_idnr)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT %s FROM %smessages WHERE message_idnr=%lu AND status < %d ",
+		r = db_query(c, "SELECT %s FROM %smessages WHERE message_idnr=%" PRIu64 " AND status < %d ",
 				the_flag_name, DBPFX, msg_idnr, MESSAGE_STATUS_DELETE);
 		if (db_result_next(r))
 			val = db_result_get_int(r, 0);
@@ -2968,7 +2968,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	}
 
 	snprintf(query + pos, DEF_QUERYSIZE - pos,
-			" WHERE message_idnr = %lu AND status < %d",
+			" WHERE message_idnr = %" PRIu64 " AND status < %d",
 			msg_idnr, MESSAGE_STATUS_DELETE);
 
 	c = db_con_get();
@@ -2995,7 +2995,7 @@ static int db_acl_has_acl(uint64_t userid, uint64_t mboxid)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT user_id, mailbox_id FROM %sacl WHERE user_id = %lu AND mailbox_id = %lu",DBPFX, userid, mboxid);
+		r = db_query(c, "SELECT user_id, mailbox_id FROM %sacl WHERE user_id = %" PRIu64 " AND mailbox_id = %" PRIu64 "",DBPFX, userid, mboxid);
 		if (db_result_next(r))
 			t = TRUE;
 	CATCH(SQLException)
@@ -3010,7 +3010,7 @@ static int db_acl_has_acl(uint64_t userid, uint64_t mboxid)
 
 static int db_acl_create_acl(uint64_t userid, uint64_t mboxid)
 {	
-	return db_update("INSERT INTO %sacl (user_id, mailbox_id) VALUES (%lu, %lu)",DBPFX, userid, mboxid);
+	return db_update("INSERT INTO %sacl (user_id, mailbox_id) VALUES (%" PRIu64 ", %" PRIu64 ")",DBPFX, userid, mboxid);
 }
 
 int db_acl_set_right(uint64_t userid, uint64_t mboxid, const char *right_flag,
@@ -3020,7 +3020,7 @@ int db_acl_set_right(uint64_t userid, uint64_t mboxid, const char *right_flag,
 
 	assert(set == 0 || set == 1);
 
-	TRACE(TRACE_DEBUG, "Setting ACL for user [%lu], mailbox [%lu].",
+	TRACE(TRACE_DEBUG, "Setting ACL for user [%" PRIu64 "], mailbox [%" PRIu64 "].",
 		userid, mboxid);
 
 	result = db_user_is_mailbox_owner(userid, mboxid);
@@ -3035,7 +3035,7 @@ int db_acl_set_right(uint64_t userid, uint64_t mboxid, const char *right_flag,
 	result = db_acl_has_acl(userid, mboxid);
 	if (result < 0) {
 		TRACE(TRACE_ERR, "Error finding acl for user "
-		      "[%lu], mailbox [%lu]",
+		      "[%" PRIu64 "], mailbox [%" PRIu64 "]",
 		      userid, mboxid);
 		return DM_EQUERY;
 	}
@@ -3043,18 +3043,18 @@ int db_acl_set_right(uint64_t userid, uint64_t mboxid, const char *right_flag,
 	if (result == FALSE) {
 		if (db_acl_create_acl(userid, mboxid) == -1) {
 			TRACE(TRACE_ERR, "Error creating ACL for "
-			      "user [%lu], mailbox [%lu]",
+			      "user [%" PRIu64 "], mailbox [%" PRIu64 "]",
 			      userid, mboxid);
 			return DM_EQUERY;
 		}
 	}
 
-	return db_update("UPDATE %sacl SET %s = %i WHERE user_id = %lu AND mailbox_id = %lu",DBPFX, right_flag, set, userid, mboxid);
+	return db_update("UPDATE %sacl SET %s = %i WHERE user_id = %" PRIu64 " AND mailbox_id = %" PRIu64 "",DBPFX, right_flag, set, userid, mboxid);
 }
 
 int db_acl_delete_acl(uint64_t userid, uint64_t mboxid)
 {
-	return db_update("DELETE FROM %sacl WHERE user_id = %lu AND mailbox_id = %lu",DBPFX, userid, mboxid);
+	return db_update("DELETE FROM %sacl WHERE user_id = %" PRIu64 " AND mailbox_id = %" PRIu64 "",DBPFX, userid, mboxid);
 }
 
 int db_acl_get_identifier(uint64_t mboxid, GList **identifier_list)
@@ -3064,7 +3064,7 @@ int db_acl_get_identifier(uint64_t mboxid, GList **identifier_list)
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT %susers.userid FROM %susers, %sacl "
-				"WHERE %sacl.mailbox_id = %lu "
+				"WHERE %sacl.mailbox_id = %" PRIu64 " "
 				"AND %susers.user_idnr = %sacl.user_id",DBPFX,DBPFX,DBPFX,
 				DBPFX,mboxid,DBPFX,DBPFX);
 		while (db_result_next(r))
@@ -3087,7 +3087,7 @@ int db_get_mailbox_owner(uint64_t mboxid, uint64_t * owner_id)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT owner_idnr FROM %smailboxes WHERE mailbox_idnr = %lu", DBPFX, mboxid);
+		r = db_query(c, "SELECT owner_idnr FROM %smailboxes WHERE mailbox_idnr = %" PRIu64 "", DBPFX, mboxid);
 		if (db_result_next(r))
 			*owner_id = db_result_get_u64(r, 0);
 	CATCH(SQLException)
@@ -3109,7 +3109,7 @@ int db_user_is_mailbox_owner(uint64_t userid, uint64_t mboxid)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT mailbox_idnr FROM %smailboxes WHERE mailbox_idnr = %lu AND owner_idnr = %lu", DBPFX, mboxid, userid);
+		r = db_query(c, "SELECT mailbox_idnr FROM %smailboxes WHERE mailbox_idnr = %" PRIu64 " AND owner_idnr = %" PRIu64 "", DBPFX, mboxid, userid);
 		if (db_result_next(r)) t = TRUE;
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -3350,14 +3350,14 @@ int db_user_create(const char *username, const char *password, const char *encty
 
 	g_free(encoding);
 	if (t == TRUE)
-		TRACE(TRACE_DEBUG, "create shadow account userid [%s], user_idnr [%lu]", username, *user_idnr);
+		TRACE(TRACE_DEBUG, "create shadow account userid [%s], user_idnr [%" PRIu64 "]", username, *user_idnr);
 
 	return t;
 }
 
 int db_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 {
-	return db_update("UPDATE %susers SET maxmail_size = %lu WHERE user_idnr = %lu", DBPFX, new_size, user_idnr);
+	return db_update("UPDATE %susers SET maxmail_size = %" PRIu64 " WHERE user_idnr = %" PRIu64 "", DBPFX, new_size, user_idnr);
 }
 
 int db_user_delete(const char * username)
@@ -3410,7 +3410,7 @@ int db_user_find_create(uint64_t user_idnr)
 
 	assert(user_idnr > 0);
 	
-	TRACE(TRACE_DEBUG,"user_idnr [%lu]", user_idnr);
+	TRACE(TRACE_DEBUG,"user_idnr [%" PRIu64 "]", user_idnr);
 
 	if ((result = user_idnr_is_delivery_user_idnr(user_idnr)))
 		return result;
@@ -3418,7 +3418,7 @@ int db_user_find_create(uint64_t user_idnr)
 	if (! (username = auth_get_userid(user_idnr))) 
 		return DM_EQUERY;
 	
-	TRACE(TRACE_DEBUG,"found username for user_idnr [%lu -> %s]",
+	TRACE(TRACE_DEBUG,"found username for user_idnr [%" PRIu64 " -> %s]",
 			user_idnr, username);
 	
 	if ((db_user_exists(username, &idnr) < 0)) {
@@ -3428,7 +3428,7 @@ int db_user_find_create(uint64_t user_idnr)
 
 	if ((idnr > 0) && (idnr != user_idnr)) {
 		TRACE(TRACE_ERR, "user_idnr for sql shadow account "
-				"differs from user_idnr [%lu != %lu]",
+				"differs from user_idnr [%" PRIu64 " != %" PRIu64 "]",
 				idnr, user_idnr);
 		g_free(username);
 		return DM_EQUERY;
@@ -3595,12 +3595,12 @@ int db_user_log_login(uint64_t user_idnr)
 {
 	TimeString_T timestring;
 	create_current_timestring(&timestring);
-	return db_update("UPDATE %susers SET last_login = '%s' WHERE user_idnr = %lu",DBPFX, timestring, user_idnr);
+	return db_update("UPDATE %susers SET last_login = '%s' WHERE user_idnr = %" PRIu64 "",DBPFX, timestring, user_idnr);
 }
 
 int db_mailbox_seq_update(uint64_t mailbox_id)
 {
-	return db_update("UPDATE %s %smailboxes SET seq=seq+1 WHERE mailbox_idnr=%lu", 
+	return db_update("UPDATE %s %smailboxes SET seq=seq+1 WHERE mailbox_idnr=%" PRIu64 "", 
 		db_get_sql(SQL_IGNORE), DBPFX, mailbox_id);
 }
 
@@ -3693,16 +3693,16 @@ int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr
 	
         switch (result) {
             case -2:
-                    TRACE(TRACE_DEBUG, "error copying message to user [%lu],"
+                    TRACE(TRACE_DEBUG, "error copying message to user [%" PRIu64 "],"
                             "maxmail exceeded", user_idnr);
                     return -2;
             case -1:
-                    TRACE(TRACE_ERR, "error copying message to user [%lu]", 
+                    TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "]", 
                             user_idnr);
                     return -1;
         }
                 
-        TRACE(TRACE_NOTICE, "message id=%lu is inserted", *msg_idnr);
+        TRACE(TRACE_NOTICE, "message id=%" PRIu64 " is inserted", *msg_idnr);
         
         return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
 }

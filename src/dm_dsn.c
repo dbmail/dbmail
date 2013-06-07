@@ -293,7 +293,7 @@ static int address_is_username_mailbox(Delivery_T *delivery)
 	*uid = userid;
 	delivery->userids = g_list_prepend(delivery->userids, uid);
 
-	TRACE(TRACE_DEBUG, "added user [%s] id [%lu] to delivery list", newaddress, userid);
+	TRACE(TRACE_DEBUG, "added user [%s] id [%" PRIu64 "] to delivery list", newaddress, userid);
 
 	g_free(newaddress);
 	return 1;
@@ -316,7 +316,7 @@ static int address_is_username(Delivery_T *delivery)
 	*uid = userid;
 	delivery->userids = g_list_prepend(delivery->userids, uid);
 
-	TRACE(TRACE_DEBUG, "added user [%s] id [%lu] to delivery list", delivery->address, userid);
+	TRACE(TRACE_DEBUG, "added user [%s] id [%" PRIu64 "] to delivery list", delivery->address, userid);
 
 	return 1;
 }
@@ -515,18 +515,18 @@ int dsnuser_resolve(Delivery_T *delivery)
 	 * We just want to make sure that the userid actually exists... */
 	if (delivery->useridnr != 0) {
 
-		TRACE(TRACE_INFO, "checking if [%lu] is a valid useridnr.", delivery->useridnr);
+		TRACE(TRACE_INFO, "checking if [%" PRIu64 "] is a valid useridnr.", delivery->useridnr);
 
 		switch (auth_check_userid(delivery->useridnr)) {
 		case -1:
 			/* Temp fail. Address related. D.N.E. */
 			set_dsn(&delivery->dsn, DSN_CLASS_TEMP, 1, 1);
-			TRACE(TRACE_INFO, "useridnr [%lu] temporary lookup failure.", delivery->useridnr);
+			TRACE(TRACE_INFO, "useridnr [%" PRIu64 "] temporary lookup failure.", delivery->useridnr);
 			break;
 		case 1:
 			/* Failure. Address related. D.N.E. */
 			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 1, 1);
-			TRACE(TRACE_INFO, "useridnr [%lu] does not exist.", delivery->useridnr);
+			TRACE(TRACE_INFO, "useridnr [%" PRIu64 "] does not exist.", delivery->useridnr);
 			break;
 		case 0:
 			/* Copy the delivery useridnr into the userids list. */
@@ -536,7 +536,7 @@ int dsnuser_resolve(Delivery_T *delivery)
 
 			/* Success. Address related. Valid. */
 			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
-			TRACE(TRACE_INFO, "delivery [%lu] directly to a useridnr.", delivery->useridnr);
+			TRACE(TRACE_INFO, "delivery [%" PRIu64 "] directly to a useridnr.", delivery->useridnr);
 			break;
 		}
 	/* Ok, we don't have a useridnr, maybe we have an address? */

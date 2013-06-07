@@ -168,9 +168,9 @@ char **base64_decodev(char *in);
 /* create a string containing the cryptographic checksum for buf */
 int dm_get_hash_for_string(const char *buf, char *hash);
 
-char * dm_base64_decode(const gchar *s, size_t *len);
+char * dm_base64_decode(const gchar *s, uint64_t *len);
 
-size_t stridx(const char *s, char c);
+uint64_t stridx(const char *s, char c);
 
 #define get_crlf_encoded(string) get_crlf_encoded_opt(string, 0)
 #define get_crlf_encoded_dots(string) get_crlf_encoded_opt(string, 1)

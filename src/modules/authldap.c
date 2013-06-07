@@ -444,7 +444,7 @@ static uint64_t dm_ldap_get_freeid(const gchar *attribute)
 	g_list_free(ids);
 	
 	id=t;
-	TRACE(TRACE_DEBUG,"return free id [%lu]\n", id);
+	TRACE(TRACE_DEBUG,"return free id [%" PRIu64 "]\n", id);
 	return id;
 }
 
@@ -457,7 +457,7 @@ static char * dm_ldap_user_getdn(uint64_t user_idnr)
 	LDAPMessage *ldap_msg;
 	LDAP *_ldap_conn = ldap_con_get();
 	
-	g_string_printf(t, "(%s=%lu)", _ldap_cfg.field_nid, user_idnr);
+	g_string_printf(t, "(%s=%" PRIu64 ")", _ldap_cfg.field_nid, user_idnr);
 	TRACE(TRACE_DEBUG, "searching with query [%s]", t->str);
 	
 	if (! (ldap_res = authldap_search(t->str))) {
@@ -621,7 +621,7 @@ int auth_user_exists(const char *username, uint64_t * user_idnr)
 	if (id_char != NULL)
 		g_free(id_char);
 
-	TRACE(TRACE_DEBUG, "returned value is [%lu]", *user_idnr);
+	TRACE(TRACE_DEBUG, "returned value is [%" PRIu64 "]", *user_idnr);
 
 	if (*user_idnr != 0)
 		return TRUE;
@@ -638,7 +638,7 @@ char *auth_get_userid(uint64_t user_idnr)
 	char query[AUTH_QUERY_SIZE];
 	const char *fields[] = { _ldap_cfg.field_uid, NULL };
 	
-	snprintf(query, AUTH_QUERY_SIZE, "(%s=%lu)", _ldap_cfg.field_nid, user_idnr);
+	snprintf(query, AUTH_QUERY_SIZE, "(%s=%" PRIu64 ")", _ldap_cfg.field_nid, user_idnr);
 	returnid = __auth_get_first_match(query, fields);
 	TRACE(TRACE_DEBUG, "returned value is [%s]", returnid);
 
@@ -653,15 +653,15 @@ int auth_check_userid(uint64_t user_idnr)
 	char query[AUTH_QUERY_SIZE];
 	const char *fields[] = { _ldap_cfg.field_nid, NULL };
 	
-	snprintf(query, AUTH_QUERY_SIZE, "(%s=%lu)", _ldap_cfg.field_nid, user_idnr);
+	snprintf(query, AUTH_QUERY_SIZE, "(%s=%" PRIu64 ")", _ldap_cfg.field_nid, user_idnr);
 	returnid = __auth_get_first_match(query, fields);
 
 	if (returnid) {
 		g_free(returnid);
-		TRACE(TRACE_DEBUG, "found user_idnr [%lu]", user_idnr);
+		TRACE(TRACE_DEBUG, "found user_idnr [%" PRIu64 "]", user_idnr);
 		return TRUE;
 	} 
-	TRACE(TRACE_DEBUG, "didn't find user_idnr [%lu]", user_idnr);
+	TRACE(TRACE_DEBUG, "didn't find user_idnr [%" PRIu64 "]", user_idnr);
 
 	return FALSE;
 }
@@ -686,14 +686,14 @@ int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr)
 		return FALSE;
 	}
 
-	snprintf(query, AUTH_QUERY_SIZE, "(%s=%lu)", _ldap_cfg.field_nid,
+	snprintf(query, AUTH_QUERY_SIZE, "(%s=%" PRIu64 ")", _ldap_cfg.field_nid,
 		 user_idnr);
 	cid_char = __auth_get_first_match(query, fields);
 	*client_idnr = (cid_char) ? strtoull(cid_char, NULL, 0) : 0;
 	if (cid_char != NULL)
 		g_free(cid_char);
 
-	TRACE(TRACE_DEBUG, "found client_idnr [%lu]", *client_idnr);
+	TRACE(TRACE_DEBUG, "found client_idnr [%" PRIu64 "]", *client_idnr);
 
 	return TRUE;
 }
@@ -713,7 +713,7 @@ int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size)
 		return FALSE;
 	}
 
-	snprintf(query, AUTH_QUERY_SIZE, "(%s=%lu)", _ldap_cfg.field_nid,
+	snprintf(query, AUTH_QUERY_SIZE, "(%s=%" PRIu64 ")", _ldap_cfg.field_nid,
 		 user_idnr);
 	max_char = __auth_get_first_match(query, fields);
 	*maxmail_size = (max_char) ? strtoull(max_char, 0, 10) : 0;
@@ -721,7 +721,7 @@ int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size)
 	// if max_char is NULL g_free will not fail it simply return
 	g_free(max_char);
 
-	TRACE(TRACE_DEBUG, "%s: %lu", _ldap_cfg.field_maxmail, *maxmail_size);
+	TRACE(TRACE_DEBUG, "%s: %" PRIu64 "", _ldap_cfg.field_maxmail, *maxmail_size);
 
 	return TRUE;
 }
@@ -877,7 +877,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 
 			id = strtoull(address, &endptr, 10);
 			if (*endptr == 0) { /* numeric deliver-to --> this is a userid */
-				TRACE(TRACE_DEBUG, "adding [%lu] to userids", id);
+				TRACE(TRACE_DEBUG, "adding [%" PRIu64 "] to userids", id);
 				uid = g_new0(uint64_t,1);
 				*uid = id;
 				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
@@ -940,9 +940,9 @@ int auth_adduser(const char *username, const char *password,
 	
 	uint64_t newidnr = dm_ldap_get_freeid(_ldap_cfg.field_nid);
 
-	g_string_printf(nid,"%lu", newidnr);
-	g_string_printf(cid,"%lu",clientid);
-	g_string_printf(maxm,"%lu",maxmail);
+	g_string_printf(nid,"%" PRIu64 "", newidnr);
+	g_string_printf(cid,"%" PRIu64 "",clientid);
+	g_string_printf(maxm,"%" PRIu64 "",maxmail);
 	
 	char **obj_values = g_strsplit(_ldap_cfg.user_objectclass,",",0);
 	char *pw_values[] = { (char *)password, NULL };
@@ -1099,10 +1099,10 @@ static int dm_ldap_user_shadow_rename(uint64_t user_idnr, const char *new_name)
 	oldname = auth_get_userid(user_idnr);
 	db_user_exists(oldname,&dbidnr);
 	if (dbidnr) {
-		TRACE(TRACE_DEBUG, "call db_user_rename ([%lu],[%s])\n", dbidnr, new_name);
+		TRACE(TRACE_DEBUG, "call db_user_rename ([%" PRIu64 "],[%s])\n", dbidnr, new_name);
 	}
 	if ((! dbidnr) || (db_user_rename(dbidnr, new_name))) {
-		TRACE(TRACE_ERR, "renaming shadow account in db failed for [%lu]->[%s]", user_idnr, new_name);
+		TRACE(TRACE_ERR, "renaming shadow account in db failed for [%" PRIu64 "]->[%s]", user_idnr, new_name);
 		return -1;
 	}
 	return 0;
@@ -1170,7 +1170,7 @@ int auth_change_password(uint64_t user_idnr, const char *new_pass, const char *e
 int auth_change_clientid(uint64_t user_idnr, uint64_t newcid)
 {
 	char newcid_str[16];
-	snprintf(newcid_str, 16, "%lu", newcid);
+	snprintf(newcid_str, 16, "%" PRIu64 "", newcid);
 	return dm_ldap_mod_field(user_idnr, _ldap_cfg.field_cid, newcid_str);
 }
 
@@ -1180,7 +1180,7 @@ int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 	char newsize_str[16];
 	if (! (result = db_change_mailboxsize(user_idnr, new_size)))
 		return result;
-	snprintf(newsize_str, 16, "%lu", new_size);
+	snprintf(newsize_str, 16, "%" PRIu64 "", new_size);
 	return dm_ldap_mod_field(user_idnr, _ldap_cfg.field_maxmail, newsize_str);
 }
 
@@ -1292,7 +1292,7 @@ GList * auth_get_user_aliases(uint64_t user_idnr)
 	GList *aliases = NULL;
 	GList *entlist, *fldlist, *attlist;
 	
-	g_string_printf(t,"%s=%lu", _ldap_cfg.field_nid, user_idnr);
+	g_string_printf(t,"%s=%" PRIu64 "", _ldap_cfg.field_nid, user_idnr);
 	if ((entlist = __auth_get_every_match(t->str, fields))) {
 		entlist = g_list_first(entlist);
 		fldlist = g_list_first(entlist->data);

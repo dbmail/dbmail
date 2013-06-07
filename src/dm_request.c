@@ -116,9 +116,9 @@ static gboolean Request_basic_auth(T R)
 		auth+=6;
 		TRACE(TRACE_DEBUG, "auth [%s]", auth);
 		s = g_base64_decode(auth, &len);
-		safe = g_strndup((char *)s, len);
+		safe = g_strndup((char *)s, (gsize)len);
 		g_free(s);
-		TRACE(TRACE_DEBUG,"Authorization [%ld][%s] <-> [%s]", len, safe, userpw);
+		TRACE(TRACE_DEBUG,"Authorization [%" PRIu64 "][%s] <-> [%s]", (uint64_t)len, safe, userpw);
 		if ((strlen(userpw) != strlen(safe)) || (strncmp(safe,(char *)userpw,strlen(userpw))!=0)) {
 			if (! Request_user_auth(R, safe)) {
 				TRACE(TRACE_DEBUG,"Authorization failed");

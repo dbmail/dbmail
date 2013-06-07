@@ -282,7 +282,7 @@ static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * dat
 	sublist = g_list_first(sublist);
 	while(sublist) {
 		id = sublist->data;
-		g_string_append_printf(t, "(%lu)", *id);
+		g_string_append_printf(t, "(%" PRIu64 ")", *id);
 		
 		if (! g_list_next(sublist))
 			break;
@@ -434,7 +434,7 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const cha
 	h = l;
 
 	while(l->data) {
-		g_string_append_printf(t,"%lu", *(uint64_t *)l->data);
+		g_string_append_printf(t,"%" PRIu64 "", *(uint64_t *)l->data);
 		if (! g_list_next(l))
 			break;
 		g_string_append_printf(t,"%s", sep);
@@ -468,9 +468,9 @@ char * dbmail_mailbox_sorted_as_string(DbmailMailbox *self)
 		msn = g_tree_lookup(self->found, l->data);
 		if (msn) {
 			if (uid)
-				g_string_append_printf(t,"%lu ", *(uint64_t *)l->data);
+				g_string_append_printf(t,"%" PRIu64 " ", *(uint64_t *)l->data);
 			else
-				g_string_append_printf(t,"%lu ", *(uint64_t *)msn);
+				g_string_append_printf(t,"%" PRIu64 " ", *(uint64_t *)msn);
 		}
 		if (! g_list_next(l))
 			break;
@@ -1060,7 +1060,7 @@ int dbmail_mailbox_build_imap_search(DbmailMailbox *self, String_T *search_keys,
 	/* SEARCH */
 	while( search_keys[*idx] && ((result = _handle_search_args(self, search_keys, idx)) == 0) );
 	
-	TRACE(TRACE_DEBUG,"done [%d] at idx [%lu]", result, *idx);
+	TRACE(TRACE_DEBUG,"done [%d] at idx [%" PRIu64 "]", result, *idx);
 	return result;
 }
 
@@ -1084,7 +1084,7 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 	g_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			"%s"
-			"WHERE m.mailbox_idnr = %lu AND m.status IN (%d,%d) "
+			"WHERE m.mailbox_idnr = %" PRIu64 " AND m.status IN (%d,%d) "
 			"ORDER BY %smessage_idnr", DBPFX, DBPFX, s->table,
 			dbmail_mailbox_get_id(self), MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, s->order);
 
@@ -1357,7 +1357,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 		while (db_result_next(r)) {
 			id = db_result_get_u64(r,0);
 			if (! (w = g_tree_lookup(ids, &id))) {
-				TRACE(TRACE_ERR, "key missing in ids: [%lu]\n", id);
+				TRACE(TRACE_ERR, "key missing in ids: [%" PRIu64 "]\n", id);
 				continue;
 			}
 			assert(w);
@@ -1378,7 +1378,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 			while (uids) {
 				uint64_t id = *(uint64_t *)uids->data;
 				if (! (w = g_tree_lookup(ids, &id))) {
-					TRACE(TRACE_ERR, "key missing in ids: [%lu]", id);
+					TRACE(TRACE_ERR, "key missing in ids: [%" PRIu64 "]", id);
 
 					if (! g_list_next(uids)) break;
 					uids = g_list_next(uids);
@@ -1388,7 +1388,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 				assert(w);
 
 				if (g_tree_lookup(s->found, &id)) {
-					TRACE(TRACE_DEBUG, "skip key [%lu]", id);
+					TRACE(TRACE_DEBUG, "skip key [%" PRIu64 "]", id);
 
 					if (! g_list_next(uids)) break;
 					uids = g_list_next(uids);
@@ -1509,7 +1509,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		lo = 1;
 		hi = maxmsn;
 		if (hi != (uint64_t)g_tree_nnodes(uids))
-			TRACE(TRACE_WARNING, "[%p] mailbox info out of sync: exists [%lu] ids [%u]", 
+			TRACE(TRACE_WARNING, "[%p] mailbox info out of sync: exists [%" PRIu64 "] ids [%u]", 
 					self->mbstate, hi, g_tree_nnodes(uids));
 	}
 	

@@ -173,7 +173,7 @@ acl_replace_rights(uint64_t userid, uint64_t mboxid, const char *rights)
 
 	rightsstring = g_strndup(rights, 256);
 
-	TRACE(TRACE_DEBUG, "replacing rights for user [%lu], mailbox [%lu] to %s", userid, mboxid, rightsstring);
+	TRACE(TRACE_DEBUG, "replacing rights for user [%" PRIu64 "], mailbox [%" PRIu64 "] to %s", userid, mboxid, rightsstring);
 
 	// RFC 2086 to RFC 4314 mapping
 	if (strchr(rightsstring, (int) 'c')) 
@@ -230,7 +230,7 @@ char *acl_get_acl(uint64_t mboxid)
 	result = db_acl_get_identifier(mboxid, &identifier_list);
 
 	if (result < 0) {
-		TRACE(TRACE_ERR, "error when getting identifier list for mailbox [%lu].", mboxid);
+		TRACE(TRACE_ERR, "error when getting identifier list for mailbox [%" PRIu64 "].", mboxid);
 		g_list_destroy(identifier_list);
 		return NULL;
 	}
@@ -245,7 +245,7 @@ char *acl_get_acl(uint64_t mboxid)
 	}
 
 	if ((username = auth_get_userid(userid)) == NULL) {
-		TRACE(TRACE_ERR, "error getting username for user [%lu]", userid);
+		TRACE(TRACE_ERR, "error getting username for user [%" PRIu64 "]", userid);
 		g_list_destroy(identifier_list);
 		return NULL;
 	}
@@ -364,7 +364,7 @@ int acl_get_rightsstring(uint64_t userid, uint64_t mboxid, char *rightsstring)
 		return result;
 
 	if (owner_idnr == userid) {
-		TRACE(TRACE_DEBUG, "mailbox [%lu] is owned by user [%lu], giving all rights", mboxid, userid);
+		TRACE(TRACE_DEBUG, "mailbox [%" PRIu64 "] is owned by user [%" PRIu64 "], giving all rights", mboxid, userid);
 		g_strlcat(rightsstring, acl_right_chars, NR_ACL_FLAGS+1);
 		return 1;
 	}

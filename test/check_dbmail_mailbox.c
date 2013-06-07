@@ -58,7 +58,7 @@ static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
 
 	uint64_t *k = (uint64_t *)key;
 	uint64_t *v = (uint64_t *)value;
-	printf("[%lu: %lu]\n", *k, *v);
+	printf("[%" PRIu64 ": %" PRIu64 "]\n", *k, *v);
 	return FALSE;
 }
 
@@ -74,7 +74,7 @@ static gboolean _node_cat(uint64_t *key, uint64_t *value, GString **s)
 	if (! (key && value))
 		return TRUE;
 	
-	g_string_append_printf(*(GString **)s, "[%lu: %lu]\n", *key,*value);
+	g_string_append_printf(*(GString **)s, "[%" PRIu64 ": %" PRIu64 "]\n", *key,*value);
 
 	return FALSE;
 }

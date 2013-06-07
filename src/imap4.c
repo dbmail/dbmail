@@ -196,13 +196,13 @@ void imap_cb_read(void *arg)
 
 	ci_read_cb(session->ci);
 
-	size_t have = p_string_len(session->ci->read_buffer);
-	size_t need = session->ci->rbuff_size;
+	uint64_t have = p_string_len(session->ci->read_buffer);
+	uint64_t need = session->ci->rbuff_size;
 
 	int enough = (need>0?(have >= need):(have > 0));
 	int state = session->ci->client_state;
 
-	TRACE(TRACE_DEBUG,"state [%d] enough %d: %ld/%ld", state, enough, have, need);
+	TRACE(TRACE_DEBUG,"state [%d] enough %d: %" PRIu64 "/%" PRIu64 "", state, enough, have, need);
 
 	if (state & CLIENT_ERR) {
 		dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);
@@ -264,10 +264,10 @@ static void imap_session_reset(ImapSession *session)
  * only the main thread may write to the network event
  * worker threads must use an async queue
  */
-static int imap_session_printf(ImapSession * self, char * message, ...)
+static int64_t imap_session_printf(ImapSession * self, char * message, ...)
 {
         va_list ap, cp;
-        size_t l;
+        uint64_t l;
 	int e = 0;
 
 	p_string_truncate(self->buff, 0);
@@ -288,7 +288,7 @@ static int imap_session_printf(ImapSession * self, char * message, ...)
         l = p_string_len(self->buff);
 	p_string_truncate(self->buff, 0);
 
-        return (int)l;
+        return (int64_t)l;
 }
 
 static void send_greeting(ImapSession *session)
@@ -437,7 +437,7 @@ void imap_handle_input(ImapSession *session)
 {
 	char buffer[MAX_LINESIZE];
 	char *alloc_buf = NULL;
-	size_t alloc_size = 0;
+	uint64_t alloc_size = 0;
 	int l, result;
 
 	assert(session && session->ci && session->ci->write_buffer);
@@ -575,7 +575,7 @@ int imap_handle_connection(client_sock *c)
 int imap4_tokenizer (ImapSession *session, char *buffer)
 {
 	char *cpy;
-	size_t i = 0;
+	uint64_t i = 0;
 		
 	if (!(*buffer))
 		return 0;
@@ -682,7 +682,7 @@ static void imap_unescape_args(ImapSession *session)
 	}
 #ifdef DEBUG
 	for (i = 0; session->args[i]; i++) { 
-		TRACE(TRACE_DEBUG, "[%p] arg[%lu]: '%s'\n", session, i, p_string_str(session->args[i])); 
+		TRACE(TRACE_DEBUG, "[%p] arg[%" PRIu64 "]: '%s'\n", session, i, p_string_str(session->args[i])); 
 	}
 #endif
 

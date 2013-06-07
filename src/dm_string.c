@@ -138,7 +138,7 @@ void p_string_append_len(T S, const char *s, size_t l)
 	S->str[S->used] = '\0';
 }
 
-size_t p_string_len(T S)
+uint64_t p_string_len(T S)
 {
 	return S->used;
 }

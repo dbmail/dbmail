@@ -105,10 +105,10 @@ void mempool_stats(M MP)
         unsigned long num_alloced, user_alloced, max_alloced, tot_alloced;
 	mpool_stats(MP->pool, &page_size, &num_alloced, &user_alloced,
 			&max_alloced, &tot_alloced);
-	TRACE(TRACE_DEBUG, "[%p] page_size: %u num: %lu user: %lu "
-			"max: %lu tot: %lu", MP->pool, 
-			page_size, num_alloced, user_alloced,
-			max_alloced, tot_alloced);
+	TRACE(TRACE_DEBUG, "[%p] page_size: %u num: %" PRIu64 " user: %" PRIu64 " "
+			"max: %" PRIu64 " tot: %" PRIu64 "", MP->pool, 
+			page_size, (uint64_t)num_alloced, (uint64_t)user_alloced,
+			(uint64_t)max_alloced, (uint64_t)tot_alloced);
 }
 
 void mempool_close(M *MP) 

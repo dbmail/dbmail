@@ -75,7 +75,7 @@ const gchar * Cram_getUsername(T C)
 
 gboolean Cram_decode(T C, const char * response)
 {
-	gsize len = 0, space = 0;
+	uint64_t len = 0, space = 0;
 	gchar *s = dm_base64_decode(response, &len);
 	space = stridx((const char *)s,' ');
 	if (space == len)

@@ -105,7 +105,7 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session)
 	INIT_QUERY;
 
 	if (db_find_create_mailbox("INBOX", BOX_DEFAULT, user_idnr, &mailbox_idnr) < 0) {
-		TRACE(TRACE_NOTICE, "find_create INBOX for user [%lu] failed, exiting..", user_idnr);
+		TRACE(TRACE_NOTICE, "find_create INBOX for user [%" PRIu64 "] failed, exiting..", user_idnr);
 		return DM_EQUERY;
 	}
 
@@ -117,7 +117,7 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.messagesize, msg.message_idnr, msg.status, "
 		 "msg.unique_id FROM %smessages msg, %sphysmessage pm "
-		 "WHERE msg.mailbox_idnr = %lu "
+		 "WHERE msg.mailbox_idnr = %" PRIu64 " "
 		 "AND msg.status < %d "
 		 "AND msg.physmessage_id = pm.id "
 		 "ORDER BY msg.message_idnr ASC",DBPFX,DBPFX,
@@ -190,7 +190,7 @@ static void pop3_close(ClientSession_T *session)
 
 		switch (session->SessionResult) {
 		case 0:
-			TRACE(TRACE_NOTICE, "user %s logging out [messages=%lu, octets=%lu]", 
+			TRACE(TRACE_NOTICE, "user %s logging out [messages=%" PRIu64 ", octets=%" PRIu64 "]", 
 					session->username, 
 					session->virtual_totalmessages, 
 					session->virtual_totalsize);
@@ -331,11 +331,11 @@ static int _pop3_session_authenticated(ClientSession_T *session, int user_idnr)
 
 	result = db_createsession(user_idnr, session);
 	if (result == 1) {
-		ci_write(ci, "+OK %s has %lu messages (%lu octets)\r\n", 
+		ci_write(ci, "+OK %s has %" PRIu64 " messages (%" PRIu64 " octets)\r\n", 
 				session->username, 
 				session->virtual_totalmessages, 
 				session->virtual_totalsize);
-		TRACE(TRACE_NOTICE, "user %s logged in [messages=%lu, octets=%lu]", 
+		TRACE(TRACE_NOTICE, "user %s logged in [messages=%" PRIu64 ", octets=%" PRIu64 "]", 
 				session->username, 
 				session->virtual_totalmessages, 
 				session->virtual_totalsize);
@@ -513,7 +513,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			while (session->messagelst) {
 				msg = (struct message *)p_list_data(session->messagelst);
 				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
-					ci_write(ci, "+OK %lu %lu\r\n", msg->messageid,msg->msize);
+					ci_write(ci, "+OK %" PRIu64 " %" PRIu64 "\r\n", msg->messageid,msg->msize);
 					found = 1;
 				}
 				if (! p_list_next(session->messagelst))
@@ -527,14 +527,14 @@ int pop3(ClientSession_T *session, const char *buffer)
 		}
 
 		/* just drop the list */
-		ci_write(ci, "+OK %lu messages (%lu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
+		ci_write(ci, "+OK %" PRIu64 " messages (%" PRIu64 " octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
 
 		if (session->virtual_totalmessages > 0) {
 			/* traversing list */
 			while (session->messagelst) {
 				msg = (struct message *)p_list_data(session->messagelst);
 				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
-					ci_write(ci, "%lu %lu\r\n", msg->messageid,msg->msize);
+					ci_write(ci, "%" PRIu64 " %" PRIu64 "\r\n", msg->messageid,msg->msize);
 				if (! p_list_next(session->messagelst))
 					break;
 				session->messagelst = p_list_next(session->messagelst);
@@ -547,7 +547,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 		if (session->state != CLIENTSTATE_AUTHENTICATED)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
-		ci_write(ci, "+OK %lu %lu\r\n", 
+		ci_write(ci, "+OK %" PRIu64 " %" PRIu64 "\r\n", 
 				session->virtual_totalmessages, 
 				session->virtual_totalsize);
 
@@ -571,7 +571,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
 				if (! (s = db_get_message_lines(msg->realmessageid, -2)))
 					return -1;
-				ci_write(ci, "+OK %lu octets\r\n%s", (uint64_t)strlen(s), s);
+				ci_write(ci, "+OK %" PRIu64 " octets\r\n%s", (uint64_t)strlen(s), s);
 				ci_write(ci, "\r\n.\r\n");
 				g_free(s);
 				return 1;
@@ -596,7 +596,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 				session->virtual_totalsize -= msg->msize;
 				session->virtual_totalmessages -= 1;
 
-				ci_write(ci, "+OK message %lu deleted\r\n", msg->messageid);
+				ci_write(ci, "+OK message %" PRIu64 " deleted\r\n", msg->messageid);
 				return 1;
 			}
 			if (! p_list_next(session->messagelst))
@@ -623,7 +623,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			session->messagelst = p_list_next(session->messagelst);
 		}
 
-		ci_write(ci, "+OK %lu messages (%lu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
+		ci_write(ci, "+OK %" PRIu64 " messages (%" PRIu64 " octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
 
 		return 1;
 
@@ -637,7 +637,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			msg = (struct message *)p_list_data(session->messagelst);
 			if (msg->virtual_messagestatus == MESSAGE_STATUS_NEW) {
 				/* we need the last message that has been accessed */
-				ci_write(ci, "+OK %lu\r\n", msg->messageid - 1);
+				ci_write(ci, "+OK %" PRIu64 "\r\n", msg->messageid - 1);
 				return 1;
 			}
 			if (! p_list_next(session->messagelst))
@@ -646,7 +646,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 		}
 
 		/* all old messages */
-		ci_write(ci, "+OK %lu\r\n", session->virtual_totalmessages);
+		ci_write(ci, "+OK %" PRIu64 "\r\n", session->virtual_totalmessages);
 
 		return 1;
 
@@ -668,7 +668,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			while (session->messagelst) {
 				msg = (struct message *)p_list_data(session->messagelst);
 				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
-					ci_write(ci, "+OK %lu %s\r\n", msg->messageid,msg->uidl);
+					ci_write(ci, "+OK %" PRIu64 " %s\r\n", msg->messageid,msg->uidl);
 					found = 1;
 				}
 
@@ -690,7 +690,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			while (session->messagelst) {
 				msg = (struct message *)p_list_data(session->messagelst); 
 				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
-					ci_write(ci, "%lu %s\r\n", msg->messageid, msg->uidl);
+					ci_write(ci, "%" PRIu64 " %s\r\n", msg->messageid, msg->uidl);
 
 				if (! p_list_next(session->messagelst))
 					break;
@@ -823,7 +823,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 				char *s = NULL; size_t i;
 				if (! (s = db_get_message_lines(msg->realmessageid, top_lines)))
 					return -1;
-				i = ci_write(ci, "+OK %lu lines of message %lu\r\n%s", top_lines, top_messageid, s);
+				i = ci_write(ci, "+OK %" PRIu64 " lines of message %" PRIu64 "\r\n%s", top_lines, top_messageid, s);
 				ci_write(ci, "\r\n.\r\n");
 				g_free(s);
 				return i;

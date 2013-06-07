@@ -153,7 +153,7 @@ void Http_getUsers(T R)
 		while(users->data) {
 			uint64_t id;
 			if (auth_user_exists((char *)users->data, &id))
-				evbuffer_add_printf(buf, "    \"%lu\":{\"name\":\"%s\"}", id, (char *)users->data);
+				evbuffer_add_printf(buf, "    \"%" PRIu64 "\":{\"name\":\"%s\"}", id, (char *)users->data);
 			if (! g_list_next(users)) break;
 			users = g_list_next(users);
 			evbuffer_add_printf(buf,",\n");
@@ -184,7 +184,7 @@ void Http_getUsers(T R)
 			MailboxState_T b = MailboxState_new(NULL, *((uint64_t *)mailboxes->data));
 			MailboxState_setOwner(b, id);
 			//if (MailboxState_reload(b) == DM_SUCCESS)
-			evbuffer_add_printf(buf, "    \"%lu\":{\"name\":\"%s\",\"exists\":%u}", MailboxState_getId(b), MailboxState_getName(b), MailboxState_getExists(b));
+			evbuffer_add_printf(buf, "    \"%" PRIu64 "\":{\"name\":\"%s\",\"exists\":%u}", MailboxState_getId(b), MailboxState_getName(b), MailboxState_getExists(b));
 			MailboxState_free(&b);
 			if (! g_list_next(mailboxes)) break;
 			mailboxes = g_list_next(mailboxes);
@@ -222,7 +222,7 @@ void Http_getMailboxes(T R)
 		return;
 	}
 
-	TRACE(TRACE_DEBUG,"mailbox id [%lu]", id);
+	TRACE(TRACE_DEBUG,"mailbox id [%" PRIu64 "]", id);
 	buf = evbuffer_new();
 	Request_setContentType(R,"application/json; charset=utf-8");
 
@@ -248,7 +248,7 @@ void Http_getMailboxes(T R)
 				exists++;		
 		}
 		evbuffer_add_printf(buf, "{\"mailboxes\": {\n");
-		evbuffer_add_printf(buf, "    \"%lu\":{\"name\":\"%s\",\"exists\":%d}", MailboxState_getId(b), MailboxState_getName(b), exists);
+		evbuffer_add_printf(buf, "    \"%" PRIu64 "\":{\"name\":\"%s\",\"exists\":%d}", MailboxState_getId(b), MailboxState_getName(b), exists);
 		evbuffer_add_printf(buf, "\n}}\n");
 		MailboxState_free(&b);
 
@@ -269,7 +269,7 @@ void Http_getMailboxes(T R)
 			uint64_t *msn = (uint64_t *)ids->data;
 			uint64_t *uid = (uint64_t *)g_tree_lookup(msns, msn);
 			MessageInfo *info = (MessageInfo *)g_tree_lookup(msginfo, uid);
-			evbuffer_add_printf(buf, "    \"%lu\":{\"size\":%lu}", *uid, info->rfcsize);
+			evbuffer_add_printf(buf, "    \"%" PRIu64 "\":{\"size\":%" PRIu64 "}", *uid, info->rfcsize);
 			if (! g_list_next(ids)) break;
 			ids = g_list_next(ids);
 			evbuffer_add_printf(buf,",\n");
@@ -323,7 +323,7 @@ void Http_getMessages(T R)
 		uint64_t size = dbmail_message_get_size(m, TRUE);
 		Request_setContentType(R,"application/json; charset=utf-8");
 		evbuffer_add_printf(buf, "{\"messages\": {\n");
-		evbuffer_add_printf(buf, "   \"%lu\":{\"size\":%lu}", id, size);
+		evbuffer_add_printf(buf, "   \"%" PRIu64 "\":{\"size\":%" PRIu64 "}", id, size);
 		evbuffer_add_printf(buf, "\n}}\n");
 
 	} else if (MATCH(Request_getMethod(R), "view")) {

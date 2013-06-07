@@ -336,7 +336,7 @@ END_TEST
 START_TEST(test_base64_decode)
 {
 	int i;
-	size_t l;
+	uint64_t l;
 	char *result;
 	const char *in = "123456123456";
 	gchar *out = g_base64_encode((const guchar *)in,16);

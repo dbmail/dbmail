@@ -164,7 +164,7 @@ START_TEST(test_db_mailbox_set_permission)
 	int result;
 	uint64_t mailbox_id;
 	result = db_find_create_mailbox("testpermissionbox", BOX_DEFAULT, testidnr, &mailbox_id);
-	fail_unless(mailbox_id, "db_find_create_mailbox [testpermissionbox] owned by [%lu] failed [%lu].", testidnr, mailbox_id);
+	fail_unless(mailbox_id, "db_find_create_mailbox [testpermissionbox] owned by [%" PRIu64 "] failed [%" PRIu64 "].", testidnr, mailbox_id);
 
 	result = db_mailbox_set_permission(mailbox_id, IMAPPERM_READ);
 	fail_unless(result==TRUE,"db_mailbox_set_permission failed");

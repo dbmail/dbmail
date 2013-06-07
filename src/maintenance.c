@@ -475,7 +475,7 @@ int do_purge_deleted(void)
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%lu] messages have DELETE status.\n", deleted_messages);
+		qprintf("Ok. [%" PRIu64 "] messages have DELETE status.\n", deleted_messages);
 	}
 	if (yes_to_all) {
 		qprintf("\nDeleting messages with DELETE status...\n");
@@ -501,7 +501,7 @@ int do_set_deleted(void)
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%lu] messages need to be set for deletion.\n", messages_set_to_delete);
+		qprintf("Ok. [%" PRIu64 "] messages need to be set for deletion.\n", messages_set_to_delete);
 	}
 	if (yes_to_all) {
 		qprintf("\nSetting DELETE status for deleted messages...\n");
@@ -577,7 +577,7 @@ int do_dangling_aliases(void)
 		dangling = g_list_first(dangling);
 		while (dangling) {
 			count++;
-			g_snprintf(deliver_to, 21, "%lu", *(uint64_t *)dangling->data);
+			g_snprintf(deliver_to, 21, "%" PRIu64 "", *(uint64_t *)dangling->data);
 			qverbosef("Dangling alias [%s] delivers to nonexistent user [%s]\n",
 				(char *)aliases->data, deliver_to);
 			if (yes_to_all) {
@@ -867,7 +867,7 @@ int do_check_iplog(const char *timespec)
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%lu] IP entries are older than [%s].\n",
+		qprintf("Ok. [%" PRIu64 "] IP entries are older than [%s].\n",
 		    log_count, timestring);
 	}
 	if (yes_to_all) {
@@ -903,7 +903,7 @@ int do_check_replycache(const char *timespec)
 			serious_errors = 1;
 			return -1;
 		}
-		qprintf("Ok. [%lu] RC entries are older than [%s].\n",
+		qprintf("Ok. [%" PRIu64 "] RC entries are older than [%s].\n",
 		    log_count, timestring);
 	}
 	if (yes_to_all) {
@@ -1115,7 +1115,7 @@ int do_erase_old(int days, char * mbtrash_name)
 		while(db_result_next(r)) 
 		{
 			uint64_t id = db_result_get_u64(r, 0);
-			qprintf("Deleting message id(%lu)\n", id);
+			qprintf("Deleting message id(%" PRIu64 ")\n", id);
 			db_set_message_status(id,MESSAGE_STATUS_PURGE);
 		}
 	CATCH(SQLException)
@@ -1179,7 +1179,7 @@ int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
 				db_mailbox_seq_update(mailbox_from);
 			}
 			else {
-				qprintf("User(%lu) doesn't has mailbox(%s)\n", user_id, mbtrash_name);
+				qprintf("User(%" PRIu64 ") doesn't has mailbox(%s)\n", user_id, mbtrash_name);
 			}
 		}
 

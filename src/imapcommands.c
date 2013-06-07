@@ -220,7 +220,7 @@ int _ic_logout(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_ANY)) return 1;
 	dbmail_imap_session_set_state(self, CLIENTSTATE_LOGOUT);
-	TRACE(TRACE_NOTICE, "[%p] userid:[%lu]", self, self->userid);
+	TRACE(TRACE_NOTICE, "[%p] userid:[%" PRIu64 "]", self, self->userid);
 	return 2;
 }
 
@@ -369,7 +369,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	/* create missing INBOX for this authenticated user */
 	if ((! mailbox_idnr ) && (strcasecmp(mailbox, "INBOX")==0)) {
 		int err = db_createmailbox("INBOX", self->userid, &mailbox_idnr);
-		TRACE(TRACE_INFO, "[%p] [%d] Auto-creating INBOX for user id [%lu]", 
+		TRACE(TRACE_INFO, "[%p] [%d] Auto-creating INBOX for user id [%" PRIu64 "]", 
 				self, err, self->userid);
 	}
 	
@@ -437,11 +437,11 @@ static void _ic_select_enter(dm_thread_data *D)
 	g_free(flags);
 
 	/* UIDNEXT */
-	dbmail_imap_session_buff_printf(self, "* OK [UIDNEXT %lu] Predicted next UID\r\n",
+	dbmail_imap_session_buff_printf(self, "* OK [UIDNEXT %" PRIu64 "] Predicted next UID\r\n",
 		MailboxState_getUidnext(S));
 	
 	/* UID */
-	dbmail_imap_session_buff_printf(self, "* OK [UIDVALIDITY %lu] UID value\r\n",
+	dbmail_imap_session_buff_printf(self, "* OK [UIDVALIDITY %" PRIu64 "] UID value\r\n",
 		MailboxState_getId(S));
 
 	if (MailboxState_getExists(S)) { 
@@ -451,7 +451,7 @@ static void _ic_select_enter(dm_thread_data *D)
 		uint64_t key = 0, *msn = NULL;
 		g_tree_foreach(info, (GTraverseFunc)mailbox_first_unseen, &key);
 		if ( (key > 0) && (msn = g_tree_lookup(uids, &key)))
-			dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %lu] first unseen message\r\n", *msn);
+			dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %" PRIu64 "] first unseen message\r\n", *msn);
 	}
 
 	if (self->command_type == IMAP_COMM_SELECT) {
@@ -603,8 +603,8 @@ void _ic_delete_enter(dm_thread_data *D)
 			c = db_con_get();
 			TRY
 				db_begin_transaction(c);
-				db_exec(c, "UPDATE %smessages SET status=%d WHERE mailbox_idnr = %lu", DBPFX, MESSAGE_STATUS_PURGE, mailbox_idnr);
-				db_exec(c, "UPDATE %smailboxes SET no_select = 1 WHERE mailbox_idnr = %lu", DBPFX, mailbox_idnr);
+				db_exec(c, "UPDATE %smessages SET status=%d WHERE mailbox_idnr = %" PRIu64 "", DBPFX, MESSAGE_STATUS_PURGE, mailbox_idnr);
+				db_exec(c, "UPDATE %smailboxes SET no_select = 1 WHERE mailbox_idnr = %" PRIu64 "", DBPFX, mailbox_idnr);
 				db_commit_transaction(c);
 			CATCH(SQLException)
 				LOG_SQLERROR;
@@ -742,13 +742,13 @@ void _ic_rename_enter(dm_thread_data *D)
 	if (!parentmboxid) {
 		TRACE(TRACE_DEBUG, "[%p] Destination is a top-level mailbox; not checking right to CREATE.", self);
 	} else {
-		TRACE(TRACE_DEBUG, "[%p] Checking right to CREATE under [%lu]", self, parentmboxid);
+		TRACE(TRACE_DEBUG, "[%p] Checking right to CREATE under [%" PRIu64 "]", self, parentmboxid);
 		if ((result = imap_session_mailbox_check_acl(self, parentmboxid, ACL_RIGHT_CREATE))) {
 			D->status = result;
 			SESSION_RETURN;
 		}
 
-		TRACE(TRACE_DEBUG, "[%p] We have the right to CREATE under [%lu]", self, parentmboxid);
+		TRACE(TRACE_DEBUG, "[%p] We have the right to CREATE under [%" PRIu64 "]", self, parentmboxid);
 	}
 
 	/* check if it is INBOX to be renamed */
@@ -1089,7 +1089,7 @@ static void _ic_status_enter(dm_thread_data *D)
 	if (! db_findmailbox(p_string_str(self->args[0]), self->userid, &id)) {
 		/* create missing INBOX for this authenticated user */
 		if ((! id ) && (MATCH(p_string_str(self->args[0]), "INBOX"))) {
-			TRACE(TRACE_INFO, "[%p] Auto-creating INBOX for user id [%lu]", self, self->userid);
+			TRACE(TRACE_INFO, "[%p] Auto-creating INBOX for user id [%" PRIu64 "]", self, self->userid);
 			db_createmailbox("INBOX", self->userid, &id);
 		}
 		if (! id) {
@@ -1127,9 +1127,9 @@ static void _ic_status_enter(dm_thread_data *D)
 		else if (MATCH(attr, "unseen"))
 			plst = g_list_append_printf(plst,"UNSEEN %u", MailboxState_getUnseen(M));
 		else if (MATCH(attr, "uidnext"))
-			plst = g_list_append_printf(plst,"UIDNEXT %lu", MailboxState_getUidnext(M));
+			plst = g_list_append_printf(plst,"UIDNEXT %" PRIu64 "", MailboxState_getUidnext(M));
 		else if (MATCH(attr, "uidvalidity"))
-			plst = g_list_append_printf(plst,"UIDVALIDITY %lu", MailboxState_getId(M));
+			plst = g_list_append_printf(plst,"UIDVALIDITY %" PRIu64 "", MailboxState_getId(M));
 		else if (MATCH(attr, ")"))
 			break;
 		else {
@@ -1328,7 +1328,7 @@ void _ic_append_enter(dm_thread_data *D)
 	case FALSE:
 		if (flagcount) {
 			if (db_set_msgflag(message_id, flaglist, keywords, IMAPFA_ADD, NULL) < 0)
-				TRACE(TRACE_ERR, "[%p] error setting flags for message [%lu]", self, message_id);
+				TRACE(TRACE_ERR, "[%p] error setting flags for message [%" PRIu64 "]", self, message_id);
 			db_mailbox_seq_update(mboxid);
 		}
 		break;
@@ -1640,7 +1640,7 @@ static void _ic_fetch_enter(dm_thread_data *D)
 			D->status = 1;
 			SESSION_RETURN;
 		}
-		TRACE(TRACE_DEBUG,"[%p] dbmail_imap_session_fetch_parse_args loop idx %lu state %d ",
+		TRACE(TRACE_DEBUG,"[%p] dbmail_imap_session_fetch_parse_args loop idx %" PRIu64 " state %d ",
 				self, self->args_idx, state);
 		self->args_idx++;
 	} while (state > 0);
@@ -1693,7 +1693,7 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 		msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), id);
 
 	if (! msginfo) {
-		TRACE(TRACE_WARNING, "[%p] unable to lookup msginfo struct for [%lu]", self, *id);
+		TRACE(TRACE_WARNING, "[%p] unable to lookup msginfo struct for [%" PRIu64 "]", self, *id);
 		return TRUE;
 	}
 
@@ -1741,9 +1741,9 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 		s = dbmail_imap_plist_as_string(sublist);
 		g_list_destroy(sublist);
 
-		dbmail_imap_session_buff_printf(self,"* %lu FETCH (", *msn);
+		dbmail_imap_session_buff_printf(self,"* %" PRIu64 " FETCH (", *msn);
 		if (self->use_uid)
-			dbmail_imap_session_buff_printf(self, "UID %lu ", *id);
+			dbmail_imap_session_buff_printf(self, "UID %" PRIu64 " ", *id);
 		dbmail_imap_session_buff_printf(self, "FLAGS %s)\r\n", s);
 		g_free(s);
 	}
@@ -2055,7 +2055,7 @@ void send_quota(ImapSession *self, Quota_T quota)
 		usage = usage / 1024;
 		limit = limit / 1024;
 		dbmail_imap_session_buff_printf(self,
-				"* QUOTA \"\" (STORAGE %lu %lu)\r\n",
+				"* QUOTA \"\" (STORAGE %" PRIu64 " %" PRIu64 ")\r\n",
 				usage, limit);
 	}
 }

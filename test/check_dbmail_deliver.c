@@ -337,6 +337,7 @@ START_TEST(test_auth_check_user_ext)
 	int checks = 0;
 	int result;
 	result = auth_check_user_ext("foobar@foobar.org",&uids,&fwds,checks);
+	fail_unless(result >= 0);
 	g_list_destroy(uids);
 	g_list_destroy(fwds);
 }
@@ -578,6 +579,8 @@ START_TEST(test_auth_get_user_aliases)
 	int result;
 	result = auth_user_exists(username, &user_idnr);
 	aliases = auth_get_user_aliases(user_idnr);
+	fail_unless(result >= 0);
+	fail_unless(aliases != NULL);
 //	fail_unless(g_list_length(aliases)>1,"auth_get_user_aliases failed");
 }
 END_TEST

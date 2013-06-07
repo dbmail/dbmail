@@ -138,7 +138,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 			// Following this, dbmail-util -d sets deleted status
 			if (delete_after_dump & 1) {
 				if (db_set_msgflag(*(uint64_t *)ids->data, deleted_flag, NULL, IMAPFA_ADD, NULL) < 0) {
-					qerrorf("Error setting flags for message [%lu]\n", *(uint64_t *)ids->data);
+					qerrorf("Error setting flags for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
 					result = -1;
 				}
 			}
@@ -147,7 +147,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 			// Following this, dbmail-util -p sets purge status
 			if (delete_after_dump & 2) {
 				if (! db_set_message_status(*(uint64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
-					qerrorf("Error setting status for message [%lu]\n", *(uint64_t *)ids->data);
+					qerrorf("Error setting status for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
 					result = -1;
 				}
 			}

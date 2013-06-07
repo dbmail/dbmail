@@ -279,7 +279,7 @@ void MailboxState_addMsginfo(T M, uint64_t uid, MessageInfo *msginfo)
 int MailboxState_removeUid(T M, uint64_t uid)
 {
 	if (! g_tree_remove(M->msginfo, &uid)) {
-		TRACE(TRACE_WARNING,"trying to remove unknown UID [%lu]", uid);
+		TRACE(TRACE_WARNING,"trying to remove unknown UID [%" PRIu64 "]", uid);
 		return DM_EGENERAL;
 	}
 
@@ -329,7 +329,7 @@ unsigned MailboxState_getExists(T M)
 {
 	int real = g_tree_nnodes(M->msginfo);
 	if (real > (int)M->exists) {
-		TRACE(TRACE_DEBUG, "[%lu] exists [%u] -> [%d]",
+		TRACE(TRACE_DEBUG, "[%" PRIu64 "] exists [%u] -> [%d]",
 				M->id, M->exists, real);
 		M->exists = (unsigned)real;
 	}
@@ -681,9 +681,9 @@ void db_getmailbox_seq(T M, Connection_T c)
 		if (! M->name)
 			M->name = p_string_new(M->pool, db_result_get(r, 0));
 		M->seq = db_result_get_u64(r,1);
-		TRACE(TRACE_DEBUG,"id: [%lu] name: [%s] seq [%lu]", M->id, p_string_str(M->name), M->seq);
+		TRACE(TRACE_DEBUG,"id: [%" PRIu64 "] name: [%s] seq [%" PRIu64 "]", M->id, p_string_str(M->name), M->seq);
 	} else {
-		TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%lu]", M->id);
+		TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%" PRIu64 "]", M->id);
 	}
 }
 
@@ -774,7 +774,7 @@ int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 
 	mboxid = MailboxState_getId(M);
 
-	TRACE(TRACE_DEBUG, "checking ACL [%s] for user [%lu] on mailbox [%lu]",
+	TRACE(TRACE_DEBUG, "checking ACL [%s] for user [%" PRIu64 "] on mailbox [%" PRIu64 "]",
 			right_flag, userid, mboxid);
 
 	/* If we don't know who owns the mailbox, look it up. */
@@ -787,7 +787,7 @@ int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 	}
 
 	if (owner_id == userid) {
-		TRACE(TRACE_DEBUG, "mailbox [%lu] is owned by user [%lu], giving all rights",
+		TRACE(TRACE_DEBUG, "mailbox [%" PRIu64 "] is owned by user [%" PRIu64 "], giving all rights",
 				mboxid, userid);
 		return 1;
 	}

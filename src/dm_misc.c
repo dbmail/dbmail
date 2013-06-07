@@ -113,7 +113,7 @@ void create_unique_id(char *target, uint64_t message_idnr)
 {
 	char md5_str[FIELDSIZE];
 	if (message_idnr != 0) {
-		snprintf(target, UID_SIZE, "%lu:%ld", message_idnr, random());
+		snprintf(target, UID_SIZE, "%" PRIu64 ":%ld", message_idnr, random());
 	} else {
 		snprintf(target, UID_SIZE, "%ld", random());
 	}
@@ -1305,7 +1305,7 @@ char *dbmail_imap_astring_as_string(const char *s)
 				p = s;
 			else
 				p = l;
-			r = g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(p), p);
+			r = g_strdup_printf("{%" PRIu64 "}\r\n%s", (uint64_t) strlen(p), p);
 			g_free(t);
 			return r;
 		}
@@ -2390,19 +2390,19 @@ void strip_crlf(char *buffer)
 }
 
 // work around glib allocation bug
-char * dm_base64_decode(const gchar *s, size_t *len)
+char * dm_base64_decode(const gchar *s, uint64_t *len)
 {
-	char *r = NULL, *p = (char *)g_base64_decode((const gchar *)s, len);
-	r = g_strndup(p, *len);
+	char *r = NULL, *p = (char *)g_base64_decode((const gchar *)s, (gsize *)len);
+	r = g_strndup(p, (gsize)*len);
 	g_free(p);
-	TRACE(TRACE_DEBUG,"[%ld:%s]->[%s]", *len, s, r);
+	TRACE(TRACE_DEBUG,"[%" PRIu64 ":%s]->[%s]", *len, s, r);
 	return r;
 }
 
 
-size_t stridx(const char *s, char c)
+uint64_t stridx(const char *s, char c)
 {
-	size_t i;
+	uint64_t i;
 	for (i = 0; s[i] && s[i] != c; i++);
 	return i;
 }

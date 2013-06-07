@@ -55,8 +55,9 @@ END_TEST
 
 START_TEST(test_mempool_pop)
 {
+	int i;
 	Mempool_T M = mempool_open();
-	for (int i = 0; i < 1024; i++) {
+	for (i = 0; i < 1024; i++) {
 		uint64_t *i = mempool_pop(M, sizeof(uint64_t));
 		fail_unless(i != NULL);
 		mempool_push(M, i, sizeof(uint64_t));
@@ -67,6 +68,7 @@ END_TEST
 
 START_TEST(test_mempool_push)
 {
+	int i;
 	struct test_data {
 		void *data;
 		char key[128];
@@ -74,14 +76,14 @@ START_TEST(test_mempool_push)
 	};
 
 	Mempool_T M = mempool_open();
-	for (int i = 0; i < 1024; i++) {
+	for (i = 0; i < 1024; i++) {
 		uint64_t *i = mempool_pop(M, sizeof(uint64_t));
 		fail_unless(i != NULL);
 		mempool_push(M, i, sizeof(*i));
 	}
 
 	struct test_data *data;
-	for (int i = 0; i < 1024; i++) {
+	for (i = 0; i < 1024; i++) {
 		data = mempool_pop(M, sizeof(*data));
 		fail_unless(data != NULL);
 		mempool_push(M, data, sizeof(*data));

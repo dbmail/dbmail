@@ -149,7 +149,7 @@ static char *store_and_retrieve(DbmailMessage *m)
 
 	dbmail_message_store(m);
 	physid = dbmail_message_get_physid(m);
-	fail_unless(physid != 0,"dbmail_message_store failed. physid [%lu]", physid);
+	fail_unless(physid != 0,"dbmail_message_store failed. physid [%" PRIu64 "]", physid);
 	dbmail_message_free(m);
 
 	n = dbmail_message_new(NULL);

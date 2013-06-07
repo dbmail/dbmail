@@ -93,7 +93,7 @@ int dm_sievescript_get(uint64_t user_idnr, char **scriptname)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT name from %ssievescripts where owner_idnr = %lu and active = 1", DBPFX, user_idnr);
+		r = db_query(c, "SELECT name from %ssievescripts where owner_idnr = %" PRIu64 " and active = 1", DBPFX, user_idnr);
 		if (db_result_next(r))
 			 *scriptname = g_strdup(db_result_get(r,0));
 
@@ -113,7 +113,7 @@ int dm_sievescript_list(uint64_t user_idnr, GList **scriptlist)
 
 	c = db_con_get();
 	TRY
-		r = db_query(c,"SELECT name,active FROM %ssievescripts WHERE owner_idnr = %lu", DBPFX,user_idnr);
+		r = db_query(c,"SELECT name,active FROM %ssievescripts WHERE owner_idnr = %" PRIu64 "", DBPFX,user_idnr);
 		while (db_result_next(r)) {
 			sievescript_info *info = g_new0(sievescript_info,1);
 			strncpy(info->name, db_result_get(r,0), sizeof(info->name));   
@@ -305,21 +305,21 @@ int dm_sievescript_delete(uint64_t user_idnr, char *scriptname)
 int dm_sievescript_quota_check(uint64_t user_idnr, uint64_t scriptlen)
 {
 	/* TODO function dm_sievescript_quota_check */
-	TRACE(TRACE_DEBUG, "checking %lu sievescript quota with %lu" , user_idnr, scriptlen);
+	TRACE(TRACE_DEBUG, "checking %" PRIu64 " sievescript quota with %" PRIu64 "" , user_idnr, scriptlen);
 	return DM_SUCCESS;
 }
 
 int dm_sievescript_quota_set(uint64_t user_idnr, uint64_t quotasize)
 {
 	/* TODO function dm_sievescript_quota_set */
-	TRACE(TRACE_DEBUG, "setting %lu sievescript quota with %lu" , user_idnr, quotasize);
+	TRACE(TRACE_DEBUG, "setting %" PRIu64 " sievescript quota with %" PRIu64 "" , user_idnr, quotasize);
 	return DM_SUCCESS;
 }
 
 int dm_sievescript_quota_get(uint64_t user_idnr, uint64_t * quotasize)
 {
 	/* TODO function dm_sievescript_quota_get */
-	TRACE(TRACE_DEBUG, "getting sievescript quota for %lu" , user_idnr);
+	TRACE(TRACE_DEBUG, "getting sievescript quota for %" PRIu64 "" , user_idnr);
 	*quotasize = 0;
 	return DM_SUCCESS;
 }

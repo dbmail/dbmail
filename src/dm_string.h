@@ -27,6 +27,7 @@
 #ifndef DM_STRING_H
 #define DM_STRING_H
 
+#include <stdint.h>
 #include "dm_mempool.h"
 
 typedef struct String_T *String_T;
@@ -39,7 +40,7 @@ extern void            p_string_append_vprintf(String_T, const char *, va_list);
 extern void            p_string_append_len(String_T, const char *, size_t);
 extern String_T        p_string_erase(String_T, size_t, int);
 extern String_T        p_string_truncate(String_T, size_t);
-extern size_t          p_string_len(String_T);
+extern uint64_t        p_string_len(String_T);
 extern const char *    p_string_str(String_T);
 extern void            p_string_unescape(String_T);
 extern char *          p_string_free(String_T, gboolean);

@@ -332,16 +332,16 @@ typedef struct {
 	int service_before_smtp;
 
 	char tls_wbuf[TLS_SEGMENT];	/* buffer to write during tls session */
-	size_t tls_wbuf_n;		/* number of octets to write during tls session */
+	uint64_t tls_wbuf_n;		/* number of octets to write during tls session */
 
-	size_t rbuff_size;              /* size of string-literals */
+	uint64_t rbuff_size;              /* size of string-literals */
 	String_T read_buffer;		/* input buffer */
-	size_t read_buffer_offset;	/* input buffer offset */
+	uint64_t read_buffer_offset;	/* input buffer offset */
 
 	String_T write_buffer;		/* output buffer */
-	size_t write_buffer_offset;	/* output buffer offset */
+	uint64_t write_buffer_offset;	/* output buffer offset */
 
-	size_t len;			/* crlf decoded octets read by last ci_read(ln) call */
+	uint64_t len;			/* crlf decoded octets read by last ci_read(ln) call */
 } ClientBase_T;
 
 struct http_sock {

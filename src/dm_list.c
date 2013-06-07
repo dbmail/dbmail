@@ -218,12 +218,12 @@ GList *g_list_slices_u64(GList *list, unsigned limit)
 	list = g_list_first(list);
 	while(list) {
 		slice = g_string_new("");
-		g_string_append_printf(slice,"%lu",*(uint64_t *)list->data);
+		g_string_append_printf(slice,"%" PRIu64 "",*(uint64_t *)list->data);
 		for (i=1; i<limit; i++) {
 			if (! g_list_next(list)) 
 				break;
 			list = g_list_next(list);
-			g_string_append_printf(slice,",%lu", *(uint64_t *)list->data);
+			g_string_append_printf(slice,",%" PRIu64 "", *(uint64_t *)list->data);
 		}
 		new = g_list_append_printf(new, "%s", slice->str);
 		g_string_free(slice,TRUE);
@@ -282,10 +282,10 @@ GString * g_list_join_u64(GList * list, const gchar * sep)
 		return string;
 	list = g_list_first(list);
 	token = (uint64_t*)list->data;
-	g_string_append_printf(string,"%lu",*token);
+	g_string_append_printf(string,"%" PRIu64 "",*token);
 	while((list = g_list_next(list))) {
 		token = (uint64_t*)list->data;
-		g_string_append_printf(string,"%s%lu", sep,*token);
+		g_string_append_printf(string,"%s%" PRIu64 "", sep,*token);
 		if (! g_list_next(list))
 			break;
 	}
