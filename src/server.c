@@ -803,7 +803,7 @@ int server_run(ServerConfig_T *conf)
 			for (k = i, i = 0; i < conf->ssl_socketcount; i++, k++) {
 				TRACE(TRACE_DEBUG, "Adding event for ssl socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, total);
 				evsock[k] = event_new(evbase, conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, NULL);
-				event_assign(evsock[k], evbase, conf->listenSockets[i], EV_READ, server_sock_cb, evsock[k]);
+				event_assign(evsock[k], evbase, conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, evsock[k]);
 				event_add(evsock[k], NULL);
 			}
 		}
