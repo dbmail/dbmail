@@ -35,6 +35,7 @@
 #define IDLE_TIMEOUT 30
 
 
+
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
@@ -106,7 +107,8 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 
 	self->pool = pool;
 
-	g_mutex_init(&self->lock);
+	pthread_mutex_init(&self->lock, NULL);
+
 	self->state = CLIENTSTATE_NON_AUTHENTICATED;
 	self->args = mempool_pop(self->pool, sizeof(String_T) * MAX_ARGS);
 	self->fi = mempool_pop(self->pool, sizeof(fetch_items));
@@ -230,7 +232,7 @@ void dbmail_imap_session_delete(ImapSession ** s)
 		mempool_push(self->pool, self->fi, sizeof(fetch_items));
 		self->fi = NULL;
 	}
-	g_mutex_clear(&self->lock);
+	pthread_mutex_destroy(&self->lock);
 	pool = self->pool;
 	mempool_push(pool, self, sizeof(ImapSession));
 	self = NULL;
@@ -1645,9 +1647,9 @@ int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 	}
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, self->state, state);
-	g_mutex_lock(&self->lock);
+	SESSION_LOCK(self->lock);
 	self->state = state;
-	g_mutex_unlock(&self->lock);
+	SESSION_UNLOCK(self->lock);
 
 	return 0;
 }

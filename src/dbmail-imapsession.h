@@ -9,6 +9,10 @@
 
 #include "dbmail.h"
 
+#define SESSION_LOCK(a) if (pthread_mutex_lock(&(a))) { perror("pthread_mutex_lock failed"); }
+#define SESSION_UNLOCK(a) if (pthread_mutex_unlock(&(a))) { perror("pthread_mutex_unlock failed"); }
+
+
 // command state during idle command
 #define IDLE -1 
 
@@ -17,7 +21,7 @@ typedef struct cmd_t *cmd_t;
 /* ImapSession definition */
 typedef struct {
 	Mempool_T pool;
-	GMutex lock;
+	pthread_mutex_t lock;
 	ClientBase_T *ci;
 	Capa_T preauth_capa;   // CAPABILITY
 	Capa_T capa;           // CAPABILITY

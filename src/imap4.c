@@ -165,9 +165,9 @@ void socket_write_cb(int fd, short what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	ClientState_T state;
-	g_mutex_lock(&session->lock);
+	SESSION_LOCK(session->lock);
 	state = session->state;
-	g_mutex_unlock(&session->lock);
+	SESSION_UNLOCK(session->lock);
 #ifdef DEBUG
 	TRACE(TRACE_DEBUG,"[%p] on [%d] state [%d] event:%s%s%s%s", session,
 			(int) fd, state,
