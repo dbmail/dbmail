@@ -80,7 +80,7 @@ static const char * Trace_To_text(Trace_T level)
 
 #define SYSLOGFORMAT "%s:[%s] %s(+%d): %s"
 #define STDERRFORMAT "%s %s %s[%d]: [%p] %s:[%s] %s(+%d): %s"
-#define MESSAGESIZE 120
+#define MESSAGESIZE 1024
 
 void trace(Trace_T level, const char * module, const char * function, int line, const char *formatstring, ...)
 {
@@ -131,6 +131,7 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 
 	if (level & TRACE_SYSLOG) {
 		/* Convert our extended log levels (>128) to syslog levels */
+		int limit = 120;
 		switch((int)ilogb((double) level))
 		{
 			case 0:
@@ -164,6 +165,9 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 				syslog_level = LOG_DEBUG;
 				break;
 		}
+		if (limit > MESSAGESIZE)
+			limit = MESSAGESIZE;
+		message[limit - 1] = 0;
 		syslog(syslog_level, SYSLOGFORMAT, Trace_To_text(level), module, function, line, message);
 	}
 
