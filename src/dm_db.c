@@ -1761,7 +1761,7 @@ int db_update_pop(ClientSession_T * session_ptr)
 		while (session_ptr->messagelst) {
 			/* check if they need an update in the database */
 			struct message *msg = (struct message *)p_list_data(session_ptr->messagelst);
-			if (msg->virtual_messagestatus != msg->messagestatus) {
+			if ((msg) && (msg->virtual_messagestatus != msg->messagestatus)) {
 				/* use one message to get the user_idnr that goes with the messages */
 				if (user_idnr == 0) user_idnr = db_get_useridnr(msg->realmessageid);
 

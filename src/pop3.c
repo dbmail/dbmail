@@ -240,7 +240,9 @@ static void pop3_handle_input(void *arg)
 	if (ci_readln(session->ci, buffer) == 0)
 		return;
 
+	ci_cork(session->ci);
 	pop3(session, buffer);
+	ci_uncork(session->ci);
 }
 
 void pop3_cb_write(void *arg)
@@ -512,7 +514,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			/* they're asking for a specific message */
 			while (session->messagelst) {
 				msg = (struct message *)p_list_data(session->messagelst);
-				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
+				if ((msg ) && (msg->messageid == strtoull(value,NULL, 10)) && (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)) {
 					ci_write(ci, "+OK %" PRIu64 " %" PRIu64 "\r\n", msg->messageid,msg->msize);
 					found = 1;
 				}
@@ -533,7 +535,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			/* traversing list */
 			while (session->messagelst) {
 				msg = (struct message *)p_list_data(session->messagelst);
-				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
+				if ((msg) && (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE))
 					ci_write(ci, "%" PRIu64 " %" PRIu64 "\r\n", msg->messageid,msg->msize);
 				if (! p_list_next(session->messagelst))
 					break;
@@ -566,7 +568,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 		
 		while (session->messagelst) {
 			msg = (struct message *)p_list_data(session->messagelst);
-			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
+			if ((msg) && (msg->messageid == strtoull(value, NULL, 10)) && (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)) {	/* message is not deleted */
 				char *s = NULL;
 				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
 				if (! (s = db_get_message_lines(msg->realmessageid, -2)))
@@ -591,7 +593,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 		/* selecting a message */
 		while (session->messagelst) {
 			msg = (struct message *)p_list_data(session->messagelst);
-			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
+			if ((msg) && (msg->messageid == strtoull(value, NULL, 10)) && (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)) {	/* message is not deleted */
 				msg->virtual_messagestatus = MESSAGE_STATUS_DELETE;
 				session->virtual_totalsize -= msg->msize;
 				session->virtual_totalmessages -= 1;
@@ -616,7 +618,8 @@ int pop3(ClientSession_T *session, const char *buffer)
 
 		while (session->messagelst) {
 			msg = (struct message *)p_list_data(session->messagelst);
-			msg->virtual_messagestatus = msg->messagestatus;
+			if (msg) 
+				msg->virtual_messagestatus = msg->messagestatus;
 
 			if (! p_list_next(session->messagelst))
 				break;
@@ -635,7 +638,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 
 		while (session->messagelst) {
 			msg = (struct message *)p_list_data(session->messagelst);
-			if (msg->virtual_messagestatus == MESSAGE_STATUS_NEW) {
+			if ((msg) && (msg->virtual_messagestatus == MESSAGE_STATUS_NEW)) {
 				/* we need the last message that has been accessed */
 				ci_write(ci, "+OK %" PRIu64 "\r\n", msg->messageid - 1);
 				return 1;
@@ -667,7 +670,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			/* they're asking for a specific message */
 			while (session->messagelst) {
 				msg = (struct message *)p_list_data(session->messagelst);
-				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
+				if ((msg) && (msg->messageid == strtoull(value,NULL, 10)) && (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)) {
 					ci_write(ci, "+OK %" PRIu64 " %s\r\n", msg->messageid,msg->uidl);
 					found = 1;
 				}
@@ -689,7 +692,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 			/* traversing list */
 			while (session->messagelst) {
 				msg = (struct message *)p_list_data(session->messagelst); 
-				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
+				if (msg && (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE))
 					ci_write(ci, "%" PRIu64 " %s\r\n", msg->messageid, msg->uidl);
 
 				if (! p_list_next(session->messagelst))
@@ -819,7 +822,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 
 		while (session->messagelst) {
 			msg = (struct message *)p_list_data(session->messagelst);
-			if (msg->messageid == top_messageid && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
+			if ((msg) && (msg->messageid == top_messageid) && (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)) {	/* message is not deleted */
 				char *s = NULL; size_t i;
 				if (! (s = db_get_message_lines(msg->realmessageid, top_lines)))
 					return -1;
