@@ -103,7 +103,10 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	ImapSession * self;
 	self = mempool_pop(pool, sizeof(ImapSession));
 
-	self->buff = p_string_new(queue_pool, "");
+	if (! queue_pool)
+		self->buff = p_string_new(pool, "");
+	else
+		self->buff = p_string_new(queue_pool, "");
 
 	self->pool = pool;
 
@@ -1230,7 +1233,10 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 
 	gpointer session = self;
 	gpointer data = self->buff;
-	self->buff = p_string_new(queue_pool, "");
+	if (! queue_pool)
+		self->buff = p_string_new(self->pool, "");
+	else
+		self->buff = p_string_new(queue_pool, "");
 
 	dm_queue_push(dm_thread_data_sendmessage, session, data);
 }
