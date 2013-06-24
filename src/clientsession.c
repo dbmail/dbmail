@@ -138,6 +138,7 @@ void client_session_bailout(ClientSession_T **session)
 	List_T messagelst = NULL;
 
 	if (! c) return;
+
 	TRACE(TRACE_DEBUG,"[%p]", c);
 	// brute force:
 	if (server_conf->no_daemonize == 1) _exit(0);
@@ -212,26 +213,28 @@ void client_session_bailout(ClientSession_T **session)
 
 void client_session_read(void *arg)
 {
-	int state;
 	ClientSession_T *session = (ClientSession_T *)arg;
 	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 	ci_read_cb(session->ci);
-		
-	state = session->ci->client_state;
+
+	uint64_t have = p_string_len(session->ci->read_buffer);
+	uint64_t need = session->ci->rbuff_size;
+
+	int enough = (need>0?(have >= need):(have > 0));
+	int state = session->ci->client_state;
+
 	if (state & CLIENT_ERR) {
 		TRACE(TRACE_DEBUG,"client_state ERROR");
 		client_session_bailout(&session);
 	} else if (state & CLIENT_EOF) {
-		TRACE(TRACE_NOTICE,"reached EOF");
-		event_del(session->ci->rev);
-		if (p_string_len(session->ci->read_buffer) < 1)
-			client_session_bailout(&session);
-		else 
+		ci_cork(session->ci);
+		if (enough)
 			session->handle_input(session);
+		else 
+			client_session_bailout(&session);
 	}
-	else if (state & CLIENT_OK || state & CLIENT_AGAIN) {
+	else if (have > 0)
 		session->handle_input(session);
-	}
 }
 
 void client_session_set_timeout(ClientSession_T *session, int timeout)
