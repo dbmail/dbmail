@@ -595,35 +595,34 @@ static void db_getmailbox_count(T M, Connection_T c)
 {
 	ResultSet_T r; 
 	PreparedStatement_T stmt;
-	unsigned result[4];
+	unsigned result[3];
 
-	result[0] = result[1] = result[2] = result[3] = 0;
+	result[0] = result[1] = result[2] = 0;
 
 	g_return_if_fail(M->id);
 
 	/* count messages */
 	stmt = db_stmt_prepare(c,
-			"SELECT CASE "
-			"WHEN seen_flag+recent_flag = 0 THEN 0 " // unseen, not recent
-			"WHEN seen_flag+recent_flag = 2 THEN 1 " // seen, recent
-			"WHEN seen_flag = 1 THEN 2 "             // seen
-			"WHEN recent_flag = 1 THEN 3 "           // recent
-			"END AS flag, COUNT(*) "
-		       	"FROM %smessages WHERE "
-			"mailbox_idnr=? AND (status < %d) "
-		       	"GROUP BY seen_flag, recent_flag",
-			DBPFX, MESSAGE_STATUS_DELETE);
+			"SELECT "
+			"SUM( CASE WHEN seen_flag = 0 THEN 1 ELSE 0 END) AS unseen, "
+			"SUM( CASE WHEN seen_flag = 1 THEN 1 ELSE 0 END) AS seen, "
+			"SUM( CASE WHEN recent_flag = 1 THEN 1 ELSE 0 END) AS recent "
+			"FROM %smessages WHERE mailbox_idnr=? AND status IN (%d,%d)",
+			DBPFX, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	db_stmt_set_u64(stmt, 1, M->id);
 
 	r = db_stmt_query(stmt);
 
-	while (db_result_next(r))
-		result[db_result_get_int(r,0)] += (unsigned)db_result_get_int(r,1);
+	if (db_result_next(r)) {
+		result[0] = (unsigned)db_result_get_int(r,0); // unseen
+		result[1] = (unsigned)db_result_get_int(r,1); // seen
+		result[2] = (unsigned)db_result_get_int(r,2); // recent
+	}
 
-	M->exists = result[0] + result[1] + result[2] + result[3];
-	M->unseen = M->exists - result[1] - result[2];
-	M->recent = result[1] + result[3];
+	M->exists = result[0] + result[1];
+	M->unseen = result[0];
+	M->recent = result[2];
  
 	TRACE(TRACE_DEBUG, "exists [%d] unseen [%d] recent [%d]", M->exists, M->unseen, M->recent);
 	/* now determine the next message UID 
