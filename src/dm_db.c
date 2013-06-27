@@ -241,8 +241,8 @@ int db_disconnect(void)
 
 Connection_T db_con_get(void)
 {
-	int i=0, k=0; Connection_T c;
-	while (i++<30) {
+	int i=0, k=0; Connection_T c = NULL;
+	while (! c) {
 		c = ConnectionPool_getConnection(pool);
 		if (c) break;
 		if((int)(i % 5)==0) {
@@ -251,16 +251,9 @@ Connection_T db_con_get(void)
 			TRACE(TRACE_INFO, "Database reaper closed [%d] stale connections", k);
 		}
 		sleep(1);
-	}
-	if (! c) {
-		TRACE(TRACE_EMERG,"[%p] can't get a database connection from the pool! max [%d] size [%d] active [%d]", 
-			pool,
-			ConnectionPool_getMaxConnections(pool),
-			ConnectionPool_size(pool),
-			ConnectionPool_active(pool));
+		i++;
 	}
 
-	assert(c);
 	Connection_setQueryTimeout(c, (int)db_params.query_timeout);
 	TRACE(TRACE_DATABASE,"[%p] connection from pool", c);
 	return c;

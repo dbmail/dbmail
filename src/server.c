@@ -974,11 +974,20 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	config_free();
 	config_read(configFile);
 
+	GetDBParams();
 	SetTraceLevel(service);
 	/* Override SetTraceLevel. */
 	if (config->log_verbose) {
 		configure_debug(5,5);
 	}
+
+	config_get_value("max_db_connections", service, val);
+	if (strlen(val) != 0) {
+		db_params.max_db_connections = (unsigned int) strtol(val, NULL, 10);
+		if (errno == EINVAL || errno == ERANGE)
+			TRACE(TRACE_EMERG, "max_db_connnections invalid in config file");
+	} 
+	TRACE(TRACE_DEBUG, "max_db_connections [%d]", db_params.max_db_connections);
 
 	config_get_logfiles(config, service);
 
@@ -1140,7 +1149,6 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 
 	strncpy(config->service_name, service, FIELDSIZE);
 
-	GetDBParams();
 }
 
 
