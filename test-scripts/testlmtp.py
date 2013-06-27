@@ -1,5 +1,11 @@
 #!/usr/bin/python
 
+# default host
+HOST = "localhost"
+
+# default port
+PORT = 10024
+
 # default number of concurrent lmtp clients to create
 CLIENTS = 20
 
@@ -56,7 +62,7 @@ class LMTPClient:
 def frontloader(*args):
     tid = args[0]
     tlocks[tid].acquire()
-    c = LMTPClient('localhost', 10024)
+    c = LMTPClient(HOST, PORT)
     r = c.lhlo('host')
     assert(r[0] == 250)
     mb = mailbox.mbox(MAILBOX, factory=None, create=False)
@@ -67,7 +73,7 @@ def frontloader(*args):
             c.send(addr, USERNAME, msg.as_string())
             if not i % RECONNECT:
                 c.quit()
-                c = LMTPClient('localhost', 10024)
+                c = LMTPClient(HOST, PORT)
                 c.lhlo('host')
                 sys.stdout.write('_')
             else:
@@ -83,18 +89,24 @@ def frontloader(*args):
 if __name__ == '__main__':
 
     parser = OptionParser()
+    parser.add_option("-H", "--host", dest="HOST",
+                      help="Hostname to connect to [default: %default]",
+                      default=HOST)
+    parser.add_option("-P", "--port", dest="PORT",
+                      help="Port to connect to [default: %default]",
+                      default=PORT)
     parser.add_option("-c", "--clients", dest="CLIENTS",
-        help="Number of concurrent clients [default: %default]",
+                      help="Number of concurrent clients [default: %default]",
                       default=CLIENTS)
     parser.add_option("-m", "--mailbox", dest="MAILBOX",
-        help="mailbox to feed to LMTP [default: %default]",
+                      help="mailbox to feed to LMTP [default: %default]",
                       default=MAILBOX)
     parser.add_option("-n", "--messages", dest="MESSAGES",
                       default=MESSAGES,
-        help="number of messsages clients sends [default: %default]")
+                      help="number of messsages clients sends [default: %default]")
     parser.add_option("-u", "--username", dest="USERNAME",
                       default=USERNAME,
-        help="deliver to username [default: %default]")
+                      help="deliver to username [default: %default]")
     parser.add_option("-r", "--reconnect", dest="RECONNECT",
                       default=RECONNECT,
                       help="Number of messages to send before " \
@@ -102,6 +114,8 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
 
+    HOST = options.HOST
+    PORT = int(options.PORT)
     CLIENTS = int(options.CLIENTS)
     MESSAGES = int(options.MESSAGES)
     MAILBOX = options.MAILBOX
@@ -112,6 +126,7 @@ if __name__ == '__main__':
     for i in range(0, CLIENTS):
         tlocks[i] = thread.allocate_lock()
 
+    print "Connect to LMTP server: %s:%d" % (HOST, PORT)
     print "Starting %d clients" % CLIENTS
     print "Deliver %d messages per client to %s" % (MESSAGES, USERNAME)
     print "Use messages from %s" % MAILBOX
