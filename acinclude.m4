@@ -42,12 +42,12 @@ else
 	DM_LOGDIR="$logdirname"
 fi
 if test "x$localstatedir" = 'x${prefix}/var'; then
-	DM_STATEDIR='/var/run'
+	DM_STATEDIR="${ac_default_prefix}/var/run"
 else
 	DM_STATEDIR=$localstatedir
 fi
 if test "x$sysconfdir" = 'x${prefix}/etc'; then
-	DM_CONFDIR='/etc'
+	DM_CONFDIR="${ac_default_prefix}/etc"
 else
 	DM_CONFDIR=$sysconfdir
 fi
@@ -276,7 +276,7 @@ AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 		[lookforjemalloc="$withval"],[lookforjemalloc="auto"])
 	if test [ "x$lookforjemalloc" != "xno" ] ; then
 		if test [ "x$lookforjemalloc" = "xauto" ] ; then 
-			CFLAGS="$CFLAGS -I${prefix}/include/jemalloc"
+			CFLAGS="$CFLAGS -I${ac_default_prefix}/include/jemalloc -I/usr/include/jemalloc"
 		else
 			CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
 		fi
@@ -298,7 +298,7 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 	AC_ARG_WITH(zdb,[  --with-zdb=PATH	  path to libzdb base directory (e.g. /usr/local or /usr)],
 		[lookforzdb="$withval"],[lookforzdb="no"])
 	if test [ "x$lookforzdb" = "xno" ] ; then
-		CFLAGS="$CFLAGS -I${prefix}/include/zdb"
+		CFLAGS="$CFLAGS -I${ac_default_prefix}/include/zdb -I/usr/include/zdb"
 	else
 		CFLAGS="$CFLAGS -I${lookforzdb}/include/zdb"
 	fi
