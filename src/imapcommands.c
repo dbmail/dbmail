@@ -220,7 +220,8 @@ int _ic_logout(ImapSession *self)
 {
 	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_ANY)) return 1;
 	dbmail_imap_session_set_state(self, CLIENTSTATE_LOGOUT);
-	TRACE(TRACE_NOTICE, "[%p] userid:[%" PRIu64 "]", self, self->userid);
+	if (self->userid)
+		TRACE(TRACE_NOTICE, "[%p] userid:[%" PRIu64 "]", self, self->userid);
 	return 2;
 }
 
