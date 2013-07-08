@@ -70,23 +70,25 @@ static void send_data(ImapSession *self, GMimeStream *stream, int cnt)
 	while (cnt >= SEND_BUF_SIZE) {
 		memset(buf,0,sizeof(buf));
 		l = g_mime_stream_read(stream, buf, SEND_BUF_SIZE-1);
-		if (l > 0)
+		if (l > 0) {
 			dbmail_imap_session_buff_printf(self, "%s", buf);
-		cnt -= l;
-		got += l;
+			cnt -= l;
+			got += l;
+		}
 	}
 
 	if (cnt > 0) {
 		memset(buf,0,sizeof(buf));
 		l = g_mime_stream_read(stream, buf, cnt);
-		if (l > 0) 
+		if (l > 0) {
 			dbmail_imap_session_buff_printf(self, "%s", buf);
-		cnt -= l;
-		got += l;
+			cnt -= l;
+			got += l;
+		}
 	}
 	assert(got == want);
 	if (got != want) 
-		TRACE(TRACE_EMERG,"[%p] want [%d] <> got [%d]", self, want, got);
+		TRACE(TRACE_WARNING,"[%p] want [%d] <> got [%d]", self, want, got);
 }
 
 static void mailboxstate_destroy(MailboxState_T M)
