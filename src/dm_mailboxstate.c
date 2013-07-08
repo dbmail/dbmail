@@ -943,6 +943,10 @@ int MailboxState_flush_recent(T M)
 
 	g_list_free(g_list_first(recent));
 
+	g_tree_foreach(M->recent_queue, (GTraverseFunc)_free_recent_queue, M);
+	g_tree_destroy(M->recent_queue);
+	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
+
 	if ( (M) && (MailboxState_getId(M)) )
 		db_mailbox_seq_update(MailboxState_getId(M));
 
