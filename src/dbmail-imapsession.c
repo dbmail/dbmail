@@ -63,7 +63,7 @@ extern ServerConfig_T *server_conf;
 static void send_data(ImapSession *self, GMimeStream *stream, int cnt)
 {
 	char buf[SEND_BUF_SIZE];
-	size_t l;
+	ssize_t l;
 	int got = 0, want = cnt;
 	int serr = 0;
 	int loop = LOOPMAX;
