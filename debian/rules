@@ -8,7 +8,7 @@
 export WITH_LDAP=--with-ldap
 export WITH_SIEVE=--with-sieve
 export SHARED=--enable-shared=yes
-export SHARED=--enable-static=no
+export STATIC=--enable-static=no
 export MANPAGES=--enable-manpages=yes
 export REAL_CLEAN=
 
