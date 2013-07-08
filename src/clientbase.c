@@ -158,30 +158,32 @@ ClientBase_T * client_init(client_sock *c)
 		client->tx		= STDOUT_FILENO;
 	} else {
 		/* server-side */
-		TRACE(TRACE_DEBUG,"saddr [%p] sa_family [%d] len [%d]", c->saddr, c->saddr->sa_family, c->saddr_len);
 		if ((serr = getnameinfo(c->saddr, c->saddr_len, client->dst_ip, NI_MAXHOST, client->dst_port, NI_MAXSERV, 
 						NI_NUMERICHOST | NI_NUMERICSERV))) {
 			TRACE(TRACE_INFO, "getnameinfo::error [%s]", gai_strerror(serr));
 		}
-		TRACE(TRACE_NOTICE, "incoming connection on [%s:%s]", client->dst_ip, client->dst_port);
 
 		/* client-side */
-		TRACE(TRACE_DEBUG,"caddr [%p] sa_family [%d] len [%d]", c->caddr, c->caddr->sa_family, c->caddr_len);
-		if ((serr = getnameinfo(c->caddr, c->caddr_len, client->src_ip, NI_MAXHOST, client->src_port, NI_MAXSERV,
-						NI_NUMERICHOST | NI_NUMERICSERV))) {
-			TRACE(TRACE_EMERG, "getnameinfo:error [%s]", gai_strerror(serr));
-		} 
-
 		if (server_conf->resolveIP) {
-			if ((serr = getnameinfo(c->caddr, c->caddr_len, client->clientname, NI_MAXHOST, NULL, 0, NI_NAMEREQD))) {
+			if ((serr = getnameinfo(c->caddr, c->caddr_len, client->clientname, NI_MAXHOST, NULL, 0,
+						       	NI_NAMEREQD))) {
 				TRACE(TRACE_INFO, "getnameinfo:error [%s]", gai_strerror(serr));
 			} 
 
-			TRACE(TRACE_NOTICE, "incoming connection from [%s:%s (%s)]",
+			TRACE(TRACE_NOTICE, "incoming connection on [%s:%s] from [%s:%s (%s)]",
+					client->dst_ip, client->dst_port,
 					client->src_ip, client->src_port,
 					client->clientname[0] ? client->clientname : "Lookup failed");
 		} else {
-			TRACE(TRACE_NOTICE, "incoming connection from [%s:%s]", client->src_ip, client->src_port);
+
+			if ((serr = getnameinfo(c->caddr, c->caddr_len, client->src_ip, NI_MAXHOST, client->src_port,
+						       	NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV))) {
+				TRACE(TRACE_INFO, "getnameinfo:error [%s]", gai_strerror(serr));
+			} 
+
+			TRACE(TRACE_NOTICE, "incoming connection on [%s:%s] from [%s:%s]", 
+					client->dst_ip, client->dst_port,
+					client->src_ip, client->src_port);
 		}
 
 		/* make streams */
