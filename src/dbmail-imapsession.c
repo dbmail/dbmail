@@ -59,34 +59,48 @@ extern ServerConfig_T *server_conf;
  * sends cnt bytes from a MEM structure to a FILE stream
  * uses a simple buffering system
  */
+#define LOOPMAX 10
 static void send_data(ImapSession *self, GMimeStream *stream, int cnt)
 {
 	char buf[SEND_BUF_SIZE];
 	size_t l;
 	int got = 0, want = cnt;
+	int serr = 0;
+	int loop = LOOPMAX;
 
 	assert(stream);
 	TRACE(TRACE_DEBUG,"[%p] stream [%p] cnt [%d]", self, stream, cnt);
-	while (cnt >= SEND_BUF_SIZE) {
+	while ((cnt >= SEND_BUF_SIZE) && (loop > 0)) {
 		memset(buf,0,sizeof(buf));
 		l = g_mime_stream_read(stream, buf, SEND_BUF_SIZE-1);
 		if (l > 0) {
+			loop = LOOPMAX;
 			dbmail_imap_session_buff_printf(self, "%s", buf);
 			cnt -= l;
 			got += l;
+		}
+		if (l < 0) {
+			serr = errno;
+			TRACE(TRACE_INFO,"failed to read from stream [%s]", strerror(serr));
+			loop--;
 		}
 	}
 
-	if (cnt > 0) {
+	while ((cnt > 0) && (loop > 0)) {
 		memset(buf,0,sizeof(buf));
 		l = g_mime_stream_read(stream, buf, cnt);
 		if (l > 0) {
+			loop = LOOPMAX;
 			dbmail_imap_session_buff_printf(self, "%s", buf);
 			cnt -= l;
 			got += l;
 		}
+		if (l < 0) {
+			serr = errno;
+			TRACE(TRACE_INFO,"failed to read from stream [%s]", strerror(serr));
+			loop--;
+		}
 	}
-	assert(got == want);
 	if (got != want) 
 		TRACE(TRACE_WARNING,"[%p] want [%d] <> got [%d]", self, want, got);
 }
