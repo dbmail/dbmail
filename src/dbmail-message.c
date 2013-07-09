@@ -734,14 +734,24 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 {
 	GMimeObject *content;
 	GMimeParser *parser;
+	FILE *tempfile;
 #define FROMLINE 80
 	char from[FROMLINE];
 	size_t buflen = strlen(str);
 
 	assert(self->content == NULL);
 
-	self->stream = g_mime_stream_file_new(tmpfile());
-	//self->stream = g_mime_stream_mem_new();
+	if (!(tempfile = tmpfile())) {
+		int serr = errno;
+		TRACE(TRACE_INFO, "unable to create temp file: %s",
+				strerror(serr));
+
+		TRACE(TRACE_INFO, "fall back to memory stream");
+		self->stream = g_mime_stream_mem_new();
+	} else {
+		self->stream = g_mime_stream_file_new(tempfile);
+	}
+
 	g_mime_stream_write(self->stream, str, buflen);
 	g_mime_stream_reset(self->stream);
 
@@ -1546,7 +1556,6 @@ static gboolean _header_insert(uint64_t physmessage_id, uint64_t headername_id, 
 		db_stmt_exec(s);
 		db_commit_transaction(c);
 	CATCH(SQLException)
-		LOG_SQLERROR;
 		db_rollback_transaction(c);
 		t = FALSE;
 	FINALLY
