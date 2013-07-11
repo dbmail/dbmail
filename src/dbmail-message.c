@@ -2216,7 +2216,7 @@ int send_mail(DbmailMessage *message,
 	char *sendmail_command = NULL;
 	Field_T sendmail, postmaster;
 	int result;
-	char buf[FIELDSIZE];
+	char *buf;
 
 	if (!from || strlen(from) < 1) {
 		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
@@ -2276,12 +2276,9 @@ int send_mail(DbmailMessage *message,
 			fprintf(mailpipe, "%s\n", preoutput);
 		// fall-through
 	case SENDMESSAGE:
-		g_mime_stream_reset(message->stream);
-		memset(buf, 0, sizeof(buf));
-		while (g_mime_stream_read(message->stream, buf, FIELDSIZE-1) > 0) {
-			fprintf(mailpipe, "%s", buf);
-			memset(buf, 0, sizeof(buf));
-		}
+		buf = dbmail_message_to_string(message);
+		fprintf(mailpipe, "%s", buf);
+		g_free(buf);
 		break;
 	default:
 		TRACE(TRACE_ERR, "invalid sendwhat in call to send_mail: [%d]", sendwhat);
