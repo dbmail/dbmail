@@ -54,6 +54,7 @@ ClientSession_T * client_session_new(client_sock *c)
 	assert(evbase);
         ci->rev = event_new(evbase, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
         ci->wev = event_new(evbase, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
+	ci_cork(ci);
 
 	session->ci = ci;
 	session->rbuff = p_string_new(session->pool, "");
