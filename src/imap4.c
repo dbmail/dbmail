@@ -545,6 +545,7 @@ static void reset_callbacks(ImapSession *session)
 
 	UNBLOCK(session->ci->rx);
 	UNBLOCK(session->ci->tx);
+	ci_uncork(session->ci);
 }
 
 int imap_handle_connection(client_sock *c)
@@ -555,19 +556,19 @@ int imap_handle_connection(client_sock *c)
 	ci = client_init(c);
 
 	session = dbmail_imap_session_new(c->pool);
-	session->ci = ci;
 
 	assert(evbase);
 	ci->rev = event_new(evbase, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
 	ci->wev = event_new(evbase, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
+	ci_cork(ci);
 
+	session->ci = ci;
 	if ((! server_conf->ssl) || (ci->sock->ssl_state == TRUE)) 
 		Capa_remove(session->capa, "STARTTLS");
 
 	send_greeting(session);
 
 	reset_callbacks(session);
-	ci_uncork(session->ci);
 
 	return EOF;
 }
