@@ -53,6 +53,11 @@ class POPClient:
         self.conn.user(USERNAME)
         self.conn.pass_(PASSWORD)
 
+    def check(self):
+        self.conn.stat()
+        self.conn.list()
+        self.conn.uidl()
+
     def fetch(self):
         count, size = self.conn.stat()
         which = int(random.random() * count) + 1
@@ -84,6 +89,7 @@ def frontloader(*args):
     c = POPClient('localhost', 10110)
     i = 1
     while i < MESSAGES:
+        c.check()
         c.fetch()
         if not i % RECONNECT:
             c.logout()
