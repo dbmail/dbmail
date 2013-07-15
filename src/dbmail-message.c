@@ -734,24 +734,13 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 {
 	GMimeObject *content;
 	GMimeParser *parser;
-	FILE *tempfile;
 #define FROMLINE 80
 	char from[FROMLINE];
 	size_t buflen = strlen(str);
 
 	assert(self->content == NULL);
 
-	if (!(tempfile = tmpfile())) {
-		int serr = errno;
-		TRACE(TRACE_INFO, "unable to create temp file: %s",
-				strerror(serr));
-
-		TRACE(TRACE_INFO, "fall back to memory stream");
-		self->stream = g_mime_stream_mem_new();
-	} else {
-		self->stream = g_mime_stream_file_new(tempfile);
-	}
-
+	self->stream = g_mime_stream_mem_new();
 	g_mime_stream_write(self->stream, str, buflen);
 	g_mime_stream_reset(self->stream);
 
