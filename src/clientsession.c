@@ -32,18 +32,23 @@ extern struct event_base *evbase;
 ClientSession_T * client_session_new(client_sock *c)
 {
 	ClientBase_T *ci;
+	Mempool_T pool = c->pool;
 
 	char unique_id[UID_SIZE];
-
-	ClientSession_T * session = mempool_pop(c->pool, sizeof(ClientSession_T));
-	session->pool = c->pool;
 
 	if (c)
 		ci = client_init(c);
 	else
 		ci = client_init(NULL);
 
+	ClientSession_T * session = mempool_pop(pool, sizeof(ClientSession_T));
+
 	session->state = CLIENTSTATE_INITIAL_CONNECT;
+	session->pool = pool;
+	session->args = p_list_new(pool);
+	session->from = p_list_new(pool);
+	session->rbuff = p_string_new(pool, "");
+	session->messagelst = p_list_new(pool);
 
 	gethostname(session->hostname, sizeof(session->hostname));
 
@@ -57,10 +62,6 @@ ClientSession_T * client_session_new(client_sock *c)
 	ci_cork(ci);
 
 	session->ci = ci;
-	session->rbuff = p_string_new(session->pool, "");
-	session->messagelst = p_list_new(session->pool);
-	session->args = p_list_new(session->pool);
-	session->from = p_list_new(session->pool);
 
 	return session;
 }
@@ -138,7 +139,7 @@ void client_session_bailout(ClientSession_T **session)
 	List_T rcpt = NULL;
 	List_T messagelst = NULL;
 
-	if (! c) return;
+	assert(c);
 
 	ci_cork(c->ci);
 
@@ -147,7 +148,7 @@ void client_session_bailout(ClientSession_T **session)
 	if (server_conf->no_daemonize == 1) _exit(0);
 
 	client_session_reset(c);
-	c->state = CLIENTSTATE_ANY;
+	c->state = CLIENTSTATE_QUIT_QUEUED;
 	ci_close(c->ci);
 
 	p_string_free(c->rbuff, TRUE);
@@ -212,12 +213,12 @@ void client_session_bailout(ClientSession_T **session)
 	pool = c->pool;
 	mempool_push(pool, c, sizeof(ClientSession_T));
 	mempool_close(&pool);
+	c = NULL;
 }
 
 void client_session_read(void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
 	ci_read_cb(session->ci);
 
 	uint64_t have = p_string_len(session->ci->read_buffer);
@@ -242,14 +243,9 @@ void client_session_read(void *arg)
 
 void client_session_set_timeout(ClientSession_T *session, int timeout)
 {
-	if (session && (session->state > CLIENTSTATE_ANY) && session->ci && session->ci->timeout) {
-		int current = session->ci->timeout->tv_sec;
-		if (timeout != current) {
-			ci_cork(session->ci);
-			session->ci->timeout->tv_sec = timeout;
-			ci_uncork(session->ci);
-		}
-	}
+	int current = session->ci->timeout->tv_sec;
+	if (timeout != current)
+		session->ci->timeout->tv_sec = timeout;
 }
 
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
@@ -264,16 +260,20 @@ void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	TRACE(TRACE_DEBUG,"[%p] state: [%d]", session, session->state);
 
-	if (session->ci->cb_write)
-		session->ci->cb_write(session);
+	if (session->state == CLIENTSTATE_QUIT_QUEUED)
+		return;
+
+	if (! session->ci->cb_write)
+		return;
+
+	session->ci->cb_write(session);
 
 	switch(session->state) {
 		case CLIENTSTATE_INITIAL_CONNECT:
 		case CLIENTSTATE_NON_AUTHENTICATED:
-			TRACE(TRACE_DEBUG,"reset timeout [%d]", server_conf->login_timeout);
-			client_session_set_timeout(session, server_conf->login_timeout);
+			//TRACE(TRACE_DEBUG,"reset timeout [%d]", server_conf->login_timeout);
+			//client_session_set_timeout(session, server_conf->login_timeout);
 			break;
 
 		case CLIENTSTATE_AUTHENTICATED:
@@ -282,14 +282,15 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 			client_session_set_timeout(session, server_conf->timeout);
 			break;
 
-		default:
-		case CLIENTSTATE_ANY:
-			break;
-
 		case CLIENTSTATE_LOGOUT:
 		case CLIENTSTATE_QUIT:
 		case CLIENTSTATE_ERROR:
 			client_session_bailout(&session);
+			break;
+
+		default:
+		case CLIENTSTATE_ANY:
+		case CLIENTSTATE_QUIT_QUEUED:
 			break;
 
 

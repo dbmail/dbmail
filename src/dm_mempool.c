@@ -24,8 +24,6 @@
 #define THIS_MODULE "mempool"
 
 #define M Mempool_T
-#define POOL_LOCK(a) if (pthread_mutex_lock(&(a))) { perror("pthread_mutex_lock failed"); }
-#define POOL_UNLOCK(a) if (pthread_mutex_unlock(&(a))) { perror("pthread_mutex_unlock failed"); }
 
 #define fail_unless(a) assert(a)
 
@@ -68,9 +66,9 @@ M mempool_open(void)
 void * mempool_pop(M MP, size_t blocksize)
 {
 	int error;
-	POOL_LOCK(MP->lock);
+	PLOCK(MP->lock);
 	void *block = mpool_calloc(MP->pool, 1, blocksize, &error);
-	POOL_UNLOCK(MP->lock);
+	PUNLOCK(MP->lock);
 	if (error != MPOOL_ERROR_NONE)
 		TRACE(TRACE_ERR, "%s", mpool_strerror(error));
 	return block;
@@ -79,9 +77,9 @@ void * mempool_pop(M MP, size_t blocksize)
 void * mempool_resize(M MP, void *block, size_t oldsize, size_t newsize)
 {
 	int error;
-	POOL_LOCK(MP->lock);
+	PLOCK(MP->lock);
 	void *newblock = mpool_resize(MP->pool, block, oldsize, newsize, &error);
-	POOL_UNLOCK(MP->lock);
+	PUNLOCK(MP->lock);
 	if (error != MPOOL_ERROR_NONE)
 		TRACE(TRACE_ERR, "%s", mpool_strerror(error));
 	assert (error == MPOOL_ERROR_NONE);
@@ -91,12 +89,12 @@ void * mempool_resize(M MP, void *block, size_t oldsize, size_t newsize)
 void mempool_push(M MP, void *block, size_t blocksize)
 {
 	int error;
-	POOL_LOCK(MP->lock);
+	PLOCK(MP->lock);
 	if ((error = mpool_free(MP->pool, block, blocksize)) != MPOOL_ERROR_NONE)
 		TRACE(TRACE_ERR, "%s", mpool_strerror(error));
 
 	fail_unless(error == MPOOL_ERROR_NONE);
-	POOL_UNLOCK(MP->lock);
+	PUNLOCK(MP->lock);
 }
 
 void mempool_stats(M MP)
@@ -116,7 +114,7 @@ void mempool_close(M *MP)
 	int error;
 	M mp = *MP;
 	pthread_mutex_t lock = mp->lock;
-	POOL_LOCK(lock);
+	PLOCK(lock);
 	mpool_t *pool = mp->pool;
 	if (pool) {
 		mempool_stats(mp);
@@ -125,7 +123,7 @@ void mempool_close(M *MP)
 	} else {
 		free(mp);
 	}
-	POOL_UNLOCK(lock);
+	PUNLOCK(lock);
 	pthread_mutex_destroy(&lock);
 	mp = NULL;
 }

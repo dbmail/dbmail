@@ -120,11 +120,13 @@ void tims_cb_time(void * arg)
 void tims_cb_write(void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
+	int state = session->state;
 
-	switch(session->state) {
+	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, state);
+
+	switch(state) {
+		case CLIENTSTATE_QUIT_QUEUED:
 		case CLIENTSTATE_QUIT:
-			client_session_bailout(&session);
 			break;
 		default:
 			if (p_string_len(session->ci->write_buffer) > session->ci->write_buffer_offset) {
@@ -153,8 +155,8 @@ int tims_handle_connection(client_sock *c)
 	ClientSession_T *session = client_session_new(c);
 	session->state = CLIENTSTATE_NON_AUTHENTICATED;
 	client_session_set_timeout(session, server_conf->login_timeout);
-	reset_callbacks(session);
 	send_greeting(session);
+	reset_callbacks(session);
 	return 0;
 }
 
@@ -302,6 +304,8 @@ int tims(ClientSession_T *session)
 	SortResult_T *sort_result = NULL;
 	ClientBase_T *ci = session->ci;
 
+	int state = session->state;
+
 	TRACE(TRACE_DEBUG,"[%p] [%d][%s]", session, session->command_type, commands[session->command_type]);
 	switch (session->command_type) {
 	case TIMS_LOUT:
@@ -382,7 +386,7 @@ int tims(ClientSession_T *session)
 		return 1;
 
 	case TIMS_PUTS:
-		if (session->state != CLIENTSTATE_AUTHENTICATED) {
+		if (state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
@@ -437,7 +441,7 @@ int tims(ClientSession_T *session)
 		break;
 		
 	case TIMS_SETS:
-		if (session->state != CLIENTSTATE_AUTHENTICATED) {
+		if (state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
@@ -469,7 +473,7 @@ int tims(ClientSession_T *session)
 		return 1;
 		
 	case TIMS_GETS:
-		if (session->state != CLIENTSTATE_AUTHENTICATED) {
+		if (state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
@@ -498,7 +502,7 @@ int tims(ClientSession_T *session)
 		return 1;
 		
 	case TIMS_DELS:
-		if (session->state != CLIENTSTATE_AUTHENTICATED) {
+		if (state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
@@ -520,7 +524,7 @@ int tims(ClientSession_T *session)
 		return 1;
 
 	case TIMS_SPAC:
-		if (session->state != CLIENTSTATE_AUTHENTICATED) {
+		if (state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}
@@ -534,7 +538,7 @@ int tims(ClientSession_T *session)
 		return 1;
 		
 	case TIMS_LIST:
-		if (session->state != CLIENTSTATE_AUTHENTICATED) {
+		if (state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "NO \"Please authenticate first.\"\r\n");
 			break;
 		}

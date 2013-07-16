@@ -141,10 +141,11 @@ ClientBase_T * client_init(client_sock *c)
 {
 	int serr;
 	ClientBase_T *client;
+	Mempool_T pool = c->pool;
 
-	client           = mempool_pop(c->pool, sizeof(ClientBase_T));
-	client->pool     = c->pool;
-	client->timeout  = mempool_pop(client->pool, sizeof(struct timeval));
+	client           = mempool_pop(pool, sizeof(ClientBase_T));
+	client->pool     = pool;
+	client->timeout  = mempool_pop(pool, sizeof(struct timeval));
 	client->sock     = c;
 	client->cb_error = client_error_cb;
 
@@ -194,8 +195,8 @@ ClientBase_T * client_init(client_sock *c)
 		}
 	}
 
-	client->read_buffer = p_string_new(client->pool, "");
-	client->write_buffer = p_string_new(client->pool, "");
+	client->read_buffer = p_string_new(pool, "");
+	client->write_buffer = p_string_new(pool, "");
 	client->rev = NULL;
 	client->wev = NULL;
 

@@ -121,11 +121,13 @@ static void lmtp_handle_input(void *arg)
 void lmtp_cb_write(void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, session->state);
+	int state = session->state;
 
-	switch (session->state) {
+	TRACE(TRACE_DEBUG, "[%p] state: [%d]", session, state);
+
+	switch (state) {
+		case CLIENTSTATE_QUIT_QUEUED:
 		case CLIENTSTATE_QUIT:
-			client_session_bailout(&session);
 			break;
 		default:
 			if (p_string_len(session->ci->write_buffer) > session->ci->write_buffer_offset) {
@@ -152,6 +154,7 @@ static void reset_callbacks(ClientSession_T *session)
 static void lmtp_rset(ClientSession_T *session, gboolean reset_state)
 {
 	int state = session->state;
+
 	client_session_reset(session);
 	if (reset_state)
 		session->state = CLIENTSTATE_AUTHENTICATED;
@@ -166,8 +169,8 @@ int lmtp_handle_connection(client_sock *c)
 {
 	ClientSession_T *session = client_session_new(c);
 	client_session_set_timeout(session, server_conf->login_timeout);
-	reset_callbacks(session);
         send_greeting(session);
+	reset_callbacks(session);
 	return 0;
 }
 
@@ -242,7 +245,9 @@ int lmtp_tokenizer(ClientSession_T *session, char *buffer)
 
 	if (session->command_type == LMTP_DATA) {
 		if (command) {
-			if (session->state != CLIENTSTATE_AUTHENTICATED) {
+			int state = session->state;
+
+			if (state != CLIENTSTATE_AUTHENTICATED) {
 				return lmtp_error(session, "550 Command out of sequence\r\n");
 			}
 			if (p_list_length(session->rcpt) < 1) {
@@ -278,6 +283,7 @@ int lmtp(ClientSession_T * session)
 	const char *class, *subject, *detail;
 	size_t tmplen = 0, tmppos = 0;
 	char *tmpaddr = NULL, *tmpbody = NULL, *arg;
+	int state = 0;
 
 	switch (session->command_type) {
 
@@ -360,7 +366,9 @@ int lmtp(ClientSession_T * session)
 		/* We need to LHLO first because the client
 		 * needs to know what extensions we support.
 		 * */
-		if (session->state != CLIENTSTATE_AUTHENTICATED) {
+		state = session->state;
+
+		if (state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "550 Command out of sequence.\r\n");
 			return 1;
 		} 
@@ -426,7 +434,9 @@ int lmtp(ClientSession_T * session)
 		return 1;
 
 	case LMTP_RCPT:
-		if (session->state != CLIENTSTATE_AUTHENTICATED) {
+		state = session->state;
+
+		if (state != CLIENTSTATE_AUTHENTICATED) {
 			ci_write(ci, "550 Command out of sequence.\r\n");
 			return 1;
 		} 
