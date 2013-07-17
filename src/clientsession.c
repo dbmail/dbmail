@@ -272,8 +272,8 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 	switch(session->state) {
 		case CLIENTSTATE_INITIAL_CONNECT:
 		case CLIENTSTATE_NON_AUTHENTICATED:
-			//TRACE(TRACE_DEBUG,"reset timeout [%d]", server_conf->login_timeout);
-			//client_session_set_timeout(session, server_conf->login_timeout);
+			TRACE(TRACE_DEBUG,"reset timeout [%d]", server_conf->login_timeout);
+			client_session_set_timeout(session, server_conf->login_timeout);
 			break;
 
 		case CLIENTSTATE_AUTHENTICATED:
