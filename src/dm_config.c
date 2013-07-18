@@ -303,11 +303,11 @@ void GetDBParams(void)
 		if (config_get_value("user", "DBMAIL", db_params.user) < 0) 
 			TRACE(TRACE_EMERG, "error getting config! [user]");
 		if (config_get_value("pass", "DBMAIL", db_params.pass) < 0)
-			TRACE(TRACE_EMERG, "error getting config! [pass]");
+			TRACE(TRACE_DEBUG, "error getting config! [pass]");
 		if (config_get_value("sqlport", "DBMAIL", port_string) < 0)
-			TRACE(TRACE_EMERG, "error getting config! [sqlpost]");
+			TRACE(TRACE_DEBUG, "error getting config! [sqlpost]");
 		if (config_get_value("sqlsocket", "DBMAIL", sock_string) < 0)
-			TRACE(TRACE_EMERG, "error getting config! [sqlsocket]");
+			TRACE(TRACE_DEBUG, "error getting config! [sqlsocket]");
 
 		/* check if port_string holds a value */
 		if (strlen(port_string) != 0) {
