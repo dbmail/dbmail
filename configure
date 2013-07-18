@@ -5004,11 +5004,11 @@ done
 if test "${with_jemalloc+set}" = set; then :
   withval=$with_jemalloc; lookforjemalloc="$withval"
 else
-  lookforjemalloc="auto"
+  lookforjemalloc="yes"
 fi
 
 	if test  "x$lookforjemalloc" != "xno"  ; then
-		if test  "x$lookforjemalloc" = "xauto"  ; then
+		if test  "x$lookforjemalloc" = "xyes"  ; then
 			CFLAGS="$CFLAGS -I${ac_default_prefix}/include/jemalloc -I/usr/include/jemalloc"
 		else
 			CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"

@@ -280,9 +280,9 @@ fi
 
 AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 	AC_ARG_WITH(jemalloc,[  --with-jemalloc=PATH	  path to libjemalloc base directory (e.g. /usr/local or /usr)],
-		[lookforjemalloc="$withval"],[lookforjemalloc="auto"])
+		[lookforjemalloc="$withval"],[lookforjemalloc="yes"])
 	if test [ "x$lookforjemalloc" != "xno" ] ; then
-		if test [ "x$lookforjemalloc" = "xauto" ] ; then 
+		if test [ "x$lookforjemalloc" = "xyes" ] ; then 
 			CFLAGS="$CFLAGS -I${ac_default_prefix}/include/jemalloc -I/usr/include/jemalloc"
 		else
 			CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
