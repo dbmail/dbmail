@@ -39,9 +39,12 @@ Config Changes
  Dbmail allows you to select the database backend and authentication
  module in the config file.
 
-driver=mysql/postgresql/sqlite
+dburi=sqlite:///home/johndoe/dbmail.sqlite
 authdriver=sql/ldap
 
+ The old database connection parameter fields (driver, host, user, password,
+ sqlport, sqlsocket, db) are now deprecated.
+ 
  The old TRACE_LEVEL is now not used anymore, and
  TRACE_SYSLOG/TRACE_STDERR are now deprecated.
  

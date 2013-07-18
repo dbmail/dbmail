@@ -189,6 +189,9 @@
 /* include sql/sqlite/create_tables.sqlite for autocreation */
 #define DM_SQLITECREATE @SQLITECREATE@
 
+/* include dbmail.conf for autocreation */
+#define DM_DEFAULT_CONFIGURATION @DM_DEFAULT_CONFIGURATION@
+
 /** default directory and extension for pidfiles */
 #define DEFAULT_PID_DIR "@DM_STATEDIR@"
 #define DEFAULT_PID_EXT ".pid"

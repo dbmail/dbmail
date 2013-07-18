@@ -34,13 +34,12 @@ int auth_load_driver(void)
 
 	auth = g_new0(auth_func_t,1);
 
-	if (strcasecmp(db_params.authdriver, "SQL") == 0)
-		driver = "auth_sql";
-	else if (strcasecmp(db_params.authdriver, "LDAP") == 0)
+	if (strcasecmp(db_params.authdriver, "LDAP") == 0)
 		driver = "auth_ldap";
-	else
-		TRACE(TRACE_EMERG, "unsupported driver: %s, please choose from SQL or LDAP",
-				db_params.authdriver);
+	else {
+		TRACE(TRACE_DEBUG, "using default auth_sql");
+		driver = "auth_sql";
+	}
 
 	Field_T library_dir;
 	config_get_value("library_directory", "DBMAIL", library_dir);
@@ -53,11 +52,15 @@ int auth_load_driver(void)
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
 	int i;
-	char *lib_path[] = { library_dir, NULL };
+	char *lib_path[] = { 
+		"src/modules/.libs",
+		library_dir, 
+		NULL 
+	};
 
 	/* Note that the limit here *includes* the NULL. This is intentional,
 	 * to allow g_module_build_path to try the current working directory. */
-	for (i = 0; i < 3; i++) {
+	for (i = 0; lib_path[i] != NULL; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
 

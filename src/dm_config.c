@@ -34,18 +34,55 @@ DBParam_T db_params;
 static GKeyFile *config_dict = NULL;
 static int configured = 0;
 
+// 
+// local functions
+//
+int config_create(const char *config_filename)
+{
+
+	int fd;
+	int serr;
+       
+	if ((fd = open(config_filename, O_RDWR|O_CREAT|O_EXCL, 00600)) == -1) {
+		serr = errno;
+		TRACE(TRACE_EMERG, "unable to create [%s]: %s",
+				config_filename, strerror(serr));
+		return -1;
+	}
+
+	const char *config = DM_DEFAULT_CONFIGURATION;
+	ssize_t config_length = (ssize_t)strlen(config);
+
+	if (write(fd, config, config_length) < config_length) {
+		serr = errno;
+		TRACE(TRACE_EMERG, "error writing [%s] %s",
+				config_filename, strerror(serr));
+		return -1;
+	}
+
+	return 0;
+}
+
 /**
  * read the configuration file and stores the configuration
  * directives in an internal structure.
+ *
+ * to to create a default configation if possible, using the
+ * distro dbmail.conf
  */
 int config_read(const char *config_filename)
 {
 	if (configured) return 0;
 	assert(config_filename != NULL);
+
+	struct stat buf;
+	if (stat(config_filename, &buf) == -1)
+		config_create(config_filename);
+
         config_dict = g_key_file_new();
 	if (! g_key_file_load_from_file(config_dict, config_filename, G_KEY_FILE_NONE, NULL)) {
 		g_key_file_free(config_dict);
-                TRACE(TRACE_EMERG, "error reading config file %s", config_filename);
+                TRACE(TRACE_EMERG, "error reading config [%s]", config_filename);
 		_exit(1);
 		return -1;
 	}
@@ -243,36 +280,59 @@ void GetDBParams(void)
 	Field_T port_string, sock_string, serverid_string, query_time;
 	Field_T max_db_connections;
 
-	if (config_get_value("driver", "DBMAIL", db_params.driver) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [driver]");
+	if (config_get_value("dburi", "DBMAIL", db_params.dburi) < 0) {
+		TRACE(TRACE_INFO, "deprecation warning! [dburi] missing");
 
-	if (MATCH((const char *)db_params.driver,"sqlite"))
-		db_params.db_driver = DM_DRIVER_SQLITE;
-	else if (MATCH((const char *)db_params.driver,"mysql"))
-		db_params.db_driver = DM_DRIVER_MYSQL;
-	else if (MATCH((const char *)db_params.driver,"postgresql"))
-		db_params.db_driver = DM_DRIVER_POSTGRESQL;
-	else if (MATCH((const char *)db_params.driver,"oracle"))
-		db_params.db_driver = DM_DRIVER_ORACLE;
-	else
-		TRACE(TRACE_EMERG,"driver not supported");
+		if (config_get_value("driver", "DBMAIL", db_params.driver) < 0)
+			TRACE(TRACE_EMERG, "error getting config! [driver]");
+
+		if (MATCH((const char *)db_params.driver,"sqlite"))
+			db_params.db_driver = DM_DRIVER_SQLITE;
+		else if (MATCH((const char *)db_params.driver,"mysql"))
+			db_params.db_driver = DM_DRIVER_MYSQL;
+		else if (MATCH((const char *)db_params.driver,"postgresql"))
+			db_params.db_driver = DM_DRIVER_POSTGRESQL;
+		else if (MATCH((const char *)db_params.driver,"oracle"))
+			db_params.db_driver = DM_DRIVER_ORACLE;
+		else
+			TRACE(TRACE_EMERG,"driver not supported");
+
+		if (config_get_value("host", "DBMAIL", db_params.host) < 0)
+			TRACE(TRACE_EMERG, "error getting config! [host]");
+		if (config_get_value("db", "DBMAIL", db_params.db) < 0) 
+			TRACE(TRACE_EMERG, "error getting config! [db]");
+		if (config_get_value("user", "DBMAIL", db_params.user) < 0) 
+			TRACE(TRACE_EMERG, "error getting config! [user]");
+		if (config_get_value("pass", "DBMAIL", db_params.pass) < 0)
+			TRACE(TRACE_EMERG, "error getting config! [pass]");
+		if (config_get_value("sqlport", "DBMAIL", port_string) < 0)
+			TRACE(TRACE_EMERG, "error getting config! [sqlpost]");
+		if (config_get_value("sqlsocket", "DBMAIL", sock_string) < 0)
+			TRACE(TRACE_EMERG, "error getting config! [sqlsocket]");
+
+		/* check if port_string holds a value */
+		if (strlen(port_string) != 0) {
+			errno = 0;
+			db_params.port =
+				(unsigned int) strtoul(port_string, NULL, 10);
+			if (errno == EINVAL || errno == ERANGE)
+				TRACE(TRACE_EMERG, "wrong value for sqlport in config file [%s]", strerror(errno));
+		} else
+			db_params.port = 0;
+
+		/* same for sock_string */
+		if (strlen(sock_string) != 0)
+			g_strlcpy(db_params.sock, sock_string, FIELDSIZE);
+		else
+			db_params.sock[0] = '\0';
+
+
+	}
 
 	if (config_get_value("authdriver", "DBMAIL", db_params.authdriver) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [authdriver]");
 	if (config_get_value("sortdriver", "DBMAIL", db_params.sortdriver) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [sortdriver]");
-	if (config_get_value("host", "DBMAIL", db_params.host) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [host]");
-	if (config_get_value("db", "DBMAIL", db_params.db) < 0) 
-		TRACE(TRACE_EMERG, "error getting config! [db]");
-	if (config_get_value("user", "DBMAIL", db_params.user) < 0) 
-		TRACE(TRACE_EMERG, "error getting config! [user]");
-	if (config_get_value("pass", "DBMAIL", db_params.pass) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [pass]");
-	if (config_get_value("sqlport", "DBMAIL", port_string) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [sqlpost]");
-	if (config_get_value("sqlsocket", "DBMAIL", sock_string) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [sqlsocket]");
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
 		TRACE(TRACE_EMERG, "error getting config! [serverid]");
 	if (config_get_value("encoding", "DBMAIL", db_params.encoding) < 0)
@@ -329,23 +389,6 @@ void GetDBParams(void)
 		g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(db_params.db[1]));
 		g_strlcpy(db_params.db, db, FIELDSIZE);
 	}
-
-	/* check if port_string holds a value */
-	if (strlen(port_string) != 0) {
-		errno = 0;
-		db_params.port =
-		    (unsigned int) strtoul(port_string, NULL, 10);
-		if (errno == EINVAL || errno == ERANGE)
-			TRACE(TRACE_EMERG, "wrong value for sqlport in config file [%s]", strerror(errno));
-	} else
-		db_params.port = 0;
-
-	/* same for sock_string */
-	if (strlen(sock_string) != 0)
-		g_strlcpy(db_params.sock, sock_string, FIELDSIZE);
-	else
-		db_params.sock[0] = '\0';
-
 	/* serverid */
 	if (strlen(serverid_string) != 0) {
 		db_params.serverid = (unsigned int) strtol(serverid_string, NULL, 10);

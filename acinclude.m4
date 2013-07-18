@@ -11,6 +11,7 @@ AC_MSG_RESULT([
  DM_LOGDIR:                 $DM_LOGDIR
  DM_CONFDIR:                $DM_CONFDIR
  DM_STATEDIR:               $DM_STATEDIR
+ DM_PKGLIBDIR:              $DM_PKGLIBDIR
  USE_DM_GETOPT:             $USE_DM_GETOPT
  CFLAGS:                    $CFLAGS
  GLIB:                      $ac_glib_libs
@@ -36,8 +37,8 @@ AC_DEFUN([DM_DEFINES],[dnl
 AC_ARG_WITH(logdir,
 	[  --with-logdir           use logdir for logfiles],
 	logdirname="$withval")
-if test "x$logdirname" = "x"; then
-	DM_LOGDIR="/var/log"
+if test "x$logdirname" = 'x'; then
+	DM_LOGDIR="${ac_default_prefix}/var/log"
 else
 	DM_LOGDIR="$logdirname"
 fi
@@ -50,6 +51,11 @@ if test "x$sysconfdir" = 'x${prefix}/etc'; then
 	DM_CONFDIR="${ac_default_prefix}/etc"
 else
 	DM_CONFDIR=$sysconfdir
+fi
+if test "x$libdir" = 'x${exec_prefix}/lib'; then
+	DM_PKGLIBDIR="${ac_default_prefix}/lib"
+else
+	DM_PKGLIBDIR=$libdir
 fi
 if test "x$prefix" = "xNONE"; then
 	AC_DEFINE_UNQUOTED([PREFIX], "$ac_default_prefix", [Prefix to the installed path])
@@ -323,6 +329,11 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 AC_DEFUN([DM_SET_SQLITECREATE], [dnl
 	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/create_tables.sqlite`
 ])
+
+AC_DEFUN([DM_SET_DEFAULT_CONFIGURATION], [dnl
+	DM_DEFAULT_CONFIGURATION=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  dbmail.conf`
+])
+
 
 AC_DEFUN([DM_CHECK_MATH], [dnl
 	AC_CHECK_HEADERS([math.h],[MATHLIB="-lm"], [MATHLIB="failed"])

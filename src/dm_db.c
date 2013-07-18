@@ -149,56 +149,63 @@ GTree * global_cache = NULL;
 
 /* globals for now... */
 ConnectionPool_T pool = NULL;
-URL_T url = NULL;
-int db_connected = 0; // 0 = not called, 1 = new url but not pool, 2 = new url and pool, but not tested, 3 = tested and ok
+URL_T dburi = NULL;
+int db_connected = 0; // 0 = not called, 1 = new dburi but not pool, 2 = new dburi and pool, but not tested, 3 = tested and ok
 
 /* This is the first db_* call anybody should make. */
 int db_connect(void)
 {
 	int sweepInterval = 60;
 	Connection_T c;
-	GString *dsn = g_string_new("");
-	g_string_append_printf(dsn,"%s://",db_params.driver);
-	if (db_params.host)
-		g_string_append_printf(dsn,"%s", db_params.host);
-	if (db_params.port)
-		g_string_append_printf(dsn,":%u", db_params.port);
-	if (db_params.db) {
-		if (MATCH(db_params.driver,"sqlite")) {
+	GString *dsn;
+       
+	if (db_params.dburi) {
+		TRACE(TRACE_DEBUG,"dburi: %s", db_params.dburi);
+		dburi = URL_new(db_params.dburi);
+	} else {
+		dsn = g_string_new("");
+		g_string_append_printf(dsn,"%s://",db_params.driver);
+		if (db_params.host)
+			g_string_append_printf(dsn,"%s", db_params.host);
+		if (db_params.port)
+			g_string_append_printf(dsn,":%u", db_params.port);
+		if (db_params.db) {
+			if (MATCH(db_params.driver,"sqlite")) {
 
-			/* expand ~ in db name to HOME env variable */
-			if ((strlen(db_params.db) > 0 ) && (db_params.db[0] == '~')) {
-				char *homedir;
-				Field_T db;
-				if ((homedir = getenv ("HOME")) == NULL)
-					TRACE(TRACE_EMERG, "can't expand ~ in db name");
-				g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(db_params.db[1]));
-				g_strlcpy(db_params.db, db, FIELDSIZE);
+				/* expand ~ in db name to HOME env variable */
+				if ((strlen(db_params.db) > 0 ) && (db_params.db[0] == '~')) {
+					char *homedir;
+					Field_T db;
+					if ((homedir = getenv ("HOME")) == NULL)
+						TRACE(TRACE_EMERG, "can't expand ~ in db name");
+					g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(db_params.db[1]));
+					g_strlcpy(db_params.db, db, FIELDSIZE);
+				}
+
+				g_string_append_printf(dsn,"%s", db_params.db);
+			} else {
+				g_string_append_printf(dsn,"/%s", db_params.db);
 			}
-
-			g_string_append_printf(dsn,"%s", db_params.db);
-		} else {
-			g_string_append_printf(dsn,"/%s", db_params.db);
 		}
-	}
-	if (db_params.user && strlen((const char *)db_params.user)) {
-		g_string_append_printf(dsn,"?user=%s", db_params.user);
-		if (db_params.pass && strlen((const char *)db_params.pass)) 
-			g_string_append_printf(dsn,"&password=%s", db_params.pass);
-		if (MATCH(db_params.driver,"mysql")) {
-			if (db_params.encoding && strlen((const char *)db_params.encoding))
-				g_string_append_printf(dsn,"&charset=%s", db_params.encoding);
+		if (db_params.user && strlen((const char *)db_params.user)) {
+			g_string_append_printf(dsn,"?user=%s", db_params.user);
+			if (db_params.pass && strlen((const char *)db_params.pass)) 
+				g_string_append_printf(dsn,"&password=%s", db_params.pass);
+			if (MATCH(db_params.driver,"mysql")) {
+				if (db_params.encoding && strlen((const char *)db_params.encoding))
+					g_string_append_printf(dsn,"&charset=%s", db_params.encoding);
+			}
 		}
+
+		if (db_params.sock && strlen((const char *)db_params.sock))
+			g_string_append_printf(dsn,"&unix-socket=%s", db_params.sock);
+
+		dburi = URL_new(dsn->str);
+		g_string_free(dsn,TRUE);
 	}
-
-	if (db_params.sock && strlen((const char *)db_params.sock))
-		g_string_append_printf(dsn,"&unix-socket=%s", db_params.sock);
-
-	TRACE(TRACE_DATABASE, "db at url: [%s]", dsn->str);
-	url = URL_new(dsn->str);
+	TRACE(TRACE_DATABASE, "db at dburi: [%s]", URL_toString(dburi));
 	db_connected = 1;
-	g_string_free(dsn,TRUE);
-	if (! (pool = ConnectionPool_new(url)))
+	if (! (pool = ConnectionPool_new(dburi)))
 		TRACE(TRACE_EMERG,"error creating database connection pool");
 	db_connected = 2;
 	
@@ -234,7 +241,7 @@ int db_disconnect(void)
 {
 	if(db_connected >= 3) ConnectionPool_stop(pool);
 	if(db_connected >= 2) ConnectionPool_free(&pool);
-	if(db_connected >= 1) URL_free(&url);
+	if(db_connected >= 1) URL_free(&dburi);
 	db_connected = 0;
 	return 0;
 }
@@ -776,6 +783,18 @@ static const char * db_get_oracle_sql(sql_fragment frag)
 
 const char * db_get_sql(sql_fragment frag)
 {
+	if (! db_params.db_driver) {
+		const char *protocol = URL_getProtocol(dburi);
+		if (MATCH(protocol, "sqlite"))
+			db_params.db_driver = DM_DRIVER_SQLITE;
+		else if (MATCH(protocol, "mysql"))
+			db_params.db_driver = DM_DRIVER_MYSQL;
+		else if (MATCH(protocol, "postgresql"))
+			db_params.db_driver = DM_DRIVER_POSTGRESQL;
+		else if (MATCH(protocol, "oracle"))
+			db_params.db_driver = DM_DRIVER_ORACLE;
+	}
+
 	switch(db_params.db_driver) {
 		case DM_DRIVER_SQLITE:
 			return db_get_sqlite_sql(frag);
@@ -820,6 +839,33 @@ int db_check_version(void)
 {
 	Connection_T c = db_con_get();
 	volatile int ok = 0;
+	volatile int db = 0;
+	TRY
+		db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users");
+		db = 1;
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	END_TRY;
+
+	db_con_clear(c);
+
+
+	if (db_params.db_driver == DM_DRIVER_SQLITE) {
+		TRY
+			db_exec(c, DM_SQLITECREATE);
+			db = 1;
+		CATCH(SQLException)
+			LOG_SQLERROR;
+		END_TRY;
+	}
+
+	if (! db) {
+		TRACE(TRACE_EMERG, "Try creating the database tables");
+		_exit(1);
+	}
+
+	db_con_clear(c);
+
 	TRY
 		check_table_exists(c, "physmessage", "pre-2.0 database incompatible. You need to run the conversion script");
 		check_table_exists(c, "headervalue", "2.0 database incompatible. You need to add the header tables.");

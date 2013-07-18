@@ -99,6 +99,7 @@ typedef char TimeString_T[TIMESTRING_SIZE];
 
 /** parameters for the database connection */
 typedef struct {
+	Field_T dburi;
 	Driver_T db_driver; // 
 	Field_T driver;         /**< database driver: mysql, pgsql, sqlite */
 	Field_T authdriver;     /**< authentication driver: sql, ldap */
