@@ -642,6 +642,7 @@ build_vendor
 build_cpu
 build
 LIBTOOL
+DM_PWD
 DM_PKGLIBDIR
 DM_STATEDIR
 DM_CONFDIR
@@ -2953,6 +2954,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 fi
+DM_PWD="$ac_pwd"
 
 DEPDIR="${am__leading_dot}deps"
 
@@ -6615,6 +6617,7 @@ fi
 
 
 	DM_DEFAULT_CONFIGURATION=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  dbmail.conf`
+
 
 
 
@@ -16188,7 +16191,7 @@ fi
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:
-
+ DM_PWD                     $DM_PWD
  DM_LOGDIR:                 $DM_LOGDIR
  DM_CONFDIR:                $DM_CONFDIR
  DM_STATEDIR:               $DM_STATEDIR
@@ -16212,7 +16215,7 @@ fi
 
 " >&5
 $as_echo "
-
+ DM_PWD                     $DM_PWD
  DM_LOGDIR:                 $DM_LOGDIR
  DM_CONFDIR:                $DM_CONFDIR
  DM_STATEDIR:               $DM_STATEDIR

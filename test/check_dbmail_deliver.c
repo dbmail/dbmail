@@ -507,7 +507,7 @@ START_TEST(test_auth_validate)
 
 	uint64_t user_idnr = 0;
 	result = auth_validate(ci,"testuser1","test",&user_idnr);
-	fail_unless(result==TRUE,"auth_validate positive failure");
+	fail_unless(result==TRUE,"auth_validate positive failure [%d:%" PRIu64 "]", result, user_idnr);
 	fail_unless(user_idnr > 0,"auth_validate couldn't find user_idnr");
 	
 	user_idnr = 0;
@@ -580,8 +580,7 @@ START_TEST(test_auth_get_user_aliases)
 	result = auth_user_exists(username, &user_idnr);
 	aliases = auth_get_user_aliases(user_idnr);
 	fail_unless(result >= 0);
-	fail_unless(aliases != NULL);
-//	fail_unless(g_list_length(aliases)>1,"auth_get_user_aliases failed");
+	fail_unless(aliases == NULL);
 }
 END_TEST
 /**

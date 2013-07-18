@@ -52,8 +52,13 @@ int auth_load_driver(void)
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
 	int i;
+	char local_path[PATH_MAX];
+	memset(local_path, 0, sizeof(local_path));
+	g_strlcat(local_path, DM_PWD, sizeof(local_path)-1);
+	g_strlcat(local_path, "/src/modules/.libs", sizeof(local_path)-1);
+
 	char *lib_path[] = { 
-		"src/modules/.libs",
+		local_path,
 		library_dir, 
 		NULL 
 	};

@@ -841,8 +841,8 @@ int db_check_version(void)
 	volatile int ok = 0;
 	volatile int db = 0;
 	TRY
-		db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users");
-		db = 1;
+		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
+			db = 1;
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	END_TRY;
@@ -850,7 +850,7 @@ int db_check_version(void)
 	db_con_clear(c);
 
 
-	if (db_params.db_driver == DM_DRIVER_SQLITE) {
+	if ((! db) && (db_params.db_driver == DM_DRIVER_SQLITE)) {
 		TRY
 			db_exec(c, DM_SQLITECREATE);
 			db = 1;

@@ -7,7 +7,7 @@ This is dbmail's GNU configure script.
 
 AC_DEFUN([DM_MSG_CONFIGURE_RESULTS], [dnl
 AC_MSG_RESULT([
-
+ DM_PWD                     $DM_PWD
  DM_LOGDIR:                 $DM_LOGDIR
  DM_CONFDIR:                $DM_CONFDIR
  DM_STATEDIR:               $DM_STATEDIR
@@ -62,6 +62,7 @@ if test "x$prefix" = "xNONE"; then
 else
 	AC_DEFINE_UNQUOTED([PREFIX], "$prefix", [Prefix to the installed path])
 fi
+DM_PWD="$ac_pwd"
 ])
 	
 AC_DEFUN([DM_SET_SHARED_OR_STATIC], [dnl

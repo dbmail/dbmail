@@ -186,6 +186,9 @@
 "Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.\n" \
 ""
 
+/* build directory */
+#define DM_PWD "@DM_PWD@"
+
 /* include sql/sqlite/create_tables.sqlite for autocreation */
 #define DM_SQLITECREATE @SQLITECREATE@
 
