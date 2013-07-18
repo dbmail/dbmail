@@ -2082,8 +2082,6 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	Field_T val;
 	size_t msgsize = (uint64_t)dbmail_message_get_size(message, FALSE);
 
-	TRACE(TRACE_INFO,"useridnr [%" PRIu64 "] mailbox [%s]", useridnr, mailbox);
-
 	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
 		TRACE(TRACE_ERR, "mailbox [%s] not found", mailbox);
 		return DSN_CLASS_FAIL;
@@ -2153,11 +2151,12 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 				useridnr);
 		return DSN_CLASS_TEMP;
 	default:
-		TRACE(TRACE_NOTICE, "message id=%" PRIu64 ", size=%zd is inserted", 
-				newmsgidnr, msgsize);
+		TRACE(TRACE_NOTICE, "useridnr [%" PRIu64 "] mailbox [%" PRIu64 "] message [%" PRIu64 "] size [%zd] is inserted", 
+				useridnr, mboxidnr, newmsgidnr, msgsize);
 		if (msgflags || keywords) {
 			TRACE(TRACE_NOTICE, "message id=%" PRIu64 ", setting imap flags", 
 				newmsgidnr);
+
 			db_set_msgflag(newmsgidnr, msgflags, keywords, IMAPFA_ADD, NULL);
 			db_mailbox_seq_update(mboxidnr);
 		}
