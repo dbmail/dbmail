@@ -159,7 +159,7 @@ int db_connect(void)
 	Connection_T c;
 	GString *dsn;
        
-	if (db_params.dburi) {
+	if (strlen(db_params.dburi) != 0) {
 		TRACE(TRACE_DEBUG,"dburi: %s", db_params.dburi);
 		dburi = URL_new(db_params.dburi);
 	} else {

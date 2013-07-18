@@ -130,7 +130,6 @@ static int config_get_value_once(const Field_T field_name,
 	return retval;
 }
 
-/* FIXME: Always returns 0, which is dandy for debugging. */
 int config_get_value(const Field_T field_name,
                      const char * const service_name,
                      Field_T value)
@@ -176,7 +175,7 @@ int config_get_value(const Field_T field_name,
 	
 	/* give up */
         value[0] = '\0';
-	return 0;
+	return -1;
 
 config_get_value_done:
 	g_free(key);
@@ -281,7 +280,7 @@ void GetDBParams(void)
 	Field_T max_db_connections;
 
 	if (config_get_value("dburi", "DBMAIL", db_params.dburi) < 0) {
-		TRACE(TRACE_INFO, "deprecation warning! [dburi] missing");
+		TRACE(TRACE_WARNING, "deprecation warning! [dburi] missing");
 
 		if (config_get_value("driver", "DBMAIL", db_params.driver) < 0)
 			TRACE(TRACE_EMERG, "error getting config! [driver]");
@@ -330,41 +329,41 @@ void GetDBParams(void)
 	}
 
 	if (config_get_value("authdriver", "DBMAIL", db_params.authdriver) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [authdriver]");
+		TRACE(TRACE_DEBUG, "missing config! [authdriver]");
 	if (config_get_value("sortdriver", "DBMAIL", db_params.sortdriver) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [sortdriver]");
+		TRACE(TRACE_DEBUG, "error getting config! [sortdriver]");
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [serverid]");
+		TRACE(TRACE_DEBUG, "error getting config! [serverid]");
 	if (config_get_value("encoding", "DBMAIL", db_params.encoding) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [encoding]");
+		TRACE(TRACE_DEBUG, "error getting config! [encoding]");
 	if (config_get_value("table_prefix", "DBMAIL", db_params.pfx) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [table_prefix]");
+		TRACE(TRACE_DEBUG, "error getting config! [table_prefix]");
 	if (config_get_value("max_db_connections", "DBMAIL", max_db_connections) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [max_db_connections]");
+		TRACE(TRACE_DEBUG, "error getting config! [max_db_connections]");
 
 	if (config_get_value("query_time_info", "DBMAIL", query_time) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [query_time_info]");
+		TRACE(TRACE_DEBUG, "error getting config! [query_time_info]");
 		if (strlen(query_time) != 0)
 			db_params.query_time_info = (unsigned int) strtoul(query_time, NULL, 10);
 		else
 			db_params.query_time_info = 10;
 
 	if (config_get_value("query_time_notice", "DBMAIL", query_time) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [query_time_notice]");
+		TRACE(TRACE_DEBUG, "error getting config! [query_time_notice]");
 		if (strlen(query_time) != 0)
 			db_params.query_time_notice = (unsigned int) strtoul(query_time, NULL, 10);
 		else
 			db_params.query_time_notice = 20;
 
 	if (config_get_value("query_time_warning", "DBMAIL", query_time) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [query_time_warning]");
+		TRACE(TRACE_DEBUG, "error getting config! [query_time_warning]");
 		if (strlen(query_time) != 0)
 			db_params.query_time_warning = (unsigned int) strtoul(query_time, NULL, 10);
 		else
 			db_params.query_time_warning = 30;
 
 	if (config_get_value("query_timeout", "DBMAIL", query_time) < 0)
-		TRACE(TRACE_EMERG, "error getting config! [query_timeout]");
+		TRACE(TRACE_DEBUG, "error getting config! [query_timeout]");
 		if (strlen(query_time) != 0)
 			db_params.query_timeout = (unsigned int) strtoul(query_time, NULL, 10) * 1000;
 		else
