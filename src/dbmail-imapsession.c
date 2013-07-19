@@ -131,7 +131,6 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	self->state = CLIENTSTATE_NON_AUTHENTICATED;
 	self->args = mempool_pop(self->pool, sizeof(String_T) * MAX_ARGS);
 	self->fi = mempool_pop(self->pool, sizeof(fetch_items));
-	self->fi->bodyfetch = p_list_new(self->pool);
 	self->capa = Capa_new(self->pool);
 	self->preauth_capa = Capa_new(self->pool);
 	Capa_remove(self->preauth_capa, "ACL");
@@ -243,14 +242,7 @@ void dbmail_imap_session_delete(ImapSession ** s)
 		p_string_free(self->buff, TRUE);
 		self->buff = NULL;
 	}
-	if (self->fi) {
-		if (self->fi->bodyfetch) {
-			self->fi->bodyfetch = p_list_first(self->fi->bodyfetch);
-			p_list_free(&self->fi->bodyfetch);
-		}
-		mempool_push(self->pool, self->fi, sizeof(fetch_items));
-		self->fi = NULL;
-	}
+
 	pthread_mutex_destroy(&self->lock);
 	pool = self->pool;
 	mempool_push(pool, self, sizeof(ImapSession));
@@ -557,9 +549,6 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 	
 	} else if (MATCH(token,"body") || MATCH(token,"body.peek")) {
 		
-		/* setting self->fi->msgparse_needed deferred to fetch_parse_partspec 
-		 * since we don't need to parse just to retrieve headers */
-
 		body_fetch *bodyfetch = mempool_pop(self->pool, sizeof(body_fetch));
 		self->fi->bodyfetch = p_list_append(self->fi->bodyfetch, bodyfetch);
 
@@ -994,7 +983,7 @@ static void _imap_show_body_sections(ImapSession *self)
 static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 {
 	int result;
-	uint64_t size, bodyoffset;
+	uint64_t size;
 	gchar *s = NULL;
 	uint64_t *id = uid;
 	gboolean reportflags = FALSE;
@@ -1115,6 +1104,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		char *tmp = imap_get_logical_part(self->message->content, "HEADER");
 		dbmail_imap_session_buff_printf(self, "RFC822.HEADER {%ld}\r\n%s", strlen(tmp), tmp);
 		free(tmp);
+		tmp = NULL;
 	}
 
 	if (self->fi->getRFC822Text) {
@@ -1122,6 +1112,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		char *tmp = imap_get_logical_part(self->message->content, "TEXT");
 		dbmail_imap_session_buff_printf(self, "RFC822.TEXT {%ld}\r\n%s", strlen(tmp), tmp);
 		free(tmp);
+		tmp = NULL;
 		self->fi->setseen = 1;
 
 	}

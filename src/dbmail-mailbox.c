@@ -1508,11 +1508,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	if (! uid) {
 		lo = 1;
 		hi = maxmsn;
-		if (hi != (uint64_t)g_tree_nnodes(uids))
-			TRACE(TRACE_WARNING, "[%p] mailbox info out of sync: exists [%" PRIu64 "] ids [%u]", 
-					self->mbstate, hi, g_tree_nnodes(uids));
 	}
-	
 
 	t = g_string_new(set);
 	
