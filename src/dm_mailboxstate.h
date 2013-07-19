@@ -50,6 +50,7 @@ extern uint64_t        MailboxState_getId(T);
 extern uint64_t        MailboxState_getSeq(T);
 extern uint64_t        MailboxState_getUidnext(T);
 extern unsigned	    MailboxState_getExists(T);
+extern void	    MailboxState_setExists(T, unsigned);
 extern unsigned	    MailboxState_getRecent(T);
 extern unsigned     MailboxState_getUnseen(T);
 extern void         MailboxState_setNoSelect(T, gboolean);

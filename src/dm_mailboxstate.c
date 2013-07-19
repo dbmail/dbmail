@@ -270,8 +270,10 @@ void MailboxState_addMsginfo(T M, uint64_t uid, MessageInfo *msginfo)
 	uint64_t *id = g_new0(uint64_t,1);
 	*id = uid;
 	g_tree_insert(M->msginfo, id, msginfo); 
-	if (msginfo->flags[IMAP_FLAG_RECENT] == 1)
+	if (msginfo->flags[IMAP_FLAG_RECENT] == 1) {
+		M->seq--; // force resync
 		M->recent++;
+	}
 	MailboxState_build_recent(M);
 	MailboxState_remap(M);
 }
@@ -334,6 +336,13 @@ unsigned MailboxState_getExists(T M)
 		M->exists = (unsigned)real;
 	}
 	return M->exists;
+}
+
+void MailboxState_setExists(T M, unsigned exists)
+{
+	TRACE(TRACE_DEBUG, "[%" PRIu64 "] exists [%u] -> [%u]",
+			M->id, M->exists, exists);
+	M->exists = exists;
 }
 
 unsigned MailboxState_getRecent(T M)

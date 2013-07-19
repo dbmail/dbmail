@@ -1110,43 +1110,20 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 			self->fi->setseen = 1;
 	}
 
-	if (self->fi->getRFC822Header || self->fi->getRFC822Text) {
-
-		bodyoffset = 0;
-		int i;
-		char buff[2], c = 0, p1 = 0, p2 = 0;
-
-		memset(buff, 0, sizeof(buff));
-		g_mime_stream_reset(stream);
-		i = g_mime_stream_read(stream, buff, 1);
-
-		while (i) {
-			c = buff[0];
-			if (c == '\n' && ((p1 == '\n') || (p1 == '\r' && p2 == '\n'))) {
-				bodyoffset++;
-				break;
-			}
-			p2 = p1;
-			p1 = c;
-			memset(buff, 0, sizeof(buff));
-			i = g_mime_stream_read(stream, buff, 1);
-			bodyoffset++;
-		}
-	}
-
 	if (self->fi->getRFC822Header) {
 		SEND_SPACE;
-		g_mime_stream_reset(stream);
-		dbmail_imap_session_buff_printf(self, "RFC822.HEADER {%" PRIu64 "}\r\n", bodyoffset);
-		send_data(self, stream, bodyoffset);
+		char *tmp = imap_get_logical_part(self->message->content, "HEADER");
+		dbmail_imap_session_buff_printf(self, "RFC822.HEADER {%ld}\r\n%s", strlen(tmp), tmp);
+		free(tmp);
 	}
 
 	if (self->fi->getRFC822Text) {
 		SEND_SPACE;
-		g_mime_stream_seek(stream, bodyoffset, GMIME_STREAM_SEEK_SET);
-		dbmail_imap_session_buff_printf(self, "RFC822.TEXT {%" PRIu64 "}\r\n", size-bodyoffset);
-		send_data(self, stream, size-bodyoffset);
+		char *tmp = imap_get_logical_part(self->message->content, "TEXT");
+		dbmail_imap_session_buff_printf(self, "RFC822.TEXT {%ld}\r\n%s", strlen(tmp), tmp);
+		free(tmp);
 		self->fi->setseen = 1;
+
 	}
 
 	_imap_show_body_sections(self);
@@ -1523,6 +1500,8 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			TRACE(TRACE_DEBUG, "seq: [%u] -> [%u]", oldseq, newseq);
 			// do a full reload: re-read flags and counters
 			N = MailboxState_new(self->pool, self->mailbox->id);
+			unsigned newexists = MailboxState_getExists(N);
+			MailboxState_setExists(N, max(oldexists, newexists));
 
 			// rebuild uid/msn trees
 			// ATTN: new messages shouldn't be visible in any way to a 
@@ -1530,8 +1509,7 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 			// EXISTS response may never decrease
 			if ((MailboxState_getUidnext(N) > olduidnext)) {
-				if (MailboxState_getExists(N) > oldexists)
-					showexists = TRUE;
+				showexists = TRUE;
 			}
 
 			if (MailboxState_getRecent(N))
@@ -1615,16 +1593,20 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			g_tree_replace(self->mbxinfo, id, M);
 		} else {
 			unsigned newseq = 0, oldseq = 0;
+			unsigned newexists = 0, oldexists = 0;
 			MailboxState_T N = NULL;
 			N = MailboxState_new(self->pool, 0);
 			MailboxState_setId(N, mailbox_id);
 			oldseq = MailboxState_getSeq(M);
 			newseq = MailboxState_getSeq(N);
+			oldexists = MailboxState_getExists(M);
 			MailboxState_free(&N);
 			if (oldseq < newseq) {
 				id = g_new0(uint64_t, 1);
 				*id = mailbox_id;
 				M = MailboxState_new(self->pool, mailbox_id);
+				newexists = MailboxState_getExists(M);
+				MailboxState_setExists(M, max(oldexists, newexists));
 				g_tree_replace(self->mbxinfo, id, M);
 			}
 		}
