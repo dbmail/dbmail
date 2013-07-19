@@ -7,6 +7,7 @@ This is dbmail's GNU configure script.
 
 AC_DEFUN([DM_MSG_CONFIGURE_RESULTS], [dnl
 AC_MSG_RESULT([
+ PREFIX                     $prefix
  DM_PWD                     $DM_PWD
  DM_LOGDIR:                 $DM_LOGDIR
  DM_CONFDIR:                $DM_CONFDIR
@@ -38,25 +39,26 @@ AC_ARG_WITH(logdir,
 	[  --with-logdir           use logdir for logfiles],
 	logdirname="$withval")
 if test "x$logdirname" = 'x'; then
-	DM_LOGDIR="${ac_default_prefix}/var/log"
+	DM_LOGDIR="${prefix}/var/log"
 else
 	DM_LOGDIR="$logdirname"
 fi
-if test "x$localstatedir" = 'x${prefix}/var'; then
-	DM_STATEDIR="${ac_default_prefix}/var/run"
+if test "x${localstatedir}" = 'x${prefix}/var'; then
+	DM_STATEDIR="${prefix}/var"
 else
-	DM_STATEDIR=$localstatedir
+	DM_STATEDIR="$localstatedir"
 fi
-if test "x$sysconfdir" = 'x${prefix}/etc'; then
-	DM_CONFDIR="${ac_default_prefix}/etc"
+if test "x${sysconfdir}" = 'x${prefix}/etc'; then
+	DM_CONFDIR="${prefix}/etc"
 else
-	DM_CONFDIR=$sysconfdir
+	DM_CONFDIR="$sysconfdir"
 fi
-if test "x$libdir" = 'x${exec_prefix}/lib'; then
-	DM_PKGLIBDIR="${ac_default_prefix}/lib"
+if test "x${libdir}" = 'x${exec_prefix}/lib'; then
+	DM_PKGLIBDIR="${prefix}/lib"
 else
-	DM_PKGLIBDIR=$libdir
+	DM_PKGLIBDIR="$libdir"
 fi
+
 if test "x$prefix" = "xNONE"; then
 	AC_DEFINE_UNQUOTED([PREFIX], "$ac_default_prefix", [Prefix to the installed path])
 else
