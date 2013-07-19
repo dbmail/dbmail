@@ -50,11 +50,20 @@ int sort_load_driver(void)
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
 	int i;
-	char *lib_path[] = { library_dir, NULL };
+	char local_path[PATH_MAX];
+	memset(local_path, 0, sizeof(local_path));
+	g_strlcat(local_path, DM_PWD, sizeof(local_path)-1);
+	g_strlcat(local_path, "/src/modules/.libs", sizeof(local_path)-1);
+
+	char *lib_path[] = { 
+		local_path,
+		library_dir, 
+		NULL 
+	};
 
 	/* Note that the limit here *includes* the NULL. This is intentional,
 	 * to allow g_module_build_path to try the current working directory. */
-	for (i = 0; i < 2; i++) {
+	for (i = 0; lib_path[i] != NULL; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
 

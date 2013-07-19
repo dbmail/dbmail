@@ -2921,6 +2921,25 @@ if test "${with_logdir+set}" = set; then :
   withval=$with_logdir; logdirname="$withval"
 fi
 
+
+if test "x$prefix" = "xNONE"; then
+
+cat >>confdefs.h <<_ACEOF
+#define PREFIX "$ac_default_prefix"
+_ACEOF
+
+	prefix=$ac_default_prefix
+else
+
+cat >>confdefs.h <<_ACEOF
+#define PREFIX "$prefix"
+_ACEOF
+
+fi
+
+if test "x${exec_prefix}" = "xNONE"; then
+	exec_prefix=$prefix
+fi
 if test "x$logdirname" = 'x'; then
 	DM_LOGDIR="${prefix}/var/log"
 else
@@ -2937,24 +2956,11 @@ else
 	DM_CONFDIR="$sysconfdir"
 fi
 if test "x${libdir}" = 'x${exec_prefix}/lib'; then
-	DM_PKGLIBDIR="${prefix}/lib"
+	DM_PKGLIBDIR="${exec_prefix}/lib"
 else
 	DM_PKGLIBDIR="$libdir"
 fi
 
-if test "x$prefix" = "xNONE"; then
-
-cat >>confdefs.h <<_ACEOF
-#define PREFIX "$ac_default_prefix"
-_ACEOF
-
-else
-
-cat >>confdefs.h <<_ACEOF
-#define PREFIX "$prefix"
-_ACEOF
-
-fi
 DM_PWD="$ac_pwd"
 
 DEPDIR="${am__leading_dot}deps"

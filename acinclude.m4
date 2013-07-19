@@ -38,6 +38,18 @@ AC_DEFUN([DM_DEFINES],[dnl
 AC_ARG_WITH(logdir,
 	[  --with-logdir           use logdir for logfiles],
 	logdirname="$withval")
+
+if test "x$prefix" = "xNONE"; then
+	AC_DEFINE_UNQUOTED([PREFIX], "$ac_default_prefix", [Prefix to the installed path])
+	prefix=$ac_default_prefix
+else
+	AC_DEFINE_UNQUOTED([PREFIX], "$prefix", [Prefix to the installed path])
+fi
+
+if test "x${exec_prefix}" = "xNONE"; then
+	exec_prefix=$prefix
+fi
+
 if test "x$logdirname" = 'x'; then
 	DM_LOGDIR="${prefix}/var/log"
 else
@@ -54,16 +66,11 @@ else
 	DM_CONFDIR="$sysconfdir"
 fi
 if test "x${libdir}" = 'x${exec_prefix}/lib'; then
-	DM_PKGLIBDIR="${prefix}/lib"
+	DM_PKGLIBDIR="${exec_prefix}/lib"
 else
 	DM_PKGLIBDIR="$libdir"
 fi
 
-if test "x$prefix" = "xNONE"; then
-	AC_DEFINE_UNQUOTED([PREFIX], "$ac_default_prefix", [Prefix to the installed path])
-else
-	AC_DEFINE_UNQUOTED([PREFIX], "$prefix", [Prefix to the installed path])
-fi
 DM_PWD="$ac_pwd"
 ])
 	
