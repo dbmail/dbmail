@@ -1,7 +1,7 @@
 /*
  Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl
  Copyright (C) 2001-2007 Aaron Stone, aaron@serendipity.cx
- Copyright (C) 2004-2011 NFG Net Facilities Group BV, support@nfg.nl
+ Copyright (C) 2004-2013 NFG Net Facilities Group BV, support@nfg.nl
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License as
@@ -186,9 +186,6 @@
 "Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.\n" \
 ""
 
-/* build directory */
-#define DM_PWD "@DM_PWD@"
-
 /* include sql/sqlite/create_tables.sqlite for autocreation */
 #define DM_SQLITECREATE @SQLITECREATE@
 
@@ -196,20 +193,13 @@
 #define DM_DEFAULT_CONFIGURATION @DM_DEFAULT_CONFIGURATION@
 
 /** default directory and extension for pidfiles */
-#define DEFAULT_PID_DIR "@DM_STATEDIR@"
 #define DEFAULT_PID_EXT ".pid"
-#define DEFAULT_STATE_DIR "@DM_STATEDIR@"
-#define DEFAULT_STATE_EXT ".state"
 
-/** default location of library files */
-#define DEFAULT_LIBRARY_DIR "@DM_PKGLIBDIR@"
-
-/** default configuration file */
-#define DEFAULT_CONFIG_FILE "@DM_CONFDIR@/dbmail.conf"
-
-/** default log files */
-#define DEFAULT_LOG_FILE "@DM_LOGDIR@/dbmail.log"
-#define DEFAULT_ERROR_LOG "@DM_LOGDIR@/dbmail.err"
+/** default locations */
+#define DEFAULT_CONFIG_FILE SYSCONFDIR"/dbmail.conf"
+#define DEFAULT_LOG_FILE DEFAULT_LOG_DIR"/dbmail.log"
+#define DEFAULT_ERROR_LOG DEFAULT_LOG_DIR"/dbmail.err"
+#define DEFAULT_LIBRARY_DIR LIBDIR"/dbmail"
 
 #define IMAP_CAPABILITY_STRING "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS ID"
 #define IMAP_TIMEOUT_MSG "* BYE dbmail IMAP4 server signing off due to timeout\r\n"

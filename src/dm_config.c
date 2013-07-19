@@ -430,7 +430,7 @@ void config_get_logfiles(ServerConfig_T *config, const char * const service)
 	/* pid directory */
 	config_get_value("pid_directory", service, val);
 	if (! strlen(val))
-		g_strlcpy(config->pid_dir, DEFAULT_PID_DIR, FIELDSIZE);
+		g_strlcpy(config->pid_dir, LOCALSTATEDIR, FIELDSIZE);
 	else
 		g_strlcpy(config->pid_dir, val, FIELDSIZE);
 	assert(config->pid_dir);
