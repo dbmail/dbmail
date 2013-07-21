@@ -324,7 +324,8 @@ int _ic_authenticate(ImapSession *self)
 static gboolean mailbox_first_unseen(gpointer key, gpointer value, gpointer data)
 {
 	MessageInfo *msginfo = (MessageInfo *)value;
-	if (msginfo->flags[IMAPFLAG_SEEN]) return FALSE; 
+	if (msginfo->flags[IMAP_FLAG_SEEN])
+	       	return FALSE;
 	*(uint64_t *)data = *(uint64_t *)key;
 	return TRUE;
 }
@@ -451,8 +452,9 @@ static void _ic_select_enter(dm_thread_data *D)
 		GTree *info = MailboxState_getMsginfo(S);
 		uint64_t key = 0, *msn = NULL;
 		g_tree_foreach(info, (GTraverseFunc)mailbox_first_unseen, &key);
-		if ( (key > 0) && (msn = g_tree_lookup(uids, &key)))
+		if ( (key > 0) && (msn = g_tree_lookup(uids, &key))) {
 			dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %" PRIu64 "] first unseen message\r\n", *msn);
+		}
 	}
 
 	if (self->command_type == IMAP_COMM_SELECT) {
