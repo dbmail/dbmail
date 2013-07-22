@@ -1599,6 +1599,8 @@ int _ic_thread(ImapSession *self)
 
 int _dm_imapsession_get_ids(ImapSession *self, const char *set)
 {
+	bool found = FALSE;
+	
 	dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 
 	if (self->ids) {
@@ -1608,7 +1610,14 @@ int _dm_imapsession_get_ids(ImapSession *self, const char *set)
 
 	self->ids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
 
-	if ( (! self->use_uid) && ((!self->ids) || (g_tree_nnodes(self->ids)==0)) ) {
+	found = ( self->ids && (g_tree_nnodes(self->ids) > 0) );
+
+	if ( (! self->use_uid) && (! found)) {
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid sequence\r\n", self->tag);
+		return DM_EGENERAL;
+	}
+	
+	if (self->use_uid && (! self->ids)) { // empty tree IS valid
 		dbmail_imap_session_buff_printf(self, "%s BAD invalid sequence\r\n", self->tag);
 		return DM_EGENERAL;
 	}

@@ -40,7 +40,7 @@ extern char * configFile;
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
-
+uint64_t empty_box = 0;
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
@@ -140,12 +140,14 @@ void setup(void)
 	db_connect();
 	auth_connect();
 	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	empty_box = get_mailbox_id("empty");
 	add_message();
 	add_message();
 }
 
 void teardown(void)
 {
+	db_delete_mailbox(empty_box, 0, 0);
 	auth_disconnect();
 	db_disconnect();
 	config_free();
@@ -509,6 +511,9 @@ START_TEST(test_dbmail_mailbox_get_set)
 	set = dbmail_mailbox_get_set(mb,"-1:1",0);
 	fail_unless(set == NULL);
 
+	set = dbmail_mailbox_get_set(mb, "0", 1);
+	fail_unless(set == NULL);
+
 
 	// UID sets
 	char *s, *t;
@@ -532,7 +537,7 @@ START_TEST(test_dbmail_mailbox_get_set)
 
 
 	// empty box
-	mb = dbmail_mailbox_new(NULL, get_mailbox_id("empty"));
+	mb = dbmail_mailbox_new(NULL, empty_box);
 	dbmail_mailbox_open(mb);
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
