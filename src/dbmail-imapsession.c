@@ -1326,7 +1326,6 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 	char *oldflags = NULL, *newflags = NULL;
 	MessageInfo *old = NULL, *new = NULL;
 	MailboxState_T M = self->mailbox->mbstate;
-	GTree *old_recent;
 
 	assert(uid);
 
@@ -1336,8 +1335,7 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 	if (! (msn = g_tree_lookup(MailboxState_getIds(M), uid)))
 		return;
 
-	old_recent = MailboxState_steal_recent(M);
-	MailboxState_merge_recent(N, old_recent);
+	MailboxState_merge_recent(N, M);
 
 	// FETCH
 	if ((old = g_tree_lookup(MailboxState_getMsginfo(M), uid)))

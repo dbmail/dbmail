@@ -900,7 +900,6 @@ int MailboxState_build_recent(T M)
 		TRACE(TRACE_DEBUG, "build list of [%d] [%d] recent messages...", 
 				g_tree_nnodes(info), g_tree_nnodes(M->recent_queue));
 	}
-
 	return 0;
 }
 
@@ -1010,15 +1009,10 @@ GList * MailboxState_message_flags(T M, MessageInfo *msginfo)
 	return sublist;
 }
 
-GTree * MailboxState_steal_recent(T M)
+int MailboxState_merge_recent(T M, T N)
 {
-	GTree *recent_queue = M->recent_queue;
-	M->recent_queue = NULL;
-	return recent_queue;
-}
-
-int MailboxState_merge_recent(T M, GTree *recent_queue)
-{
+	GTree *recent_queue = N->recent_queue;
+	N->recent_queue = NULL;
 	g_tree_merge(M->recent_queue, recent_queue, IST_SUBSEARCH_OR);
 	g_tree_foreach(recent_queue, (GTraverseFunc)_free_recent_queue, M);
 	g_tree_destroy(recent_queue);

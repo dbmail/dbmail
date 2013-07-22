@@ -35,8 +35,7 @@ extern void         MailboxState_remap(T);
 extern int          MailboxState_build_recent(T);
 extern int          MailboxState_flush_recent(T);
 extern int          MailboxState_clear_recent(T);
-extern GTree *      MailboxState_steal_recent(T);
-extern int          MailboxState_merge_recent(T, GTree *);
+extern int          MailboxState_merge_recent(T, T);
 
 extern int          MailboxState_removeUid(T, uint64_t);
 extern void         MailboxState_addMsginfo(T, uint64_t, MessageInfo *);
