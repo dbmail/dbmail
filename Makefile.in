@@ -761,6 +761,10 @@ uninstall-am:
 	ps ps-am tags tags-recursive uninstall uninstall-am
 
 
+testall:
+	CK_FORK=no make check
+	imaptest user=testuser1 pass=test port=10143 host=localhost test=test-scripts/imap
+
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:
