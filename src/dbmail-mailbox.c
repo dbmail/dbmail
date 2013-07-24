@@ -1523,14 +1523,37 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		if (strlen(rest) < 1) break;
 
 		if (g_tree_nnodes(uids) == 0) { // empty box
-			if (uid && (rest[0] == '*')) {
-				uint64_t *k = g_new0(uint64_t,1);
-				uint64_t *v = g_new0(uint64_t,2);
+			if (uid) {
+				if (rest[0] == '*') {
+					uint64_t *k = g_new0(uint64_t,1);
+					uint64_t *v = g_new0(uint64_t,2);
 
-				*k = 1;
-				*v = MailboxState_getUidnext(self->mbstate);
+					*k = 1;
+					*v = MailboxState_getUidnext(self->mbstate);
 
-				g_tree_insert(b, k, v);
+					g_tree_insert(b, k, v);
+				} else {
+					if (! (l = dm_strtoull(sets->data, &rest, 10))) {
+						error = TRUE;
+						break;
+					}
+					if (rest[0] != ':') {
+						error = TRUE;
+						break;
+					}
+					rest++;
+					if (rest[0] != '*') {
+						error = TRUE;
+						break;
+					}
+					uint64_t *k = g_new0(uint64_t,1);
+					uint64_t *v = g_new0(uint64_t,2);
+
+					*k = 1;
+					*v = MailboxState_getUidnext(self->mbstate);
+
+					g_tree_insert(b, k, v);
+				}
 			} else {
 				error = TRUE;
 				break;
