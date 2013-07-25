@@ -36,7 +36,6 @@ import re
 import commands
 import traceback
 import string
-import time
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
 from pyparsing import nestedExpr
@@ -276,7 +275,8 @@ class testImapServer(unittest.TestCase):
         # get the message's original uid
         result = self.o.fetch(id, "(UID)")
         response_data = result[1][0]
-        uid = parse_parenthesized_list(response_data[response_data.find("("):])['UID']
+        uid = parse_parenthesized_list(
+            response_data[response_data.find("("):])['UID']
         # copy the recent message from the origin folder
         result = self.o.copy(id, 'testcopy2')
         self.assertEquals(result[0], 'OK')
@@ -287,14 +287,22 @@ class testImapServer(unittest.TestCase):
         self.assertEqual(code_name, 'COPYUID')
         uid_validity, orig_uids, new_uids = code_data[0].split(" ")
         self.assertRegexpMatches(uid_validity, "^\d+$")
-        self.assertRegexpMatches(orig_uids, "^\d+$")  # we copied just one message
-        self.assertRegexpMatches(new_uids, "^\d+$")  # we copied just one message
+        self.assertRegexpMatches(
+            orig_uids, "^\d+$")  # we copied just one message
+        self.assertRegexpMatches(
+            new_uids, "^\d+$")  # we copied just one message
         # check whether response code elements match
-        self.assertEqual(uid_validity, old_uid_validity)  # 'Uidvalidity matches'
-        self.assertEqual(orig_uids, uid)  # 'Old uid returned by UID COPY matches the one that we actually copied'
-        self.assertLessEqual(int(old_uid_next), int(new_uids)) # 'The copied message\'s uid is higher than the last uid_next value'
+        self.assertEqual(
+            uid_validity, old_uid_validity)  # 'Uidvalidity matches'
+        # 'Old uid returned by UID COPY matches the one
+        # that we actually copied'
+        self.assertEqual(orig_uids, uid)
+        # 'The copied message\'s uid is higher than the last uid_next value'
+        self.assertLessEqual(
+            int(old_uid_next), int(new_uids))
 
-        # check again what's the uid_next value and uidvalidity in the target folder
+        # check again what's the uid_next value and uidvalidity in the target
+        # folder
         self.o.select('testcopy2')
         responses = self.o.untagged_responses
         old_uid_validity = responses["UIDVALIDITY"][-1]
@@ -304,7 +312,9 @@ class testImapServer(unittest.TestCase):
         self.o.select('testcopy1')
         # get the uids of all messages
         result = self.o.fetch('1:*', "(UID)")
-        uids = [parse_parenthesized_list(x[x.find("("):])['UID'] for x in result[1]]
+        uids = [
+            parse_parenthesized_list(x[x.find("("):])['UID'] for x in result[1]
+        ]
         # copy them
         result = self.o.copy('1:*', 'testcopy2')
         self.assertEquals(result[0], 'OK')
@@ -949,64 +959,85 @@ class testImapServer(unittest.TestCase):
         # create hierarchy
         base_name = "Test folder"
         self.o.create(base_name)
-        second_level = base_name+"/2012"
+        second_level = base_name + "/2012"
         self.o.create(second_level)
         subfolders = ['02', '04', '09', '03', '05', '06']
         for i in subfolders:
-            self.o.create(second_level+"/"+i)
+            self.o.create(second_level + "/" + i)
 
         # run a list command and check the base_name folder in the results
         result = self.o.list("", "%")
         self.assertEqual(result[0], 'OK')
         # find the base_name folder in the results
-        folder = [i for i in result[1] if re.search("\""+re.escape(base_name)+"\"$", i)]
-        self.assertNotEqual([], folder, base_name+' is in the results')
+        folder = [
+            i for i in result[1] if
+            re.search("\"" + re.escape(base_name) + "\"$", i)
+        ]
+        self.assertNotEqual([], folder, base_name + ' is in the results')
         folder = folder[0]
         flags = re.search("^\((.*?)\)", folder).group(1)
         # check for the \Noselect error
-        self.assertEqual([], [i for i in flags.split(" ") if i.lower() == '\\noselect'], 'noselect is not in attributes for '+base_name)
+        self.assertEqual(
+            [],
+            [i for i in flags.split(" ") if i.lower() == '\\noselect'],
+            'noselect is not in attributes for ' + base_name)
 
         # run a list command and check the second_level folder in the results
-        result = self.o.list(base_name+"/", "%")
+        result = self.o.list(base_name + "/", "%")
         self.assertEqual(result[0], 'OK')
         # find the second_level folder in the results
-        folder = [i for i in result[1] if re.search("\""+re.escape(second_level)+"\"$", i)]
-        self.assertNotEqual([], folder, second_level+' is in the results')
+        folder = [i for i in result[1] if
+                  re.search("\"" + re.escape(second_level) + "\"$", i)
+                 ]
+        self.assertNotEqual([], folder, second_level + ' is in the results')
         folder = folder[0]
         flags = re.search("^\((.*?)\)", folder).group(1)
         # check for the \Noselect error
-        self.assertEqual([], [i for i in flags.split(" ") if i.lower() == '\\noselect'], 'noselect is not in attributes for '+second_level)
+        self.assertEqual([], [
+            i for i in flags.split(" ") if i.lower() == '\\noselect'],
+            'noselect is not in attributes for ' + second_level)
 
         # check whether all subfolders are in the list
-        result = self.o.list(second_level+"/", "%")
-        self.assertEqual(len(subfolders), len(result[1]), 'number of subfolders match')
+        result = self.o.list(second_level + "/", "%")
+        self.assertEqual(len(subfolders), len(result[1]),
+                         'number of subfolders match')
         for i in subfolders:
-            folder = [j for j in result[1] if re.search("\""+re.escape(second_level+"/"+i)+"\"$", j)]
-            self.assertNotEqual([], folder, second_level+"/"+i+' is in the results')
+            folder = [j for j in result[1] if
+                      re.search("\"" + re.escape(
+                          second_level + "/" + i) + "\"$", j)]
+            self.assertNotEqual([], folder,
+                                second_level + "/" + i + ' is in the results')
 
     def testBug987(self):
         """
         Test http://www.dbmail.org/mantis/view.php?id=987
-        create a hierarchy (with Cyrillic folder names) that's reproducing the error
+        create a hierarchy (with Cyrillic folder names) that's reproducing
+        the error
         """
         # create hierarchy, it's important to have one Cyrillic parent folder
-        base_name = "&BBoEOARXBDI-" # 'Київ' in utf7-imap
+        base_name = "&BBoEOARXBDI-"  # 'Київ' in utf7-imap
         self.o.create(base_name)
         # these folders don't essentially need to be in Cyrillic
-        subfolders = ["&BBwEMAQ5BDQEMAQ9-", "&BBcEPgQ7BD4EQgRW- &BBIEPgRABD4EQgQw-"]  # 'Майдан' and 'Золоті Ворота' in utf7-imap
+        subfolders = [
+            "&BBwEMAQ5BDQEMAQ9-",
+            "&BBcEPgQ7BD4EQgRW- &BBIEPgRABD4EQgQw-"
+        ]  # 'Майдан' and 'Золоті Ворота' in utf7-imap
         for i in subfolders:
-            self.o.create(base_name+"/"+i)
+            self.o.create(base_name + "/" + i)
 
         # run a list command and check the base_name folder in the results
         result = self.o.list("", "%")
         self.assertEqual(result[0], 'OK')
         # find the base_name folder in the results
-        folder = [i for i in result[1] if re.search("\""+re.escape(base_name)+"\"$", i)]
-        self.assertNotEqual([], folder, base_name+' is in the results')
+        folder = [i for i in result[1] if
+                  re.search("\"" + re.escape(base_name) + "\"$", i)]
+        self.assertNotEqual([], folder, base_name + ' is in the results')
         folder = folder[0]
         flags = re.search("^\((.*?)\)", folder).group(1)
         # check for the \Hasnochildren flag - shouldn't be in the flags
-        self.assertEqual([], [i for i in flags.split(" ") if i.lower() == '\\hasnochildren'], 'hasnochildren is not in attributes for '+base_name)
+        self.assertEqual([], [i for i in flags.split(" ") if
+                              i.lower() == '\\hasnochildren'],
+                         'hasnochildren is not in attributes for ' + base_name)
 
     def tearDown(self):
         try:
