@@ -169,7 +169,6 @@ static int authldap_connect(void)
 	LDAP *_ldap_conn = NULL;
 	int ret;
 
-	if (! g_thread_supported()) g_thread_init(NULL);
 	g_once(&ldap_conn_once, authldap_once, NULL);
 
 	switch (_ldap_cfg.version_int) {
