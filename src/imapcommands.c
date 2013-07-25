@@ -894,20 +894,14 @@ int _ic_unsubscribe(ImapSession *self)
  * Free the mailbox state info, if we are not copying it.
  * This is called for each found hierarchy in a loop.
  */
-static gboolean _ic_list_found_hierarchy_copy(char *key, MailboxState_T *M, GTree *found_folders)
+static gboolean _ic_list_found_hierarchy_copy(char *key, MailboxState_T M, GTree *found_folders)
 {
-	TRACE(TRACE_DEBUG,"searching hierarchy [%s] in found folders", MailboxState_getName(*M));
+	TRACE(TRACE_DEBUG,"searching hierarchy [%s] in found folders", MailboxState_getName(M));
 	if (!g_tree_lookup(found_folders, key)) {
 		TRACE(TRACE_DEBUG,"not found, adding");
 		g_tree_insert(found_folders, key, M);
 	} else {
 		TRACE(TRACE_DEBUG,"found, not adding");
-		// we won't use this MailBox state info any more
-		// free the 'locally reserved' part of the structure
-		MailboxState_free(M);
-		// free the structure itself, because we reserved place for it
-		//TRACE(TRACE_DEBUG,"freeing dynamic pointer [%d]", M);
-		g_free(M);
 	}
 	return FALSE;
 }
@@ -917,16 +911,16 @@ static gboolean _ic_list_found_hierarchy_copy(char *key, MailboxState_T *M, GTre
  *
  * This is called for each found folder in a loop.
  */
-static gboolean _ic_list_write_out_found_folder(gpointer UNUSED key, MailboxState_T *M, ImapSession *self)
+static gboolean _ic_list_write_out_found_folder(gpointer UNUSED key, MailboxState_T M, ImapSession *self)
 {
-	TRACE(TRACE_DEBUG,"writing out found folder [%s]", MailboxState_getName(*M));
+	TRACE(TRACE_DEBUG,"writing out found folder [%s]", MailboxState_getName(M));
 	GList *plist = NULL;
 	char *pstring = NULL;
-	if (MailboxState_noSelect(*M))
+	if (MailboxState_noSelect(M))
 		plist = g_list_append(plist, g_strdup("\\noselect"));
-	if (MailboxState_noInferiors(*M))
+	if (MailboxState_noInferiors(M))
 		plist = g_list_append(plist, g_strdup("\\noinferiors"));
-	if (MailboxState_noChildren(*M))
+	if (MailboxState_noChildren(M))
 		plist = g_list_append(plist, g_strdup("\\hasnochildren"));
 	else
 		plist = g_list_append(plist, g_strdup("\\haschildren"));
@@ -934,16 +928,10 @@ static gboolean _ic_list_write_out_found_folder(gpointer UNUSED key, MailboxStat
 	/* show */
 	pstring = dbmail_imap_plist_as_string(plist);
 	dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", self->command,
-			pstring, MAILBOX_SEPARATOR, MailboxState_getName(*M));
+			pstring, MAILBOX_SEPARATOR, MailboxState_getName(M));
 
 	g_list_destroy(plist);
 	g_free(pstring);
-
-	// free the 'locally reserved' part of the structure
-	MailboxState_free(M);
-	// free the structure itself, because we reserved place for it
-	//TRACE(TRACE_DEBUG,"freeing dynamic pointer [%d]", M);
-	g_free(M);
 
 	return FALSE;
 }
@@ -964,9 +952,6 @@ void _ic_list_enter(dm_thread_data *D)
 	// that's why store them separately in another GTree
 	// this is to not to let them mask out real folders if they are found first
 	GTree *found_hierarchy = NULL;
-	// we need a pointer to reserve place for folder state info (for many folders)
-	//  that we'll put into the above GTree-s
-	MailboxState_T *pM = NULL;
 	// we also need a local variable to be able to access the returned value
 	//  from MailboxState_new().
 	MailboxState_T M = NULL;
@@ -1009,8 +994,8 @@ void _ic_list_enter(dm_thread_data *D)
 		SESSION_RETURN;
 	}
 
-	found_folders = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,(GDestroyNotify)g_free,NULL);
-	found_hierarchy = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,(GDestroyNotify)g_free,NULL);
+	found_folders = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,NULL,NULL);
+	found_hierarchy = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,NULL,NULL);
 
 	while ((! D->status) && children) {
 		gboolean show = FALSE;
@@ -1087,22 +1072,18 @@ void _ic_list_enter(dm_thread_data *D)
 		//  - it's not a hierarchy element (so real folder) AND it cannot be found among real folders
 		//  - it's a hierarchy element AND it cannot be found among hierarchy elements
 		if (show && MailboxState_getName(M) && ((!hierarchy_element && !exists_in_found_folders) || (hierarchy_element && !exists_in_found_hierarchy))) {
-			char *s = g_strdup(MailboxState_getName(M));
+			const char *s = MailboxState_getName(M);
 			// reserve memory for that structure pointer that we'll put into GLists
 			// it will be freed when finishing the work with tree elements
-			pM = g_malloc0(sizeof(*pM));
-			//TRACE(TRACE_DEBUG,"reserving dynamic pointer [%d]", pM);
-			// copy the value over to the pointer-var
-			*pM = M;
 			// insert the Mailbox state data into one of the trees
 			// we'll need full access to it to set up the command's output
 			// decide where to store the Mailbox data
 			if (!hierarchy_element) {
 				TRACE(TRACE_DEBUG,"adding to found folders [%s]", s);
-				g_tree_insert(found_folders, s, pM);
+				g_tree_insert(found_folders, (gpointer)s, M);
 			} else {
 				TRACE(TRACE_DEBUG,"adding to found hierarchy [%s]", s);
-				g_tree_insert(found_hierarchy, s, pM);
+				g_tree_insert(found_hierarchy, (gpointer)s, M);
 			}
 		} else {
 			// if we haven't added the Mailbox state data into any of the trees then we need to free the memory
@@ -1473,7 +1454,7 @@ void _ic_append_enter(dm_thread_data *D)
 	char buffer[1024];
 	memset(buffer, 0, sizeof(buffer));
 	// copy the response code parameters to it
-	g_snprintf(buffer, 1024, "APPENDUID %llu %llu", mboxid, message_id);
+	g_snprintf(buffer, 1024, "APPENDUID %" PRIu64 " %" PRIu64, mboxid, message_id);
 	SESSION_OK_WITH_RESP_CODE(buffer);
 	SESSION_RETURN;
 }
@@ -2051,7 +2032,7 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 	// reserve memory for the new element in new_ids
 	new_ids_element = g_new0(uint64_t,1);
 	*new_ids_element = newid;
-	TRACE(TRACE_DEBUG, "copied message with old uid %d to new uid %d", *id, *new_ids_element);
+	TRACE(TRACE_DEBUG, "copied uid %" PRIu64 " -> %" PRIu64, *id, *new_ids_element);
 	// prepending is faster then appending
 	self->new_ids = g_list_prepend(self->new_ids, new_ids_element);
 	return FALSE;
@@ -2128,7 +2109,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 	// convert them to string (into a buffer)
 	old_ids_buff = g_list_join_u64(old_ids,",");
 	// copy the parameters to the response code buffer
-	g_string_printf(buffer, "COPYUID %llu %s %s", destmboxid, old_ids_buff->str, new_ids_buff->str);
+	g_string_printf(buffer, "COPYUID %" PRIu64 " %s %s", destmboxid, old_ids_buff->str, new_ids_buff->str);
 	SESSION_OK_WITH_RESP_CODE(buffer->str);
 	// clean up
 	// for old_ids free just the list itself, because the elements are reserved in self->ids (and will be freed later)
