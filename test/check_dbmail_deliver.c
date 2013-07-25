@@ -574,7 +574,15 @@ END_TEST
 START_TEST(test_auth_get_user_aliases)
 {
 	uint64_t user_idnr;
-	char *username="testuser1";
+	char *username = "testaliasuser";
+	char *passwd = "test";
+	char *passwdtype = "md5-hash";
+	char *password = NULL;
+	char *enctype = NULL;
+	if (! (auth_user_exists(username,&user_idnr))) {
+		mkpassword(username, passwd, passwdtype, NULL, &password, &enctype);
+		auth_adduser(username,password, enctype, 101, 1024000, &user_idnr);
+	}
 	GList *aliases;
 	int result;
 	result = auth_user_exists(username, &user_idnr);
