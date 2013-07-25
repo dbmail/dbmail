@@ -481,7 +481,7 @@ START_TEST(test_dbmail_mailbox_get_set)
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
 	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	c = g_tree_nnodes(set);
-	//FIXME: fail_unless(c>1,"dbmail_mailbox_get_set failed [%d]", c);
+	fail_unless(c>1,"dbmail_mailbox_get_set failed [%d]", c);
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb,"*:1",0);
@@ -560,8 +560,18 @@ START_TEST(test_dbmail_mailbox_get_set)
 	fail_unless(d==1, "expected 1, got %d", d);
 	g_tree_destroy(set);
 
+	set = dbmail_mailbox_get_set(mb, "*:1", 1);
+	fail_unless(set != NULL);
+	d = g_tree_nnodes(set);
+	fail_unless(d==1, "expected 1, got %d", d);
+	g_tree_destroy(set);
+
+	set = dbmail_mailbox_get_set(mb, "1234567", 1);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
+	g_tree_destroy(set);
+
 	set = dbmail_mailbox_get_set(mb, "1:1", 1);
-	fail_unless(set == NULL,"dbmail_mailbox_get_set failed");
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb, "1:a*", 1);
@@ -569,6 +579,10 @@ START_TEST(test_dbmail_mailbox_get_set)
 	g_tree_destroy(set);
 	
 	set = dbmail_mailbox_get_set(mb, "a:*", 1);
+	fail_unless(set == NULL,"dbmail_mailbox_get_set failed");
+	g_tree_destroy(set);
+
+	set = dbmail_mailbox_get_set(mb, "*:a", 1);
 	fail_unless(set == NULL,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 

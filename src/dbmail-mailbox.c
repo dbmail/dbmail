@@ -1470,6 +1470,16 @@ static void find_range(GTree *c, uint64_t l, uint64_t r, GTree *a, gboolean uid)
 	g_tree_foreach(c, (GTraverseFunc)filter_range, &data);
 }
 
+static int checkset(const char *s)
+{
+	int i;
+	for (i = 0; s[i]; i++) {
+		if (!strchr("0123456789:,*", s[i]))
+		       	return 0;
+	}
+	return 1;
+}
+
 GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean uid)
 {
 	GList *ids = NULL, *sets = NULL;
@@ -1489,6 +1499,9 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	assert (self && self->mbstate && set);
 
 	if ((! uid ) && (MailboxState_getExists(self->mbstate) == 0)) // empty mailbox
+		return NULL;
+
+	if (! checkset(set)) // invalid chars
 		return NULL;
 
 	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
@@ -1523,40 +1536,38 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		if (strlen(rest) < 1) break;
 
 		if (g_tree_nnodes(uids) == 0) { // empty box
-			if (uid) {
-				if (rest[0] == '*') {
-					uint64_t *k = g_new0(uint64_t,1);
-					uint64_t *v = g_new0(uint64_t,2);
+			assert(uid);
+			if (rest[0] == '*') {
+				uint64_t *k = g_new0(uint64_t,1);
+				uint64_t *v = g_new0(uint64_t,2);
 
-					*k = 1;
-					*v = MailboxState_getUidnext(self->mbstate);
+				*k = 1;
+				*v = MailboxState_getUidnext(self->mbstate);
 
-					g_tree_insert(b, k, v);
-				} else {
-					if (! (l = dm_strtoull(sets->data, &rest, 10))) {
-						error = TRUE;
-						break;
-					}
+				g_tree_insert(b, k, v);
+			} else {
+				if (! (l = dm_strtoull(sets->data, &rest, 10))) {
+					error = TRUE;
+					break;
+				}
+				if (rest[0]) {
 					if (rest[0] != ':') {
 						error = TRUE;
 						break;
 					}
 					rest++;
-					if (rest[0] != '*') {
+					if ((rest[0] != '*') && (! dm_strtoull(rest, NULL, 10))) {
 						error = TRUE;
 						break;
 					}
-					uint64_t *k = g_new0(uint64_t,1);
-					uint64_t *v = g_new0(uint64_t,2);
-
-					*k = 1;
-					*v = MailboxState_getUidnext(self->mbstate);
-
-					g_tree_insert(b, k, v);
 				}
-			} else {
-				error = TRUE;
-				break;
+				uint64_t *k = g_new0(uint64_t,1);
+				uint64_t *v = g_new0(uint64_t,2);
+
+				*k = 1;
+				*v = MailboxState_getUidnext(self->mbstate);
+
+				g_tree_insert(b, k, v);
 			}
 		} else {
 			if (rest[0] == '*') {
@@ -1609,7 +1620,6 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 			}
 		}
 
-		
 		if (! g_list_next(sets)) break;
 		sets = g_list_next(sets);
 	}
