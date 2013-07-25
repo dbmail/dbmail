@@ -1804,10 +1804,8 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 	if (self->mailbox && MailboxState_getMsginfo(self->mailbox->mbstate))
 		msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), id);
 
-	if (! msginfo) {
-		TRACE(TRACE_WARNING, "[%p] unable to lookup msginfo struct for [%" PRIu64 "]", self, *id);
+	if (! msginfo)
 		return TRUE;
-	}
 
 	msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), id);
 
