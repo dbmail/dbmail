@@ -52,7 +52,7 @@ struct mailbox_match * mailbox_match_new(const char *mailbox)
 	char *sensitive, *insensitive;
 	size_t i, j, len;
 	int uscore = 0, verbatim = 0, has_sensitive_part = 0;
-	char p, c;
+	char p = 0, c = 0;
 
 	len = strlen(mailbox);
 	for (i = 0; i < len; i++)
