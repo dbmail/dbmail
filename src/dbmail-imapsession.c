@@ -1285,8 +1285,8 @@ int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, c
 		case 1:
 			self->userid = userid;
 			ci_authlog_init(self->ci, THIS_MODULE, username, AUTHLOG_ACT);
-			TRACE(TRACE_NOTICE, "[%p] login accepted: user [%s] from [%s:%s]", self, username, 
-				self->ci->src_ip, self->ci->src_port);
+			TRACE(TRACE_NOTICE, "[%p] login accepted: id [%" PRIu64 "] user [%s] from [%s:%s]",
+				       	self, userid, username, self->ci->src_ip, self->ci->src_port);
 			break;
 
 		default:
