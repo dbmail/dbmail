@@ -819,6 +819,44 @@ START_TEST(test_dbmail_message_get_size)
 }
 END_TEST
 
+
+START_TEST(test_db_get_message_lines)
+{
+	DbmailMessage *m;
+	char *result;
+	char *raw;
+	const char *header = "From: foo@bar.org\r\n"
+	"Subject: Some test\r\n"
+	"To: bar@foo.org\r\n"
+	"MIME-Version: 1.0\r\n"
+	"Content-Type: text/plain; charset=utf-8\r\n"
+	"Content-Transfer-Encoding: base64\r\n"
+	"\r\n";
+	const char *body = "CnRlc3RpbmcKCuHh4eHk\r\n";
+	raw = g_strconcat(header, body, NULL);
+
+	m = dbmail_message_new(NULL);
+	m = dbmail_message_init_with_string(m, raw);
+	dbmail_message_store(m);
+
+
+	result = db_get_message_lines(m->msg_idnr, 0);
+	fail_unless(MATCH(result, header));
+	g_free(result);
+
+	result = db_get_message_lines(m->msg_idnr, 1);
+	fail_unless(MATCH(result, raw));
+	g_free(result);
+
+	result = db_get_message_lines(m->msg_idnr, -2);
+	fail_unless(MATCH(result, raw));
+	g_free(result);
+	
+	g_free(raw);
+	dbmail_message_free(m);
+}
+END_TEST
+
 Suite *dbmail_message_suite(void)
 {
 	Suite *s = suite_create("Dbmail Message");
@@ -849,6 +887,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_construct);
 	tcase_add_test(tc_message, test_dbmail_message_get_size);
 	tcase_add_test(tc_message, test_encoding);
+	tcase_add_test(tc_message, test_db_get_message_lines);
 	return s;
 }
 

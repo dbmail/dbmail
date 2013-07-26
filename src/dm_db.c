@@ -1757,12 +1757,8 @@ int db_delete_mailbox(uint64_t mailbox_idnr, int only_empty, int update_curmail_
 char * db_get_message_lines(uint64_t message_idnr, long lines)
 {
 	DbmailMessage *msg;
-	
+	char *raw, *out;
 	uint64_t physmessage_id = 0;
-	char *c, *raw = NULL, *hdr = NULL, *buf = NULL;
-	GString *s, *t;
-	int pos = 0;
-	long n = 0;
 	
 	TRACE(TRACE_DEBUG, "request for [%ld] lines", lines);
 
@@ -1772,38 +1768,23 @@ char * db_get_message_lines(uint64_t message_idnr, long lines)
 
 	msg = dbmail_message_new(NULL);
 	msg = dbmail_message_retrieve(msg, physmessage_id);
-	hdr = dbmail_message_hdrs_to_string(msg);
-	buf = dbmail_message_body_to_string(msg);
+	raw = dbmail_message_to_string(msg);
 	dbmail_message_free(msg);
 
-	/* always send all headers */
-	s = g_string_new(hdr);
-	g_free(hdr);
-
-	/* send requested body lines */	
-	if (buf) {
-		t = g_string_new(buf);
-		g_free(buf);
-	} else {
-		t = g_string_new("");
-	}
-
-	raw = t->str;
-	
 	if (lines >=0) {
+		unsigned n = 0;
+		unsigned pos = 0;
+		pos = find_end_of_header(raw);
 		while (raw[pos] && n < lines) {
-			if (raw[pos] == '\n') n++;
+			if (raw[pos] == '\n')
+				n++;
 			pos++;
 		}
-		t = g_string_truncate(t,pos);
+		raw[pos] = '\0';
 	}
-
-	g_string_append(s, t->str);
-	g_string_free(t, TRUE);
-
-	c = get_crlf_encoded_dots(s->str);
-	g_string_free(s,TRUE);
-	return c;
+	out = get_crlf_encoded_dots(raw);
+	g_free(raw);
+	return out;
 }
 
 int db_update_pop(ClientSession_T * session_ptr)
