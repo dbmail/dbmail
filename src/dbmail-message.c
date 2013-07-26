@@ -937,29 +937,13 @@ gchar * dbmail_message_body_to_string(const DbmailMessage *self)
 
 gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
 {
-	gchar *h;
-	size_t j = 0;
-	unsigned offset = 0, i = 0;
+	char *h;
+	unsigned offset = 0;
 
-	char buf[FIELDSIZE];
-	memset(buf, 0, sizeof(buf));
-
-	g_mime_stream_reset(self->stream);
-	j = g_mime_stream_read(self->stream, buf, FIELDSIZE-1);
-
-	while (j > 0) {
-		i = find_end_of_header(buf);
-		offset += i;
-		if (i < j)
-			break;
-		memset(buf, 0, sizeof(buf));
-		j = g_mime_stream_read(self->stream, buf, FIELDSIZE-1);
-	}
-
-	h = g_new0(gchar,offset+1);
-	g_mime_stream_reset(self->stream);
-	g_mime_stream_read(self->stream, h, offset);
-	return h;
+	h = dbmail_message_to_string(self);
+	offset = find_end_of_header(h);
+	h[offset] = '\0';
+	return g_realloc(h, offset+1);
 }
 
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
