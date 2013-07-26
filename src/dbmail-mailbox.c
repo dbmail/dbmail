@@ -1445,7 +1445,7 @@ static int filter_range(gpointer key, gpointer value, gpointer data)
 	if (*(uint64_t *)key > d->max) return TRUE; // done
 
 	k = g_new0(uint64_t,1);
-	v = g_new0(uint64_t,2);
+	v = g_new0(uint64_t,1);
 
 	*k = *(uint64_t *)key;
 	*v = *(uint64_t *)value;

@@ -930,6 +930,7 @@ static gboolean _ic_list_write_out_found_folder(gpointer UNUSED key, MailboxStat
 	dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", self->command,
 			pstring, MAILBOX_SEPARATOR, MailboxState_getName(M));
 
+	MailboxState_free(&M);
 	g_list_destroy(plist);
 	g_free(pstring);
 
@@ -1506,7 +1507,7 @@ static void _ic_close_enter(dm_thread_data *D)
 	/* only perform the expunge if the user has the right to do it */
 	if (result == 1) {
 		if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE)
-			dbmail_imap_session_mailbox_expunge(self);
+			dbmail_imap_session_mailbox_expunge(self, NULL);
 		imap_session_mailbox_close(self);
 	}
 
@@ -1551,6 +1552,7 @@ int _ic_unselect(ImapSession *self)
 	
 static void _ic_expunge_enter(dm_thread_data *D)
 {
+	const char *set = NULL;
 	int result;
 	SESSION_GET;
 
@@ -1559,7 +1561,10 @@ static void _ic_expunge_enter(dm_thread_data *D)
 		SESSION_RETURN;
 	}
 	
-	if (dbmail_imap_session_mailbox_expunge(self) != DM_SUCCESS) {
+	if (self->use_uid)
+		set = p_string_str(self->args[self->args_idx]);
+
+	if (dbmail_imap_session_mailbox_expunge(self, set) != DM_SUCCESS) {
 		dbmail_imap_session_buff_printf(self, "* BYE expunge failed\r\n");
 		D->status = DM_EQUERY;
 		SESSION_RETURN;
@@ -1571,7 +1576,10 @@ static void _ic_expunge_enter(dm_thread_data *D)
 
 int _ic_expunge(ImapSession *self)
 {
-	if (!check_state_and_args(self, 0, 0, CLIENTSTATE_SELECTED)) return 1;
+	if (self->use_uid)
+		if (!check_state_and_args(self, 1, 1, CLIENTSTATE_SELECTED)) return 1;
+	else
+		if (!check_state_and_args(self, 0, 0, CLIENTSTATE_SELECTED)) return 1;
 
 	if (MailboxState_getPermission(self->mailbox->mbstate) != IMAPPERM_READWRITE) {
 		dbmail_imap_session_buff_printf(self, "%s NO you do not have write permission on this folder\r\n", self->tag);
@@ -2170,6 +2178,10 @@ int _ic_uid(ImapSession *self)
 		dbmail_imap_session_set_command(self, command);
 		self->args_idx++;
 		result = _ic_thread(self);
+	} else if (MATCH(command, "expunge")) {
+		dbmail_imap_session_set_command(self, command);
+		self->args_idx++;
+		result = _ic_expunge(self);
 	} else {
 		dbmail_imap_session_buff_printf(self, "%s BAD invalid UID command\r\n", self->tag);
 		result = 1;

@@ -73,8 +73,8 @@ END_TEST
 
 START_TEST(test_capa_add)
 {
-	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS";
-	char *ex2 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS ID";
+	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS UIDPLUS";
+	char *ex2 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk NAMESPACE CHILDREN SORT QUOTA THREAD=ORDEREDSUBJECT UNSELECT IDLE STARTTLS UIDPLUS ID";
 	Capa_remove(A, "ID");
 	fail_unless(! Capa_match(A, "ID"), "remove failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
 	fail_unless(MATCH(Capa_as_string(A), ex1), "remove failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
@@ -86,13 +86,13 @@ END_TEST
 
 START_TEST(test_capa_remove)
 {
-	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk SORT THREAD=ORDEREDSUBJECT UNSELECT IDLE ID";
+	char *ex1 = "IMAP4rev1 AUTH=LOGIN AUTH=CRAM-MD5 ACL RIGHTS=texk SORT THREAD=ORDEREDSUBJECT UNSELECT IDLE ID UIDPLUS";
 	Capa_remove(A, "STARTTLS");
 	fail_unless(! Capa_match(A, "STARTTLS"), "remove failed");
 	Capa_remove(A, "NAMESPACE");
 	Capa_remove(A, "QUOTA");
 	Capa_remove(A, "CHILDREN");
-	fail_unless(MATCH(Capa_as_string(A), ex1),"remove failed");
+	fail_unless(MATCH(Capa_as_string(A), ex1), "remove failed\n[%s] !=\n[%s]\n", ex1, Capa_as_string(A));
 }
 END_TEST
 

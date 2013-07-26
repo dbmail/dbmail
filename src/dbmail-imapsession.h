@@ -103,7 +103,7 @@ int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, c
 MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t mailbox_idnr);
 
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
-int dbmail_imap_session_mailbox_expunge(ImapSession *self);
+int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set);
 
 int dbmail_imap_session_fetch_get_items(ImapSession *self);
 int dbmail_imap_session_fetch_parse_args(ImapSession * self);

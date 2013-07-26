@@ -9,5 +9,9 @@
 9 expunge
 10 fetch 1:* (uid)
 11 store 1 +flags (\Deleted)
-12 close
-13 logout
+12 uid store * +flags (\Deleted)
+13 uid expunge
+13 uid expunge 1
+13 uid expunge *
+14 close
+15 logout

@@ -142,6 +142,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	Capa_remove(self->preauth_capa, "THREAD=ORDEREDSUBJECT");
 	Capa_remove(self->preauth_capa, "UNSELECT");
 	Capa_remove(self->preauth_capa, "IDLE");
+	Capa_remove(self->preauth_capa, "UIDPLUS");
 	if (MATCH(db_params.authdriver, "LDAP")) {
 		Capa_remove(self->capa, "AUTH=CRAM-MD5");
 		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
@@ -1660,11 +1661,12 @@ static gboolean _do_expunge(uint64_t *id, ImapSession *self)
 	return notify_expunge(self, id);
 }
 
-int dbmail_imap_session_mailbox_expunge(ImapSession *self)
+int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set)
 {
 	uint64_t mailbox_size;
 	int i;
 	GList *ids;
+	GTree *uids = NULL;
 	MailboxState_T M = self->mailbox->mbstate;
 
 	if (! (i = g_tree_nnodes(MailboxState_getMsginfo(M))))
@@ -1673,7 +1675,13 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self)
 	if (db_get_mailbox_size(self->mailbox->id, 1, &mailbox_size) == DM_EQUERY)
 		return DM_EQUERY;
 
-	ids = g_tree_keys(MailboxState_getMsginfo(M));
+	if (set) {
+		uids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
+		ids = g_tree_keys(uids);
+	} else {
+		ids = g_tree_keys(MailboxState_getMsginfo(M));
+	}
+
 	ids = g_list_reverse(ids);
 
 	self->c = db_con_get();
@@ -1683,8 +1691,10 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self)
 	db_con_close(self->c);
 	self->c = NULL;
 
-	ids = g_list_first(ids);
-	g_list_free(ids);
+	if (uids)
+		g_tree_destroy(uids);
+
+	g_list_free(g_list_first(ids));
 
 	if (i > g_tree_nnodes(MailboxState_getMsginfo(M))) {
 		db_mailbox_seq_update(self->mailbox->id);
