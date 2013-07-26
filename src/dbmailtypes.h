@@ -427,7 +427,7 @@ typedef struct {
 /* length of database date string 
    YYYY-MM-DD HH:MM:SS
    1234567890123456789 */
-#define SQL_INTERNALDATE_LEN 20
+#define SQL_INTERNALDATE_LEN 32
 
 /* max length of number/dots part specifier */
 #define IMAP_MAX_PARTSPEC_LEN 100
