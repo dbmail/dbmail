@@ -1536,10 +1536,6 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		if (strlen(rest) < 1) break;
 
 		if (g_tree_nnodes(uids) == 0) { // empty box
-			if (uid) { // really shouldn't happen
-				error = TRUE;
-				break;
-			}
 			if (rest[0] == '*') {
 				uint64_t *k = g_new0(uint64_t,1);
 				uint64_t *v = g_new0(uint64_t,2);
