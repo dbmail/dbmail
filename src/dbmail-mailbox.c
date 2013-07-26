@@ -1498,15 +1498,14 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 
 	assert (self && self->mbstate && set);
 
-	if ((! uid ) && (MailboxState_getExists(self->mbstate) == 0)) // empty mailbox
+	uids = MailboxState_getIds(self->mbstate);
+	if ((! uid) && (g_tree_nnodes(uids) == 0))
 		return NULL;
 
 	if (! checkset(set)) // invalid chars
 		return NULL;
 
-	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	maxmsn = MailboxState_getExists(self->mbstate);
-	uids = MailboxState_getIds(self->mbstate);
 	ids = g_tree_keys(uids);
 	if (ids) {
 		ids = g_list_last(ids);
@@ -1517,6 +1516,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	}
 
 	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
 	if (! uid) {
 		lo = 1;
@@ -1536,7 +1536,10 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		if (strlen(rest) < 1) break;
 
 		if (g_tree_nnodes(uids) == 0) { // empty box
-			assert(uid);
+			if (uid) { // really shouldn't happen
+				error = TRUE;
+				break;
+			}
 			if (rest[0] == '*') {
 				uint64_t *k = g_new0(uint64_t,1);
 				uint64_t *v = g_new0(uint64_t,2);
