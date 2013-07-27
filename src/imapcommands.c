@@ -902,6 +902,7 @@ static gboolean _ic_list_found_hierarchy_copy(char *key, MailboxState_T M, GTree
 		g_tree_insert(found_folders, key, M);
 	} else {
 		TRACE(TRACE_DEBUG,"found, not adding");
+		MailboxState_free(&M);
 	}
 	return FALSE;
 }
@@ -1040,7 +1041,7 @@ void _ic_list_enter(dm_thread_data *D)
 						g_free(p[l]);
 						p[l] = NULL;
 					}
-					m = g_strjoinv(MAILBOX_SEPARATOR,p);
+					m = g_strjoinv(MAILBOX_SEPARATOR, p);
 					if (listex_match(pattern, m, MAILBOX_SEPARATOR, 0)) {
 						TRACE(TRACE_DEBUG,"partial hierarchy [%s] matches [%s]", m, pattern);
 
@@ -1049,6 +1050,7 @@ void _ic_list_enter(dm_thread_data *D)
 						MailboxState_setNoChildren(M, FALSE);
 						show = TRUE;
 						hierarchy_element = TRUE;
+						g_free(m);
 						break;
 					} else {
 						TRACE(TRACE_DEBUG,"partial hierarchy [%s] doesn't match [%s]", m, pattern);
