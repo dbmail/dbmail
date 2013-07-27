@@ -843,7 +843,45 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		date_imap2sql(p_string_str(search_keys[*idx]), s);
 		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > '%s'", s);
 		(*idx)++;
+
+	} else if ( MATCH(key, "older") ) {
+		uint64_t seconds;
+		char partial[DEF_FRAGSIZE];
+		memset(partial, 0, sizeof(partial));
+		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		errno = 0;
+		seconds = dm_strtoull(p_string_str(search_keys[*idx + 1]), NULL, 10);
+		int ser = errno;
+		if (ser) {
+			TRACE(TRACE_DEBUG, "%s", strerror(ser));
+			return -1;
+		}
+		value->type = IST_IDATE;
+		(*idx)++;
+		g_snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_WITHIN), seconds);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date < %s", partial);
+		(*idx)++;
+
+	} else if ( MATCH(key, "younger") ) {
+		uint64_t seconds;
+		char partial[DEF_FRAGSIZE];
+		memset(partial, 0, sizeof(partial));
+		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		errno = 0;
+		seconds = dm_strtoull(p_string_str(search_keys[*idx + 1]), NULL, 10);
+		int ser = errno;
+		if (ser) {
+			TRACE(TRACE_DEBUG, "%s", strerror(ser));
+			return -1;
+		}
+		value->type = IST_IDATE;
+		(*idx)++;
+		g_snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_WITHIN), seconds);
+		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > %s", partial);
+		(*idx)++;
+
 	}
+
 
 	/*
 	 * DATA-keys

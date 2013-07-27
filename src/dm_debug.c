@@ -88,7 +88,7 @@ static const char * Trace_To_text(Trace_T level)
 
 #define SYSLOGFORMAT "%s:[%s] %s(+%d): %s"
 #define STDERRFORMAT "%s %s %s[%d]: [%p] %s:[%s] %s(+%d): %s"
-#define MESSAGESIZE 1024
+#define MESSAGESIZE 4096
 
 void trace(Trace_T level, const char * module, const char * function, int line, const char *formatstring, ...)
 {

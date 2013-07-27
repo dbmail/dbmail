@@ -607,6 +607,9 @@ static const char * db_get_sqlite_sql(sql_fragment frag)
 		case SQL_EXPIRE:
 			return "DATETIME('now','-%d DAYS')";	
 		break;
+		case SQL_WITHIN:
+			return "DATETIME('now','-%d SECONDS')";	
+		break;
 		case SQL_BINARY:
 			return "";
 		break;
@@ -654,6 +657,9 @@ static const char * db_get_mysql_sql(sql_fragment frag)
 		break;
 		case SQL_EXPIRE:
 			return "NOW() - INTERVAL %d DAY";
+		break;
+		case SQL_WITHIN:
+			return "NOW() - INTERVAL %d SECOND";
 		break;
 		case SQL_BINARY:
 			return "BINARY";
@@ -707,6 +713,9 @@ static const char * db_get_pgsql_sql(sql_fragment frag)
 		break;
 		case SQL_EXPIRE:
 			return "NOW() - INTERVAL '%d DAY'";
+		break;
+		case SQL_WITHIN:
+			return "NOW() - INTERVAL '%d SECOND'";
 		break;
 		case SQL_IGNORE:
 		case SQL_BINARY:
@@ -763,6 +772,9 @@ static const char * db_get_oracle_sql(sql_fragment frag)
 		break;
 		case SQL_EXPIRE:
 			return "SYSTIMESTAMP - NUMTODSINTERVAL(%d,'day')"; 
+		break;
+		case SQL_WITHIN:
+			return "SYSTIMESTAMP - NUMTODSINTERVAL(%d,'second')"; 
 		break;
 		case SQL_BINARY:
 			return "";

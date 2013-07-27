@@ -143,6 +143,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	Capa_remove(self->preauth_capa, "UNSELECT");
 	Capa_remove(self->preauth_capa, "IDLE");
 	Capa_remove(self->preauth_capa, "UIDPLUS");
+	Capa_remove(self->preauth_capa, "WITHIN");
 	if (MATCH(db_params.authdriver, "LDAP")) {
 		Capa_remove(self->capa, "AUTH=CRAM-MD5");
 		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
