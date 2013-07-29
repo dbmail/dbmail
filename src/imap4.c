@@ -563,8 +563,10 @@ int imap_handle_connection(client_sock *c)
 	ci_cork(ci);
 
 	session->ci = ci;
-	if ((! server_conf->ssl) || (ci->sock->ssl_state == TRUE)) 
+	if ((! server_conf->ssl) || (ci->sock->ssl_state == TRUE)) {
 		Capa_remove(session->capa, "STARTTLS");
+		Capa_remove(session->capa, "LOGINDISABLED");
+	}
 
 	send_greeting(session);
 

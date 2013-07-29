@@ -187,6 +187,7 @@ int _ic_starttls(ImapSession *self)
 	i = ci_starttls(self->ci);
 	
 	Capa_remove(self->capa, "STARTTLS");
+	Capa_remove(self->capa, "LOGINDISABLED");
 	
 	if (i < 0) i = 0;
 

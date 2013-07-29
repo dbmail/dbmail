@@ -117,6 +117,9 @@ static void mailboxstate_destroy(MailboxState_T M)
 ImapSession * dbmail_imap_session_new(Mempool_T pool)
 {
 	ImapSession * self;
+	Field_T val;
+	bool login_disabled = TRUE;
+
 	self = mempool_pop(pool, sizeof(ImapSession));
 
 	if (! queue_pool)
@@ -127,6 +130,10 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	self->pool = pool;
 
 	pthread_mutex_init(&self->lock, NULL);
+
+	GETCONFIGVALUE("login_disabled", "IMAP", val);
+	if (strlen(val) && MATCH(val, "no"))
+		login_disabled = FALSE;
 
 	self->state = CLIENTSTATE_NON_AUTHENTICATED;
 	self->args = mempool_pop(self->pool, sizeof(String_T) * MAX_ARGS);
@@ -144,6 +151,21 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	Capa_remove(self->preauth_capa, "IDLE");
 	Capa_remove(self->preauth_capa, "UIDPLUS");
 	Capa_remove(self->preauth_capa, "WITHIN");
+
+	if (! (server_conf && server_conf->ssl))
+		Capa_remove(self->preauth_capa, "STARTTLS");
+
+	if (! Capa_match(self->preauth_capa, "STARTTLS"))
+		login_disabled = FALSE;
+
+	if (login_disabled) {
+		if (! Capa_match(self->preauth_capa, "LOGINDISABLED"))
+			Capa_add(self->preauth_capa, "LOGINDISABLED");
+		Capa_remove(self->preauth_capa, "AUTH=LOGIN");
+		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
+	} else {
+		Capa_remove(self->preauth_capa, "LOGINDISABLED");
+	}
 	if (MATCH(db_params.authdriver, "LDAP")) {
 		Capa_remove(self->capa, "AUTH=CRAM-MD5");
 		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
