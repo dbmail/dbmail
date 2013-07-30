@@ -34,7 +34,7 @@
 #include <check.h>
 #include "check_dbmail.h"
 
-extern char *configFile;
+extern char configFile[PATH_MAX];
 
 /*
  *
@@ -44,6 +44,7 @@ extern char *configFile;
 void setup(void)
 {
 	configure_debug(255,0);
+	config_get_file();
 	config_read(configFile);
 	GetDBParams();
 	db_connect();

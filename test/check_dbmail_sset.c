@@ -38,7 +38,7 @@
 #include <time.h>
 #include <stdio.h>
 
-extern char *configFile;
+extern char configFile[PATH_MAX];
 
 /*
  *
@@ -91,6 +91,7 @@ static int compare(const void *a, const void *b)
 void setup(void)
 {
 	configure_debug(255,0);
+	config_get_file();
 	config_read(configFile);
 	V = Sset_new(compare, sizeof(struct item), NULL);
 	W = Sset_new(compare, sizeof(struct item), NULL);

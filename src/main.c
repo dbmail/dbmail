@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
- This program is free software; you can redistribute it and/or 
+This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
  as published by the Free Software Foundation; either 
  version 2 of the License, or (at your option) any later 
@@ -37,7 +37,7 @@
 /* syslog */
 #define PNAME "dbmail/deliver"
 
-char *configFile = DEFAULT_CONFIG_FILE;
+extern char configFile[PATH_MAX];
 
 int brute_force = 0;
 char *deliver_to_header = NULL;
@@ -93,6 +93,8 @@ int main(int argc, char *argv[])
 	
 	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 	
+	config_get_file();
+
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
 	/* Check for commandline options.
@@ -177,9 +179,10 @@ int main(int argc, char *argv[])
 
 		/* Common command line options. */
 		case 'f':
-			if (optarg && strlen(optarg) > 0)
-				configFile = optarg;
-			else {
+			if (optarg && strlen(optarg) > 0) {
+				memset(configFile, 0, sizeof(configFile));
+				strncpy(configFile, optarg, sizeof(configFile)-1);
+			} else {
 				fprintf(stderr, "dbmail-deliver: -f requires a filename\n\n" );
 				return 1;
 			}

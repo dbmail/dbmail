@@ -23,7 +23,7 @@
 
 #include "dbmail.h"
 
-extern char *configFile;
+extern char configFile[PATH_MAX];
 
 #define SHADOWFILE "/etc/shadow"
 #define THIS_MODULE "user"

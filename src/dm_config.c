@@ -24,16 +24,23 @@
  * \brief read configuration values from a config file
  */
 
+#include <libgen.h>
 #include "dbmail.h"
 
 #define THIS_MODULE "config"
 
 DBParam_T db_params;
 
+char configFile[PATH_MAX];
+
 /** dictionary which holds the configuration */
 static GKeyFile *config_dict = NULL;
 static int configured = 0;
 
+void config_get_file(void)
+{
+	strncpy(configFile, DEFAULT_CONFIG_FILE, sizeof(configFile)-1);
+}
 // 
 // local functions
 //
@@ -43,6 +50,11 @@ int config_create(const char *config_filename)
 	int fd;
 	int serr;
        
+	char *copy = strdup(config_filename);
+	char *config_dir = dirname(copy);
+	g_mkdir_with_parents(config_dir, 0700);
+	free(copy);
+
 	if ((fd = open(config_filename, O_RDWR|O_CREAT|O_EXCL, 00600)) == -1) {
 		serr = errno;
 		TRACE(TRACE_EMERG, "unable to create [%s]: %s",
@@ -326,6 +338,20 @@ void GetDBParams(void)
 			db_params.sock[0] = '\0';
 
 
+	} else {
+		/* expand ~ in db name to HOME env variable */
+		if (strncmp(db_params.dburi, "sqlite://~", 10) == 0) {
+			char *rest = index(db_params.dburi, '~');
+			char *homedir;
+			Field_T dburi;
+			if (strlen(rest) < 3)
+				TRACE(TRACE_EMERG, "invalid filename for sqlite database");
+			rest++;
+			if ((homedir = getenv ("HOME")) == NULL)
+				TRACE(TRACE_EMERG, "can't expand ~ in db name");
+			g_snprintf(dburi, FIELDSIZE, "sqlite://%s%s", homedir, rest);
+			g_strlcpy(db_params.dburi, dburi, FIELDSIZE);
+		}
 	}
 
 	if (config_get_value("authdriver", "DBMAIL", db_params.authdriver) < 0)
@@ -379,15 +405,6 @@ void GetDBParams(void)
 		g_strlcpy(db_params.pfx, DEFAULT_DBPFX, FIELDSIZE);
 	}
 
-	/* expand ~ in db name to HOME env variable */
-	if ((strlen(db_params.db) > 0 ) && (db_params.db[0] == '~')) {
-		char *homedir;
-		Field_T db;
-		if ((homedir = getenv ("HOME")) == NULL)
-			TRACE(TRACE_EMERG, "can't expand ~ in db name");
-		g_snprintf(db, FIELDSIZE, "%s%s", homedir, &(db_params.db[1]));
-		g_strlcpy(db_params.db, db, FIELDSIZE);
-	}
 	/* serverid */
 	if (strlen(serverid_string) != 0) {
 		db_params.serverid = (unsigned int) strtol(serverid_string, NULL, 10);

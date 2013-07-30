@@ -36,7 +36,7 @@
 #include "dbmail.h"
 
 
-extern char *configFile;
+extern char configFile[PATH_MAX];
 
 /*
  *
@@ -51,6 +51,7 @@ Mempool_T pool;
 void setup(void)
 {
 	configure_debug(255,0);
+	config_get_file();
 	config_read(configFile);
 	pool = mempool_open();
 }

@@ -41,7 +41,7 @@ int quiet = 0;
 /* Don't print errors. */
 int reallyquiet = 0;
 
-char *configFile = DEFAULT_CONFIG_FILE;
+extern char configFile[PATH_MAX];
 
 int has_errors = 0;
 int serious_errors = 0;
@@ -124,6 +124,9 @@ int main(int argc, char *argv[])
 	char * mbinbox_name;
 
 	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	
+	config_get_file();
+
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
@@ -252,9 +255,10 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'f':
-			if (optarg && strlen(optarg) > 0)
-				configFile = optarg;
-			else {
+			if (optarg && strlen(optarg) > 0) {
+				memset(configFile, 0, sizeof(configFile));
+				strncpy(configFile, optarg, sizeof(configFile)-1);
+			} else {
 				qerrorf("dbmail-util: -f requires a filename\n\n" );
 				return 1;
 			}

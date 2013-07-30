@@ -34,7 +34,7 @@
 #include <check.h>
 #include "check_dbmail.h"
 
-extern char *configFile;
+extern char configFile[PATH_MAX];
 
 /*
  *
@@ -46,7 +46,8 @@ Mempool_T pool;
 
 void setup(void)
 {
-	configure_debug(255,0);
+	configure_debug(255,31);
+	config_get_file();
 	config_read(configFile);
 	pool = mempool_open();
 	A = Capa_new(pool);

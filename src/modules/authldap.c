@@ -26,7 +26,7 @@
 #define AUTH_QUERY_SIZE 1024
 #define LDAP_RES_SIZE 1024
 
-extern char *configFile;
+extern char configFile[PATH_MAX];
 
 GStaticPrivate ldap_conn_key;
 static GOnce ldap_conn_once = G_ONCE_INIT;

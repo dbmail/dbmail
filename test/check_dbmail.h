@@ -10,9 +10,6 @@
 
 #define THIS_MODULE "check"
 
-char *configFile = "/etc/dbmail/dbmail-test.conf";
-
-
 /* simple testmessages. */
 char *simple = "From nobody Wed Sep 14 16:47:48 2005\n"
 	"X-Foo: bar\n"

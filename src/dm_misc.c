@@ -84,18 +84,12 @@ int drop_privileges(char *newuser, char *newgroup)
 	memset(buf,0,sizeof(buf));
 
 	s = getgrnam_r(newgroup, &grp, buf, sizeof(buf), &gresult);
-	if (gresult == NULL) {
-		if (s == 0)
-			TRACE(TRACE_ERR, "could not find group %s\n", newgroup);
+	if (gresult == NULL)
 		return -1;
-	}
 
 	s = getpwnam_r(newuser, &pwd, buf, sizeof(buf), &presult);
-	if (presult == NULL) {
-		if (s == 0)
-			TRACE(TRACE_ERR, "could not find user %s\n", newuser);
+	if (presult == NULL)
 		return -1;
-	}
 
 	if (setgid(grp.gr_gid) != 0) {
 		TRACE(TRACE_ERR, "could not set gid to %s\n", newgroup);

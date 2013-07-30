@@ -36,7 +36,7 @@
 #include <check.h>
 #include "check_dbmail.h"
 
-extern char *configFile;
+extern char configFile[PATH_MAX];
 extern int quiet;
 extern int reallyquiet;
 
@@ -60,6 +60,7 @@ char *domain_catchall = "@nonexistantdomain";
 void setup(void)
 {
 	configure_debug(255,0);
+	config_get_file();
 	if (config_read(configFile) < 0) {
 		printf( "Config file not found: %s\n", configFile );
 		exit(1);

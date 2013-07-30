@@ -34,8 +34,8 @@
 #include <check.h>
 #include "check_dbmail.h"
 
-extern char * multipart_message;
-extern char * configFile;
+extern char *multipart_message;
+extern char configFile[PATH_MAX];
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
@@ -67,6 +67,7 @@ void init_testuser1(void)
 void setup(void)
 {
 	configure_debug(255,0);
+	config_get_file();
 	config_read(configFile);
 	GetDBParams();
 	db_connect();

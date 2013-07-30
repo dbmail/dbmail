@@ -24,6 +24,7 @@
  *
  */
 
+#include <libgen.h>
 #include "dbmail.h"
 #include "dm_request.h"
 #include "dm_mempool.h"
@@ -38,7 +39,7 @@ Mempool_T    queue_pool;
 GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
 
-char             configFile[FIELDSIZE];
+extern char configFile[PATH_MAX];
 ServerConfig_T   *server_conf;
 extern DBParam_T  db_params;
 
@@ -727,6 +728,12 @@ static void server_pidfile(ServerConfig_T *conf)
 	if (! conf->pidFile)
 		conf->pidFile = config_get_pidfile(conf, conf->process_name);
 
+	char *fcopy = strdup(conf->pidFile);
+	char *piddir = dirname(fcopy);
+
+	g_mkdir_with_parents(piddir, 0700);
+	free(fcopy);
+
 	pidfile_create(conf->pidFile, getpid());
 
 	configured = TRUE;
@@ -811,10 +818,8 @@ int server_run(ServerConfig_T *conf)
 
 	atexit(server_exit);
 
-	if (drop_privileges(conf->serverUser, conf->serverGroup) < 0) {
-		TRACE(TRACE_ERR,"unable to drop privileges");
-		return 0;
-	}
+	if (drop_privileges(conf->serverUser, conf->serverGroup) < 0)
+		TRACE(TRACE_WARNING, "unable to drop privileges");
 	
 	server_pidfile(conf);
 
@@ -1023,10 +1028,21 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	config_get_value("PORT", service, val);
 	config_get_value("TLS_PORT", service, val_ssl);
 
-	if ((strlen(val) == 0) && (strlen(val_ssl) == 0))
-		TRACE(TRACE_EMERG, "no value for PORT or TLS_PORT in config file");
+	if ((strlen(val) == 0) && (strlen(val_ssl) == 0)) {
+		TRACE(TRACE_WARNING, "no value for PORT or TLS_PORT in config file. Using defaults");
 
-	strncpy(config->port, val, FIELDSIZE);
+		if (MATCH(service, "IMAP"))
+			strncpy(config->port, "143", FIELDSIZE);
+		else if (MATCH(service, "POP"))
+			strncpy(config->port, "110", FIELDSIZE);
+		else if (MATCH(service, "SIEVE"))
+			strncpy(config->port, "2000", FIELDSIZE);
+		else if (MATCH(service, "HTTP"))
+			strncpy(config->port, "41380", FIELDSIZE);
+	} else {
+		strncpy(config->port, val, FIELDSIZE);
+	}
+
 	TRACE(TRACE_DEBUG, "binding to PORT [%s]", config->port);
 
 	if (strlen(val_ssl) > 0) {
@@ -1037,7 +1053,8 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	/* read items: BINDIP */
 	config_get_value("BINDIP", service, val);
 	if (strlen(val) == 0)
-		TRACE(TRACE_EMERG, "no value for BINDIP in config file");
+		strncpy(val, "127.0.0.1", FIELDSIZE);
+
 	// If there was a SIGHUP, then we're resetting an active config.
 	g_strfreev(config->iplist);
 	g_free(config->listenSockets);

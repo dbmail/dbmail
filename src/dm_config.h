@@ -20,6 +20,13 @@
 #ifndef DM_CONFIG_H
 #define DM_CONFIG_H
 
+
+/* 
+ * determine the default configuration filename
+ * may be overridden by a -f switch
+ */
+void config_get_file(void);
+
 /**
  * \brief read configuration from filename
  * \param cfilename name of configuration file 

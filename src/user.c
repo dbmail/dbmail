@@ -27,7 +27,7 @@
 
 #include "dbmail.h"
 
-char *configFile = DEFAULT_CONFIG_FILE;
+extern char configFile[PATH_MAX];
 
 #define SHADOWFILE "/etc/shadow"
 #define PNAME "dbmail/user"
@@ -99,6 +99,7 @@ int main(int argc, char *argv[])
 	struct change_flags change_flags;
 	size_t len = 0;
 
+	config_get_file();
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
@@ -239,9 +240,10 @@ int main(int argc, char *argv[])
 
 		/* Common options */
 		case 'f':
-			if (optarg && strlen(optarg) > 0)
-				configFile = optarg;
-			else {
+			if (optarg && strlen(optarg) > 0) {
+				memset(configFile, 0, sizeof(configFile));
+				strncpy(configFile, optarg, sizeof(configFile)-1);
+			} else {
 				qerrorf("dbmail-users: -f requires a filename\n\n");
 				result = 1;
 			}

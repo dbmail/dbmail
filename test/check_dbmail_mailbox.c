@@ -35,8 +35,8 @@
 #include <assert.h>
 #include "check_dbmail.h"
 
-extern char * multipart_message;
-extern char * configFile;
+extern char *multipart_message;
+extern char configFile[PATH_MAX];
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
@@ -135,6 +135,7 @@ static uint64_t get_mailbox_id(const char *name)
 void setup(void)
 {
 	configure_debug(511,0);
+	config_get_file();
 	config_read(configFile);
 	GetDBParams();
 	db_connect();

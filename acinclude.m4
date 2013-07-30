@@ -35,9 +35,10 @@ AC_ARG_WITH(logdir,
 	logdirname="$withval")
 
 if test [ "x$logdirname" = "x" ]; then
-	logdirname="${ac_default_prefix}/var/log"
+	AC_DEFINE_UNQUOTED([DEFAULT_LOG_DIR], LOCALSTATEDIR"/log" , [Log directory])
+else
+	AC_DEFINE_UNQUOTED([DEFAULT_LOG_DIR], "$logdirname", [Log directory])
 fi
-AC_DEFINE_UNQUOTED([DEFAULT_LOG_DIR], "$logdirname", [Log directory])
 AC_DEFINE_UNQUOTED([DM_PWD], "$ac_pwd", [Build directory])
 ])
 	

@@ -29,6 +29,8 @@
 #include "check_dbmail.h"
 #include "dm_mempool.h"
 
+extern char configFile[PATH_MAX];
+
 /*
  *
  * the test fixtures
@@ -37,6 +39,7 @@
 void setup(void)
 {
 	configure_debug(255,0);
+	config_get_file();
 	config_read(configFile);
 }
 

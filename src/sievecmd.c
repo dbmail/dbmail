@@ -38,7 +38,7 @@ int reallyquiet = 0;
 #define qprintf(fmt, args...) if (! (quiet||reallyquiet)) printf(fmt, ##args) 
 #define qerrorf(fmt, args...) if (! reallyquiet) fprintf(stderr, fmt, ##args) 
 
-char *configFile = DEFAULT_CONFIG_FILE;
+extern char configFile[PATH_MAX];
 
 static int do_showhelp(void);
 static int do_list(uint64_t user_idnr);
@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
 	int activate = 0, deactivate = 0, insert = 0;
 	int remove = 0, list = 0, cat = 0, help = 0, edit = 0;
 
+	config_get_file();
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
@@ -133,9 +134,10 @@ int main(int argc, char *argv[])
 			return 1;*/
 
 		case 'f':
-			if (optarg && strlen(optarg) > 0)
-				configFile = optarg;
-			else {
+			if (optarg && strlen(optarg) > 0) {
+				memset(configFile, 0, sizeof(configFile));
+				strncpy(configFile, optarg, sizeof(configFile)-1);
+			} else {
 				qerrorf("dbmail-users: -f requires a filename\n\n");
 				return 1;
 			}
