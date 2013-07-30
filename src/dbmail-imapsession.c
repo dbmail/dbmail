@@ -418,16 +418,20 @@ static int _imap_session_fetch_parse_partspec(ImapSession *self)
 	} else if (MATCH(partspec, "header.fields.not")) {
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_HEADER_FIELDS_NOT);
 	} else if (MATCH(partspec, "text")) {
+		self->fi->msgparse_needed=1;
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_TEXT);
 		shouldclose = 1;
 	} else if (MATCH(partspec, "header")) {
+		self->fi->msgparse_needed=1;
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_HEADER);
 		shouldclose = 1;
 	} else if (MATCH(partspec, "mime")) {
+		self->fi->msgparse_needed=1;
 		if (j == 0) return -2;				/* error DONE */
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_MIME);
 		shouldclose = 1;
 	} else if (token[j] == '\0') {
+		self->fi->msgparse_needed=1;
 		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_TEXT_SILENT);
 		shouldclose = 1;
 	} else {
@@ -501,6 +505,7 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 		/* read the numbers */
 		token[strlen(token) - 1] = '\0';
 		token[delimpos] = '\0';
+		self->fi->msgparse_needed=1;
 		dbmail_imap_session_bodyfetch_set_octetstart(self, strtoll(&token[1], NULL, 10));
 		dbmail_imap_session_bodyfetch_set_octetcnt(self,strtoll(&token [delimpos + 1], NULL, 10));
 
@@ -554,12 +559,16 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		self->fi->getFlags = 1;
 		self->fi->getSize = 1;
 	} else if (MATCH(token,"rfc822")) {
+		self->fi->msgparse_needed=1;
 		self->fi->getRFC822=1;
 	} else if (MATCH(token,"rfc822.header")) {
+		self->fi->msgparse_needed=1;
 		self->fi->getRFC822Header = 1;
 	} else if (MATCH(token,"rfc822.peek")) {
+		self->fi->msgparse_needed=1;
 		self->fi->getRFC822Peek = 1;
 	} else if (MATCH(token,"rfc822.text")) {
+		self->fi->msgparse_needed=1;
 		self->fi->getRFC822Text = 1;
 	
 	} else if (MATCH(token,"body") || MATCH(token,"body.peek")) {
@@ -573,6 +582,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		
 		if (! nexttoken || ! MATCH(nexttoken,"[")) {
 			if (ispeek) return -2;	/* error DONE */
+			self->fi->msgparse_needed = 1;
 			self->fi->getMIME_IMB_noextension = 1;	/* just BODY specified */
 		} else {
 			int res = 0;
@@ -587,8 +597,10 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 
 			if (MATCH(token,"]")) {
 				if (ispeek) {
+					self->fi->msgparse_needed = 1;
 					self->fi->getBodyTotalPeek = 1;
 				} else {
+					self->fi->msgparse_needed = 1;
 					self->fi->getBodyTotal = 1;
 				}
 				self->args_idx++;				
@@ -614,17 +626,20 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			return res;
 		}
 	} else if (MATCH(token,"all")) {		
+		self->fi->msgparse_needed=1; // because of getEnvelope
 		self->fi->getInternalDate = 1;
 		self->fi->getEnvelope = 1;
 		self->fi->getFlags = 1;
 		self->fi->getSize = 1;
 	} else if (MATCH(token,"full")) {
+		self->fi->msgparse_needed=1;
 		self->fi->getInternalDate = 1;
 		self->fi->getEnvelope = 1;
 		self->fi->getMIME_IMB_noextension = 1;
 		self->fi->getFlags = 1;
 		self->fi->getSize = 1;
 	} else if (MATCH(token,"bodystructure")) {
+		self->fi->msgparse_needed=1;
 		self->fi->getMIME_IMB = 1;
 	} else if (MATCH(token,"envelope")) {
 		self->fi->getEnvelope = 1;
@@ -856,15 +871,17 @@ static int _imap_show_body_section(body_fetch *bodyfetch, gpointer data)
 	
 	TRACE(TRACE_DEBUG,"[%p] itemtype [%d] partspec [%s]", self, bodyfetch->itemtype, bodyfetch->partspec);
 	
-	if (bodyfetch->partspec[0]) {
-		if (bodyfetch->partspec[0] == '0') {
-			dbmail_imap_session_buff_printf(self, "\r\n%s BAD protocol error\r\n", self->tag);
-			TRACE(TRACE_ERR, "[%p] PROTOCOL ERROR", self);
-			return 1;
+	if (self->fi->msgparse_needed) {
+		if (bodyfetch->partspec[0]) {
+			if (bodyfetch->partspec[0] == '0') {
+				dbmail_imap_session_buff_printf(self, "\r\n%s BAD protocol error\r\n", self->tag);
+				TRACE(TRACE_ERR, "[%p] PROTOCOL ERROR", self);
+				return 1;
+			}
+			part = imap_get_partspec(GMIME_OBJECT((self->message)->content), bodyfetch->partspec);
+		} else {
+			part = GMIME_OBJECT((self->message)->content);
 		}
-		part = imap_get_partspec(GMIME_OBJECT((self->message)->content), bodyfetch->partspec);
-	} else {
-		part = GMIME_OBJECT((self->message)->content);
 	}
 
 	SEND_SPACE;
@@ -1010,12 +1027,14 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
 
-	if (! (dbmail_imap_session_message_load(self)))
-		return 0;
+	if (self->fi->msgparse_needed) {
+		if (! (dbmail_imap_session_message_load(self)))
+			return 0;
 
-	stream = self->message->stream;
-	g_mime_stream_reset(stream);
-	size = g_mime_stream_length(stream);
+		stream = self->message->stream;
+		g_mime_stream_reset(stream);
+		size = g_mime_stream_length(stream);
+	}
 
 	dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (", *id);
 

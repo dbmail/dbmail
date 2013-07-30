@@ -498,6 +498,8 @@ typedef struct {
 
 typedef struct {
 	gboolean noseen;		/* set the seen flag ? */
+	gboolean msgparse_needed;
+	gboolean hdrparse_needed;
 
 	/* helpers */
 	gboolean setseen;
