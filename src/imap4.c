@@ -161,7 +161,11 @@ static void imap_session_bailout(ImapSession *session)
 	dm_queue_push(imap_cleanup_deferred, session, NULL);
 }
 
+#ifdef DEBUG
 void socket_write_cb(int fd, short what, void *arg)
+#else
+void socket_write_cb(int UNUSED fd, short UNUSED what, void *arg)
+#endif
 {
 	ImapSession *session = (ImapSession *)arg;
 	ClientState_T state;
@@ -217,11 +221,14 @@ void imap_cb_read(void *arg)
 		imap_handle_input(session);
 }
 
-
+#ifdef DEBUG
 void socket_read_cb(int fd, short what, void *arg)
+#else
+void socket_read_cb(int UNUSED fd, short what, void *arg)
+#endif
 {
 	ImapSession *session = (ImapSession *)arg;
-#if DEBUG
+#ifdef DEBUG
 	TRACE(TRACE_DEBUG,"[%p] on [%d] event: %s%s%s%s", session,
 			(int) fd,
 			(what&EV_TIMEOUT) ? " timeout": "",

@@ -36,7 +36,10 @@ extern DBParam_T db_params;
 //#define dprint(fmt, args...) TRACE(TRACE_DEBUG, fmt, ##args); printf(fmt, ##args)
 
 #ifndef dprint
+#define DPRINT 0
 #define dprint(fmt, args...) 
+#else
+#define DPRINT 1
 #endif
 
 static void _header_cache(const char *, const char *, gpointer);
@@ -336,7 +339,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	GMimeContentType *mimetype = NULL;
 	int maxdepth = 128;
 	volatile char **blist = g_new0(volatile char *, maxdepth);
-	int prevdepth, depth = 0, order, row = 0, key = 1;
+	int prevdepth, depth = 0, row = 0;
 	volatile int t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
 	gboolean prev_is_message = FALSE, is_message = FALSE;
@@ -366,10 +369,16 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		row = 0;
 		while (db_result_next(r)) {
 			int l;
+#if DPRINT
+			int order;
+			int key;
+#endif
 
 			prevdepth	= depth;
 			prev_header	= is_header;
+#if DPRINT
 			key		= db_result_get_int(r,0);
+#endif
 			depth		= db_result_get_int(r,1);
 			while (maxdepth < (depth + 1)) {
 				int newmaxdepth = 2 * depth;
@@ -378,7 +387,9 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 					blist[maxdepth++] = NULL;
 			}
 
+#if DPRINT
 			order		= db_result_get_int(r,2);
+#endif
 			is_header	= db_result_get_bool(r,3);
 			if (row == 0) {
 				memset(internal_date, 0, sizeof(internal_date));
@@ -1170,7 +1181,7 @@ int dbmail_message_store(DbmailMessage *self)
 
 static void insert_physmessage(DbmailMessage *self, Connection_T c)
 {
-	ResultSet_T r;
+	ResultSet_T r = NULL;
 	char *internal_date = NULL, *frag;
 	int thisyear;
 	volatile uint64_t id = 0;
@@ -1208,7 +1219,7 @@ static void insert_physmessage(DbmailMessage *self, Connection_T c)
 
 	if (db_params.db_driver == DM_DRIVER_ORACLE)
 		id = db_get_pk(c, "physmessage");
-	else
+	else if (r)
 		id = db_insert_result(c, r);
 
 	if (! id) {

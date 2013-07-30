@@ -1579,10 +1579,11 @@ static void _ic_expunge_enter(dm_thread_data *D)
 
 int _ic_expunge(ImapSession *self)
 {
-	if (self->use_uid)
+	if (self->use_uid) {
 		if (!check_state_and_args(self, 1, 1, CLIENTSTATE_SELECTED)) return 1;
-	else
+	} else {
 		if (!check_state_and_args(self, 0, 0, CLIENTSTATE_SELECTED)) return 1;
+	}
 
 	if (MailboxState_getPermission(self->mailbox->mbstate) != IMAPPERM_READWRITE) {
 		dbmail_imap_session_buff_printf(self, "%s NO you do not have write permission on this folder\r\n", self->tag);

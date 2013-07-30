@@ -1107,7 +1107,6 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 {
 	GString *q;
 	uint64_t tid, *id;
-	unsigned i;
 	Connection_T c; ResultSet_T r; volatile int t = FALSE;
 	search_key *s = (search_key *)node->data;
 	GTree *z;
@@ -1134,7 +1133,6 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self)
 	z = g_tree_new((GCompareFunc)ucmp);
 	c = db_con_get();
 	TRY
-		i = 0;
 		r = db_query(c,q->str);
 		while (db_result_next(r)) {
 			tid = db_result_get_u64(r,0);

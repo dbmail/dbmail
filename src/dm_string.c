@@ -151,7 +151,6 @@ const char * p_string_str(T S)
 T p_string_erase(T S, size_t pos, int len)
 {
 	assert(S);
-	assert(pos >= 0);
 	assert(pos <= S->used);
 
 	if (len < 0)

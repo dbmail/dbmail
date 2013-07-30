@@ -79,15 +79,14 @@ int drop_privileges(char *newuser, char *newgroup)
 	struct group grp;
 	struct group *gresult;
 	char buf[16384];
-	int s;
 
 	memset(buf,0,sizeof(buf));
 
-	s = getgrnam_r(newgroup, &grp, buf, sizeof(buf), &gresult);
+	getgrnam_r(newgroup, &grp, buf, sizeof(buf), &gresult);
 	if (gresult == NULL)
 		return -1;
 
-	s = getpwnam_r(newuser, &pwd, buf, sizeof(buf), &presult);
+	getpwnam_r(newuser, &pwd, buf, sizeof(buf), &presult);
 	if (presult == NULL)
 		return -1;
 

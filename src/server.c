@@ -251,10 +251,12 @@ static int server_setup(ServerConfig_T *conf)
 	return 0;
 }
 
+#ifdef DEBUG
 static void _cb_log_event(int UNUSED severity, const char *msg)
 {
 	TRACE(TRACE_WARNING, "%s", msg);
 }
+#endif
 
 static int server_start_cli(ServerConfig_T *conf)
 {
@@ -537,7 +539,11 @@ static void server_create_sockets(ServerConfig_T * conf)
 	}
 }
 
+#ifdef DEBUG
 static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
+#else
+static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
+#endif
 {
 	Mempool_T pool;
 	client_sock *c;

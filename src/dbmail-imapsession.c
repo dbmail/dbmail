@@ -1007,7 +1007,7 @@ static void _imap_show_body_sections(ImapSession *self)
 static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 {
 	int result;
-	uint64_t size;
+	uint64_t size = 0;
 	gchar *s = NULL;
 	uint64_t *id = uid;
 	gboolean reportflags = FALSE;
@@ -1028,7 +1028,6 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 	self->fi->isfirstfetchout = 1;
 
 	if (self->fi->msgparse_needed) {
-		size = 0;
 		if (! (dbmail_imap_session_message_load(self)))
 			return 0;
 
