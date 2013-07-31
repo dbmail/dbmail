@@ -653,6 +653,9 @@ SORTLTLIB
 SORTALIB
 CRYPTLIB
 DM_DEFAULT_CONFIGURATION
+SQLITE_32001
+MYSQL_32001
+PGSQL_32001
 SQLITECREATE
 LDAP_FALSE
 LDAP_TRUE
@@ -6598,6 +6601,14 @@ fi
 
 
 	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/create_tables.sqlite`
+
+
+
+	PGSQL_32001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/32001.psql`
+	MYSQL_32001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/32001.mysql`
+	SQLITE_32001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/32001.sqlite`
+
+
 
 
 

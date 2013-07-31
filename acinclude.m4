@@ -304,10 +304,6 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 	fi
 ])
 
-AC_DEFUN([DM_SET_SQLITECREATE], [dnl
-	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/create_tables.sqlite`
-])
-
 AC_DEFUN([DM_SET_DEFAULT_CONFIGURATION], [dnl
 	DM_DEFAULT_CONFIGURATION=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  dbmail.conf`
 ])
@@ -434,15 +430,6 @@ else
 		LDFLAGS="$LDFLAGS $ac_gmime_libs"
         	AC_MSG_RESULT([$ac_gmime_libs])
 	fi
-dnl	ac_gmime_minvers="2.4.30"
-dnl	AC_MSG_CHECKING([GMime version >= $ac_gmime_minvers])
-dnl	ac_gmime_vers=`${gmimeconfig} --atleast-version=$ac_gmime_minvers gmime-2.6 && echo yes`
-dnl	if test -z "$ac_gmime_vers"
-dnl	then
-dnl		AC_MSG_ERROR([At least GMime version $ac_gmime_minvers is required.])
-dnl	else
-dnl		AC_MSG_RESULT([$ac_gmime_vers])
-dnl	fi
 fi
 ])
 
@@ -675,3 +662,16 @@ AC_DEFUN([CMU_SOCKETS], [
 	AC_SUBST(SOCKETLIB)
 ])
 
+AC_DEFUN([DM_SET_SQLITECREATE], [dnl
+	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/create_tables.sqlite`
+])
+
+# register upgrades
+AC_DEFUN([DM_UPGRADE_STEPS], [dnl
+	PGSQL_32001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/32001.psql`
+	MYSQL_32001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/32001.mysql`
+	SQLITE_32001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/32001.sqlite`
+	AC_SUBST(PGSQL_32001)
+	AC_SUBST(MYSQL_32001)
+	AC_SUBST(SQLITE_32001)
+])

@@ -190,6 +190,12 @@
 /* include sql/sqlite/create_tables.sqlite for autocreation */
 #define DM_SQLITECREATE @SQLITECREATE@
 
+/* upgrade steps
+ */
+#define DM_MYSQL_32001 @MYSQL_32001@
+#define DM_PGSQL_32001 @PGSQL_32001@
+#define DM_SQLITE_32001 @SQLITE_32001@
+
 /* include dbmail.conf for autocreation */
 #define DM_DEFAULT_CONFIGURATION @DM_DEFAULT_CONFIGURATION@
 

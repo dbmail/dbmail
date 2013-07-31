@@ -1,0 +1,13 @@
+
+BEGIN;
+
+CREATE TABLE dbmail_upgrade_steps (
+  from_version int not null,
+  to_version int not null,
+  applied TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX dbmail_upgrade_steps_index_1 ON dbmail_upgrade_steps (from_version, to_version);
+INSERT INTO dbmail_upgrade_steps (from_version, to_version) values (0, 32001);
+
+COMMIT;
