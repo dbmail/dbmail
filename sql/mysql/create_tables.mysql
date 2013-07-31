@@ -384,6 +384,9 @@ CREATE TABLE `dbmail_users` (
   `cursieve_size` bigint(20) NOT NULL default '0',
   `encryption_type` varchar(255) NOT NULL default '',
   `last_login` datetime NOT NULL default '1979-11-03 22:05:58',
+  `spasswd` varchar(255) NOT NULL default '',
+  `saction` smallint NOT NULL default '0',
+  `active` smallint NOT NULL default '1',
   PRIMARY KEY  (`user_idnr`),
   UNIQUE KEY `userid_index` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

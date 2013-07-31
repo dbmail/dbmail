@@ -514,6 +514,9 @@ CREATE TABLE dbmail_users (
   cursieve_size number(20) default '0' NOT NULL,
   encryption_type varchar2(255)  default NULL,
   last_login timestamp default TO_TIMESTAMP('1979-11-03 22:05:58','YYYY-MM-DD HH24:MI:SS') NOT NULL
+  spasswd varchar2(255) default NULL,
+  saction number(1) default '0' NOT NULL,
+  active number(1) default '1' NOT NULL
 );
 CREATE UNIQUE INDEX dbmail_users_idx ON dbmail_users (user_idnr) TABLESPACE DBMAIL_TS_IDX;
 ALTER TABLE dbmail_users ADD CONSTRAINT dbmail_users_pk PRIMARY KEY (user_idnr) USING INDEX dbmail_users_idx;
