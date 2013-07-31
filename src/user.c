@@ -513,6 +513,8 @@ freeall:
 	if (fwds_del) g_list_destroy(fwds_del);
 	if (fwds_add) g_list_destroy(fwds_add);
 	if (passwdtype) g_free(passwdtype);
+	if (password) g_free(password);
+	if (spasswd_enc) g_free(spasswd_enc);
 
 	db_disconnect();
 	auth_disconnect();
