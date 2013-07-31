@@ -3373,6 +3373,16 @@ int db_user_set_security_password(uint64_t user_idnr, const char *password)
 	return t;
 }
 
+int db_user_security_validate(ClientBase_T *ci, uint64_t user_idnr, const char *password)
+{
+	return 0;
+}
+
+int db_user_security_trigger(uint64_t user_idnr)
+{
+	return 0;
+}
+
 int db_user_exists(const char *username, uint64_t * user_idnr) 
 {
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
