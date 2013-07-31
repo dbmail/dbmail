@@ -43,16 +43,6 @@ int mkpassword(const char * const user, const char * const passwd,
                const char * const passwdtype, const char * const passwdfile,
                char ** password, char ** enctype);
 
-struct change_flags {
-	unsigned int newuser         : 1;
-	unsigned int newmaxmail      : 1;
-	unsigned int newclientid     : 1;
-	unsigned int newpasswd       : 1;
-	unsigned int newpasswdfile   : 1;
-	unsigned int newpasswdstdin  : 1;
-	unsigned int newpasswdshadow : 1;
-};
-
 /* The prodigious use of const ensures that programming
  * mistakes inside of these functions don't cause us to
  * use incorrect values when calling auth_ and db_ internals.
@@ -75,6 +65,9 @@ int do_clientid(const uint64_t useridnr, const uint64_t clientid);
 int do_password(const uint64_t useridnr,
                 const char * const password,
                 const char * const enctype);
+int do_spasswd(const uint64_t useridnr, const char * const password);
+int do_saction(const uint64_t useridnr, long int saction);
+int do_enable(const uint64_t useridnr, bool enable);
 int do_aliases(const uint64_t useridnr,
                GList * alias_add,
                GList * alias_del);
