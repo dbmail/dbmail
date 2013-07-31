@@ -747,7 +747,8 @@ int db_user_set_active(uint64_t user_idnr, bool active);
 int db_user_get_security_action(uint64_t user_idnr);
 int db_user_set_security_action(uint64_t user_idnr, long int action);
 int db_user_set_security_password(uint64_t user_idnr, const char *password);
-
+int db_user_security_validate(ClientBase_T *ci, uint64_t user_idnr, const char *password);
+int db_user_security_trigger(uint64_t user_idnr);
 
 int db_user_exists(const char *username, uint64_t * user_idnr);
 int db_user_create_shadow(const char *username, uint64_t * user_idnr);

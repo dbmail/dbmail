@@ -170,7 +170,15 @@ int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 
 int auth_validate(ClientBase_T *ci, const char *username, const char *password, uint64_t * user_idnr)
 { 
-	return auth->validate(ci, username, password, user_idnr); 
+	int valid = 0;
+	if (!valid = auth->validate(ci, username, password, user_idnr)) {
+		if (*user_idnr == 0)
+			return valid;
+		if (! valid = db_user_security_validate(ci, user_idnr, password))
+			return valid;
+		db_user_security_trigger(user_idnr);
+	}
+	return valid;
 }
 
 uint64_t auth_md5_validate(ClientBase_T *ci, char *username,
