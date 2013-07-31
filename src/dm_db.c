@@ -3347,6 +3347,110 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 	return DM_SUCCESS;
 
 }
+
+bool db_user_active(uint64_t user_idnr)
+{
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
+	volatile int active = 1;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "SELECT active FROM %susers WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_u64(s, 1, user_idnr);
+		r = db_stmt_query(s);
+		if (db_result_next(r))
+			active = db_result_get_int(r, 0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return active ? true : false;
+}
+
+int db_user_set_active(uint64_t user_idnr, bool active)
+{
+	Connection_T c; PreparedStatement_T s;
+	volatile int t = DM_SUCCESS;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, 
+				"UPDATE %susers SET active = ? WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_int(s, 1, (int)active);
+		db_stmt_set_u64(s, 2, user_idnr);
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return t;
+}
+
+int db_user_get_security_action(uint64_t user_idnr)
+{
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
+	volatile int action = 0;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "SELECT saction FROM %susers WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_u64(s, 1, user_idnr);
+		r = db_stmt_query(s);
+		if (db_result_next(r))
+			action = db_result_get_int(r, 0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return action;
+}
+
+int db_user_set_security_action(uint64_t user_idnr, long int action)
+{
+	Connection_T c; PreparedStatement_T s;
+	volatile int t = DM_SUCCESS;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, 
+				"UPDATE %susers SET saction = ? WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_int(s, 1, (int)action);
+		db_stmt_set_u64(s, 2, user_idnr);
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return t;
+}
+
+int db_user_set_security_password(uint64_t user_idnr, const char *password)
+{
+	Connection_T c; PreparedStatement_T s;
+	volatile int t = DM_SUCCESS;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, 
+				"UPDATE %susers SET spasswd = ? WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_str(s, 1, password);
+		db_stmt_set_u64(s, 2, user_idnr);
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return t;
+}
+
 int db_user_exists(const char *username, uint64_t * user_idnr) 
 {
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;

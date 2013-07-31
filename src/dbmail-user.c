@@ -527,7 +527,7 @@ int do_spasswd(const uint64_t useridnr, const char * const spasswd)
 		qprintf("Pretending to set security password for user [%" PRIu64 "] to [%s]\n", useridnr, spasswd);
 		return 1;
 	}
-	return 0;
+	return db_user_set_security_password(useridnr, spasswd);
 }
 
 int do_saction(const uint64_t useridnr, long int saction)
@@ -536,7 +536,7 @@ int do_saction(const uint64_t useridnr, long int saction)
 		qprintf("Pretending to set security action for user [%" PRIu64 "] to [%ld]\n", useridnr, saction);
 		return 1;
 	}
-	return 0;
+	return db_user_set_security_action(useridnr, saction);
 }
 
 int do_enable(const uint64_t useridnr, bool enable)
@@ -545,7 +545,7 @@ int do_enable(const uint64_t useridnr, bool enable)
 		qprintf("Pretending to %s authentication for user [%" PRIu64 "]\n", enable?"enable":"disable", useridnr);
 		return 1;
 	}
-	return 0;
+	return db_user_set_active(useridnr, enable);
 }
 
 int do_delete(const uint64_t useridnr, const char * const name)
