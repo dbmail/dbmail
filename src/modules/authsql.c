@@ -301,7 +301,7 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 {
 	int is_validated = 0;
 	char salt[13], cryptres[35], real_username[DM_USERNAME_LEN];
-	char *dbpass = NULL, *encode = NULL;
+	const char *dbpass = NULL, *encode = NULL;
 	char hashstr[FIELDSIZE];
 	const char *tuser;
 	int result, t = FALSE;
@@ -341,12 +341,16 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 	if (! auth_user_exists(real_username, user_idnr)) 
 		return FALSE;
 
+	if (! db_user_active(*user_idnr))
+		return FALSE;
+
 	c = db_con_get();
 	TRY
-		r = db_query(c, "SELECT passwd, encryption_type FROM %susers WHERE user_idnr = %" PRIu64 "", DBPFX, *user_idnr);
+		r = db_query(c, "SELECT passwd, encryption_type FROM %susers WHERE user_idnr = %" PRIu64 "",
+			       	DBPFX, *user_idnr);
 		if (db_result_next(r)) {
-			dbpass = g_strdup(db_result_get(r,0));
-			encode = g_strdup(db_result_get(r,1));
+			dbpass = db_result_get(r, 0);
+			encode = db_result_get(r, 1);
 			t = TRUE;
 		} else {
 			t = FALSE;
@@ -358,11 +362,8 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 		db_con_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY) {
-		g_free(dbpass);
-		g_free(encode);
+	if (t == DM_EQUERY)
 		return t;
-	}
 	
 	if (! t) return FALSE;
 
@@ -373,8 +374,6 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 		else 
 			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
 	} else if (username == NULL || password == NULL) {
-		g_free(dbpass);
-		g_free(encode);		
 		return FALSE;
         }
 
@@ -425,9 +424,6 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 		dm_tiger(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 48) == 0) ? 1 : 0;
 	}
-
-	if (dbpass) g_free(dbpass);
-	if (encode) g_free(encode);
 
 	if (is_validated)
 		db_user_log_login(*user_idnr);
