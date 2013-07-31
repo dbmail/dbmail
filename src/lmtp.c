@@ -505,6 +505,7 @@ int lmtp(ClientSession_T * session)
 		 * that of the status of each of the remaining recipients. */
 
 		/* The replies MUST be in the order received */
+		session->rcpt = p_list_first(session->rcpt);
 		while (session->rcpt) {
 			Delivery_T * dsnuser = (Delivery_T *)p_list_data(session->rcpt);
 			dsn_tostring(dsnuser->dsn, &class, &subject, &detail);
