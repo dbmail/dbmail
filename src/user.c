@@ -195,11 +195,10 @@ int main(int argc, char *argv[])
 				change_flags.newspasswd = 1;
 				spasswd = optarg;
 			} else if (MATCH(long_options[option_index].name, "security-action")) {
-				int serr = 0;
+				char *rest;
 				change_flags.newsaction = 1;
-				if ((saction = strtol(optarg, NULL, 10)) == 0)
-					serr = errno;
-				if (serr || (saction < 0) || (saction > 999)) {
+				saction = strtol(optarg, &rest, 10);
+				if ((rest == optarg) || (saction < 0) || (saction > 999)) {
 					qerrorf("Use a security-action between 0 and 999\n");
 					return 1;
 				}
