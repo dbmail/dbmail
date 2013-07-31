@@ -39,6 +39,21 @@ extern int verbose;
 extern int quiet;          /* Don't be helpful. */
 extern int reallyquiet;    /* Don't print errors. */
 
+struct change_flags {
+	unsigned int newuser         : 1;
+	unsigned int newmaxmail      : 1;
+	unsigned int newclientid     : 1;
+	unsigned int newpasswd       : 1;
+	unsigned int newpasswdfile   : 1;
+	unsigned int newpasswdstdin  : 1;
+	unsigned int newpasswdshadow : 1;
+	unsigned int newspasswd      : 1;
+	unsigned int newsaction      : 1;
+	unsigned int enable          : 1;
+	unsigned int disable         : 1;
+};
+
+
 int do_showhelp(void)
 {
 	printf(
@@ -71,6 +86,10 @@ int do_showhelp(void)
 	"     -S alia.. removes a list of recipient aliases (wildcards supported)\n"
 	"     -t fwds.. adds a list of deliver-to forwards\n"
 	"     -T fwds.. removes a list of deliver-to forwards (wildcards supported)\n"
+	"     --security-password  specify a separate security fall-back password\n"
+	"     --security-action    select the security action value (default 0)\n"
+	"     --enable             enable authentication for user\n"
+	"     --disable            disable authentication for user\n"
         "\nCommon options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
 	"     -q        quietly skip interactive prompts\n"
@@ -93,6 +112,8 @@ int main(int argc, char *argv[])
 	char *user = NULL, *newuser = NULL, *userspec = NULL, *alias = NULL;
 	char *passwd = NULL, *passwdtype = NULL, *passwdfile = NULL;
 	char *password = NULL, *enctype = NULL;
+	char *spasswd = NULL, *spasswd_enc = NULL;
+	long int saction = 0;
 	uint64_t useridnr = 0, clientid = 0, maxmail = 0;
 	GList *alias_add = NULL, *alias_del = NULL, *fwds_add = NULL, *fwds_del = NULL;
 	GString *tmp = NULL;
@@ -107,10 +128,24 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv,
-		"-a:d:c:e:l::x:" /* Major modes */
-		"W::w:P::p:u:g:m:t:s:S:T:" /* Minor options */
-		"i" "f:qnyvVh" /* Common options */ )) != -1) {
+	while (1) {
+		static struct option long_options[] = {
+			{"security-password", required_argument, 0, 0},
+			{"security-action", required_argument, 0, 0},
+			{"enable", no_argument, 0, 0},
+			{"disable", no_argument, 0, 0},
+			{0, 0, 0, 0}
+		};
+		int option_index = 0;
+
+		opt = getopt_long(argc, argv,
+				"-a:d:c:e:l::x:" /* Major modes */
+				"W::w:P::p:u:g:m:t:s:S:T:" /* Minor options */
+				"i" "f:qnyvVh" /* Common options */,
+				long_options, &option_index);
+		if (opt == -1)
+			break;
+
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		if (opt == 1)
@@ -155,6 +190,26 @@ int main(int argc, char *argv[])
 
 
 		/* Minor options */
+		case 0:
+			if (MATCH(long_options[option_index].name, "security-password")) {
+				change_flags.newspasswd = 1;
+				spasswd = optarg;
+			} else if (MATCH(long_options[option_index].name, "security-action")) {
+				int serr = 0;
+				change_flags.newsaction = 1;
+				if ((saction = strtol(optarg, NULL, 10)) == 0)
+					serr = errno;
+				if (serr || (saction < 0) || (saction > 999)) {
+					qerrorf("Use a security-action between 0 and 999\n");
+					return 1;
+				}
+			} else if (MATCH(long_options[option_index].name, "enable")) {
+				change_flags.enable = 1;
+			} else if (MATCH(long_options[option_index].name, "disable")) {
+				change_flags.disable = 1;
+			}
+			break;
+
 		case 'w':
 			change_flags.newpasswd = 1;
 			passwd = optarg;
@@ -290,6 +345,16 @@ int main(int argc, char *argv[])
 			goto freeall;
 	}	
 
+	if (passwdtype && change_flags.newspasswd && (! passwd)) {
+		qerrorf("\nError:\nYou cannot set the security-password and encryption-type "
+				"at the same time,\nwithout setting the main password as well.\n\n");
+		result = -1;
+		goto freeall;
+	}
+
+	if (change_flags.enable && change_flags.disable)
+		mode_toomany = 1;
+
 	/* If nothing is happening, show the help text. */
 	if (!mode || mode_toomany || show_help || (no_to_all && yes_to_all)) {
 		do_showhelp();
@@ -379,6 +444,13 @@ int main(int argc, char *argv[])
 			result = -1;
 			goto freeall;
 		}
+		if (spasswd) {
+			if (mkpassword(user, spasswd, passwdtype, passwdfile, &spasswd_enc, &enctype)) {
+				qerrorf("Error: unable to create a security password.\n");
+				result = -1;
+				goto freeall;
+			}
+		}
 	}
 
 
@@ -403,6 +475,18 @@ int main(int argc, char *argv[])
 		}
 		if (change_flags.newmaxmail) {
 			result |= do_maxmail(useridnr, maxmail);
+		}
+		if (change_flags.newspasswd) {
+			result |= do_spasswd(useridnr, spasswd_enc);
+		}
+		if (change_flags.newsaction) {
+			result |= do_saction(useridnr, saction);
+		}
+		if (change_flags.enable) {
+			result |= do_enable(useridnr, true);
+		}
+		if (change_flags.disable) {
+			result |= do_enable(useridnr, false);
 		}
 		result |= do_aliases(useridnr, alias_add, alias_del);
 		break;

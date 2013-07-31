@@ -167,8 +167,12 @@ int auth_change_clientid(uint64_t user_idnr, uint64_t new_cid)
 	{ return auth->change_clientid(user_idnr, new_cid); }
 int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 	{ return auth->change_mailboxsize(user_idnr, new_size); }
+
 int auth_validate(ClientBase_T *ci, const char *username, const char *password, uint64_t * user_idnr)
-	{ return auth->validate(ci, username, password, user_idnr); }
+{ 
+	return auth->validate(ci, username, password, user_idnr); 
+}
+
 uint64_t auth_md5_validate(ClientBase_T *ci, char *username,
 		unsigned char *md5_apop_he, char *apop_stamp)
 	{ return auth->md5_validate(ci, username,
