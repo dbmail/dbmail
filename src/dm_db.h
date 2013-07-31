@@ -743,6 +743,12 @@ int char2date_str(const char *date, Field_T *frag);
  * db-user accessors
  */
 
+bool db_user_active(const char *username);
+int db_user_set_active(const char *username, bool active);
+
+int db_user_get_security_action(const char *username);
+int db_user_set_security_action(const char *username, int action);
+
 int db_user_exists(const char *username, uint64_t * user_idnr);
 int db_user_create_shadow(const char *username, uint64_t * user_idnr);
 int db_user_create(const char *username, const char *password, const char *enctype,
