@@ -314,6 +314,10 @@ int _ic_authenticate(ImapSession *self)
 		if (!check_state_and_args(self, 2, 2, CLIENTSTATE_NON_AUTHENTICATED)) return 1;
 	}
 
+	if (Capa_match(self->preauth_capa, "LOGINDISABLED") && (! self->ci->sock->ssl_state)) {
+		dbmail_imap_session_buff_printf(self, "%s NO try STARTTLS first\r\n", self->tag);
+		return 1;
+	}
 	dm_thread_data_push((gpointer)self, _ic_authenticate_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -448,11 +452,11 @@ static void _ic_select_enter(dm_thread_data *D)
 
 	/* UIDNEXT */
 	dbmail_imap_session_buff_printf(self, "* OK [UIDNEXT %" PRIu64 "] Predicted next UID\r\n",
-		MailboxState_getUidnext(S));
+			MailboxState_getUidnext(S));
 	
 	/* UID */
 	dbmail_imap_session_buff_printf(self, "* OK [UIDVALIDITY %" PRIu64 "] UID value\r\n",
-		MailboxState_getId(S));
+			MailboxState_getId(S));
 
 	if (MailboxState_getExists(S)) { 
 		/* show msn of first unseen msg (if present) */
