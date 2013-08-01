@@ -858,10 +858,70 @@ char *db_returning(const char *s)
 /*
  * check to make sure the database has been upgraded
  */
-static void check_table_exists(Connection_T c, const char *table, const char *errormessage)
+static ResultSet_T check_table_exists(Connection_T c, const char *table)
 {
-	if (! db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, table))
-		TRACE(TRACE_EMERG, "%s", errormessage);
+	db_con_clear(c);
+	return db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, table);
+}
+
+static int check_upgrade_step(Connection_T c, int from_version, int to_version)
+{
+	const char *query = NULL;
+	volatile int result = 0;
+	PreparedStatement_T st; ResultSet_T r;
+
+	TRY
+		st = db_stmt_prepare(c,
+				"SELECT 1=1 FROM %supgrade_steps WHERE "
+				"from_version = ? "
+				"AND to_version = ?", DBPFX);
+		db_stmt_set_int(st, 1, from_version);
+		db_stmt_set_int(st, 2, to_version);
+		r = db_stmt_query(st);
+		if (db_result_next(r)) // found
+			result = to_version;
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	END_TRY;
+
+	if (result)
+		return result;
+
+
+	switch(db_params.db_driver) {
+		case DM_DRIVER_SQLITE:
+			if (to_version == 32001)
+				query = DM_SQLITE_32001;
+		break;
+		case DM_DRIVER_MYSQL:
+			if (to_version == 32001)
+				query = DM_MYSQL_32001;
+
+		break;
+		case DM_DRIVER_POSTGRESQL:
+			if (to_version == 32001)
+				query = DM_PGSQL_32001;
+
+		break;
+		default:
+			TRACE(TRACE_WARNING, "Migrations not supported for database driver");
+			return DM_EQUERY;
+		break;
+	}
+
+	if (! query) {
+		TRACE(TRACE_INFO, "Unable to find migration query for upgrade step [%d]", to_version);
+		return DM_EQUERY;
+	}
+
+	db_con_clear(c);
+	TRACE(TRACE_INFO, "Running upgrade step %d -> %d", from_version, to_version);
+	if (db_exec(c, query))
+		result = to_version;
+	else
+		result = DM_EQUERY;
+
+	return result;
 }
 
 int db_check_version(void)
@@ -869,6 +929,7 @@ int db_check_version(void)
 	Connection_T c = db_con_get();
 	volatile int ok = 0;
 	volatile int db = 0;
+
 	TRY
 		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
 			db = 1;
@@ -895,25 +956,39 @@ int db_check_version(void)
 
 	db_con_clear(c);
 
-	TRY
-		check_table_exists(c, "physmessage", "pre-2.0 database incompatible. You need to run the conversion script");
-		check_table_exists(c, "headervalue", "2.0 database incompatible. You need to add the header tables.");
-		check_table_exists(c, "envelope", "2.1+ database incompatible. You need to add the envelopes table and run dbmail-util -by");
-		check_table_exists(c, "mimeparts", "3.x database incompatible.");
-		check_table_exists(c, "header", "3.x database incompatible - single instance header storage missing.");
+	do {
+		if (! check_table_exists(c, "mimeparts"))
+			break;
+		if (! check_table_exists(c, "header"))
+			break;
 		ok = 1;
-	CATCH(SQLException)
-		LOG_SQLERROR;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (ok)
-		TRACE(TRACE_DEBUG,"Tables OK");
-	else
+		break;
+	} while (true);
+	
+	if (! ok) {
 		TRACE(TRACE_WARNING,"Schema version incompatible. Bailing out");
+		return DM_EQUERY;
+	}
 
-	return ok?DM_SUCCESS:DM_EQUERY;
+	db_con_clear(c);
+
+	do {
+		if ((ok = check_upgrade_step(c, 0, 32001)) == DM_EQUERY)
+			break;
+		break;
+	} while (true);
+
+	db_con_close(c);
+
+	if (ok == 32001) {
+		TRACE(TRACE_DEBUG, "Schema check successful");
+	} else {
+		TRACE(TRACE_WARNING,"Schema version incompatible [%d]. Bailing out",
+				ok);
+		return DM_EQUERY;
+	}
+
+	return DM_SUCCESS;
 }
 
 /* test existence of usermap table */
