@@ -1196,7 +1196,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 				char qs[DEF_FRAGSIZE];
 				char field[DEF_FRAGSIZE];
 				char d[SQL_INTERNALDATE_LEN];
-				char date[SQL_INTERNALDATE_LEN];
+				char date[DEF_FRAGSIZE];
 				memset(d, 0, sizeof(d));
 				memset(qs, 0, sizeof(qs));
 				memset(date, 0, sizeof(date));
@@ -1205,7 +1205,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 				g_snprintf(field, DEF_FRAGSIZE-1, db_get_sql(SQL_TO_DATE), s->hdrfld);
 				date_imap2sql(s->search, d);
 				g_snprintf(qs, DEF_FRAGSIZE-1, "'%s'", d);
-				g_snprintf(date, SQL_INTERNALDATE_LEN-1, db_get_sql(SQL_TO_DATE), qs);
+				g_snprintf(date, DEF_FRAGSIZE-1, db_get_sql(SQL_TO_DATE), qs);
 
 				if (s->type == IST_HDRDATE_SINCE)
 					op = ">=";
