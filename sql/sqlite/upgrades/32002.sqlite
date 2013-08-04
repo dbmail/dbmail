@@ -1,0 +1,14 @@
+
+BEGIN;
+DROP VIEW IF EXISTS dbmail_subjectfield;
+CREATE VIEW dbmail_subjectfield AS
+   SELECT physmessage_id, headervalue AS subjectfield, sortfield
+   FROM dbmail_messages m
+   JOIN dbmail_header h USING (physmessage_id)
+   JOIN dbmail_headername n ON h.headername_id = n.id
+   JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+WHERE n.headername = 'subject';
+
+INSERT INTO dbmail_upgrade_steps (from_version, to_version) values (32001, 32002);
+COMMIT;
+

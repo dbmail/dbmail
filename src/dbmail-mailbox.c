@@ -557,7 +557,7 @@ static int _handle_sort_args(DbmailMailbox *self, String_T *search_keys, search_
 	
 	else if ( MATCH(key, "subject") ) {
 		_append_join(value->table, "subjectfield");
-		_append_sort(value->order, "subjectfield", reverse);
+		_append_sort(value->order, "sortfield", reverse);
 		(*idx)++;
 	} 
 	

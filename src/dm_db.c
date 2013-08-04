@@ -890,18 +890,16 @@ static int check_upgrade_step(Connection_T c, int from_version, int to_version)
 
 	switch(db_params.db_driver) {
 		case DM_DRIVER_SQLITE:
-			if (to_version == 32001)
-				query = DM_SQLITE_32001;
+			if (to_version == 32001) query = DM_SQLITE_32001;
+			if (to_version == 32002) query = DM_SQLITE_32002;
 		break;
 		case DM_DRIVER_MYSQL:
-			if (to_version == 32001)
-				query = DM_MYSQL_32001;
-
+			if (to_version == 32001) query = DM_MYSQL_32001;
+			if (to_version == 32002) query = DM_MYSQL_32002;
 		break;
 		case DM_DRIVER_POSTGRESQL:
-			if (to_version == 32001)
-				query = DM_PGSQL_32001;
-
+			if (to_version == 32001) query = DM_PGSQL_32001;
+			if (to_version == 32002) query = DM_PGSQL_32002;
 		break;
 		default:
 			TRACE(TRACE_WARNING, "Migrations not supported for database driver");
@@ -975,12 +973,14 @@ int db_check_version(void)
 	do {
 		if ((ok = check_upgrade_step(c, 0, 32001)) == DM_EQUERY)
 			break;
+		if ((ok = check_upgrade_step(c, 32001, 32002)) == DM_EQUERY)
+			break;
 		break;
 	} while (true);
 
 	db_con_close(c);
 
-	if (ok == 32001) {
+	if (ok == 32002) {
 		TRACE(TRACE_DEBUG, "Schema check successful");
 	} else {
 		TRACE(TRACE_WARNING,"Schema version incompatible [%d]. Bailing out",

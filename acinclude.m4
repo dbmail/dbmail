@@ -674,4 +674,11 @@ AC_DEFUN([DM_UPGRADE_STEPS], [dnl
 	AC_SUBST(PGSQL_32001)
 	AC_SUBST(MYSQL_32001)
 	AC_SUBST(SQLITE_32001)
+	PGSQL_32002=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/32002.psql`
+	MYSQL_32002=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/32002.mysql`
+	SQLITE_32002=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/32002.sqlite`
+	AC_SUBST(PGSQL_32002)
+	AC_SUBST(MYSQL_32002)
+	AC_SUBST(SQLITE_32002)
+
 ])
