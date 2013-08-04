@@ -430,34 +430,34 @@ void  dm_pack_spaces(char *in)
 
 static void _strip_blob_prefix(char *subject)
 {
-	char *tmp = g_strdup(subject);
-	char *saved = tmp;
-	if (*tmp == '[') {
-		while (*tmp != '\0' && *tmp != ']')
-			tmp++;
+	size_t len;
+	char *tmp = subject;
+	if (*tmp != '[')
+		return;
 
-		if (*tmp != ']') {
-			g_free(saved);
-			return;
-		}
+	tmp++;
+	while (*tmp != '\0' && *tmp != ']' && *tmp != '[')
+		tmp++;
 
-		g_strstrip(++tmp); // skip ']'
+	if (*tmp != ']')
+		return;
 
-		if (strlen(tmp) > 0)
-			strncpy(subject,tmp,strlen(tmp)+1);
+	while (isspace(*++tmp))
+		;
+	len = strlen(tmp);
 
-	}
-	g_free(saved);
+	if (len > 0)
+		memmove(subject,tmp,len+1);
+
 	return;
 }
-static void _strip_refwd(char *subject) 
+static bool _strip_refwd(char *subject) 
 {
-	char *tmp, *saved;
+	char *tmp;
 	if (! (strncasecmp(subject,"re",2)==0 || strncasecmp(subject,"fw",2)==0))
-		return;
+		return false;
 	
-	tmp = g_strdup(subject);	
-	saved = tmp;
+	tmp = subject;	
 	
 	if (strncasecmp(tmp,"fwd",3)==0) 
 		tmp+=3;
@@ -465,34 +465,36 @@ static void _strip_refwd(char *subject)
 		tmp+=2;
 	
 	g_strstrip(tmp);
+	
 	if (strlen(tmp) > 0)
 		_strip_blob_prefix(tmp);
 
-	if (*tmp!=':') {
-		g_free(saved);
-		return;
-	}
+	if (*tmp!=':')
+		return false;
 
 	g_strstrip(++tmp); // skip ':'
 	
 	if (strlen(tmp) > 0)
-		strncpy(subject,tmp,strlen(tmp)+1);
+		memmove(subject,tmp,strlen(tmp)+1);
 
-	g_free(saved);
+	return true;
 }
 		
 static void _strip_sub_leader(char *subject)
 {
 	unsigned len;
 	/* strip blobs prefixes */
-	while (1==1) {
+	while (1) {
 		len = strlen(subject);
 		_strip_blob_prefix(subject);
 		if (strlen(subject)==len)
 			break;
 	}
 	/* strip refwd prefixes */
-	_strip_refwd(subject);
+	while (1) {
+		if (!_strip_refwd(subject))
+			break;
+	}
 }
 
 char * dm_base_subject(const char *subject)
@@ -502,6 +504,11 @@ char * dm_base_subject(const char *subject)
 	
 	// we expect utf-8 or 7-bit data
 	if (subject == NULL) return NULL;
+
+	//(1) Convert any RFC 2047 encoded-words in the subject to [UTF-8]
+	//    as described in "Internationalization Considerations".
+	//    Convert all tabs and continuations to space.  Convert all
+	//    multiple spaces to a single space.
 	if (g_mime_utils_text_is_8bit((unsigned char *)subject, strlen(subject))) 
 		tmp = g_strdup(subject);
 	else 
@@ -510,13 +517,16 @@ char * dm_base_subject(const char *subject)
 	
 	dm_pack_spaces(tmp);
 	g_strstrip(tmp);
-	while (1==1) {
+	while (1) {
 		olen = strlen(tmp);
+		// (2) remove subject trailer: "(fwd)" / WSP
 		while (g_str_has_suffix(tmp,"(fwd)")) {
 			offset = strlen(tmp) - 5;
 			tmp[offset] = '\0';
 			g_strstrip(tmp);
 		}
+		// (3) remove subject leader: (*subj-blob subj-refwd) / WSP
+		// (4) remove subj-blob prefix if result non-empty
 		while (1==1) {
 			len = strlen(tmp);
 			_strip_sub_leader(tmp);
@@ -524,11 +534,15 @@ char * dm_base_subject(const char *subject)
 				break;
 		}
 
+		// (6) If the resulting text begins with the subj-fwd-hdr ABNF and
+		//     ends with the subj-fwd-trl ABNF, remove the subj-fwd-hdr and
+		//     subj-fwd-trl and repeat from step (2).
 		if (g_str_has_suffix(tmp,"]") && strncasecmp(tmp,"[fwd:",5)==0 ) {
 			offset=strlen(tmp)-1;
 			tmp[offset]='\0';
 			tmp+=5;
 			g_strstrip(tmp);
+			continue;
 		}
 		
 		while (g_str_has_prefix(tmp,":") && (strlen(tmp) > 1)) 

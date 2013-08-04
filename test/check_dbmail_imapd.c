@@ -757,7 +757,11 @@ static int wrap_base_subject(const char *in, const char *expect)
 	return res;
 }	
 
-#define BS(x,y) fail_unless(wrap_base_subject((x),(y))==0, "dm_base_subject failed")
+#define BS(x,y) { \
+       char *res = dm_base_subject((x));\
+		   fail_unless(wrap_base_subject((x),(y))==0, "dm_base_subject failed\n%s !=\n%s", res, y); \
+		   free(res); \
+}
 #define BSF(x,y) fail_unless(wrap_base_subject((x),(y))!=0, "dm_base_subject failed (negative)")
 
 START_TEST(test_dm_base_subject)
@@ -777,6 +781,7 @@ START_TEST(test_dm_base_subject)
 	
 	BSF("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=",
             "=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=");
+	BS("re: [fwd: [fwd: re: [fwd: babylon]]]", "babylon");
 }
 END_TEST
 
