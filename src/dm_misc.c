@@ -516,14 +516,17 @@ char * dm_base_subject(const char *subject)
 	saved = tmp;
 	
 	dm_pack_spaces(tmp);
-	g_strstrip(tmp);
 	while (1) {
+		g_strstrip(tmp);
 		olen = strlen(tmp);
 		// (2) remove subject trailer: "(fwd)" / WSP
-		while (g_str_has_suffix(tmp,"(fwd)")) {
-			offset = strlen(tmp) - 5;
-			tmp[offset] = '\0';
-			g_strstrip(tmp);
+		if (olen > 5) {
+			char *trailer = tmp + (olen - 5);
+			if (strncasecmp(trailer, "(fwd)", 5)==0) {
+				*trailer = '\0';
+				g_strstrip(tmp);
+				continue;
+			}
 		}
 		// (3) remove subject leader: (*subj-blob subj-refwd) / WSP
 		// (4) remove subj-blob prefix if result non-empty
@@ -551,7 +554,9 @@ char * dm_base_subject(const char *subject)
 		if (strlen(tmp)==olen)
 			break;
 	}
-	tmp = g_strdup(tmp);
+		
+	tmp = g_utf8_strdown(tmp, strlen(tmp));
+
 	g_free(saved);
 	
 	return tmp;

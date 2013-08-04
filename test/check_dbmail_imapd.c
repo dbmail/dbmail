@@ -781,7 +781,18 @@ START_TEST(test_dm_base_subject)
 	
 	BSF("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=",
             "=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=");
+	BS("[foo] Fwd: [bar] Re: fw: b (fWd)  (fwd)", "b");
+	BS("b (a)", "b (a)");
+	BS("Re: [FWD: c]", "c");
+	BS("[xyz]", "[xyz]");
+	BS("=?iso-8859-1?q?_?=", "");
+	BS("Re: =?utf-8?q?b?=", "b");
+	BS("=?iso-8859-1?q?RE:_C?=", "c");
+	BS("=?us-ascii?b?UmU6IGM=?=", "c");
+	BS("Ad: Re: Ad: Re: Ad: x", "ad: re: ad: re: ad: x");
 	BS("re: [fwd: [fwd: re: [fwd: babylon]]]", "babylon");
+	BS("C", "c");
+	BS(" ", "");
 }
 END_TEST
 
