@@ -449,3 +449,53 @@ char * config_get_pidfile(ServerConfig_T *config, const char *name)
 	return res;
 }
 
+void config_get_security_actions(ServerConfig_T *config)
+{
+	Field_T var;
+	char **values;
+	uint64_t *key;
+	char *value;
+
+	if (config->security_actions)
+		return;
+
+	GTree *actions = g_tree_new_full((GCompareDataFunc)ucmp, NULL, g_free, g_free);
+
+	memset(var, '\0', sizeof(var));
+	GETCONFIGVALUE("security_action", "DBMAIL", var);
+	key = g_new0(uint64_t, 1);
+	*key = 0;
+	g_tree_insert(actions, key, g_strdup("NONE"));
+	key = g_new0(uint64_t, 1);
+	*key = 1;
+	g_tree_insert(actions, key, g_strdup("ALL"));
+
+	if (strlen(var) > 2) { // 2:a;3:b
+		int i = 0;
+		values = g_strsplit(var, ";", 0);
+		while (values[i]) {
+			uint64_t tmp = dm_strtoull(values[i], &value, 10);
+			if ((tmp == 0) || (value == NULL) || (value[0] != ':')) {
+				TRACE(TRACE_NOTICE, "error parsing security action");
+				break;
+			}
+			if (g_tree_lookup(actions, &tmp)) {
+				TRACE(TRACE_ERR, "duplicate security action specified [%" PRIu64 "]",
+						tmp);
+				TRACE(TRACE_ERR, "ignoring security_action configuration. using defaults.");
+				break;
+			}
+			value++;
+			key = g_new0(uint64_t, 1);
+			*key = tmp;
+			g_tree_insert(actions, key, g_strdup(value));
+			i++;
+		}
+		i = 0;
+	}
+
+	config->security_actions = actions;
+	g_strfreev(values);
+}
+
+

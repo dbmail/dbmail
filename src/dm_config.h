@@ -63,6 +63,7 @@ void SetTraceLevel(const char *service_name);
 void pidfile_create(const char *pidFile, pid_t pid);
 
 void config_get_logfiles(ServerConfig_T *config, const char * const service);
+void config_get_security_actions(ServerConfig_T *config);
 
 char * config_get_pidfile(ServerConfig_T *config, const char *name);
 char * config_get_statefile(ServerConfig_T *config, const char *name);
