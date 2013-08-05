@@ -409,6 +409,7 @@ typedef struct {
         Field_T tls_ciphers;
 	int (*ClientHandler) (client_sock *);
 	void (*cb) (struct evhttp_request *, void *);
+	GTree *security_actions;
 } ServerConfig_T;
 
 
