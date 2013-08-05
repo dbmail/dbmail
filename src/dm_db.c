@@ -38,6 +38,7 @@ const char *imap_flag_desc[] = {
 const char *imap_flag_desc_escaped[] = {
 	"\\Seen", "\\Answered", "\\Deleted", "\\Flagged", "\\Draft", "\\Recent" };
 
+extern ServerConfig_T *server_conf;
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
@@ -3373,13 +3374,151 @@ int db_user_set_security_password(uint64_t user_idnr, const char *password)
 	return t;
 }
 
-int db_user_security_validate(ClientBase_T *ci, uint64_t user_idnr, const char *password)
+int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr, const char *password)
+{
+	int is_validated = 0;
+	char salt[13], cryptres[35];
+	int t = FALSE;
+	const char *dbpass, *encode;
+	char hashstr[FIELDSIZE];
+	Connection_T c; ResultSet_T r;
+
+	memset(salt,0,sizeof(salt));
+	memset(cryptres,0,sizeof(cryptres));
+	memset(hashstr, 0, sizeof(hashstr));
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT %s, encryption_type FROM %susers WHERE user_idnr = %" PRIu64 "",
+			       	pwfield, DBPFX, *user_idnr);
+		if (db_result_next(r)) {
+			dbpass = db_result_get(r, 0);
+			encode = db_result_get(r, 1);
+			t = TRUE;
+		} else {
+			t = FALSE;
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (t == DM_EQUERY)
+		return t;
+	
+	if (! t) return FALSE;
+
+	if (strcasecmp(encode, "") == 0) {
+		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
+		if (ci && ci->auth) // CRAM-MD5 
+			is_validated = Cram_verify(ci->auth, dbpass);
+		else 
+			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
+        }
+
+	if (strcasecmp(encode, "crypt") == 0) {
+		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
+		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "md5") == 0) {
+		/* get password */
+		if (strncmp(dbpass, "$1$", 3)) {
+			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
+			dm_md5(password, hashstr);
+			is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+		} else {
+			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
+			strncpy(salt, dbpass, 12);
+			strncpy(cryptres, (char *) crypt(password, dbpass), 34);
+			TRACE(TRACE_DEBUG, "salt   : %s", salt);
+			TRACE(TRACE_DEBUG, "hash   : %s", dbpass);
+			TRACE(TRACE_DEBUG, "crypt(): %s", cryptres);
+			is_validated = (strncmp(dbpass, cryptres, 34) == 0) ? 1 : 0;
+		}
+	} else if (strcasecmp(encode, "md5sum") == 0) {
+		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
+		dm_md5(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "md5base64") == 0) {
+		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
+		dm_md5_base64(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "whirlpool") == 0) {
+		TRACE(TRACE_DEBUG, "validating using WHIRLPOOL hash comparison");
+		dm_whirlpool(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "sha512") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-512 hash comparison");
+		dm_sha512(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "sha256") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-256 hash comparison");
+		dm_sha256(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 64) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "sha1") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-1 hash comparison");
+		dm_sha1(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "tiger") == 0) {
+		TRACE(TRACE_DEBUG, "validating using TIGER hash comparison");
+		dm_tiger(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 48) == 0) ? 1 : 0;
+	}
+
+	if (is_validated)
+		db_user_log_login(*user_idnr);
+	
+	return (is_validated ? 1 : 0);
+}
+
+int db_user_delete_messages(uint64_t user_idnr, char *flags)
 {
 	return 0;
 }
 
 int db_user_security_trigger(uint64_t user_idnr)
 {
+	volatile uint64_t result = 0;
+	uint64_t action = 0;
+	char *flags = NULL;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
+	config_get_security_actions(server_conf);
+
+	assert(user_idnr);
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "SELECT saction FROM %susers WHERE user_idnr = ?", DBPFX);
+		db_stmt_set_u64(s, 1, user_idnr);
+		r = db_stmt_query(s);
+		if (db_result_next(r))
+			result = db_result_get_u64(r, 0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (! result) return 0;
+	action = result;
+
+	flags = g_tree_lookup(server_conf->security_actions, &action);
+
+	if (flags) {
+		TRACE(TRACE_DEBUG, "Found: user_idnr [%" PRIu64 "] security_action [%" PRIu64 "] flags [%s]",
+				user_idnr, action, flags);
+	}
+
+
+	if (action == 1) {
+		db_empty_mailbox(user_idnr);
+	} else if (flags) {
+		db_user_delete_messages(user_idnr, flags);
+	} else {
+		TRACE(TRACE_INFO, "NotFound: user_idnr [%" PRIu64 "] security_action [%" PRIu64 "]",
+				user_idnr, action);
+	}
+
 	return 0;
 }
 
