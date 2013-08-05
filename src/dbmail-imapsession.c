@@ -1279,13 +1279,11 @@ int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, c
 {
 	uint64_t userid = 0;
 	
+	TRACE(TRACE_DEBUG, "[%p] trying to validate user [%s]", self, username);
 	int valid = auth_validate(self->ci, username, password, &userid);
 	
 	if (self->ci->auth)
 		username = Cram_getUsername(self->ci->auth);
-
-	TRACE(TRACE_DEBUG, "[%p] trying to validate user [%s]", self, username);
-
 	
 	switch(valid) {
 		case -1: /* a db-error occurred */
