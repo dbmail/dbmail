@@ -3552,6 +3552,90 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 
 int db_user_delete_messages(uint64_t user_idnr, char *flags)
 {
+	int flagcount = 0;
+	int i = 0, j = 0;
+	char *flag;
+	char **parts;
+	GList *keywords = NULL;
+	int sysflags[IMAP_NFLAGS];
+	String_T query = NULL;
+	Mempool_T pool = NULL;
+	Connection_T c; PreparedStatement_T st;
+
+	memset(sysflags, 0, sizeof(sysflags));
+	parts = g_strsplit(flags, " ", 0);
+	while ((flag = parts[i++])) {
+		for (j = 0; j < IMAP_NFLAGS; j++) {
+			if (MATCH(flag, imap_flag_desc_escaped[j])) {
+				sysflags[j] = 1;
+				flagcount++;
+				break;
+			}
+		}
+		if (j == IMAP_NFLAGS) {
+			keywords = g_list_append(keywords, g_utf8_strdown(flag, strlen(flag)));
+			flagcount++;
+		}
+	}
+
+	if (! flagcount)
+		return 0;
+
+	pool = mempool_open();
+	query = p_string_new(pool, "");
+	p_string_printf(query, "UPDATE %smessages SET status=%d "
+			"WHERE message_idnr IN ("
+			"SELECT m.message_idnr FROM %smessages m "
+			"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
+			"LEFT OUTER JOIN %skeywords k ON k.message_idnr=m.message_idnr "
+			"WHERE b.owner_idnr=? AND status IN (%d,%d) AND (1=0",
+			DBPFX, MESSAGE_STATUS_DELETE, DBPFX, DBPFX, DBPFX,
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+
+
+	for (j = 0; j < IMAP_NFLAGS; j++) {
+		if (! sysflags[j])
+			continue;
+		p_string_append_printf(query, " OR m.%s=1", db_flag_desc[j]);
+	}
+
+	keywords = g_list_first(keywords);
+	while (keywords) {
+		p_string_append_printf(query, " OR k.keyword=?");
+		if (! g_list_next(keywords))
+			break;
+		keywords = g_list_next(keywords);
+	}
+
+	p_string_append(query, "))");
+
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		st = db_stmt_prepare(c, p_string_str(query));
+		db_stmt_set_u64(st, 1, user_idnr);
+		i = 2;
+		keywords = g_list_first(keywords);
+		while (keywords) {
+			char *label = (char *)keywords->data;
+			db_stmt_set_str(st, i++, label);
+			if (! g_list_next(keywords))
+				break;
+			keywords = g_list_next(keywords);
+		}
+		db_stmt_exec(st);
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		db_rollback_transaction(c);
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	p_string_free(query, TRUE);
+	g_list_destroy(keywords);
+	mempool_close(&pool);
+
 	return 0;
 }
 
