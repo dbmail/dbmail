@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 		result = 1;
 		goto shutdown;
 	}
-	result = server_mainloop(&config, "SIEVE", "dbmail-timsieved");
+	result = server_mainloop(&config, "dbmail-timsieved");
 shutdown:
 	TRACE(TRACE_INFO, "exit");
 	return result;

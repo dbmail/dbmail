@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
 	config.ClientHandler = imap_handle_connection;
 	imap_before_smtp = config.service_before_smtp;
-	result = server_mainloop(&config, "IMAP", "dbmail-imapd");
+	result = server_mainloop(&config, "dbmail-imapd");
 shutdown:
 	TRACE(TRACE_INFO, "return [%d]", result);
 	return result;

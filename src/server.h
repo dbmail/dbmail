@@ -59,7 +59,7 @@ void dm_thread_data_free(gpointer data);
 
 void server_showhelp(const char *service, const char *greeting);
 int server_getopt(ServerConfig_T *config, const char *service, int argc, char *argv[]);
-int server_mainloop(ServerConfig_T *config, const char *service, const char *servicename);
+int server_mainloop(ServerConfig_T *config, const char *servicename);
 pid_t server_daemonize(ServerConfig_T *conf);
 void server_http(ServerConfig_T *conf);
 

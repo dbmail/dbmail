@@ -32,7 +32,7 @@
 #define THIS_MODULE "server"
 
 
-volatile sig_atomic_t mainRestart = 0;
+volatile sig_atomic_t mainReload = 0;
 
 // thread data
 Mempool_T    queue_pool;
@@ -314,6 +314,11 @@ static void reopen_logs(ServerConfig_T *conf)
 {
 	int serr;
 
+	if (mainReload) {
+		mainReload = 0;
+		TRACE(TRACE_INFO, "reopening log files");
+	}
+
 	if (fstdout) fclose(fstdout);
 	if (fstderr) fclose(fstderr);
 	if (fnull) fclose(fnull);
@@ -332,6 +337,7 @@ static void reopen_logs(ServerConfig_T *conf)
 		serr = errno;
 		TRACE(TRACE_ERR, "freopen failed on stdin [%s]", strerror(serr));
 	}
+
 }
 	
 /* Should be called once to initially close the actual std{in,out,err}
@@ -563,6 +569,9 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 	/* accept the active fd */
 	int len = sizeof(*caddr);
 
+	if (mainReload)
+		reopen_logs(server_conf);
+
 	if ((csock = accept(sock, NULL, NULL)) < 0) {
                 int serr=errno;
                 switch(serr) {
@@ -634,16 +643,13 @@ static void server_sock_ssl_cb(int sock, short event, void *arg)
 }
 
 
-void server_sig_cb(int fd, short event, void *arg)
+void server_sig_cb(int UNUSED fd, short UNUSED event, void *arg)
 {
 	struct event *ev = arg;
 	
-	TRACE(TRACE_DEBUG, "fd %d, event %d, %s", 
-			fd, event, strsignal(EVENT_SIGNAL(ev)));
-
 	switch (EVENT_SIGNAL(ev)) {
-		case SIGHUP: // TODO: reload config
-			mainRestart = 1;
+		case SIGHUP:
+			mainReload = 1;
 		case SIGPIPE: // ignore
 		break;
 		case SIGUSR1:
@@ -750,7 +756,7 @@ int server_run(ServerConfig_T *conf)
 	int i;
 	struct event **evsock;
 
-	mainRestart = 0;
+	mainReload = 0;
 
 	assert(conf);
 	reopen_logs(conf);
@@ -939,7 +945,7 @@ int server_getopt(ServerConfig_T *config, const char *service, int argc, char *a
 	return 0;
 }
 
-int server_mainloop(ServerConfig_T *config, const char *service, const char *servicename)
+int server_mainloop(ServerConfig_T *config, const char *servicename)
 {
 	strncpy(config->process_name, servicename, FIELDSIZE);
 
@@ -963,14 +969,8 @@ int server_mainloop(ServerConfig_T *config, const char *service, const char *ser
 	if (! config->no_daemonize)
 		server_daemonize(config);
 
-
 	/* This is the actual main loop. */
-	while (server_run(config)) {
-		/* Reread the config file and restart the services,
-		 * e.g. on SIGHUP or other graceful restart condition. */
-		server_config_load(config, service);
-		sleep(2);
-	}
+	server_run(config);
 
 	server_config_free(config);
 	TRACE(TRACE_INFO, "leaving main loop");

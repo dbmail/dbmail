@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 	}
 	config.ClientHandler = pop3_handle_connection;
 	pop_before_smtp = config.service_before_smtp;
-	result = server_mainloop(&config, "POP", "dbmail-pop3d");
+	result = server_mainloop(&config, "dbmail-pop3d");
 shutdown:
 	TRACE(TRACE_INFO, "exit");
 	return result;

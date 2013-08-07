@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	}
 
 	config.ClientHandler = lmtp_handle_connection;
-	result = server_mainloop(&config, "LMTP", "dbmail-lmtpd");
+	result = server_mainloop(&config, "dbmail-lmtpd");
 shutdown:
 	TRACE(TRACE_INFO, "exit");
 	return result;

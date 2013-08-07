@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	}
 
 	config.cb = Request_cb;
-	result = server_mainloop(&config, "HTTP", "dbmail-httpd");
+	result = server_mainloop(&config, "dbmail-httpd");
 	
 shutdown:
 	g_mime_shutdown();
