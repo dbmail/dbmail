@@ -1599,8 +1599,6 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 				}
 				
 				if (!r) break;
-				if (r > hi) r = hi;
-				if (r < lo) r = lo;
 			}
 		
 			if (! (l && r)) break;

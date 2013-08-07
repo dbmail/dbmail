@@ -512,13 +512,18 @@ START_TEST(test_dbmail_mailbox_get_set)
 	fail_unless(set == NULL);
 	g_tree_destroy(set);
 
-	set = dbmail_mailbox_get_set(mb, "0", 1);
-	fail_unless(set == NULL);
+	set = dbmail_mailbox_get_set(mb, "999999998:999999999", 0);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
+	c = g_tree_nnodes(set);
+	fail_unless(c==0, "dbmail_mailbox_get_set failed [%d]", c);
 	g_tree_destroy(set);
-
 	
 	// UID sets
 	char *s, *t;
+
+	set = dbmail_mailbox_get_set(mb, "0", 1);
+	fail_unless(set == NULL);
+	g_tree_destroy(set);
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 1);
 	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
@@ -535,8 +540,13 @@ START_TEST(test_dbmail_mailbox_get_set)
 	g_free(s);
 	g_free(t);
 	
+	set = dbmail_mailbox_get_set(mb, "999999998:999999999", 1);
+	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
+	c = g_tree_nnodes(set);
+	fail_unless(c==0, "dbmail_mailbox_get_set failed [%d]", c);
+	g_tree_destroy(set);
+	
 	dbmail_mailbox_free(mb);
-
 
 	// empty box
 	mb = dbmail_mailbox_new(NULL, empty_box);
