@@ -734,7 +734,7 @@ int do_empty(uint64_t useridnr)
 		qprintf("Emptying mailbox... ");
 		fflush(stdout);
         
-		result = db_empty_mailbox(useridnr);
+		result = db_empty_mailbox(useridnr, 1);
 		if (result != 0) {
 			qerrorf("Error. Please check the log.\n");
 		} else {

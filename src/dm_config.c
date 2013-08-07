@@ -492,10 +492,10 @@ void config_get_security_actions(ServerConfig_T *config)
 			i++;
 		}
 		i = 0;
+		g_strfreev(values);
 	}
 
 	config->security_actions = actions;
-	g_strfreev(values);
 }
 
 
