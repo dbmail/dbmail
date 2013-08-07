@@ -336,7 +336,7 @@ int db_do_cleanup(const char **tables, int num_tables);
 *      - -1 on database failure
 *      - 0 on success
 */
-int db_empty_mailbox(uint64_t user_idnr);
+int db_empty_mailbox(uint64_t user_idnr, int only_empty);
 
 /**
  * \brief fetch the size of a mailbox

@@ -1281,7 +1281,7 @@ int db_cleanup(void)
 	return db_do_cleanup(DB_TABLENAMES, DB_NTABLES);
 }
 
-int db_empty_mailbox(uint64_t user_idnr)
+int db_empty_mailbox(uint64_t user_idnr, int only_empty)
 {
 	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	GList *mboxids = NULL;
@@ -1316,7 +1316,7 @@ int db_empty_mailbox(uint64_t user_idnr)
 	mboxids = g_list_first(mboxids);
 	while (mboxids) {
 		id = mboxids->data;
-		if (db_delete_mailbox(*id, 1, 1)) {
+		if (db_delete_mailbox(*id, only_empty, 1)) {
 			TRACE(TRACE_ERR, "error emptying mailbox [%" PRIu64 "]", *id);
 			result = -1;
 			break;
@@ -1791,10 +1791,10 @@ int db_delete_mailbox(uint64_t mailbox_idnr, int only_empty, int update_curmail_
 	if (! mailbox_is_writable(mailbox_idnr))
 		return DM_EGENERAL;
 
-	if (! mailbox_empty(mailbox_idnr))
-		return DM_EGENERAL;
-
-	if (! only_empty) {
+	if (only_empty) {
+		if (! mailbox_empty(mailbox_idnr))
+			return DM_EGENERAL;
+	} else {
 		if (! mailbox_delete(mailbox_idnr))
 			return DM_EGENERAL;
 	}
@@ -3573,7 +3573,7 @@ int db_user_delete_messages(uint64_t user_idnr, char *flags)
 			}
 		}
 		if (j == IMAP_NFLAGS) {
-			keywords = g_list_append(keywords, g_utf8_strdown(flag, strlen(flag)));
+			keywords = g_list_append(keywords, g_strdup(flag));
 			flagcount++;
 		}
 	}
@@ -3601,7 +3601,7 @@ int db_user_delete_messages(uint64_t user_idnr, char *flags)
 
 	keywords = g_list_first(keywords);
 	while (keywords) {
-		p_string_append_printf(query, " OR k.keyword=?");
+		p_string_append_printf(query, " OR lower(k.keyword)=lower(?)");
 		if (! g_list_next(keywords))
 			break;
 		keywords = g_list_next(keywords);
@@ -3673,9 +3673,10 @@ int db_user_security_trigger(uint64_t user_idnr)
 
 
 	if (action == 1) {
-		db_empty_mailbox(user_idnr);
+		db_empty_mailbox(user_idnr, 0);
 	} else if (flags) {
 		db_user_delete_messages(user_idnr, flags);
+		dm_quota_rebuild_user(user_idnr);
 	} else {
 		TRACE(TRACE_INFO, "NotFound: user_idnr [%" PRIu64 "] security_action [%" PRIu64 "]",
 				user_idnr, action);
