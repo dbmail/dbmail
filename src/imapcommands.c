@@ -479,7 +479,7 @@ static void _ic_select_enter(dm_thread_data *D)
 			MailboxState_getId(S));
 
 	/* MODSEQ */
-	if (Capa_match(self->capa, "CONDSTORE")) {
+	if (self->mailbox->condstore) {
 		dbmail_imap_session_buff_printf(self, "* OK [HIGHESTMODSEQ %" PRIu64 "]\r\n",
 				MailboxState_getSeq(S));
 	}
@@ -1968,16 +1968,16 @@ static void _ic_store_enter(dm_thread_data *D)
 			}
 		}
 		if (needflags) {
-			if (MATCH(token, "(")) {
+			if ( (! startflags) && (MATCH(token, "("))) {
 				startflags = k+1;
-			} else if (startflags && MATCH(token, ")")) {
+				continue;
+			} else if (! startflags) {
+				startflags = k;
+				continue;
+			} else if (startflags && (MATCH(token, ")") || MATCH(token, "("))) {
 				needflags = false;
 				endflags = k-1;
-			} else {
-				startflags = endflags = k;
-				needflags = false;
 			}
-
 			continue;
 		} else {
 			if (MATCH(token, "(")) {
@@ -1998,6 +1998,8 @@ static void _ic_store_enter(dm_thread_data *D)
 			}
 		}
 	}
+	if (! endflags)
+		endflags = k-1;
 
 
 	if (cmd->action == IMAPFA_NONE) {
@@ -2008,7 +2010,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	}
 
 	/* multiple flags should be parenthesed */
-	if (needflags || (startflags > endflags)) {
+	if (needflags && (!startflags)) {
 		dbmail_imap_session_buff_printf(self, "%s BAD invalid argument(s) to STORE\r\n", self->tag);
 		D->status = 1;
 		SESSION_RETURN;

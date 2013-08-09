@@ -2853,8 +2853,6 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 
 	g_free(frag);
 
-	db_mailbox_seq_update(mailbox_to, *newmsg_idnr);
-
 	/* Copy the message keywords */
 	c = db_con_get();
 	TRY
@@ -2869,6 +2867,8 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 	FINALLY
 		db_con_close(c);
 	END_TRY;
+
+	db_mailbox_seq_update(mailbox_to, *newmsg_idnr);
 
 	/* update quotum */
 	if (! dm_quota_user_inc(user_idnr, msgsize))
@@ -3119,9 +3119,16 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		}
 	}
 
-	snprintf(query + pos, DEF_QUERYSIZE - pos,
-			" WHERE message_idnr = %" PRIu64 " AND status < %d AND seq <= %" PRIu64,
-			msg_idnr, MESSAGE_STATUS_DELETE, seq);
+	if (seq) {
+		snprintf(query + pos, DEF_QUERYSIZE - pos,
+				" WHERE message_idnr = %" PRIu64 " AND status < %d AND seq <= %" PRIu64,
+				msg_idnr, MESSAGE_STATUS_DELETE, seq);
+	} else {
+		snprintf(query + pos, DEF_QUERYSIZE - pos,
+				" WHERE message_idnr = %" PRIu64 " AND status < %d",
+				msg_idnr, MESSAGE_STATUS_DELETE);
+	}
+
 
 	c = db_con_get();
 	TRY
@@ -3771,7 +3778,7 @@ uint64_t db_mailbox_seq_update(uint64_t mailbox_id, uint64_t message_id)
 		if (db_result_next(r))
 			seq = db_result_get_u64(r, 0);
 		if (message_id) {
-			st3 = db_stmt_prepare(c, "UPDATE %s %smessages SET seq = ? WHERE message_idnr = ?"
+			st3 = db_stmt_prepare(c, "UPDATE %s %smessages SET seq = ? WHERE message_idnr = ? "
 					"AND seq < ?",
 					db_get_sql(SQL_IGNORE), DBPFX);
 			db_stmt_set_u64(st3, 1, seq);
@@ -3795,7 +3802,7 @@ void db_message_set_seq(uint64_t message_id, uint64_t seq)
 	Connection_T c; PreparedStatement_T st;
 	c = db_con_get();
 	TRY
-		st = db_stmt_prepare(c, "UPDATE %s %smessages SET seq = ? WHERE message_idnr = ?"
+		st = db_stmt_prepare(c, "UPDATE %s %smessages SET seq = ? WHERE message_idnr = ? "
 				"AND seq < ?", db_get_sql(SQL_IGNORE), DBPFX);
 		db_stmt_set_u64(st, 1, seq);
 		db_stmt_set_u64(st, 2, message_id);
