@@ -2155,8 +2155,8 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 			TRACE(TRACE_NOTICE, "message id=%" PRIu64 ", setting imap flags", 
 				newmsgidnr);
 
-			db_set_msgflag(newmsgidnr, msgflags, keywords, IMAPFA_ADD, NULL);
-			db_mailbox_seq_update(mboxidnr);
+			if (db_set_msgflag(newmsgidnr, msgflags, keywords, IMAPFA_ADD, 0, NULL))
+				db_mailbox_seq_update(mboxidnr, newmsgidnr);
 		}
 		message->msg_idnr = newmsgidnr;
 		return DSN_CLASS_OK;

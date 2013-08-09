@@ -418,6 +418,9 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const cha
 	GString *t;
 	gchar *s = NULL;
 	GList *l = NULL, *h = NULL;
+	GTree *msginfo;
+	GTree *msn;
+	uint64_t maxseq = 0;
 
 	if ((self->found == NULL) || g_tree_nnodes(self->found) <= 0) {
 		TRACE(TRACE_DEBUG,"no ids found");
@@ -433,8 +436,23 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const cha
 
 	h = l;
 
+	msginfo = MailboxState_getMsginfo(self->mbstate);
+	msn = MailboxState_getMsn(self->mbstate);
+
 	while(l->data) {
-		g_string_append_printf(t,"%" PRIu64 "", *(uint64_t *)l->data);
+		uint64_t *key = (uint64_t *)l->data;
+		if (self->modseq) {
+			uint64_t *id;
+			if (uid || dbmail_mailbox_get_uid(self)) {
+				id = key;
+			} else {
+				id = g_tree_lookup(msn, key);
+			}
+
+			MessageInfo *info = g_tree_lookup(msginfo, id);
+			maxseq = max(maxseq, info->seq);
+		}
+		g_string_append_printf(t,"%" PRIu64 "", *key);
 		if (! g_list_next(l))
 			break;
 		g_string_append_printf(t,"%s", sep);
@@ -442,6 +460,9 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const cha
 	}
 
 	g_list_free(h);
+
+	if (self->modseq)
+		g_string_append_printf(t, " (MODSEQ %" PRIu64 ")", maxseq);
 
 	s = t->str;
 	g_string_free(t,FALSE);
@@ -880,6 +901,32 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > %s", partial);
 		(*idx)++;
 
+	} else if ( MATCH(key, "modseq") ) {
+		const char *token;
+		bool valid = false;
+		uint64_t seq = 0;
+		int i = 0;
+		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		(*idx)++;
+		for (i=0; i<=2; i++) {
+			char *rest;
+			token = p_string_str(search_keys[*idx+i]);
+			TRACE(TRACE_DEBUG, "check token [%d:%s]", i, token);
+			if (! token)
+			       	break;
+			if (i == 1)
+				continue;
+			seq = dm_strtoull(token, &rest, 10);
+			if (rest != token) {
+				valid=true;
+				break;
+			}
+		}
+		(*idx) += i + 1;
+		if (! valid)
+			return -1;
+		self->modseq = seq;
+		self->condstore = true;
 	}
 
 
@@ -1180,8 +1227,10 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 
 	if (self->found && g_tree_nnodes(self->found) <= 200) {
 		char *setlist = dbmail_mailbox_ids_as_string(self, TRUE, ",");
-		inset = g_strdup_printf("AND m.message_idnr IN (%s)", setlist);
-		g_free(setlist);
+		if (setlist) {
+			inset = g_strdup_printf("AND m.message_idnr IN (%s)", setlist);
+			g_free(setlist);
+		}
 	}
 
 	c = db_con_get();
@@ -1465,7 +1514,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 	return s->found;
 }
 
-struct filter_helper {  
+struct filter_range_helper {  
         gboolean uid;   
         uint64_t min;      
         uint64_t max;      
@@ -1475,7 +1524,7 @@ struct filter_helper {
 static int filter_range(gpointer key, gpointer value, gpointer data)
 {                       
 	uint64_t *k, *v;   
-	struct filter_helper *d = (struct filter_helper *)data;
+	struct filter_range_helper *d = (struct filter_range_helper *)data;
 
 	if (*(uint64_t *)key < d->min) return FALSE; // skip
 	if (*(uint64_t *)key > d->max) return TRUE; // done
@@ -1496,7 +1545,7 @@ static int filter_range(gpointer key, gpointer value, gpointer data)
 
 static void find_range(GTree *c, uint64_t l, uint64_t r, GTree *a, gboolean uid)
 {                       
-	struct filter_helper data;
+	struct filter_range_helper data;
 
 	data.uid = uid; 
 	data.min = l;   
@@ -1514,6 +1563,47 @@ static int checkset(const char *s)
 		       	return 0;
 	}
 	return 1;
+}
+
+struct filter_modseq_helper {
+	GTree *msginfo;
+	uint64_t modseq;
+	GList *remove;
+};
+
+static int filter_modseq(gpointer key, gpointer UNUSED value, gpointer data)
+{
+	struct filter_modseq_helper *d = (struct filter_modseq_helper *)data;
+	uint64_t *id;
+
+	id = (uint64_t *)key;
+	MessageInfo *info = g_tree_lookup(d->msginfo, id);
+	if (info->seq <= d->modseq)
+		d->remove = g_list_prepend(d->remove, key);
+	return FALSE;
+}
+
+GTree * find_modseq(DbmailMailbox *self, GTree *in)
+{
+	if (! self->modseq)
+		return in;
+	GList *remove;
+	struct filter_modseq_helper data;
+	data.msginfo = MailboxState_getMsginfo(self->mbstate);
+	data.modseq = self->modseq;
+	data.remove = NULL;
+
+	g_tree_foreach(in, (GTraverseFunc)filter_modseq, &data);
+	remove = data.remove;
+	while(remove) {
+		uint64_t *key = (uint64_t *)remove->data;
+		g_tree_remove(in, key);
+		if (! g_list_next(remove))
+			break;
+		remove = g_list_next(remove);
+	}
+
+	return in;
 }
 
 GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean uid)
@@ -1668,7 +1758,7 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		TRACE(TRACE_DEBUG, "return NULL");
 	}
 
-	return b;
+	return find_modseq(self, b);
 }
 
 static gboolean _found_tree_copy(uint64_t *key, uint64_t *val, GTree *tree)

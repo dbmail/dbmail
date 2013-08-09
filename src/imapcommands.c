@@ -50,6 +50,8 @@ struct cmd_t {
 	int flaglist[IMAP_NFLAGS];
 	GList *keywords;
 	uint64_t mailbox_id;
+	uint64_t seq;
+	uint64_t unchangedsince;
 };
 
 cmd_t cmd_new(void)
@@ -425,6 +427,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 static void _ic_select_enter(dm_thread_data *D)
 {
 	int err;
+	int idx;
 	char *flags;
 	const char *okarg;
 	MailboxState_T S;
@@ -437,6 +440,23 @@ static void _ic_select_enter(dm_thread_data *D)
 		D->status = err;
 		SESSION_RETURN;
 	}	
+	idx = self->args_idx;
+	while (self->args[idx++])
+		;
+
+	if (idx == 5) {
+		if ((MATCH(p_string_str(self->args[1]),"(")) && \
+				(MATCH(p_string_str(self->args[2]), "condstore")) && \
+				(MATCH(p_string_str(self->args[3]), ")"))) {
+			self->mailbox->condstore = true;
+		} else {
+			dbmail_imap_session_buff_printf(self, "%s BAD invalid parameter\r\n",
+					self->tag);
+			D->status = 1;
+			SESSION_RETURN;
+		}
+	}
+	
 	dbmail_imap_session_set_state(self,CLIENTSTATE_SELECTED);
 
 	S = self->mailbox->mbstate;
@@ -458,6 +478,12 @@ static void _ic_select_enter(dm_thread_data *D)
 	dbmail_imap_session_buff_printf(self, "* OK [UIDVALIDITY %" PRIu64 "] UID value\r\n",
 			MailboxState_getId(S));
 
+	/* MODSEQ */
+	if (Capa_match(self->capa, "CONDSTORE")) {
+		dbmail_imap_session_buff_printf(self, "* OK [HIGHESTMODSEQ %" PRIu64 "]\r\n",
+				MailboxState_getSeq(S));
+	}
+
 	if (MailboxState_getExists(S)) { 
 		/* show msn of first unseen msg (if present) */
 		GTree *uids = MailboxState_getIds(S);
@@ -476,14 +502,18 @@ static void _ic_select_enter(dm_thread_data *D)
 		okarg = "READ-ONLY";
 	}
 
-	dbmail_imap_session_buff_printf(self, "%s OK [%s] %s completed\r\n", self->tag, okarg, self->command);
+	dbmail_imap_session_buff_printf(self, "%s OK [%s] %s completed%s\r\n", 
+			self->tag, 
+			okarg, 
+			self->command,
+			self->mailbox->condstore?", CONDSTORE is now enabled": "");
 
 	SESSION_RETURN;
 }
 
 int _ic_select(ImapSession *self) 
 {
-	if (!check_state_and_args(self, 1, 1, CLIENTSTATE_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 1, 4, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_select_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -634,7 +664,7 @@ void _ic_delete_enter(dm_thread_data *D)
 			}
 
 			MailboxState_setNoSelect(S, TRUE);
-			db_mailbox_seq_update(mailbox_idnr);
+			db_mailbox_seq_update(mailbox_idnr, 0);
 			if (! dm_quota_user_dec(self->userid, mailbox_size)) {
 				D->status=DM_EQUERY;
 				SESSION_RETURN;
@@ -1235,6 +1265,10 @@ static void _ic_status_enter(dm_thread_data *D)
 			plst = g_list_append_printf(plst,"UIDNEXT %" PRIu64 "", MailboxState_getUidnext(M));
 		else if (MATCH(attr, "uidvalidity"))
 			plst = g_list_append_printf(plst,"UIDVALIDITY %" PRIu64 "", MailboxState_getId(M));
+		else if (Capa_match(self->capa, "CONDSTORE") && MATCH(attr, "highestmodseq")) {
+			plst = g_list_append_printf(plst,"HIGHESTMODSEQ %" PRIu64, MailboxState_getSeq(M));
+			self->mailbox->condstore = true;
+		}
 		else if (MATCH(attr, ")"))
 			break;
 		else {
@@ -1432,9 +1466,10 @@ void _ic_append_enter(dm_thread_data *D)
 		break;
 	case FALSE:
 		if (flagcount) {
-			if (db_set_msgflag(message_id, flaglist, keywords, IMAPFA_ADD, NULL) < 0)
+			if (db_set_msgflag(message_id, flaglist, keywords, IMAPFA_ADD, 0, NULL) < 0)
 				TRACE(TRACE_ERR, "[%p] error setting flags for message [%" PRIu64 "]", self, message_id);
-			db_mailbox_seq_update(mboxid);
+			else
+				db_mailbox_seq_update(mboxid, message_id);
 		}
 		break;
 	}
@@ -1813,6 +1848,7 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 	MessageInfo *msginfo = NULL;
 	char *s;
 	int i;
+	int changed = 0;
 
 	if (self->mailbox && MailboxState_getMsginfo(self->mailbox->mbstate))
 		msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), id);
@@ -1823,10 +1859,15 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 	msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), id);
 
 	if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE) {
-		if (db_set_msgflag(*id, cmd->flaglist, cmd->keywords, cmd->action, msginfo) < 0) {
+		changed = db_set_msgflag(*id, cmd->flaglist, cmd->keywords, cmd->action, cmd->unchangedsince, msginfo);
+		if (changed < 0) {
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 			D->status = TRUE;
 			return TRUE;
+		} else if (changed) {
+			db_message_set_seq(*id, cmd->seq);
+		} else {
+			self->ids_list = g_list_prepend(self->ids_list, id);
 		}
 	}
 
@@ -1858,16 +1899,27 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 	g_list_merge(&(msginfo->keywords), cmd->keywords, cmd->action, (GCompareFunc)g_ascii_strcasecmp);
 
 	// reporting callback
-	if (! cmd->silent) {
-		GList *sublist = NULL;
-		sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
-		s = dbmail_imap_plist_as_string(sublist);
-		g_list_destroy(sublist);
-
+	if ((! cmd->silent) || changed > 0) {
+		bool needspace = false;
 		dbmail_imap_session_buff_printf(self,"* %" PRIu64 " FETCH (", *msn);
-		if (self->use_uid)
-			dbmail_imap_session_buff_printf(self, "UID %" PRIu64 " ", *id);
-		dbmail_imap_session_buff_printf(self, "FLAGS %s)\r\n", s);
+		if (self->use_uid) {
+			dbmail_imap_session_buff_printf(self, "UID %" PRIu64 , *id);
+			needspace = true;
+		}
+
+		if (changed && cmd->unchangedsince) {
+			if (needspace) dbmail_imap_session_buff_printf(self, " ");
+			dbmail_imap_session_buff_printf(self, "MODSEQ (%" PRIu64 ")", cmd->seq);
+			needspace = true;
+		}
+		if (! cmd->silent) {
+			GList *sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
+			s = dbmail_imap_plist_as_string(sublist);
+			g_list_destroy(sublist);
+			if (needspace) dbmail_imap_session_buff_printf(self, " ");
+			dbmail_imap_session_buff_printf(self, "FLAGS %s", s);
+		}
+		dbmail_imap_session_buff_printf(self, ")\r\n", s);
 		g_free(s);
 	}
 
@@ -1877,40 +1929,76 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 static void _ic_store_enter(dm_thread_data *D)
 {
 	SESSION_GET;
-	int result, i, j, k;
+	int result, j, k;
 	cmd_t cmd;
 	gboolean update = FALSE;
-	const char *type;
+	const char *token = NULL;
+	bool needflags = false;
+	int startflags = 0, endflags = 0;
+	String_T buffer = NULL;
 
 	k = self->args_idx;
-	/* multiple flags should be parenthesed */
-	if (self->args[k+3] && strcmp(p_string_str(self->args[k+2]), "(") != 0) {
-		dbmail_imap_session_buff_printf(self, "%s BAD invalid argument(s) to STORE\r\n", self->tag);
-		D->status = 1;
-		SESSION_RETURN;
-	}
-
 	cmd = g_malloc0(sizeof(*cmd));
 	cmd->silent = FALSE;
 
 	/* retrieve action type */
-	type = p_string_str(self->args[k+1]);
-	if (MATCH(type, "flags"))
-		cmd->action = IMAPFA_REPLACE;
-	else if (MATCH(type, "flags.silent")) {
-		cmd->action = IMAPFA_REPLACE;
-		cmd->silent = TRUE;
-	} else if (MATCH(type, "+flags"))
-		cmd->action = IMAPFA_ADD;
-	else if (MATCH(type, "+flags.silent")) {
-		cmd->action = IMAPFA_ADD;
-		cmd->silent = TRUE;
-	} else if (MATCH(type, "-flags"))
-		cmd->action = IMAPFA_REMOVE;
-	else if (MATCH(type, "-flags.silent")) {
-		cmd->action = IMAPFA_REMOVE;
-		cmd->silent = TRUE;
+	for (k = self->args_idx+1; self->args[k]; k++) {
+
+		token = p_string_str(self->args[k]);
+		if (cmd->action == IMAPFA_NONE) {
+			if (MATCH(token, "flags")) {
+				cmd->action = IMAPFA_REPLACE;
+			} else if (MATCH(token, "flags.silent")) {
+				cmd->action = IMAPFA_REPLACE;
+				cmd->silent = TRUE;
+			} else if (MATCH(token, "+flags")) {
+				cmd->action = IMAPFA_ADD;
+			} else if (MATCH(token, "+flags.silent")) {
+				cmd->action = IMAPFA_ADD;
+				cmd->silent = TRUE;
+			} else if (MATCH(token, "-flags")) {
+				cmd->action = IMAPFA_REMOVE;
+			} else if (MATCH(token, "-flags.silent")) {
+				cmd->action = IMAPFA_REMOVE;
+				cmd->silent = TRUE;
+			}
+			if (cmd->action != IMAPFA_NONE) {
+				needflags = true;
+				continue;
+			}
+		}
+		if (needflags) {
+			if (MATCH(token, "(")) {
+				startflags = k+1;
+			} else if (startflags && MATCH(token, ")")) {
+				needflags = false;
+				endflags = k-1;
+			} else {
+				startflags = endflags = k;
+				needflags = false;
+			}
+
+			continue;
+		} else {
+			if (MATCH(token, "(")) {
+				char *end;
+				if (self->args[k+1] && self->args[k+2]) {
+					if (! MATCH(p_string_str(self->args[k+1]), "UNCHANGEDSINCE")) {
+						cmd->action = IMAPFA_NONE;
+						break;
+					}
+					errno = 0;
+					cmd->unchangedsince = dm_strtoull(p_string_str(self->args[k+2]), &end, 10);
+					if (p_string_str(self->args[k+2]) == end) {
+						cmd->action = IMAPFA_NONE;
+						break;
+					}
+					self->mailbox->condstore = true;
+				}
+			}
+		}
 	}
+
 
 	if (cmd->action == IMAPFA_NONE) {
 		dbmail_imap_session_buff_printf(self, "%s BAD invalid STORE action specified\r\n", self->tag);
@@ -1919,27 +2007,33 @@ static void _ic_store_enter(dm_thread_data *D)
 		SESSION_RETURN;
 	}
 
-	/* now fetch flag list */
-	i = (strcmp(p_string_str(self->args[k+2]), "(") == 0) ? 3 : 2;
+	/* multiple flags should be parenthesed */
+	if (needflags || (startflags > endflags)) {
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid argument(s) to STORE\r\n", self->tag);
+		D->status = 1;
+		SESSION_RETURN;
+	}
 
-	for (; self->args[k+i] && strcmp(p_string_str(self->args[k+i]), ")") != 0; i++) {
+
+	/* now fetch flag list */
+	for (k = startflags; k <= endflags; k++) {
 		for (j = 0; j < IMAP_NFLAGS; j++) {
 			/* storing the recent flag explicitely is not allowed */
-			if (MATCH(p_string_str(self->args[k+i]),"\\Recent")) {
+			if (MATCH(p_string_str(self->args[k]),"\\Recent")) {
 				dbmail_imap_session_buff_printf(self, "%s BAD invalid flag list to STORE command\r\n", self->tag);
 				D->status = 1;
 				g_free(cmd);
 				SESSION_RETURN;
 			}
 				
-			if (MATCH(p_string_str(self->args[k+i]), imap_flag_desc_escaped[j])) {
+			if (MATCH(p_string_str(self->args[k]), imap_flag_desc_escaped[j])) {
 				cmd->flaglist[j] = 1;
 				break;
 			}
 		}
 
 		if (j == IMAP_NFLAGS) {
-			const char *kw = p_string_str(self->args[k+i]);
+			const char *kw = p_string_str(self->args[k]);
 			cmd->keywords = g_list_append(cmd->keywords,g_strdup(kw));
 			if (! MailboxState_hasKeyword(self->mailbox->mbstate, kw)) {
 				MailboxState_addKeyword(self->mailbox->mbstate, kw);
@@ -1991,10 +2085,11 @@ static void _ic_store_enter(dm_thread_data *D)
 		g_free(flags);
 	}
 
-	if ((result = _dm_imapsession_get_ids(self, p_string_str(self->args[k]))) == DM_SUCCESS) {
-		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, D);
+	if ((result = _dm_imapsession_get_ids(self, p_string_str(self->args[self->args_idx]))) == DM_SUCCESS) {
 		if (self->ids) {
-			db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
+			uint64_t seq = db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate), 0);
+			self->cmd->seq = seq;
+			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, D);
 		}
 	}
 
@@ -2006,7 +2101,21 @@ static void _ic_store_enter(dm_thread_data *D)
 		SESSION_RETURN;
 	}
 
-	SESSION_OK;
+	if (self->ids_list) {
+		GString *failed_ids = g_list_join_u64(self->ids_list, ",");
+		buffer = p_string_new(self->pool, "");
+		p_string_printf(buffer, "MODIFIED [%s]", failed_ids->str);
+		g_string_free(failed_ids, TRUE);
+		g_list_free(g_list_first(self->ids_list));
+		self->ids_list = NULL;
+		SESSION_OK_WITH_RESP_CODE(p_string_str(buffer));
+		p_string_free(buffer, TRUE);
+	} else {
+		SESSION_OK;
+	}
+
+
+
 	SESSION_RETURN;
 }
 
@@ -2031,6 +2140,7 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 	uint64_t *new_ids_element = NULL;
 
 	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid, TRUE);
+	db_message_set_seq(*id, cmd->seq);
 	if (result == -1) {
 		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		return TRUE;
@@ -2092,9 +2202,10 @@ static void _ic_copy_enter(dm_thread_data *D)
 	self->cmd = cmd;
 
 	if ((result = _dm_imapsession_get_ids(self, src)) == DM_SUCCESS) {
-		g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
-		if (self->ids)
-			db_mailbox_seq_update(destmboxid);
+		if (self->ids) {
+			cmd->seq = db_mailbox_seq_update(destmboxid, 0);
+			g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
+		}
 	}
   	
 	g_free(self->cmd);

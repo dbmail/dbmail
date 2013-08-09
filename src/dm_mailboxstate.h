@@ -45,9 +45,9 @@ extern GTree *      MailboxState_getMsn(T);
 
 
 extern void         MailboxState_setId(T, uint64_t);
-extern uint64_t        MailboxState_getId(T);
-extern uint64_t        MailboxState_getSeq(T);
-extern uint64_t        MailboxState_getUidnext(T);
+extern uint64_t     MailboxState_getId(T);
+extern uint64_t     MailboxState_getSeq(T);
+extern uint64_t     MailboxState_getUidnext(T);
 extern unsigned	    MailboxState_getExists(T);
 extern void	    MailboxState_setExists(T, unsigned);
 extern unsigned	    MailboxState_getRecent(T);
@@ -59,7 +59,7 @@ extern gboolean     MailboxState_noChildren(T);
 extern gboolean     MailboxState_noInferiors(T);
 
 extern void         MailboxState_setOwner(T S, uint64_t owner_id);
-extern uint64_t        MailboxState_getOwner(T S);
+extern uint64_t     MailboxState_getOwner(T S);
 extern void         MailboxState_setPermission(T S, int permission);
 extern unsigned     MailboxState_getPermission(T S);
 extern void         MailboxState_setName(T S, const char *name);

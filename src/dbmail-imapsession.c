@@ -151,6 +151,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	Capa_remove(self->preauth_capa, "IDLE");
 	Capa_remove(self->preauth_capa, "UIDPLUS");
 	Capa_remove(self->preauth_capa, "WITHIN");
+	Capa_remove(self->preauth_capa, "CONDSTORE");
 
 	if (! (server_conf && server_conf->ssl))
 		Capa_remove(self->preauth_capa, "STARTTLS");
@@ -643,6 +644,18 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		self->fi->getMIME_IMB = 1;
 	} else if (MATCH(token,"envelope")) {
 		self->fi->getEnvelope = 1;
+	} else if (MATCH(token,"changedsince")) {
+		self->args_idx++;
+		self->args_idx++;
+		uint64_t seq = dm_strtoull(nexttoken, NULL, 10);
+		if (seq) {
+			self->fi->changedsince = seq;
+			self->mailbox->condstore = true;
+		}
+	} else if (MATCH(token, "modseq")) {
+		self->args_idx++;
+		self->fi->modseq = true;
+		self->mailbox->condstore = true;
 	} else {			
 		if ((! nexttoken) && (strcmp(token,")") == 0)) return -1;
 		TRACE(TRACE_INFO,"[%p] error [%s]", self, token);
@@ -1024,6 +1037,9 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 	g_return_val_if_fail(id,-1);
 
+	if (self->fi->changedsince && (msginfo->seq <= self->fi->changedsince))
+		return 0;
+
 	self->msg_idnr = *uid;
 	self->fi->isfirstfetchout = 1;
 
@@ -1038,6 +1054,11 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 	dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (", *id);
 
+	if (self->fi->changedsince || self->fi->modseq) {
+		SEND_SPACE;
+		dbmail_imap_session_buff_printf(self, "MODSEQ (%" PRIu64 ")",
+				msginfo->seq);
+	}
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;
 		char *s =date_sql2imap(msginfo->internaldate);
@@ -1159,13 +1180,13 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		
 		if (result == 1) {
 			reportflags = TRUE;
-			result = db_set_msgflag(self->msg_idnr, setSeenSet, NULL, IMAPFA_ADD, msginfo);
+			result = db_set_msgflag(self->msg_idnr, setSeenSet, NULL, IMAPFA_ADD, 0, msginfo);
 			if (result == -1) {
 				dbmail_imap_session_buff_clear(self);
 				dbmail_imap_session_buff_printf(self, "\r\n* BYE internal dbase error\r\n");
 				return -1;
 			}
-			db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate));
+			db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate), self->msg_idnr);
 		}
 
 		self->fi->getFlags = 1;
@@ -1373,12 +1394,16 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 
 	if (oldflags && (! MATCH(oldflags, newflags))) {
 		TRACE(TRACE_DEBUG, "flags [%s] -> [%s]", oldflags, newflags);
-		char *t = NULL;
-		if (self->use_uid) t = g_strdup_printf(" UID %" PRIu64 "", *uid);
-		dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (FLAGS %s%s)\r\n", 
-				*msn, newflags, t?t:"");
-
-		if (t) g_free(t);
+		char t[256];
+		memset(t, 0, sizeof(t));
+		if (self->use_uid) 
+			snprintf(t, sizeof(t)-1, " UID %" PRIu64 "", *uid);
+		if (self->mailbox->condstore)
+			dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (MODSEQ (%" PRIu64 " (FLAGS %s%s))\r\n", 
+					*msn, old->seq, newflags, self->use_uid?t:"");
+		else
+			dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (FLAGS %s%s)\r\n", 
+					*msn, newflags, self->use_uid?t:"");
 	}
 
 	if (oldflags) g_free(oldflags);
@@ -1508,8 +1533,8 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		MailboxState_free(&N);
 		N = NULL;
 
+		TRACE(TRACE_DEBUG, "seq: [%u] -> [%u]", oldseq, newseq);
 		if (oldseq != newseq) {
-			TRACE(TRACE_DEBUG, "seq: [%u] -> [%u]", oldseq, newseq);
 			// do a full reload: re-read flags and counters
 			N = MailboxState_new(self->pool, self->mailbox->id);
 			unsigned newexists = MailboxState_getExists(N);
@@ -1706,20 +1731,21 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set)
 
 	ids = g_list_reverse(ids);
 
-	self->c = db_con_get();
-	db_begin_transaction(self->c);
-	g_list_foreach(ids, (GFunc) _do_expunge, self);
-	db_commit_transaction(self->c);
-	db_con_close(self->c);
-	self->c = NULL;
+	if (ids) {
+		self->c = db_con_get();
+		db_begin_transaction(self->c);
+		g_list_foreach(ids, (GFunc) _do_expunge, self);
+		db_commit_transaction(self->c);
+		db_con_close(self->c);
+		self->c = NULL;
+		g_list_free(g_list_first(ids));
+	}
 
 	if (uids)
 		g_tree_destroy(uids);
 
-	g_list_free(g_list_first(ids));
-
 	if (i > g_tree_nnodes(MailboxState_getMsginfo(M))) {
-		db_mailbox_seq_update(self->mailbox->id);
+		db_mailbox_seq_update(self->mailbox->id, 0);
 		if (! dm_quota_user_dec(self->userid, mailbox_size))
 			return DM_EQUERY;
 	}

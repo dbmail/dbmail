@@ -1,0 +1,20 @@
+x login testuser1 test
+x examine inbox (condstore)
+x select inbox (condstore)
+x store 1 +flags \Flagged
+x store 1 -flags \Flagged (UNCHANGEDSINCE 1)
+x uid store * +flags ($test) (UNCHANGEDSINCE 1)
+x uid store * +flags.silent ($test) (UNCHANGEDSINCE 1)
+x uid store * +flags.silent ($test) (UNCHANGEDSINCE 0)
+x noop
+x fetch * flags modseq
+x uid fetch * flags modseq
+x fetch * flags (changedsince 1)
+x uid fetch * flags (changedsince 1)
+x fetch * flags (changedsince 99999999999)
+x uid search modseq "/flags/\\draft" all 1
+x uid search modseq "/flags/\\draft" all 1
+x uid search modseq "/flags/\\draft" all 9999999999
+x uid search modseq 1
+x uid search modseq 9999999999
+x logout

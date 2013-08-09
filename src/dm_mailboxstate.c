@@ -96,7 +96,7 @@ static T state_load_messages(T M, Connection_T c)
 	date2char_str("internal_date", &frag);
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-			"draft_flag, recent_flag, %s, rfcsize, message_idnr FROM %smessages m "
+			"draft_flag, recent_flag, %s, rfcsize, seq, message_idnr FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
 			"WHERE m.mailbox_idnr = ? AND m.status IN (%d,%d) ORDER BY message_idnr ASC",
 			frag, DBPFX, DBPFX, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
@@ -111,7 +111,7 @@ static T state_load_messages(T M, Connection_T c)
 	while (db_result_next(r)) {
 		i++;
 
-		id = db_result_get_u64(r,IMAP_NFLAGS + 2);
+		id = db_result_get_u64(r,IMAP_NFLAGS + 3);
 
 		uid = g_new0(uint64_t,1); *uid = id;
 
@@ -136,6 +136,8 @@ static T state_load_messages(T M, Connection_T c)
 
 		/* rfcsize */
 		result->rfcsize = db_result_get_u64(r,IMAP_NFLAGS + 1);
+
+		result->seq = db_result_get_u64(r,IMAP_NFLAGS + 2);
 
 		g_tree_insert(msginfo, uid, result); 
 
@@ -903,34 +905,38 @@ int MailboxState_build_recent(T M)
 	return 0;
 }
 
-static int _update_recent(GList *slices)
+static long long int _update_recent(GList *slices, uint64_t seq)
 {
 	INIT_QUERY;
 	Connection_T c;
-	volatile int t = FALSE;
+	volatile long long int count = 0;
 
 	if (! (slices = g_list_first(slices)))
-		return t;
+		return count;
 
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
 		while (slices) {
-			db_exec(c, "UPDATE %smessages SET recent_flag = 0 WHERE message_idnr IN (%s) AND recent_flag = 1", DBPFX, (gchar *)slices->data);
+			Connection_execute(c, "UPDATE %smessages SET recent_flag = 0, seq = %" PRIu64 
+					" WHERE recent_flag = 1 AND seq < %" PRIu64 
+					" AND message_idnr IN (%s)", 
+					DBPFX, seq, seq, (gchar *)slices->data);
+			count += Connection_rowsChanged(c);
 			if (! g_list_next(slices)) break;
 			slices = g_list_next(slices);
 		}
 		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		t = DM_EQUERY;
+		count = DM_EQUERY;
 		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
 		g_list_destroy(slices);
 	END_TRY;
 
-	return t;
+	return count;
 }
 
 int MailboxState_flush_recent(T M) 
@@ -947,16 +953,19 @@ int MailboxState_flush_recent(T M)
 
 	recent = g_tree_keys(M->recent_queue);
 
-	_update_recent(g_list_slices_u64(recent,100));
+	if (recent) {
+		long long int changed = 0;
+		uint64_t seq = MailboxState_getSeq(M);
+		changed = _update_recent(g_list_slices_u64(recent,100), seq+1);
+		if (changed)
+			db_mailbox_seq_update(MailboxState_getId(M), 0);
+	}
 
 	g_list_free(g_list_first(recent));
 
 	g_tree_foreach(M->recent_queue, (GTraverseFunc)_free_recent_queue, M);
 	g_tree_destroy(M->recent_queue);
 	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
-
-	if ( (M) && (MailboxState_getId(M)) )
-		db_mailbox_seq_update(MailboxState_getId(M));
 
 	return 0;
 }

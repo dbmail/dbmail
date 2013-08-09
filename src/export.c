@@ -128,6 +128,8 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 	}
 
 	if (delete_after_dump) {
+		int count = 0;
+		int affected = 0;
 		int deleted_flag[IMAP_NFLAGS];
 		memset(deleted_flag, 0, IMAP_NFLAGS * sizeof(int));
 		deleted_flag[IMAP_FLAG_DELETED] = 1;
@@ -135,12 +137,15 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 		GList *ids = g_tree_keys(MailboxState_getIds(mb->mbstate));
 
                 while (ids) {
+			affected = 0;
 			// Flag the selected messages \\Deleted
 			// Following this, dbmail-util -d sets deleted status
 			if (delete_after_dump & 1) {
-				if (db_set_msgflag(*(uint64_t *)ids->data, deleted_flag, NULL, IMAPFA_ADD, NULL) < 0) {
+				if (db_set_msgflag(*(uint64_t *)ids->data, deleted_flag, NULL, IMAPFA_ADD, 0, NULL) < 0) {
 					qerrorf("Error setting flags for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
 					result = -1;
+				} else {
+					affected = 1;
 				}
 			}
 
@@ -150,13 +155,19 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 				if (! db_set_message_status(*(uint64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
 					qerrorf("Error setting status for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
 					result = -1;
+				} else {
+					affected = 1;
 				}
 			}
+			if (affected)
+				count++;
 
 			if (!g_list_next(ids))
 				break;
 			ids = g_list_next(ids);
 		}
+		if (count)
+			db_mailbox_seq_update(MailboxState_getId(mb->mbstate), 0);
 
 		g_list_free(g_list_first(ids));
 	}

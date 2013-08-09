@@ -685,11 +685,13 @@ int db_get_msgflag(const char *flag_name, uint64_t msg_idnr);
  *          in flags
  *        - IMAPFA_REMOVE clear all flags that have '1' as value
  *          in flags
+ * \param seq
+ *        - only modify message flags if modsequence for message <= seq
  * \return 
  * 		- -1 on failure
- * 		-  0 on success
+ * 		-  1 on success
  */
-int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo);
+int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_type, uint64_t seq, MessageInfo *msginfo);
 
 /**
  * \brief set one right in an acl for a user
@@ -761,7 +763,8 @@ int db_replycache_unregister(const char *to, const char *from, const char *handl
 const char * db_get_sql(sql_fragment frag);
 char * db_returning(const char *s);
 
-int db_mailbox_seq_update(uint64_t mailbox_id);
+uint64_t db_mailbox_seq_update(uint64_t mailbox_id, uint64_t message_id);
+void db_message_set_seq(uint64_t message_id, uint64_t seq);
 
 int db_rehash_store(void);
 

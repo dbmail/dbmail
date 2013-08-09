@@ -1179,8 +1179,8 @@ int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
 				db_stmt_set_u64(s2,1,mailbox_to);
 				db_stmt_set_u64(s2,2,id);
 				db_stmt_exec(s2);
-				db_mailbox_seq_update(mailbox_to);
-				db_mailbox_seq_update(mailbox_from);
+				db_mailbox_seq_update(mailbox_to, 0);
+				db_mailbox_seq_update(mailbox_from, 0);
 			}
 			else {
 				qprintf("User(%" PRIu64 ") doesn't has mailbox(%s)\n", user_id, mbtrash_name);

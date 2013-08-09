@@ -390,6 +390,7 @@ gboolean db_update(const char *q, ...)
 {
 	Connection_T c; volatile gboolean result = FALSE;
 	va_list ap, cp;
+	struct timeval before, after;
 	INIT_QUERY;
 
 	va_start(ap, q);
@@ -399,16 +400,22 @@ gboolean db_update(const char *q, ...)
         va_end(ap);
 
 	c = db_con_get();
+	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
 	TRY
+		gettimeofday(&before, NULL);
 		db_begin_transaction(c);
-		result = db_exec(c, query);
+		Connection_execute(c, "%s", (const char *)query);
 		db_commit_transaction(c);
+		result = TRUE;
+		gettimeofday(&after, NULL);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
 	END_TRY;
+
+	if (result) log_query_time(query, before, after);
 
 	return result;
 }
@@ -892,14 +899,17 @@ static int check_upgrade_step(Connection_T c, int from_version, int to_version)
 		case DM_DRIVER_SQLITE:
 			if (to_version == 32001) query = DM_SQLITE_32001;
 			if (to_version == 32002) query = DM_SQLITE_32002;
+			if (to_version == 32003) query = DM_SQLITE_32003;
 		break;
 		case DM_DRIVER_MYSQL:
 			if (to_version == 32001) query = DM_MYSQL_32001;
 			if (to_version == 32002) query = DM_MYSQL_32002;
+			if (to_version == 32003) query = DM_MYSQL_32003;
 		break;
 		case DM_DRIVER_POSTGRESQL:
 			if (to_version == 32001) query = DM_PGSQL_32001;
 			if (to_version == 32002) query = DM_PGSQL_32002;
+			if (to_version == 32003) query = DM_MYSQL_32003;
 		break;
 		default:
 			TRACE(TRACE_WARNING, "Migrations not supported for database driver");
@@ -975,12 +985,14 @@ int db_check_version(void)
 			break;
 		if ((ok = check_upgrade_step(c, 32001, 32002)) == DM_EQUERY)
 			break;
+		if ((ok = check_upgrade_step(c, 32001, 32003)) == DM_EQUERY)
+			break;
 		break;
 	} while (true);
 
 	db_con_close(c);
 
-	if (ok == 32002) {
+	if (ok == 32003) {
 		TRACE(TRACE_DEBUG, "Schema check successful");
 	} else {
 		TRACE(TRACE_WARNING,"Schema version incompatible [%d]. Bailing out",
@@ -2693,22 +2705,27 @@ int db_noinferiors(uint64_t mailbox_idnr)
 
 int db_movemsg(uint64_t mailbox_to, uint64_t mailbox_from)
 {
-	Connection_T c; volatile int t = DM_SUCCESS;
+	Connection_T c; volatile long long int count = 0;
 	c = db_con_get();
 	TRY
+		db_begin_transaction(c);
 		db_exec(c, "UPDATE %smessages SET mailbox_idnr=%" PRIu64 " WHERE mailbox_idnr=%" PRIu64 "", 
 				DBPFX, mailbox_to, mailbox_from);
+		count = Connection_rowsChanged(c);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		t = DM_EQUERY;
+		count = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY) return t;
+	if (count == DM_EQUERY) return count;
 
-	db_mailbox_seq_update(mailbox_to);
-	db_mailbox_seq_update(mailbox_from);
+	if (count > 0) {
+		db_mailbox_seq_update(mailbox_to, 0);
+		db_mailbox_seq_update(mailbox_from, 0);
+	}
 
 	return DM_SUCCESS;		/* success */
 }
@@ -2836,7 +2853,7 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 
 	g_free(frag);
 
-	db_mailbox_seq_update(mailbox_to);
+	db_mailbox_seq_update(mailbox_to, *newmsg_idnr);
 
 	/* Copy the message keywords */
 	c = db_con_get();
@@ -2995,20 +3012,28 @@ int db_get_msgflag(const char *flag_name, uint64_t msg_idnr)
 	return val;
 }
 
-static void db_set_msgkeywords(Connection_T c, uint64_t msg_idnr, GList *keywords, int action_type, MessageInfo *msginfo)
+static long long int db_set_msgkeywords(Connection_T c, uint64_t msg_idnr, GList *keywords, int action_type, MessageInfo *msginfo)
 {
 	PreparedStatement_T s;
 	INIT_QUERY;
+	volatile long long int count = 0;
 
 	if (action_type == IMAPFA_REMOVE) {
+
+
 		s = db_stmt_prepare(c, "DELETE FROM %skeywords WHERE message_idnr=? AND keyword=?",
 				DBPFX);
 		db_stmt_set_u64(s,1,msg_idnr);
 
 		keywords = g_list_first(keywords);
 		while (keywords) {
-			db_stmt_set_str(s,2,(char *)keywords->data);
-			db_stmt_exec(s);
+			if ((msginfo) && (g_list_find_custom(msginfo->keywords, 
+							(char *)keywords->data, 
+							(GCompareFunc)g_ascii_strcasecmp))) {
+				db_stmt_set_str(s,2,(char *)keywords->data);
+				db_stmt_exec(s);
+				count++;
+			}
 
 			if (! g_list_next(keywords)) break;
 			keywords = g_list_next(keywords);
@@ -3042,16 +3067,18 @@ static void db_set_msgkeywords(Connection_T c, uint64_t msg_idnr, GList *keyword
 				db_stmt_set_u64(s, 1, msg_idnr);
 				db_stmt_set_str(s, 2, (char *)keywords->data);
 				db_stmt_exec(s);
+				count++;
 			}
 			if (! g_list_next(keywords)) break;
 			keywords = g_list_next(keywords);
 		}
 	}
+	return count;
 }
 
-int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_type, MessageInfo *msginfo)
+int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_type, uint64_t seq, MessageInfo *msginfo)
 {
-	Connection_T c; int t = DM_SUCCESS;
+	Connection_T c;
 	size_t i, pos = 0;
 	volatile int seen = 0;
 	INIT_QUERY;
@@ -3093,25 +3120,29 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	}
 
 	snprintf(query + pos, DEF_QUERYSIZE - pos,
-			" WHERE message_idnr = %" PRIu64 " AND status < %d",
-			msg_idnr, MESSAGE_STATUS_DELETE);
+			" WHERE message_idnr = %" PRIu64 " AND status < %d AND seq <= %" PRIu64,
+			msg_idnr, MESSAGE_STATUS_DELETE, seq);
 
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
-		if (seen) db_exec(c, query);
-		db_set_msgkeywords(c, msg_idnr, keywords, action_type, msginfo);
+		if (seen) {
+			db_exec(c, query);
+			if (Connection_rowsChanged(c))
+				seen = 1;
+		}
+		if (db_set_msgkeywords(c, msg_idnr, keywords, action_type, msginfo))
+			seen = 1;
+
 		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		t = DM_EQUERY;
+		seen = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
-	if (t == DM_EQUERY) return t;
-
-	return DM_SUCCESS;
+	return seen;
 }
 
 static int db_acl_has_acl(uint64_t userid, uint64_t mboxid)
@@ -3723,10 +3754,58 @@ int db_user_log_login(uint64_t user_idnr)
 	return db_update("UPDATE %susers SET last_login = '%s' WHERE user_idnr = %" PRIu64 "",DBPFX, timestring, user_idnr);
 }
 
-int db_mailbox_seq_update(uint64_t mailbox_id)
+uint64_t db_mailbox_seq_update(uint64_t mailbox_id, uint64_t message_id)
 {
-	return db_update("UPDATE %s %smailboxes SET seq=seq+1 WHERE mailbox_idnr=%" PRIu64 "", 
-		db_get_sql(SQL_IGNORE), DBPFX, mailbox_id);
+	Connection_T c; ResultSet_T r; PreparedStatement_T st1, st2, st3;
+	volatile uint64_t seq = 0;
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		st1 = db_stmt_prepare(c, "UPDATE %s %smailboxes SET seq=seq+1 WHERE mailbox_idnr = ?",
+				db_get_sql(SQL_IGNORE), DBPFX);
+		db_stmt_set_u64(st1, 1, mailbox_id);
+		st2 = db_stmt_prepare(c, "SELECT seq FROM %smailboxes WHERE mailbox_idnr = ?", DBPFX);
+		db_stmt_set_u64(st2, 1, mailbox_id);
+		db_stmt_exec(st1);
+		r = db_stmt_query(st2);
+		if (db_result_next(r))
+			seq = db_result_get_u64(r, 0);
+		if (message_id) {
+			st3 = db_stmt_prepare(c, "UPDATE %s %smessages SET seq = ? WHERE message_idnr = ?"
+					"AND seq < ?",
+					db_get_sql(SQL_IGNORE), DBPFX);
+			db_stmt_set_u64(st3, 1, seq);
+			db_stmt_set_u64(st3, 2, message_id);
+			db_stmt_set_u64(st3, 3, seq);
+			db_stmt_exec(st3);
+		}
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	TRACE(TRACE_DEBUG, "mailbox_id [%" PRIu64 "] message_id [%" PRIu64 "] -> [%" PRIu64 "]",
+			mailbox_id, message_id, seq);
+	return seq;
+}
+
+void db_message_set_seq(uint64_t message_id, uint64_t seq)
+{
+	Connection_T c; PreparedStatement_T st;
+	c = db_con_get();
+	TRY
+		st = db_stmt_prepare(c, "UPDATE %s %smessages SET seq = ? WHERE message_idnr = ?"
+				"AND seq < ?", db_get_sql(SQL_IGNORE), DBPFX);
+		db_stmt_set_u64(st, 1, seq);
+		db_stmt_set_u64(st, 2, message_id);
+		db_stmt_set_u64(st, 3, seq);
+		db_stmt_exec(st);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 }
 
 int db_rehash_store(void)

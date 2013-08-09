@@ -1027,10 +1027,11 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 	switch(condition) {
 		case IST_SUBSEARCH_AND:
 
+			type=g_strdup("AND");
+
 			if (! g_tree_nnodes(a) > 0)
 				break;
 
-			type=g_strdup("AND");
 			/* delete from A all keys not in B */
 			merger->tree = b;
 			merger->condition = IST_SUBSEARCH_AND;

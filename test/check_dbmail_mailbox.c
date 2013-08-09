@@ -496,8 +496,8 @@ START_TEST(test_dbmail_mailbox_get_set)
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed [%d != 2]", d);
 	g_tree_destroy(set);
-
-	set = dbmail_mailbox_get_set(mb,"1,*",0);
+	
+	set = dbmail_mailbox_get_set(mb,"*,1",0);
 	fail_unless(set != NULL,"dbmail_mailbox_get_set failed");
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
@@ -618,7 +618,6 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
-	
 	return s;
 }
 

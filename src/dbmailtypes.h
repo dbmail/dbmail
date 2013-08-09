@@ -520,7 +520,10 @@ typedef struct {
 	gboolean getBodyTotal;
 	gboolean getBodyTotalPeek;
 
-	List_T bodyfetch;
+	/* condstore */
+	bool     modseq;
+	uint64_t changedsince;
+	List_T   bodyfetch;
 } fetch_items;
 
 /************************************************************************ 
@@ -536,6 +539,7 @@ typedef struct { // map dbmail_messages
 	uint64_t msn;
 	uint64_t uid;
 	uint64_t rfcsize;
+	uint64_t seq;
 	char internaldate[IMAP_INTERNALDATE_LEN];
 	int flags[IMAP_NFLAGS];
 	// reference dbmail_keywords
