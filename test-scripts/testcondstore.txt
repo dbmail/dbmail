@@ -11,6 +11,7 @@ x fetch * flags modseq
 x uid fetch * flags modseq
 x fetch * flags (changedsince 1)
 x uid fetch * flags (changedsince 1)
+x UID fetch * (FLAGS) (CHANGEDSINCE 0)
 x fetch * flags (changedsince 99999999999)
 x uid search modseq "/flags/\\draft" all 1
 x uid search modseq "/flags/\\draft" all 1

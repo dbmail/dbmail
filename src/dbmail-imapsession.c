@@ -656,10 +656,8 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token, "modseq"))) {
 		self->args_idx++;
 		self->mailbox->condstore = true;
-	} else {			
-		if ((! nexttoken) && (strcmp(token,")") == 0)) return -1;
-		TRACE(TRACE_INFO,"[%p] error [%s]", self, token);
-		return -2;	/* DONE */
+	} else if ((! nexttoken) && (strcmp(token,")") == 0)) { 
+		return -1; // done
 	}
 
 	return 1; //theres more...
