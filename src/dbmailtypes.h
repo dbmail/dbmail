@@ -493,6 +493,7 @@ typedef struct {
 	gchar *hdrnames;
 	gchar *hdrplist;
 	GTree *headers;
+	GList *names;
 } body_fetch;
 
 
