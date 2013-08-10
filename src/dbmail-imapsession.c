@@ -726,7 +726,9 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	uint64_t *mid;
 	uint64_t id;
 	GList *last;
+	GString *fieldorder = NULL;
 	int k;
+	int fieldseq;
 	char range[DEF_FRAGSIZE];
 	memset(range,0,DEF_FRAGSIZE);
 
@@ -748,7 +750,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 		bodyfetch->hdrplist = dbmail_imap_plist_as_string(tlist);
 		h = g_list_join((GList *)tlist,"','");
-		g_list_free(g_list_first(tlist));
+		bodyfetch->names = tlist;
 
 		h = g_string_ascii_down(h);
 
@@ -757,7 +759,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		g_string_free(h,FALSE);
 	}
 
-	TRACE(TRACE_DEBUG,"[%p] for %" PRIu64 " [%s]", self, self->msg_idnr, bodyfetch->hdrplist);
+	TRACE(TRACE_DEBUG,"[%p] for %" PRIu64 "%s [%s]", self, self->msg_idnr, not?"NOT":"", bodyfetch->hdrplist);
 
 	// did we prefetch this message already?
 	if (self->msg_idnr <= self->ceiling) {
@@ -777,17 +779,42 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		snprintf(range,DEF_FRAGSIZE,"BETWEEN %" PRIu64 " AND %" PRIu64 "", self->msg_idnr, self->hi);
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %" PRIu64 ":%" PRIu64 " ceiling %" PRIu64 " [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
-	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr, n.headername, v.headervalue "
+
+	if (! not) {
+		fieldorder = g_string_new(", CASE ");
+		fieldseq = 0;
+		bodyfetch->names = g_list_first(bodyfetch->names);
+
+		while (bodyfetch->names) {
+			char *raw = (char *)bodyfetch->names->data;
+			char *name = g_ascii_strdown(raw, strlen(raw));
+			g_string_append_printf(fieldorder, "WHEN n.headername='%s' THEN %d ",
+					name, fieldseq);
+			g_free(name);
+			if (! g_list_next(bodyfetch->names))
+				break;
+			bodyfetch->names = g_list_next(bodyfetch->names);
+			fieldseq++;
+		}
+		g_string_append_printf(fieldorder, "END AS seq");
+	}
+
+	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr, n.headername, v.headervalue%s "
 			"FROM %sheader h "
 			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
 			"LEFT JOIN %sheadername n ON h.headername_id=n.id "
 			"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
 			"WHERE m.mailbox_idnr = %" PRIu64 " "
 			"AND m.message_idnr %s "
-			"AND n.headername %s IN ('%s')",
+			"AND n.headername %s IN ('%s') "
+			"ORDER BY message_idnr, seq",
+			not?"":fieldorder->str,
 			DBPFX, DBPFX, DBPFX, DBPFX,
 			self->mailbox->id, range, 
 			not?"NOT":"", bodyfetch->hdrnames);
+
+	if (fieldorder)
+		g_string_free(fieldorder, TRUE);
 
 	c = db_con_get();	
 	TRY
@@ -1764,6 +1791,11 @@ static void _body_fetch_free(body_fetch *bodyfetch, gpointer data)
 {
 	ImapSession *self = (ImapSession *)data;
 	if (! bodyfetch) return;
+	if (bodyfetch->names) {
+		g_list_free(g_list_first(bodyfetch->names));
+		bodyfetch->names = NULL;
+	}
+
 	if (bodyfetch->hdrnames) g_free(bodyfetch->hdrnames);
 	if (bodyfetch->hdrplist) g_free(bodyfetch->hdrplist);
 	if (bodyfetch->headers) {
