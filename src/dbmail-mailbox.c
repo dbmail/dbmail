@@ -865,7 +865,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > '%s'", s);
 		(*idx)++;
 
-	} else if ( MATCH(key, "older") ) {
+	} else if (MATCH(key, "older") ) {
 		uint64_t seconds;
 		char partial[DEF_FRAGSIZE];
 		memset(partial, 0, sizeof(partial));
@@ -883,7 +883,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date < %s", partial);
 		(*idx)++;
 
-	} else if ( MATCH(key, "younger") ) {
+	} else if (MATCH(key, "younger") ) {
 		uint64_t seconds;
 		char partial[DEF_FRAGSIZE];
 		memset(partial, 0, sizeof(partial));
@@ -901,7 +901,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > %s", partial);
 		(*idx)++;
 
-	} else if ( MATCH(key, "modseq") ) {
+	} else if (MATCH(key, "modseq") ) {
 		const char *token;
 		bool valid = false;
 		uint64_t seq = 0;

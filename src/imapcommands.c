@@ -445,7 +445,8 @@ static void _ic_select_enter(dm_thread_data *D)
 		;
 
 	if (idx == 5) {
-		if ((MATCH(p_string_str(self->args[1]),"(")) && \
+		if (Capa_match(self->capa, "CONDSTORE") && \
+				(MATCH(p_string_str(self->args[1]),"(")) && \
 				(MATCH(p_string_str(self->args[2]), "condstore")) && \
 				(MATCH(p_string_str(self->args[3]), ")"))) {
 			self->mailbox->condstore = true;
@@ -479,8 +480,8 @@ static void _ic_select_enter(dm_thread_data *D)
 			MailboxState_getId(S));
 
 	/* MODSEQ */
-	if (self->mailbox->condstore) {
-		dbmail_imap_session_buff_printf(self, "* OK [HIGHESTMODSEQ %" PRIu64 "]\r\n",
+	if (Capa_match(self->capa, "CONDSTORE")) {
+		dbmail_imap_session_buff_printf(self, "* OK [HIGHESTMODSEQ %" PRIu64 "] Highest\r\n",
 				MailboxState_getSeq(S));
 	}
 
@@ -1907,7 +1908,7 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 			needspace = true;
 		}
 
-		if (changed && cmd->unchangedsince) {
+		if (changed && (cmd->unchangedsince || self->mailbox->condstore)) {
 			if (needspace) dbmail_imap_session_buff_printf(self, " ");
 			dbmail_imap_session_buff_printf(self, "MODSEQ (%" PRIu64 ")", cmd->seq);
 			needspace = true;
@@ -1978,12 +1979,12 @@ static void _ic_store_enter(dm_thread_data *D)
 				needflags = false;
 				endflags = k-1;
 			}
-			continue;
-		} else {
+		} 
+		if (! needflags) {
 			if (MATCH(token, "(")) {
 				char *end;
 				if (self->args[k+1] && self->args[k+2]) {
-					if (! MATCH(p_string_str(self->args[k+1]), "UNCHANGEDSINCE")) {
+					if ((! Capa_match(self->capa, "CONDSTORE")) || (! MATCH(p_string_str(self->args[k+1]), "UNCHANGEDSINCE"))) {
 						cmd->action = IMAPFA_NONE;
 						break;
 					}
@@ -1993,6 +1994,7 @@ static void _ic_store_enter(dm_thread_data *D)
 						cmd->action = IMAPFA_NONE;
 						break;
 					}
+					k += 2;
 					self->mailbox->condstore = true;
 				}
 			}

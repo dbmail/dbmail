@@ -3018,6 +3018,9 @@ static long long int db_set_msgkeywords(Connection_T c, uint64_t msg_idnr, GList
 	INIT_QUERY;
 	volatile long long int count = 0;
 
+	if (g_list_length(g_list_first(keywords)) == 0)
+		return 0;
+
 	if (action_type == IMAPFA_REMOVE) {
 
 
@@ -3080,7 +3083,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 {
 	Connection_T c;
 	size_t i, pos = 0;
-	volatile int seen = 0;
+	volatile int seen = 0, count = 0;
 	INIT_QUERY;
 
 	memset(query,0,DEF_QUERYSIZE);
@@ -3136,20 +3139,20 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		if (seen) {
 			db_exec(c, query);
 			if (Connection_rowsChanged(c))
-				seen = 1;
+				count = 1;
 		}
 		if (db_set_msgkeywords(c, msg_idnr, keywords, action_type, msginfo))
-			seen = 1;
+			count = 1;
 
 		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
-		seen = DM_EQUERY;
+		count = DM_EQUERY;
 	FINALLY
 		db_con_close(c);
 	END_TRY;
 
-	return seen;
+	return count;
 }
 
 static int db_acl_has_acl(uint64_t userid, uint64_t mboxid)

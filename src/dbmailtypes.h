@@ -522,7 +522,6 @@ typedef struct {
 	gboolean getBodyTotalPeek;
 
 	/* condstore */
-	bool     modseq;
 	uint64_t changedsince;
 	List_T   bodyfetch;
 } fetch_items;

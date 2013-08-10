@@ -644,7 +644,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		self->fi->getMIME_IMB = 1;
 	} else if (MATCH(token,"envelope")) {
 		self->fi->getEnvelope = 1;
-	} else if (MATCH(token,"changedsince")) {
+	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token,"changedsince"))) {
 		self->args_idx++;
 		self->args_idx++;
 		uint64_t seq = dm_strtoull(nexttoken, NULL, 10);
@@ -652,9 +652,8 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			self->fi->changedsince = seq;
 			self->mailbox->condstore = true;
 		}
-	} else if (MATCH(token, "modseq")) {
+	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token, "modseq"))) {
 		self->args_idx++;
-		self->fi->modseq = true;
 		self->mailbox->condstore = true;
 	} else {			
 		if ((! nexttoken) && (strcmp(token,")") == 0)) return -1;
@@ -1081,7 +1080,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 	dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (", *id);
 
-	if (self->fi->changedsince || self->fi->modseq) {
+	if (self->mailbox->condstore) {
 		SEND_SPACE;
 		dbmail_imap_session_buff_printf(self, "MODSEQ (%" PRIu64 ")",
 				msginfo->seq);
@@ -1397,6 +1396,7 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 	char *oldflags = NULL, *newflags = NULL;
 	MessageInfo *old = NULL, *new = NULL;
 	MailboxState_T M = self->mailbox->mbstate;
+	bool flagschanged = false, modseqchanged = false;
 
 	assert(uid);
 
@@ -1419,18 +1419,37 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 	g_list_destroy(ol);
 	g_list_destroy(nl);
 
-	if (oldflags && (! MATCH(oldflags, newflags))) {
-		TRACE(TRACE_DEBUG, "flags [%s] -> [%s]", oldflags, newflags);
-		char t[256];
-		memset(t, 0, sizeof(t));
-		if (self->use_uid) 
-			snprintf(t, sizeof(t)-1, " UID %" PRIu64 "", *uid);
-		if (self->mailbox->condstore)
-			dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (MODSEQ (%" PRIu64 " (FLAGS %s%s))\r\n", 
-					*msn, old->seq, newflags, self->use_uid?t:"");
-		else
-			dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (FLAGS %s%s)\r\n", 
-					*msn, newflags, self->use_uid?t:"");
+	if (old->seq < new->seq)
+		modseqchanged = true;
+	if (oldflags && (! MATCH(oldflags, newflags)))
+		flagschanged = true;
+
+	if (modseqchanged || flagschanged) {
+		GList *plist = NULL;
+		char *response = NULL;
+		if (self->use_uid) {
+			char *u = g_strdup_printf("UID %" PRIu64, *uid);
+			plist = g_list_append(plist, u);
+		}
+
+		if (modseqchanged && self->mailbox->condstore) {
+			TRACE(TRACE_DEBUG, "seq [%" PRIu64 "] -> [%" PRIu64 "]", old->seq, new->seq);
+			char *m = g_strdup_printf("MODSEQ (%" PRIu64 ")", new->seq);
+			plist = g_list_append(plist, m);
+		}
+
+		if (flagschanged) {
+			TRACE(TRACE_DEBUG, "flags [%s] -> [%s]", oldflags, newflags);
+			char *f = g_strdup_printf("FLAGS %s", newflags);
+			plist = g_list_append(plist, f);
+		}
+
+		response = dbmail_imap_plist_as_string(plist);
+
+		dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH %s\r\n", 
+				*msn, response);
+		g_free(response);
+		g_list_destroy(plist);
 	}
 
 	if (oldflags) g_free(oldflags);
