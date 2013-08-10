@@ -647,11 +647,12 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token,"changedsince"))) {
 		self->args_idx++;
 		self->args_idx++;
-		uint64_t seq = dm_strtoull(nexttoken, NULL, 10);
-		if (seq) {
-			self->fi->changedsince = seq;
-			self->mailbox->condstore = true;
-		}
+		char *rest = (char *)nexttoken;
+		uint64_t seq = dm_strtoull(nexttoken, &rest, 10);
+		if (rest == nexttoken)
+			return -2;
+		self->fi->changedsince = seq;
+		self->mailbox->condstore = true;
 	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token, "modseq"))) {
 		self->args_idx++;
 		self->mailbox->condstore = true;
