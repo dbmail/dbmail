@@ -508,7 +508,7 @@ static void server_exit(void)
 {
 	disconnect_all();
 	server_close_sockets(server_conf);
-	event_base_free(evbase);
+	//event_base_free(evbase);
 
 	if (fstdout) fclose(fstdout);
 	if (fstderr) fclose(fstderr);

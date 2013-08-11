@@ -271,6 +271,7 @@ void dbmail_imap_session_delete(ImapSession ** s)
 	pthread_mutex_destroy(&self->lock);
 	pool = self->pool;
 	mempool_push(pool, self, sizeof(ImapSession));
+	mempool_close(&pool);
 	self = NULL;
 }
 
