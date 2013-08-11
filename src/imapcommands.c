@@ -54,20 +54,6 @@ struct cmd_t {
 	uint64_t unchangedsince;
 };
 
-cmd_t cmd_new(void)
-{
-	return (cmd_t)g_malloc0(sizeof(cmd_t));
-}
-
-void cmd_free(cmd_t *cmd)
-{
-	assert(cmd && *cmd);
-	if ((*cmd)->keywords)
-		g_list_destroy((*cmd)->keywords);
-	(*cmd)->keywords = NULL;
-	g_free((*cmd));	
-}
-
 /* 
  * push a message onto the queue and notify the
  * event-loop by sending a char into the selfpipe
@@ -1842,7 +1828,7 @@ int _ic_fetch(ImapSession *self)
 static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D)
 {
 	ImapSession *self = D->session;
-	cmd_t cmd = self->cmd;
+	struct cmd_t *cmd = self->cmd;
 
 	uint64_t *msn;
 	MessageInfo *msginfo = NULL;
@@ -1930,7 +1916,7 @@ static void _ic_store_enter(dm_thread_data *D)
 {
 	SESSION_GET;
 	int result, j, k;
-	cmd_t cmd;
+	struct cmd_t cmd;
 	gboolean update = FALSE;
 	const char *token = NULL;
 	bool needflags = false;
@@ -1938,31 +1924,32 @@ static void _ic_store_enter(dm_thread_data *D)
 	String_T buffer = NULL;
 
 	k = self->args_idx;
-	cmd = g_malloc0(sizeof(*cmd));
-	cmd->silent = FALSE;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.silent = FALSE;
 
 	/* retrieve action type */
 	for (k = self->args_idx+1; self->args[k]; k++) {
 
 		token = p_string_str(self->args[k]);
-		if (cmd->action == IMAPFA_NONE) {
+		if (cmd.action == IMAPFA_NONE) {
 			if (MATCH(token, "flags")) {
-				cmd->action = IMAPFA_REPLACE;
+				cmd.action = IMAPFA_REPLACE;
 			} else if (MATCH(token, "flags.silent")) {
-				cmd->action = IMAPFA_REPLACE;
-				cmd->silent = TRUE;
+				cmd.action = IMAPFA_REPLACE;
+				cmd.silent = TRUE;
 			} else if (MATCH(token, "+flags")) {
-				cmd->action = IMAPFA_ADD;
+				cmd.action = IMAPFA_ADD;
 			} else if (MATCH(token, "+flags.silent")) {
-				cmd->action = IMAPFA_ADD;
-				cmd->silent = TRUE;
+				cmd.action = IMAPFA_ADD;
+				cmd.silent = TRUE;
 			} else if (MATCH(token, "-flags")) {
-				cmd->action = IMAPFA_REMOVE;
+				cmd.action = IMAPFA_REMOVE;
 			} else if (MATCH(token, "-flags.silent")) {
-				cmd->action = IMAPFA_REMOVE;
-				cmd->silent = TRUE;
+				cmd.action = IMAPFA_REMOVE;
+				cmd.silent = TRUE;
 			}
-			if (cmd->action != IMAPFA_NONE) {
+			if (cmd.action != IMAPFA_NONE) {
 				needflags = true;
 				continue;
 			}
@@ -1984,13 +1971,13 @@ static void _ic_store_enter(dm_thread_data *D)
 				char *end;
 				if (self->args[k+1] && self->args[k+2]) {
 					if ((! Capa_match(self->capa, "CONDSTORE")) || (! MATCH(p_string_str(self->args[k+1]), "UNCHANGEDSINCE"))) {
-						cmd->action = IMAPFA_NONE;
+						cmd.action = IMAPFA_NONE;
 						break;
 					}
 					errno = 0;
-					cmd->unchangedsince = dm_strtoull(p_string_str(self->args[k+2]), &end, 10);
+					cmd.unchangedsince = dm_strtoull(p_string_str(self->args[k+2]), &end, 10);
 					if (p_string_str(self->args[k+2]) == end) {
-						cmd->action = IMAPFA_NONE;
+						cmd.action = IMAPFA_NONE;
 						break;
 					}
 					k += 2;
@@ -2003,10 +1990,9 @@ static void _ic_store_enter(dm_thread_data *D)
 		endflags = k-1;
 
 
-	if (cmd->action == IMAPFA_NONE) {
+	if (cmd.action == IMAPFA_NONE) {
 		dbmail_imap_session_buff_printf(self, "%s BAD invalid STORE action specified\r\n", self->tag);
 		D->status = 1;
-		g_free(cmd);
 		SESSION_RETURN;
 	}
 
@@ -2025,19 +2011,18 @@ static void _ic_store_enter(dm_thread_data *D)
 			if (MATCH(p_string_str(self->args[k]),"\\Recent")) {
 				dbmail_imap_session_buff_printf(self, "%s BAD invalid flag list to STORE command\r\n", self->tag);
 				D->status = 1;
-				g_free(cmd);
 				SESSION_RETURN;
 			}
 				
 			if (MATCH(p_string_str(self->args[k]), imap_flag_desc_escaped[j])) {
-				cmd->flaglist[j] = 1;
+				cmd.flaglist[j] = 1;
 				break;
 			}
 		}
 
 		if (j == IMAP_NFLAGS) {
 			const char *kw = p_string_str(self->args[k]);
-			cmd->keywords = g_list_append(cmd->keywords,g_strdup(kw));
+			cmd.keywords = g_list_append(cmd.keywords,g_strdup(kw));
 			if (! MailboxState_hasKeyword(self->mailbox->mbstate, kw)) {
 				MailboxState_addKeyword(self->mailbox->mbstate, kw);
 				update = TRUE;
@@ -2046,40 +2031,37 @@ static void _ic_store_enter(dm_thread_data *D)
 	}
 
 	/** check ACL's for STORE */
-	if (cmd->flaglist[IMAP_FLAG_SEEN] == 1) {
+	if (cmd.flaglist[IMAP_FLAG_SEEN] == 1) {
 		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_SEEN))) {
 			dbmail_imap_session_buff_printf(self, "%s NO access denied\r\n", self->tag);
 			D->status = result;
-			g_list_destroy(cmd->keywords);
-			g_free(cmd);
+			g_list_destroy(cmd.keywords);
 			SESSION_RETURN;
 		}
 	}
-	if (cmd->flaglist[IMAP_FLAG_DELETED] == 1) {
+	if (cmd.flaglist[IMAP_FLAG_DELETED] == 1) {
 		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_DELETED))) {
 			dbmail_imap_session_buff_printf(self, "%s NO access denied\r\n", self->tag);
 			D->status = result;
-			g_list_destroy(cmd->keywords);
-			g_free(cmd);
+			g_list_destroy(cmd.keywords);
 			SESSION_RETURN;
 		}
 	}
-	if (cmd->flaglist[IMAP_FLAG_ANSWERED] == 1 ||
-	    cmd->flaglist[IMAP_FLAG_FLAGGED] == 1 ||
-	    cmd->flaglist[IMAP_FLAG_DRAFT] == 1 ||
-	    g_list_length(cmd->keywords) > 0 ) {
+	if (cmd.flaglist[IMAP_FLAG_ANSWERED] == 1 ||
+	    cmd.flaglist[IMAP_FLAG_FLAGGED] == 1 ||
+	    cmd.flaglist[IMAP_FLAG_DRAFT] == 1 ||
+	    g_list_length(cmd.keywords) > 0 ) {
 		if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_WRITE))) {
 			dbmail_imap_session_buff_printf(self, "%s NO access denied\r\n", self->tag);
 			D->status = result;
-			g_list_destroy(cmd->keywords);
-			g_free(cmd);
+			g_list_destroy(cmd.keywords);
 			SESSION_RETURN;
 		}
 	}
 	/* end of ACL checking. If we get here without returning, the user has
 	   the right to store the flags */
 
-	self->cmd = cmd;
+	self->cmd = &cmd;
 
 	if ( update ) {
 		char *flags = MailboxState_flags(self->mailbox->mbstate);
@@ -2091,13 +2073,12 @@ static void _ic_store_enter(dm_thread_data *D)
 	if ((result = _dm_imapsession_get_ids(self, p_string_str(self->args[self->args_idx]))) == DM_SUCCESS) {
 		if (self->ids) {
 			uint64_t seq = db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate), 0);
-			self->cmd->seq = seq;
+			cmd.seq = seq;
 			g_tree_foreach(self->ids, (GTraverseFunc) _do_store, D);
 		}
 	}
 
-	g_list_destroy(cmd->keywords);
-	g_free(cmd);
+	g_list_destroy(cmd.keywords);
 
 	if (result || D->status) {
 		if (result) D->status = result;
@@ -2117,8 +2098,6 @@ static void _ic_store_enter(dm_thread_data *D)
 		SESSION_OK;
 	}
 
-
-
 	SESSION_RETURN;
 }
 
@@ -2137,7 +2116,7 @@ int _ic_store(ImapSession *self)
 
 static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 {
-	cmd_t cmd = self->cmd;
+	struct cmd_t *cmd = self->cmd;
 	uint64_t newid;
 	int result;
 	uint64_t *new_ids_element = NULL;
@@ -2169,7 +2148,7 @@ static void _ic_copy_enter(dm_thread_data *D)
 	uint64_t destmboxid;
 	int result;
 	MailboxState_T S;
-	cmd_t cmd;
+	struct cmd_t cmd;
 	const char *src, *dst;
 
 	src = p_string_str(self->args[self->args_idx]);
@@ -2200,18 +2179,15 @@ static void _ic_copy_enter(dm_thread_data *D)
 		SESSION_RETURN;
 	}
 
-	cmd = g_malloc0(sizeof(*cmd));
-	cmd->mailbox_id = destmboxid;
-	self->cmd = cmd;
-
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.mailbox_id = destmboxid;
+	self->cmd = &cmd;
 	if ((result = _dm_imapsession_get_ids(self, src)) == DM_SUCCESS) {
 		if (self->ids) {
-			cmd->seq = db_mailbox_seq_update(destmboxid, 0);
+			cmd.seq = db_mailbox_seq_update(destmboxid, 0);
 			g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
 		}
 	}
-  	
-	g_free(self->cmd);
 	self->cmd = NULL;
 
 	if (result) {

@@ -16,8 +16,6 @@
 // command state during idle command
 #define IDLE -1 
 
-typedef struct cmd_t *cmd_t;
-
 /* ImapSession definition */
 typedef struct {
 	Mempool_T pool;
@@ -60,7 +58,7 @@ typedef struct {
 	GTree *mbxinfo; 	// cache MailboxState_T 
 	GList *ids_list;
 
-	cmd_t cmd; // command structure (wip)
+	struct cmd_t *cmd; // command structure (wip)
 	gboolean error; // command result
 	int error_count;
 	ClientState_T state; // session status 
