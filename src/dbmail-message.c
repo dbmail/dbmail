@@ -875,19 +875,16 @@ void _get_header_repeated(const char *name, const char *value, gpointer data)
 
 GList * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header)
 {
-	GList *result;
 	GMimeHeaderList *headers = g_mime_object_get_header_list(
 			GMIME_OBJECT(self->content));
        
-	struct payload *data = g_new0(struct payload,1);
-	data->header = header;
-	data->list = NULL;
+	struct payload data;
+	data.header = header;
+	data.list = NULL;
 
-	g_mime_header_list_foreach(headers, _get_header_repeated, data);
+	g_mime_header_list_foreach(headers, _get_header_repeated, &data);
 
-	result = data->list;
-	g_free(data);
-	return result;
+	return data.list;
 }
 
 GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field_name)
@@ -1301,7 +1298,9 @@ int _message_insert(DbmailMessage *self,
 void _message_cache_envelope_date(const DbmailMessage *self)
 {
 	time_t date = self->internal_date;
-	char *value, *datefield, *sortfield;
+	char *value;
+	char datefield[CACHE_WIDTH];
+	char sortfield[CACHE_WIDTH];
 	uint64_t headervalue_id;
 	uint64_t headername_id;
 
@@ -1309,24 +1308,22 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 			self->internal_date, 
 			self->internal_date_gmtoff);
 
-	sortfield = g_new0(char, CACHE_WIDTH+1);
-	strftime(sortfield, CACHE_WIDTH, "%Y-%m-%d %H:%M:%S", gmtime(&date));
+	memset(sortfield, 0, sizeof(sortfield));
+	strftime(sortfield, CACHE_WIDTH-1, "%Y-%m-%d %H:%M:%S", gmtime(&date));
 
 	if (self->internal_date_gmtoff)
 		date += (self->internal_date_gmtoff * 36);
 
-	datefield = g_new0(gchar, 20);
+	memset(datefield, 0, sizeof(datefield));
 	strftime(datefield, 20, "%Y-%m-%d", gmtime(&date));
 
 	_header_name_get_id(self, "Date", &headername_id);
 	_header_value_get_id(value, sortfield, datefield, &headervalue_id);
 
+	g_free(value);
+
 	if (headervalue_id && headername_id)
 		_header_insert(self->id, headername_id, headervalue_id);
-
-	g_free(value);
-	g_free(sortfield);
-	g_free(datefield);
 }
 
 int dbmail_message_cache_headers(const DbmailMessage *self)
@@ -1602,7 +1599,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	time_t date;
 	volatile gboolean isaddr = 0, isdate = 0, issubject = 0;
 	const char *charset = dbmail_message_get_charset(self);
-	gchar *datefield = NULL;
+	char datefield[CACHE_WIDTH];
 	char sortfield[CACHE_WIDTH];
 	char *value = NULL;
 	InternetAddressList *emaillist;
@@ -1694,8 +1691,8 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 		strftime(sortfield, CACHE_WIDTH, "%Y-%m-%d %H:%M:%S", gmtime(&date));
 
 		date += (offset * 36); // +0200 -> offset 200
-		datefield = g_new0(gchar,20);
-		strftime(datefield,20,"%Y-%m-%d", gmtime(&date));
+		memset(datefield, 0, sizeof(datefield));
+		strftime(datefield, 20,"%Y-%m-%d", gmtime(&date));
 
 		TRACE(TRACE_DEBUG,"Date is [%s] offset [%d], datefield [%s]",
 				value, offset, datefield);
@@ -1717,7 +1714,6 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 
 	headervalue_id=0;
 
-	g_free(datefield); datefield = NULL;
 	emaillist=NULL;
 	date=0;
 }
