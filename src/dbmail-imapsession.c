@@ -522,30 +522,26 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 	return 0;	/* DONE */
 }
 
-/*
- * dbmail_imap_session_fetch_parse_args()
- *
- * retrieves next item to be fetched from an argument list starting at the given
- * index. The update index is returned being -1 on 'no-more' and -2 on error.
- * arglist is supposed to be formatted according to build_args_array()
- *
- */
-#define NEXTTOKEN (self->args[self->args_idx+1]?p_string_str(self->args[self->args_idx+1]):NULL)
+
+#define TOKENAT(a) (self->args[self->args_idx+a]?p_string_str(self->args[self->args_idx+a]):NULL)
+#define NEXTTOKEN TOKENAT(1)
+#define TOKEN TOKENAT(0)
+
 int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 {
 	int ispeek = 0;
 	
-	if (!self->args[self->args_idx]) return -1;	/* no more */
-	if (p_string_str(self->args[self->args_idx])[0] == '(') 
-		self->args_idx++;
-	if (!self->args[self->args_idx]) return -2;	/* error */
-	
-	const char *token = NULL, *nexttoken = NULL;
-	
-	token = p_string_str(self->args[self->args_idx]);
-	nexttoken = NEXTTOKEN;
+	const char *token = TOKEN;
+	const char *nexttoken = NEXTTOKEN;
+
+	if (!token) return -1; // done
+	if ((token[0] == ')') && (! nexttoken)) return -1; // done
+	if (token[0] == '(') return 1; // skip
 
 	TRACE(TRACE_DEBUG,"[%p] parse args[%" PRIu64 "] = [%s]", self, self->args_idx, token);
+
+	if ((! nexttoken) && (strcmp(token,")") == 0))
+		return -1; // done
 
 	if (MATCH(token,"flags")) {
 		self->fi->getFlags = 1;
@@ -591,7 +587,7 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			self->args_idx++;	/* now pointing at '[' (not the last arg, parentheses are matched) */
 			self->args_idx++;	/* now pointing at what should be the item type */
 
-			token = (char *)p_string_str(self->args[self->args_idx]);
+			token = TOKEN;
 			nexttoken = NEXTTOKEN;
 
 			TRACE(TRACE_DEBUG,"[%p] token [%s], nexttoken [%s]", self, token, nexttoken);
@@ -645,23 +641,20 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 	} else if (MATCH(token,"envelope")) {
 		self->fi->getEnvelope = 1;
 	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token,"changedsince"))) {
-		self->args_idx++;
-		self->args_idx++;
 		char *rest = (char *)nexttoken;
 		uint64_t seq = dm_strtoull(nexttoken, &rest, 10);
 		if (rest == nexttoken)
 			return -2;
 		self->fi->changedsince = seq;
 		self->mailbox->condstore = true;
-	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token, "modseq"))) {
 		self->args_idx++;
+	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token, "modseq"))) {
 		self->mailbox->condstore = true;
-	} else if ((! nexttoken) && (strcmp(token,")") == 0)) { 
-		return -1; // done
 	}
 
 	return 1; //theres more...
 }
+
 
 #define SEND_SPACE if (self->fi->isfirstfetchout) \
 				self->fi->isfirstfetchout = 0; \
@@ -1703,7 +1696,6 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 
 int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 {
-	TRACE(TRACE_DEBUG,"state [%d]", state);
 	if (self->state == state)
 		return 0;
 
