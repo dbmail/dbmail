@@ -37,6 +37,7 @@ char configFile[PATH_MAX];
 static GKeyFile *config_dict = NULL;
 static int configured = 0;
 
+
 void config_get_file(void)
 {
 	strncpy(configFile, DEFAULT_CONFIG_FILE, sizeof(configFile)-1);
@@ -283,7 +284,7 @@ void SetTraceLevel(const char *service_name)
 		}
 	}
 
-	configure_debug(trace_syslog_int, trace_stderr_int);
+	configure_debug(service_name, trace_syslog_int, trace_stderr_int);
 }
 
 void GetDBParams(void)

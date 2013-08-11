@@ -46,9 +46,9 @@ Mempool_T pool;
 
 void setup(void)
 {
-	configure_debug(255,31);
 	config_get_file();
 	config_read(configFile);
+	configure_debug(NULL,255,31);
 	pool = mempool_open();
 	A = Capa_new(pool);
 }

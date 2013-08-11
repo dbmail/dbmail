@@ -48,9 +48,9 @@ int imap_before_smtp = 0;
 	
 void setup(void)
 {
-	configure_debug(255,0);
 	config_get_file();
 	config_read(configFile);
+	configure_debug(NULL,255,0);
 	GetDBParams();
 	db_connect();
 	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);

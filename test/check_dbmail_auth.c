@@ -66,9 +66,9 @@ static void ci_delete(ClientBase_T *ci)
 void setup(void)
 {
 	reallyquiet = 1;
-	configure_debug(511,0);
 	config_get_file();
 	config_read(configFile);
+	configure_debug(NULL,511,0);
 	GetDBParams();
 	db_connect();
 	auth_connect();

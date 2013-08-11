@@ -58,7 +58,7 @@ struct event *pev = NULL;
 SSL_CTX *tls_context;
 
 FILE *fstdout = NULL;
-FILE *fstderr = NULL;
+extern FILE *fstderr;
 FILE *fnull = NULL;
 /*
  * self-pipe event
@@ -310,7 +310,7 @@ int StartCliServer(ServerConfig_T * conf)
 /* Should be called after a HUP to allow for log rotation,
  * as the filesystem may want to give us new inodes and/or
  * the user may have changed the log file configs. */
-static void reopen_logs(ServerConfig_T *conf)
+static void reopen_logs_level(ServerConfig_T *conf, Trace_T level)
 {
 	int serr;
 
@@ -325,44 +325,23 @@ static void reopen_logs(ServerConfig_T *conf)
 
 	if (! (fstdout = freopen(conf->log, "a", stdout))) {
 		serr = errno;
-		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
+		TRACE(level, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
 	}
 
 	if (! (fstderr = freopen(conf->error_log, "a", stderr))) {
 		serr = errno;
-		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
+		TRACE(level, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
 	}
 
 	if (! (fnull = freopen("/dev/null", "r", stdin))) {
 		serr = errno;
-		TRACE(TRACE_ERR, "freopen failed on stdin [%s]", strerror(serr));
+		TRACE(level, "freopen failed on stdin [%s]", strerror(serr));
 	}
 
 }
 	
-/* Should be called once to initially close the actual std{in,out,err}
- * and open the redirection files. */
-static void reopen_logs_fatal(ServerConfig_T *conf)
-{
-	int serr;
-
-	if (fstdout) fclose(fstdout);
-	if (fstderr) fclose(fstderr);
-	if (fnull) fclose(fnull);
-
-	if (! (fstdout = freopen(conf->log, "a", stdout))) {
-		serr = errno;
-		TRACE(TRACE_EMERG, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
-	}
-	if (! (fstdout = freopen(conf->error_log, "a", stderr))) {
-		serr = errno;
-		TRACE(TRACE_EMERG, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
-	}
-	if (! (fstdout = freopen("/dev/null", "r", stdin))) {
-		serr = errno;
-		TRACE(TRACE_EMERG, "freopen failed on stdin [%s]", strerror(serr));
-	}
-}
+#define reopen_logs(a) reopen_logs_level(a, TRACE_ERR)
+#define reopen_logs_fatal(a) reopen_logs_level(a, TRACE_EMERG)
 
 pid_t server_daemonize(ServerConfig_T *conf)
 {
@@ -989,7 +968,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	SetTraceLevel(service);
 	/* Override SetTraceLevel. */
 	if (config->log_verbose) {
-		configure_debug(5,5);
+		configure_debug(service,5,5);
 	}
 
 	config_get_value("max_db_connections", service, val);

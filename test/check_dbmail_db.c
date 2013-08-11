@@ -63,12 +63,9 @@ char *domain_catchall = "@nonexistantdomain";
  */
 void setup(void)
 {
-	configure_debug(511,0);
 	config_get_file();
-	if (config_read(configFile) < 0) {
-		printf( "Config file not found: %s\n", configFile );
-		exit(1);
-	}
+	config_read(configFile);
+	configure_debug(NULL,511,0);
 	GetDBParams();
 	db_connect();
 	auth_connect();

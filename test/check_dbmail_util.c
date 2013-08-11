@@ -43,9 +43,9 @@ extern char configFile[PATH_MAX];
  */
 void setup(void)
 {
-	configure_debug(255,0);
 	config_get_file();
 	config_read(configFile);
+	configure_debug(NULL,255,0);
 	GetDBParams();
 	db_connect();
 	auth_connect();

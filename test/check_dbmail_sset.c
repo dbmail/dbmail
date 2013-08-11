@@ -90,9 +90,9 @@ static int compare(const void *a, const void *b)
 
 void setup(void)
 {
-	configure_debug(255,0);
 	config_get_file();
 	config_read(configFile);
+	configure_debug(NULL,255,0);
 	V = Sset_new(compare, sizeof(struct item), NULL);
 	W = Sset_new(compare, sizeof(struct item), NULL);
 }

@@ -57,7 +57,7 @@ typedef enum {
 void TabortHandler(const char *error);
 void trace(Trace_T level, const char * module, const char * function, int line, const char *formatstring, ...) PRINTF_ARGS(5, 6);
 
-void configure_debug(Trace_T trace_syslog, Trace_T trace_stderr);
+void configure_debug(const char *service_name, Trace_T trace_syslog, Trace_T trace_stderr);
 
 void null_logger(const char UNUSED *log_domain, GLogLevelFlags UNUSED log_level, const char UNUSED *message, gpointer UNUSED data);
 #endif

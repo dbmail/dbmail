@@ -63,14 +63,14 @@ void init_testuser1(void)
 	
 void setup(void)
 {
-	queue_pool = mempool_open();
-	configure_debug(255,0);
 	config_get_file();
 	config_read(configFile);
+	configure_debug(NULL,255,0);
 	GetDBParams();
 	db_connect();
 	auth_connect();
 	init_testuser1();
+	queue_pool = mempool_open();
 }
 
 void teardown(void)
@@ -184,7 +184,6 @@ START_TEST(test_imap_session_new)
 	s = dbmail_imap_session_new(pool);
 	fail_unless(s!=NULL, "Failed to initialize imapsession");
 	dbmail_imap_session_delete(&s);
-	mempool_close(&pool);
 }
 END_TEST
 

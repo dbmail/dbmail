@@ -31,6 +31,8 @@ char            *__progname = NULL;
 
 char		hostname[16];
  
+#define THIS_MODULE "debug"
+
 /* the debug variables */
 static Trace_T TRACE_SYSLOG = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
 static Trace_T TRACE_STDERR = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
@@ -46,10 +48,25 @@ void TabortHandler(const char *error)
 /*
  * configure the debug settings
  */
-void configure_debug(Trace_T trace_syslog, Trace_T trace_stderr)
+FILE *fstderr = NULL;
+
+static void configure_stderr(const char *service_name)
+{
+	Field_T error_log;
+	config_get_value("errorlog", service_name, error_log);
+	if (! (fstderr = freopen(error_log, "a", stderr))) {
+		int serr = errno;
+		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", error_log, strerror(serr));
+	}
+}
+
+void configure_debug(const char *service_name, Trace_T trace_syslog, Trace_T trace_stderr)
 {
 	TRACE_SYSLOG = trace_syslog;
 	TRACE_STDERR = trace_stderr;
+
+	configure_stderr(service_name?service_name:"DBMAIL");
+
 }
 
 /* Make sure that these match Trace_T. */

@@ -49,9 +49,9 @@ extern char *raw_lmtp_data;
 	
 void setup(void)
 {
-	configure_debug(511,0);
 	config_get_file();
 	config_read(configFile);
+	configure_debug(NULL,511,0);
 	GetDBParams();
 	db_connect();
 	auth_connect();

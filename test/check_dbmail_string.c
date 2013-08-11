@@ -50,9 +50,9 @@ Mempool_T pool;
 
 void setup(void)
 {
-	configure_debug(255,0);
 	config_get_file();
 	config_read(configFile);
+	configure_debug(NULL,255,0);
 	pool = mempool_open();
 }
 
