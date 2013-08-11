@@ -261,9 +261,6 @@ void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
 
-	if (session->state == CLIENTSTATE_QUIT_QUEUED)
-		return;
-
 	if (! session->ci->cb_write)
 		return;
 

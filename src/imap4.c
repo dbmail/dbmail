@@ -140,6 +140,12 @@ void imap_cleanup_deferred(gpointer data)
 	ImapSession *session = (ImapSession *)D->session;
 	ClientBase_T *ci = session->ci;
 
+	if ((p_string_len(ci->write_buffer) - ci->write_buffer_offset) > 0) {
+		ci_write_cb(session->ci);
+		dm_queue_push(imap_cleanup_deferred, session, NULL);
+		return;
+	}
+
 	rx = ci->rx;
 	ci_close(ci);
 
@@ -152,10 +158,11 @@ void imap_cleanup_deferred(gpointer data)
 
 static void imap_session_bailout(ImapSession *session)
 {
+	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
+
 	if (session->state == CLIENTSTATE_QUIT_QUEUED)
 		return;
 
-	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
 	dbmail_imap_session_set_state(session,CLIENTSTATE_QUIT_QUEUED);
 	assert(session && session->ci);
 	dm_queue_push(imap_cleanup_deferred, session, NULL);
@@ -369,11 +376,10 @@ static void imap_handle_continue(ImapSession *session)
 			}
 			dbmail_imap_session_buff_clear(session);
 		}
-		if ((p_string_len(session->ci->write_buffer) - session->ci->write_buffer_offset) > 0) {
+		if (p_string_len(session->ci->write_buffer) > session->ci->write_buffer_offset)
 			ci_write(session->ci, NULL);
-		} else if (session->command_state == TRUE) {
+		if (session->command_state == TRUE)
 			imap_session_reset(session);
-		}
 	} else {
 		dbmail_imap_session_buff_clear(session);
 	}				
@@ -446,7 +452,6 @@ void imap_handle_input(ImapSession *session)
 	if (p_string_len(session->ci->write_buffer)) {
 		TRACE(TRACE_DEBUG,"[%p] write buffer not empty", session);
 		ci_write(session->ci, NULL);
-		return;
 	}
 
 	// nothing left to handle

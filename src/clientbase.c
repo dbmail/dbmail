@@ -87,7 +87,6 @@ static void client_wbuf_scale(ClientBase_T *client)
 		p_string_truncate(client->write_buffer,0);
 		client->write_buffer_offset = 0;
 	}
-
 }
 
 
@@ -127,8 +126,8 @@ static int client_error_cb(int sock, int error, void *arg)
 				break; // reschedule
 
 			default:
-				r = error;
 				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
+				r = error;
 				client_rbuf_clear(client);
 				client_wbuf_clear(client);
 				break;
@@ -214,6 +213,9 @@ void ci_uncork(ClientBase_T *s)
 {
 	TRACE(TRACE_DEBUG,"[%p]", s);
 
+	if (s->client_state & CLIENT_ERR)
+		return;
+
 	if (! (s->client_state & CLIENT_EOF))
 		event_add(s->rev, s->timeout);
 	event_add(s->wev, NULL);
@@ -255,19 +257,33 @@ int ci_starttls(ClientBase_T *client)
 	return DM_SUCCESS;
 }
 
+#define WBUF_LEN p_string_len(client->write_buffer) - client->write_buffer_offset
 void ci_write_cb(ClientBase_T *client)
 {
-	if (p_string_len(client->write_buffer) > client->write_buffer_offset)
-		ci_write(client,NULL);
+	uint64_t rest = WBUF_LEN;
+	int result = 0;
+	if (rest) {
+	       result = ci_write(client,NULL);
+	       switch(result) {
+		       case 0:
+			       event_add(client->wev, NULL);
+			       break;
+		       case 1:
+			       ci_uncork(client);
+			       break;
+	       }
+	}
 }
 
 int ci_write(ClientBase_T *client, char * msg, ...)
 {
 	va_list ap, cp;
+	size_t before = 0, after = 0;
 	int64_t t = 0;
 	int e = 0;
-	uint64_t n;
+	uint64_t n, left;
 	char *s;
+	char buf[40];
 
 	if (client->client_state & CLIENT_ERR) {
 		TRACE(TRACE_DEBUG, "called while clientbase in error state");
@@ -280,30 +296,21 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	}
 
 	if (msg) {
+		before = p_string_len(client->write_buffer);
 		va_start(ap, msg);
 		va_copy(cp, ap);
 		p_string_append_vprintf(client->write_buffer, msg, cp);
 		va_end(cp);
 		va_end(ap);
-	}
-	
-	if (p_string_len(client->write_buffer) < 1) { 
-		TRACE(TRACE_DEBUG, "write_buffer is empty [%" PRIu64 "]", p_string_len(client->write_buffer));
-		return 0;
+		after = p_string_len(client->write_buffer);
 	}
 
-	n = p_string_len(client->write_buffer) - client->write_buffer_offset;
-	if (n == 0) {
-		TRACE(TRACE_DEBUG, "write_buffer is empty [%" PRIu64 "]", p_string_len(client->write_buffer));
-		return 0;
-	}
-
-	while (n > 0) {
+	left = WBUF_LEN;
+	while (left > 0) {
+		n = left;
 		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
 
 		s = (char *)p_string_str(client->write_buffer) + client->write_buffer_offset;
-
-		TRACE(TRACE_DEBUG, "[%p] S > [%" PRId64 "/%" PRIu64 ":%s]", client, t, p_string_len(client->write_buffer), s);
 
 		if (client->sock->ssl) {
 			if (! client->tls_wbuf_n) {
@@ -320,25 +327,25 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 		if (t == -1) {
 			if ((e = client->cb_error(client->tx, e, (void *)client))) {
 				client->client_state |= CLIENT_ERR;
-			} else {
-				if (client->sock->ssl && client->sock->ssl_state)
-					event_add(client->wev, NULL);
-			}
+				return -1;
+			} 
 			return 0;
-		} else {
-			event_add(client->wev, NULL);
+		} 
 
-			client->bytes_tx += t;	// Update our byte counter
-			client->write_buffer_offset += t;
-			client_wbuf_scale(client);
+		memset(buf, 0, sizeof(buf));
+		strncpy(buf, s, sizeof(buf)-1);
 
-			if (client->sock->ssl) {
-				memset(client->tls_wbuf, '\0', TLS_SEGMENT);
-				client->tls_wbuf_n = 0;
-			}
+		TRACE(TRACE_DEBUG, "[%p] S > [%" PRId64 "/%" PRIu64 ":%s]", client, t, left, buf);
+
+		client->bytes_tx += t;	// Update our byte counter
+		client->write_buffer_offset += t;
+		client_wbuf_scale(client);
+		if (client->sock->ssl) {
+			memset(client->tls_wbuf, '\0', TLS_SEGMENT);
+			client->tls_wbuf_n = 0;
 		}
 
-		n = p_string_len(client->write_buffer) - client->write_buffer_offset;
+		left = WBUF_LEN;
 	}
 
 	return 0;

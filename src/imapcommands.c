@@ -1633,6 +1633,7 @@ int _dm_imapsession_get_ids(ImapSession *self, const char *set)
  * fetch message(s) from the selected mailbox
  */
 	
+
 static void _ic_fetch_enter(dm_thread_data *D)
 {
 	SESSION_GET;
@@ -1647,13 +1648,11 @@ static void _ic_fetch_enter(dm_thread_data *D)
 
 	state = 1;
 	do {
-		if ( (state = dbmail_imap_session_fetch_parse_args(self)) == -2) {
+		if ((state=dbmail_imap_session_fetch_parse_args(self)) == -2) {
 			dbmail_imap_session_buff_printf(self, "%s BAD invalid argument list to fetch\r\n", self->tag);
 			D->status = 1;
 			SESSION_RETURN;
 		}
-		TRACE(TRACE_DEBUG,"[%p] dbmail_imap_session_fetch_parse_args loop idx %" PRIu64 " state %d ",
-				self, self->args_idx, state);
 		self->args_idx++;
 	} while (state > 0);
 
