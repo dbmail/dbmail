@@ -911,53 +911,38 @@ int _ic_unsubscribe(ImapSession *self)
 }
 
 /**
- * Copy one element of hierarchy to the found folders (if it's not there already)
- *
- * Free the mailbox state info, if we are not copying it.
- * This is called for each found hierarchy in a loop.
- */
-static gboolean _ic_list_found_hierarchy_copy(char *key, MailboxState_T M, GTree *found_folders)
-{
-	TRACE(TRACE_DEBUG,"searching hierarchy [%s] in found folders", MailboxState_getName(M));
-	if (!g_tree_lookup(found_folders, key)) {
-		TRACE(TRACE_DEBUG,"not found, adding");
-		g_tree_insert(found_folders, key, M);
-	} else {
-		TRACE(TRACE_DEBUG,"found, not adding");
-		MailboxState_free(&M);
-	}
-	return FALSE;
-}
-
-/**
  * Write out one element of found folders (contains found hierarchy too)
  *
  * This is called for each found folder in a loop.
  */
 static gboolean _ic_list_write_out_found_folder(gpointer UNUSED key, MailboxState_T M, ImapSession *self)
 {
-	TRACE(TRACE_DEBUG,"writing out found folder [%s]", MailboxState_getName(M));
 	GList *plist = NULL;
 	char *pstring = NULL;
 	if (MailboxState_noSelect(M))
-		plist = g_list_append(plist, g_strdup("\\noselect"));
+		plist = g_list_append(plist, "\\noselect");
 	if (MailboxState_noInferiors(M))
-		plist = g_list_append(plist, g_strdup("\\noinferiors"));
+		plist = g_list_append(plist, "\\noinferiors");
 	if (MailboxState_noChildren(M))
-		plist = g_list_append(plist, g_strdup("\\hasnochildren"));
+		plist = g_list_append(plist, "\\hasnochildren");
 	else
-		plist = g_list_append(plist, g_strdup("\\haschildren"));
+		plist = g_list_append(plist, "\\haschildren");
 
 	/* show */
 	pstring = dbmail_imap_plist_as_string(plist);
 	dbmail_imap_session_buff_printf(self, "* %s %s \"%s\" \"%s\"\r\n", self->command,
 			pstring, MAILBOX_SEPARATOR, MailboxState_getName(M));
 
-	MailboxState_free(&M);
-	g_list_destroy(plist);
+	g_list_free(g_list_first(plist));
 	g_free(pstring);
 
 	return FALSE;
+}
+
+void free_mailboxstate(void *data)
+{
+	MailboxState_T M = (MailboxState_T)data;
+	MailboxState_free(&M);
 }
 
 /*
@@ -976,8 +961,6 @@ void _ic_list_enter(dm_thread_data *D)
 	// that's why store them separately in another GTree
 	// this is to not to let them mask out real folders if they are found first
 	GTree *found_hierarchy = NULL;
-	// we also need a local variable to be able to access the returned value
-	//  from MailboxState_new().
 	MailboxState_T M = NULL;
 	unsigned i;
 	char pattern[255];
@@ -1018,8 +1001,8 @@ void _ic_list_enter(dm_thread_data *D)
 		SESSION_RETURN;
 	}
 
-	found_folders = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,NULL,NULL);
-	found_hierarchy = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,NULL,NULL);
+	found_folders = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,g_free,free_mailboxstate);
+	found_hierarchy = g_tree_new_full((GCompareDataFunc)dm_strcmpdata,NULL,g_free,free_mailboxstate);
 
 	while ((! D->status) && children) {
 		gboolean show = FALSE;
@@ -1087,31 +1070,16 @@ void _ic_list_enter(dm_thread_data *D)
 			show = TRUE;
 		}
 
-		// search just if necessary
-		gboolean exists_in_found_folders = !hierarchy_element && g_tree_lookup(found_folders, MailboxState_getName(M));
-		//TRACE(TRACE_DEBUG,"exists_in_found_folders [%d]", exists_in_found_folders);
-		gboolean exists_in_found_hierarchy = hierarchy_element && g_tree_lookup(found_hierarchy, MailboxState_getName(M));
-		//TRACE(TRACE_DEBUG,"exists_in_found_hierarchy [%d]", exists_in_found_hierarchy);
-
 		// add the result if either:
 		//  - it's not a hierarchy element (so real folder) AND it cannot be found among real folders
 		//  - it's a hierarchy element AND it cannot be found among hierarchy elements
-		if (show && MailboxState_getName(M) && ((!hierarchy_element && !exists_in_found_folders) || (hierarchy_element && !exists_in_found_hierarchy))) {
-			const char *s = MailboxState_getName(M);
-			// reserve memory for that structure pointer that we'll put into GLists
-			// it will be freed when finishing the work with tree elements
-			// insert the Mailbox state data into one of the trees
-			// we'll need full access to it to set up the command's output
-			// decide where to store the Mailbox data
-			if (!hierarchy_element) {
-				TRACE(TRACE_DEBUG,"adding to found folders [%s]", s);
+		if (show && MailboxState_getName(M)) {
+			char *s = g_strdup(MailboxState_getName(M));
+			if (! hierarchy_element)
 				g_tree_insert(found_folders, (gpointer)s, M);
-			} else {
-				TRACE(TRACE_DEBUG,"adding to found hierarchy [%s]", s);
+			else 
 				g_tree_insert(found_hierarchy, (gpointer)s, M);
-			}
 		} else {
-			// if we haven't added the Mailbox state data into any of the trees then we need to free the memory
 			MailboxState_free(&M);
 		}
 
@@ -1119,25 +1087,14 @@ void _ic_list_enter(dm_thread_data *D)
 		children = g_list_next(children);
 	}
 
-	// handle the mailbox info that we put into the found_hierarchy and found_folders trees
-	//
-	// insert folders from "found hierarchy" to "found folders"
-	//  this includes checking for each whether a found hierarchy element is not already there
-	//  copy just those that are not yet there
-	// this is necessary, to not to let hierarchy elements mask out real folders
-	//
-	// Important: free all mailbox state infos that we are not copying over!
 	TRACE(TRACE_DEBUG,"copying found hierarchy to found_folders");
-	g_tree_foreach(found_hierarchy, (GTraverseFunc)_ic_list_found_hierarchy_copy, found_folders);
+	g_tree_merge(found_folders, found_hierarchy, IST_SUBSEARCH_OR);
 
-	// write out all found folders
-	//
-	// this should free the remaining mailbox state infos
 	TRACE(TRACE_DEBUG,"writing out found_folders");
 	g_tree_foreach(found_folders, (GTraverseFunc)_ic_list_write_out_found_folder, self);
 
-	if (found_folders) g_tree_destroy(found_folders);
 	if (found_hierarchy) g_tree_destroy(found_hierarchy);
+	if (found_folders) g_tree_destroy(found_folders);
 	if (children) g_list_destroy(children);
 
 	if (! D->status) dbmail_imap_session_buff_printf(self, "%s OK %s completed\r\n", self->tag, self->command);

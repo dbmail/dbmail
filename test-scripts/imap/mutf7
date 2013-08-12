@@ -1,0 +1,23 @@
+state: auth
+
+# get the separator
+ok list "" ""
+* list () $sep $root
+
+ok create "$mailbox${sep}&BBoEOARXBDI-"
+ok create "$mailbox${sep}&BBoEOARXBDI-${sep}&BBwEMAQ5BDQEMAQ9-"
+ok create "$mailbox${sep}&BBoEOARXBDI-${sep}&BBcEPgQ7BD4EQgRW-"
+ok create "$mailbox${sep}&BBoEOARXBDI-${sep}&BBIEPgRABD4EQgQw-"
+
+ok list "" "$mailbox${sep}&BBoEOARXBDI-"
+* list () $sep "$mailbox${sep}&BBoEOARXBDI-"
+
+ok list "" "${mailbox}${sep}&BBoEOARXBDI-${sep}%"
+* list () $sep "$mailbox${sep}&BBoEOARXBDI-${sep}&BBwEMAQ5BDQEMAQ9-"
+* list () $sep "$mailbox${sep}&BBoEOARXBDI-${sep}&BBcEPgQ7BD4EQgRW-"
+* list () $sep "$mailbox${sep}&BBoEOARXBDI-${sep}&BBIEPgRABD4EQgQw-"
+
+ok status "$mailbox${sep}&BBoEOARXBDI-" (messages)
+* status "$mailbox${sep}&BBoEOARXBDI-" (messages 0)
+
+

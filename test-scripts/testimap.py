@@ -958,8 +958,8 @@ class testImapServer(unittest.TestCase):
 
         # create hierarchy
         base_name = "Test folder"
-        self.o.create(base_name)
         second_level = base_name + "/2012"
+        self.o.create(base_name)
         self.o.create(second_level)
         subfolders = ['02', '04', '09', '03', '05', '06']
         for i in subfolders:
@@ -980,7 +980,7 @@ class testImapServer(unittest.TestCase):
         self.assertEqual(
             [],
             [i for i in flags.split(" ") if i.lower() == '\\noselect'],
-            'noselect is not in attributes for ' + base_name)
+            'noselect is not in attributes for %s: [%s]' % (base_name, flags))
 
         # run a list command and check the second_level folder in the results
         result = self.o.list(base_name + "/", "%")
@@ -995,7 +995,8 @@ class testImapServer(unittest.TestCase):
         # check for the \Noselect error
         self.assertEqual([], [
             i for i in flags.split(" ") if i.lower() == '\\noselect'],
-            'noselect is not in attributes for ' + second_level)
+            'noselect is not in attributes for %s [%s]' % (
+                second_level, flags))
 
         # check whether all subfolders are in the list
         result = self.o.list(second_level + "/", "%")
