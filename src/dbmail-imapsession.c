@@ -1901,12 +1901,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 		self->ci->rbuff_size -= max;
 		if (self->ci->rbuff_size == 0) {
 			self->args_idx++; // move on to next token
-			TRACE(TRACE_DEBUG, "string literal complete. last-char [%d]", s[max-1]);
-			if (MATCH(self->command,"APPEND")) {
-				TRACE(TRACE_DEBUG,"break out to finalize");
-				goto finalize;
-			}
-
+			TRACE(TRACE_DEBUG, "string literal complete. last-char [%c]", s[max-1]);
 		}
 
 		return 0;
@@ -2047,8 +2042,9 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 							self->tag, self->command);
 					self->command_state = TRUE;
 				} else {
-					self->ci->rbuff_size = octets;
-					dbmail_imap_session_buff_printf(self, "+ OK\r\n");
+					self->ci->rbuff_size += octets;
+					if (*lastchar == '}')
+						dbmail_imap_session_buff_printf(self, "+ OK\r\n");
 				}
 				dbmail_imap_session_buff_flush(self);
 				return 0;
