@@ -323,6 +323,9 @@ static void reopen_logs_level(ServerConfig_T *conf, Trace_T level)
 	if (fstderr) fclose(fstderr);
 	if (fnull) fclose(fnull);
 
+	SetTraceLevel(conf->service_name);
+	config_get_timeout(conf, conf->service_name);
+
 	if (! (fstdout = freopen(conf->log, "a", stdout))) {
 		serr = errno;
 		TRACE(level, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
@@ -548,8 +551,10 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 	/* accept the active fd */
 	int len = sizeof(*caddr);
 
-	if (mainReload)
+	if (mainReload) {
+		config_read(configFile);
 		reopen_logs(server_conf);
+	}
 
 	if ((csock = accept(sock, NULL, NULL)) < 0) {
                 int serr=errno;
@@ -956,6 +961,7 @@ int server_mainloop(ServerConfig_T *config, const char *servicename)
 	return 0;
 }
 
+
 void server_config_load(ServerConfig_T * config, const char * const service)
 {
 	Field_T val, val_ssl;
@@ -981,26 +987,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 
 	config_get_logfiles(config, service);
 
-	/* read items: TIMEOUT */
-	config_get_value("TIMEOUT", service, val);
-	if (strlen(val) == 0) {
-		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
-		config->timeout = 300;
-	} else if ((config->timeout = atoi(val)) <= 30)
-		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]", config->timeout);
-
-	TRACE(TRACE_DEBUG, "timeout [%d] seconds", config->timeout);
-
-	/* read items: LOGIN_TIMEOUT */
-	config_get_value("LOGIN_TIMEOUT", service, val);
-	if (strlen(val) == 0) {
-		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
-		config->login_timeout = 60;
-	} else if ((config->login_timeout = atoi(val)) <= 10)
-		TRACE(TRACE_EMERG, "value for TIMEOUT is invalid: [%d]", config->login_timeout);
-
-	TRACE(TRACE_DEBUG, "login_timeout [%d] seconds",
-	      config->login_timeout);
+	config_get_timeout(config, service);
 
 	/* SOCKET */
 	config_get_value("SOCKET", service, val);

@@ -69,6 +69,7 @@ void SetTraceLevel(const char *service_name);
 
 void pidfile_create(const char *pidFile, pid_t pid);
 
+void config_get_timeout(ServerConfig_T *config, const char * const service);
 void config_get_logfiles(ServerConfig_T *config, const char * const service);
 
 char * config_get_pidfile(ServerConfig_T *config, const char *name);

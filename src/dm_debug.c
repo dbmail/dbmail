@@ -62,11 +62,22 @@ static void configure_stderr(const char *service_name)
 
 void configure_debug(const char *service_name, Trace_T trace_syslog, Trace_T trace_stderr)
 {
-	TRACE_SYSLOG = trace_syslog;
-	TRACE_STDERR = trace_stderr;
+	Trace_T old_syslog, old_stderr;
+	
+	old_syslog = TRACE_SYSLOG;
+	old_stderr = TRACE_STDERR;
 
 	configure_stderr(service_name?service_name:"DBMAIL");
 
+	TRACE_SYSLOG = trace_syslog;
+	TRACE_STDERR = trace_stderr;
+
+	if ((old_syslog != trace_syslog) || (old_stderr != trace_stderr)) {
+		TRACE(TRACE_INFO, "[%s] syslog [%d -> %d] stderr [%d -> %d]",
+				service_name?service_name:"DBMAIL", 
+				old_syslog, trace_syslog,
+				old_stderr, trace_stderr);
+	}
 }
 
 /* Make sure that these match Trace_T. */
