@@ -879,6 +879,7 @@ GList * dbmail_message_get_header_repeated(const DbmailMessage *self, const char
 			GMIME_OBJECT(self->content));
        
 	struct payload data;
+	memset(&data, 0, sizeof(struct payload));
 	data.header = header;
 	data.list = NULL;
 
@@ -1467,11 +1468,15 @@ static uint64_t _header_value_insert(Connection_T c, const char *value, const ch
 	ResultSet_T r; PreparedStatement_T s;
 	uint64_t id = 0;
 	char *frag;
+	size_t datesize = 0;
+
+	if (datefield)
+		datesize = strlen(datefield);
 
 	db_con_clear(c);
 
 	frag = db_returning("id");
-	if (datefield)
+	if (datesize)
 		s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue, sortfield, datefield) VALUES (?,?,?,?) %s", DBPFX, frag);
 	else
 		s = db_stmt_prepare(c, "INSERT INTO %sheadervalue (hash, headervalue, sortfield) VALUES (?,?,?) %s", DBPFX, frag);
@@ -1480,7 +1485,7 @@ static uint64_t _header_value_insert(Connection_T c, const char *value, const ch
 	db_stmt_set_str(s, 1, hash);
 	db_stmt_set_blob(s, 2, value, strlen(value));
 	db_stmt_set_str(s, 3, sortfield);
-	if (datefield)
+	if (datesize)
 		db_stmt_set_str(s, 4, datefield);
 
 	if (db_params.db_driver == DM_DRIVER_ORACLE) {
@@ -1685,15 +1690,14 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 		g_free(t);
 	}
 
+	memset(datefield, 0, sizeof(datefield));
 	if(isdate) {
 		int offset;
 		date = g_mime_utils_header_decode_date(value,&offset);
 		strftime(sortfield, CACHE_WIDTH, "%Y-%m-%d %H:%M:%S", gmtime(&date));
 
 		date += (offset * 36); // +0200 -> offset 200
-		memset(datefield, 0, sizeof(datefield));
 		strftime(datefield, 20,"%Y-%m-%d", gmtime(&date));
-
 		TRACE(TRACE_DEBUG,"Date is [%s] offset [%d], datefield [%s]",
 				value, offset, datefield);
 	}
