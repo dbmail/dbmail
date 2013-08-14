@@ -242,8 +242,8 @@ static void pop3_handle_input(void *arg)
 		return;
 
 	ci_cork(session->ci);
-	pop3(session, buffer);
-	ci_uncork(session->ci);
+	if (pop3(session, buffer) > 0)
+		ci_uncork(session->ci);
 }
 
 void pop3_cb_write(void *arg)
