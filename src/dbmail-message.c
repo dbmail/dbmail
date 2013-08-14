@@ -30,6 +30,7 @@ extern DBParam_T db_params;
 #define DBMAIL_TEMPMBOX "INBOX"
 #define THIS_MODULE "message"
 
+
 /*
  * used for debugging message de/re-construction
  */
@@ -1000,7 +1001,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	 * _mime_retrieve failed. Fall back to messageblks
 	 * interface
 	 */
-	TRACE(TRACE_WARNING, "[%" PRIu64 "] Deprecation warning. Please migrate the old messageblks using dbmail-util -M",
+	TRACE(TRACE_INFO, "[%" PRIu64 "] Deprecation warning. Please migrate the old messageblks using dbmail-util -M",
 			dbmail_message_get_physid(store));
 	self = store;
 
