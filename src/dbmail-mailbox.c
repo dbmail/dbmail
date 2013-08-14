@@ -782,7 +782,12 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(search_keys[*idx + 2], -1);
 		value->type = IST_HDR;
-		strncpy(value->hdrfld, p_string_str(search_keys[*idx + 1]), MIME_FIELD_MAX);
+
+		const char *hdr = p_string_str(search_keys[*idx + 1]);
+		char *hdrfld = g_ascii_strdown(hdr, strlen(hdr));
+		strncpy(value->hdrfld, hdrfld, MIME_FIELD_MAX);
+		g_free(hdrfld);
+
 		strncpy(value->search, p_string_str(search_keys[*idx + 2]), MAX_SEARCH_LEN);
 		(*idx) += 3;
 
