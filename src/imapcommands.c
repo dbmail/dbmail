@@ -1705,12 +1705,12 @@ int _dm_imapsession_get_ids(ImapSession *self, const char *set)
 	found = ( self->ids && (g_tree_nnodes(self->ids) > 0) );
 
 	if ( (! self->use_uid) && (! found)) {
-		dbmail_imap_session_buff_printf(self, "%s BAD invalid sequence\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid sequence in msn set [%s]\r\n", self->tag, set);
 		return DM_EGENERAL;
 	}
 	
 	if (self->use_uid && (! self->ids)) { // empty tree IS valid
-		dbmail_imap_session_buff_printf(self, "%s BAD invalid sequence\r\n", self->tag);
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid sequence in uid set [%s]\r\n", self->tag, set);
 		return DM_EGENERAL;
 	}
 
@@ -1789,7 +1789,6 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 
 	uint64_t *msn;
 	MessageInfo *msginfo = NULL;
-	char *s;
 	int i;
 	int changed = 0;
 
@@ -1857,13 +1856,13 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 		}
 		if (! cmd->silent) {
 			GList *sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
-			s = dbmail_imap_plist_as_string(sublist);
+			char *s = dbmail_imap_plist_as_string(sublist);
 			g_list_destroy(sublist);
 			if (needspace) dbmail_imap_session_buff_printf(self, " ");
 			dbmail_imap_session_buff_printf(self, "FLAGS %s", s);
+			g_free(s);
 		}
-		dbmail_imap_session_buff_printf(self, ")\r\n", s);
-		g_free(s);
+		dbmail_imap_session_buff_printf(self, ")\r\n");
 	}
 
 	return FALSE;

@@ -49,7 +49,6 @@ extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
 extern volatile sig_atomic_t alarm_occured;
 
-extern int selfpipe[2];
 extern GAsyncQueue *queue;
 extern ServerConfig_T *server_conf;
 
@@ -1076,7 +1075,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 	if (self->mailbox->condstore) {
 		SEND_SPACE;
 		dbmail_imap_session_buff_printf(self, "MODSEQ (%" PRIu64 ")",
-				msginfo->seq);
+				msginfo->seq?msginfo->seq:1);
 	}
 	if (self->fi->getInternalDate) {
 		SEND_SPACE;

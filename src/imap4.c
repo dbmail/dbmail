@@ -31,7 +31,6 @@
 /* max number of BAD/NO responses */
 #define MAX_FAULTY_RESPONSES 5
 
-extern int selfpipe[2];
 extern ServerConfig_T *server_conf;
 extern GAsyncQueue *queue;
 extern struct event_base *evbase;
