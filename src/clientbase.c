@@ -348,7 +348,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 		left = WBUF_LEN;
 	}
 
-	return 0;
+	return 1;
 }
 
 #define IBUFLEN 65535
