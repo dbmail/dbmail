@@ -11,3 +11,10 @@ bin/buildout: bin/python
 
 bin/python:
 	virtualenv .
+
+test: buildout
+	(cd ../ && CK_FORK=no make check)
+
+
+.PHONY: test
+
