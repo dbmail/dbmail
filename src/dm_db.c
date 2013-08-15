@@ -249,6 +249,18 @@ int db_connect(void)
 	db_connected = 3;
 	db_con_close(c);
 
+	if (! db_params.db_driver) {
+		const char *protocol = URL_getProtocol(dburi);
+		if (MATCH(protocol, "sqlite"))
+			db_params.db_driver = DM_DRIVER_SQLITE;
+		else if (MATCH(protocol, "mysql"))
+			db_params.db_driver = DM_DRIVER_MYSQL;
+		else if (MATCH(protocol, "postgresql"))
+			db_params.db_driver = DM_DRIVER_POSTGRESQL;
+		else if (MATCH(protocol, "oracle"))
+			db_params.db_driver = DM_DRIVER_ORACLE;
+	}
+
 	return db_check_version();
 }
 
@@ -621,7 +633,7 @@ static const char * db_get_sqlite_sql(sql_fragment frag)
 			return "";
 		break;
 		case SQL_SENSITIVE_LIKE:
-			return "REGEXP";
+			return "LIKE";
 		break;
 		case SQL_INSENSITIVE_LIKE:
 			return "LIKE";
@@ -819,18 +831,6 @@ static const char * db_get_oracle_sql(sql_fragment frag)
 
 const char * db_get_sql(sql_fragment frag)
 {
-	if (! db_params.db_driver) {
-		const char *protocol = URL_getProtocol(dburi);
-		if (MATCH(protocol, "sqlite"))
-			db_params.db_driver = DM_DRIVER_SQLITE;
-		else if (MATCH(protocol, "mysql"))
-			db_params.db_driver = DM_DRIVER_MYSQL;
-		else if (MATCH(protocol, "postgresql"))
-			db_params.db_driver = DM_DRIVER_POSTGRESQL;
-		else if (MATCH(protocol, "oracle"))
-			db_params.db_driver = DM_DRIVER_ORACLE;
-	}
-
 	switch(db_params.db_driver) {
 		case DM_DRIVER_SQLITE:
 			return db_get_sqlite_sql(frag);
