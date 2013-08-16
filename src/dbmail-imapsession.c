@@ -1697,7 +1697,7 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 {
 	if (self->state == state)
-		return 0;
+		return 1;
 
 	switch (state) {
 		case CLIENTSTATE_ERROR:
