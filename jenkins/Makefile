@@ -23,6 +23,7 @@ test: buildout
 	bin/py ../test-scripts/testlmtp.py
 	timeout 5m bin/py ../test-scripts/loadimap.py
 	timeout 5m bin/py ../test-scripts/loadpop.py
+	bin/supervisorctl shutdown || true
 
 
 .PHONY: test
