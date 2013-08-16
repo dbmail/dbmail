@@ -1639,7 +1639,7 @@ int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 {
 	TRACE(TRACE_DEBUG,"state [%d]", state);
 	if (self->state == state)
-		return 0;
+		return 1;
 
 	switch (state) {
 		case CLIENTSTATE_ERROR:

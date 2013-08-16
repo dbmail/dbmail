@@ -160,12 +160,10 @@ static void imap_session_bailout(ImapSession *session)
 {
 	TRACE(TRACE_DEBUG,"[%p] state [%d] ci[%p]", session, session->state, session->ci);
 
-	if (session->state == CLIENTSTATE_QUIT_QUEUED)
-		return;
-
-	dbmail_imap_session_set_state(session,CLIENTSTATE_QUIT_QUEUED);
-	assert(session && session->ci);
-	dm_queue_push(imap_cleanup_deferred, session, NULL);
+	if (! dbmail_imap_session_set_state(session, CLIENTSTATE_QUIT_QUEUED)) {
+		assert(session && session->ci);
+		dm_queue_push(imap_cleanup_deferred, session, NULL);
+	}
 }
 
 void socket_write_cb(int fd, short what, void *arg)

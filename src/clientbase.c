@@ -57,6 +57,15 @@ static void dm_tls_error(void)
 	TRACE(TRACE_INFO, "%s", ERR_error_string(e, NULL));
 }
 
+static size_t client_wbuf_len(ClientBase_T *client)
+{
+	size_t len = 0;
+	if (client->write_buffer)
+		len = p_string_len(client->write_buffer) - client->write_buffer_offset;
+	return len;
+}
+
+
 static void client_wbuf_clear(ClientBase_T *client)
 {
 	if (client->write_buffer) {
@@ -257,10 +266,9 @@ int ci_starttls(ClientBase_T *client)
 	return DM_SUCCESS;
 }
 
-#define WBUF_LEN p_string_len(client->write_buffer) - client->write_buffer_offset
 void ci_write_cb(ClientBase_T *client)
 {
-	uint64_t rest = WBUF_LEN;
+	uint64_t rest = client_wbuf_len(client);
 	int result = 0;
 	if (rest) {
 	       result = ci_write(client,NULL);
@@ -270,6 +278,9 @@ void ci_write_cb(ClientBase_T *client)
 			       break;
 		       case 1:
 			       ci_uncork(client);
+			       break;
+		       case -1:
+			       client_wbuf_clear(client);
 			       break;
 	       }
 	}
@@ -305,7 +316,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 		after = p_string_len(client->write_buffer);
 	}
 
-	left = WBUF_LEN;
+	left = client_wbuf_len(client);
 	while (left > 0) {
 		n = left;
 		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
@@ -345,7 +356,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 			client->tls_wbuf_n = 0;
 		}
 
-		left = WBUF_LEN;
+		left = client_wbuf_len(client);
 	}
 
 	return 1;
