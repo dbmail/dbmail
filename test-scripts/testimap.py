@@ -564,12 +564,7 @@ class testImapServer(unittest.TestCase):
         """
         self.o.logout()
         result = self.setUp("testuser1", "test")
-        self.assertEquals(result,
-                          ('OK',
-                           ['[CAPABILITY IMAP4rev1 ACL '
-                            'RIGHTS=texk NAMESPACE CHILDREN SORT '
-                            'QUOTA THREAD=ORDEREDSUBJECT UNSELECT '
-                            'IDLE STARTTLS ID] User testuser1 authenticated']))
+        self.assertEquals(result[0], 'OK')
         self.failUnlessRaises(Exception, self.setUp, "testuser1", "blah")
 
     def testLogin_cram_md5(self):
@@ -582,12 +577,7 @@ class testImapServer(unittest.TestCase):
         o = getsock()
         o.debug = DEBUG
         result = o.login_cram_md5("testuser1", "test")
-        self.assertEquals(result,
-                          ('OK',
-                           ['[CAPABILITY IMAP4rev1 ACL '
-                            'RIGHTS=texk NAMESPACE CHILDREN SORT '
-                            'QUOTA THREAD=ORDEREDSUBJECT UNSELECT '
-                            'IDLE STARTTLS ID] User testuser1 authenticated']))
+        self.assertEquals(result[0], 'OK')
         o = getsock()
         o.debug = DEBUG
         self.failUnlessRaises(Exception, o.login_cram_md5,

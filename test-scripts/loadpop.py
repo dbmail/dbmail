@@ -1,5 +1,16 @@
 #!/usr/bin/python
 
+import os
+import poplib
+import imaplib
+import thread
+import time
+import sys
+import mailbox
+import random
+from optparse import OptionParser
+
+
 # default number of concurrent clients to create
 CLIENTS = 20
 
@@ -7,7 +18,7 @@ CLIENTS = 20
 MESSAGES = 100
 
 # default mailbox to append from
-MAILBOX = "testbox"
+MAILBOX = os.path.join(os.path.dirname(__file__), "testbox")
 
 # username
 USERNAME = "testuser1"
@@ -17,15 +28,6 @@ PASSWORD = "test"
 
 # number of messages to send per session
 RECONNECT = 5
-
-import poplib
-import imaplib
-import thread
-import time
-import sys
-import mailbox
-import random
-from optparse import OptionParser
 
 DEBUG = False
 
@@ -114,7 +116,7 @@ if __name__ == '__main__':
                       default=CLIENTS)
     parser.add_option("-m", "--mailbox", dest="MAILBOX",
         help="mailbox to feed to dbmail-deliver",
-                      default=None)
+                      default=MAILBOX)
     parser.add_option("-n", "--messages", dest="MESSAGES",
                       default=MESSAGES,
                       help="number of messages to fetch [default: %default]")

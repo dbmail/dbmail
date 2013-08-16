@@ -1,5 +1,15 @@
 #!/usr/bin/python
 
+import os
+import smtplib
+import thread
+import time
+import sys
+import mailbox
+import string
+from optparse import OptionParser
+
+
 # default host
 HOST = "localhost"
 
@@ -13,21 +23,13 @@ CLIENTS = 20
 MESSAGES = 100
 
 # default mailbox
-MAILBOX = "testbox"
+MAILBOX = os.path.join(os.path.dirname(__file__), "testbox")
 
 # username
 USERNAME = "testuser1"
 
 # number of messages to send per session
 RECONNECT = 5
-
-import smtplib
-import thread
-import time
-import sys
-import mailbox
-import string
-from optparse import OptionParser
 
 DEBUG = False
 
