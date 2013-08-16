@@ -4,11 +4,11 @@ default: buildout
 buildout: bin/buildout
 	bin/buildout
 
-bin/buildout: bin/python
+bin/buildout: bin/python2.7
 	bin/python ./bootstrap.py
 
-bin/python:
-	virtualenv .
+bin/python2.7:
+	virtualenv --python=python2.7 --clear .
 
 test: buildout
 	bin/supervisorctl shutdown || true
