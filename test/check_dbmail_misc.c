@@ -53,14 +53,12 @@ void setup(void)
 	GetDBParams();
 	db_connect();
 	auth_connect();
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 }
 
 void teardown(void)
 {
 	db_disconnect();
 	auth_disconnect();
-	g_mime_shutdown();
 }
 
 
@@ -592,10 +590,12 @@ Suite *dbmail_misc_suite(void)
 int main(void)
 {
 	int nf;
+	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 	Suite *s = dbmail_misc_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
+	g_mime_shutdown();
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -71,7 +71,6 @@ void setup(void)
 	GetDBParams();
 	db_connect();
 	auth_connect();
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 	testboxid = get_mailbox_id(TESTBOX);
 }
 
@@ -156,9 +155,11 @@ int main(void)
 	int nf;
 	Suite *s = dbmail_common_suite();
 	SRunner *sr = srunner_create(s);
+	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
+	g_mime_shutdown();
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 	

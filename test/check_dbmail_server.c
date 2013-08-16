@@ -53,13 +53,11 @@ void setup(void)
 	configure_debug(NULL,255,0);
 	GetDBParams();
 	db_connect();
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 }
 
 void teardown(void)
 {
 	db_disconnect();
-	g_mime_shutdown();
 }
 #define X(a,b,c,d) fail_unless(dm_sock_compare((b),(c),(d))==(a),"dm_sock_compare failed")
 #define Y(a,b,c) fail_unless(dm_sock_score((b),(c))==(a),"dm_sock_score failed")
@@ -109,11 +107,13 @@ Suite *dbmail_server_suite(void)
 int main(void)
 {
 	int nf;
+	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 	Suite *s = dbmail_server_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
+	g_mime_shutdown();
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 	
