@@ -20,9 +20,9 @@ test: buildout
 	timeout 300 imaptest user=testuser1 pass=test port=10143 host=localhost test=../test-scripts/imap
 	timeout 300 bin/py ../test-scripts/testimap.py -v
 	timeout 300 bin/py ../test-scripts/testpop.py -v
-	timeout 300 bin/py ../test-scripts/testlmtp.py
-	timeout 300 bin/py ../test-scripts/loadimap.py
-	timeout 300 bin/py ../test-scripts/loadpop.py
+	#timeout 300 bin/py ../test-scripts/testlmtp.py
+	#timeout 300 bin/py ../test-scripts/loadimap.py
+	#timeout 300 bin/py ../test-scripts/loadpop.py
 	bin/supervisorctl shutdown || true
 
 
