@@ -57,7 +57,7 @@ static void dm_tls_error(void)
 	TRACE(TRACE_INFO, "%s", ERR_error_string(e, NULL));
 }
 
-static size_t client_wbuf_len(ClientBase_T *client)
+size_t client_wbuf_len(ClientBase_T *client)
 {
 	size_t len = 0;
 	if (client->write_buffer)
@@ -296,15 +296,11 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	char *s;
 	char buf[40];
 
-	if (client->client_state & CLIENT_ERR) {
-		TRACE(TRACE_DEBUG, "called while clientbase in error state");
-		return -1;
-	}
+	if (! (client && client->write_buffer))
+		return -1; // stale
 
-	if (! (client && client->write_buffer)) {
-		TRACE(TRACE_DEBUG, "called while clientbase is stale");
-		return -1;
-	}
+	if (client->client_state & CLIENT_ERR)
+		return -1; // disconnected
 
 	if (msg) {
 		before = p_string_len(client->write_buffer);

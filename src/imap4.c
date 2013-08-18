@@ -139,8 +139,8 @@ void imap_cleanup_deferred(gpointer data)
 	ImapSession *session = (ImapSession *)D->session;
 	ClientBase_T *ci = session->ci;
 
-	if ((p_string_len(ci->write_buffer) - ci->write_buffer_offset) > 0) {
-		ci_write_cb(session->ci);
+	if (client_wbuf_len(ci) && (! (ci->client_state & CLIENT_ERR))) {
+		ci_write_cb(ci);
 		dm_queue_push(imap_cleanup_deferred, session, NULL);
 		return;
 	}

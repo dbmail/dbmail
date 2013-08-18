@@ -36,6 +36,8 @@ void ci_authlog_init(ClientBase_T *, const char *, const char *, const char *);
 void ci_write_cb(ClientBase_T *);
 int ci_write(ClientBase_T *, char *, ...);
 
+size_t client_wbuf_len(ClientBase_T *);
+
 void ci_read_cb(ClientBase_T *);
 int ci_read(ClientBase_T *, char *, size_t);
 int ci_readln(ClientBase_T *, char *);
