@@ -222,6 +222,8 @@ static void pop3_close(ClientSession_T *session)
 	} else {
 		ci_write(ci, "+OK see ya later\r\n");
 	}
+
+	client_session_bailout(&session);
 }
 
 
