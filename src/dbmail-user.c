@@ -428,18 +428,18 @@ int do_aliases(const uint64_t useridnr,
 	GList *current_aliases, *matching_aliases, *matching_alias_del;
 
 	if (no_to_all) {
-		qprintf("Pretending to remove aliases for user id number [%" PRIu64 "]\n",
-			useridnr);
 		if (alias_del) {
+			qprintf("Pretending to remove aliases for user id number [%" PRIu64 "]\n",
+				useridnr);
 			alias_del = g_list_first(alias_del);
 			while (alias_del) {
 				qprintf("  [%s]\n", (char *)alias_del->data);
 				alias_del = g_list_next(alias_del);
 			}
 		}
-		qprintf("Pretending to add aliases for user id number [%" PRIu64 "]\n",
-			useridnr);
 		if (alias_add) {
+			qprintf("Pretending to add aliases for user id number [%" PRIu64 "]\n",
+				useridnr);
 			alias_add = g_list_first(alias_add);
 			while (alias_add) {
 				qprintf("  [%s]\n", (char *)alias_add->data);
@@ -521,6 +521,32 @@ int do_aliases(const uint64_t useridnr,
 	return result;
 }
 
+int do_spasswd(const uint64_t useridnr, const char * const spasswd)
+{
+	if (no_to_all) {
+		qprintf("Pretending to set security password for user [%" PRIu64 "] to [%s]\n", useridnr, spasswd);
+		return 1;
+	}
+	return db_user_set_security_password(useridnr, spasswd);
+}
+
+int do_saction(const uint64_t useridnr, long int saction)
+{
+	if (no_to_all) {
+		qprintf("Pretending to set security action for user [%" PRIu64 "] to [%ld]\n", useridnr, saction);
+		return 1;
+	}
+	return db_user_set_security_action(useridnr, saction);
+}
+
+int do_enable(const uint64_t useridnr, bool enable)
+{
+	if (no_to_all) {
+		qprintf("Pretending to %s authentication for user [%" PRIu64 "]\n", enable?"enable":"disable", useridnr);
+		return 1;
+	}
+	return db_user_set_active(useridnr, enable);
+}
 
 int do_delete(const uint64_t useridnr, const char * const name)
 {
@@ -708,7 +734,7 @@ int do_empty(uint64_t useridnr)
 		qprintf("Emptying mailbox... ");
 		fflush(stdout);
         
-		result = db_empty_mailbox(useridnr);
+		result = db_empty_mailbox(useridnr, 1);
 		if (result != 0) {
 			qerrorf("Error. Please check the log.\n");
 		} else {

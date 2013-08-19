@@ -38,6 +38,7 @@ const char *imap_flag_desc[] = {
 const char *imap_flag_desc_escaped[] = {
 	"\\Seen", "\\Answered", "\\Deleted", "\\Flagged", "\\Draft", "\\Recent" };
 
+extern ServerConfig_T *server_conf;
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
@@ -900,16 +901,19 @@ static int check_upgrade_step(Connection_T c, int from_version, int to_version)
 			if (to_version == 32001) query = DM_SQLITE_32001;
 			if (to_version == 32002) query = DM_SQLITE_32002;
 			if (to_version == 32003) query = DM_SQLITE_32003;
+			if (to_version == 32004) query = DM_SQLITE_32004;
 		break;
 		case DM_DRIVER_MYSQL:
 			if (to_version == 32001) query = DM_MYSQL_32001;
 			if (to_version == 32002) query = DM_MYSQL_32002;
 			if (to_version == 32003) query = DM_MYSQL_32003;
+			if (to_version == 32004) query = DM_MYSQL_32004;
 		break;
 		case DM_DRIVER_POSTGRESQL:
 			if (to_version == 32001) query = DM_PGSQL_32001;
 			if (to_version == 32002) query = DM_PGSQL_32002;
 			if (to_version == 32003) query = DM_MYSQL_32003;
+			if (to_version == 32004) query = DM_MYSQL_32004;
 		break;
 		default:
 			TRACE(TRACE_WARNING, "Migrations not supported for database driver");
@@ -987,12 +991,14 @@ int db_check_version(void)
 			break;
 		if ((ok = check_upgrade_step(c, 32001, 32003)) == DM_EQUERY)
 			break;
+		if ((ok = check_upgrade_step(c, 32001, 32004)) == DM_EQUERY)
+			break;
 		break;
 	} while (true);
 
 	db_con_close(c);
 
-	if (ok == 32003) {
+	if (ok == 32004) {
 		TRACE(TRACE_DEBUG, "Schema check successful");
 	} else {
 		TRACE(TRACE_WARNING,"Schema version incompatible [%d]. Bailing out",
@@ -1398,7 +1404,7 @@ int db_cleanup(void)
 	return db_do_cleanup(DB_TABLENAMES, DB_NTABLES);
 }
 
-int db_empty_mailbox(uint64_t user_idnr)
+int db_empty_mailbox(uint64_t user_idnr, int only_empty)
 {
 	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	GList *mboxids = NULL;
@@ -1433,7 +1439,7 @@ int db_empty_mailbox(uint64_t user_idnr)
 	mboxids = g_list_first(mboxids);
 	while (mboxids) {
 		id = mboxids->data;
-		if (db_delete_mailbox(*id, 1, 1)) {
+		if (db_delete_mailbox(*id, only_empty, 1)) {
 			TRACE(TRACE_ERR, "error emptying mailbox [%" PRIu64 "]", *id);
 			result = -1;
 			break;
@@ -1836,10 +1842,10 @@ int db_delete_mailbox(uint64_t mailbox_idnr, int only_empty, int update_curmail_
 	if (! mailbox_is_writable(mailbox_idnr))
 		return DM_EGENERAL;
 
-	if (! mailbox_empty(mailbox_idnr))
-		return DM_EGENERAL;
-
-	if (! only_empty) {
+	if (only_empty) {
+		if (! mailbox_empty(mailbox_idnr))
+			return DM_EGENERAL;
+	} else {
 		if (! mailbox_delete(mailbox_idnr))
 			return DM_EGENERAL;
 	}
@@ -3414,6 +3420,343 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 	return DM_SUCCESS;
 
 }
+
+bool db_user_active(uint64_t user_idnr)
+{
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
+	volatile int active = 1;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "SELECT active FROM %susers WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_u64(s, 1, user_idnr);
+		r = db_stmt_query(s);
+		if (db_result_next(r))
+			active = db_result_get_int(r, 0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return active ? true : false;
+}
+
+int db_user_set_active(uint64_t user_idnr, bool active)
+{
+	Connection_T c; PreparedStatement_T s;
+	volatile int t = DM_SUCCESS;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, 
+				"UPDATE %susers SET active = ? WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_int(s, 1, (int)active);
+		db_stmt_set_u64(s, 2, user_idnr);
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return t;
+}
+
+int db_user_get_security_action(uint64_t user_idnr)
+{
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
+	volatile int action = 0;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "SELECT saction FROM %susers WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_u64(s, 1, user_idnr);
+		r = db_stmt_query(s);
+		if (db_result_next(r))
+			action = db_result_get_int(r, 0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return action;
+}
+
+int db_user_set_security_action(uint64_t user_idnr, long int action)
+{
+	Connection_T c; PreparedStatement_T s;
+	volatile int t = DM_SUCCESS;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, 
+				"UPDATE %susers SET saction = ? WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_int(s, 1, (int)action);
+		db_stmt_set_u64(s, 2, user_idnr);
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return t;
+}
+
+int db_user_set_security_password(uint64_t user_idnr, const char *password)
+{
+	Connection_T c; PreparedStatement_T s;
+	volatile int t = DM_SUCCESS;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, 
+				"UPDATE %susers SET spasswd = ? WHERE user_idnr = ?",
+				DBPFX);
+		db_stmt_set_str(s, 1, password);
+		db_stmt_set_u64(s, 2, user_idnr);
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	return t;
+}
+
+int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr, const char *password)
+{
+	int is_validated = 0;
+	char salt[13], cryptres[35];
+	int t = FALSE;
+	const char *dbpass, *encode;
+	char hashstr[FIELDSIZE];
+	Connection_T c; ResultSet_T r;
+
+	memset(salt,0,sizeof(salt));
+	memset(cryptres,0,sizeof(cryptres));
+	memset(hashstr, 0, sizeof(hashstr));
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT %s, encryption_type FROM %susers WHERE user_idnr = %" PRIu64 "",
+			       	pwfield, DBPFX, *user_idnr);
+		if (db_result_next(r)) {
+			dbpass = db_result_get(r, 0);
+			encode = db_result_get(r, 1);
+			t = TRUE;
+		} else {
+			t = FALSE;
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (t == DM_EQUERY)
+		return t;
+	
+	if (! t) return FALSE;
+
+	if (strcasecmp(encode, "") == 0) {
+		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
+		if (ci && ci->auth) // CRAM-MD5 
+			is_validated = Cram_verify(ci->auth, dbpass);
+		else 
+			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
+        }
+
+	if (strcasecmp(encode, "crypt") == 0) {
+		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
+		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "md5") == 0) {
+		/* get password */
+		if (strncmp(dbpass, "$1$", 3)) {
+			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
+			dm_md5(password, hashstr);
+			is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+		} else {
+			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
+			strncpy(salt, dbpass, 12);
+			strncpy(cryptres, (char *) crypt(password, dbpass), 34);
+			TRACE(TRACE_DEBUG, "salt   : %s", salt);
+			TRACE(TRACE_DEBUG, "hash   : %s", dbpass);
+			TRACE(TRACE_DEBUG, "crypt(): %s", cryptres);
+			is_validated = (strncmp(dbpass, cryptres, 34) == 0) ? 1 : 0;
+		}
+	} else if (strcasecmp(encode, "md5sum") == 0) {
+		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
+		dm_md5(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "md5base64") == 0) {
+		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
+		dm_md5_base64(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "whirlpool") == 0) {
+		TRACE(TRACE_DEBUG, "validating using WHIRLPOOL hash comparison");
+		dm_whirlpool(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "sha512") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-512 hash comparison");
+		dm_sha512(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "sha256") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-256 hash comparison");
+		dm_sha256(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 64) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "sha1") == 0) {
+		TRACE(TRACE_DEBUG, "validating using SHA-1 hash comparison");
+		dm_sha1(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
+	} else if (strcasecmp(encode, "tiger") == 0) {
+		TRACE(TRACE_DEBUG, "validating using TIGER hash comparison");
+		dm_tiger(password, hashstr);
+		is_validated = (strncmp(hashstr, dbpass, 48) == 0) ? 1 : 0;
+	}
+
+	if (is_validated)
+		db_user_log_login(*user_idnr);
+	
+	return (is_validated ? 1 : 0);
+}
+
+int db_user_delete_messages(uint64_t user_idnr, char *flags)
+{
+	int flagcount = 0;
+	int i = 0, j = 0;
+	char *flag;
+	char **parts;
+	GList *keywords = NULL;
+	int sysflags[IMAP_NFLAGS];
+	String_T query = NULL;
+	Mempool_T pool = NULL;
+	Connection_T c; PreparedStatement_T st;
+
+	memset(sysflags, 0, sizeof(sysflags));
+	parts = g_strsplit(flags, " ", 0);
+	while ((flag = parts[i++])) {
+		for (j = 0; j < IMAP_NFLAGS; j++) {
+			if (MATCH(flag, imap_flag_desc_escaped[j])) {
+				sysflags[j] = 1;
+				flagcount++;
+				break;
+			}
+		}
+		if (j == IMAP_NFLAGS) {
+			keywords = g_list_append(keywords, g_strdup(flag));
+			flagcount++;
+		}
+	}
+
+	if (! flagcount)
+		return 0;
+
+	pool = mempool_open();
+	query = p_string_new(pool, "");
+	p_string_printf(query, "UPDATE %smessages SET status=%d "
+			"WHERE message_idnr IN ("
+			"SELECT m.message_idnr FROM %smessages m "
+			"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
+			"LEFT OUTER JOIN %skeywords k ON k.message_idnr=m.message_idnr "
+			"WHERE b.owner_idnr=? AND status IN (%d,%d) AND (1=0",
+			DBPFX, MESSAGE_STATUS_DELETE, DBPFX, DBPFX, DBPFX,
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+
+
+	for (j = 0; j < IMAP_NFLAGS; j++) {
+		if (! sysflags[j])
+			continue;
+		p_string_append_printf(query, " OR m.%s=1", db_flag_desc[j]);
+	}
+
+	keywords = g_list_first(keywords);
+	while (keywords) {
+		p_string_append_printf(query, " OR lower(k.keyword)=lower(?)");
+		if (! g_list_next(keywords))
+			break;
+		keywords = g_list_next(keywords);
+	}
+
+	p_string_append(query, "))");
+
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		st = db_stmt_prepare(c, p_string_str(query));
+		db_stmt_set_u64(st, 1, user_idnr);
+		i = 2;
+		keywords = g_list_first(keywords);
+		while (keywords) {
+			char *label = (char *)keywords->data;
+			db_stmt_set_str(st, i++, label);
+			if (! g_list_next(keywords))
+				break;
+			keywords = g_list_next(keywords);
+		}
+		db_stmt_exec(st);
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		db_rollback_transaction(c);
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	p_string_free(query, TRUE);
+	g_list_destroy(keywords);
+	mempool_close(&pool);
+
+	return 0;
+}
+
+int db_user_security_trigger(uint64_t user_idnr)
+{
+	volatile uint64_t result = 0;
+	uint64_t action = 0;
+	char *flags = NULL;
+	Connection_T c; ResultSet_T r; PreparedStatement_T s;
+	config_get_security_actions(server_conf);
+
+	assert(user_idnr);
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, "SELECT saction FROM %susers WHERE user_idnr = ?", DBPFX);
+		db_stmt_set_u64(s, 1, user_idnr);
+		r = db_stmt_query(s);
+		if (db_result_next(r))
+			result = db_result_get_u64(r, 0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (! result) return 0;
+	action = result;
+
+	flags = g_tree_lookup(server_conf->security_actions, &action);
+
+	if (flags) {
+		TRACE(TRACE_DEBUG, "Found: user_idnr [%" PRIu64 "] security_action [%" PRIu64 "] flags [%s]",
+				user_idnr, action, flags);
+	}
+
+
+	if (action == 1) {
+		db_empty_mailbox(user_idnr, 0);
+	} else if (flags) {
+		db_user_delete_messages(user_idnr, flags);
+		dm_quota_rebuild_user(user_idnr);
+	} else {
+		TRACE(TRACE_INFO, "NotFound: user_idnr [%" PRIu64 "] security_action [%" PRIu64 "]",
+				user_idnr, action);
+	}
+
+	return 0;
+}
+
 int db_user_exists(const char *username, uint64_t * user_idnr) 
 {
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;

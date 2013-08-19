@@ -336,7 +336,7 @@ int db_do_cleanup(const char **tables, int num_tables);
 *      - -1 on database failure
 *      - 0 on success
 */
-int db_empty_mailbox(uint64_t user_idnr);
+int db_empty_mailbox(uint64_t user_idnr, int only_empty);
 
 /**
  * \brief fetch the size of a mailbox
@@ -742,6 +742,16 @@ int char2date_str(const char *date, Field_T *frag);
 /* 
  * db-user accessors
  */
+
+bool db_user_active(uint64_t user_idnr);
+int db_user_set_active(uint64_t user_idnr, bool active);
+
+int db_user_get_security_action(uint64_t user_idnr);
+int db_user_set_security_action(uint64_t user_idnr, long int action);
+int db_user_set_security_password(uint64_t user_idnr, const char *password);
+
+int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr, const char *password);
+int db_user_security_trigger(uint64_t user_idnr);
 
 int db_user_exists(const char *username, uint64_t * user_idnr);
 int db_user_create_shadow(const char *username, uint64_t * user_idnr);

@@ -669,7 +669,8 @@ static void db_getmailbox_keywords(T M, Connection_T c)
 			"SELECT DISTINCT(keyword) FROM %skeywords k "
 			"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 			"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
-			"WHERE b.mailbox_idnr=?", DBPFX, DBPFX, DBPFX);
+			"WHERE b.mailbox_idnr=? AND m.status IN (%d,%d)", 
+			DBPFX, DBPFX, DBPFX, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 	db_stmt_set_u64(stmt, 1, M->id);
 	r = db_stmt_query(stmt);
 

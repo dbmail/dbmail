@@ -297,20 +297,14 @@ int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 	return db_change_mailboxsize(user_idnr, new_size);
 }
 
+
 int auth_validate(ClientBase_T *ci, const char *username, const char *password, uint64_t * user_idnr)
 {
-	int is_validated = 0;
-	char salt[13], cryptres[35], real_username[DM_USERNAME_LEN];
-	char *dbpass = NULL, *encode = NULL;
-	char hashstr[FIELDSIZE];
+	char real_username[DM_USERNAME_LEN];
 	const char *tuser;
-	int result, t = FALSE;
-	C c; R r;
+	int result;
 
-	memset(salt,0,sizeof(salt));
-	memset(cryptres,0,sizeof(cryptres));
 	memset(real_username,0,sizeof(real_username));
-	memset(hashstr, 0, sizeof(hashstr));
 
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
@@ -341,100 +335,19 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 	if (! auth_user_exists(real_username, user_idnr)) 
 		return FALSE;
 
-	c = db_con_get();
-	TRY
-		r = db_query(c, "SELECT passwd, encryption_type FROM %susers WHERE user_idnr = %" PRIu64 "", DBPFX, *user_idnr);
-		if (db_result_next(r)) {
-			dbpass = g_strdup(db_result_get(r,0));
-			encode = g_strdup(db_result_get(r,1));
-			t = TRUE;
-		} else {
-			t = FALSE;
-		}
-	CATCH(SQLException)
-		LOG_SQLERROR;
-		t = DM_EQUERY;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-
-	if (t == DM_EQUERY) {
-		g_free(dbpass);
-		g_free(encode);
-		return t;
-	}
-	
-	if (! t) return FALSE;
-
-	if (strcasecmp(encode, "") == 0) {
-		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
-		if (ci && ci->auth) // CRAM-MD5 
-			is_validated = Cram_verify(ci->auth, dbpass);
-		else 
-			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
-	} else if (username == NULL || password == NULL) {
-		g_free(dbpass);
-		g_free(encode);		
+	if (! db_user_active(*user_idnr))
 		return FALSE;
-        }
 
-	if (strcasecmp(encode, "crypt") == 0) {
-		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
-		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "md5") == 0) {
-		/* get password */
-		if (strncmp(dbpass, "$1$", 3)) {
-			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-			dm_md5(password, hashstr);
-			is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-		} else {
-			TRACE(TRACE_DEBUG, "validating using MD5 hash comparison");
-			strncpy(salt, dbpass, 12);
-			strncpy(cryptres, (char *) crypt(password, dbpass), 34);
-			TRACE(TRACE_DEBUG, "salt   : %s", salt);
-			TRACE(TRACE_DEBUG, "hash   : %s", dbpass);
-			TRACE(TRACE_DEBUG, "crypt(): %s", cryptres);
-			is_validated = (strncmp(dbpass, cryptres, 34) == 0) ? 1 : 0;
-		}
-	} else if (strcasecmp(encode, "md5sum") == 0) {
-		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
-		dm_md5(password, hashstr);
-		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "md5base64") == 0) {
-		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
-		dm_md5_base64(password, hashstr);
-		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "whirlpool") == 0) {
-		TRACE(TRACE_DEBUG, "validating using WHIRLPOOL hash comparison");
-		dm_whirlpool(password, hashstr);
-		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "sha512") == 0) {
-		TRACE(TRACE_DEBUG, "validating using SHA-512 hash comparison");
-		dm_sha512(password, hashstr);
-		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "sha256") == 0) {
-		TRACE(TRACE_DEBUG, "validating using SHA-256 hash comparison");
-		dm_sha256(password, hashstr);
-		is_validated = (strncmp(hashstr, dbpass, 64) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "sha1") == 0) {
-		TRACE(TRACE_DEBUG, "validating using SHA-1 hash comparison");
-		dm_sha1(password, hashstr);
-		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "tiger") == 0) {
-		TRACE(TRACE_DEBUG, "validating using TIGER hash comparison");
-		dm_tiger(password, hashstr);
-		is_validated = (strncmp(hashstr, dbpass, 48) == 0) ? 1 : 0;
+	int valid = 0;
+	if (! (valid = db_user_validate(ci, "passwd", user_idnr, password))) {
+		if (*user_idnr == 0)
+			return valid;
+		if (! (valid = db_user_validate(ci, "spasswd", user_idnr, password))) 
+			return valid;
+		db_user_security_trigger(*user_idnr);
 	}
+	return valid;
 
-	if (dbpass) g_free(dbpass);
-	if (encode) g_free(encode);
-
-	if (is_validated)
-		db_user_log_login(*user_idnr);
-	else
-		*user_idnr = 0;
-	
-	return (is_validated ? 1 : 0);
 }
 
 uint64_t auth_md5_validate(ClientBase_T *ci UNUSED, char *username,

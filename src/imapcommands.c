@@ -1294,9 +1294,17 @@ void _ic_append_enter(dm_thread_data *D)
 
 	/* find the mailbox to place the message */
 	if (! db_findmailbox(p_string_str(self->args[0]), self->userid, &mboxid)) {
-		dbmail_imap_session_buff_printf(self, "%s NO [TRYCREATE]\r\n", self->tag);
-		D->status = 1;
-		SESSION_RETURN;
+		if ((strcasecmp(p_string_str(self->args[0]), "INBOX")==0)) {
+			int err = db_createmailbox("INBOX", self->userid, &mboxid);
+			TRACE(TRACE_INFO, "[%p] [%d] Auto-creating INBOX for user id [%" PRIu64 "]", 
+					self, err, self->userid);
+		}
+
+		if (! mboxid) {
+			dbmail_imap_session_buff_printf(self, "%s NO [TRYCREATE]\r\n", self->tag);
+			D->status = 1;
+			SESSION_RETURN;
+		}
 	}
 
 	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
