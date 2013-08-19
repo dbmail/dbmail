@@ -37,24 +37,8 @@ extern SSL_CTX *tls_context;
 static void dm_tls_error(void)
 {
 	unsigned long e;
-	e = ERR_get_error();
-	if (e == 0) {
-		if (errno != 0) {
-			int se = errno;
-			switch (se) {
-				case EAGAIN:
-				case EINTR:
-					break;
-				default:
-					TRACE(TRACE_INFO, "%s", strerror(se));
-				break;
-			}
-		} else {
-			TRACE(TRACE_INFO, "Unknown error");
-		}
-		return;
-	}
-	TRACE(TRACE_INFO, "%s", ERR_error_string(e, NULL));
+	while ((e = ERR_get_error()))
+		TRACE(TRACE_INFO, "%s", ERR_error_string(e, NULL));
 }
 
 size_t client_wbuf_len(ClientBase_T *client)
@@ -367,13 +351,6 @@ void ci_read_cb(ClientBase_T *client)
 	 */
 	int64_t t = 0;
 	char ibuf[IBUFLEN];
-
-	TRACE(TRACE_DEBUG,"[%p] reset timeout [%ld]", client, client->timeout->tv_sec); 
-
-	if (client->sock->ssl && client->sock->ssl_state == FALSE) {
-		ci_starttls(client);
-		return;
-	}
 
 	while (TRUE) {
 		memset(ibuf, 0, sizeof(ibuf));
