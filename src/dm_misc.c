@@ -1863,7 +1863,8 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	GMimeObject *part;
 	char *s, *t;
 	
-	assert(GMIME_IS_MESSAGE(message));
+	if (! GMIME_IS_MESSAGE(message))
+		return NULL;
 
 	part = g_mime_message_get_mime_part(message);
 	type = (GMimeContentType *)g_mime_object_get_content_type(part);

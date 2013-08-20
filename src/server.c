@@ -242,7 +242,7 @@ static int server_setup(ServerConfig_T *conf)
 		TRACE(TRACE_EMERG, "selfpipe setup failed");
 
 	UNBLOCK(selfpipe[0]);
-	//UNBLOCK(selfpipe[1]);
+	UNBLOCK(selfpipe[1]);
 	
 	assert(evbase);
 	pev = event_new(evbase, selfpipe[0], EV_READ, dm_queue_drain, NULL);

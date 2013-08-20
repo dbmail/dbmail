@@ -537,7 +537,6 @@ uint64_t db_insert_result(Connection_T c, ResultSet_T r)
 {
 	uint64_t id = 0;
 
-	assert(r);
 	db_result_next(r);
 
 	// lastRowId is always zero for pgsql tables without OIDs
