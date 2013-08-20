@@ -340,12 +340,12 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 
 	int valid = 0;
 	if (! (valid = db_user_validate(ci, "passwd", user_idnr, password))) {
-		if (*user_idnr == 0)
-			return valid;
-		if (! (valid = db_user_validate(ci, "spasswd", user_idnr, password))) 
-			return valid;
-		db_user_security_trigger(*user_idnr);
+		if ((valid = db_user_validate(ci, "spasswd", user_idnr, password))) 
+			db_user_security_trigger(*user_idnr);
 	}
+	if (! valid)
+		*user_idnr = 0;
+
 	return valid;
 
 }
