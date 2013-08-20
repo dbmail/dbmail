@@ -169,6 +169,7 @@ MKDIR_P = @MKDIR_P@
 MYSQL_32001 = @MYSQL_32001@
 MYSQL_32002 = @MYSQL_32002@
 MYSQL_32003 = @MYSQL_32003@
+MYSQL_32004 = @MYSQL_32004@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -186,6 +187,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PGSQL_32001 = @PGSQL_32001@
 PGSQL_32002 = @PGSQL_32002@
 PGSQL_32003 = @PGSQL_32003@
+PGSQL_32004 = @PGSQL_32004@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -199,6 +201,7 @@ SQLITECREATE = @SQLITECREATE@
 SQLITE_32001 = @SQLITE_32001@
 SQLITE_32002 = @SQLITE_32002@
 SQLITE_32003 = @SQLITE_32003@
+SQLITE_32004 = @SQLITE_32004@
 STRIP = @STRIP@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
@@ -769,10 +772,6 @@ uninstall-am:
 	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
 	ps ps-am tags tags-recursive uninstall uninstall-am
 
-
-testall:
-	CK_FORK=no make check
-	imaptest user=testuser1 pass=test port=10143 host=localhost test=test-scripts/imap
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

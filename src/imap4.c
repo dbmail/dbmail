@@ -314,7 +314,7 @@ static void send_greeting(ImapSession *session)
 			       	Capa_as_string(session->preauth_capa), banner);
 	else
 		imap_session_printf(session, "* OK [CAPABILITY %s] dbmail %s ready.\r\n",
-			       	Capa_as_string(session->preauth_capa), VERSION);
+			       	Capa_as_string(session->preauth_capa), DM_VERSION);
 
 	dbmail_imap_session_set_state(session, CLIENTSTATE_NON_AUTHENTICATED);
 }

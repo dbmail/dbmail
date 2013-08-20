@@ -228,7 +228,7 @@ void _ic_id_enter(dm_thread_data *D)
 	memset(&buf, 0, sizeof(buf));
 	uname(&buf);
 	dbmail_imap_session_buff_printf(self, "* ID (\"name\" \"dbmail\" \"version\" \"%s\""
-		" \"os\" \"%s\" \"os-version\" \"%s\")\r\n", VERSION, &buf.sysname, &buf.release);
+		" \"os\" \"%s\" \"os-version\" \"%s\")\r\n", DM_VERSION, &buf.sysname, &buf.release);
 	SESSION_OK;
 	SESSION_RETURN;
 }

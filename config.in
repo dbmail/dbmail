@@ -12,6 +12,9 @@
 /* Build directory */
 #undef DM_PWD
 
+/* DBMail Version */
+#undef DM_VERSION
+
 /* Define to 1 if you have the <ConnectionPool.h> header file. */
 #undef HAVE_CONNECTIONPOOL_H
 
