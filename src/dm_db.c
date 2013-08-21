@@ -1742,6 +1742,7 @@ char * db_get_message_lines(uint64_t message_idnr, long lines)
 	DbmailMessage *msg;
 	char *raw, *out;
 	uint64_t physmessage_id = 0;
+	size_t size = 0, read = 0;
 	
 	TRACE(TRACE_DEBUG, "request for [%ld] lines", lines);
 
@@ -1751,7 +1752,12 @@ char * db_get_message_lines(uint64_t message_idnr, long lines)
 
 	msg = dbmail_message_new(NULL);
 	msg = dbmail_message_retrieve(msg, physmessage_id);
-	raw = dbmail_message_to_string(msg);
+	g_mime_stream_reset(msg->stream);
+	size = g_mime_stream_length(msg->stream);
+	raw = g_new0(char, size+1);
+	if ((read = g_mime_stream_read(msg->stream, raw, size)) < size) {
+		TRACE(TRACE_INFO, "error reading from stream [%lu/%lu]", read, size);
+	}
 	dbmail_message_free(msg);
 
 	if (lines >=0) {

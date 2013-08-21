@@ -227,13 +227,18 @@ class testPopServer(unittest.TestCase):
              servers.  Test this method by hand against the POP3 servers you
              will use before trusting it.
         """
-        result = self.o.top(1, 10)
-        self.assertEquals(result[0], '+OK 10 lines of message 1')
-        result = self.o.top(1, 0)
+        list = self.o.list()
+        id, size = [x for x in [
+            (int(x[0]), int(x[1])) for x in [
+                x.split(' ') for x in list[1]]] if x[1] > 1000][0]
+
+        result = self.o.top(id, 10)
+        self.assertEquals(result[0], '+OK 10 lines of message %d' % id)
+        result = self.o.top(id, 0)
         msg = message_from_string('\r\n'.join(result[1]))
         self.assertEquals(msg.get_payload(), "")
 
-        result = self.o.top(1, 2)
+        result = self.o.top(id, 2)
         msg = message_from_string('\r\n'.join(result[1]))
         self.assertEquals(len(msg.get_payload().split('\r\n')), 3)
 
