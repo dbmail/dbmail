@@ -298,6 +298,8 @@ typedef struct {
 	int rx, tx;                     /* read and write filehandles */
 	uint64_t bytes_rx;		/* read byte counter */
 	uint64_t bytes_tx;		/* write byte counter */
+
+	pthread_mutex_t lock;
 	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
 
 	struct event *pev;		/* self-pipe event */

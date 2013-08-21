@@ -34,19 +34,12 @@ extern DBParam_T db_params;
 extern ServerConfig_T *server_conf;
 extern SSL_CTX *tls_context;
 
+
 static void dm_tls_error(void)
 {
 	unsigned long e;
 	while ((e = ERR_get_error()))
 		TRACE(TRACE_INFO, "%s", ERR_error_string(e, NULL));
-}
-
-size_t client_wbuf_len(ClientBase_T *client)
-{
-	size_t len = 0;
-	if (client->write_buffer)
-		len = p_string_len(client->write_buffer) - client->write_buffer_offset;
-	return len;
 }
 
 
@@ -141,6 +134,8 @@ ClientBase_T * client_init(client_sock *c)
 	client->sock     = c;
 	client->cb_error = client_error_cb;
 
+	pthread_mutex_init(&client->lock, NULL);
+
 	/* set byte counters to 0 */
 	client->bytes_rx = 0;
 	client->bytes_tx = 0;
@@ -205,11 +200,16 @@ void ci_cork(ClientBase_T *s)
 void ci_uncork(ClientBase_T *s)
 {
 	TRACE(TRACE_DEBUG,"[%p]", s);
+	int state;
 
-	if (s->client_state & CLIENT_ERR)
+	PLOCK(s->lock);
+	state = s->client_state;
+	PUNLOCK(s->lock);
+
+	if (state & CLIENT_ERR)
 		return;
 
-	if (! (s->client_state & CLIENT_EOF))
+	if (! (state & CLIENT_EOF))
 		event_add(s->rev, s->timeout);
 	event_add(s->wev, NULL);
 }
@@ -279,11 +279,16 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	uint64_t n, left;
 	char *s;
 	char buf[40];
+	int state;
 
 	if (! (client && client->write_buffer))
 		return -1; // stale
 
-	if (client->client_state & CLIENT_ERR)
+	PLOCK(client->lock);
+	state = client->client_state;
+	PUNLOCK(client->lock);
+
+	if (state & CLIENT_ERR)
 		return -1; // disconnected
 
 	if (msg) {
@@ -317,7 +322,9 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 
 		if (t == -1) {
 			if ((e = client->cb_error(client->tx, e, (void *)client))) {
+				PLOCK(client->lock);
 				client->client_state |= CLIENT_ERR;
+				PUNLOCK(client->lock);
 				return -1;
 			} 
 			return 0;
@@ -342,6 +349,26 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	return 1;
 }
 
+size_t client_wbuf_len(ClientBase_T *client)
+{
+	size_t len = 0;
+	int state;
+
+	PLOCK(client->lock);
+	state = client->client_state;
+	PUNLOCK(client->lock);
+
+	if (state & CLIENT_ERR) {
+		client_wbuf_clear(client);
+		return len;
+	}
+
+	if (client->write_buffer)
+		len = p_string_len(client->write_buffer) - client->write_buffer_offset;
+	return len;
+}
+
+
 #define IBUFLEN 65535
 void ci_read_cb(ClientBase_T *client)
 {
@@ -351,6 +378,7 @@ void ci_read_cb(ClientBase_T *client)
 	 */
 	int64_t t = 0;
 	char ibuf[IBUFLEN];
+	int state;
 
 	while (TRUE) {
 		memset(ibuf, 0, sizeof(ibuf));
@@ -364,21 +392,29 @@ void ci_read_cb(ClientBase_T *client)
 		if (t < 0) {
 			int e = errno;
 			if ((e = client->cb_error(client->rx, e, (void *)client)))
-				client->client_state |= CLIENT_ERR;
+				state = CLIENT_ERR;
 			else
-				client->client_state |= CLIENT_AGAIN;
+				state = CLIENT_AGAIN;
+			PLOCK(client->lock);
+			client->client_state |= state;
+			PUNLOCK(client->lock);
+
 			break;
 
 		} else if (t == 0) {
 			int e = errno;
 			if (client->sock->ssl)
 				client->cb_error(client->rx, e, (void *)client);
+			PLOCK(client->lock);
 			client->client_state |= CLIENT_EOF;
+			PUNLOCK(client->lock);
 			break;
 
 		} else if (t > 0) {
 			client->bytes_rx += t;	// Update our byte counter
+			PLOCK(client->lock);
 			client->client_state = CLIENT_OK; 
+			PUNLOCK(client->lock);
 			p_string_append_len(client->read_buffer, ibuf, t);
 		}
 	}
@@ -422,7 +458,9 @@ int ci_readln(ClientBase_T *client, char * buffer)
 		l = stridx(s, '\n');
 		if (l >= MAX_LINESIZE) {
 			TRACE(TRACE_WARNING, "insane line-length [%" PRIu64 "]", l);
-			client->client_state = CLIENT_ERR;
+			PLOCK(client->lock);
+			client->client_state |= CLIENT_ERR;
+			PUNLOCK(client->lock);
 			return 0;
 		}
 		for (j=0; j<=l; j++)
@@ -536,6 +574,9 @@ void ci_close(ClientBase_T *client)
 
 	p_string_free(client->read_buffer, TRUE);
 	p_string_free(client->write_buffer, TRUE);
+
+	pthread_mutex_destroy(&client->lock);
+
 	Mempool_T pool = client->pool;
 	mempool_push(pool, client->timeout, sizeof(struct timeval));
 	mempool_push(pool, client->sock->caddr, sizeof(struct sockaddr_storage));

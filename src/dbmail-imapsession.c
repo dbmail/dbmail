@@ -1723,9 +1723,9 @@ int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 	}
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, self->state, state);
-	SESSION_LOCK(self->lock);
+	PLOCK(self->lock);
 	self->state = state;
-	SESSION_UNLOCK(self->lock);
+	PUNLOCK(self->lock);
 
 	return 0;
 }

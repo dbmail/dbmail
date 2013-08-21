@@ -9,10 +9,6 @@
 
 #include "dbmail.h"
 
-#define SESSION_LOCK(a) if (pthread_mutex_lock(&(a))) { perror("pthread_mutex_lock failed"); }
-#define SESSION_UNLOCK(a) if (pthread_mutex_unlock(&(a))) { perror("pthread_mutex_unlock failed"); }
-
-
 // command state during idle command
 #define IDLE -1 
 

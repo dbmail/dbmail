@@ -66,7 +66,7 @@ struct cmd_t {
 	D->session->command_state = TRUE; \
 	g_async_queue_push(queue, (gpointer)D); \
 	if (selfpipe[1] > -1) { \
-		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } \
+		if (write(selfpipe[1], "D", 1) != 1) { /* ignore */; } \
 	} \
 	return;
 

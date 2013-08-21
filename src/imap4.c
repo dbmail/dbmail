@@ -140,7 +140,7 @@ void imap_cleanup_deferred(gpointer data)
 	ImapSession *session = (ImapSession *)D->session;
 	ClientBase_T *ci = session->ci;
 
-	if (client_wbuf_len(ci) && (! (ci->client_state & CLIENT_ERR))) {
+	if (client_wbuf_len(ci)) {
 		ci_write_cb(ci);
 		dm_queue_push(imap_cleanup_deferred, session, NULL);
 		return;
@@ -174,9 +174,9 @@ void socket_write_cb(int UNUSED fd, short UNUSED what, void *arg)
 {
 	ImapSession *session = (ImapSession *)arg;
 	ClientState_T state;
-	SESSION_LOCK(session->lock);
+	PLOCK(session->lock);
 	state = session->state;
-	SESSION_UNLOCK(session->lock);
+	PUNLOCK(session->lock);
 #ifdef DEBUG
 	TRACE(TRACE_DEBUG,"[%p] on [%d] state [%d] event:%s%s%s%s", session,
 			(int) fd, state,
@@ -211,7 +211,11 @@ void imap_cb_read(void *arg)
 	uint64_t need = session->ci->rbuff_size;
 
 	int enough = (need>0?(have >= need):(have > 0));
-	int state = session->ci->client_state;
+	int state;
+       
+	PLOCK(session->ci->lock);
+	state = session->ci->client_state;
+	PUNLOCK(session->ci->lock);
 
 	TRACE(TRACE_DEBUG,"state [%d] enough %d: %" PRIu64 "/%" PRIu64 "", state, enough, have, need);
 
@@ -654,7 +658,10 @@ void _ic_cb_leave(gpointer data)
 	dm_thread_data *D = (dm_thread_data *)data;
 	ImapSession *session = D->session;
 
+	PLOCK(session->ci->lock);
 	state = session->ci->client_state;
+	PUNLOCK(session->ci->lock);
+
 	TRACE(TRACE_DEBUG,"handling imap session [%p] client_state [%s%s]",
 			session,
 		       	(state&CLIENT_ERR)?" error":"",
