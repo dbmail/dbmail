@@ -565,7 +565,8 @@ class testImapServer(unittest.TestCase):
         self.o.logout()
         result = self.setUp("testuser1", "test")
         self.assertEquals(result[0], 'OK')
-        self.failUnlessRaises(Exception, self.setUp, "testuser1", "blah")
+        self.failUnlessRaises(Exception, self.setUp, "testuser1",
+                              "blahRANDOMblah")
 
     def testLogin_cram_md5(self):
         """

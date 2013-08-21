@@ -125,9 +125,11 @@ FILE *i;
 	int d; size_t l; char *s;\
 	l = strlen(a); \
 	d = memcmp((a),(b),l); \
-	s = showdiff(a,b); \
-	fail_unless(d == 0, "store store/retrieve failed\n%s\n\n", s); \
-	g_free(s); \
+	if (d) { \
+		s = showdiff(a,b); \
+		fail_unless(d == 0, "store store/retrieve failed\n%s\n\n", s); \
+		g_free(s); \
+	} \
 	}
 
 static DbmailMessage  * message_init(const char *message)
