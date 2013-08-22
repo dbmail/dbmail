@@ -252,7 +252,7 @@ int ci_starttls(ClientBase_T *client)
 
 void ci_write_cb(ClientBase_T *client)
 {
-	uint64_t rest = client_wbuf_len(client);
+	uint64_t rest = ci_wbuf_len(client);
 	int result = 0;
 	if (rest) {
 	       result = ci_write(client,NULL);
@@ -301,7 +301,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 		after = p_string_len(client->write_buffer);
 	}
 
-	left = client_wbuf_len(client);
+	left = ci_wbuf_len(client);
 	while (left > 0) {
 		n = left;
 		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
@@ -343,13 +343,13 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 			client->tls_wbuf_n = 0;
 		}
 
-		left = client_wbuf_len(client);
+		left = ci_wbuf_len(client);
 	}
 
 	return 1;
 }
 
-size_t client_wbuf_len(ClientBase_T *client)
+size_t ci_wbuf_len(ClientBase_T *client)
 {
 	size_t len = 0;
 	int state;

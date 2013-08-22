@@ -141,7 +141,7 @@ void client_session_bailout(ClientSession_T **session)
 
 	assert(c);
 
-	while (client_wbuf_len(c->ci))
+	while (ci_wbuf_len(c->ci))
 		ci_write_cb(c->ci);
 
 	ci_cork(c->ci);
