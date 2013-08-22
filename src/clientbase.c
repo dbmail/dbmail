@@ -226,9 +226,11 @@ int ci_starttls(ClientBase_T *client)
 	if (! client->sock->ssl) {
 		client->sock->ssl_state = FALSE;
 		if (! (client->sock->ssl = tls_setup(client->tx))) {
+			TRACE(TRACE_DEBUG, "[%p] tls_setup failed", client);
 			return DM_EGENERAL;
 		}
 	}
+
 	if (! client->sock->ssl_state) {
 		if ((e = SSL_accept(client->sock->ssl)) != 1) {
 			int e2;
@@ -236,13 +238,11 @@ int ci_starttls(ClientBase_T *client)
 				SSL_shutdown(client->sock->ssl);
 				SSL_free(client->sock->ssl);
 				client->sock->ssl = NULL;
+				TRACE(TRACE_DEBUG, "[%p] SSL_accept hard failure",
+						client);
 				return DM_EGENERAL;
-			} else {
-				return e;
 			}
 		}
-		TRACE(TRACE_INFO,"[%p] SSL handshake successful using %s", 
-				client->sock->ssl, SSL_get_cipher(client->sock->ssl));
 		client->sock->ssl_state = TRUE;
 		ci_write(client,NULL);
 	}
