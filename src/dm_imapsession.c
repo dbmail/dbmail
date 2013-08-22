@@ -20,8 +20,6 @@
 
 /* 
  * 
- * dbmail-imapsession.c
- *
  * IMAP-server utility functions implementations
  */
 

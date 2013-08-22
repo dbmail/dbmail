@@ -18,7 +18,6 @@
 */
 
 /**
- * \file dbmail-mailbox.c
  *
  * implements DbmailMailbox object
  */

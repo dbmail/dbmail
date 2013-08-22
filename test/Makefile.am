@@ -36,7 +36,7 @@ TESTS=check_dbmail_common \
 IMAPD = $(top_srcdir)/src/dm_quota.c \
         $(top_srcdir)/src/imap4.c \
         $(top_srcdir)/src/imapcommands.c \
-        $(top_srcdir)/src/dbmail-imapsession.c
+        $(top_srcdir)/src/dm_imapsession.c
 	
 noinst_PROGRAMS=$(TESTS)
 

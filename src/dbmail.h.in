@@ -115,10 +115,10 @@
 #include "dm_quota.h"
 #include "dm_tls.h"
 
-#include "dbmail-user.h"
-#include "dbmail-mailbox.h"
-#include "dbmail-message.h"
-#include "dbmail-imapsession.h"
+#include "dm_user.h"
+#include "dm_mailbox.h"
+#include "dm_message.h"
+#include "dm_imapsession.h"
 
 #include "imapcommands.h"
 #include "server.h"

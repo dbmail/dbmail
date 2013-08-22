@@ -18,7 +18,6 @@
 */
 
 /**
- * \file dbmail-message.c
  *
  * implements DbmailMessage object
  */

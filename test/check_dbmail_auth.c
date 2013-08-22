@@ -109,7 +109,7 @@ START_TEST(test_auth_change_password)
 	if (!auth_user_exists(userid, &user_idnr))
 		auth_adduser(userid,"initialpassword","", 101, 1002400, &user_idnr);
 
-	// Taken from dbmail-user.c, mkpassword:
+	// Taken from dm_user.c, mkpassword:
 	/* These are the easy text names. */
 	const char * const pwtypes[] = {
 		"plaintext",	"plaintext",	"crypt",	"crypt",
@@ -147,7 +147,7 @@ START_TEST(test_auth_change_password_raw)
 	if (!auth_user_exists(userid, &user_idnr))
 		auth_adduser(userid,"initialpassword","", 101, 1002400, &user_idnr);
 
-	// Taken from dbmail-user.c, mkpassword:
+	// Taken from dm_user.c, mkpassword:
 	/* These are the easy text names. */
 	const char * const pwtypes[] = {
 		"plaintext-raw",	"crypt-raw",

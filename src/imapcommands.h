@@ -28,7 +28,6 @@
 #define DM_IMAP_COMMANDS_H
 
 #include "dbmail.h"
-#include "dbmail-imapsession.h"
 
 /* any-state commands */
 int _ic_starttls(ImapSession *self);

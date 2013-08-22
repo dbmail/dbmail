@@ -2551,7 +2551,7 @@ int db_mailbox_set_permission(uint64_t mailbox_id, int permission)
 
 
 /* Called from:
- * dbmail-message.c (dbmail_message_store -> _message_insert) (always INBOX)
+ * dm_message.c (dbmail_message_store -> _message_insert) (always INBOX)
  * modules/authldap.c (creates shadow INBOX) (always INBOX)
  * sort.c (delivers to a mailbox) (performs own ACL checking)
  *

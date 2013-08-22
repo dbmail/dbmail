@@ -23,7 +23,6 @@
  */
 
 /* 
- * \file dbmail-mailbox.h
  * 
  * \brief DbmailMailbox class  
  *

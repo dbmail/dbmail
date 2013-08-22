@@ -37,9 +37,9 @@ sbin_PROGRAMS = dbmail-deliver \
 	dbmail-httpd \
 	dbmail-lmtpd $(SIEVEPROGS)
 
-COMMON = dbmail-user.c \
-	dbmail-message.c \
-	dbmail-mailbox.c \
+COMMON = dm_user.c \
+	dm_message.c \
+	dm_mailbox.c \
 	dm_mailboxstate.c \
 	dm_cram.c \
 	dm_capa.c \
@@ -72,7 +72,7 @@ SERVER = server.c \
 IMAPD = dm_quota.c \
 	imap4.c \
 	imapcommands.c \
-	dbmail-imapsession.c
+	dm_imapsession.c
 
 AM_CPPFLAGS = -DSYSCONFDIR='"$(sysconfdir)"' -DLIBDIR='"$(libdir)"' -DLOCALSTATEDIR='"$(localstatedir)"'
 AM_CFLAGS = @SIEVEINC@ @LDAPINC@

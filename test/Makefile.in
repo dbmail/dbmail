@@ -126,10 +126,10 @@ check_dbmail_dsn_OBJECTS = $(am_check_dbmail_dsn_OBJECTS)
 @WITHCHECK_TRUE@check_dbmail_dsn_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am__check_dbmail_imapd_SOURCES_DIST = $(top_srcdir)/src/dm_quota.c \
 	$(top_srcdir)/src/imap4.c $(top_srcdir)/src/imapcommands.c \
-	$(top_srcdir)/src/dbmail-imapsession.c check_dbmail_imapd.c
+	$(top_srcdir)/src/dm_imapsession.c check_dbmail_imapd.c
 @WITHCHECK_TRUE@am__objects_1 = dm_quota.$(OBJEXT) imap4.$(OBJEXT) \
 @WITHCHECK_TRUE@	imapcommands.$(OBJEXT) \
-@WITHCHECK_TRUE@	dbmail-imapsession.$(OBJEXT)
+@WITHCHECK_TRUE@	dm_imapsession.$(OBJEXT)
 @WITHCHECK_TRUE@am_check_dbmail_imapd_OBJECTS = $(am__objects_1) \
 @WITHCHECK_TRUE@	check_dbmail_imapd.$(OBJEXT)
 check_dbmail_imapd_OBJECTS = $(am_check_dbmail_imapd_OBJECTS)
@@ -407,7 +407,7 @@ top_srcdir = @top_srcdir@
 @WITHCHECK_TRUE@IMAPD = $(top_srcdir)/src/dm_quota.c \
 @WITHCHECK_TRUE@        $(top_srcdir)/src/imap4.c \
 @WITHCHECK_TRUE@        $(top_srcdir)/src/imapcommands.c \
-@WITHCHECK_TRUE@        $(top_srcdir)/src/dbmail-imapsession.c
+@WITHCHECK_TRUE@        $(top_srcdir)/src/dm_imapsession.c
 
 @WITHCHECK_TRUE@check_dbmail_user_SOURCES = check_dbmail_user.c
 @WITHCHECK_TRUE@check_dbmail_user_LDADD = $(CHECK_LDADD)
@@ -585,7 +585,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_string.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_user.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_util.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmail-imapsession.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_imapsession.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_quota.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm_sset.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/imap4.Po@am__quote@
@@ -654,19 +654,19 @@ imapcommands.obj: $(top_srcdir)/src/imapcommands.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o imapcommands.obj `if test -f '$(top_srcdir)/src/imapcommands.c'; then $(CYGPATH_W) '$(top_srcdir)/src/imapcommands.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/imapcommands.c'; fi`
 
-dbmail-imapsession.o: $(top_srcdir)/src/dbmail-imapsession.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dbmail-imapsession.o -MD -MP -MF $(DEPDIR)/dbmail-imapsession.Tpo -c -o dbmail-imapsession.o `test -f '$(top_srcdir)/src/dbmail-imapsession.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dbmail-imapsession.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dbmail-imapsession.Tpo $(DEPDIR)/dbmail-imapsession.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dbmail-imapsession.c' object='dbmail-imapsession.o' libtool=no @AMDEPBACKSLASH@
+dm_imapsession.o: $(top_srcdir)/src/dm_imapsession.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_imapsession.o -MD -MP -MF $(DEPDIR)/dm_imapsession.Tpo -c -o dm_imapsession.o `test -f '$(top_srcdir)/src/dm_imapsession.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_imapsession.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_imapsession.Tpo $(DEPDIR)/dm_imapsession.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_imapsession.c' object='dm_imapsession.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dbmail-imapsession.o `test -f '$(top_srcdir)/src/dbmail-imapsession.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dbmail-imapsession.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_imapsession.o `test -f '$(top_srcdir)/src/dm_imapsession.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_imapsession.c
 
-dbmail-imapsession.obj: $(top_srcdir)/src/dbmail-imapsession.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dbmail-imapsession.obj -MD -MP -MF $(DEPDIR)/dbmail-imapsession.Tpo -c -o dbmail-imapsession.obj `if test -f '$(top_srcdir)/src/dbmail-imapsession.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dbmail-imapsession.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dbmail-imapsession.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dbmail-imapsession.Tpo $(DEPDIR)/dbmail-imapsession.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dbmail-imapsession.c' object='dbmail-imapsession.obj' libtool=no @AMDEPBACKSLASH@
+dm_imapsession.obj: $(top_srcdir)/src/dm_imapsession.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_imapsession.obj -MD -MP -MF $(DEPDIR)/dm_imapsession.Tpo -c -o dm_imapsession.obj `if test -f '$(top_srcdir)/src/dm_imapsession.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_imapsession.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_imapsession.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dm_imapsession.Tpo $(DEPDIR)/dm_imapsession.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/dm_imapsession.c' object='dm_imapsession.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dbmail-imapsession.obj `if test -f '$(top_srcdir)/src/dbmail-imapsession.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dbmail-imapsession.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dbmail-imapsession.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dm_imapsession.obj `if test -f '$(top_srcdir)/src/dm_imapsession.c'; then $(CYGPATH_W) '$(top_srcdir)/src/dm_imapsession.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/dm_imapsession.c'; fi`
 
 dm_sset.o: $(top_srcdir)/src/dm_sset.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dm_sset.o -MD -MP -MF $(DEPDIR)/dm_sset.Tpo -c -o dm_sset.o `test -f '$(top_srcdir)/src/dm_sset.c' || echo '$(srcdir)/'`$(top_srcdir)/src/dm_sset.c

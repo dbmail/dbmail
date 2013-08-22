@@ -18,7 +18,6 @@
 */
 
 /* 
- * \file dbmail-message.h
  * 
  * \brief DbmailMessage class  
  *
