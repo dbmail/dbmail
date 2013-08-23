@@ -368,9 +368,10 @@ static int checktag(const char *s)
 
 void imap_handle_abort(ImapSession *session)
 {
-	dbmail_imap_session_set_state(session,CLIENTSTATE_ERROR);	/* fatal error occurred, kick this user */
-	imap_session_reset(session);
-	imap_session_bailout(session);
+	if (dbmail_imap_session_set_state(session, CLIENTSTATE_ERROR)) {	/* fatal error occurred, kick this user */
+		imap_session_reset(session);
+		imap_session_bailout(session);
+	}
 }
 
 static void imap_handle_continue(ImapSession *session)
