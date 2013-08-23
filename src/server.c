@@ -45,7 +45,7 @@ extern DBParam_T  db_params;
 
 static void server_config_load(ServerConfig_T * conf, const char * const service);
 static int server_set_sighandler(void);
-static void dm_thread_data_free(gpointer data)
+static void dm_thread_data_free(gpointer data);
 void disconnect_all(void);
 
 struct event_base *evbase = NULL;
