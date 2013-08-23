@@ -405,11 +405,12 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				blist[depth] = boundary;
 			}
 
-			if (prevdepth > depth && blist[depth]) {
-				dprint("\n--%s at %d--\n", blist[depth], depth);
-				p_string_append_printf(m, "\n--%s--\n", blist[depth]);
-				g_free((void *)blist[depth]);
-				blist[depth] = NULL;
+			while (prevdepth-1 >= depth && blist[prevdepth-1]) {
+				dprint("\n--%s at %d -> %d--\n", blist[prevdepth-1], prevdepth, prevdepth-1);
+				p_string_append_printf(m, "\n--%s--\n", blist[prevdepth-1]);
+				g_free((void *)blist[prevdepth-1]);
+				blist[prevdepth-1] = NULL;
+				prevdepth--;
 				finalized=TRUE;
 			}
 
