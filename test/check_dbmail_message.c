@@ -203,6 +203,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(simple, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -210,6 +211,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(rfc822, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -217,6 +219,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_message, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -224,6 +227,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_message2, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -231,6 +235,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(message_rfc822, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -238,6 +243,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_message3, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -245,6 +251,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_message4, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -252,6 +259,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_message5, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -259,6 +267,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	//COMPARE(multipart_message6, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -266,13 +275,15 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_mixed, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
 	m = message_init(broken_message);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	//COMPARE(expect,t);
+	//COMPARE(e,t);
+	//COMPARE(broken_message, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -280,6 +291,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(encoded_message_latin_1, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -287,6 +299,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(encoded_message_latin_2, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -294,6 +307,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(encoded_message_utf8, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -301,6 +315,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(encoded_message_utf8_1, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -308,6 +323,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(encoded_message_utf8_2, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -315,6 +331,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(encoded_message_koi, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -322,6 +339,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(raw_message_koi, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -329,6 +347,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_alternative, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -336,6 +355,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	// COMPARE(e,t);
+	// COMPARE(outlook_multipart, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -343,6 +363,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_alternative2, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -350,6 +371,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_apple, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -357,6 +379,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(long_quopri_subject, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -364,6 +387,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_message_big, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -371,6 +395,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	//COMPARE(e,t);
+	//COMPARE(multipart_digest, t);
 	g_free(e);
 	g_free(t);
 	//-----------------------------------------
@@ -378,6 +403,7 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	COMPARE(e,t);
+	COMPARE(multipart_alternative3, t);
 	g_free(e);
 	g_free(t);
 }
