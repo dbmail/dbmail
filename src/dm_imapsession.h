@@ -107,15 +107,6 @@ void dbmail_imap_session_bodyfetch_free(ImapSession *self);
 int imap4_tokenizer_main(ImapSession *self, const char *buffer);
 
 
-/* threaded work queue */
-	
-/*
- * thread launcher
- *
- */
-void dm_thread_data_push(gpointer session, gpointer cb_enter, gpointer cb_leave, gpointer data);
-
-void dm_thread_data_sendmessage(gpointer data);
 void _ic_cb_leave(gpointer data);
 
 #endif
