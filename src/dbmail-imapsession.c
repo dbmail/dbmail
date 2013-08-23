@@ -1637,8 +1637,13 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 
 int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 {
-	TRACE(TRACE_DEBUG,"state [%d]", state);
-	if (self->state == state)
+	ClientState_T current;
+
+	SESSION_LOCK(self->lock);
+	current = self->state;
+	SESSION_UNLOCK(self->lock);
+
+	if ((current == state) || (current == CLIENTSTATE_QUIT_QUEUED))
 		return 1;
 
 	switch (state) {
@@ -1666,7 +1671,8 @@ int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 			break;
 	}
 
-	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, self->state, state);
+	TRACE(TRACE_DEBUG,"[%p] state [%d]->[%d]", self, current, state);
+
 	SESSION_LOCK(self->lock);
 	self->state = state;
 	SESSION_UNLOCK(self->lock);
