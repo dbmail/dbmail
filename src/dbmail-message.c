@@ -147,7 +147,7 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 				db_commit_transaction(c);
 			}
 		} else {
-			snprintf(blob_cmp, DEF_FRAGSIZE, db_get_sql(SQL_COMPARE_BLOB), "data");
+			snprintf(blob_cmp, DEF_FRAGSIZE-1, db_get_sql(SQL_COMPARE_BLOB), "data");
 			s = db_stmt_prepare(c,"SELECT id FROM %smimeparts WHERE hash=? AND %ssize%s=? AND %s", 
 					DBPFX,db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN),
 					blob_cmp);
@@ -1007,7 +1007,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	self = store;
 
 	date2char_str("p.internal_date", &frag);
-	snprintf(query, DEF_QUERYSIZE, query_template, frag, DBPFX, DBPFX, dbmail_message_get_physid(self));
+	snprintf(query, DEF_QUERYSIZE-1, query_template, frag, DBPFX, DBPFX, dbmail_message_get_physid(self));
 
 	c = db_con_get();
 	if (! (r = db_query(c, query))) {
@@ -1439,7 +1439,7 @@ static uint64_t _header_value_exists(Connection_T c, const char *value, const ch
 		return 0;
 	}
 	db_con_clear(c);
-	snprintf(blob_cmp, DEF_FRAGSIZE, db_get_sql(SQL_COMPARE_BLOB), "headervalue");
+	snprintf(blob_cmp, DEF_FRAGSIZE-1, db_get_sql(SQL_COMPARE_BLOB), "headervalue");
 
 	s = db_stmt_prepare(c, "SELECT id FROM %sheadervalue WHERE hash=? AND %s", DBPFX, blob_cmp);
 	db_stmt_set_str(s, 1, hash);

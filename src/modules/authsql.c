@@ -163,7 +163,7 @@ static GList *user_get_deliver_to(const char *username)
 	C c; R r; S s;
 	GList *d = NULL;
 
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE-1,
 		 "SELECT deliver_to FROM %saliases "
 		 "WHERE lower(alias) = lower(?) "
 		 "AND lower(alias) <> lower(deliver_to)",
@@ -264,7 +264,7 @@ int auth_change_password(uint64_t user_idnr, const char *new_pass, const char *e
 {
 	C c; S s; volatile int t = FALSE;
 
-	if (strlen(new_pass) >= DEF_QUERYSIZE/2) {
+	if (strlen(new_pass) >= 128) {
 		TRACE(TRACE_ERR, "new password length is insane");
 		return -1;
 	}
@@ -537,7 +537,7 @@ int auth_addalias(uint64_t user_idnr, const char *alias, uint64_t clientid)
 	INIT_QUERY;
 
 	/* check if this alias already exists */
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE-1,
 		 "SELECT alias_idnr FROM %saliases "
 		 "WHERE lower(alias) = lower(?) AND deliver_to = ? "
 		 "AND client_idnr = ?",DBPFX);
@@ -596,7 +596,7 @@ int auth_addalias_ext(const char *alias,
 	TRY
 		/* check if this alias already exists */
 		if (clientid != 0) {
-			snprintf(query, DEF_QUERYSIZE,
+			snprintf(query, DEF_QUERYSIZE-1,
 				 "SELECT alias_idnr FROM %saliases "
 				 "WHERE lower(alias) = lower(?) AND "
 				 "lower(deliver_to) = lower(?) "
@@ -608,7 +608,7 @@ int auth_addalias_ext(const char *alias,
 			db_stmt_set_u64(s, 3, clientid);
 
 		} else {
-			snprintf(query, DEF_QUERYSIZE,
+			snprintf(query, DEF_QUERYSIZE-1,
 				 "SELECT alias_idnr FROM %saliases "
 				 "WHERE lower(alias) = lower(?) "
 				 "AND lower(deliver_to) = lower(?) ",DBPFX);

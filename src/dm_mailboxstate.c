@@ -94,7 +94,7 @@ static T state_load_messages(T M, Connection_T c)
 	INIT_QUERY;
 
 	date2char_str("internal_date", &frag);
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE-1,
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
 			"draft_flag, recent_flag, %s, rfcsize, message_idnr FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
@@ -149,7 +149,7 @@ static T state_load_messages(T M, Connection_T c)
 	db_con_clear(c);
 
 	memset(query,0,sizeof(query));
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE-1,
 		"SELECT k.message_idnr, keyword FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 		"LEFT JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "

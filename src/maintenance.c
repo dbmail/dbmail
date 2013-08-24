@@ -1097,7 +1097,7 @@ int do_erase_old(int days, char * mbtrash_name)
 	Connection_T c; PreparedStatement_T s; ResultSet_T r;
 	char expire [DEF_FRAGSIZE];
 	memset(expire,0,sizeof(expire));
-	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), days);
+	snprintf(expire, DEF_FRAGSIZE-1, db_get_sql(SQL_EXPIRE), days);
 
 	c = db_con_get();
 
@@ -1138,7 +1138,7 @@ int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
         uint64_t mailbox_from;
 
 	memset(expire,0,sizeof(expire));
-	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), days);
+	snprintf(expire, DEF_FRAGSIZE-1, db_get_sql(SQL_EXPIRE), days);
 
 	c = db_con_get();
 	s = db_stmt_prepare(c,"SELECT msg.message_idnr, mb.owner_idnr, mb.mailbox_idnr FROM %smessages msg "

@@ -114,7 +114,7 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session)
 	/* query is < MESSAGE_STATUS_DELETE  because we don't want deleted 
 	 * messages
 	 */
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE-1,
 		 "SELECT pm.messagesize, msg.message_idnr, msg.status, "
 		 "msg.unique_id FROM %smessages msg, %sphysmessage pm "
 		 "WHERE msg.mailbox_idnr = %" PRIu64 " "
