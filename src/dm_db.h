@@ -39,8 +39,8 @@
 #define CONFIG_EMPTY 0
 
 #define INIT_QUERY \
-       char query[DEF_QUERYSIZE]; \
-       memset(query,0,DEF_QUERYSIZE)
+       char query[DEF_QUERYSIZE+1]; \
+       memset(query,0,DEF_QUERYSIZE+1)
 
 #define P ConnectionPool_T
 #define S PreparedStatement_T

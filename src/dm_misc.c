@@ -913,7 +913,7 @@ int date_imap2sql(const char *imapdate, char *sqldate)
 		TRACE(TRACE_DEBUG, "error parsing IMAP date %s", imapdate);
 		return 1;
 	}
-	(void) strftime(sqldate, SQL_INTERNALDATE_LEN, "%Y-%m-%d 00:00:00", &tm);
+	(void) strftime(sqldate, SQL_INTERNALDATE_LEN-1, "%Y-%m-%d 00:00:00", &tm);
 
 	return 0;
 }

@@ -28,7 +28,6 @@
 #include "dm_mailboxstate.h"
 
 #define THIS_MODULE "db"
-#define DEF_FRAGSIZE 64
 
 // Flag order defined in dbmailtypes.h
 static const char *db_flag_desc[] = {
@@ -408,7 +407,7 @@ gboolean db_update(const char *q, ...)
 
 	va_start(ap, q);
 	va_copy(cp, ap);
-        vsnprintf(query, DEF_QUERYSIZE, q, cp);
+        vsnprintf(query, DEF_QUERYSIZE-1, q, cp);
         va_end(cp);
         va_end(ap);
 
@@ -1966,7 +1965,7 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 	else if (mailbox_like->insensitive)
 		frag = db_get_sql(SQL_INSENSITIVE_LIKE);
 
-	snprintf(query, DEF_QUERYSIZE, 
+	snprintf(query, DEF_QUERYSIZE-1, 
 			"SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr = ? AND name %s ? ", 
 			DBPFX, frag);
 
@@ -2508,7 +2507,7 @@ int db_createmailbox(const char * name, uint64_t owner_idnr, uint64_t * mailbox_
 	}
 
 	frag = db_returning("mailbox_idnr");
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE-1,
 		 "INSERT INTO %smailboxes (name,owner_idnr,permission,seq)"
 		 " VALUES (?, ?, %d, 1) %s", DBPFX,
 		 IMAPPERM_READWRITE, frag);
@@ -2754,9 +2753,9 @@ int db_mailbox_has_message_id(uint64_t mailbox_idnr, const char *messageid)
 
 	g_return_val_if_fail(messageid!=NULL,0);
 
-	snprintf(expire, DEF_FRAGSIZE, db_get_sql(SQL_EXPIRE), EXPIRE_DAYS);
-	snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_PARTIAL), "v.headervalue");
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(expire, DEF_FRAGSIZE-1, db_get_sql(SQL_EXPIRE), EXPIRE_DAYS);
+	snprintf(partial, DEF_FRAGSIZE-1, db_get_sql(SQL_PARTIAL), "v.headervalue");
+	snprintf(query, DEF_QUERYSIZE-1,
 		"SELECT m.message_idnr "
 		"FROM %smessages m "
 		"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
@@ -2989,22 +2988,23 @@ int db_unsubscribe(uint64_t mailbox_idnr, uint64_t user_idnr)
 int db_get_msgflag(const char *flag_name, uint64_t msg_idnr)
 {
 	Connection_T c; ResultSet_T r;
-	char the_flag_name[DEF_QUERYSIZE / 2];	/* should be sufficient ;) */
+	char the_flag_name[DEF_FRAGSIZE];	/* should be sufficient ;) */
 	int val = 0;
 
+	memset(the_flag_name, 0, sizeof(the_flag_name));
 	/* determine flag */
 	if (strcasecmp(flag_name, "seen") == 0)
-		snprintf(the_flag_name, DEF_QUERYSIZE / 2, "seen_flag");
+		snprintf(the_flag_name, DEF_FRAGSIZE-1, "seen_flag");
 	else if (strcasecmp(flag_name, "deleted") == 0)
-		snprintf(the_flag_name, DEF_QUERYSIZE / 2, "deleted_flag");
+		snprintf(the_flag_name, DEF_FRAGSIZE-1, "deleted_flag");
 	else if (strcasecmp(flag_name, "answered") == 0)
-		snprintf(the_flag_name, DEF_QUERYSIZE / 2, "answered_flag");
+		snprintf(the_flag_name, DEF_FRAGSIZE-1, "answered_flag");
 	else if (strcasecmp(flag_name, "flagged") == 0)
-		snprintf(the_flag_name, DEF_QUERYSIZE / 2, "flagged_flag");
+		snprintf(the_flag_name, DEF_FRAGSIZE-1, "flagged_flag");
 	else if (strcasecmp(flag_name, "recent") == 0)
-		snprintf(the_flag_name, DEF_QUERYSIZE / 2, "recent_flag");
+		snprintf(the_flag_name, DEF_FRAGSIZE-1, "recent_flag");
 	else if (strcasecmp(flag_name, "draft") == 0)
-		snprintf(the_flag_name, DEF_QUERYSIZE / 2, "draft_flag");
+		snprintf(the_flag_name, DEF_FRAGSIZE-1, "draft_flag");
 	else
 		return DM_SUCCESS;	/* non-existent flag is not set */
 
@@ -3098,7 +3098,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	INIT_QUERY;
 
 	memset(query,0,DEF_QUERYSIZE);
-	pos += snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET ", DBPFX);
+	pos += snprintf(query, DEF_QUERYSIZE-1, "UPDATE %smessages SET ", DBPFX);
 
 	for (i = 0; flags && i < IMAP_NFLAGS; i++) {
 		if (flags[i])
@@ -3108,14 +3108,14 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		case IMAPFA_ADD:
 			if (flags[i]) {
 				if (msginfo && msginfo->flags) msginfo->flags[i] = 1;
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=1", seen?",":"", db_flag_desc[i]); 
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos - 1, "%s%s=1", seen?",":"", db_flag_desc[i]); 
 				seen++;
 			}
 			break;
 		case IMAPFA_REMOVE:
 			if (flags[i]) {
 				if (msginfo && msginfo->flags) msginfo->flags[i] = 0;
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=0", seen?",":"", db_flag_desc[i]); 
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos - 1, "%s%s=0", seen?",":"", db_flag_desc[i]); 
 				seen++;
 			}
 			break;
@@ -3123,10 +3123,10 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		case IMAPFA_REPLACE:
 			if (flags[i]) {
 				if (msginfo && msginfo->flags) msginfo->flags[i] = 1;
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=1", seen?",":"", db_flag_desc[i]); 
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos - 1, "%s%s=1", seen?",":"", db_flag_desc[i]); 
 			} else if (i != IMAP_FLAG_RECENT) {
 				if (msginfo && msginfo->flags) msginfo->flags[i] = 0;
-				pos += snprintf(query + pos, DEF_QUERYSIZE - pos, "%s%s=0", seen?",":"", db_flag_desc[i]); 
+				pos += snprintf(query + pos, DEF_QUERYSIZE - pos - 1, "%s%s=0", seen?",":"", db_flag_desc[i]); 
 			}
 			seen++;
 			break;
@@ -3134,11 +3134,11 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	}
 
 	if (seq) {
-		snprintf(query + pos, DEF_QUERYSIZE - pos,
+		snprintf(query + pos, DEF_QUERYSIZE - pos - 1,
 				" WHERE message_idnr = %" PRIu64 " AND status < %d AND seq <= %" PRIu64,
 				msg_idnr, MESSAGE_STATUS_DELETE, seq);
 	} else {
-		snprintf(query + pos, DEF_QUERYSIZE - pos,
+		snprintf(query + pos, DEF_QUERYSIZE - pos - 1,
 				" WHERE message_idnr = %" PRIu64 " AND status < %d",
 				msg_idnr, MESSAGE_STATUS_DELETE);
 	}
@@ -3343,7 +3343,7 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 	}
 	
 	/* user_idnr not found, so try to get it from the usermap */
-	snprintf(query, DEF_QUERYSIZE, "SELECT login, sock_allow, sock_deny, userid FROM %susermap "
+	snprintf(query, DEF_QUERYSIZE-1, "SELECT login, sock_allow, sock_deny, userid FROM %susermap "
 			"WHERE login in (?,'ANY') "
 			"ORDER BY sock_allow, sock_deny", 
 			DBPFX);
@@ -3804,7 +3804,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 	if (db_user_exists(username, &existing_user_idnr))
 		return TRUE;
 
-	if (strlen(password) >= (DEF_QUERYSIZE/2)) {
+	if (strlen(password) >= 128) {
 		TRACE(TRACE_ERR, "password length is insane");
 		return DM_EQUERY;
 	}
@@ -3819,7 +3819,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 		db_begin_transaction(c);
 		frag = db_returning("user_idnr");
 		if (*user_idnr==0) {
-			snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
+			snprintf(query, DEF_QUERYSIZE-1, "INSERT INTO %susers "
 				"(userid,passwd,client_idnr,maxmail_size,"
 				"encryption_type) VALUES "
 				"(?,?,?,?,?) %s",
@@ -3831,7 +3831,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 			db_stmt_set_u64(s, 4, maxmail);
 			db_stmt_set_str(s, 5, encoding);
 		} else {
-			snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
+			snprintf(query, DEF_QUERYSIZE-1, "INSERT INTO %susers "
 				"(userid,user_idnr,passwd,client_idnr,maxmail_size,"
 				"encryption_type) VALUES "
 				"(?,?,?,?,?,?) %s",
@@ -3971,7 +3971,7 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	tmp_from = g_strndup(from, REPLYCACHE_WIDTH);
 	tmp_handle = g_strndup(handle, REPLYCACHE_WIDTH);
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT lastseen FROM %sreplycache "
+	snprintf(query, DEF_QUERYSIZE-1, "SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = ? AND from_addr = ? AND handle = ? ", DBPFX);
 
 	c = db_con_get();
@@ -3996,13 +3996,13 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	
 	memset(query,0,DEF_QUERYSIZE);
 	if (t) {
-		snprintf(query, DEF_QUERYSIZE,
+		snprintf(query, DEF_QUERYSIZE-1,
 			 "UPDATE %sreplycache SET lastseen = %s "
 			 "WHERE to_addr = ? AND from_addr = ? "
 			 "AND handle = ?",
 			 DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP));
 	} else {
-		snprintf(query, DEF_QUERYSIZE,
+		snprintf(query, DEF_QUERYSIZE-1,
 			 "INSERT INTO %sreplycache (to_addr, from_addr, handle, lastseen) "
 			 "VALUES (?,?,?, %s)",
 			 DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP));
@@ -4038,7 +4038,7 @@ int db_replycache_unregister(const char *to, const char *from, const char *handl
 	Connection_T c; PreparedStatement_T s; volatile gboolean t = FALSE;
 	INIT_QUERY;
 
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE-1,
 			"DELETE FROM %sreplycache "
 			"WHERE to_addr = ? "
 			"AND from_addr = ? "
@@ -4077,7 +4077,7 @@ int db_replycache_validate(const char *to, const char *from,
 
 	g_string_printf(tmp, db_get_sql(SQL_EXPIRE), days);
 
-	snprintf(query, DEF_QUERYSIZE,
+	snprintf(query, DEF_QUERYSIZE-1,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = ? AND from_addr = ? "
 			"AND handle = ? AND lastseen > (%s)",

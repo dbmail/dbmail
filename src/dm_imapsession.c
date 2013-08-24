@@ -710,7 +710,6 @@ void _send_headers(ImapSession *self, const body_fetch *bodyfetch, gboolean not)
 static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean not)
 {
 	Connection_T c; ResultSet_T r; volatile int t = FALSE;
-	INIT_QUERY;
 	gchar *fld, *val, *old, *new = NULL;
 	uint64_t *mid;
 	uint64_t id;
@@ -718,8 +717,8 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	GString *fieldorder = NULL;
 	int k;
 	int fieldseq;
-	char range[DEF_FRAGSIZE];
-	memset(range,0,DEF_FRAGSIZE);
+	String_T query = p_string_new(self->pool, "");
+	String_T range = p_string_new(self->pool, "");
 
 	if (! bodyfetch->headers) {
 		TRACE(TRACE_DEBUG, "[%p] init bodyfetch->headers", self);
@@ -763,9 +762,9 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	self->hi = *(uint64_t *)last->data;
 
 	if (self->msg_idnr == self->hi)
-		snprintf(range,DEF_FRAGSIZE,"= %" PRIu64 "", self->msg_idnr);
+		p_string_printf(range, "= %" PRIu64 "", self->msg_idnr);
 	else
-		snprintf(range,DEF_FRAGSIZE,"BETWEEN %" PRIu64 " AND %" PRIu64 "", self->msg_idnr, self->hi);
+		p_string_printf(range, "BETWEEN %" PRIu64 " AND %" PRIu64 "", self->msg_idnr, self->hi);
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %" PRIu64 ":%" PRIu64 " ceiling %" PRIu64 " [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
 
@@ -788,7 +787,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		g_string_append_printf(fieldorder, "END AS seq");
 	}
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT m.message_idnr, n.headername, v.headervalue%s "
+	p_string_printf(query, "SELECT m.message_idnr, n.headername, v.headervalue%s "
 			"FROM %sheader h "
 			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
 			"LEFT JOIN %sheadername n ON h.headername_id=n.id "
@@ -799,7 +798,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			"ORDER BY message_idnr, seq",
 			not?"":fieldorder->str,
 			DBPFX, DBPFX, DBPFX, DBPFX,
-			self->mailbox->id, range, 
+			self->mailbox->id, p_string_str(range), 
 			not?"NOT":"", bodyfetch->hdrnames);
 
 	if (fieldorder)
@@ -807,7 +806,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 	c = db_con_get();	
 	TRY
-		r = db_query(c, query);
+		r = db_query(c, p_string_str(query));
 		while (db_result_next(r)) {
 			int l;	
 			const void *blob;
@@ -840,6 +839,9 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	FINALLY
 		db_con_close(c);
 	END_TRY;
+
+	p_string_free(range, TRUE);
+	p_string_free(query, TRUE);
 
 	if (t == DM_EQUERY) return;
 	
@@ -958,7 +960,7 @@ static void _fetch_envelopes(ImapSession *self)
 	uint64_t id;
 	char range[DEF_FRAGSIZE];
 	GList *last;
-	memset(range,0,DEF_FRAGSIZE);
+	memset(range,0,sizeof(range));
 
 	if (! self->envelopes) {
 		self->envelopes = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
@@ -978,11 +980,11 @@ static void _fetch_envelopes(ImapSession *self)
 	self->hi = *(uint64_t *)last->data;
 
 	if (self->msg_idnr == self->hi)
-		snprintf(range,DEF_FRAGSIZE,"= %" PRIu64 "", self->msg_idnr);
+		snprintf(range,DEF_FRAGSIZE-1,"= %" PRIu64 "", self->msg_idnr);
 	else
-		snprintf(range,DEF_FRAGSIZE,"BETWEEN %" PRIu64 " AND %" PRIu64 "", self->msg_idnr, self->hi);
+		snprintf(range,DEF_FRAGSIZE-1,"BETWEEN %" PRIu64 " AND %" PRIu64 "", self->msg_idnr, self->hi);
 
-	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr,envelope "
+	snprintf(query, DEF_QUERYSIZE-1, "SELECT message_idnr,envelope "
 			"FROM %senvelope e "
 			"LEFT JOIN %smessages m USING (physmessage_id) "
 			"WHERE m.mailbox_idnr = %" PRIu64 " "

@@ -883,7 +883,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		}
 		value->type = IST_IDATE;
 		(*idx)++;
-		g_snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_WITHIN), seconds);
+		g_snprintf(partial, DEF_FRAGSIZE-1, db_get_sql(SQL_WITHIN), seconds);
 		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date < %s", partial);
 		(*idx)++;
 
@@ -901,7 +901,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		}
 		value->type = IST_IDATE;
 		(*idx)++;
-		g_snprintf(partial, DEF_FRAGSIZE, db_get_sql(SQL_WITHIN), seconds);
+		g_snprintf(partial, DEF_FRAGSIZE-1, db_get_sql(SQL_WITHIN), seconds);
 		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > %s", partial);
 		(*idx)++;
 
@@ -1306,7 +1306,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 			db_stmt_set_int(st, 2, MESSAGE_STATUS_NEW);
 			db_stmt_set_int(st, 3, MESSAGE_STATUS_SEEN);
 			memset(partial,0,sizeof(partial));
-			snprintf(partial, DEF_FRAGSIZE, "%%%s%%", s->search);
+			snprintf(partial, DEF_FRAGSIZE-1, "%%%s%%", s->search);
 			db_stmt_set_str(st, 4, partial);
 
 			break;
@@ -1334,7 +1334,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 			db_stmt_set_int(st, 2, MESSAGE_STATUS_NEW);
 			db_stmt_set_int(st, 3, MESSAGE_STATUS_SEEN);
 			memset(partial,0,sizeof(partial));
-			snprintf(partial, DEF_FRAGSIZE, "%%%s%%", s->search);
+			snprintf(partial, DEF_FRAGSIZE-1, "%%%s%%", s->search);
 			db_stmt_set_str(st, 4, partial);
 			db_stmt_set_str(st, 5, partial);
 
@@ -1378,7 +1378,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 			db_stmt_set_int(st, 2, MESSAGE_STATUS_NEW);
 			db_stmt_set_int(st, 3, MESSAGE_STATUS_SEEN);
 			memset(partial,0,sizeof(partial));
-			snprintf(partial, DEF_FRAGSIZE, "%%%s%%", s->search);
+			snprintf(partial, DEF_FRAGSIZE-1, "%%%s%%", s->search);
 			db_stmt_set_str(st, 4, partial);
 
 			break;

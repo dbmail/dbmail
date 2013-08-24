@@ -245,8 +245,8 @@
 #define MAX_LINESIZE (64*1024)
 
 /* string length for query */
-#define DEF_QUERYSIZE 8192
-#define DEF_FRAGSIZE 64 
+#define DEF_QUERYSIZE (32*1024)
+#define DEF_FRAGSIZE 256
 
 /** default table prefix */
 #define DEFAULT_DBPFX "dbmail_"
