@@ -45,8 +45,8 @@ static gchar * init_challenge(void)
 {
 	char name[255];
 	memset(name,0, sizeof(name));
-	if (getdomainname(name,sizeof(name))) {
-		if (gethostname(name, sizeof(name)))
+	if (getdomainname(name,sizeof(name)-1)) {
+		if (gethostname(name, sizeof(name)-1))
 			strcpy(name,"(none)");
 	}
 	return g_mime_utils_generate_message_id(name);

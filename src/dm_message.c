@@ -393,7 +393,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			is_header	= db_result_get_bool(r,3);
 			if (row == 0) {
 				memset(internal_date, 0, sizeof(internal_date));
-				g_strlcpy(internal_date, db_result_get(r,4), SQL_INTERNALDATE_LEN);
+				g_strlcpy(internal_date, db_result_get(r,4), SQL_INTERNALDATE_LEN-1);
 			}
 			blob		= db_result_get_blob(r,5,&l);
 
@@ -1695,7 +1695,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	if(isdate) {
 		int offset;
 		date = g_mime_utils_header_decode_date(value,&offset);
-		strftime(sortfield, CACHE_WIDTH, "%Y-%m-%d %H:%M:%S", gmtime(&date));
+		strftime(sortfield, CACHE_WIDTH-1, "%Y-%m-%d %H:%M:%S", gmtime(&date));
 
 		date += (offset * 36); // +0200 -> offset 200
 		strftime(datefield, 20,"%Y-%m-%d", gmtime(&date));
@@ -1998,7 +1998,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 		
 		memset(into,0,sizeof(into));
 
-		if (! (get_mailbox_from_filters(message, useridnr, mailbox, into, sizeof(into)))) {				
+		if (! (get_mailbox_from_filters(message, useridnr, mailbox, into, sizeof(into)-1))) {				
 			mailbox = "INBOX";
 			source = BOX_DEFAULT;
 		} else {

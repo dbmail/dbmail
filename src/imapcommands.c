@@ -1446,7 +1446,7 @@ void _ic_append_enter(dm_thread_data *D)
 
 	char buffer[1024];
 	memset(buffer, 0, sizeof(buffer));
-	g_snprintf(buffer, 1024, "APPENDUID %" PRIu64 " %" PRIu64, mboxid, message_id);
+	g_snprintf(buffer, 1023, "APPENDUID %" PRIu64 " %" PRIu64, mboxid, message_id);
 	SESSION_OK_WITH_RESP_CODE(buffer);
 	SESSION_RETURN;
 }

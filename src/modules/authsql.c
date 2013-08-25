@@ -322,7 +322,7 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 	/* the shared mailbox user should not log in! */
 	if (strcmp(tuser, PUBLIC_FOLDER_USER) == 0) return 0;
 
-	strncpy(real_username, tuser, DM_USERNAME_LEN);
+	strncpy(real_username, tuser, DM_USERNAME_LEN-1);
 	if (db_use_usermap()) {  /* use usermap */
 		result = db_usermap_resolve(ci, tuser, real_username);
 		if (result == DM_EGENERAL)

@@ -102,7 +102,7 @@ const char * quota_get_root(T quota)
 int quota_set_root(T quota, const char *root)
 {
 	memset(quota->root, 0, sizeof(quota->root));
-	g_strlcpy(quota->root, root, sizeof(quota->root));
+	g_strlcpy(quota->root, root, sizeof(quota->root)-1);
 	return 0;
 }
 

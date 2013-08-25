@@ -54,10 +54,10 @@ static gpointer dbmail_iconv_once(gpointer UNUSED data)
 	GETCONFIGVALUE("DEFAULT_MSG_ENCODING", "DBMAIL", ic->msg_charset);
 
 	if (! ic->db_charset[0])
-		g_strlcpy(ic->db_charset,g_mime_locale_charset(), FIELDSIZE);
+		g_strlcpy(ic->db_charset,g_mime_locale_charset(), FIELDSIZE-1);
 
 	if (! ic->msg_charset[0])
-		g_strlcpy(ic->msg_charset, g_mime_locale_charset(), FIELDSIZE);
+		g_strlcpy(ic->msg_charset, g_mime_locale_charset(), FIELDSIZE-1);
 
 	TRACE(TRACE_DEBUG,"Initialize DB encoding surface [UTF-8..%s]", ic->db_charset);
 	ic->to_db = g_mime_iconv_open(ic->db_charset,"UTF-8");

@@ -304,7 +304,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	left = ci_wbuf_len(client);
 	while (left > 0) {
 		n = left;
-		if (n > TLS_SEGMENT) n = TLS_SEGMENT;
+		if (n >= TLS_SEGMENT) n = TLS_SEGMENT - 1;
 
 		s = (char *)p_string_str(client->write_buffer) + client->write_buffer_offset;
 
