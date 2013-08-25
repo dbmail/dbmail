@@ -3152,7 +3152,7 @@ int date2char_str(const char *column, Field_T *frag)
 {
 	assert(frag);
 	memset(frag, 0, sizeof(Field_T));
-	snprintf((char *)frag, sizeof(Field_T), db_get_sql(SQL_TO_CHAR), column);
+	snprintf((char *)frag, sizeof(Field_T)-1, db_get_sql(SQL_TO_CHAR), column);
 	return 0;
 }
 
@@ -3164,7 +3164,7 @@ int char2date_str(const char *date, Field_T *frag)
 	memset(frag, 0, sizeof(Field_T));
 
 	qs = g_strdup_printf("'%s'", date);
-	snprintf((char *)frag, sizeof(Field_T), db_get_sql(SQL_TO_DATETIME), qs);
+	snprintf((char *)frag, sizeof(Field_T)-1, db_get_sql(SQL_TO_DATETIME), qs);
 	g_free(qs);
 
 	return 0;
@@ -3188,7 +3188,7 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 	if (ci->tx==0) {
 		strncpy(clientsock,"",1);
 	} else {
-		snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%s", ci->dst_ip, ci->dst_port);
+		snprintf(clientsock, DM_SOCKADDR_LEN-1, "inet:%s:%s", ci->dst_ip, ci->dst_port);
 		TRACE(TRACE_DEBUG, "client on inet socket [%s]", clientsock);
 	}
 	

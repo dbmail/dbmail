@@ -52,8 +52,8 @@ int sort_load_driver(void)
 	int i;
 	char local_path[PATH_MAX];
 	memset(local_path, 0, sizeof(local_path));
-	g_strlcat(local_path, DM_PWD, sizeof(local_path)-1);
-	g_strlcat(local_path, "/src/modules/.libs", sizeof(local_path)-1);
+	g_strlcat(local_path, DM_PWD, PATH_MAX);
+	g_strlcat(local_path, "/src/modules/.libs", PATH_MAX);
 
 	char *lib_path[] = { 
 		local_path,

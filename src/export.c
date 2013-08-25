@@ -129,7 +129,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 
 	if (delete_after_dump) {
 		int deleted_flag[IMAP_NFLAGS];
-		memset(deleted_flag, 0, IMAP_NFLAGS * sizeof(int));
+		memset(deleted_flag, 0, sizeof(deleted_flag));
 		deleted_flag[IMAP_FLAG_DELETED] = 1;
 
 		GList *ids = g_tree_keys(MailboxState_getIds(mb->mbstate));

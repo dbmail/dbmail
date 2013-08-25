@@ -156,7 +156,7 @@ int send_alert(uint64_t user_idnr, char *subject, char *body)
 		from = DEFAULT_POSTMASTER;
 
 	// Set the \Flagged flag.
-	memset(msgflags, 0, sizeof(int) * IMAP_NFLAGS);
+	memset(msgflags, 0, sizeof(msgflags));
 	msgflags[IMAP_FLAG_FLAGGED] = 1;
 
 	// Get the user's login name.
@@ -370,7 +370,7 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	/* If there were any imapflags, set them. */
 	if (flags) {
 		int i, j;
-		memset(msgflags, 0, IMAP_NFLAGS * sizeof(int));
+		memset(msgflags, 0, sizeof(msgflags));
 
 		// Loop through all script/user-specified flags.
 		for (i = 0; flags[i]; i++) {

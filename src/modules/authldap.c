@@ -1048,7 +1048,7 @@ int auth_delete_user(const char *username)
 		return 0;
 	}
 
-	snprintf(query, AUTH_QUERY_SIZE, "(%s=%s)", _ldap_cfg.field_uid, username);
+	snprintf(query, AUTH_QUERY_SIZE-1, "(%s=%s)", _ldap_cfg.field_uid, username);
 
 	if (! (ldap_res = authldap_search(query)))
 		return -1;
@@ -1221,7 +1221,7 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 	
 	create_current_timestring(&timestring);
 	
-	strncpy(real_username, username, DM_USERNAME_LEN);
+	strncpy(real_username, username, DM_USERNAME_LEN-1);
 	if (db_use_usermap()) {  /* use usermap */
 		result = db_usermap_resolve(ci, username, real_username);
 		if (result == DM_EGENERAL)

@@ -117,11 +117,11 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 	if (level & TRACE_STDERR) {
 		time_t now = time(NULL);
 		struct tm tmp;
-		char date[32];
+		char date[33];
 
  		if (! configured) {
  			memset(hostname,'\0',sizeof(hostname));
- 			gethostname(hostname,15);
+ 			gethostname(hostname,sizeof(hostname)-1);
  			configured=1;
  		}
  

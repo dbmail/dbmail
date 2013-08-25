@@ -511,7 +511,7 @@ static void _append_join(char *join, char *table)
         char tmp[BUFSIZE+1];
 	memset(tmp, 0, sizeof(tmp));
         g_snprintf(tmp, BUFSIZE, "LEFT JOIN %s%s ON m.physmessage_id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
-        g_strlcat(join, tmp, MAX_SEARCH_LEN-strlen(join)-1);
+        g_strlcat(join, tmp, MAX_SEARCH_LEN);
 }
 
 static void _append_sort(char *order, char *field, gboolean reverse)
@@ -519,7 +519,7 @@ static void _append_sort(char *order, char *field, gboolean reverse)
 	char tmp[BUFSIZE+1];
 	memset(tmp, 0, sizeof(tmp));
 	g_snprintf(tmp, BUFSIZE, "%s%s,", field, reverse ? " DESC" : "");
-	g_strlcat(order, tmp, MAX_SEARCH_LEN-strlen(order)-1);
+	g_strlcat(order, tmp, MAX_SEARCH_LEN);
 }
 
 static int _handle_sort_args(DbmailMailbox *self, String_T *search_keys, search_key *value, uint64_t *idx)
@@ -822,7 +822,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		value->type = IST_IDATE;
 		(*idx)++;
 		date_imap2sql(p_string_str(search_keys[*idx]), s);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date < '%s'", s);
+		g_snprintf(value->search, MAX_SEARCH_LEN-1, "p.internal_date < '%s'", s);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "on") ) {
@@ -835,7 +835,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		(*idx)++;
 		date_imap2sql(p_string_str(search_keys[*idx]), s);
 		g_snprintf(d, MIME_FIELD_MAX-1, db_get_sql(SQL_TO_DATE), "p.internal_date");
-		g_snprintf(value->search, MAX_SEARCH_LEN, "%s = '%s'", d, s);
+		g_snprintf(value->search, MAX_SEARCH_LEN-1, "%s = '%s'", d, s);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "since") ) {
@@ -846,7 +846,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		value->type = IST_IDATE;
 		(*idx)++;
 		date_imap2sql(p_string_str(search_keys[*idx]), s);
-		g_snprintf(value->search, MAX_SEARCH_LEN, "p.internal_date > '%s'", s);
+		g_snprintf(value->search, MAX_SEARCH_LEN-1, "p.internal_date > '%s'", s);
 		(*idx)++;
 	}
 

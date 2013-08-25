@@ -44,7 +44,7 @@
 
 #define MAXSOCKETS 256
 
-#define UID_SIZE 70
+#define UID_SIZE 96
 #define IPNUM_LEN 32
 #define IPLEN 32
 #define BACKLOG 128

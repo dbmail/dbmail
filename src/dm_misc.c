@@ -83,14 +83,14 @@ int drop_privileges(char *newuser, char *newgroup)
 
 	memset(buf,0,sizeof(buf));
 
-	s = getgrnam_r(newgroup, &grp, buf, sizeof(buf), &gresult);
+	s = getgrnam_r(newgroup, &grp, buf, sizeof(buf)-1, &gresult);
 	if (gresult == NULL) {
 		if (s == 0)
 			TRACE(TRACE_ERR, "could not find group %s\n", newgroup);
 		return -1;
 	}
 
-	s = getpwnam_r(newuser, &pwd, buf, sizeof(buf), &presult);
+	s = getpwnam_r(newuser, &pwd, buf, sizeof(buf)-1, &presult);
 	if (presult == NULL) {
 		if (s == 0)
 			TRACE(TRACE_ERR, "could not find user %s\n", newuser);
@@ -113,14 +113,14 @@ void create_unique_id(char *target, uint64_t message_idnr)
 {
 	char md5_str[FIELDSIZE];
 	if (message_idnr != 0) {
-		snprintf(target, UID_SIZE, "%" PRIu64 ":%ld", message_idnr, random());
+		snprintf(target, UID_SIZE-1, "%" PRIu64 ":%ld", message_idnr, random());
 	} else {
-		snprintf(target, UID_SIZE, "%ld", random());
+		snprintf(target, UID_SIZE-1, "%ld", random());
 	}
 
 	memset(md5_str, 0, sizeof(md5_str));
 	dm_md5(target, md5_str);
-	snprintf(target, UID_SIZE, "%s", md5_str);
+	snprintf(target, UID_SIZE-1, "%s", md5_str);
 
 	TRACE(TRACE_DEBUG, "created: %s", target);
 }
@@ -135,7 +135,7 @@ void create_current_timestring(TimeString_T * timestring)
 
 	memset(&tm,0,sizeof(tm));
 	localtime_r(&td, &tm);	/* get components */
-	strftime((char *) timestring, sizeof(TimeString_T),
+	strftime((char *) timestring, sizeof(TimeString_T)-1,
 		 "%Y-%m-%d %H:%M:%S", &tm);
 }
 
@@ -2296,7 +2296,7 @@ int dm_get_hash_for_string(const char *buf, char *digest)
 
 	if (! initialized) {
 		if (config_get_value("hash_algorithm", "DBMAIL", hash_algorithm) < 0)
-			g_strlcpy(hash_algorithm, "sha1", FIELDSIZE);
+			g_strlcpy(hash_algorithm, "sha1", FIELDSIZE-1);
 
 		if (MATCH(hash_algorithm,"md5"))
 			type=MHASH_MD5;
