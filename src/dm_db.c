@@ -3385,21 +3385,26 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 	int is_validated = 0;
 	char salt[13], cryptres[35];
 	int t = FALSE;
-	const char *dbpass, *encode;
+	char dbpass[255], encode[255];
 	char hashstr[FIELDSIZE];
 	Connection_T c; ResultSet_T r;
 
 	memset(salt,0,sizeof(salt));
 	memset(cryptres,0,sizeof(cryptres));
 	memset(hashstr, 0, sizeof(hashstr));
+	memset(dbpass, 0, sizeof(dbpass));
+	memset(encode, 0, sizeof(encode));
 
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT %s, encryption_type FROM %susers WHERE user_idnr = %" PRIu64 "",
 			       	pwfield, DBPFX, *user_idnr);
 		if (db_result_next(r)) {
-			dbpass = db_result_get(r, 0);
-			encode = db_result_get(r, 1);
+			const char *pwd, *enc;
+			pwd = db_result_get(r, 0);
+			enc = db_result_get(r, 1);
+			strncpy(dbpass, pwd, 254);
+			strncpy(encode, enc, 254);
 			t = TRUE;
 		} else {
 			t = FALSE;
@@ -3422,9 +3427,7 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 			is_validated = Cram_verify(ci->auth, dbpass);
 		else 
 			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
-        }
-
-	if (strcasecmp(encode, "crypt") == 0) {
+        } else if (strcasecmp(encode, "crypt") == 0) {
 		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
 		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
 	} else if (strcasecmp(encode, "md5") == 0) {
@@ -3485,10 +3488,12 @@ int db_user_delete_messages(uint64_t user_idnr, char *flags)
 	char *flag;
 	char **parts;
 	GList *keywords = NULL;
+	GList *ids = NULL;
 	int sysflags[IMAP_NFLAGS];
 	String_T query = NULL;
 	Mempool_T pool = NULL;
 	Connection_T c; PreparedStatement_T st;
+	ResultSet_T r;
 
 	memset(sysflags, 0, sizeof(sysflags));
 	parts = g_strsplit(flags, " ", 0);
@@ -3511,13 +3516,11 @@ int db_user_delete_messages(uint64_t user_idnr, char *flags)
 
 	pool = mempool_open();
 	query = p_string_new(pool, "");
-	p_string_printf(query, "UPDATE %smessages SET status=%d "
-			"WHERE message_idnr IN ("
-			"SELECT m.message_idnr FROM %smessages m "
+	p_string_printf(query,"SELECT m.message_idnr FROM %smessages m "
 			"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
 			"LEFT OUTER JOIN %skeywords k ON k.message_idnr=m.message_idnr "
 			"WHERE b.owner_idnr=? AND status IN (%d,%d) AND (1=0",
-			DBPFX, MESSAGE_STATUS_DELETE, DBPFX, DBPFX, DBPFX,
+			DBPFX, DBPFX, DBPFX,
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 
@@ -3535,7 +3538,7 @@ int db_user_delete_messages(uint64_t user_idnr, char *flags)
 		keywords = g_list_next(keywords);
 	}
 
-	p_string_append(query, "))");
+	p_string_append(query, ")");
 
 	c = db_con_get();
 	TRY
@@ -3551,7 +3554,29 @@ int db_user_delete_messages(uint64_t user_idnr, char *flags)
 				break;
 			keywords = g_list_next(keywords);
 		}
-		db_stmt_exec(st);
+		r = db_stmt_query(st);
+		while (db_result_next(r)) {
+			uint64_t *id = g_new0(uint64_t, 1);
+			*id = db_result_get_u64(r, 0);
+			ids = g_list_prepend(ids, id);
+		}
+
+		if (g_list_length(ids)) {
+			GList *slices = g_list_slices_u64(ids, 100);
+			g_list_destroy(ids);
+			slices = g_list_first(slices);
+			while (slices) {
+				p_string_printf(query, "UPDATE %smessages SET status=%d "
+						"WHERE message_idnr IN (%s)",
+						DBPFX, MESSAGE_STATUS_DELETE,
+						(char *)slices->data);
+				db_exec(c, p_string_str(query));
+				if (! g_list_next(slices))
+					break;
+				slices = g_list_next(slices);
+			}
+			g_list_destroy(slices);
+		}
 		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
