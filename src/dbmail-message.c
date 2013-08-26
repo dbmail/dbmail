@@ -317,11 +317,14 @@ static GMimeContentType *find_type(const char *s)
 
 static char * find_boundary(const char *s)
 {
-	gchar *boundary;
+	gchar *boundary = NULL;
+	const gchar *parameter = NULL;
 	GMimeContentType *type = find_type(s);
 	if (! type)
 		return NULL;
-	boundary = g_strdup(g_mime_content_type_get_parameter(type,"boundary"));
+	parameter = g_mime_content_type_get_parameter(type,"boundary");
+	if (parameter)
+		boundary = g_strdup(parameter);
 	g_object_unref(type);
 	return boundary;
 }
@@ -400,16 +403,23 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 			if (is_header && ((boundary = find_boundary((char *)blob)) != NULL)) {
 				got_boundary = TRUE;
+				volatile char *old = NULL;
 				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
-				if (blist[depth]) g_free((void *)blist[depth]);
+				if (blist[depth])
+					old = blist[depth];
 				blist[depth] = boundary;
+				if (old) {
+					g_free((void *)old);
+					old = NULL;
+				}
 			}
 
 			while (prevdepth-1 >= depth && blist[prevdepth-1]) {
-				dprint("\n--%s at %d -> %d--\n", blist[prevdepth-1], prevdepth, prevdepth-1);
-				p_string_append_printf(m, "\n--%s--\n", blist[prevdepth-1]);
-				g_free((void *)blist[prevdepth-1]);
+				volatile char *old = blist[prevdepth-1];
 				blist[prevdepth-1] = NULL;
+				dprint("\n--%s at %d -> %d--\n", old, prevdepth, prevdepth-1);
+				p_string_append_printf(m, "\n--%s--\n", old);
+				g_free((void *)old);
 				prevdepth--;
 				finalized=TRUE;
 			}
