@@ -66,6 +66,7 @@ START_TEST(test_string_new)
 {
 	String_T S = p_string_new(pool, "");
 	fail_unless(S != NULL);
+	p_string_free(S, TRUE);
 }
 END_TEST
 
@@ -84,6 +85,7 @@ START_TEST(test_string_assign)
 			fail_unless(MATCH("test", p_string_str(S)));
 		}
 	}
+	p_string_free(S, TRUE);
 }
 END_TEST
 
@@ -103,6 +105,7 @@ START_TEST(test_string_printf)
 			fail_unless(MATCH("test", p_string_str(S)));
 		}
 	}
+	p_string_free(S, TRUE);
 }
 END_TEST
 
@@ -113,9 +116,10 @@ START_TEST(test_string_append_printf)
 	String_T S = p_string_new(pool, "A");
 	p_string_append_printf(S, "%s", "B");
 	fail_unless(MATCH("AB", p_string_str(S)), p_string_str(S));
-	for (i=0; i<1000; i++) {
-		p_string_append_printf(S, "%s", ABCD);
+	for (i=0; i<10000; i++) {
+		p_string_append_printf(S, "%s TEST", ABCD);
 	}
+	p_string_free(S, TRUE);
 }
 END_TEST
 
@@ -141,6 +145,7 @@ START_TEST(test_string_truncate)
 	String_T S = p_string_new(pool, "ABCDE");
 	p_string_truncate(S, 2);
 	fail_unless(MATCH("AB", p_string_str(S)));
+	p_string_free(S, TRUE);
 }
 END_TEST
 
@@ -151,12 +156,12 @@ START_TEST(test_string_erase)
 	fail_unless(MATCH("ABCDEFGHIJKLMNO",p_string_str(S)));
 	p_string_erase(S, 0, 5);
 	fail_unless(MATCH("FGHIJKLMNO",p_string_str(S)));
+	p_string_free(S, TRUE);
 }
 END_TEST
 
 START_TEST(test_string_unescape)
 {
-	Mempool_T pool = mempool_open();
 	String_T is = p_string_new(pool, "");
 	char *in[] = {
 		"",
@@ -189,6 +194,7 @@ START_TEST(test_string_unescape)
 			       	in[i], p_string_str(is), out[i]);
 		i++;
 	}
+	p_string_free(is, TRUE);
 }
 END_TEST
 
@@ -197,6 +203,7 @@ START_TEST(test_string_free)
 	String_T S = p_string_new(pool, "ABCDE");
 	char *s = p_string_free(S, FALSE);
 	fail_unless(MATCH("ABCDE", s));
+	free(s);
 }
 END_TEST
 
