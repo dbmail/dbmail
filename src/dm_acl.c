@@ -339,6 +339,9 @@ int acl_get_rightsstring_identifier(char *identifier, uint64_t mboxid, char *rig
 {
 	uint64_t userid;
 
+	assert(rightsstring);
+	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
+	
 	if (! auth_user_exists(identifier, &userid)) {
 		TRACE(TRACE_ERR, "error finding user id for user with name [%s]", identifier);
 		return -1;
@@ -354,12 +357,15 @@ int acl_get_rightsstring(uint64_t userid, uint64_t mboxid, char *rightsstring)
 	MailboxState_T S;
 	struct ACLMap map;
 
+	assert(rightsstring);
+	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
+
 	if ((result = db_get_mailbox_owner(mboxid, &owner_idnr)) <= 0)
 		return result;
 
 	if (owner_idnr == userid) {
 		TRACE(TRACE_DEBUG, "mailbox [%" PRIu64 "] is owned by user [%" PRIu64 "], giving all rights", mboxid, userid);
-		g_strlcat(rightsstring, acl_right_chars, NR_ACL_FLAGS);
+		g_strlcat(rightsstring, acl_right_chars, NR_ACL_FLAGS+1);
 		return 1;
 	}
 	
@@ -372,33 +378,33 @@ int acl_get_rightsstring(uint64_t userid, uint64_t mboxid, char *rightsstring)
 	if (result == DM_EQUERY) return result;
 	
 	if (map.lookup_flag)
-		g_strlcat(rightsstring,"l", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"l", NR_ACL_FLAGS+1);
 	if (map.read_flag)
-		g_strlcat(rightsstring,"r", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"r", NR_ACL_FLAGS+1);
 	if (map.seen_flag)
-		g_strlcat(rightsstring,"s", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"s", NR_ACL_FLAGS+1);
 	if (map.write_flag)
-		g_strlcat(rightsstring,"w", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"w", NR_ACL_FLAGS+1);
 	if (map.insert_flag)
-		g_strlcat(rightsstring,"i", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"i", NR_ACL_FLAGS+1);
 	if (map.post_flag)
-		g_strlcat(rightsstring,"p", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"p", NR_ACL_FLAGS+1);
 	if (map.create_flag)
-		g_strlcat(rightsstring,"k", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"k", NR_ACL_FLAGS+1);
 	if (map.delete_flag)
-		g_strlcat(rightsstring,"x", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"x", NR_ACL_FLAGS+1);
 	if (map.deleted_flag)
-		g_strlcat(rightsstring,"t", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"t", NR_ACL_FLAGS+1);
 	if (map.expunge_flag)
-		g_strlcat(rightsstring,"e", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"e", NR_ACL_FLAGS+1);
 	if (map.administer_flag)
-		g_strlcat(rightsstring,"a", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"a", NR_ACL_FLAGS+1);
 
 	// RFC 4314 backwords compatible RFC 2086 virtual c and d rights
 	if (map.create_flag)
-		g_strlcat(rightsstring,"c", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"c", NR_ACL_FLAGS+1);
 	if (map.delete_flag || map.deleted_flag || map.expunge_flag)
-		g_strlcat(rightsstring,"d", NR_ACL_FLAGS);
+		g_strlcat(rightsstring,"d", NR_ACL_FLAGS+1);
 
 	return 1;
 }
