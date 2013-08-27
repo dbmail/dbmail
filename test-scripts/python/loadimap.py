@@ -50,7 +50,7 @@ class IMAPClient:
     def fetch(self):
         self.conn.create(IMAPBOX)
         self.conn.select(IMAPBOX)
-        self.conn.uid('FETCH', '1:*', "(UID BODY[])")
+        self.conn.uid('FETCH', "1:*", "rfc822")
 
     def logout(self):
         return self.conn.logout()
