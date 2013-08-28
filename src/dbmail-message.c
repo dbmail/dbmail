@@ -2009,6 +2009,7 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 	dsn_class_t ret;
 	Field_T val;
 	char *subaddress = NULL;
+	char into[1024];
 
 	/* Catch the brute force delivery right away.
 	 * We skip the Sieve scripts, and down the call
@@ -2021,8 +2022,6 @@ dsn_class_t sort_and_deliver(DbmailMessage *message,
 
 	/* This is the only condition when called from pipe.c, actually. */
 	if (! mailbox) {
-		char into[1024];
-		
 		memset(into,0,sizeof(into));
 
 		if (! (get_mailbox_from_filters(message, useridnr, mailbox, into, sizeof(into)-1))) {				
