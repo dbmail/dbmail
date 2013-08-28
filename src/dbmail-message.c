@@ -314,24 +314,30 @@ static char *find_type_header(const char *s)
 
 static GMimeContentType *find_type(const char *s)
 {
+	GMimeContentType *type = NULL;
 	char *header = find_type_header(s);
 	if (! header)
 		return NULL;
-	return g_mime_content_type_new_from_string(header);
+	type = g_mime_content_type_new_from_string(header);
+	g_free(header);
+	return type;
 }
 
 static char * find_boundary(const char *s)
 {
 	int i = 0;
-	char *rest;
+	char *rest = NULL;
+	char *boundary = NULL;
 	bool wantquote = false;
 	char *type = find_type_header(s);
 
 	if (! type)
 		return NULL;
 	rest = g_strcasestr(type, "boundary=");
-	if (! rest)
+	if (! rest) {
+		g_free(type);
 		return NULL;
+	}
 	rest += 9; // jump past 'boundary='
 	if (rest[0] == '"') {
 		wantquote=true;
@@ -345,7 +351,9 @@ static char * find_boundary(const char *s)
 		i++;
 	}
 		
-	return g_strndup(rest, min(i,70)); // boundaries have a max-length of 70
+	boundary = g_strndup(rest, min(i,70)); // boundaries have a max-length of 70
+	g_free(type);
+	return boundary;
 }
 
 
