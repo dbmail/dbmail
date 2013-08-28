@@ -365,6 +365,8 @@ int db_get_mailbox_size(uint64_t mailbox_idnr, int only_deleted, uint64_t * mail
 int db_icheck_partlists(gboolean cleanup);
 int db_icheck_mimeparts(gboolean cleanup);
 int db_icheck_physmessages(gboolean cleanup);
+int db_icheck_headernames(gboolean cleanup);
+int db_icheck_headervalues(gboolean cleanup);
 
 /** 
  * \brief check for cached header values
