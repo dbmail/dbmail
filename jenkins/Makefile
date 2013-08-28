@@ -19,9 +19,9 @@ test: buildout
 	sbin/dbmail-users -y -e testuser1 || true
 	bin/py ../contrib/mailbox2dbmail/mailbox2dbmail -u testuser1 -m ../test-scripts/testbox -t mbox -p sbin/dbmail-deliver
 	timeout 300 imaptest user=testuser1 pass=test port=10143 test=../test-scripts/imap
-	timeout 300 bin/py ../test-scripts/python/testimap.py -v
+	timeout 300 bin/py ../test-scripts/testimap.py -v
 	bin/py ../contrib/mailbox2dbmail/mailbox2dbmail -u testuser1 -m ../test-scripts/testbox -t mbox -p sbin/dbmail-deliver
-	timeout 300 bin/py ../test-scripts/python/testpop.py -v
+	timeout 300 bin/py ../test-scripts/testpop.py -v
 	timeout 300 bin/py ../test-scripts/python/compare.py
 	#timeout 300 bin/py ../test-scripts/python/loadlmtp.py
 	#timeout 300 bin/py ../test-scripts/python/loadimap.py
