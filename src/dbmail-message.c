@@ -278,9 +278,8 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 
 }
 
-static GMimeContentType *find_type(const char *s)
+static char *find_type_header(const char *s)
 {
-	GMimeContentType *type = NULL;
 	GString *header;
 	char *rest, *h = NULL;
 	int i=0;
@@ -308,25 +307,45 @@ static GMimeContentType *find_type(const char *s)
 		g_string_append_c(header,rest[i++]);
 	}
 	h = header->str;
+	g_string_free(header,FALSE);
 	g_strstrip(h);
-	if (strlen(h))
-		type = g_mime_content_type_new_from_string(h);
-	g_string_free(header,TRUE);
-	return type;
+	return h;
+}
+
+static GMimeContentType *find_type(const char *s)
+{
+	char *header = find_type_header(s);
+	if (! header)
+		return NULL;
+	return g_mime_content_type_new_from_string(header);
 }
 
 static char * find_boundary(const char *s)
 {
-	gchar *boundary = NULL;
-	const gchar *parameter = NULL;
-	GMimeContentType *type = find_type(s);
+	int i = 0;
+	char *rest;
+	bool wantquote = false;
+	char *type = find_type_header(s);
+
 	if (! type)
 		return NULL;
-	parameter = g_mime_content_type_get_parameter(type,"boundary");
-	if (parameter)
-		boundary = g_strdup(parameter);
-	g_object_unref(type);
-	return boundary;
+	rest = g_strcasestr(type, "boundary=");
+	if (! rest)
+		return NULL;
+	rest += 9; // jump past 'boundary='
+	if (rest[0] == '"') {
+		wantquote=true;
+		rest++;
+	}
+	while (rest[i]) {
+		if (wantquote && rest[i]=='"')
+			break;
+		if (! wantquote && isspace(rest[i]))
+			break;
+		i++;
+	}
+		
+	return g_strndup(rest, min(i,70)); // boundaries have a max-length of 70
 }
 
 
@@ -338,7 +357,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	char internal_date[SQL_INTERNALDATE_LEN];
 	char *boundary = NULL;
 	GMimeContentType *mimetype = NULL;
-	int maxdepth = 128;
+	int maxdepth = 16;
 	volatile char **blist = g_new0(volatile char *, maxdepth);
 	int prevdepth, depth = 0, order, row = 0, key = 1;
 	volatile int t = FALSE;
