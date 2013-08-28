@@ -632,6 +632,8 @@ int do_check_integrity(void)
 	 3. Check for loose physmessages
 	 4. Check for loose partlists
 	 5. Check for loose mimeparts
+	 6. Check for loose headernames
+	 7. Check for loose headervalues
 	 */
 
 	/* part 3 */
@@ -700,12 +702,49 @@ int do_check_integrity(void)
 		action, difftime(stop, start));
 	/* end part 5 */
 
+	/* part 6 */
+	start = stop;
+	qprintf("\n%s DBMAIL headernames integrity...\n", action);
+	if ((count = db_icheck_headernames(cleanup)) < 0) {
+		qerrorf("Failed. An error occurred. Please check log.\n");
+		serious_errors = 1;
+		return -1;
+	}
+
+	qprintf("Ok. Found [%ld] unconnected headernames.\n", count);
+	if (count > 0 && cleanup) {
+		qerrorf("Ok. Orphaned headernames deleted.\n");
+	}
+
+	time(&stop);
+	qverbosef("--- %s unconnected headernames took %g seconds\n",
+		action, difftime(stop, start));
+	/* end part 6 */
+
+	/* part 7 */
+	start = stop;
+	qprintf("\n%s DBMAIL headervalues integrity...\n", action);
+	if ((count = db_icheck_headervalues(cleanup)) < 0) {
+		qerrorf("Failed. An error occurred. Please check log.\n");
+		serious_errors = 1;
+		return -1;
+	}
+
+	qprintf("Ok. Found [%ld] unconnected headervalues.\n", count);
+	if (count > 0 && cleanup) {
+		qerrorf("Ok. Orphaned headervalues deleted.\n");
+	}
+
+	time(&stop);
+	qverbosef("--- %s unconnected headervalues took %g seconds\n",
+		action, difftime(stop, start));
+	/* end part 7 */
+
 	g_list_destroy(lost);
 	lost = NULL;
 
 	time(&stop);
 	qverbosef("--- %s block integrity took %g seconds\n", action, difftime(stop, start));
-	/* end part 6 */
 
 	return 0;
 }

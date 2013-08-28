@@ -1438,6 +1438,78 @@ int db_icheck_mimeparts(gboolean cleanup)
 	return t;
 }
 
+int db_icheck_headernames(gboolean cleanup)
+{
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
+	GList *ids = NULL;
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT hn.id FROM %sheadername hn LEFT JOIN %sheader h ON hn.id = h.headername_id "
+				"WHERE h.headername_id IS NULL", DBPFX, DBPFX);
+		while(db_result_next(r)) {
+			uint64_t *id = g_new0(uint64_t, 1);
+			*id = db_result_get_u64(r, 0);
+			ids = g_list_prepend(ids, id);
+		}
+		if (cleanup) {
+			while(ids) {
+				db_begin_transaction(c);
+				db_exec(c, "DELETE FROM %sheadername WHERE id = %" PRIu64 "", DBPFX, *(uint64_t *)ids->data);
+				db_commit_transaction(c);
+				if (! g_list_next(ids)) break;
+				ids = g_list_next(ids);
+			}
+		}
+		t = g_list_length(ids);
+		g_list_destroy(ids);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		db_rollback_transaction(c);
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+}
+
+int db_icheck_headervalues(gboolean cleanup)
+{
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
+	GList *ids = NULL;
+
+	c = db_con_get();
+	TRY
+		r = db_query(c, "SELECT hv.id FROM %sheadervalue hv LEFT JOIN %sheader h ON hv.id = h.headervalue_id "
+				"WHERE h.headervalue_id IS NULL", DBPFX, DBPFX);
+		while(db_result_next(r)) {
+			uint64_t *id = g_new0(uint64_t, 1);
+			*id = db_result_get_u64(r, 0);
+			ids = g_list_prepend(ids, id);
+		}
+		if (cleanup) {
+			while(ids) {
+				db_begin_transaction(c);
+				db_exec(c, "DELETE FROM %sheadervalue WHERE id = %" PRIu64 "", DBPFX, *(uint64_t *)ids->data);
+				db_commit_transaction(c);
+				if (! g_list_next(ids)) break;
+				ids = g_list_next(ids);
+			}
+		}
+		t = g_list_length(ids);
+		g_list_destroy(ids);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		db_rollback_transaction(c);
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+}
+
 int db_icheck_rfcsize(GList  **lost)
 {
 	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
