@@ -2,8 +2,14 @@
 
 # -*- sh -*-
 
-# Uncomment this to turn on verbose mode. 
-#export DH_VERBOSE=1
+DPKG_EXPORT_BUILDFLAGS = 1
+ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
+	export DEB_BUILD_MAINT_OPTIONS=hardening=+all,-pie
+else
+	export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+endif
+
+include /usr/share/dpkg/buildflags.mk
 
 export WITH_LDAP=--with-ldap
 export WITH_SIEVE=--with-sieve
@@ -11,9 +17,6 @@ export SHARED=--enable-shared=yes
 export STATIC=--enable-static=no
 export MANPAGES=--enable-manpages=yes
 export REAL_CLEAN=
-
-CFLAGS = -Wall -O1
-LDFLAGS = -lcrypt
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -27,20 +30,12 @@ ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export MANPAGES=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes
-#	export REAL_CLEAN=mrproper
 	export WITH_LDAP=
-	export WITH_SIEVE=
-	CFLAGS = -Wall -g -DDEBUG
-endif
-ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
-	export WITH_LDAP=--with-ldap
-endif
-ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
-	export WITH_SIEVE=--with-sieve
+	CFLAGS += -Wall -g -DDEBUG 
+	# avoid valgrind warnings
+	CFLAGS += -DEXTRA
 endif
 
-# avoid valgrind warnings
-CFLAGS += -DEXTRA
 
 CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
@@ -104,13 +99,6 @@ binary-common: build
 	dh_testroot
 	dh_testdir
 	dh_installdirs -a
-	## reduce RPATH to minimum (libdbmail.so in /usr/lib/dbmail/)
-	#for file in $(CURDIR)/debian/tmp/usr/lib/dbmail/*.so ; do \
-	#	chrpath -d $$file; \
-	#done
-	#for file in $(CURDIR)/debian/tmp/usr/sbin/* ; do \
-	#	chrpath -r /usr/lib/dbmail $$file; \
-	#done
 	dh_install -a --sourcedir=debian/tmp
 	dh_installinit -a --name=dbmail -- defaults 25
 	dh_installcron -a --name=dbmail
