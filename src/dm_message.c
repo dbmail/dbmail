@@ -325,20 +325,23 @@ static GMimeContentType *find_type(const char *s)
 	return type;
 }
 
-static char * find_boundary(const char *s)
+#define MAX_MIME_DEPTH 64
+#define MAX_MIME_BLEN 128
+
+static bool find_boundary(const char *s, char *boundary)
 {
 	int i = 0;
 	char *rest = NULL;
-	char *boundary = NULL;
 	bool wantquote = false;
 	char *type = find_type_header(s);
 
+	memset(boundary, 0, MAX_MIME_BLEN);
 	if (! type)
-		return NULL;
+		return false;
 	rest = g_strcasestr(type, "boundary=");
 	if (! rest) {
 		g_free(type);
-		return NULL;
+		return false;
 	}
 	rest += 9; // jump past 'boundary='
 	if (rest[0] == '"') {
@@ -346,18 +349,18 @@ static char * find_boundary(const char *s)
 		rest++;
 	}
 	while (rest[i]) {
-		if (wantquote && rest[i]=='"')
+		if (wantquote && rest[i]=='"') {
 			break;
+		}
 		if (! wantquote && isspace(rest[i]))
 			break;
 		i++;
 	}
 		
-	boundary = g_strndup(rest, min(i,70)); // boundaries have a max-length of 70
+	strncpy(boundary, rest, min(i, MAX_MIME_BLEN-1));
 	g_free(type);
-	return boundary;
+	return true;
 }
-
 
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 {
@@ -365,10 +368,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	Connection_T c;
        	ResultSet_T r;
 	char internal_date[SQL_INTERNALDATE_LEN];
-	char *boundary = NULL;
 	GMimeContentType *mimetype = NULL;
-	int maxdepth = 16;
-	volatile char **blist = g_new0(volatile char *, maxdepth);
 	int prevdepth, depth = 0, row = 0;
 	volatile int t = FALSE;
 	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
@@ -384,6 +384,12 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 	c = db_con_get();
 	TRY
+		char boundary[MAX_MIME_BLEN];
+		char blist[MAX_MIME_DEPTH][MAX_MIME_BLEN];
+
+		memset(&boundary, 0, sizeof(boundary));
+		memset(&blist, 0, sizeof(blist));
+
 		stmt = db_stmt_prepare(c,
 			       	"SELECT l.part_key,l.part_depth,l.part_order,l.is_header,%s,%s "
 				"FROM %smimeparts p "
@@ -410,13 +416,6 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			key		= db_result_get_int(r,0);
 #endif
 			depth		= db_result_get_int(r,1);
-			while (maxdepth < (depth + 1)) {
-				int newmaxdepth = 2 * depth;
-				blist = g_renew(volatile char *, blist, newmaxdepth);
-				while (maxdepth < newmaxdepth)
-					blist[maxdepth++] = NULL;
-			}
-
 #if DPRINT
 			order		= db_result_get_int(r,2);
 #endif
@@ -438,31 +437,22 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 			got_boundary = FALSE;
 
-			if (is_header && ((boundary = find_boundary((char *)blob)) != NULL)) {
+			if (is_header && find_boundary((char *)blob, boundary)) {
 				got_boundary = TRUE;
-				volatile char *old = NULL;
 				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
-				if (blist[depth])
-					old = blist[depth];
-				blist[depth] = boundary;
-				if (old) {
-					g_free((void *)old);
-					old = NULL;
-				}
+				strncpy(blist[depth], boundary, MAX_MIME_BLEN-1);
 			}
 
-			while (prevdepth-1 >= depth && blist[prevdepth-1]) {
-				volatile char *old = blist[prevdepth-1];
-				blist[prevdepth-1] = NULL;
-				dprint("\n--%s at %d -> %d--\n", old, prevdepth, prevdepth-1);
-				p_string_append_printf(m, "\n--%s--\n", old);
-				g_free((void *)old);
+			while (prevdepth-1 >= depth && blist[prevdepth-1][0]) {
+				dprint("\n--%s at %d -> %d--\n", blist[prevdepth-1], prevdepth, prevdepth-1);
+				p_string_append_printf(m, "\n--%s--\n", blist[prevdepth-1]);
+				memset(blist[prevdepth-1], 0, MAX_MIME_BLEN);
 				prevdepth--;
 				finalized=TRUE;
 			}
 
-			if (depth>0 && blist[depth-1])
-				boundary = (char *)blist[depth-1];
+			if ((depth > 0) && (blist[depth-1][0]))
+				strncpy(boundary, blist[depth-1], MAX_MIME_BLEN-1);
 
 			if (is_header && (!prev_header || prev_boundary || (prev_header && depth>0 && !prev_is_message))) {
 				dprint("\n--%s\n", boundary);
@@ -478,6 +468,14 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			
 			row++;
 		}
+
+		if (row > 2 && boundary[0] && !finalized) {
+			dprint("\n--%s-- final\n", boundary);
+			p_string_append_printf(m, "\n--%s--\n", boundary);
+			finalized=1;
+		}
+
+
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -491,29 +489,10 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		return NULL;
 	}
 
-	if (row > 2 && boundary && !finalized) {
-		dprint("\n--%s-- final\n", boundary);
-		p_string_append_printf(m, "\n--%s--\n", boundary);
-		finalized=1;
-	}
-
-	if (row > 2 && depth > 0 && boundary && blist[0] && !finalized) {
-		if (strcmp((const char *)blist[0],boundary)!=0) {
-			dprint("\n--%s-- final\n", blist[0]);
-			p_string_append_printf(m, "\n--%s--\n\n", blist[0]);
-		} else
-			p_string_append_printf(m, "\n");
-	}
-	
 	self = dbmail_message_init_with_string(self,p_string_str(m));
 	dbmail_message_set_internal_date(self, internal_date);
 	p_string_free(m,TRUE);
 	p_string_free(n,TRUE);
-	while (--maxdepth >= 0) {
-		if (blist[maxdepth])
-			g_free((void *)blist[maxdepth]);
-	}
-	g_free(blist);
 	return self;
 }
 
