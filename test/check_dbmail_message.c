@@ -617,12 +617,12 @@ START_TEST(test_dbmail_message_set_header)
 	m = dbmail_message_init_with_string(m, encoded_message_utf8);
 	res = dbmail_message_to_string(m);
 	fail_unless(MATCH(encoded_message_utf8, res), "to_string failed");
-	dbmail_message_set_header(m, "X-Foobar", "Test");
+	g_free(res);
 
+	dbmail_message_set_header(m, "X-Foobar", "Test");
 	g_mime_object_remove_header(GMIME_OBJECT(m->content), "X-Foobar");
 	res = dbmail_message_to_string(m);
 	fail_unless(MATCH(encoded_message_utf8, res), "to_string failed \n[%s] != \n[%s]\n", encoded_message_utf8, res);
-
 	g_free(res);
 	dbmail_message_free(m);
 	//
