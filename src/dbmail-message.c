@@ -1576,7 +1576,14 @@ static GString * _header_addresses(InternetAddressList *ialist)
 			if (j>0) g_string_append(store, " ");
 
 			GString *group;
-			g_string_append_printf(store, "%s:", internet_address_get_name(ia));
+			const char *name;
+		       	if ((name = internet_address_get_name(ia))) {
+				if (strchr(name, ',')) {
+					g_string_append_printf(store, "\"%s\":", internet_address_get_name(ia));
+				} else {
+					g_string_append_printf(store, "%s:", internet_address_get_name(ia));
+				}
+			}
 			group = _header_addresses(internet_address_group_get_members((InternetAddressGroup *)ia));
 			if (group->len > 0)
 				g_string_append_printf(store, " %s", group->str);
@@ -1590,8 +1597,13 @@ static GString * _header_addresses(InternetAddressList *ialist)
 			const char *name = internet_address_get_name(ia);
 			const char *addr = internet_address_mailbox_get_addr((InternetAddressMailbox *)ia);
 
-			if (name)
-				g_string_append_printf(store, "%s ", name);
+			if (name) {
+				if (strchr(name, ',')) {
+					g_string_append_printf(store, "\"%s\" ", name);
+				} else {
+					g_string_append_printf(store, "%s ", name);
+				}
+			}
 			if (addr)
 				g_string_append_printf(store, "%s%s%s", 
 						name?"<":"", 
