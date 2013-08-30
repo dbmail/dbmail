@@ -203,10 +203,11 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	const char *message, *subject, *fromaddr, *handle;
 	const char *rc_to, *rc_from;
 	char rc_handle[FIELDSIZE];
-	int days, mime;
+	int days;
+	//int mime;
 
 	days = sieve2_getvalue_int(s, "days");
-	mime = sieve2_getvalue_int(s, "mime"); // mime: 1 if message is mime coded. FIXME.
+	//mime = sieve2_getvalue_int(s, "mime"); // mime: 1 if message is mime coded. FIXME.
 	message = sieve2_getvalue_string(s, "message");
 	subject = sieve2_getvalue_string(s, "subject");
 	fromaddr = sieve2_getvalue_string(s, "fromaddr"); // From: specified by the script.
@@ -258,16 +259,18 @@ From http://www.ietf.org/internet-drafts/draft-ietf-sieve-notify-07.txt
 int sort_notify(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
-	const char *message, *fromaddr, *method;
+	const char *fromaddr;
+	//const char *message;
+	//const char *method;
 	const char *rc_to, *rc_from;
-	int importance;
-	char * const * options;
+	//int importance;
+	//char * const * options;
 
 	fromaddr = sieve2_getvalue_string(s, "fromaddr");
-	method = sieve2_getvalue_string(s, "method");
-	message = sieve2_getvalue_string(s, "message");
-	importance = sieve2_getvalue_int(s, "importance");
-	options = sieve2_getvalue_stringlist(s, "options");
+	//method = sieve2_getvalue_string(s, "method");
+	//message = sieve2_getvalue_string(s, "message");
+	//importance = sieve2_getvalue_int(s, "importance");
+	//options = sieve2_getvalue_stringlist(s, "options");
 
 	// FIXME: should be validated as a user might try
 	// to forge an address from their script.

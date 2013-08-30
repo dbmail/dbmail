@@ -33,6 +33,7 @@
 
 #include <check.h>
 #include "check_dbmail.h"
+#include "dm_debug.h"
 
 #include <sys/times.h>
 #include <time.h>
@@ -55,7 +56,7 @@ static void start_clock(void)
 	st_time = times(&st_cpu);
 }
 
-static void end_clock(char * UNUSED msg)
+static void end_clock(char * msg UNUSED)
 {
 	en_time = times(&en_cpu);
 	/*

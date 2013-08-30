@@ -420,7 +420,7 @@ int main(int argc, char *argv[])
 			/* Prompt for a password and read until \n or EOF. */
 			qprintf("Please enter a password (will not echo): ");
 			fflush(stdout);
-			fgets(pw, 50, stdin);
+			if (fgets(pw, 50, stdin)) { /* ignore */ }
 
 			/* We don't want the trailing newline. */
 			len = strlen(pw);

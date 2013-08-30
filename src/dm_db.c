@@ -187,7 +187,7 @@ int db_connect(void)
 		if (db_params.port)
 			g_string_append_printf(dsn,":%u", db_params.port);
 		if (db_params.db) {
-			if (MATCH(db_params.driver,"sqlite")) {
+			if (SMATCH(db_params.driver,"sqlite")) {
 
 				/* expand ~ in db name to HOME env variable */
 				if ((strlen(db_params.db) > 0 ) && (db_params.db[0] == '~')) {
@@ -208,7 +208,7 @@ int db_connect(void)
 			g_string_append_printf(dsn,"?user=%s", db_params.user);
 			if (db_params.pass && strlen((const char *)db_params.pass)) 
 				g_string_append_printf(dsn,"&password=%s", db_params.pass);
-			if (MATCH(db_params.driver,"mysql")) {
+			if (SMATCH(db_params.driver,"mysql")) {
 				if (db_params.encoding && strlen((const char *)db_params.encoding))
 					g_string_append_printf(dsn,"&charset=%s", db_params.encoding);
 			}
@@ -2053,8 +2053,7 @@ static int mailboxes_by_regex(uint64_t user_idnr, int only_subscribed, const cha
 	uint64_t search_user_idnr = user_idnr;
 	char *spattern;
 	char *namespace, *username;
-	struct mailbox_match *mailbox_like = NULL;
-	GString *qs;
+	GString *qs = NULL;
 	int n_rows = 0;
 	PreparedStatement_T stmt;
 	int prml;
@@ -2082,40 +2081,41 @@ static int mailboxes_by_regex(uint64_t user_idnr, int only_subscribed, const cha
 		g_free(username);
 	}
 
-	/* If there's neither % nor *, don't match on mailbox name. */
-	if ( (! strchr(spattern, '%')) && (! strchr(spattern,'*')) )
-		mailbox_like = mailbox_match_new(spattern);
-
-	qs = g_string_new("");
-	g_string_printf(qs,
-			"SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
-			"FROM %smailboxes mbx "
-			"LEFT JOIN %sacl acl ON mbx.mailbox_idnr = acl.mailbox_id "
-			"LEFT JOIN %susers usr ON acl.user_id = usr.user_idnr ",
-			DBPFX, DBPFX, DBPFX);
-
-	if (only_subscribed)
-		g_string_append_printf(qs, 
-				"LEFT JOIN %ssubscription sub ON sub.mailbox_id = mbx.mailbox_idnr "
-				"WHERE ( sub.user_id=? ) ", DBPFX);
-	else
-		g_string_append_printf(qs, 
-				"WHERE 1=1 ");
-
-	g_string_append_printf(qs, 
-			"AND ((mbx.owner_idnr=?) "
-			"%s (acl.user_id=? AND acl.lookup_flag=1) "
-			"OR (usr.userid=? AND acl.lookup_flag=1)) ",
-			search_user_idnr==user_idnr?"OR":"AND"
-	);
-
-	if (mailbox_like && mailbox_like->insensitive)
-		g_string_append_printf(qs, " AND mbx.name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
-	if (mailbox_like && mailbox_like->sensitive)
-		g_string_append_printf(qs, " AND mbx.name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
-
 	c = db_con_get();
 	TRY
+		/* If there's neither % nor *, don't match on mailbox name. */
+		struct mailbox_match *mailbox_like = NULL;
+		if ( (! strchr(spattern, '%')) && (! strchr(spattern,'*')) )
+			mailbox_like = mailbox_match_new(spattern);
+
+		qs = g_string_new("");
+		g_string_printf(qs,
+				"SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
+				"FROM %smailboxes mbx "
+				"LEFT JOIN %sacl acl ON mbx.mailbox_idnr = acl.mailbox_id "
+				"LEFT JOIN %susers usr ON acl.user_id = usr.user_idnr ",
+				DBPFX, DBPFX, DBPFX);
+
+		if (only_subscribed)
+			g_string_append_printf(qs, 
+					"LEFT JOIN %ssubscription sub ON sub.mailbox_id = mbx.mailbox_idnr "
+					"WHERE ( sub.user_id=? ) ", DBPFX);
+		else
+			g_string_append_printf(qs, 
+					"WHERE 1=1 ");
+
+		g_string_append_printf(qs, 
+				"AND ((mbx.owner_idnr=?) "
+				"%s (acl.user_id=? AND acl.lookup_flag=1) "
+				"OR (usr.userid=? AND acl.lookup_flag=1)) ",
+				search_user_idnr==user_idnr?"OR":"AND"
+		);
+
+		if (mailbox_like && mailbox_like->insensitive)
+			g_string_append_printf(qs, " AND mbx.name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
+		if (mailbox_like && mailbox_like->sensitive)
+			g_string_append_printf(qs, " AND mbx.name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
+
 		stmt = db_stmt_prepare(c, qs->str);
 		prml = 1;
 
@@ -2150,6 +2150,7 @@ static int mailboxes_by_regex(uint64_t user_idnr, int only_subscribed, const cha
 			g_free(simple_mailbox_name);
 			g_free(mailbox_name);
 		}
+		if (mailbox_like) mailbox_match_free(mailbox_like);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -2157,9 +2158,9 @@ static int mailboxes_by_regex(uint64_t user_idnr, int only_subscribed, const cha
 		db_con_close(c);
 	END_TRY;
 
-	g_string_free(qs, TRUE);
+	if (qs)
+		g_string_free(qs, TRUE);
 
-	if (mailbox_like) mailbox_match_free(mailbox_like);
 	if (t == DM_EQUERY) return t;
 	if (n_rows == 0) return DM_SUCCESS;
 
@@ -2603,23 +2604,21 @@ int db_find_create_mailbox(const char *name, mailbox_source source,
 
 int db_listmailboxchildren(uint64_t mailbox_idnr, uint64_t user_idnr, GList ** children)
 {
-	struct mailbox_match *mailbox_like = NULL;
+	char pattern[IMAP_MAX_MAILBOX_NAMELEN+5];
 	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = DM_SUCCESS;
 	GString *qs;
 	int prml;
 
 	*children = NULL;
 
+	memset(&pattern, 0, sizeof(pattern));
 	/* retrieve the name of this mailbox */
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT name FROM %smailboxes WHERE mailbox_idnr=%" PRIu64 " AND owner_idnr=%" PRIu64 "",
 				DBPFX, mailbox_idnr, user_idnr);
-		if (db_result_next(r)) {
-			char *pattern = g_strdup_printf("%s/%%", db_result_get(r,0));
-			mailbox_like = mailbox_match_new(pattern);
-			g_free(pattern);
-		}
+		if (db_result_next(r))
+			snprintf(pattern, sizeof(pattern)-1, "%s/%%", db_result_get(r,0));
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -2628,8 +2627,6 @@ int db_listmailboxchildren(uint64_t mailbox_idnr, uint64_t user_idnr, GList ** c
 	END_TRY;
 
 	if (t == DM_EQUERY) {
-		if (mailbox_like) 
-			mailbox_match_free(mailbox_like);
 		db_con_close(c);
 		return t;
 	}
@@ -2637,12 +2634,17 @@ int db_listmailboxchildren(uint64_t mailbox_idnr, uint64_t user_idnr, GList ** c
 	t = DM_SUCCESS;
 	qs = g_string_new("");
 	g_string_printf(qs, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr = ? ", DBPFX);
-	if (mailbox_like && mailbox_like->insensitive)
-		g_string_append_printf(qs, " AND name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
-	if (mailbox_like && mailbox_like->sensitive)
-		g_string_append_printf(qs, " AND name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
-	
+
+
 	TRY
+		struct mailbox_match *mailbox_like = NULL;
+		if (pattern[0])
+			mailbox_like = mailbox_match_new(pattern);
+		if (mailbox_like && mailbox_like->insensitive)
+			g_string_append_printf(qs, " AND name %s ? ", db_get_sql(SQL_INSENSITIVE_LIKE));
+		if (mailbox_like && mailbox_like->sensitive)
+			g_string_append_printf(qs, " AND name %s ? ", db_get_sql(SQL_SENSITIVE_LIKE));
+		
 		s = db_stmt_prepare(c, qs->str);
 		prml = 1;
 		db_stmt_set_u64(s, prml++, user_idnr);
@@ -2658,6 +2660,8 @@ int db_listmailboxchildren(uint64_t mailbox_idnr, uint64_t user_idnr, GList ** c
 			*id = db_result_get_u64(r,0);
 			*(GList **)children = g_list_prepend(*(GList **)children, id);
 		}
+		if (mailbox_like) mailbox_match_free(mailbox_like);
+
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		t = DM_EQUERY;
@@ -2665,7 +2669,6 @@ int db_listmailboxchildren(uint64_t mailbox_idnr, uint64_t user_idnr, GList ** c
 		db_con_close(c);
 	END_TRY;
 
-	if (mailbox_like) mailbox_match_free(mailbox_like);
 	g_string_free(qs, TRUE);
 	return t;
 }
@@ -3529,26 +3532,30 @@ int db_user_set_security_password(uint64_t user_idnr, const char *password)
 	return t;
 }
 
+#define COLUMN_WIDTH 255
 int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr, const char *password)
 {
 	int is_validated = 0;
 	char salt[13], cryptres[35];
 	int t = FALSE;
-	const char *dbpass, *encode;
+	char dbpass[COLUMN_WIDTH+1];
+       	char encode[COLUMN_WIDTH+1];
 	char hashstr[FIELDSIZE];
 	Connection_T c; ResultSet_T r;
 
 	memset(salt,0,sizeof(salt));
 	memset(cryptres,0,sizeof(cryptres));
 	memset(hashstr, 0, sizeof(hashstr));
+	memset(dbpass, 0, sizeof(dbpass));
+	memset(encode, 0, sizeof(encode));
 
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT %s, encryption_type FROM %susers WHERE user_idnr = %" PRIu64 "",
 			       	pwfield, DBPFX, *user_idnr);
 		if (db_result_next(r)) {
-			dbpass = db_result_get(r, 0);
-			encode = db_result_get(r, 1);
+			strncpy(dbpass, db_result_get(r, 0), sizeof(dbpass)-1);
+			strncpy(encode, db_result_get(r, 1), sizeof(encode)-1);
 			t = TRUE;
 		} else {
 			t = FALSE;
@@ -3565,7 +3572,7 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 	
 	if (! t) return FALSE;
 
-	if (strcasecmp(encode, "") == 0) {
+	if (SMATCH(encode, "")) {
 		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
 		if (ci && ci->auth) // CRAM-MD5 
 			is_validated = Cram_verify(ci->auth, dbpass);
@@ -3573,12 +3580,14 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
         }
 
-	if (strcasecmp(encode, "crypt") == 0) {
+	else if (SMATCH(encode, "crypt")) {
 		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
 		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "md5") == 0) {
+	} 
+	
+	else if (SMATCH(encode, "md5")) {
 		/* get password */
-		if (strncmp(dbpass, "$1$", 3)) {
+		if (strncmp(dbpass, "$1$", 3)) { // no match
 			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
 			dm_md5(password, hashstr);
 			is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
@@ -3591,31 +3600,31 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 			TRACE(TRACE_DEBUG, "crypt(): %s", cryptres);
 			is_validated = (strncmp(dbpass, cryptres, 34) == 0) ? 1 : 0;
 		}
-	} else if (strcasecmp(encode, "md5sum") == 0) {
+	} else if (SMATCH(encode, "md5sum")) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
 		dm_md5(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "md5base64") == 0) {
+	} else if (SMATCH(encode, "md5base64")) {
 		TRACE(TRACE_DEBUG, "validating using MD5 digest base64 comparison");
 		dm_md5_base64(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "whirlpool") == 0) {
+	} else if (SMATCH(encode, "whirlpool")) {
 		TRACE(TRACE_DEBUG, "validating using WHIRLPOOL hash comparison");
 		dm_whirlpool(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "sha512") == 0) {
+	} else if (SMATCH(encode, "sha512")) {
 		TRACE(TRACE_DEBUG, "validating using SHA-512 hash comparison");
 		dm_sha512(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 128) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "sha256") == 0) {
+	} else if (SMATCH(encode, "sha256")) {
 		TRACE(TRACE_DEBUG, "validating using SHA-256 hash comparison");
 		dm_sha256(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 64) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "sha1") == 0) {
+	} else if (SMATCH(encode, "sha1")) {
 		TRACE(TRACE_DEBUG, "validating using SHA-1 hash comparison");
 		dm_sha1(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 32) == 0) ? 1 : 0;
-	} else if (strcasecmp(encode, "tiger") == 0) {
+	} else if (SMATCH(encode, "tiger")) {
 		TRACE(TRACE_DEBUG, "validating using TIGER hash comparison");
 		dm_tiger(password, hashstr);
 		is_validated = (strncmp(hashstr, dbpass, 48) == 0) ? 1 : 0;

@@ -2652,9 +2652,9 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 	TRACE(TRACE_DEBUG, "temporary msgidnr is [%" PRIu64 "]", message->msg_idnr);
 
 	config_get_value("QUOTA_FAILURE", "DELIVERY", val);
-	if (MATCH(val, "soft"))
+	if (SMATCH(val, "soft"))
 		quota_softfail = TRUE;
-	else if (MATCH(val, "hard"))
+	else if (SMATCH(val, "hard"))
 		quota_softfail = FALSE;
 	else
 		TRACE(TRACE_INFO, "Using default hard bounce for quota failure");

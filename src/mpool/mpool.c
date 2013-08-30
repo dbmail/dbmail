@@ -56,7 +56,7 @@ static char *rcs_id = "$Id: mpool.c,v 1.5 2006/05/31 20:28:31 gray Exp $";
 #endif
 
 /* version */
-static	char *version = "mpool library version 2.1.0";
+//static	char *version = "mpool library version 2.1.0";
 
 /* local variables */
 static	int		enabled_b = 0;		/* lib initialized? */
@@ -1411,7 +1411,8 @@ void	*mpool_resize(mpool_t *mp_p, void *old_addr,
 		      const unsigned long new_byte_size,
 		      int *error_p)
 {
-  unsigned long	copy_size, new_size, old_size, fence;
+  //unsigned long	copy_size, new_size, old_size, fence;
+  unsigned long	copy_size, old_size;
   void		*new_addr;
   mpool_block_t	*block_p;
   int		ret;
@@ -1470,7 +1471,7 @@ void	*mpool_resize(mpool_t *mp_p, void *old_addr,
   
   /* verify that the size matches exactly if we can */
   if (BIT_IS_SET(mp_p->mp_flags, MPOOL_FLAG_NO_FREE)) {
-    fence = 0;
+    ; //fence = 0;
   }
   else if (old_size > 0) {
     ret = check_magic(old_addr, old_size);
@@ -1478,17 +1479,18 @@ void	*mpool_resize(mpool_t *mp_p, void *old_addr,
       SET_POINTER(error_p, ret);
       return NULL;
     }
-    fence = FENCE_SIZE;
+    //fence = FENCE_SIZE;
   }
   
   /* make sure we have enough bytes */
+  /*
   if (new_byte_size < MIN_ALLOCATION) {
     new_size = MIN_ALLOCATION;
   }
   else {
     new_size = new_byte_size;
   }
-  
+  */
   /*
    * NOTE: we could here see if the size is the same or less and then
    * use the current memory and free the space above.  This is harder

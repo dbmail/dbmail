@@ -374,7 +374,7 @@ END_TEST
 
 #define S1(a,b) \
 	memset(hash,0,sizeof(hash)); dm_sha1((a),hash); \
-	fail_unless(MATCH(hash,(b)), "sha1 failed [%s] != [%s]", hash, b)
+	fail_unless(SMATCH(hash,(b)), "sha1 failed [%s] != [%s]", hash, b)
 START_TEST(test_sha1)
 {
 	char hash[FIELDSIZE]; 
@@ -387,7 +387,7 @@ END_TEST
 
 #define S2(a,b) \
 	memset(hash,0,sizeof(hash)); dm_sha256((a),hash); \
-	fail_unless(MATCH(hash,(b)), "sha256 failed [%s] != [%s]", hash, b)
+	fail_unless(SMATCH(hash,(b)), "sha256 failed [%s] != [%s]", hash, b)
 START_TEST(test_sha256)
 {
 	char hash[FIELDSIZE]; 
@@ -400,7 +400,7 @@ END_TEST
 
 #define S3(a,b) \
 	memset(hash,0,sizeof(hash)); dm_sha512((a),hash); \
-	fail_unless(MATCH(hash,(b)), "sha512 failed [%s] != [%s]", hash, b)
+	fail_unless(SMATCH(hash,(b)), "sha512 failed [%s] != [%s]", hash, b)
 START_TEST(test_sha512)
 {
 	char hash[FIELDSIZE]; 
@@ -413,7 +413,7 @@ END_TEST
 
 #define M(a,b) \
 	memset(hash,0,sizeof(hash)); dm_md5((a),hash); \
-	fail_unless(MATCH(hash,(b)), "md5 failed [%s] != [%s]", hash, b)
+	fail_unless(SMATCH(hash,(b)), "md5 failed [%s] != [%s]", hash, b)
 START_TEST(test_md5)
 {
 	char hash[FIELDSIZE]; 
@@ -425,7 +425,7 @@ END_TEST
 
 #define T(a,b) \
 	memset(hash,0,sizeof(hash)); dm_tiger((a),hash); \
-	fail_unless(MATCH(hash,(b)), "tiger failed [%s] != [%s]", hash, b)
+	fail_unless(SMATCH(hash,(b)), "tiger failed [%s] != [%s]", hash, b)
 START_TEST(test_tiger)
 {
 	char hash[FIELDSIZE]; 
@@ -437,7 +437,7 @@ END_TEST
 
 #define W(a,b) \
 	memset(hash,0,sizeof(hash)); dm_whirlpool((a),hash); \
-	fail_unless(MATCH(hash,(b)), "whirlpool failed [%s] != [%s]", hash, b)
+	fail_unless(SMATCH(hash,(b)), "whirlpool failed [%s] != [%s]", hash, b)
 START_TEST(test_whirlpool)
 {
 	char hash[FIELDSIZE]; 
@@ -522,7 +522,7 @@ START_TEST(test_date_imap2sql)
 	while (in[i]) {
 		memset(r, 0, sizeof(r));
 		date_imap2sql(in[i], r);
-		fail_unless(MATCH(out[i], r), "[%s] != [%s]", r, out[i]);
+		fail_unless(SMATCH(out[i], r), "[%s] != [%s]", r, out[i]);
 		i++;
 	}
 

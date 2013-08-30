@@ -129,7 +129,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	pthread_mutex_init(&self->lock, NULL);
 
 	GETCONFIGVALUE("login_disabled", "IMAP", val);
-	if (strlen(val) && MATCH(val, "no"))
+	if (SMATCH(val, "no"))
 		login_disabled = FALSE;
 
 	self->state = CLIENTSTATE_NON_AUTHENTICATED;

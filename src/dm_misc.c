@@ -2312,17 +2312,17 @@ int dm_get_hash_for_string(const char *buf, char *digest)
 		if (config_get_value("hash_algorithm", "DBMAIL", hash_algorithm) < 0)
 			g_strlcpy(hash_algorithm, "sha1", FIELDSIZE-1);
 
-		if (MATCH(hash_algorithm,"md5"))
+		if (SMATCH(hash_algorithm,"md5"))
 			type=MHASH_MD5;
-		else if (MATCH(hash_algorithm,"sha1"))
+		else if (SMATCH(hash_algorithm,"sha1"))
 			type=MHASH_SHA1;
-		else if (MATCH(hash_algorithm,"sha256"))
+		else if (SMATCH(hash_algorithm,"sha256"))
 			type=MHASH_SHA256;
-		else if (MATCH(hash_algorithm,"sha512"))
+		else if (SMATCH(hash_algorithm,"sha512"))
 			type=MHASH_SHA512;
-		else if (MATCH(hash_algorithm,"whirlpool"))
+		else if (SMATCH(hash_algorithm,"whirlpool"))
 			type=MHASH_WHIRLPOOL;
-		else if (MATCH(hash_algorithm,"tiger"))
+		else if (SMATCH(hash_algorithm,"tiger"))
 			type=MHASH_TIGER;
 		else {
 			TRACE(TRACE_INFO,"hash algorithm not supported. Using SHA1.");

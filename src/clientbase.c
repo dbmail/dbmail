@@ -273,7 +273,6 @@ void ci_write_cb(ClientBase_T *client)
 int ci_write(ClientBase_T *client, char * msg, ...)
 {
 	va_list ap, cp;
-	size_t before = 0, after = 0;
 	int64_t t = 0;
 	int e = 0;
 	uint64_t n, left;
@@ -292,13 +291,11 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 		return -1; // disconnected
 
 	if (msg) {
-		before = p_string_len(client->write_buffer);
 		va_start(ap, msg);
 		va_copy(cp, ap);
 		p_string_append_vprintf(client->write_buffer, msg, cp);
 		va_end(cp);
 		va_end(ap);
-		after = p_string_len(client->write_buffer);
 	}
 
 	left = ci_wbuf_len(client);
@@ -482,9 +479,9 @@ void ci_authlog_init(ClientBase_T *client, const char *service, const char *user
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	const char *now = db_get_sql(SQL_CURRENT_TIMESTAMP);
 	char *frag = db_returning("id");
-	const char *user = client->auth?Cram_getUsername(client->auth):username;
 	c = db_con_get();
 	TRY
+		const char *user = client->auth?Cram_getUsername(client->auth):username;
 
 		s = db_stmt_prepare(c, "INSERT INTO %sauthlog (userid, service, login_time, logout_time, src_ip, src_port, dst_ip, dst_port, status)"
 				" VALUES (?, ?, %s, %s, ?, ?, ?, ?, ?) %s", DBPFX, now, now, frag);
