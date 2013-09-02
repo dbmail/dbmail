@@ -33,7 +33,9 @@ extern DBParam_T db_params;
 /*
  * used for debugging message de/re-construction
  */
-//#define dprint(fmt, args...) TRACE(TRACE_DEBUG, fmt, ##args); printf(fmt, ##args)
+#ifdef DEBUG_MESSAGE
+#define dprint(fmt, args...) TRACE(TRACE_DEBUG, fmt, ##args); printf(fmt, ##args)
+#endif
 
 #ifndef dprint
 #define DPRINT 0
@@ -325,9 +327,6 @@ static GMimeContentType *find_type(const char *s)
 	return type;
 }
 
-#define MAX_MIME_DEPTH 64
-#define MAX_MIME_BLEN 128
-
 static bool find_boundary(const char *s, char *boundary)
 {
 	int i = 0;
@@ -385,7 +384,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	c = db_con_get();
 	TRY
 		char boundary[MAX_MIME_BLEN];
-		char blist[MAX_MIME_DEPTH][MAX_MIME_BLEN];
+		char blist[MAX_MIME_DEPTH+1][MAX_MIME_BLEN];
 
 		memset(&boundary, 0, sizeof(boundary));
 		memset(&blist, 0, sizeof(blist));
@@ -443,7 +442,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				strncpy(blist[depth], boundary, MAX_MIME_BLEN-1);
 			}
 
-			while (prevdepth-1 >= depth && blist[prevdepth-1][0]) {
+			while ((prevdepth > 0) && (prevdepth-1 >= depth) && blist[prevdepth-1][0]) {
 				dprint("\n--%s at %d -> %d--\n", blist[prevdepth-1], prevdepth, prevdepth-1);
 				p_string_append_printf(m, "\n--%s--\n", blist[prevdepth-1]);
 				memset(blist[prevdepth-1], 0, MAX_MIME_BLEN);
