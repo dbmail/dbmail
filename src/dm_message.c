@@ -216,6 +216,13 @@ static int register_blob(DbmailMessage *m, uint64_t id, gboolean is_header)
 {
 	Connection_T c; volatile gboolean t = FALSE;
 	c = db_con_get();
+
+	if (m->part_depth > MAX_MIME_DEPTH) {
+		TRACE(TRACE_WARNING, "MIME part depth exceeds allowed limit. You should recompile "
+				"with CFLAGS+=-DMAX_MIME_DEPTH=<int> where <int> greater than [%d]",
+				m->part_depth);
+	}
+
 	TRY
 		db_begin_transaction(c);
 		t = db_exec(c, "INSERT INTO %spartlists (physmessage_id, is_header, part_key, part_depth, part_order, part_id) "
@@ -415,6 +422,12 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			key		= db_result_get_int(r,0);
 #endif
 			depth		= db_result_get_int(r,1);
+			if (depth > MAX_MIME_DEPTH) {
+				TRACE(TRACE_WARNING, "MIME part depth exceeds allowed maximum [%d]",
+						MAX_MIME_DEPTH);
+				continue;
+			}
+
 #if DPRINT
 			order		= db_result_get_int(r,2);
 #endif
