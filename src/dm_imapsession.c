@@ -1065,9 +1065,26 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		if (! (dbmail_imap_session_message_load(self)))
 			return 0;
 
-		stream = self->message->stream;
+		char buf[1024];
+		GMimeFilter *filter;
+
+		filter = g_mime_filter_crlf_new(TRUE, FALSE);
+		stream = g_mime_stream_filter_new(self->message->stream);
+		g_mime_stream_filter_add((GMimeStreamFilter *)stream, filter);
+		g_object_unref(filter);
+
 		g_mime_stream_reset(stream);
-		size = g_mime_stream_length(stream);
+		// work-around for gmime bug in older versions
+		size = 0;
+		while (1) {
+			ssize_t read = 0;
+			memset(&buf, 0, sizeof(buf));
+			if ((read = g_mime_stream_read(stream, buf, sizeof(buf)-1)) > 0)
+				size += read;
+			else
+				break;
+		}
+		g_mime_stream_reset(stream);
 	}
 
 	dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (", *id);
@@ -1106,6 +1123,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->message)->content), 1))==NULL) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body structure\r\n");
+			if (stream) g_object_unref(stream);
 			return -1;
 		}
 		dbmail_imap_session_buff_printf(self, "BODYSTRUCTURE %s", s);
@@ -1117,6 +1135,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->message)->content), 0))==NULL) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body\r\n");
+			if (stream) g_object_unref(stream);
 			return -1;
 		}
 		dbmail_imap_session_buff_printf(self, "BODY %s",s);
@@ -1181,6 +1200,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 	_imap_show_body_sections(self);
 
+	if (stream) g_object_unref(stream);
 	/* set \Seen flag if necessary; note the absence of an error-check 
 	 * for db_get_msgflag()!
 	 */
