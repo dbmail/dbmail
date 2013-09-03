@@ -350,7 +350,7 @@ static bool find_boundary(const char *s, char *boundary)
 		if (wantquote && rest[i]=='"') {
 			break;
 		}
-		if (! wantquote && isspace(rest[i]))
+		if (! wantquote && (isspace(rest[i]) || rest[i]==';'))
 			break;
 		i++;
 	}
