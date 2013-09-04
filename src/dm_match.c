@@ -192,12 +192,14 @@ GList *match_glob_list(char *pattern, GList *list)
 	if (!list)
 		return NULL;
 
-	do {
+	while (list) {
 		if (match_glob(pattern, (char *)list->data)) {
 			match_list = g_list_prepend(match_list,
 					g_strdup((char *)list->data));
 		}
-	} while ((list = g_list_next(list)));
+		if (! g_list_next(list)) break;
+		list = g_list_next(list);
+	} 
 
 	// Return elements in the same relative order.
 	if (match_list)

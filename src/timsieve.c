@@ -270,7 +270,8 @@ int tims_tokenizer(ClientSession_T *session, char *buffer)
 		}
 		if (p_string_len(t)) {
 			session->args = p_list_append(session->args, t);
-			t = p_string_new(session->pool, "");
+		} else {
+			p_string_free(t, TRUE);
 		}
 	} 
 	session->parser_state = TRUE;
@@ -453,7 +454,7 @@ int tims(ClientSession_T *session)
 		if ((session->args && p_list_data(session->args)))
 			scriptname = (char *)p_string_str(p_list_data(session->args));
 
-		if (strlen(scriptname)) {
+		if (scriptname && (strlen(scriptname))) {
 			if (! dm_sievescript_activate(session->useridnr, scriptname))
 				ci_write(ci, "NO \"Error activating script.\"\r\n");
 			else

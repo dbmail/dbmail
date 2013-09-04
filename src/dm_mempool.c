@@ -54,8 +54,10 @@ M mempool_open(void)
 	
 	if (pthread_mutex_init(&MP->lock, NULL)) {
 		perror("pthread_mutex_init failed");
-		if (pool)
+		if (pool) {
+			mpool_free(pool, MP, sizeof(*MP));
 			mpool_close(pool);
+		}
 		return NULL;
 	}
 

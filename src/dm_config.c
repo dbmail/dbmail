@@ -70,9 +70,11 @@ int config_create(const char *config_filename)
 		serr = errno;
 		TRACE(TRACE_EMERG, "error writing [%s] %s",
 				config_filename, strerror(serr));
+		close(fd);
 		return -1;
 	}
 
+	close(fd);
 	return 0;
 }
 

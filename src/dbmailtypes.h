@@ -315,11 +315,11 @@ typedef struct {
 
 	Field_T clientname;             /* resolved client name */
 
-	char src_ip[NI_MAXHOST];	/* client IP-number */
-	char src_port[NI_MAXSERV];	/* client port number */
+	char src_ip[NI_MAXHOST+1];	/* client IP-number */
+	char src_port[NI_MAXSERV+1];	/* client port number */
 
-	char dst_ip[NI_MAXHOST];	/* server IP-number */
-	char dst_port[NI_MAXSERV];      /* server port number */
+	char dst_ip[NI_MAXHOST+1];	/* server IP-number */
+	char dst_port[NI_MAXSERV+1];      /* server port number */
 
 	struct timeval *timeout;	/**< timeout on socket */
 

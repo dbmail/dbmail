@@ -756,13 +756,13 @@ int do_empty(uint64_t useridnr)
 			 * user actually owns the mailbox (because that means
 			 * it is on the hit list for deletion) and then look up
 			 * and print out the name of the mailbox. */
-			db_get_mailbox_owner(*mailbox_id, &owner_idnr);
-			if (owner_idnr == useridnr) {
-				db_getmailboxname(*mailbox_id, useridnr, mailbox);			
-				qprintf("%s\n", mailbox);
+			if (db_get_mailbox_owner(*mailbox_id, &owner_idnr)) {
+				if (owner_idnr == useridnr) {
+					db_getmailboxname(*mailbox_id, useridnr, mailbox);			
+					qprintf("%s\n", mailbox);
+				}
 			}
-			if (! g_list_next(children))
-				break;
+			if (! g_list_next(children)) break;
 			children = g_list_next(children);
 		}
 
@@ -806,10 +806,13 @@ char *bgetpwent(const char *filename, const char *name)
 				break;
 			num_tok++;
 		}
-		if (strcmp(user, name) == 0)
+		if (strcmp(user, name) == 0) {
+			fclose(passfile);
 			return pw;
+		}
 
 	}
+	fclose(passfile);
 	return "";
 }
 

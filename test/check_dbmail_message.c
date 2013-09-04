@@ -114,9 +114,7 @@ static char * showdiff(const char *a, const char *b)
 	assert(a && b);
 	while (*a++ == *b++)
 		;
-	if (--a && --b)
-		return g_strdup_printf("[%s]\n[%s]\n", a, b);
-	return g_strdup("");
+	return g_strdup_printf("[%s]\n[%s]\n", --a, --b);
 }
 
 FILE *i;

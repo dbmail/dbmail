@@ -148,7 +148,7 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session)
 			/* unique id */
 			query_result = db_result_get(r,3);
 			if (query_result)
-				strncpy(tmpmessage->uidl, query_result, UID_SIZE);
+				strncpy(tmpmessage->uidl, query_result, UID_SIZE-1);
 
 			session->totalmessages++;
 			session->totalsize += tmpmessage->msize;

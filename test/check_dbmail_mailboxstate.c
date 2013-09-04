@@ -102,6 +102,7 @@ START_TEST(test_metadata)
 	fail_unless(MailboxState_getUnseen(M) == 1);
 	fail_unless(MailboxState_getRecent(M) == 1);
 	fail_unless(MailboxState_getExists(M) == 1);
+	MailboxState_free(&M);
 }
 END_TEST
 

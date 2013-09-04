@@ -116,7 +116,7 @@ int dm_sievescript_list(uint64_t user_idnr, GList **scriptlist)
 		r = db_query(c,"SELECT name,active FROM %ssievescripts WHERE owner_idnr = %" PRIu64 "", DBPFX,user_idnr);
 		while (db_result_next(r)) {
 			sievescript_info *info = g_new0(sievescript_info,1);
-			strncpy(info->name, db_result_get(r,0), sizeof(info->name));   
+			strncpy(info->name, db_result_get(r,0), sizeof(info->name)-1);   
 			info->active = db_result_get_int(r,1);
 			*(GList **)scriptlist = g_list_prepend(*(GList **)scriptlist, info);
 		}

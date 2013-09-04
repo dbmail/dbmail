@@ -494,7 +494,8 @@ static ClientBase_T * ci_new(void)
 	ClientBase_T *ci = g_new0(ClientBase_T,1);
 	FILE *fd = fopen("/dev/null","w");
 	ci->rx = fileno(stdin);
-	ci->tx = fileno(fd);
+	ci->tx = dup(fileno(fd));
+	fclose(fd);
 	return ci;
 }
 
@@ -514,6 +515,7 @@ START_TEST(test_auth_validate)
 	fail_unless(result==FALSE,"auth_validate negative failure");
 	fail_unless(user_idnr == 0,"auth_validate shouldn't find user_idnr");
 
+	close(ci->tx);
 	g_free(ci);
 }
 END_TEST

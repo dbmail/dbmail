@@ -268,6 +268,9 @@ void _ic_authenticate_enter(dm_thread_data *D)
 	if (self->args[self->args_idx] && self->args[self->args_idx+1]) {
 		username = p_string_str(self->args[self->args_idx]);
 		password = p_string_str(self->args[self->args_idx+1]);
+	} else {
+		D->status = -1;
+		SESSION_RETURN;
 	}
 
 	if ((err = dbmail_imap_session_handle_auth(self,username,password))) {
@@ -366,7 +369,7 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	uint64_t mailbox_idnr = 0;
 
 	/* get the mailbox_idnr */
-	db_findmailbox(mailbox, self->userid, &mailbox_idnr);
+	if (db_findmailbox(mailbox, self->userid, &mailbox_idnr)) { /* ignored */ }
 	
 	/* create missing INBOX for this authenticated user */
 	if ((! mailbox_idnr ) && (strcasecmp(mailbox, "INBOX")==0)) {
@@ -1437,7 +1440,9 @@ void _ic_append_enter(dm_thread_data *D)
 	for (flagcount = 0; flagcount < IMAP_NFLAGS; flagcount++)
 		info->flags[flagcount] = flaglist[flagcount];
 	info->flags[IMAP_FLAG_RECENT] = 1;
-	strncpy(info->internaldate, internal_date?internal_date:"01-Jan-1970 00:00:01 +0100", IMAP_INTERNALDATE_LEN);
+	strncpy(info->internaldate, 
+			internal_date?internal_date:"01-Jan-1970 00:00:01 +0100",
+		       	IMAP_INTERNALDATE_LEN-1);
 	info->rfcsize = strlen(message);
 	info->keywords = keywords;
 
@@ -2081,7 +2086,7 @@ int _ic_store(ImapSession *self)
 static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 {
 	struct cmd_t *cmd = self->cmd;
-	uint64_t newid;
+	uint64_t newid = 0;
 	int result;
 	uint64_t *new_ids_element = NULL;
 

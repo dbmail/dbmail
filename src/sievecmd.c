@@ -546,6 +546,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 
 	/* Read the file into a char array until EOF. */
 	res = read_from_stream(file, &buf, -1);
+	fclose(file);
 	if (res != 0) {
 		qerrorf("Error reading in your script!\n");
 		return -1;

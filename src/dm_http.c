@@ -103,6 +103,7 @@ void Http_getUsers(T R)
 				/* Check if the user has ACL delete rights to this mailbox */
 				M = MailboxState_new(NULL, mboxid);
 				access = acl_has_right(M, id, ACL_RIGHT_DELETE);
+				MailboxState_free(&M);
 				if (access != 1) {
 					Request_error(R, HTTP_BADREQUEST, "NO permission denied");
 					evbuffer_free(buf);
@@ -116,7 +117,6 @@ void Http_getUsers(T R)
 					return;
 				}
 			}
-
 
 			users = g_list_append_printf(users, "%s", username);
 		} else {

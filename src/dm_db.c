@@ -31,11 +31,32 @@
 
 // Flag order defined in dbmailtypes.h
 static const char *db_flag_desc[] = {
-	"seen_flag", "answered_flag", "deleted_flag", "flagged_flag", "draft_flag", "recent_flag" };
+	"seen_flag",
+       	"answered_flag",
+       	"deleted_flag",
+       	"flagged_flag",
+       	"draft_flag",
+       	"recent_flag",
+	NULL
+};
 const char *imap_flag_desc[] = {
-	"Seen", "Answered", "Deleted", "Flagged", "Draft", "Recent" };
+	"Seen",
+       	"Answered",
+       	"Deleted",
+       	"Flagged",
+       	"Draft",
+       	"Recent",
+       	NULL
+};
 const char *imap_flag_desc_escaped[] = {
-	"\\Seen", "\\Answered", "\\Deleted", "\\Flagged", "\\Draft", "\\Recent" };
+	"\\Seen",
+       	"\\Answered",
+       	"\\Deleted",
+       	"\\Flagged",
+       	"\\Draft",
+       	"\\Recent",
+       	NULL
+};
 
 extern ServerConfig_T *server_conf;
 extern DBParam_T db_params;
@@ -536,7 +557,7 @@ uint64_t db_insert_result(Connection_T c, ResultSet_T r)
 {
 	uint64_t id = 0;
 
-	db_result_next(r);
+	if (! db_result_next(r)) { /* ignore */ }
 
 	// lastRowId is always zero for pgsql tables without OIDs
 	// or possibly for sqlite after calling executeQuery but 
@@ -2024,7 +2045,7 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 	PreparedStatement_T stmt;
 	int p;
 	INIT_QUERY;
-	const char *frag;
+	const char *frag = NULL;
 
 	assert(mailbox_idnr);
 	*mailbox_idnr = 0;
@@ -2034,7 +2055,7 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 	mailbox_like = mailbox_match_new(name); 
 	if (mailbox_like->sensitive)
 		frag = db_get_sql(SQL_SENSITIVE_LIKE);
-	else if (mailbox_like->insensitive)
+	else
 		frag = db_get_sql(SQL_INSENSITIVE_LIKE);
 
 	snprintf(query, DEF_QUERYSIZE-1, 
@@ -2047,7 +2068,7 @@ static int db_findmailbox_owner(const char *name, uint64_t owner_idnr,
 		db_stmt_set_u64(stmt, p++, owner_idnr);
 		if (mailbox_like->sensitive)
 			db_stmt_set_str(stmt, p++, mailbox_like->sensitive);
-		else if (mailbox_like->insensitive)
+		else
 			db_stmt_set_str(stmt, p++, mailbox_like->insensitive);
 
 		r = db_stmt_query(stmt);
@@ -2353,10 +2374,15 @@ GList * db_imap_split_mailbox(const char *mailbox, uint64_t owner_idnr, const ch
 				*errmsg = "Public user required for #Public folder access.";
 				goto egeneral;
 			}
-			db_findmailbox(cpy, public, &mboxid);
+			if (! db_findmailbox(cpy, public, &mboxid)) {
+				*errmsg = "Public folder not found.";
+				goto egeneral;
+			}
 
 		} else {
-			db_findmailbox(cpy, owner_idnr, &mboxid);
+			if (! db_findmailbox(cpy, owner_idnr, &mboxid)) {
+				/* ignore */
+			}
 		}
 
 		/* Prepend a mailbox struct onto the list. */

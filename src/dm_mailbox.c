@@ -174,7 +174,7 @@ static size_t dump_message_to_stream(DbmailMailbox *self, DbmailMessage *message
 
 static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 {
-	List_T head, ids = NULL;
+	List_T ids = NULL;
 	uint64_t msgid, physid, *id;
 	DbmailMessage *m;
 	GTree *uids;
@@ -216,11 +216,11 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 
 	if (t == DM_EQUERY) return t;
 
-	head = p_list_first(ids);
-	ids = head;
+	ids = p_list_first(ids);
 
 	while(ids) {
 		physid = *(uint64_t *)p_list_data(ids);
+		mempool_push(self->pool, p_list_data(ids), sizeof(uint64_t));
 		m = dbmail_message_new(self->pool);
 		m = dbmail_message_retrieve(m, physid);
 		if (dump_message_to_stream(self, m, ostream) > 0)
@@ -231,14 +231,8 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 		ids = p_list_next(ids);
 	}
 
-	ids = head;
-	while (ids) {
-		mempool_push(self->pool, p_list_data(ids), sizeof(uint64_t));
-		if (! p_list_next(ids)) break;
-		ids = p_list_next(ids);
-	}
-
-	p_list_free(&head);
+	ids = p_list_first(ids);
+	p_list_free(&ids);
 
 	return count;
 }
@@ -664,7 +658,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		g_return_val_if_fail(check_msg_set(p_string_str(search_keys[*idx + 1])),-1);
 		value->type = IST_UIDSET;
 		(*idx)++;
-		strncpy(value->search, p_string_str(search_keys[(*idx)]), MAX_SEARCH_LEN);
+		strncpy(value->search, p_string_str(search_keys[(*idx)]), MAX_SEARCH_LEN-1);
 		(*idx)++;
 	}
 
@@ -674,67 +668,67 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 
 	else if ( MATCH(key, "answered") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "answered_flag=1", MAX_SEARCH_LEN);
+		strncpy(value->search, "answered_flag=1", MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "deleted") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "deleted_flag=1", MAX_SEARCH_LEN);
+		strncpy(value->search, "deleted_flag=1", MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "flagged") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "flagged_flag=1", MAX_SEARCH_LEN);
+		strncpy(value->search, "flagged_flag=1", MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "recent") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN);
+		strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "seen") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "seen_flag=1", MAX_SEARCH_LEN);
+		strncpy(value->search, "seen_flag=1", MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "draft") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "draft_flag=1", MAX_SEARCH_LEN);
+		strncpy(value->search, "draft_flag=1", MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "new") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "(seen_flag=0 AND recent_flag=1)", MAX_SEARCH_LEN);
+		strncpy(value->search, "(seen_flag=0 AND recent_flag=1)", MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "old") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN);
+		strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	} else if ( MATCH(key, "unanswered") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN);
+		strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN-1);
 		(*idx)++;
 
 	} else if ( MATCH(key, "undeleted") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN);
+		strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN-1);
 		(*idx)++;
 	
 	} else if ( MATCH(key, "unflagged") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN);
+		strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN-1);
 		(*idx)++;
 	
 	} else if ( MATCH(key, "unseen") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN);
+		strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN-1);
 		(*idx)++;
 	
 	} else if ( MATCH(key, "undraft") ) {
 		value->type = IST_FLAG;
-		strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN);
+		strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN-1);
 		(*idx)++;
 	
 	}
@@ -743,7 +737,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		if ((p = dbmail_iconv_str_to_db(p_string_str(search_keys[*idx]), self->charset)) == NULL) {  \
 			TRACE(TRACE_WARNING, "search_key [%s] is not charset [%s]", p_string_str(search_keys[*idx]), self->charset); \
 		} else { \
-			strncpy(value->search, p, MAX_SEARCH_LEN); \
+			strncpy(value->search, p, MAX_SEARCH_LEN-1); \
 			g_free(p); \
 		} \
 		g_free(t); \
@@ -771,31 +765,31 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	else if ( MATCH(key, "bcc") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
-		strncpy(value->hdrfld, "bcc", MIME_FIELD_MAX);
+		strncpy(value->hdrfld, "bcc", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 		
 	} else if ( MATCH(key, "cc") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
-		strncpy(value->hdrfld, "cc", MIME_FIELD_MAX);
+		strncpy(value->hdrfld, "cc", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "from") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
-		strncpy(value->hdrfld, "from", MIME_FIELD_MAX);
+		strncpy(value->hdrfld, "from", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "to") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
-		strncpy(value->hdrfld, "to", MIME_FIELD_MAX);
+		strncpy(value->hdrfld, "to", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "subject") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
-		strncpy(value->hdrfld, "subject", MIME_FIELD_MAX);
+		strncpy(value->hdrfld, "subject", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "header") ) {
@@ -805,28 +799,28 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 
 		const char *hdr = p_string_str(search_keys[*idx + 1]);
 		char *hdrfld = g_ascii_strdown(hdr, strlen(hdr));
-		strncpy(value->hdrfld, hdrfld, MIME_FIELD_MAX);
+		strncpy(value->hdrfld, hdrfld, MIME_FIELD_MAX-1);
 		g_free(hdrfld);
 
-		strncpy(value->search, p_string_str(search_keys[*idx + 2]), MAX_SEARCH_LEN);
+		strncpy(value->search, p_string_str(search_keys[*idx + 2]), MAX_SEARCH_LEN-1);
 		(*idx) += 3;
 
 	} else if ( MATCH(key, "sentbefore") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_BEFORE;
-		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX);
+		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 
 	} else if ( MATCH(key, "senton") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_ON;
-		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX);
+		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 
 	} else if ( MATCH(key, "sentsince") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_SINCE;
-		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX);
+		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	}
 
@@ -976,47 +970,51 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	else if ( MATCH(key, "not") ) {
 		const char *nextkey;
 
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		if (! search_keys[*idx + 1]) {
+			mempool_push(self->pool, value, sizeof(search_key));
+			return -1;
+		}
+
 		nextkey = p_string_str(search_keys[*idx+1]);
 
 		if ( MATCH(nextkey, "answered") ) {
 			value->type = IST_FLAG;
-			strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN);
+			strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN-1);
 			(*idx)+=2;
 			
 		} else if ( MATCH(nextkey, "deleted") ) {
 			value->type = IST_FLAG;
-			strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN);
+			strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN-1);
 			(*idx)+=2;
 			
 		} else if ( MATCH(nextkey, "flagged") ) {
 			value->type = IST_FLAG;
-			strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN);
+			strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN-1);
 			(*idx)+=2;
 			
 		} else if ( MATCH(nextkey, "recent") ) {
 			value->type = IST_FLAG;
-			strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN);
+			strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN-1);
 			(*idx)+=2;
 			
 		} else if ( MATCH(nextkey, "seen") ) {
 			value->type = IST_FLAG;
-			strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN);
+			strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN-1);
 			(*idx)+=2;
 			
 		} else if ( MATCH(nextkey, "draft") ) {
 			value->type = IST_FLAG;
-			strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN);
+			strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN-1);
 			(*idx)+=2;
 			
 		} else if ( MATCH(nextkey, "new") ) {
 			value->type = IST_FLAG;
-			strncpy(value->search, "(seen_flag=1 AND recent_flag=0)", MAX_SEARCH_LEN);
+			strncpy(value->search, "(seen_flag=1 AND recent_flag=0)", MAX_SEARCH_LEN-1);
 			(*idx)+=2;
 			
 		} else if ( MATCH(nextkey, "old") ) {
 			value->type = IST_FLAG;
-			strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN);
+			strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN-1);
 			(*idx)+=2;
 			
 		} else {
@@ -1061,7 +1059,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	
 	} else if (check_msg_set(key)) {
 		value->type = IST_SET;
-		strncpy(value->search, key, MAX_SEARCH_LEN);
+		strncpy(value->search, key, MAX_SEARCH_LEN-1);
 		(*idx)++;
 		
 	/* ignore the charset. Let the database handle this */
@@ -1106,11 +1104,11 @@ int dbmail_mailbox_build_imap_search(DbmailMailbox *self, String_T *search_keys,
 	value->type = IST_SET;
 
 	if (check_msg_set(p_string_str(search_keys[*idx]))) {
-		strncpy(value->search, p_string_str(search_keys[*idx]), MAX_SEARCH_LEN);
+		strncpy(value->search, p_string_str(search_keys[*idx]), MAX_SEARCH_LEN-1);
 		(*idx)++;
 	} else {
 		/* match all messages if no initial sequence set is defined */
-		strncpy(value->search, "1:*", MAX_SEARCH_LEN);
+		strncpy(value->search, "1:*", MAX_SEARCH_LEN-1);
 	}
 	append_search(self, value, 0);
 

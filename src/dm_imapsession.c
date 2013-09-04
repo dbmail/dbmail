@@ -717,8 +717,8 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	GString *fieldorder = NULL;
 	int k;
 	int fieldseq;
-	String_T query = p_string_new(self->pool, "");
-	String_T range = p_string_new(self->pool, "");
+	String_T query;
+	String_T range;
 
 	if (! bodyfetch->headers) {
 		TRACE(TRACE_DEBUG, "[%p] init bodyfetch->headers", self);
@@ -756,7 +756,9 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	}
 
 	// let's fetch the required message and prefetch a batch if needed.
-	
+	range = p_string_new(self->pool, "");
+	query = p_string_new(self->pool, "");
+
 	if (! (last = g_list_nth(self->ids_list, self->lo+(uint64_t)QUERY_BATCHSIZE)))
 		last = g_list_last(self->ids_list);
 	self->hi = *(uint64_t *)last->data;
@@ -969,7 +971,7 @@ static void _fetch_envelopes(ImapSession *self)
 	}
 
 	if ((s = g_tree_lookup(self->envelopes, &(self->msg_idnr))) != NULL) {
-		dbmail_imap_session_buff_printf(self, "ENVELOPE %s", s?s:"");
+		dbmail_imap_session_buff_printf(self, "ENVELOPE %s", s);
 		return;
 	}
 
@@ -1429,7 +1431,7 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 	g_list_destroy(ol);
 	g_list_destroy(nl);
 
-	if (old->seq < new->seq)
+	if ((!old) || (old->seq < new->seq))
 		modseqchanged = true;
 	if (oldflags && (! MATCH(oldflags, newflags)))
 		flagschanged = true;
@@ -1443,7 +1445,7 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 		}
 
 		if (modseqchanged && self->mailbox->condstore) {
-			TRACE(TRACE_DEBUG, "seq [%" PRIu64 "] -> [%" PRIu64 "]", old->seq, new->seq);
+			TRACE(TRACE_DEBUG, "seq [%" PRIu64 "] -> [%" PRIu64 "]", old?old->seq:0, new->seq);
 			char *m = g_strdup_printf("MODSEQ (%" PRIu64 ")", new->seq);
 			plist = g_list_append(plist, m);
 		}

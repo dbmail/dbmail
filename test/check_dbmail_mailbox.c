@@ -129,6 +129,7 @@ static uint64_t get_mailbox_id(const char *name)
 	uint64_t id, owner;
 	auth_user_exists("testuser1",&owner);
 	db_find_create_mailbox(name, BOX_COMMANDLINE, owner, &id);
+	assert(id);
 	return id;
 }
 

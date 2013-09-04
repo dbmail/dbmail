@@ -82,12 +82,13 @@ int drop_privileges(char *newuser, char *newgroup)
 
 	memset(buf,0,sizeof(buf));
 
-	getgrnam_r(newgroup, &grp, buf, sizeof(buf)-1, &gresult);
-	if (gresult == NULL)
+	if (getgrnam_r(newgroup, &grp, buf, sizeof(buf)-1, &gresult))
 		return -1;
 
-	getpwnam_r(newuser, &pwd, buf, sizeof(buf)-1, &presult);
-	if (presult == NULL)
+	if (getpwnam_r(newuser, &pwd, buf, sizeof(buf)-1, &presult))
+		return -1;
+
+	if (gresult == NULL || presult == NULL)
 		return -1;
 
 	if (setgid(grp.gr_gid) != 0) {
@@ -672,9 +673,6 @@ int dm_sock_score(const char *base, const char *test)
 	if (t!=base)
 		return 0;
 
-	if (! test)
-		return 0;
-	
 	basefilter = cidr_new(base);
 	testfilter = cidr_new(test);
 	

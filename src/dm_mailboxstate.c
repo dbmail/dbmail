@@ -132,7 +132,7 @@ static T state_load_messages(T M, Connection_T c)
 		strncpy(result->internaldate,
 				(query_result) ? query_result :
 				"01-Jan-1970 00:00:01 +0100",
-				IMAP_INTERNALDATE_LEN);
+				IMAP_INTERNALDATE_LEN-1);
 
 		/* rfcsize */
 		result->rfcsize = db_result_get_u64(r,IMAP_NFLAGS + 1);
@@ -944,13 +944,13 @@ int MailboxState_flush_recent(T M)
 {
 	GList *recent;
 
-	if (M && MailboxState_getPermission(M) != IMAPPERM_READWRITE) 
+	if ((!M) || (M && MailboxState_getPermission(M) != IMAPPERM_READWRITE))
 		return DM_SUCCESS;
-
-	TRACE(TRACE_DEBUG,"flush [%d] recent messages", g_tree_nnodes(M->recent_queue));
 
 	if (! g_tree_nnodes(M->recent_queue))
 		return DM_SUCCESS;
+
+	TRACE(TRACE_DEBUG,"flush [%d] recent messages", g_tree_nnodes(M->recent_queue));
 
 	recent = g_tree_keys(M->recent_queue);
 

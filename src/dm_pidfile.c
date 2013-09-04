@@ -109,10 +109,15 @@ void pidfile_create(const char *pidFile, pid_t pid)
 	}
 
 	if (!(f = fopen(pidFile, "w"))) {
-		TRACE(TRACE_EMERG, "Cannot open pidfile [%s], error was [%s]",
-			pidFile, strerror(errno));
+		int serr = errno;
+		TRACE(TRACE_EMERG, "open pidfile [%s] failed: [%s]",
+				pidFile, strerror(serr));
 	}
-	chmod(pidFile, 0644);
+	if (chmod(pidFile, 0644)) {
+		int serr = errno;
+		TRACE(TRACE_EMERG, "chown pidfile [%s] failed: [%s]",
+			       	pidFile, strerror(serr));
+	}
 
 	fprintf(f, "%u\n", pid);
 	fflush(f);

@@ -414,14 +414,18 @@ static int create_unix_socket(ServerConfig_T * conf)
 	/* setup sockaddr_un */
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
-	strncpy(un.sun_path,conf->socket, sizeof(un.sun_path));
+	strncpy(un.sun_path,conf->socket, sizeof(un.sun_path)-1);
 
 	TRACE(TRACE_DEBUG, "create socket [%s] backlog [%d]", conf->socket, conf->backlog);
 
 	// any error in dm_bind_and_listen is fatal
 	dm_bind_and_listen(sock, (struct sockaddr *)&un, sizeof(un), conf->backlog, FALSE);
 	
-	chmod(conf->socket, 02777);
+	if (chmod(conf->socket, 02777)) {
+		int serr = errno;
+		TRACE(TRACE_ERR, "chmod [%s] failed: [%s]",
+				conf->socket, strerror(serr));
+	}
 
 	return sock;
 }
@@ -933,7 +937,7 @@ int server_getopt(ServerConfig_T *config, const char *service, int argc, char *a
 
 int server_mainloop(ServerConfig_T *config, const char *servicename)
 {
-	strncpy(config->process_name, servicename, FIELDSIZE);
+	strncpy(config->process_name, servicename, FIELDSIZE-1);
 
 	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 	g_mime_parser_get_type();
@@ -995,7 +999,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	config_get_value("SOCKET", service, val);
 	if (strlen(val) == 0)
 		TRACE(TRACE_DEBUG, "no value for SOCKET in config file");
-	strncpy(config->socket, val, FIELDSIZE);
+	strncpy(config->socket, val, FIELDSIZE-1);
 	TRACE(TRACE_DEBUG, "socket [%s]", config->socket);
 	
 	/* read items: PORT */
@@ -1006,28 +1010,28 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 		TRACE(TRACE_WARNING, "no value for PORT or TLS_PORT in config file. Using defaults");
 
 		if (MATCH(service, "IMAP"))
-			strncpy(config->port, "143", FIELDSIZE);
+			strncpy(config->port, "143", FIELDSIZE-1);
 		else if (MATCH(service, "POP"))
-			strncpy(config->port, "110", FIELDSIZE);
+			strncpy(config->port, "110", FIELDSIZE-1);
 		else if (MATCH(service, "SIEVE"))
-			strncpy(config->port, "2000", FIELDSIZE);
+			strncpy(config->port, "2000", FIELDSIZE-1);
 		else if (MATCH(service, "HTTP"))
-			strncpy(config->port, "41380", FIELDSIZE);
+			strncpy(config->port, "41380", FIELDSIZE-1);
 	} else {
-		strncpy(config->port, val, FIELDSIZE);
+		strncpy(config->port, val, FIELDSIZE-1);
 	}
 
 	TRACE(TRACE_DEBUG, "binding to PORT [%s]", config->port);
 
 	if (strlen(val_ssl) > 0) {
-		strncpy(config->ssl_port, val_ssl, FIELDSIZE);
+		strncpy(config->ssl_port, val_ssl, FIELDSIZE-1);
 		TRACE(TRACE_DEBUG, "binding to SSL_PORT [%s]", config->ssl_port);
 	}
 
 	/* read items: BINDIP */
 	config_get_value("BINDIP", service, val);
 	if (strlen(val) == 0)
-		strncpy(val, "127.0.0.1", FIELDSIZE);
+		strncpy(val, "127.0.0.1", FIELDSIZE-1);
 
 	// If there was a SIGHUP, then we're resetting an active config.
 	g_strfreev(config->iplist);
@@ -1086,8 +1090,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	if (strlen(val) == 0)
 		TRACE(TRACE_EMERG, "no value for EFFECTIVE_USER in config file");
 
-	strncpy(config->serverUser, val, FIELDSIZE);
-	config->serverUser[FIELDSIZE - 1] = '\0';
+	strncpy(config->serverUser, val, FIELDSIZE-1);
 
 	TRACE(TRACE_DEBUG, "effective user shall be [%s]",
 	      config->serverUser);
@@ -1097,8 +1100,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	if (strlen(val) == 0)
 		TRACE(TRACE_EMERG, "no value for EFFECTIVE_GROUP in config file");
 
-	strncpy(config->serverGroup, val, FIELDSIZE);
-	config->serverGroup[FIELDSIZE - 1] = '\0';
+	strncpy(config->serverGroup, val, FIELDSIZE-1);
 
 	TRACE(TRACE_DEBUG, "effective group shall be [%s]", config->serverGroup);
 
@@ -1106,8 +1108,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	config_get_value("TLS_CAFILE", service, val);
 	if(strlen(val) == 0)
 		TRACE(TRACE_WARNING, "no value for TLS_CAFILE in config file");
-	strncpy(config->tls_cafile, val, FIELDSIZE);
-        config->tls_cafile[FIELDSIZE - 1] = '\0';
+	strncpy(config->tls_cafile, val, FIELDSIZE-1);
 
         TRACE(TRACE_DEBUG, "CA file is set to [%s]", config->tls_cafile);
 
@@ -1115,8 +1116,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	config_get_value("TLS_CERT", service, val);
 	if(strlen(val) == 0)
 		TRACE(TRACE_WARNING, "no value for TLS_CERT in config file");
-	strncpy(config->tls_cert, val, FIELDSIZE);
-        config->tls_cert[FIELDSIZE - 1] = '\0';
+	strncpy(config->tls_cert, val, FIELDSIZE-1);
 
         TRACE(TRACE_DEBUG, "Certificate file is set to [%s]", config->tls_cert);
 
@@ -1124,8 +1124,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	config_get_value("TLS_KEY", service, val);
 	if(strlen(val) == 0)
 		TRACE(TRACE_WARNING, "no value for TLS_KEY in config file");
-	strncpy(config->tls_key, val, FIELDSIZE);
-        config->tls_key[FIELDSIZE - 1] = '\0';
+	strncpy(config->tls_key, val, FIELDSIZE-1);
 
         TRACE(TRACE_DEBUG, "Key file is set to [%s]", config->tls_key);
 
@@ -1133,12 +1132,11 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 	config_get_value("TLS_CIPHERS", service, val);
 	if(strlen(val) == 0)
 		TRACE(TRACE_INFO, "no value for TLS_CIPHERS in config file");
-	strncpy(config->tls_ciphers, val, FIELDSIZE);
-        config->tls_ciphers[FIELDSIZE - 1] = '\0';
+	strncpy(config->tls_ciphers, val, FIELDSIZE-1);
 
         TRACE(TRACE_DEBUG, "Cipher string is set to [%s]", config->tls_ciphers);
 
-	strncpy(config->service_name, service, FIELDSIZE);
+	strncpy(config->service_name, service, FIELDSIZE-1);
 
 }
 

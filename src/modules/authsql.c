@@ -311,11 +311,11 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 	*user_idnr = 0;
 
 	tuser = username;
-	if (tuser == NULL || password == NULL) {
+	if (tuser[0] == '\0' || password[0] == '\0') {
 		if (ci && ci->auth) { // CRAM-MD5
 			tuser = (char *)Cram_getUsername(ci->auth);
 		} else {
-			TRACE(TRACE_DEBUG, "username or password is NULL");
+			TRACE(TRACE_DEBUG, "username or password is empty");
 			return FALSE;
 		}
 	}

@@ -496,8 +496,8 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	END_TRY;
 
 	if ((row == 0) || (t == DM_EQUERY)) {
-		if (m)
-			p_string_free(m,TRUE);
+		if (m) p_string_free(m, TRUE);
+		if (n) p_string_free(n, TRUE);
 		return NULL;
 	}
 
@@ -1106,13 +1106,16 @@ static DbmailMessage * _fetch_full(DbmailMessage *self)
 DbmailMessage * dbmail_message_retrieve(DbmailMessage *self, uint64_t physid)
 {
 	assert(physid);
+	DbmailMessage *ptr;
 	
 	dbmail_message_set_physid(self, physid);
+	ptr = self;
 	
 	self = _fetch_full(self);
 
 	if ((!self) || (! self->content)) {
 		TRACE(TRACE_ERR, "retrieval failed for physid [%" PRIu64 "]", physid);
+		dbmail_message_free(ptr);
 		return NULL;
 	}
 
@@ -2116,7 +2119,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 		uint64_t useridnr, const char *mailbox, mailbox_source source,
 		int *msgflags, GList *keywords)
 {
-	uint64_t mboxidnr, newmsgidnr;
+	uint64_t mboxidnr = 0, newmsgidnr = 0;
 	Field_T val;
 	size_t msgsize = (uint64_t)dbmail_message_get_size(message, FALSE);
 
