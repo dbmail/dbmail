@@ -1,0 +1,11 @@
+[Unit]
+Description=DBMail Sieve Server
+After=syslog.target network.target mysqld.service postgresql.service
+
+[Service]
+Type=forking
+PIDFile=@piddir@/dbmail-timsieved.pid
+ExecStart=@sbindir@/dbmail-timsieved -p @piddir@/dbmail-timsieved.pid
+
+[Install]
+WantedBy=multi-user.target

@@ -6,4 +6,6 @@ if MANPAGES
 SUBDIRS += man
 endif
 
-
+if SYSTEMD
+SUBDIRS += systemd
+endif

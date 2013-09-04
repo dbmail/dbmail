@@ -44,6 +44,10 @@ AC_ARG_ENABLE([manpages],
     AS_HELP_STRING([--enable-manpages], [Enable building and installation of man pages]))
 AM_CONDITIONAL(MANPAGES, [ test "$enable_manpages" = "yes" ])
 
+AC_ARG_ENABLE([systemd],
+    AS_HELP_STRING([--enable-systemd], [Enable systemd support]))
+AM_CONDITIONAL(SYSTEMD, [ test "$enable_systemd" = "yes" ])
+
 AC_PROG_CC
 AC_COMPILE_WARNINGS
 AC_C_CONST
@@ -80,6 +84,6 @@ AC_SUBST(DM_PKGLIBDIR)
 AC_SUBST(DM_PWD)
 AC_PROG_LIBTOOL
 
-AC_OUTPUT(src/dbmail.h Makefile src/Makefile src/modules/Makefile man/Makefile test/Makefile)
+AC_OUTPUT(src/dbmail.h Makefile src/Makefile src/modules/Makefile man/Makefile test/Makefile systemd/Makefile)
 
 DM_MSG_CONFIGURE_RESULTS

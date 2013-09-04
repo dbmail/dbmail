@@ -1,0 +1,11 @@
+[Unit]
+Description=DBMail Imap Server
+After=syslog.target network.target mysqld.service postgresql.service
+
+[Service]
+Type=forking
+PIDFile=@piddir@/dbmail-imapd.pid
+ExecStart=@sbindir@/dbmail-imapd -p @piddir@/dbmail-imapd.pid
+
+[Install]
+WantedBy=multi-user.target
