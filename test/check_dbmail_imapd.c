@@ -538,7 +538,7 @@ START_TEST(test_imap_get_partspec)
 	DbmailMessage *message;
 	GMimeObject *object;
 	char *result, *expect;
-	
+
 	/* text/plain */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
@@ -633,10 +633,43 @@ START_TEST(test_imap_get_partspec)
 	g_free(expect);
 
 	dbmail_message_free(message);
+
+	/* multipart signed */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_signed);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.1");
+	result = imap_get_logical_part(object,NULL);
+	expect = g_strdup("Content-Type: text/plain; charset=UTF-8\r\n"
+			"Content-Transfer-Encoding: quoted-printable\r\n"
+			"\r\n"
+			"quo-pri text");
+	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
+	g_free(result);
+	g_free(expect);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
+	result = imap_get_logical_part(object,"HEADER");
+	expect = g_strdup("Date: Mon, 19 Aug 2013 14:54:05 +0200\r\n"
+			"To: a@b\r\n"
+			"From: d@b\r\n"
+			"Reply-To: e@b\r\n"
+			"Subject: msg1\r\n"
+			"MIME-Version: 1.0\r\n"
+			"Content-Type: multipart/alternative;\r\n"
+			"\tboundary=b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\r\n"
+			"\r\n");
+				
+	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
+	g_free(result);
+	g_free(expect);
+
+	dbmail_message_free(message);
+
 }
 END_TEST
 
-#ifdef OLD
+#if 0
 static uint64_t get_physid(void)
 {
 	uint64_t id = 0;
@@ -875,7 +908,6 @@ Suite *dbmail_suite(void)
 	suite_add_tcase(s, tc_misc);
 	
 	tcase_add_checked_fixture(tc_session, setup, teardown);
-
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_cleanup_address);
@@ -895,7 +927,6 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_date_sql2imap);
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_base_subject);
-
 	return s;
 }
 

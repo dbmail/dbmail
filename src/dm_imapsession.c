@@ -431,7 +431,7 @@ static int _imap_session_fetch_parse_partspec(ImapSession *self)
 		shouldclose = 1;
 	} else if (token[j] == '\0') {
 		self->fi->msgparse_needed=1;
-		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_TEXT_SILENT);
+		dbmail_imap_session_bodyfetch_set_itemtype(self, BFIT_ALL);
 		shouldclose = 1;
 	} else {
 		return -2;					/* error DONE */
@@ -866,7 +866,7 @@ static uint64_t get_dumpsize(body_fetch *bodyfetch, uint64_t dumpsize)
 
 static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch *bodyfetch, const char *type)
 {
-	TRACE(TRACE_DEBUG,"[%p] type [%s]", self, type);
+	TRACE(TRACE_DEBUG,"[%p] type [%s]", self, type?type:"");
 	if ( !part ) { 
 		dbmail_imap_session_buff_printf(self, "] NIL");
 	} else {
@@ -924,12 +924,14 @@ static int _imap_show_body_section(body_fetch *bodyfetch, gpointer data)
 
 	switch (bodyfetch->itemtype) {
 
+		case BFIT_ALL:
+			_imap_send_part(self, part, bodyfetch, NULL);
+			break;
 		case BFIT_TEXT:
 			dbmail_imap_session_buff_printf(self, "TEXT");
-			// fall-through
-		case BFIT_TEXT_SILENT:
 			_imap_send_part(self, part, bodyfetch, "TEXT");
 			break;
+			// fall-through
 		case BFIT_HEADER:
 			dbmail_imap_session_buff_printf(self, "HEADER");
 			_imap_send_part(self, part, bodyfetch, "HEADER");
