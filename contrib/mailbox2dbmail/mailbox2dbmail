@@ -35,10 +35,11 @@ def main():
         box = "Inbox"
         path = "/usr/sbin/dbmail-deliver"
         dryrun = False
+        sieve = False
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "u:m:b:t:p:f:dhv",
-            ["user=", "mail=", "box=", "path=", "type=", "help", "version"])
+            "u:m:b:t:p:f:dhvs",
+            ["user=", "mail=", "box=", "path=", "type=", "help", "version", "dryrun", "sieve"])
         for o, a in opts:
             if o in ("-v", "--version"):
                 print version
@@ -48,6 +49,8 @@ def main():
                 sys.exit()
             elif o in ("-d", "--dryrun"):
                 dryrun = True
+            elif o in ("-s", "--sieve"):
+                sieve = True
             elif o in ("-u", "--user"):
                 user = a
             elif o in ("-m", "--mail"):
@@ -85,7 +88,7 @@ def main():
         elif not type:
             print "No mailbox type specified"
             sys.exit(1)
-        convert(user, mbox, box, path, conf, dryrun)
+        convert(user, mbox, box, path, conf, dryrun, sieve)
     except getopt.GetoptError:
         usage()
         print "Error Parsing Options"
@@ -96,6 +99,7 @@ def usage():
     print version
     print """%s
     -d|--dryrun
+    -s|--sieve
     -u|--user <user>
     -t|--type <mbox, maildir, and mhdir>
     -m|--mail <location of mailbox>
@@ -105,11 +109,12 @@ def usage():
     """ % (sys.argv[0], )
 
 
-def convert(user, mbox, box, path, conf, dryrun):
+def convert(user, mbox, box, path, conf, dryrun, sieve):
     if conf:
         conf = """-f %s""" % conf
-    command = """%s %s -m "%s" -u "%s" """ % (
-        path, conf, box, user)
+    command = """%s %s %s "%s" -u "%s" """ % (
+        path, conf, "-m" if sieve else "-M", box, user)
+    print command
     msgnumber = 1
     try:
         while 1:
