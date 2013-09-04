@@ -192,7 +192,9 @@ START_TEST(test_imap_get_structure)
 	DbmailMessage *message;
 	char *body;
 	char *result;
-	char *expect = g_new0(char,1024);
+	char expect[4096];
+
+	memset(&expect, 0, sizeof(expect));
 
 	/* bare bones */
 	message = dbmail_message_new(NULL);
@@ -232,7 +234,6 @@ START_TEST(test_imap_get_structure)
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
 	g_free(result);
 	dbmail_message_free(message);
-
 	/* multipart apple */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_apple);
@@ -242,7 +243,6 @@ START_TEST(test_imap_get_structure)
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
 	g_free(result);
 	dbmail_message_free(message);
-	
 	/* rfc2231 encoded content-disposition */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_message7);
@@ -253,8 +253,14 @@ START_TEST(test_imap_get_structure)
 	g_free(result);
 	dbmail_message_free(message);
 
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_signed);
+	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	strncpy(expect, "(((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"image\" \"gif\" (\"name\" \"image.gif\") NIL NIL \"base64\" 142 NIL (\"attachment\" (\"filename\" \"image.gif\")) NIL NIL)(\"message\" \"rfc822\" NIL NIL NIL \"7bit\" 610 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg1\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL) 26 NIL (\"attachment\" (\"filename\" \"msg1.eml\")) NIL NIL)(\"message\" \"rfc822\" (\"name\" \"msg2.eml\") NIL NIL \"7bit\" 608 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg2\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL) 25 NIL (\"attachment\" (\"filename\" \"msg2.eml\")) NIL NIL)(\"application\" \"x-php\" (\"name\" \"script.php\") NIL NIL \"base64\" 122 NIL (\"attachment\" (\"filename\" \"script.php\")) NIL NIL) \"mixed\" (\"boundary\" \"------------090808030504030005030705\") NIL NIL NIL)(\"application\" \"pgp-signature\" (\"name\" \"signature.asc\") NIL \"OpenPGP digital signature\" \"7BIT\" 271 NIL (\"attachment\" (\"filename\" \"signature.asc\")) NIL NIL) \"signed\" (\"micalg\" \"pgp-sha1\" \"protocol\" \"application/pgp-signature\" \"boundary\" \"DQGSJUrIXg9lgq2GBFumjRDhuJtiugxAX\") NIL NIL NIL)", 4096);
+	fail_unless(strncasecmp(result,expect,4096)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
+	g_free(result);
+	dbmail_message_free(message);
 	/* done */
-	g_free(expect);
 }
 END_TEST
 
@@ -862,9 +868,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_envelope_8bit_id);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_envelope_latin);
-	
 	tcase_add_test(tc_session, test_imap_get_partspec);
-
 	tcase_add_checked_fixture(tc_util, setup, teardown);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_collapse);
@@ -873,7 +877,6 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_g_list_slices_u64);
 	tcase_add_test(tc_util, test_listex_match);
 	tcase_add_test(tc_util, test_date_sql2imap);
-
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_base_subject);
 
