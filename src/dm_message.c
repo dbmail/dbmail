@@ -139,7 +139,7 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 			s = db_stmt_prepare(c, "SELECT a.id, b.id FROM dbmail_mimeparts a INNER JOIN " 
 					"%smimeparts b ON a.hash=b.hash AND DBMS_LOB.COMPARE(a.data, b.data) = 0 " 
 					" AND a.id<>b.id AND b.id=?", DBPFX);
-			db_stmt_set_u64(s,1,l);
+			db_stmt_set_u64(s, 1, id);
 			r = db_stmt_query(s);
 			if (db_result_next(r))
 				id_old = db_result_get_u64(r,0);			
