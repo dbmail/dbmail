@@ -670,6 +670,8 @@ LDAP_FALSE
 LDAP_TRUE
 SIEVE_FALSE
 SIEVE_TRUE
+SYSTEMD_FALSE
+SYSTEMD_TRUE
 MANPAGES_FALSE
 MANPAGES_TRUE
 WITHCHECK_FALSE
@@ -788,6 +790,7 @@ with_zdb
 with_jemalloc
 with_check
 enable_manpages
+enable_systemd
 with_pic
 enable_fast_install
 with_gnu_ld
@@ -1430,6 +1433,7 @@ Optional Features:
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --enable-manpages       Enable building and installation of man pages
+  --enable-systemd        Enable systemd support
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
@@ -5502,6 +5506,20 @@ fi
 else
   MANPAGES_TRUE='#'
   MANPAGES_FALSE=
+fi
+
+
+# Check whether --enable-systemd was given.
+if test "${enable_systemd+set}" = set; then :
+  enableval=$enable_systemd;
+fi
+
+ if  test "$enable_systemd" = "yes" ; then
+  SYSTEMD_TRUE=
+  SYSTEMD_FALSE='#'
+else
+  SYSTEMD_TRUE='#'
+  SYSTEMD_FALSE=
 fi
 
 
@@ -13815,7 +13833,7 @@ CC="$lt_save_CC"
 
 
 
-ac_config_files="$ac_config_files src/dbmail.h Makefile src/Makefile src/modules/Makefile man/Makefile test/Makefile"
+ac_config_files="$ac_config_files src/dbmail.h Makefile src/Makefile src/modules/Makefile man/Makefile test/Makefile systemd/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -13964,6 +13982,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${MANPAGES_TRUE}" && test -z "${MANPAGES_FALSE}"; then
   as_fn_error $? "conditional \"MANPAGES\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${SYSTEMD_TRUE}" && test -z "${SYSTEMD_FALSE}"; then
+  as_fn_error $? "conditional \"SYSTEMD\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
@@ -14869,6 +14891,7 @@ do
     "src/modules/Makefile") CONFIG_FILES="$CONFIG_FILES src/modules/Makefile" ;;
     "man/Makefile") CONFIG_FILES="$CONFIG_FILES man/Makefile" ;;
     "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
+    "systemd/Makefile") CONFIG_FILES="$CONFIG_FILES systemd/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
