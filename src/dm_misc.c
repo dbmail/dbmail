@@ -1642,7 +1642,6 @@ void _structure_part_message(GMimeObject *part, gpointer data, gboolean extensio
 	GList *list = NULL;
 	size_t s = 0, l = 0;
 	GMimeObject *object;
-	GMimeMessage *tmpmes;
 	
 	object = part;
 	
@@ -1654,12 +1653,12 @@ void _structure_part_message(GMimeObject *part, gpointer data, gboolean extensio
 	list = g_list_append_printf(list,"%d", s);
 
 	/* envelope structure */
-	b = imap_get_envelope(tmpmes = g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)));
+	b = imap_get_envelope(g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)));
 	list = g_list_append_printf(list,"%s", b?b:"NIL");
 	g_free(b);
 
 	/* body structure */
-	b = imap_get_structure(tmpmes = g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)), extension);
+	b = imap_get_structure(g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)), extension);
 	list = g_list_append_printf(list,"%s", b?b:"NIL");
 	g_free(b);
 
@@ -1863,6 +1862,9 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	GMimeObject *part;
 	char *s, *t;
 	
+	if (! message) 
+		return NULL;
+
 	if (! GMIME_IS_MESSAGE(message))
 		return NULL;
 
@@ -1961,10 +1963,11 @@ char * imap_get_envelope(GMimeMessage *message)
 	char *s = NULL, *t = NULL;
 	const char *h;
 
-	if (! GMIME_IS_MESSAGE(message)) {
-		TRACE(TRACE_ERR, "argument is not a message");
+	if (! message) 
 		return NULL;
-	}
+
+	if (! GMIME_IS_MESSAGE(message))
+		return NULL;
 	
 	part = GMIME_OBJECT(message);
 	/* date */
