@@ -268,9 +268,6 @@ void _ic_authenticate_enter(dm_thread_data *D)
 	if (self->args[self->args_idx] && self->args[self->args_idx+1]) {
 		username = p_string_str(self->args[self->args_idx]);
 		password = p_string_str(self->args[self->args_idx+1]);
-	} else {
-		D->status = -1;
-		SESSION_RETURN;
 	}
 
 	if ((err = dbmail_imap_session_handle_auth(self,username,password))) {

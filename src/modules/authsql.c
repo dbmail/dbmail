@@ -298,6 +298,7 @@ int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 	return db_change_mailboxsize(user_idnr, new_size);
 }
 
+#define CONSTNULL(a) ((! a) || (a && (! a[0])))
 
 int auth_validate(ClientBase_T *ci, const char *username, const char *password, uint64_t * user_idnr)
 {
@@ -311,7 +312,7 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 	*user_idnr = 0;
 
 	tuser = username;
-	if (tuser[0] == '\0' || password[0] == '\0') {
+	if (CONSTNULL(tuser) || CONSTNULL(password)) {
 		if (ci && ci->auth) { // CRAM-MD5
 			tuser = (char *)Cram_getUsername(ci->auth);
 		} else {
