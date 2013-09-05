@@ -2047,7 +2047,7 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 
 	rfc822 = g_mime_content_type_is_type(type,"message","rfc822");
 
-	if (MATCH(specifier, "HEADER") || MATCH(specifier, "TEXT")) {
+	if (specifier == NULL || MATCH(specifier, "HEADER") || MATCH(specifier, "TEXT")) {
 		if (rfc822)
 			object = (GMimeObject *)g_mime_message_part_get_message(
 					(GMimeMessagePart *)object);
@@ -2062,7 +2062,10 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 		s = g_realloc(s, strlen(s) + 3);
 		strcat(s, "\r\n");
 	} else {
-		t = g_mime_object_get_body(GMIME_OBJECT(object));
+		if (rfc822)
+			t = g_mime_object_to_string(GMIME_OBJECT(object));
+		else
+			t = g_mime_object_get_body(GMIME_OBJECT(object));
 		s = get_crlf_encoded(t);
 		g_free(t);
 	} 
@@ -2077,7 +2080,7 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 	GMimeObject *object;
 	GMimeContentType *type;
 	char *part;
-	guint index;
+	guint index, maxindex;
 	guint i;
 
 	assert(message);
@@ -2088,7 +2091,9 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 	GList *specs = g_string_split(t,".");
 	g_string_free(t,TRUE);
 	
-	for (i=0; i< g_list_length(specs); i++) {
+	maxindex = g_list_length(specs);
+
+	for (i=0; i< maxindex; i++) {
 		part = g_list_nth_data(specs,i);
 		if (! (index = strtol((const char *)part, NULL, 0))) 
 			break;
@@ -2108,10 +2113,12 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 		}
 
 		if (g_mime_content_type_is_type(type, "message", "rfc822")) {
-			object = (GMimeObject *)g_mime_message_part_get_message(
-					(GMimeMessagePart *)object);
-			type = (GMimeContentType *)g_mime_object_get_content_type(
-					object);
+			if (i+1 < maxindex) {
+				object = (GMimeObject *)g_mime_message_part_get_message(
+						(GMimeMessagePart *)object);
+				type = (GMimeContentType *)g_mime_object_get_content_type(
+						object);
+			}
 		}
 
 	}

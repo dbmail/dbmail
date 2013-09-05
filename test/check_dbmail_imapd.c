@@ -678,6 +678,104 @@ START_TEST(test_imap_get_partspec)
 	g_free(expect);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
+	result = g_mime_object_to_string(object);
+	expect = g_strdup("Content-Type: message/rfc822;\n"
+			"Content-Transfer-Encoding: 7bit\n"
+			"Content-Disposition: attachment;\n"
+			" filename=\"msg1.eml\"\n"
+			"\n"
+			"Date: Mon, 19 Aug 2013 14:54:05 +0200\n"
+			"To: a@b\n"
+			"From: d@b\n"
+			"Reply-To: e@b\n"
+			"Subject: msg1\n"
+			"MIME-Version: 1.0\n"
+			"Content-Type: multipart/alternative;\n"
+			"	boundary=b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\n"
+			"\n"
+			"\n"
+			"--b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\n"
+			"Content-Type: text/plain; charset=\"ISO-8859-1\"\n"
+			"Content-Transfer-Encoding: quoted-printable\n"
+			"\n"
+			"quo-pri text\n"
+			"--b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\n"
+			"Content-Type: text/html; charset=\"ISO-8859-1\"\n"
+			"Content-Transfer-Encoding: quoted-printable\n"
+			"\n"
+			"html text\n"
+			"\n"
+			"--b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845--\n"
+			"\n"
+			"\n"
+			"\n");
+
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
+	g_free(result);
+	g_free(expect);
+
+	result = imap_get_logical_part(object,"MIME");
+	expect = g_strdup("Content-Type: message/rfc822;\r\n"
+			"Content-Transfer-Encoding: 7bit\r\n"
+			"Content-Disposition: attachment;\r\n"
+			" filename=\"msg1.eml\"\r\n"
+			"\r\n");
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
+	g_free(result);
+	g_free(expect);
+
+	
+	result = imap_get_logical_part(object,NULL);
+	expect = g_strdup("Date: Mon, 19 Aug 2013 14:54:05 +0200\r\n"
+			"To: a@b\r\n"
+			"From: d@b\r\n"
+			"Reply-To: e@b\r\n"
+			"Subject: msg1\r\n"
+			"MIME-Version: 1.0\r\n"
+			"Content-Type: multipart/alternative;\r\n"
+			"	boundary=b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\r\n"
+			"\r\n"
+			"\r\n"
+			"--b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\r\n"
+			"Content-Type: text/plain; charset=\"ISO-8859-1\"\r\n"
+			"Content-Transfer-Encoding: quoted-printable\r\n"
+			"\r\n"
+			"quo-pri text\r\n"
+			"--b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\r\n"
+			"Content-Type: text/html; charset=\"ISO-8859-1\"\r\n"
+			"Content-Transfer-Encoding: quoted-printable\r\n"
+			"\r\n"
+			"html text\r\n"
+			"\r\n"
+			"--b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845--\r\n"
+			"\r\n"
+			"\r\n"
+			"\r\n");
+
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
+	g_free(result);
+	g_free(expect);
+
+
+
+	result = imap_get_logical_part(object,"MIME");
+	expect = g_strdup("Content-Type: message/rfc822;\r\n"
+			"Content-Transfer-Encoding: 7bit\r\n"
+			"Content-Disposition: attachment;\r\n"
+			" filename=\"msg1.eml\"\r\n"
+			"\r\n");
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
+	g_free(result);
+	g_free(expect);
+
 	result = imap_get_logical_part(object,"HEADER");
 	expect = g_strdup("Date: Mon, 19 Aug 2013 14:54:05 +0200\r\n"
 			"To: a@b\r\n"
