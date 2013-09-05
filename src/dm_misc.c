@@ -2036,23 +2036,32 @@ char * imap_get_envelope(GMimeMessage *message)
 
 char * imap_get_logical_part(const GMimeObject *object, const char * specifier) 
 {
+	GMimeContentType *type;
 	gchar *s = NULL, *t=NULL;
+	bool rfc822 = false;
 		
-	if (specifier == NULL) {
-		t = g_mime_object_to_string(GMIME_OBJECT(object));
-		s = get_crlf_encoded(t);
-		g_free(t);
+	assert(object);
+
+	type = (GMimeContentType *)g_mime_object_get_content_type(
+			(GMimeObject *)object);
+
+	rfc822 = g_mime_content_type_is_type(type,"message","rfc822");
+
+	if (MATCH(specifier, "HEADER") || MATCH(specifier, "TEXT")) {
+		if (rfc822)
+			object = (GMimeObject *)g_mime_message_part_get_message(
+					(GMimeMessagePart *)object);
+		if (! object)
+			return g_strdup("");
 	}
 
-	else if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) {
+	if (MATCH(specifier,"HEADER") || MATCH(specifier,"MIME")) {
 		t = g_mime_object_get_headers(GMIME_OBJECT(object));
 		s = get_crlf_encoded(t);
 		g_free(t);
 		s = g_realloc(s, strlen(s) + 3);
 		strcat(s, "\r\n");
-	} 
-	
-	else if (strcasecmp(specifier,"TEXT")==0) {
+	} else {
 		t = g_mime_object_get_body(GMIME_OBJECT(object));
 		s = get_crlf_encoded(t);
 		g_free(t);
@@ -2074,58 +2083,37 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 	assert(message);
 	assert(partspec);
 	
+	object = (GMimeObject *)message;
 	GString *t = g_string_new(partspec);
 	GList *specs = g_string_split(t,".");
 	g_string_free(t,TRUE);
 	
-	object = GMIME_OBJECT(message);
-	if (!object) {
-		TRACE(TRACE_INFO, "message is not an object");
-		return NULL;
-	}
-		
 	for (i=0; i< g_list_length(specs); i++) {
 		part = g_list_nth_data(specs,i);
 		if (! (index = strtol((const char *)part, NULL, 0))) 
 			break;
-		
+		if (! object)
+			break;
+
 		if (GMIME_IS_MESSAGE(object))
-			object = GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
-		
+			object = g_mime_message_get_mime_part((GMimeMessage *)object);
+			
 		type = (GMimeContentType *)g_mime_object_get_content_type(object);
 
 		if (g_mime_content_type_is_type(type,"multipart","*")) {
-			object = g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
-			if (!object) {
-				TRACE(TRACE_INFO, "object part [%d] is null", (int)index-1);
-				g_list_destroy(specs);
-				return NULL;
-			}
-			if (! GMIME_IS_OBJECT(object)) {
-				TRACE(TRACE_INFO, "object part [%d] is not an object", (int)index-1);
-				g_list_destroy(specs);
-				return NULL;
-			}
-
-			type = (GMimeContentType *)g_mime_object_get_content_type(object);
+			object = g_mime_multipart_get_part(
+					(GMimeMultipart *)object, (int)index-1);
+			type = (GMimeContentType *)g_mime_object_get_content_type(
+					object);
 		}
 
-		// for message/rfc822 parts we want the contained message, 
-		// not the mime-part as such
-
-		if (g_mime_content_type_is_type(type,"message","rfc822")) {
-			object = GMIME_OBJECT(GMIME_MESSAGE_PART(object)->message);
-			if (!object) {
-				TRACE(TRACE_INFO, "rfc822 part is null");
-				g_list_destroy(specs);
-				return NULL;
-			}
-			if (! GMIME_IS_OBJECT(object)) {
-				TRACE(TRACE_INFO, "rfc822 part is not an object");
-				g_list_destroy(specs);
-				return NULL;
-			}
+		if (g_mime_content_type_is_type(type, "message", "rfc822")) {
+			object = (GMimeObject *)g_mime_message_part_get_message(
+					(GMimeMessagePart *)object);
+			type = (GMimeContentType *)g_mime_object_get_content_type(
+					object);
 		}
+
 	}
 
 	g_list_destroy(specs);

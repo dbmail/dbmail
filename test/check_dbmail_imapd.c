@@ -544,6 +544,12 @@ START_TEST(test_imap_get_partspec)
 	message = dbmail_message_init_with_string(message, rfc822);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
+	result = g_mime_object_to_string(object);
+	fail_unless(MATCH(rfc822,result),
+			"imap_get_partsec failed \n[%s] !=\n[%s]\n",
+		       	rfc822, result);
+	g_free(result);
+
 	result = imap_get_logical_part(object,"HEADER");
 	expect = g_strdup("From nobody Wed Sep 14 16:47:48 2005\r\n"
 			"Content-Type: text/plain; charset=\"us-ascii\"\r\n"
@@ -575,39 +581,53 @@ START_TEST(test_imap_get_partspec)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_message);
 
+	/* test a simple mime part */
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1");
-	result = imap_get_logical_part(object,NULL);
+	result = imap_get_logical_part(object,"MIME");
 	expect = g_strdup("Content-type: text/html\r\n"
-	        "Content-disposition: inline\r\n\r\n"
-	        "Test message one\r\n"
-		" and more.\r\n");
+	        "Content-disposition: inline\r\n\r\n");
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
+	g_free(result);
+	g_free(expect);
+
+	result = imap_get_logical_part(object,NULL);
+	expect = g_strdup("Test message one\r\n and more.\r\n");
 	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
 	g_free(result);
 	g_free(expect);
 
-	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
-	result = imap_get_logical_part(object,"TEXT");
-	expect = g_strdup("Test message one\r\n"
-			" and more.\r\n");
-	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
-	g_free(result);
-	g_free(expect);
-
-	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.HEADER");
+	/* object isn't a message/rfc822 so these are 
+	 * acually invalid. Let's try anyway */
 	result = imap_get_logical_part(object,"HEADER");
 	expect = g_strdup("Content-type: text/html\r\n"
-			"Content-disposition: inline\r\n"
-			"\r\n");
-	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
+			"Content-disposition: inline\r\n\r\n");
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
 	g_free(result);
 	g_free(expect);
-	
-	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.MIME");
+
+	result = imap_get_logical_part(object,"TEXT");
+	expect = g_strdup("Test message one\r\n and more.\r\n");
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
+	g_free(result);
+	g_free(expect);
+
+	/* moving on */
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"2");
 	result = imap_get_logical_part(object,"MIME");
-	expect = g_strdup("Content-type: text/plain; charset=us-ascii; name=testfile\r\n"
+	expect = g_strdup(
+			"Content-type: text/plain; charset=us-ascii; name=testfile\r\n"
 			"Content-transfer-encoding: base64\r\n"
-			"\r\n");
-	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
+			"\r\n"
+			);
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
 	g_free(result);
 	g_free(expect);
 
@@ -617,18 +637,30 @@ START_TEST(test_imap_get_partspec)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_mixed);
 
-	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.HEADER");
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"2");
 	result = imap_get_logical_part(object,"HEADER");
-	fail_unless(strncmp(result,"From: \"try\" <try@test.kisise>",29)==0,"imap_get_partspec failed");
+	expect = g_strdup("From: \"try\" <try@test.kisise>");
+	fail_unless((strncmp(expect,result,29)==0),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
+	g_free(expect);
 	g_free(result);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.1.1");
 	result = imap_get_logical_part(object,NULL);
+	expect = g_strdup("Body of doc2\r\n\r\n");
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+			expect, result);
+	g_free(result);
+	g_free(expect);
+	result = imap_get_logical_part(object,"MIME");
 	expect = g_strdup("Content-Type: text/plain;\r\n"
 			"	charset=\"us-ascii\"\r\n"
-			"Content-Transfer-Encoding: 7bit\r\n\r\n"
-			"Body of doc2\r\n\r\n");
-	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
+			"Content-Transfer-Encoding: 7bit\r\n\r\n");
+	fail_unless(MATCH(expect,result),
+			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
+			expect, result);
 	g_free(result);
 	g_free(expect);
 
@@ -640,10 +672,7 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.1");
 	result = imap_get_logical_part(object,NULL);
-	expect = g_strdup("Content-Type: text/plain; charset=UTF-8\r\n"
-			"Content-Transfer-Encoding: quoted-printable\r\n"
-			"\r\n"
-			"quo-pri text");
+	expect = g_strdup("quo-pri text");
 	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
 	g_free(result);
 	g_free(expect);
