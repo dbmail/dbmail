@@ -150,6 +150,7 @@ typedef struct {
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;
 	GMimeStream *stream;
+	String_T crlf; 
 
 	// Mappings
 	GHashTable *header_dict;

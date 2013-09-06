@@ -53,53 +53,26 @@ extern ServerConfig_T *server_conf;
 /*
  * send_data()
  *
- * sends cnt bytes from a MEM structure to a FILE stream
- * uses a simple buffering system
  */
-#define LOOPMAX 10
-static void send_data(ImapSession *self, GMimeStream *stream, int cnt)
+static void send_data(ImapSession *self, const String_T stream, size_t offset, size_t len)
 {
 	char buf[SEND_BUF_SIZE];
-	ssize_t l;
-	int got = 0, want = cnt;
-	int serr = 0;
-	int loop = LOOPMAX;
+	size_t l = 0;
+	char *head;
 
-	assert(stream);
-	TRACE(TRACE_DEBUG,"[%p] stream [%p] cnt [%d]", self, stream, cnt);
-	while ((cnt >= SEND_BUF_SIZE) && (loop > 0)) {
-		memset(buf,0,sizeof(buf));
-		l = g_mime_stream_read(stream, buf, SEND_BUF_SIZE-1);
-		if (l > 0) {
-			loop = LOOPMAX;
-			dbmail_imap_session_buff_printf(self, "%s", buf);
-			cnt -= l;
-			got += l;
-		}
-		if (l < 0) {
-			serr = errno;
-			TRACE(TRACE_INFO,"failed to read from stream [%s]", strerror(serr));
-			loop--;
-		}
-	}
+	assert(p_string_len(stream) >= (offset+len));
 
-	while ((cnt > 0) && (loop > 0)) {
+	head = (char *)p_string_str(stream)+offset;
+
+	TRACE(TRACE_DEBUG,"[%p] stream [%p] offset [%ld] len [%ld]", self, stream, offset, len);
+	while (len > 0) {
+		l = min(len, sizeof(buf)-1);
 		memset(buf,0,sizeof(buf));
-		l = g_mime_stream_read(stream, buf, cnt);
-		if (l > 0) {
-			loop = LOOPMAX;
-			dbmail_imap_session_buff_printf(self, "%s", buf);
-			cnt -= l;
-			got += l;
-		}
-		if (l < 0) {
-			serr = errno;
-			TRACE(TRACE_INFO,"failed to read from stream [%s]", strerror(serr));
-			loop--;
-		}
+		strncpy(buf, head, l);
+		dbmail_imap_session_buff_printf(self, "%s", buf);
+		head += l;
+		len -= l;
 	}
-	if (got != want) 
-		TRACE(TRACE_WARNING,"[%p] want [%d] <> got [%d]", self, want, got);
 }
 
 static void mailboxstate_destroy(MailboxState_T M)
@@ -1046,7 +1019,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 	gchar *s = NULL;
 	uint64_t *id = uid;
 	gboolean reportflags = FALSE;
-	GMimeStream *stream = NULL;
+	String_T stream = NULL;
 
 	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), uid);
 
@@ -1069,26 +1042,8 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		if (! (dbmail_imap_session_message_load(self)))
 			return 0;
 
-		char buf[1024];
-		GMimeFilter *filter;
-
-		filter = g_mime_filter_crlf_new(TRUE, FALSE);
-		stream = g_mime_stream_filter_new(self->message->stream);
-		g_mime_stream_filter_add((GMimeStreamFilter *)stream, filter);
-		g_object_unref(filter);
-
-		g_mime_stream_reset(stream);
-		// work-around for gmime bug in older versions
-		size = 0;
-		while (1) {
-			ssize_t read = 0;
-			memset(&buf, 0, sizeof(buf));
-			if ((read = g_mime_stream_read(stream, buf, sizeof(buf)-1)) > 0)
-				size += read;
-			else
-				break;
-		}
-		g_mime_stream_reset(stream);
+		stream = self->message->crlf;
+		size = p_string_len(stream);
 	}
 
 	dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (", *id);
@@ -1127,7 +1082,6 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->message)->content), 1))==NULL) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body structure\r\n");
-			if (stream) g_object_unref(stream);
 			return -1;
 		}
 		dbmail_imap_session_buff_printf(self, "BODYSTRUCTURE %s", s);
@@ -1139,7 +1093,6 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		if ((s = imap_get_structure(GMIME_MESSAGE((self->message)->content), 0))==NULL) {
 			dbmail_imap_session_buff_clear(self);
 			dbmail_imap_session_buff_printf(self, "\r\n* BYE error fetching body\r\n");
-			if (stream) g_object_unref(stream);
 			return -1;
 		}
 		dbmail_imap_session_buff_printf(self, "BODY %s",s);
@@ -1154,8 +1107,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {
 		SEND_SPACE;
 		dbmail_imap_session_buff_printf(self, "RFC822 {%" PRIu64 "}\r\n", size);
-		g_mime_stream_reset(stream);
-		send_data(self, stream, size);
+		send_data(self, stream, 0, size);
 		if (self->fi->getRFC822)
 			self->fi->setseen = 1;
 
@@ -1165,20 +1117,14 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		SEND_SPACE;
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
 			dbmail_imap_session_buff_printf(self, "BODY[] {%" PRIu64 "}\r\n", size);
-			g_mime_stream_reset(stream);
-			send_data(self, stream, size);
+			send_data(self, stream, 0, size);
 		} else {
-			g_mime_stream_seek(stream,
-					dbmail_imap_session_bodyfetch_get_last_octetstart(self),
-					GMIME_STREAM_SEEK_SET);
-			size = (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) >
-			     (((long long)size) - dbmail_imap_session_bodyfetch_get_last_octetstart(self)))
-			    ? (((long long)size) - dbmail_imap_session_bodyfetch_get_last_octetstart(self)) 
-			    : dbmail_imap_session_bodyfetch_get_last_octetcnt(self);
-
+			uint64_t start = dbmail_imap_session_bodyfetch_get_last_octetstart(self);
+			uint64_t count = dbmail_imap_session_bodyfetch_get_last_octetcnt(self);
+			count = ((start + count) > size)?(size - start):count;
 			dbmail_imap_session_buff_printf(self, "BODY[]<%" PRIu64 "> {%" PRIu64 "}\r\n", 
-					dbmail_imap_session_bodyfetch_get_last_octetstart(self), size);
-			send_data(self, stream, size);
+					start, count);
+			send_data(self, stream, start, count);
 		}
 		if (self->fi->getBodyTotal)
 			self->fi->setseen = 1;
@@ -1204,7 +1150,6 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 	_imap_show_body_sections(self);
 
-	if (stream) g_object_unref(stream);
 	/* set \Seen flag if necessary; note the absence of an error-check 
 	 * for db_get_msgflag()!
 	 */

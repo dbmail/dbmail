@@ -724,6 +724,10 @@ void dbmail_message_free(DbmailMessage *self)
 		g_object_unref(self->stream);
 		self->stream = NULL;
 	}
+	if (self->crlf) {
+		p_string_free(self->crlf, TRUE);
+		self->crlf = NULL;
+	}
 
 	p_string_free(self->envelope_recipient,TRUE);
 	g_hash_table_destroy(self->header_dict);
@@ -775,6 +779,7 @@ int dbmail_message_get_class(const DbmailMessage *self)
  */
 DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char *str)
 {
+	char *buf, *crlf;
 	GMimeObject *content;
 	GMimeParser *parser;
 #define FROMLINE 80
@@ -814,6 +819,12 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 			self->content = content;
 		}
 	}
+
+	buf = dbmail_message_to_string(self);
+	crlf = get_crlf_encoded(buf);
+	self->crlf = p_string_new(self->pool, crlf);
+	g_free(crlf);
+	g_free(buf);
 
 	return self;
 }
@@ -989,34 +1000,7 @@ gchar * dbmail_message_hdrs_to_string(const DbmailMessage *self)
 
 size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf)
 {
-	size_t r;
-
-	r = g_mime_stream_length(self->stream);
-
-        if (crlf) {
-		int i = 0, j = 0;
-		char curr = 0, prev = 0;
-
-		char buf[FIELDSIZE];
-		memset(buf, 0, sizeof(buf));
-
-		g_mime_stream_reset(self->stream);
-		j = g_mime_stream_read(self->stream, buf, FIELDSIZE-1);
-
-		while (j>0) {
-			for (i=0; i<j; i++) {
-				curr = buf[i];
-				if (ISLF(curr) && (! ISCR(prev)))
-					r++;
-				prev = curr;
-			}
-
-			memset(buf, 0, sizeof(buf));
-			j = g_mime_stream_read(self->stream, buf, FIELDSIZE-1);
-		}
-	}
-
-	return r;
+        return crlf ? (size_t)p_string_len(self->crlf):(size_t)g_mime_stream_length(self->stream);
 }
 
 static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template)
