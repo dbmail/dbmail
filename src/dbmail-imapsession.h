@@ -74,11 +74,11 @@ typedef struct {
 #define DM_THREAD_DATA_MAGIC 0x5af8d
 	unsigned int magic;
 	Mempool_T pool;
-	void (* cb_enter)(gpointer);		/* callback on thread entry		*/
-	void (* cb_leave)(gpointer);		/* callback on thread exit		*/
+	void (* cb_enter)(gpointer);	/* callback on thread entry		*/
+	void (* cb_leave)(gpointer);	/* callback on thread exit		*/
 	ImapSession *session;
-	gpointer data;                          /* payload */
-	volatile int status;			/* command result 			*/
+	gpointer data;                  /* payload */
+	volatile int status;		/* command result 			*/
 } dm_thread_data;
 
 /* public methods */
