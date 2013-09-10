@@ -52,17 +52,13 @@ struct event *sig_hup = NULL;
 struct event *sig_term = NULL;
 struct event *sig_pipe = NULL;
 struct event *sig_usr = NULL;
-struct event *pev = NULL;
+struct event *heartbeat = NULL;
 
 SSL_CTX *tls_context;
 
 FILE *fstdout = NULL;
 FILE *fstderr = NULL;
 FILE *fnull = NULL;
-/*
- * self-pipe event
- */
-int selfpipe[2];
 
 /* 
  *
@@ -77,13 +73,18 @@ int selfpipe[2];
 /*
  * async queue drainage callback for the main thread
  */
-void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
+struct timeval heartbeat_interval = {0,200000};
+
+void dm_queue_heartbeat(void)
 {
-	char buf[128];
+	heartbeat = event_new(evbase, -1, 0, dm_queue_drain, NULL);
+	event_add(heartbeat, &heartbeat_interval);
+}
+
+void dm_queue_drain(int fd UNUSED, short what UNUSED, void *arg UNUSED)
+{
 	gpointer data;
-
-	event_del(pev);
-
+	event_del(heartbeat);
 	do {
 		data = g_async_queue_try_pop(queue);
 		if (data) {
@@ -93,10 +94,7 @@ void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
 		}
 	} while (data);
 
-	while ((read(sock, buf, 128)) > 0)
-		;
-
-	event_add(pev, NULL);
+	event_add(heartbeat, &heartbeat_interval);
 }
 
 /*
@@ -117,8 +115,6 @@ void dm_queue_push(void *cb, void *session, void *data)
 	D->data     = data;
 
         g_async_queue_push(queue, (gpointer)D);
-        if (selfpipe[1] > -1)
-		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
 }
 
 /* 
@@ -236,16 +232,7 @@ static int server_setup(ServerConfig_T *conf)
 	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
-	// self-pipe used to push the event-loop
-	if (pipe(selfpipe))
-		TRACE(TRACE_EMERG, "selfpipe setup failed");
-
-	UNBLOCK(selfpipe[0]);
-	UNBLOCK(selfpipe[1]);
-	
 	assert(evbase);
-	pev = event_new(evbase, selfpipe[0], EV_READ, dm_queue_drain, NULL);
-	event_add(pev, NULL);
 
 	return 0;
 }
@@ -287,6 +274,10 @@ static int server_start_cli(ServerConfig_T *conf)
 		evbase = event_base_new();
 		if (server_setup(conf)) return -1;
 		conf->ClientHandler(c);
+
+		if (MATCH(conf->service_name, "IMAP"))
+			dm_queue_heartbeat();
+
 		event_base_dispatch(evbase);
 	}
 
@@ -817,6 +808,9 @@ int server_run(ServerConfig_T *conf)
 	}
 	
 	server_pidfile(conf);
+
+	if (MATCH(conf->service_name, "IMAP"))
+		dm_queue_heartbeat();
 
 	TRACE(TRACE_DEBUG,"dispatching event loop...");
 
