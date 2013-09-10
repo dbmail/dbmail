@@ -148,6 +148,7 @@ void imap_cleanup_deferred(gpointer data)
 
 	rx = ci->rx;
 	ci_close(ci);
+	ci = NULL;
 
 	dbmail_imap_session_delete(&session);
 

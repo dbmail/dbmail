@@ -319,8 +319,8 @@ static char *find_type_header(const char *s)
 	}
 	h = header->str;
 	g_string_free(header,FALSE);
-	g_strstrip(h);
-	return h;
+	header = NULL;
+	return g_strstrip(h);
 }
 
 static GMimeContentType *find_type(const char *s)

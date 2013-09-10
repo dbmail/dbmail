@@ -575,10 +575,19 @@ void ci_close(ClientBase_T *client)
 
 	Mempool_T pool = client->pool;
 	mempool_push(pool, client->timeout, sizeof(struct timeval));
+	client->timeout = NULL;
+
 	mempool_push(pool, client->sock->caddr, sizeof(struct sockaddr_storage));
+	client->sock->caddr = NULL;
+
 	mempool_push(pool, client->sock->saddr, sizeof(struct sockaddr_storage));
+	client->sock->saddr = NULL;
+
 	mempool_push(pool, client->sock, sizeof(client_sock));
+	client->sock = NULL;
+
 	mempool_push(pool, client, sizeof(ClientBase_T));
+	client = NULL;
 }
 
 

@@ -281,8 +281,10 @@ void dbmail_imap_session_args_free(ImapSession *self, gboolean all)
 	}
 	self->args_idx = 0;
 
-	if (all) 
+	if (all) {
 		mempool_push(self->pool, self->args, sizeof(String_T) * MAX_ARGS);
+		self->args = NULL;
+	}
 }
 
 /*************************************************************************************
