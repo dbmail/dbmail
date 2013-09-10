@@ -75,7 +75,7 @@ FILE *fnull = NULL;
 /*
  * async queue drainage callback for the main thread
  */
-struct timeval heartbeat_interval = {0,2};
+struct timeval heartbeat_interval = {0,200000};
 
 void dm_queue_heartbeat(void)
 {
