@@ -1042,13 +1042,8 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	m = g_string_new("");
 	while (db_result_next(r)) {
 		blob = db_result_get_blob(r,0,&l);
-		char *str = g_new0(char,l+1);
-		str = strncpy(str, blob, l);
-
 		if (row == 0) internal_date = g_strdup(db_result_get(r,2));
-
-		g_string_append_printf(m, "%s", str);
-		g_free(str);
+		g_string_append_len(m, (const char *)blob, l);
 		row++;
 	}
 	db_con_close(c);
