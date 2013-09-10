@@ -54,19 +54,13 @@ struct event *sig_hup = NULL;
 struct event *sig_term = NULL;
 struct event *sig_pipe = NULL;
 struct event *sig_usr = NULL;
-struct event *pev = NULL;
+struct event *heartbeat = NULL;
 
 SSL_CTX *tls_context;
 
 FILE *fstdout = NULL;
 extern FILE *fstderr;
 FILE *fnull = NULL;
-
-/*
- * self-pipe event
- */
-int selfpipe[2];
-pthread_mutex_t selfpipe_lock;
 
 /* 
  *
@@ -81,14 +75,18 @@ pthread_mutex_t selfpipe_lock;
 /*
  * async queue drainage callback for the main thread
  */
-void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
+struct timeval heartbeat_interval = {0,2};
+
+void dm_queue_heartbeat(void)
 {
-	char buf[128];
+	heartbeat = event_new(evbase, -1, 0, dm_queue_drain, NULL);
+	event_add(heartbeat, &heartbeat_interval);
+}
+
+void dm_queue_drain(int fd UNUSED, short what UNUSED, void *arg UNUSED)
+{
 	gpointer data;
-	assert(sock == selfpipe[0]);
-
-	event_del(pev);
-
+	event_del(heartbeat);
 	do {
 		data = g_async_queue_try_pop(queue);
 		if (data) {
@@ -97,14 +95,7 @@ void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
 			dm_thread_data_free(data);
 		}
 	} while (data);
-
-
-	PLOCK(selfpipe_lock);
-	while ((read(sock, buf, 128)) > 0)
-		;
-	PUNLOCK(selfpipe_lock);
-
-	event_add(pev, NULL);
+	event_add(heartbeat, &heartbeat_interval);
 }
 
 /*
@@ -125,10 +116,6 @@ void dm_queue_push(void *cb, void *session, void *data)
 	D->data     = data;
 
         g_async_queue_push(queue, (gpointer)D);
-	PLOCK(selfpipe_lock);
-        if (selfpipe[1] > -1)
-		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
-	PUNLOCK(selfpipe_lock);
 }
 
 /* 
@@ -246,17 +233,7 @@ static int server_setup(ServerConfig_T *conf)
 	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,TRUE,&err)))
 		TRACE(TRACE_DEBUG,"g_thread_pool creation failed [%s]", err->message);
 
-	// self-pipe used to push the event-loop
-	if (pipe(selfpipe))
-		TRACE(TRACE_EMERG, "selfpipe setup failed");
-
-	UNBLOCK(selfpipe[0]);
-	UNBLOCK(selfpipe[1]);
-	
-	pthread_mutex_init(&selfpipe_lock, NULL);
 	assert(evbase);
-	pev = event_new(evbase, selfpipe[0], EV_READ, dm_queue_drain, NULL);
-	event_add(pev, NULL);
 
 	return 0;
 }
@@ -300,6 +277,10 @@ static int server_start_cli(ServerConfig_T *conf)
 		evbase = event_base_new();
 		if (server_setup(conf)) return -1;
 		conf->ClientHandler(c);
+
+		if (MATCH(conf->service_name, "IMAP"))
+			dm_queue_heartbeat();
+
 		event_base_dispatch(evbase);
 	}
 
@@ -506,7 +487,6 @@ static void server_exit(void)
 	server_close_sockets(server_conf);
 	//event_base_free(evbase);
 
-	pthread_mutex_destroy(&selfpipe_lock);
 	if (fstdout) fclose(fstdout);
 	if (fstderr) fclose(fstderr);
 	if (fnull) fclose(fnull);
@@ -833,6 +813,9 @@ int server_run(ServerConfig_T *conf)
 		TRACE(TRACE_WARNING, "unable to drop privileges");
 	
 	server_pidfile(conf);
+
+	if (MATCH(conf->service_name, "IMAP"))
+		dm_queue_heartbeat();
 
 	TRACE(TRACE_DEBUG,"dispatching event loop...");
 

@@ -34,7 +34,6 @@ extern DBParam_T db_params;
 extern ServerConfig_T *server_conf;
 extern SSL_CTX *tls_context;
 
-
 static void dm_tls_error(void)
 {
 	unsigned long e;
