@@ -36,6 +36,7 @@ volatile sig_atomic_t mainReload = 0;
 
 // thread data
 Mempool_T    queue_pool;
+Mempool_T    small_pool;
 GAsyncQueue *queue;
 GThreadPool *tpool = NULL;
 
@@ -228,6 +229,7 @@ static int server_setup(ServerConfig_T *conf)
 	queue = g_async_queue_new();
 
 	queue_pool = mempool_open();
+	small_pool = mempool_open();
 
 	// Create the thread pool
 	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,TRUE,&err)))
@@ -476,8 +478,8 @@ static void server_close_sockets(ServerConfig_T *conf)
 		if (conf->socket)
 			unlink(conf->socket);
 
-		g_free(conf->listenSockets);
-		g_free(conf->ssl_listenSockets);
+		mempool_push(small_pool, conf->listenSockets, sizeof(int) * MAXSOCKETS);
+		mempool_push(small_pool, conf->ssl_listenSockets, sizeof(int) * MAXSOCKETS);
 	}
 }
 
@@ -498,8 +500,8 @@ static void server_create_sockets(ServerConfig_T * conf)
 {
 	int i;
 
-	conf->listenSockets = g_new0(int, MAXSOCKETS);
-	conf->ssl_listenSockets = g_new0(int, MAXSOCKETS);
+	conf->listenSockets = mempool_pop(small_pool, sizeof(int) * MAXSOCKETS);
+	conf->ssl_listenSockets = mempool_pop(small_pool, sizeof(int) * MAXSOCKETS);
 
 	if (conf->socket && strlen(conf->socket))
 		conf->listenSockets[conf->socketcount++] = create_unix_socket(conf);
@@ -851,8 +853,8 @@ static void server_config_free(ServerConfig_T * config)
 	assert(config);
 
 	g_strfreev(config->iplist);
-	g_free(config->listenSockets);
-	g_free(config->ssl_listenSockets);
+	mempool_push(small_pool, config->listenSockets, sizeof(int) * MAXSOCKETS);
+	mempool_push(small_pool, config->ssl_listenSockets, sizeof(int) * MAXSOCKETS);
 
 	config->listenSockets = NULL;
 	config->ssl = FALSE;
@@ -868,8 +870,6 @@ int server_getopt(ServerConfig_T *config, const char *service, int argc, char *a
 	memset(configFile, 0, sizeof(configFile));
 
 	g_strlcpy(configFile,DEFAULT_CONFIG_FILE, FIELDSIZE-1);
-
-	server_config_free(config);
 
 	TRACE(TRACE_DEBUG, "checking command line options");
 

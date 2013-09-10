@@ -38,6 +38,7 @@ extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
 extern Mempool_T queue_pool;
+extern Mempool_T small_pool;
 
 gboolean imap_feature_idle_status = FALSE;
 
@@ -142,7 +143,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
 	}
 	self->physids = g_tree_new((GCompareFunc)ucmp);
-	self->mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
+	self->mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)uint64_free,(GDestroyNotify)mailboxstate_destroy);
 
 	TRACE(TRACE_DEBUG,"imap session [%p] created", self);
 	return self;
@@ -697,7 +698,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 	if (! bodyfetch->headers) {
 		TRACE(TRACE_DEBUG, "[%p] init bodyfetch->headers", self);
-		bodyfetch->headers = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+		bodyfetch->headers = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)uint64_free,(GDestroyNotify)g_free);
 		self->ceiling = 0;
 		self->hi = 0;
 		self->lo = 0;
@@ -799,7 +800,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			if (! val) {
 				TRACE(TRACE_DEBUG, "[%p] [%" PRIu64 "] no headervalue [%s]", self, id, fld);
 			} else {
-				mid = g_new0(uint64_t,1);
+				mid = mempool_pop(small_pool, sizeof(uint64_t));
 				*mid = id;
 
 				old = g_tree_lookup(bodyfetch->headers, (gconstpointer)mid);
@@ -942,7 +943,7 @@ static void _fetch_envelopes(ImapSession *self)
 	memset(range,0,sizeof(range));
 
 	if (! self->envelopes) {
-		self->envelopes = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+		self->envelopes = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)uint64_free,(GDestroyNotify)g_free);
 		self->lo = 0;
 		self->hi = 0;
 	}
@@ -979,7 +980,7 @@ static void _fetch_envelopes(ImapSession *self)
 			if (! g_tree_lookup(self->ids,&id))
 				continue;
 			
-			mid = g_new0(uint64_t,1);
+			mid = mempool_pop(small_pool, sizeof(uint64_t));
 			*mid = id;
 			
 			g_tree_insert(self->envelopes,mid,g_strdup(ResultSet_getString(r, 2)));
@@ -1501,7 +1502,7 @@ static void mailbox_notify_fetch(ImapSession *self, MailboxState_T N)
 
 	// switch active mailbox view
 	self->mailbox->mbstate = N;
-	id = g_new0(uint64_t,1);
+	id = mempool_pop(small_pool, sizeof(uint64_t));
 	*id = MailboxState_getId(N);
 	g_tree_replace(self->mbxinfo, id, N);
 
@@ -1611,30 +1612,13 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 {
 	MailboxState_T M = NULL;
 	uint64_t *id;
-/*
-	int reload = FALSE;
-	switch (self->command_type) {
-		case IMAP_COMM_SELECT:
-		case IMAP_COMM_EXAMINE:
-			reload = TRUE;
-			break;
-	}
-	TRACE(TRACE_DEBUG, "[%p] mailbox_id [%" PRIu64 "] reload [%d]", self, mailbox_id, reload);
-
-	if (reload) {
-		id = g_new0(uint64_t,1);
-		*id = mailbox_id;
-		M = MailboxState_new(self->pool, mailbox_id);
-		g_tree_replace(self->mbxinfo, id, M);
-	} else if (self->mailbox && self->mailbox->mbstate && (MailboxState_getId(self->mailbox->mbstate) == mailbox_id)) {
-*/	
 	if (self->mailbox && self->mailbox->mbstate && (MailboxState_getId(self->mailbox->mbstate) == mailbox_id)) {
 		// selected state
 		M = self->mailbox->mbstate;
 	} else {
 		M = (MailboxState_T)g_tree_lookup(self->mbxinfo, &mailbox_id);
 		if (! M) {
-			id = g_new0(uint64_t,1);
+			id = mempool_pop(small_pool, sizeof(uint64_t));
 			*id = mailbox_id;
 			M = MailboxState_new(self->pool, mailbox_id);
 			g_tree_replace(self->mbxinfo, id, M);
@@ -1649,7 +1633,7 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			oldexists = MailboxState_getExists(M);
 			MailboxState_free(&N);
 			if (oldseq < newseq) {
-				id = g_new0(uint64_t, 1);
+				id = mempool_pop(small_pool, sizeof(uint64_t));
 				*id = mailbox_id;
 				M = MailboxState_new(self->pool, mailbox_id);
 				newexists = MailboxState_getExists(M);

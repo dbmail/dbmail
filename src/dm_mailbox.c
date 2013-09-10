@@ -24,7 +24,10 @@
 
 #include "dbmail.h"
 #define THIS_MODULE "mailbox"
+
 extern DBParam_T db_params;
+extern Mempool_T small_pool;
+
 #define DBPFX db_params.pfx
 
 /* internal utilities */
@@ -1438,7 +1441,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 
 		r = db_stmt_query(st);
 
-		s->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
+		s->found = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)uint64_free, (GDestroyNotify)uint64_free);
 
 		ids = MailboxState_getIds(self->mbstate);
 		while (db_result_next(r)) {
@@ -1449,8 +1452,8 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 			}
 			assert(w);
 
-			k = g_new0(uint64_t,1);
-			v = g_new0(uint64_t,1);
+			k = mempool_pop(small_pool, sizeof(uint64_t));
+			v = mempool_pop(small_pool, sizeof(uint64_t));
 			*k = id;
 			*v = *w;
 
@@ -1459,7 +1462,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 
 		if (s->type == IST_UNKEYWORD) {
 			GTree *old = NULL;
-			GTree *invert = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
+			GTree *invert = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)uint64_free, (GDestroyNotify)uint64_free);
 			GList *uids = g_tree_keys(ids);
 			uids = g_list_first(uids);
 			while (uids) {
@@ -1482,8 +1485,8 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 					continue;
 				}
 
-				k = g_new0(uint64_t,1);
-				v = g_new0(uint64_t,1);
+				k = mempool_pop(small_pool, sizeof(uint64_t));
+				v = mempool_pop(small_pool, sizeof(uint64_t));
 				*k = id;
 				*v = *w;
 
@@ -1531,8 +1534,8 @@ static int filter_range(gpointer key, gpointer value, gpointer data)
 	if (*(uint64_t *)key < d->min) return FALSE; // skip
 	if (*(uint64_t *)key > d->max) return TRUE; // done
 
-	k = g_new0(uint64_t,1);
-	v = g_new0(uint64_t,1);
+	k = mempool_pop(small_pool, sizeof(uint64_t));
+	v = mempool_pop(small_pool, sizeof(uint64_t));
 
 	*k = *(uint64_t *)key;
 	*v = *(uint64_t *)value;
@@ -1643,8 +1646,8 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 		g_list_free(g_list_first(ids));
 	}
 
-	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
-	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)uint64_free, (GDestroyNotify)uint64_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)uint64_free, (GDestroyNotify)uint64_free);
 
 	if (! uid) {
 		lo = 1;
@@ -1665,8 +1668,8 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 
 		if (g_tree_nnodes(uids) == 0) { // empty box
 			if (rest[0] == '*') {
-				uint64_t *k = g_new0(uint64_t,1);
-				uint64_t *v = g_new0(uint64_t,2);
+				uint64_t *k = mempool_pop(small_pool, sizeof(uint64_t));
+				uint64_t *v = mempool_pop(small_pool, sizeof(uint64_t));
 
 				*k = 1;
 				*v = MailboxState_getUidnext(self->mbstate);
@@ -1688,8 +1691,8 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 						break;
 					}
 				}
-				uint64_t *k = g_new0(uint64_t,1);
-				uint64_t *v = g_new0(uint64_t,2);
+				uint64_t *k = mempool_pop(small_pool, sizeof(uint64_t));
+				uint64_t *v = mempool_pop(small_pool, sizeof(uint64_t));
 
 				*k = 1;
 				*v = MailboxState_getUidnext(self->mbstate);

@@ -52,6 +52,7 @@ const int month_len[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 extern const char *imap_flag_desc_escaped[];
 
 extern struct DbmailIconv *ic;
+extern Mempool_T small_pool;
 
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )
@@ -2415,6 +2416,11 @@ uint64_t stridx(const char *s, char c)
 	uint64_t i;
 	for (i = 0; s[i] && s[i] != c; i++);
 	return i;
+}
+
+void uint64_free(void *data)
+{
+	mempool_push(small_pool, data, sizeof(uint64_t));
 }
 
 

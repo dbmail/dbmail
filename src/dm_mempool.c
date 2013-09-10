@@ -36,14 +36,14 @@ M mempool_open(void)
 {
 	M MP;
 	mpool_t *pool = NULL;
-	static gboolean env_mpool = FALSE;
-	static gboolean use_mpool = FALSE;
+	static bool env_mpool = false;
+	static bool use_mpool = false;
 
 	if (! env_mpool) {
 		char *dm_pool = getenv("DM_POOL");
-		if (MATCH(dm_pool, "yes"))
-			use_mpool = TRUE;
-		env_mpool = TRUE;
+		if (MATCH(dm_pool, "no"))
+			use_mpool = true;
+		env_mpool = true;
 	}
 	if (use_mpool)
 		pool = mpool_open(0,0,0,NULL);

@@ -176,5 +176,6 @@ uint64_t stridx(const char *s, char c);
 #define get_crlf_encoded_dots(string) get_crlf_encoded_opt(string, 1)
 gchar * get_crlf_encoded_opt(const gchar *string, int dots);
 void strip_crlf(char *buffer);
+void uint64_free(void *);
 
 #endif
