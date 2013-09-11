@@ -63,7 +63,6 @@ FILE *fnull = NULL;
  * self-pipe event
  */
 int selfpipe[2];
-pthread_mutex_t selfpipe_lock;
 
 /* 
  *
@@ -82,7 +81,6 @@ void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
 {
 	char buf[128];
 	gpointer data;
-	assert(sock == selfpipe[0]);
 
 	event_del(pev);
 
@@ -95,11 +93,8 @@ void dm_queue_drain(int sock, short event UNUSED, void *arg UNUSED)
 		}
 	} while (data);
 
-
-	PLOCK(selfpipe_lock);
 	while ((read(sock, buf, 128)) > 0)
 		;
-	PUNLOCK(selfpipe_lock);
 
 	event_add(pev, NULL);
 }
@@ -122,10 +117,8 @@ void dm_queue_push(void *cb, void *session, void *data)
 	D->data     = data;
 
         g_async_queue_push(queue, (gpointer)D);
-	PLOCK(selfpipe_lock);
         if (selfpipe[1] > -1)
 		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } 
-	PUNLOCK(selfpipe_lock);
 }
 
 /* 
@@ -250,7 +243,6 @@ static int server_setup(ServerConfig_T *conf)
 	UNBLOCK(selfpipe[0]);
 	UNBLOCK(selfpipe[1]);
 	
-	pthread_mutex_init(&selfpipe_lock, NULL);
 	assert(evbase);
 	pev = event_new(evbase, selfpipe[0], EV_READ, dm_queue_drain, NULL);
 	event_add(pev, NULL);
@@ -509,7 +501,6 @@ static void server_exit(void)
 	server_close_sockets(server_conf);
 	event_base_free(evbase);
 
-	pthread_mutex_destroy(&selfpipe_lock);
 	if (fstdout) fclose(fstdout);
 	if (fstderr) fclose(fstderr);
 	if (fnull) fclose(fnull);

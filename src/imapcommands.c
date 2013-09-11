@@ -37,7 +37,6 @@ extern DBParam_T db_params;
 
 extern ServerConfig_T *server_conf;
 extern int selfpipe[2];
-extern pthread_mutex_t selfpipe_lock;
 extern GAsyncQueue *queue;
 extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
@@ -78,11 +77,9 @@ void cmd_free(cmd_t *cmd)
 #define SESSION_RETURN \
 	D->session->command_state = TRUE; \
 	g_async_queue_push(queue, (gpointer)D); \
-	PLOCK(selfpipe_lock); \
 	if (selfpipe[1] > -1) { \
 		if (write(selfpipe[1], "Q", 1) != 1) { /* ignore */; } \
 	} \
-	PUNLOCK(selfpipe_lock); \
 	return;
 
 #define SESSION_OK \
