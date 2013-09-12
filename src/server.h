@@ -54,7 +54,7 @@ int StartCliServer(ServerConfig_T * conf);
 int server_run(ServerConfig_T *conf);
 
 void dm_queue_push(void *cb, void *session, void *data);
-void dm_queue_drain(int, short, void *);
+void dm_queue_drain(void);
 void dm_queue_heartbeat(void);
 
 void dm_thread_data_free(gpointer data);
