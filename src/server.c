@@ -78,16 +78,23 @@ FILE *fnull = NULL;
  */
 struct timeval heartbeat_interval = {0,200000};
 
-void dm_queue_heartbeat(void)
+static void cb_queue_drain(int fd UNUSED, short what UNUSED, void *arg UNUSED)
 {
-	heartbeat = event_new(evbase, -1, 0, dm_queue_drain, NULL);
+	event_del(heartbeat);
+	dm_queue_drain();
 	event_add(heartbeat, &heartbeat_interval);
 }
 
-void dm_queue_drain(int fd UNUSED, short what UNUSED, void *arg UNUSED)
+
+void dm_queue_heartbeat(void)
+{
+	heartbeat = event_new(evbase, -1, 0, cb_queue_drain, NULL);
+	event_add(heartbeat, &heartbeat_interval);
+}
+
+void dm_queue_drain(void)
 {
 	gpointer data;
-	event_del(heartbeat);
 	do {
 		data = g_async_queue_try_pop(queue);
 		if (data) {
@@ -96,7 +103,6 @@ void dm_queue_drain(int fd UNUSED, short what UNUSED, void *arg UNUSED)
 			dm_thread_data_free(data);
 		}
 	} while (data);
-	event_add(heartbeat, &heartbeat_interval);
 }
 
 /*

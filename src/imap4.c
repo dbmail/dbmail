@@ -200,6 +200,7 @@ void socket_write_cb(int UNUSED fd, short UNUSED what, void *arg)
 			ci_write_cb(session->ci);
 			break;
 	}
+	dm_queue_drain();
 }
 
 void imap_cb_read(void *arg)
@@ -253,6 +254,7 @@ void socket_read_cb(int UNUSED fd, short what, void *arg)
 	else if (what == EV_TIMEOUT && session->ci->cb_time)
 		session->ci->cb_time(session);
 	
+	dm_queue_drain();
 }
 
 
