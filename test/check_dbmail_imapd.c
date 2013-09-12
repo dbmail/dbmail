@@ -958,6 +958,9 @@ START_TEST(test_dm_base_subject)
 	BS("re: [fwd: [fwd: re: [fwd: babylon]]]", "babylon");
 	BS("C", "c");
 	BS(" ", "");
+	BS("Re:", "");
+	BS("Re: Re: ", "");
+	BS("Re: Fwd: ", "");
 }
 END_TEST
 

@@ -456,6 +456,7 @@ static void _strip_blob_prefix(char *subject)
 static bool _strip_refwd(char *subject) 
 {
 	char *tmp;
+	size_t len;
 	if (! (strncasecmp(subject,"re",2)==0 || strncasecmp(subject,"fw",2)==0))
 		return false;
 	
@@ -476,10 +477,10 @@ static bool _strip_refwd(char *subject)
 
 	g_strstrip(++tmp); // skip ':'
 	
-	if (strlen(tmp) > 0)
-		memmove(subject,tmp,strlen(tmp)+1);
+	len = strlen(tmp);
+	memmove(subject,tmp,strlen(tmp)+1);
 
-	return true;
+	return len?true:false;
 }
 		
 static void _strip_sub_leader(char *subject)
