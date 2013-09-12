@@ -38,6 +38,7 @@
 extern char *multipart_message;
 extern char configFile[PATH_MAX];
 extern DBParam_T db_params;
+extern Mempool_T small_pool;
 #define DBPFX db_params.pfx
 
 uint64_t empty_box = 0;
@@ -141,6 +142,7 @@ void setup(void)
 	GetDBParams();
 	db_connect();
 	auth_connect();
+	small_pool = mempool_open();
 	empty_box = get_mailbox_id("empty");
 	add_message();
 	add_message();
@@ -152,6 +154,7 @@ void teardown(void)
 	auth_disconnect();
 	db_disconnect();
 	config_free();
+	mempool_close(&small_pool);
 }
 
 
