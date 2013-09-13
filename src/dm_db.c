@@ -224,7 +224,6 @@ int db_connect(void)
 		ConnectionPool_getInitialConnections(pool), ConnectionPool_getMaxConnections(pool));
 
 	if (! (c = ConnectionPool_getConnection(pool))) {
-		db_con_close(c);
 		TRACE(TRACE_EMERG, "error getting a database connection from the pool");
 		return -1;
 	}
