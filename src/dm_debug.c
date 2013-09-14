@@ -42,7 +42,7 @@ static Trace_T TRACE_STDERR = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR
  */
 void TabortHandler(const char *error)
 {
-	trace(TRACE_CRIT, "libzdb", __func__, __LINE__, "%s", error);
+	trace(TRACE_EMERG, "libzdb", __func__, __LINE__, "%s", error);
 }
 
 /*
