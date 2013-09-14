@@ -40,7 +40,7 @@ static Trace_T TRACE_STDERR = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR
  */
 void TabortHandler(const char *error)
 {
-	trace(TRACE_CRIT, "libzdb", __func__, __LINE__, "%s", error);
+	trace(TRACE_EMERG, "libzdb", __func__, __LINE__, "%s", error);
 }
 
 /*
@@ -180,8 +180,8 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 	}
 
 	/* Bail out on fatal errors. */
-//	if (level == TRACE_EMERG)
-//		exit(EX_TEMPFAIL);
+	if (level == TRACE_EMERG)
+		exit(EX_TEMPFAIL);
 }
 
 
