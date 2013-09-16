@@ -2355,6 +2355,9 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 	const char *from, *to, *subject;
 	const char *x_dbmail_reply;
 	const char *precedence;
+	char *usubject;
+	char *newsubject;
+	char *unewsubject;
 	char handle[FIELDSIZE];
 	int result;
 
@@ -2402,7 +2405,11 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 		return 0;
 	}
 
-	char *newsubject = g_strconcat("Re: ", subject, NULL);
+	usubject = dbmail_iconv_decode_text(subject);
+       	unewsubject = g_strconcat("Re: ", usubject, NULL);
+	newsubject = g_mime_utils_header_encode_text(unewsubject);
+	g_free(usubject);
+	g_free(unewsubject);
 
 	DbmailMessage *new_message = dbmail_message_new(message->pool);
 	new_message = dbmail_message_construct(new_message, to, from, newsubject, body);
