@@ -375,7 +375,7 @@ then
 	AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
 else
 	AC_MSG_CHECKING([GLib headers])
-	ac_glib_cflags=`${glibconfig} --cflags glib-2.0 --cflags gmodule-2.0 2>/dev/null`
+	ac_glib_cflags=`${glibconfig} --cflags glib-2.0 --cflags gmodule-2.0 --cflags gthread-2.0 2>/dev/null`
 	if test -z "$ac_glib_cflags"
 	then
 		AC_MSG_RESULT([no])
@@ -385,7 +385,7 @@ else
 	CFLAGS="$CFLAGS $ac_glib_cflags"
 	AC_MSG_RESULT([$ac_glib_cflags])
         AC_MSG_CHECKING([Glib libraries])
-	ac_glib_libs=`${glibconfig} --libs glib-2.0 --libs gmodule-2.0 2>/dev/null`
+	ac_glib_libs=`${glibconfig} --libs glib-2.0 --libs gmodule-2.0 --libs gthread-2.0 2>/dev/null`
 	if test -z "$ac_glib_libs"
 	then
 		AC_MSG_RESULT([no])
