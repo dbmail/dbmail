@@ -4747,7 +4747,7 @@ then
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking GLib headers" >&5
 $as_echo_n "checking GLib headers... " >&6; }
-	ac_glib_cflags=`${glibconfig} --cflags glib-2.0 --cflags gmodule-2.0 2>/dev/null`
+	ac_glib_cflags=`${glibconfig} --cflags glib-2.0 --cflags gmodule-2.0 --cflags gthread-2.0 2>/dev/null`
 	if test -z "$ac_glib_cflags"
 	then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4760,7 +4760,7 @@ $as_echo "no" >&6; }
 $as_echo "$ac_glib_cflags" >&6; }
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking Glib libraries" >&5
 $as_echo_n "checking Glib libraries... " >&6; }
-	ac_glib_libs=`${glibconfig} --libs glib-2.0 --libs gmodule-2.0 2>/dev/null`
+	ac_glib_libs=`${glibconfig} --libs glib-2.0 --libs gmodule-2.0 --libs gthread-2.0 2>/dev/null`
 	if test -z "$ac_glib_libs"
 	then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
