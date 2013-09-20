@@ -182,13 +182,16 @@ void p_string_unescape(T S)
 {
 	char *s = S->str;
 	char *head = s, *this = s, *next = s;
+	char found_escape = 0;
 	while (*this) {
 		next = this+1;
-		if (*this && *next && (*this == '\\') && (*next == '"' || *next == '\\')) {
+		if (!found_escape && *this && *next && (*this == '\\') && (*next == '"' || *next == '\\')) {
+			found_escape = 1;
 			S->used--;
 			this++;
 			continue;
 		}
+		found_escape = 0;
 		*head++ = *this++;
 	}
 	*head = 0;
