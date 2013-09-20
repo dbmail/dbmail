@@ -50,7 +50,7 @@
 #define BACKLOG 128
 
 #define DM_SOCKADDR_LEN 108
-#define DM_USERNAME_LEN 100
+#define DM_USERNAME_LEN 255
 
 /** string length of configuration values */
 #define FIELDSIZE 1024
