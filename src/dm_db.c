@@ -3329,14 +3329,14 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 
 	if ((strncmp(login,"ANY",3)==0)) {
 		if (dm_valid_format(userid)==0)
-			snprintf(real_username,DM_USERNAME_LEN,userid,username);
+			snprintf(real_username,DM_USERNAME_LEN-1,userid,username);
 		else {
 			if (bestlogin) g_free(bestlogin);
 			if (bestuserid) g_free(bestuserid);
 			return DM_EQUERY;
 		}
 	} else {
-		strncpy(real_username, userid, DM_USERNAME_LEN);
+		strncpy(real_username, userid, DM_USERNAME_LEN-1);
 	}
 	
 	TRACE(TRACE_DEBUG,"[%s] maps to [%s]", username, real_username);
