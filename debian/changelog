@@ -1,3 +1,9 @@
+dbmail (3.1.7-1) unstable; urgency=low
+
+  * upstream release
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 24 Sep 2013 17:00:44 +0200
+
 dbmail (3.1.6-1) unstable; urgency=low
 
   * upstream release
