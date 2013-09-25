@@ -2133,8 +2133,6 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 			if (i+1 < maxindex) {
 				object = (GMimeObject *)g_mime_message_part_get_message(
 						(GMimeMessagePart *)object);
-				type = (GMimeContentType *)g_mime_object_get_content_type(
-						object);
 			}
 		}
 
