@@ -497,7 +497,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 	if ((row == 0) || (t == DM_EQUERY)) {
 		if (m) p_string_free(m, TRUE);
-		if (n) p_string_free(n, TRUE);
+		p_string_free(n, TRUE);
 		return NULL;
 	}
 
