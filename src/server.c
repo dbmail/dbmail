@@ -223,6 +223,8 @@ static int server_setup(ServerConfig_T *conf)
 
 	server_set_sighandler();
 
+	small_pool = mempool_open();
+
 	if (! MATCH(conf->service_name,"IMAP")) 
 		return 0;
 
@@ -235,7 +237,6 @@ static int server_setup(ServerConfig_T *conf)
 	queue = g_async_queue_new();
 
 	queue_pool = mempool_open();
-	small_pool = mempool_open();
 
 	// Create the thread pool
 	if (! (tpool = g_thread_pool_new((GFunc)dm_thread_dispatch,NULL,tpool_size,TRUE,&err)))
