@@ -1227,9 +1227,6 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 	GString *t;
 	String_T q;
 
-	if (!strlen(s->search))
-		return NULL;
-
 	if (self->found && g_tree_nnodes(self->found) <= 200) {
 		char *setlist = dbmail_mailbox_ids_as_string(self, TRUE, ",");
 		if (setlist) {
