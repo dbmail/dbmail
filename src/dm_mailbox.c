@@ -656,9 +656,15 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		
 	} 
 	
+#define RETURN_IF_FAIL(x, y) \
+	if (! (x)) { \
+		mempool_push(self->pool, value, sizeof(search_key)); \
+		return y; \
+	}
+
 	else if ( MATCH(key, "uid") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
-		g_return_val_if_fail(check_msg_set(p_string_str(search_keys[*idx + 1])),-1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(check_msg_set(p_string_str(search_keys[*idx + 1])),-1);
 		value->type = IST_UIDSET;
 		(*idx)++;
 		strncpy(value->search, p_string_str(search_keys[(*idx)]), MAX_SEARCH_LEN-1);
@@ -751,13 +757,13 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	 */
 
 	else if ( MATCH(key, "keyword") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_KEYWORD;
 		IMAP_SET_SEARCH;
 	}
 
 	else if ( MATCH(key, "unkeyword") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_UNKEYWORD;
 		IMAP_SET_SEARCH;
 	}
@@ -766,38 +772,38 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	 * HEADER search keys
 	 */
 	else if ( MATCH(key, "bcc") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "bcc", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 		
 	} else if ( MATCH(key, "cc") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "cc", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "from") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "from", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "to") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "to", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "subject") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "subject", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "header") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
-		g_return_val_if_fail(search_keys[*idx + 2], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 2], -1);
 		value->type = IST_HDR;
 
 		const char *hdr = p_string_str(search_keys[*idx + 1]);
@@ -809,19 +815,19 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		(*idx) += 3;
 
 	} else if ( MATCH(key, "sentbefore") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_BEFORE;
 		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 
 	} else if ( MATCH(key, "senton") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_ON;
 		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
 
 	} else if ( MATCH(key, "sentsince") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_SINCE;
 		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX-1);
 		IMAP_SET_SEARCH;
@@ -834,8 +840,8 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	else if ( MATCH(key, "before") ) {
 		char s[SQL_INTERNALDATE_LEN];
 		memset(s, 0, sizeof(s));
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
-		g_return_val_if_fail(check_date(p_string_str(search_keys[*idx + 1])),-1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
 		date_imap2sql(p_string_str(search_keys[*idx]), s);
@@ -846,8 +852,8 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		char s[SQL_INTERNALDATE_LEN], d[MIME_FIELD_MAX];
 		memset(s, 0, sizeof(s));
 		memset(d, 0, sizeof(d));
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
-		g_return_val_if_fail(check_date(p_string_str(search_keys[*idx + 1])),-1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
 		date_imap2sql(p_string_str(search_keys[*idx]), s);
@@ -858,8 +864,8 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	} else if ( MATCH(key, "since") ) {
 		char s[SQL_INTERNALDATE_LEN];
 		memset(s, 0, sizeof(s));
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
-		g_return_val_if_fail(check_date(p_string_str(search_keys[*idx + 1])),-1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
 		date_imap2sql(p_string_str(search_keys[*idx]), s);
@@ -870,7 +876,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		uint64_t seconds;
 		char partial[DEF_FRAGSIZE];
 		memset(partial, 0, sizeof(partial));
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		errno = 0;
 		seconds = dm_strtoull(p_string_str(search_keys[*idx + 1]), NULL, 10);
 		int ser = errno;
@@ -888,7 +894,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		uint64_t seconds;
 		char partial[DEF_FRAGSIZE];
 		memset(partial, 0, sizeof(partial));
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		errno = 0;
 		seconds = dm_strtoull(p_string_str(search_keys[*idx + 1]), NULL, 10);
 		int ser = errno;
@@ -907,7 +913,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		bool valid = false;
 		uint64_t seq = 0;
 		int i = 0;
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		(*idx)++;
 		for (i=0; i<=2; i++) {
 			char *rest;
@@ -936,12 +942,12 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	 */
 
 	else if ( MATCH(key, "body") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_DATA_BODY;
 		IMAP_SET_SEARCH;
 
 	} else if ( MATCH(key, "text") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_DATA_TEXT;
 		IMAP_SET_SEARCH;
 	}
@@ -951,14 +957,14 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	 */
 
 	else if ( MATCH(key, "larger") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_SIZE_LARGER;
 		(*idx)++;
 		value->size = strtoull(p_string_str(search_keys[(*idx)]), NULL, 10);
 		(*idx)++;
 	
 	} else if ( MATCH(key, "smaller") ) {
-		g_return_val_if_fail(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 		value->type = IST_SIZE_SMALLER;
 		(*idx)++;
 		value->size = strtoull(p_string_str(search_keys[(*idx)]), NULL, 10);
@@ -973,10 +979,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	else if ( MATCH(key, "not") ) {
 		const char *nextkey;
 
-		if (! search_keys[*idx + 1]) {
-			mempool_push(self->pool, value, sizeof(search_key));
-			return -1;
-		}
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 
 		nextkey = p_string_str(search_keys[*idx+1]);
 
