@@ -155,24 +155,28 @@ x logout
         """ dump and delete messages """
 
         def is_empty(res):
-            return '()' == res[1][0].split(" ", 1)[1]
+            payload = res[1][0]
+            return isinstance(payload, str)
 
-        for id in ids:
-            self.imap.fetch("%d" % id, "(FLAGS BODY[HEADER])")
-            part = 1
-            while 1:
-                res = self.imap.fetch("%d" % id, "BODY[%d.MIME]" % part)
-                if is_empty(res):
-                    break
-                res = self.imap.fetch("%d" % id, "BODY[1]")
-                if is_empty(res):
-                    break
-                part += 1
+        try:
+            for id in ids:
+                self.imap.fetch("%d" % id, "(FLAGS BODY[HEADER])")
+                part = 1
+                while 1:
+                    res = self.imap.fetch("%d" % id, "(BODY[%d.MIME])" % part)
+                    if is_empty(res):
+                        break
+                    res = self.imap.fetch("%d" % id, "(BODY[%d])" % part)
+                    if is_empty(res):
+                        break
+                    part += 1
 
-            self.imap.noop()
-            self.imap.store("%d" % id, "+FLAGS.SILENT", "(\Deleted)")
-            self.imap.expunge()
-            print "deleted message", id
+                self.imap.noop()
+                self.imap.store("%d" % id, "+FLAGS.SILENT", "(\Deleted)")
+                self.imap.expunge()
+                print "deleted message", id
+        except:
+            pass
 
 
 if __name__ == '__main__':
