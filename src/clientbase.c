@@ -152,7 +152,7 @@ ClientBase_T * client_init(client_sock *c)
 
 		/* client-side */
 		if (server_conf->resolveIP) {
-			if ((serr = getnameinfo(c->caddr, c->caddr_len, client->clientname, NI_MAXHOST, NULL, 0,
+			if ((serr = getnameinfo(c->caddr, c->caddr_len, client->clientname, NI_MAXHOST-1, NULL, 0,
 						       	NI_NAMEREQD))) {
 				TRACE(TRACE_INFO, "getnameinfo:error [%s]", gai_strerror(serr));
 			} 

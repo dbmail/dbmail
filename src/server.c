@@ -381,7 +381,10 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 
 	TRACE(TRACE_DEBUG, "creating %s socket [%d] on [%s:%s]", ssl?"ssl":"plain", sock, hbuf, sbuf);
 
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress)) == -1) {
+		err = errno;
+		TRACE(TRACE_EMERG, "setsockopt::error [%s]", strerror(err));
+	}
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
 		err = errno;
@@ -407,6 +410,7 @@ static int create_unix_socket(ServerConfig_T * conf)
 	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) == -1) {
 		int err = errno;
 		TRACE(TRACE_EMERG, "%s", strerror(err));
+		return -1;
 	}
 
 	/* setup sockaddr_un */
@@ -482,7 +486,7 @@ static void server_close_sockets(ServerConfig_T *conf)
 			if (conf->ssl_listenSockets[i] > 0)
 				close(conf->ssl_listenSockets[i]);
 		conf->ssl_socketcount=0;
-		if (conf->socket)
+		if (strlen(conf->socket))
 			unlink(conf->socket);
 
 		mempool_push(small_pool, conf->listenSockets, sizeof(int) * MAXSOCKETS);
@@ -510,7 +514,7 @@ static void server_create_sockets(ServerConfig_T * conf)
 	conf->listenSockets = mempool_pop(small_pool, sizeof(int) * MAXSOCKETS);
 	conf->ssl_listenSockets = mempool_pop(small_pool, sizeof(int) * MAXSOCKETS);
 
-	if (conf->socket && strlen(conf->socket))
+	if (strlen(conf->socket))
 		conf->listenSockets[conf->socketcount++] = create_unix_socket(conf);
 
 	tls_load_certs(conf);
@@ -518,7 +522,7 @@ static void server_create_sockets(ServerConfig_T * conf)
 	if (conf->ssl)
 		tls_load_ciphers(conf);
 
-	if (conf->port && strlen(conf->port)) {
+	if (strlen(conf->port)) {
 		for (i = 0; i < conf->ipcount; i++) {
 			create_inet_socket(conf, i, FALSE);
 		}
@@ -776,7 +780,7 @@ int server_run(ServerConfig_T *conf)
 
 	if (server_setup(conf)) return -1;
 
-	if (conf->port) {
+	if (strlen(conf->port)) {
 
 		if (MATCH(conf->service_name, "HTTP")) {
 			// FIXME: 

@@ -235,7 +235,7 @@ int db_connect(void)
 			}
 		}
 
-		if (db_params.sock && strlen((const char *)db_params.sock))
+		if (strlen((const char *)db_params.sock))
 			g_string_append_printf(dsn,"&unix-socket=%s", db_params.sock);
 
 		dburi = URL_new(dsn->str);
@@ -3208,14 +3208,14 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		switch (action_type) {
 		case IMAPFA_ADD:
 			if (flags[i]) {
-				if (msginfo && msginfo->flags) msginfo->flags[i] = 1;
+				if (msginfo) msginfo->flags[i] = 1;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos - 1, "%s%s=1", seen?",":"", db_flag_desc[i]); 
 				seen++;
 			}
 			break;
 		case IMAPFA_REMOVE:
 			if (flags[i]) {
-				if (msginfo && msginfo->flags) msginfo->flags[i] = 0;
+				if (msginfo) msginfo->flags[i] = 0;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos - 1, "%s%s=0", seen?",":"", db_flag_desc[i]); 
 				seen++;
 			}
@@ -3223,10 +3223,10 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 
 		case IMAPFA_REPLACE:
 			if (flags[i]) {
-				if (msginfo && msginfo->flags) msginfo->flags[i] = 1;
+				if (msginfo) msginfo->flags[i] = 1;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos - 1, "%s%s=1", seen?",":"", db_flag_desc[i]); 
 			} else if (i != IMAP_FLAG_RECENT) {
-				if (msginfo && msginfo->flags) msginfo->flags[i] = 0;
+				if (msginfo) msginfo->flags[i] = 0;
 				pos += snprintf(query + pos, DEF_QUERYSIZE - pos - 1, "%s%s=0", seen?",":"", db_flag_desc[i]); 
 			}
 			seen++;

@@ -36,10 +36,7 @@ ClientSession_T * client_session_new(client_sock *c)
 
 	char unique_id[UID_SIZE];
 
-	if (c)
-		ci = client_init(c);
-	else
-		ci = client_init(NULL);
+	ci = client_init(c);
 
 	ClientSession_T * session = mempool_pop(pool, sizeof(ClientSession_T));
 

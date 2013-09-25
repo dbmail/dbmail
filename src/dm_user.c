@@ -187,7 +187,7 @@ int mkpassword(const char * const user, const char * const passwd,
 			*enctype = "";
 			break;
 		case CRYPT:
-			strcat(pw, null_crypt(passwd, cget_salt()));
+			strncpy(pw, null_crypt(passwd, cget_salt()), 129);
 			*enctype = "crypt";
 			break;
 		case CRYPT_RAW:
@@ -619,7 +619,10 @@ int do_show(const char * const name)
 		}
 		g_list_free(g_list_first(aliases));
 	} else {
-		auth_user_exists(name, &useridnr);
+		if (auth_user_exists(name, &useridnr)) {
+			; // ignore
+		}
+
 		if (useridnr == 0) {
 			return show_alias(name, 0);
 		} else {

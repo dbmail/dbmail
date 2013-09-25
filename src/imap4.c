@@ -300,7 +300,7 @@ static int64_t imap_session_printf(ImapSession * session, char * message, ...)
         va_end(ap);
 
 	if ((e = ci_write(session->ci, (char *)p_string_str(session->buff))) < 0) {
-		TRACE(TRACE_DEBUG, "ci_write failed [%s]", strerror(e));
+		TRACE(TRACE_DEBUG, "ci_write failed [%d]", e);
 		imap_handle_abort(session);
 		return e;
 	}

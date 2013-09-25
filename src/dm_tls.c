@@ -90,7 +90,7 @@ void tls_load_certs(ServerConfig_T *conf)
 
 /* load the ciphers into the context */
 void tls_load_ciphers(ServerConfig_T *conf) {
-	if (conf->tls_ciphers && strlen(conf->tls_ciphers) &&
+	if (strlen(conf->tls_ciphers) &&
 	      SSL_CTX_set_cipher_list(tls_context, conf->tls_ciphers) == 0) {
 		TRACE(TRACE_WARNING, "Unable to set any ciphers in list [%s]: %s",
 		     conf->tls_ciphers, tls_get_error());

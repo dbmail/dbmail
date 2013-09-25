@@ -113,7 +113,8 @@ void Cram_free(T *C)
 	if (c->challenge) g_free(c->challenge);
 	if (c->username) g_free(c->username);
 	if (c->response) g_free(c->response);
-	if (c) g_free(c);
+	g_free(c);
+	c = NULL;
 }
 
 

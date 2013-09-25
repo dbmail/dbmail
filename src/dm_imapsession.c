@@ -61,6 +61,7 @@ static void send_data(ImapSession *self, const String_T stream, size_t offset, s
 	size_t l = 0;
 	char *head;
 
+	assert(stream);
 	assert(p_string_len(stream) >= (offset+len));
 
 	head = (char *)p_string_str(stream)+offset;

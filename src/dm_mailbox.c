@@ -1227,7 +1227,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 	GString *t;
 	String_T q;
 
-	if (!s->search)
+	if (!strlen(s->search))
 		return NULL;
 
 	if (self->found && g_tree_nnodes(self->found) <= 200) {
@@ -1386,6 +1386,8 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 
 			case IST_SIZE_LARGER:
 				gt_lt = '>';
+				// fallthrough
+
 			case IST_SIZE_SMALLER:
 				if (!gt_lt) gt_lt = '<';
 

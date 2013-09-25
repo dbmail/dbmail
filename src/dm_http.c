@@ -294,7 +294,7 @@ void Http_getMailboxes(T R)
 
 void Http_getMessages(T R)
 {
-	DbmailMessage *m = dbmail_message_new(NULL);
+	DbmailMessage *m;
 	struct evbuffer *buf;
 	uint64_t pid;
 	uint64_t id = 0;
@@ -312,6 +312,7 @@ void Http_getMessages(T R)
 		return;
 	}
 	buf = evbuffer_new();
+	m = dbmail_message_new(NULL);
 	m = dbmail_message_retrieve(m, pid);
 	if (Request_getMethod(R) == NULL) {
 

@@ -201,8 +201,6 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 				syslog_level = LOG_DEBUG;
 				break;
 		}
-		if (limit > MESSAGESIZE)
-			limit = MESSAGESIZE;
 		message[limit - 1] = 0;
 		syslog(syslog_level, SYSLOGFORMAT, Trace_To_text(level), module, function, line, message);
 	}
