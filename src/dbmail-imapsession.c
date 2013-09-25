@@ -664,8 +664,8 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	GString *fieldorder = NULL;
 	int k;
 	int fieldseq;
-	String_T query = p_string_new(self->pool, "");
-	String_T range = p_string_new(self->pool, "");
+	String_T query;
+	String_T range;
 
 	if (! bodyfetch->headers) {
 		TRACE(TRACE_DEBUG, "[%p] init bodyfetch->headers", self);
@@ -708,6 +708,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		last = g_list_last(self->ids_list);
 	self->hi = *(uint64_t *)last->data;
 
+	range = p_string_new(self->pool, "");
 	if (self->msg_idnr == self->hi)
 		p_string_printf(range, "= %" PRIu64 "", self->msg_idnr);
 	else
@@ -734,6 +735,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		g_string_append_printf(fieldorder, "END AS seq");
 	}
 
+	query = p_string_new(self->pool, "");
 	p_string_printf(query, "SELECT m.message_idnr, n.headername, v.headervalue%s "
 			"FROM %sheader h "
 			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
