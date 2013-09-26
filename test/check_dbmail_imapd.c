@@ -1,4 +1,6 @@
 /*
+ * vim: set fileencodings=utf-8
+ *
  *   Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
  *
  *   This program is free software; you can redistribute it and/or
@@ -136,7 +138,7 @@ START_TEST(test_dbmail_imap_astring_as_string)
 	A("\"test\"","\"test\"");
 	A("\"test\" \"test\"","{13}\r\n\"test\" \"test\"");
 	A("\"test","{5}\r\n\"test");
-	A("test�","{5}\r\ntest�");
+	A("testÃ","{6}\r\ntestÃ");
 	A("test\"","{5}\r\ntest\"");
 	A("test\"","{5}\r\ntest\"");
 	A("test\\","{5}\r\ntest\\");
@@ -961,12 +963,19 @@ START_TEST(test_dm_base_subject)
 	BS("Re:", "");
 	BS("Re: Re: ", "");
 	BS("Re: Fwd: ", "");
+	BS("=?UTF-8?B?0J/RgNC40LLQtdGCINC40Lcg0KDQvtGB0YHQuNC4IChIZWxsbyBmcm8=?= =?UTF-8?B?bSBSdXNzaWEp?=",
+			"привет из россии (hello from russia)");
+	BS("=?UTF-8?B?16nXnNeV150g15HXoteR16jXmdeqIChIZWxsbyBpbiBIZWJyZXcpIA==?=",
+			"שלום בעברית (hello in hebrew)");
+	BS("=?UTF-8?B?2YXYsdit2KjYpyDYqNin2YTZhNi62Kkg2KfZhNi52LHYqNmK2KkgKEg=?= =?UTF-8?B?ZWxsb3cgaW4gQXJhYmljKQ==?=",
+			"مرحبا باللغة العربية (hellow in arabic)");
+
 }
 END_TEST
 
 #define Y(z,q) fail_unless(z==(q), "listex_match failed")
 #define X(z,a,b) Y(z,listex_match(a,b,".",0))
-#define N(z,a,b) Y(z,listex_match(a,b,"�",0))
+#define N(z,a,b) Y(z,listex_match(a,b,"¿",0))
 START_TEST(test_listex_match)
 {
 	X(1, "INBOX", "INBOX");
