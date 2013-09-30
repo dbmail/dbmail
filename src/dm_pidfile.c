@@ -118,6 +118,7 @@ void pidfile_create(const char *pidFile, pid_t pid)
 		int serr = errno;
 		TRACE(TRACE_EMERG, "chown pidfile [%s] failed: [%s]",
 			       	pidFile, strerror(serr));
+		fclose(f);
 		return;
 	}
 

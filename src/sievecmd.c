@@ -380,7 +380,12 @@ int do_edit(uint64_t user_idnr, char *name)
 		goto cleanup;
 	}
 
-	fstat(fileno(ftmp), &stat_after);
+	if (fstat(fileno(ftmp), &stat_after) == -1) {
+		int serr = errno;
+		qerrorf("Stat failed: [%s]", strerror(serr));
+		ret = 1;
+		goto cleanup;
+	}
 
 	/* If the file does not appear to have changed, cancel insertion. */
 	if ((stat_before.st_mtime == stat_after.st_mtime)

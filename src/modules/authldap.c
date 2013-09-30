@@ -384,7 +384,6 @@ static GList * __auth_get_every_match(const char *q, const char **retfields)
 	}
 
 	if (ldap_res) ldap_msgfree(ldap_res);
-	if (ldap_msg) ldap_msgfree(ldap_msg);
 
 	return entlist;
 }
@@ -1364,13 +1363,13 @@ GList * auth_get_aliases_ext(const char *alias)
 int auth_addalias(uint64_t user_idnr, const char *alias, uint64_t clientid UNUSED)
 {
 	LDAP *_ldap_conn = ldap_con_get();
-	char *userid = NULL, *dn = NULL;
+	char *dn = NULL;
 	char **mailValues = NULL;
 	LDAPMod *modify[2], addMail;
 	GList *aliases;
 	int err;
 
-	if (! (userid = auth_get_userid(user_idnr)))
+	if (! (auth_get_userid(user_idnr)))
 		return FALSE;
 	
 	/* check the alias newval against the known aliases for this user */
