@@ -380,29 +380,26 @@ void GetDBParams(void)
 			db_params.query_time_info = 10;
 	}
 
-	if (config_get_value("query_time_notice", "DBMAIL", query_time) < 0) {
+	if (config_get_value("query_time_notice", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_DEBUG, "error getting config! [query_time_notice]");
-		if (strlen(query_time) != 0)
-			db_params.query_time_notice = (unsigned int) strtoul(query_time, NULL, 10);
-		else
-			db_params.query_time_notice = 20;
-	}
+	if (strlen(query_time) != 0)
+		db_params.query_time_notice = (unsigned int) strtoul(query_time, NULL, 10);
+	else
+		db_params.query_time_notice = 20;
 
-	if (config_get_value("query_time_warning", "DBMAIL", query_time) < 0) {
+	if (config_get_value("query_time_warning", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_DEBUG, "error getting config! [query_time_warning]");
-		if (strlen(query_time) != 0)
-			db_params.query_time_warning = (unsigned int) strtoul(query_time, NULL, 10);
-		else
-			db_params.query_time_warning = 30;
-	}
+	if (strlen(query_time) != 0)
+		db_params.query_time_warning = (unsigned int) strtoul(query_time, NULL, 10);
+	else
+		db_params.query_time_warning = 30;
 
-	if (config_get_value("query_timeout", "DBMAIL", query_time) < 0) {
+	if (config_get_value("query_timeout", "DBMAIL", query_time) < 0)
 		TRACE(TRACE_DEBUG, "error getting config! [query_timeout]");
-		if (strlen(query_time) != 0)
-			db_params.query_timeout = (unsigned int) strtoul(query_time, NULL, 10) * 1000;
-		else
-			db_params.query_timeout = 300000;
-	}
+	if (strlen(query_time) != 0)
+		db_params.query_timeout = (unsigned int) strtoul(query_time, NULL, 10) * 1000;
+	else
+		db_params.query_timeout = 300000;
 
 
 	if (strcmp(db_params.pfx, "\"\"") == 0) {
