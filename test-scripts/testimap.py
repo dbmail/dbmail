@@ -204,8 +204,8 @@ class testImapServer(unittest.TestCase):
         #The next line would be necessary in case of multiappend
         #self.assertRegexpMatches(uid_set, "^\d+(:\d+)?(,\d+(:\d+)?)*$") # based on the BNF in rfc4315
         # check whether the uid_validity and uid_next match
-        self.assertEqual(uid_validity, old_uid_validity)  # 'Uidvalidity matches'
-        self.assertLessEqual(int(old_uid_next), int(uid_set)) # 'The appended message\'s uid is higher than the last uid_next value'
+        self.assertEqual(uid_validity, old_uid_validity)
+        self.assertLessEqual(int(old_uid_next), int(uid_set))
 
         result = self.o.select('testappend')
         id = result[1][0]
@@ -330,9 +330,9 @@ class testImapServer(unittest.TestCase):
         orig_uids = orig_uids.split(',')
         new_uids = new_uids.split(',')
         # check whether response code elements match
-        self.assertEqual(uid_validity, old_uid_validity)  # 'Uidvalidity matches'
-        self.assertEqual(orig_uids.sort(), uids.sort()) # 'Old uids returned by UID COPY match the ones that we actually copied')
-        self.assertEqual(len(new_uids), len(orig_uids)) # 'Old and new uids have the same number of elements'
+        self.assertEqual(uid_validity, old_uid_validity)
+        self.assertEqual(orig_uids.sort(), uids.sort())
+        self.assertEqual(len(new_uids), len(orig_uids))
         for i in new_uids:
             # check whether all new uids are above the last seen uid_next value
             self.assertLessEqual(int(old_uid_next), int(i))
