@@ -226,9 +226,11 @@ static LDAPMessage * authldap_search(const gchar *query)
 	int _ldap_attrsonly = 0;
 	char **_ldap_attrs = NULL;
 	int c=0, err;
-	LDAP *_ldap_conn = ldap_con_get();
+	LDAP *_ldap_conn;
 
 	g_return_val_if_fail(query!=NULL, NULL);
+
+	_ldap_conn = ldap_con_get();
 
 	while (c++ < 5) {
 		TRACE(TRACE_DEBUG, " [%s]", query);
