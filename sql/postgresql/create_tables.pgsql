@@ -62,9 +62,6 @@ CREATE TABLE dbmail_users (
    cursieve_size INT8 DEFAULT '0' NOT NULL,
    encryption_type VARCHAR(20) DEFAULT '' NOT NULL,
    last_login TIMESTAMP DEFAULT '1979-11-03 22:05:58' NOT NULL,
-   spasswd VARCHAR(130) DEFAULT '' NOT NULL,
-   saction SMALLINT DEFAULT '0' NOT NULL,
-   active SMALLINT DEFAULT '1' NOT NULL
    PRIMARY KEY (user_idnr)
 );
 

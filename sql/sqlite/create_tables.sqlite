@@ -53,10 +53,7 @@ CREATE TABLE dbmail_users (
    maxmail_size INTEGER DEFAULT '0' NOT NULL,
    curmail_size INTEGER DEFAULT '0' NOT NULL,
    encryption_type TEXT DEFAULT '' NOT NULL,
-   last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL,
-   spasswd TEXT NOT NULL DEFAULT '',
-   saction SMALLINT NOT NULL DEFAULT '0',
-   active BOOLEAN NOT NULL DEFAULT '1'
+   last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL
 );
 CREATE UNIQUE INDEX dbmail_users_1 ON dbmail_users(userid);
 
