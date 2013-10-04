@@ -160,14 +160,13 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
  		fprintf(stderr, STDERRFORMAT, date, hostname, __progname?__progname:"", getpid(), 
 			g_thread_self(), Trace_To_text(level), module, function, line, message);
  
-		if (message[l] != '\n')
+		if (message[l - 1] != '\n')
 			fprintf(stderr, "\n");
 		fflush(stderr);
 	}
 
 	if (level & TRACE_SYSLOG) {
 		/* Convert our extended log levels (>128) to syslog levels */
-		int limit = 120;
 		switch((int)ilogb((double) level))
 		{
 			case 0:
@@ -201,7 +200,10 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 				syslog_level = LOG_DEBUG;
 				break;
 		}
-		message[limit - 1] = 0;
+		if (l > MESSAGESIZE) {
+			l = MESSAGESIZE;
+			message[l - 1] = 0;
+		}
 		syslog(syslog_level, SYSLOGFORMAT, Trace_To_text(level), module, function, line, message);
 	}
 
