@@ -63,6 +63,11 @@ FILE *fstdout = NULL;
 extern FILE *fstderr;
 FILE *fnull = NULL;
 
+/* self-pipe
+ */
+int selfpipe[2];
+pthread_mutex_t selfpipe_lock;
+
 /* 
  *
  * threaded command primitives 
@@ -72,24 +77,30 @@ FILE *fnull = NULL;
  *
  */
 
-
-/*
- * async queue drainage callback for the main thread
- */
-struct timeval heartbeat_interval = {0,200000};
-
-static void cb_queue_drain(int fd UNUSED, short what UNUSED, void *arg UNUSED)
+static void cb_queue_drain(int fd, short what UNUSED, void *arg UNUSED)
 {
+	char buf[1024];
 	event_del(heartbeat);
 	dm_queue_drain();
-	event_add(heartbeat, &heartbeat_interval);
+	PLOCK(selfpipe_lock);
+	if (read(fd, buf, sizeof(buf))) { /* ignore */ }
+	PUNLOCK(selfpipe_lock);
+	event_add(heartbeat, NULL);
 }
 
 
 void dm_queue_heartbeat(void)
 {
-	heartbeat = event_new(evbase, -1, 0, cb_queue_drain, NULL);
-	event_add(heartbeat, &heartbeat_interval);
+	if (pipe(selfpipe))
+		TRACE(TRACE_EMERG, "self-pipe setup failed");
+
+	UNBLOCK(selfpipe[0]);
+	UNBLOCK(selfpipe[1]);
+
+	pthread_mutex_init(&selfpipe_lock, NULL);
+
+	heartbeat = event_new(evbase, selfpipe[0], EV_READ, cb_queue_drain, NULL);
+	event_add(heartbeat, NULL);
 }
 
 void dm_queue_drain(void)
@@ -123,6 +134,11 @@ void dm_queue_push(void *cb, void *session, void *data)
 	D->data     = data;
 
         g_async_queue_push(queue, (gpointer)D);
+	PLOCK(selfpipe_lock);
+	if (selfpipe[1] > -1) {
+		if (write(selfpipe[1], "Q", 1)) { /* ignore */ }
+	}
+	PUNLOCK(selfpipe_lock);
 }
 
 /* 
@@ -500,6 +516,7 @@ static void server_exit(void)
 	server_close_sockets(server_conf);
 	//event_base_free(evbase);
 
+	pthread_mutex_destroy(&selfpipe_lock);
 	if (fstdout) fclose(fstdout);
 	if (fstderr) fclose(fstderr);
 	if (fnull) fclose(fnull);
