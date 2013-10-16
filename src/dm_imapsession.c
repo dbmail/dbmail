@@ -797,7 +797,10 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			
 			fld = (char *)db_result_get(r, 1);
 			blob = db_result_get_blob(r, 2, &l);
-			val = dbmail_iconv_db_to_utf7((const char *)blob);
+			char *str = g_new0(char, l + 1);
+			str = strncpy(str, blob, l);
+			val = dbmail_iconv_db_to_utf7(str);
+			g_free(str);
 			if (! val) {
 				TRACE(TRACE_DEBUG, "[%p] [%" PRIu64 "] no headervalue [%s]", self, id, fld);
 			} else {
