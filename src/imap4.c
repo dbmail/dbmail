@@ -276,9 +276,9 @@ static void imap_session_reset(ImapSession *session)
 	session->parser_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 
-	SESSION_LOCK(session->lock);
+	PLOCK(session->lock);
 	current = session->state;
-	SESSION_UNLOCK(session->lock);
+	PUNLOCK(session->lock);
 
 	if (current == CLIENTSTATE_AUTHENTICATED)
 		session->ci->timeout->tv_sec = server_conf->timeout; 
