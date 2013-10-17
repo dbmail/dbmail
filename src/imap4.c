@@ -252,6 +252,8 @@ void socket_read_cb(int fd, short what, void *arg)
 //
 static void imap_session_reset(ImapSession *session)
 {
+	ClientState_T current;
+
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
 	memset(session->tag, 0, sizeof(session->tag));
@@ -263,7 +265,15 @@ static void imap_session_reset(ImapSession *session)
 	session->parser_state = FALSE;
 	dbmail_imap_session_args_free(session, FALSE);
 
-	session->ci->timeout->tv_sec = server_conf->timeout; 
+	SESSION_LOCK(session->lock);
+	current = session->state;
+	SESSION_UNLOCK(session->lock);
+
+	if (current == CLIENTSTATE_AUTHENTICATED)
+		session->ci->timeout->tv_sec = server_conf->timeout; 
+	else
+		session->ci->timeout->tv_sec = server_conf->login_timeout; 
+
 	ci_uncork(session->ci);
 	
 	return;
