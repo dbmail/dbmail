@@ -582,6 +582,7 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
                                 TRACE(TRACE_ERR, "%d:%s", serr, strerror(serr));
                                 break;
                 }
+                event_add(ev, NULL);
                 return;
         }
 	
@@ -597,6 +598,7 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 		mempool_push(pool, c, sizeof(client_sock));
 		mempool_close(&pool);
 		close(csock);
+		event_add(ev, NULL);
 		return;
 	}
 
@@ -609,6 +611,7 @@ static void _sock_cb(int sock, short event, void *arg, gboolean ssl)
 		mempool_push(pool, c, sizeof(client_sock));
 		mempool_close(&pool);
 		close(csock);
+		event_add(ev, NULL);
 		return; // fatal 
 	}
 
