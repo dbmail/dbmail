@@ -245,6 +245,10 @@ CREATE TABLE dbmail_header (
                 ON UPDATE CASCADE ON DELETE CASCADE,
         PRIMARY KEY (physmessage_id,headername_id,headervalue_id)
 );
+ 
+CREATE INDEX dbmail_header_headername_id_key on dbmail_header(headername_id);   
+CREATE INDEX dbmail_header_headervalue_id_key on dbmail_header(headervalue_id); 
+CREATE INDEX dbmail_header_physmessage_id_key on dbmail_header(physmessage_id); 
 
 
 CREATE SEQUENCE dbmail_referencesfield_idnr_seq;
