@@ -50,6 +50,11 @@ void tls_load_certs(ServerConfig_T *conf)
 {
 	gboolean e = FALSE;
 	/* load CA file */
+	if (! (strlen(conf->tls_cafile) && strlen(conf->tls_cert) && strlen(conf->tls_key))) {
+		conf->ssl = FALSE;
+		return;
+	}
+
 	if (SSL_CTX_load_verify_locations(tls_context, conf->tls_cafile, NULL) == 0) {
 		TRACE(TRACE_WARNING, "Error loading CA file [%s]: %s",
 				conf->tls_cafile ? conf->tls_cafile : "",
@@ -82,18 +87,15 @@ void tls_load_certs(ServerConfig_T *conf)
 		e = TRUE;
 	}
 
-	if (e) 
-		conf->ssl = FALSE;
-	else
-		conf->ssl = TRUE;
+	conf->ssl = e ? FALSE : TRUE;
 }
 
 /* load the ciphers into the context */
 void tls_load_ciphers(ServerConfig_T *conf) {
-	if (conf->tls_ciphers && strlen(conf->tls_ciphers) &&
-	      SSL_CTX_set_cipher_list(tls_context, conf->tls_ciphers) == 0) {
+	if (strlen(conf->tls_ciphers) &&
+			SSL_CTX_set_cipher_list(tls_context, conf->tls_ciphers) == 0) {
 		TRACE(TRACE_WARNING, "Unable to set any ciphers in list [%s]: %s",
-		     conf->tls_ciphers, tls_get_error());
+				conf->tls_ciphers, tls_get_error());
 	}
 }
 
