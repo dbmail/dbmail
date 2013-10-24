@@ -1126,35 +1126,31 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 
 	/* read items: TLS_CAFILE */
 	config_get_value("TLS_CAFILE", service, val);
-	if(strlen(val) == 0)
-		TRACE(TRACE_WARNING, "no value for TLS_CAFILE in config file");
-	strncpy(config->tls_cafile, val, FIELDSIZE-1);
-
-        TRACE(TRACE_DEBUG, "CA file is set to [%s]", config->tls_cafile);
+	if(strlen(val)) {
+		strncpy(config->tls_cafile, val, FIELDSIZE-1);
+		TRACE(TRACE_DEBUG, "CA file is set to [%s]", config->tls_cafile);
+	}
 
 	/* read items: TLS_CERT */
 	config_get_value("TLS_CERT", service, val);
-	if(strlen(val) == 0)
-		TRACE(TRACE_WARNING, "no value for TLS_CERT in config file");
-	strncpy(config->tls_cert, val, FIELDSIZE-1);
-
-        TRACE(TRACE_DEBUG, "Certificate file is set to [%s]", config->tls_cert);
+	if(strlen(val)) {
+		strncpy(config->tls_cert, val, FIELDSIZE-1);
+		TRACE(TRACE_DEBUG, "Certificate file is set to [%s]", config->tls_cert);
+	}
 
 	/* read items: TLS_KEY */
 	config_get_value("TLS_KEY", service, val);
-	if(strlen(val) == 0)
-		TRACE(TRACE_WARNING, "no value for TLS_KEY in config file");
-	strncpy(config->tls_key, val, FIELDSIZE-1);
-
-        TRACE(TRACE_DEBUG, "Key file is set to [%s]", config->tls_key);
+	if(strlen(val)) {
+		strncpy(config->tls_key, val, FIELDSIZE-1);
+		TRACE(TRACE_DEBUG, "Key file is set to [%s]", config->tls_key);
+	}
 
 	/* read items: TLS_CIPHERS */
 	config_get_value("TLS_CIPHERS", service, val);
-	if(strlen(val) == 0)
-		TRACE(TRACE_INFO, "no value for TLS_CIPHERS in config file");
-	strncpy(config->tls_ciphers, val, FIELDSIZE-1);
-
-        TRACE(TRACE_DEBUG, "Cipher string is set to [%s]", config->tls_ciphers);
+	if(strlen(val)) {
+		strncpy(config->tls_ciphers, val, FIELDSIZE-1);
+		TRACE(TRACE_DEBUG, "Cipher string is set to [%s]", config->tls_ciphers);
+	}
 
 	strncpy(config->service_name, service, FIELDSIZE-1);
 
