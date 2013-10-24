@@ -146,6 +146,10 @@ CREATE TABLE dbmail_header (
         PRIMARY KEY (physmessage_id,headername_id,headervalue_id)
 );
 
+CREATE INDEX dbmail_header_headername_id_key on dbmail_header(headername_id);
+CREATE INDEX dbmail_header_headervalue_id_key on dbmail_header(headervalue_id);
+CREATE INDEX dbmail_header_physmessage_id_key on dbmail_header(physmessage_id); 
+
 CREATE VIEW dbmail_fromfield AS
         SELECT physmessage_id,sortfield AS fromfield
         FROM dbmail_messages m
