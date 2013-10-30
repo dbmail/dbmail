@@ -310,20 +310,31 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 				client->tls_wbuf_n = n;
 			}
 			t = (int64_t)SSL_write(client->sock->ssl, (gconstpointer)client->tls_wbuf, client->tls_wbuf_n);
-			e = t;
 		} else {
 			t = (int64_t)write(client->tx, (gconstpointer)s, n);
-			e = errno;
 		}
 
 		if (t == -1) {
-			if ((e = client->cb_error(client->tx, e, (void *)client))) {
+			if (client->sock->ssl)
+				e = t;
+			else
+				e = errno;
+
+			if (client->cb_error(client->tx, e, (void *)client)) {
 				PLOCK(client->lock);
 				client->client_state |= CLIENT_ERR;
 				PUNLOCK(client->lock);
 				return -1;
 			} 
 			return 0;
+		} else if ((t == 0) && (client->sock->ssl)) {
+			TRACE(TRACE_DEBUG, "ssl_ragged_eof");
+			if (client->cb_error(client->tx, t, (void *)client) < 0) {
+				PLOCK(client->lock);
+				client->client_state |= CLIENT_ERR;
+				PUNLOCK(client->lock);
+				return -1;
+			} 
 		} 
 
 		memset(buf, 0, sizeof(buf));
@@ -398,10 +409,11 @@ void ci_read_cb(ClientBase_T *client)
 			break;
 
 		} else if (t == 0) {
-			int e = errno;
-			if (client->sock->ssl)
-				client->cb_error(client->rx, e, (void *)client);
 			PLOCK(client->lock);
+			if (client->sock->ssl) {
+				if (client->cb_error(client->rx, t, (void *)client))
+					client->client_state |= CLIENT_ERR;
+			}
 			client->client_state |= CLIENT_EOF;
 			PUNLOCK(client->lock);
 			break;
