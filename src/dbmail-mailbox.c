@@ -185,7 +185,7 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 	ResultSet_T r;
        	volatile int t = FALSE;
 
-	uids = MailboxState_getIds(self->mbstate);
+	uids = self->found;
 
 	c = db_con_get();
 	TRY
