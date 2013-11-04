@@ -29,6 +29,8 @@ extern char configFile[PATH_MAX];
 #define PNAME "dbmail/export"
 
 extern DBParam_T db_params;
+extern Mempool_T small_pool;
+
 #define DBPFX db_params.pfx
 
 /* UI policy */
@@ -90,7 +92,8 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 	 *
 	 * TODO: facilitate maildir type exports
 	 */
-	mb = dbmail_mailbox_new(NULL, mailbox_idnr);
+	Mempool_T pool = mempool_open();
+	mb = dbmail_mailbox_new(pool, mailbox_idnr);
 	client_sock *c;
 	s = dbmail_imap_session_new(mb->pool);
 	c = mempool_pop(s->pool, sizeof(client_sock));
@@ -110,7 +113,6 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 		return 1;
 	}
 	dbmail_mailbox_search(mb);
-	dbmail_imap_session_delete(&s);
 
 	if (strcmp(dumpfile, "-") == 0) {
 		ostream = stdout;
@@ -175,6 +177,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 cleanup:
 	if (mb)
 		dbmail_mailbox_free(mb);
+	dbmail_imap_session_delete(&s);
 	if ((ostream) && (ostream != stdout))
 		fclose(ostream);
 
@@ -284,6 +287,7 @@ int main(int argc, char *argv[])
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
+	small_pool = mempool_open();
 	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
 
 	config_get_file();
@@ -450,6 +454,7 @@ freeall:
 	auth_disconnect();
 	config_free();
 	g_mime_shutdown();
+	mempool_close(&small_pool);
 
 	if (result < 0)
 		qerrorf("Command failed.\n");
