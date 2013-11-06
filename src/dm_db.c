@@ -263,7 +263,7 @@ int db_connect(void)
 		ConnectionPool_getInitialConnections(pool), ConnectionPool_getMaxConnections(pool));
 
 	if (! (c = ConnectionPool_getConnection(pool))) {
-		TRACE(TRACE_EMERG, "error getting a database connection from the pool");
+		TRACE(TRACE_ALERT, "error getting a database connection from the pool");
 		return -1;
 	}
 	db_connected = 3;
@@ -317,10 +317,20 @@ Connection_T db_con_get(void)
 
 gboolean dm_db_ping(void)
 {
-	Connection_T c; gboolean t;
-	c = db_con_get();
-	t = Connection_ping(c);
-	db_con_close(c);
+	Connection_T c; gboolean t = FALSE;
+	int try = 0;
+	while (try++ < 2) {
+		c = db_con_get();
+		t = Connection_ping(c);
+		db_con_close(c);
+		if (t)
+			break;
+		db_disconnect();
+		TRACE(TRACE_WARNING, "database has gone away. trying to reconnect...");
+		sleep(3);
+		if (db_connect() == DM_EQUERY)
+			break;
+	}
 
 	if (!t) TRACE(TRACE_ERR,"database has gone away");
 
