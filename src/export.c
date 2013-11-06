@@ -90,21 +90,22 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 	 *
 	 * TODO: facilitate maildir type exports
 	 */
-	mb = dbmail_mailbox_new(NULL, mailbox_idnr);
+	Mempool_T pool = mempool_open();
+	mb = dbmail_mailbox_new(pool, mailbox_idnr);
 	client_sock *c;
 	s = dbmail_imap_session_new(mb->pool);
 	c = mempool_pop(s->pool, sizeof(client_sock));
 	c->pool = s->pool;
 	s->ci = client_init(c);
 	if (! (imap4_tokenizer_main(s, search))) {
-		qerrorf("error parsing search string");
+		qerrorf("error parsing search string\n");
 		dbmail_mailbox_free(mb);
 		dbmail_imap_session_delete(&s);
 		return 1;
 	}
 
 	if (dbmail_mailbox_build_imap_search(mb, s->args, &(s->args_idx), SEARCH_UNORDERED) < 0) {
-		qerrorf("invalid search string");
+		qerrorf("invalid search string\n");
 		dbmail_mailbox_free(mb);
 		dbmail_imap_session_delete(&s);
 		return 1;
