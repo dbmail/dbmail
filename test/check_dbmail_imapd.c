@@ -68,6 +68,7 @@ void setup(void)
 	config_read(configFile);
 	GetDBParams();
 	db_connect();
+	if (! g_thread_supported () ) g_thread_init (NULL);
 	auth_connect();
 	init_testuser1();
 }
