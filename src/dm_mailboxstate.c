@@ -779,6 +779,7 @@ int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 	Connection_T c;
        	ResultSet_T r;
 	volatile int result = FALSE;
+	volatile bool owner_acl = false;
 	uint64_t owner_id, mboxid;
 
 	mboxid = MailboxState_getId(M);
@@ -796,9 +797,36 @@ int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 	}
 
 	if (owner_id == userid) {
-		TRACE(TRACE_DEBUG, "mailbox [%" PRIu64 "] is owned by user [%" PRIu64 "], giving all rights",
-				mboxid, userid);
-		return 1;
+		c = db_con_get();
+		TRY
+			stmt = db_stmt_prepare(c,
+					"SELECT * FROM %sacl WHERE "
+					"user_id = ? AND mailbox_id = ?", 
+					DBPFX);
+			db_stmt_set_u64(stmt, 1, userid);
+			db_stmt_set_u64(stmt, 2, mboxid);
+			r = db_stmt_query(stmt);
+
+			if (db_result_next(r))
+				owner_acl = true;
+		CATCH(SQLException)
+			LOG_SQLERROR;
+			result = DM_EQUERY;
+		FINALLY	
+			db_con_close(c);
+		END_TRY;
+
+		if (! owner_acl) {
+			TRACE(TRACE_DEBUG, "mailbox [%" PRIu64 "] is owned by user [%" PRIu64 "]"
+					"and no ACL in place. Giving all rights",
+					mboxid, userid);
+			return 1;
+		} else {
+			TRACE(TRACE_DEBUG, "mailbox [%" PRIu64 "] is owned by user [%" PRIu64 "]"
+					"but ACL in place. Restricted access for owner.",
+					mboxid, userid);
+		}
+
 	}
 
 	result = FALSE;
