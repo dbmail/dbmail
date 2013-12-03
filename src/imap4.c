@@ -405,6 +405,11 @@ static void imap_handle_continue(ImapSession *session)
 
 static void imap_handle_retry(ImapSession *session)
 {
+	if (session->ci->client_state && CLIENT_EOF) {
+		imap_session_bailout(session);
+		return;
+	}
+
 	session->command_state = TRUE;
 	dbmail_imap_session_buff_flush(session);
 	session->error_count++;	/* server returned BAD or NO response */
