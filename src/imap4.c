@@ -215,7 +215,7 @@ void imap_cb_read(void *arg)
 	TRACE(TRACE_DEBUG,"state [%d] enough %d: %" PRIu64 "/%" PRIu64 "", state, enough, have, need);
 
 	if (state & CLIENT_ERR) {
-		imap_handle_abort(session);
+		imap_session_bailout(session);
 	} else if (state & CLIENT_EOF) {
 		ci_cork(session->ci);
 		if (enough)
