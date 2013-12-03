@@ -143,6 +143,12 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 		Capa_remove(self->capa, "AUTH=CRAM-MD5");
 		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
 	}
+
+	if (! server_conf->ssl) {
+		Capa_remove(self->capa, "STARTTLS");
+		Capa_remove(self->preauth_capa, "STARTTLS");
+	}
+
 	self->physids = g_tree_new((GCompareFunc)ucmp);
 	self->mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)uint64_free,(GDestroyNotify)mailboxstate_destroy);
 
