@@ -405,7 +405,7 @@ static void imap_handle_continue(ImapSession *session)
 
 static void imap_handle_retry(ImapSession *session)
 {
-	if (session->ci->client_state && CLIENT_EOF) {
+	if (session->ci->client_state & CLIENT_EOF) {
 		imap_session_bailout(session);
 		return;
 	}
