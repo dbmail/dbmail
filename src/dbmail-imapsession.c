@@ -120,7 +120,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
 	}
 
-	if (! server_conf->ssl) {
+	if (! (server_conf && server_conf->ssl)) {
 		Capa_remove(self->capa, "STARTTLS");
 		Capa_remove(self->preauth_capa, "STARTTLS");
 	}
