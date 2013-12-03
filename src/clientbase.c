@@ -78,20 +78,25 @@ static void client_wbuf_scale(ClientBase_T *client)
 static int client_error_cb(int sock, int error, void *arg)
 {
 	int r = 0;
+	int serr;
 	ClientBase_T *client = (ClientBase_T *)arg;
 	if (client->sock->ssl) {
 		int sslerr = 0;
 		if (! (sslerr = SSL_get_error(client->sock->ssl, error)))
 			return r;
-		
+
+		serr = errno;
+
 		dm_tls_error();
 		switch (sslerr) {
+			case SSL_ERROR_ZERO_RETURN:
+				client->client_state |= CLIENT_EOF;
+				break;
 			case SSL_ERROR_WANT_READ:
 			case SSL_ERROR_WANT_WRITE:
 				break; // reschedule
 			case SSL_ERROR_SYSCALL:
-				if (error == -1)
-					TRACE(TRACE_DEBUG, "[%p] %d %s", client, sock, strerror(errno));
+				TRACE(TRACE_DEBUG, "[%p] %d %s", client, sock, strerror(serr));
 				client_rbuf_clear(client);
 				client_wbuf_clear(client);
 				r = -1;
