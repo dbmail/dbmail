@@ -243,9 +243,11 @@ void client_session_read(void *arg)
 
 void client_session_set_timeout(ClientSession_T *session, int timeout)
 {
-	int current = session->ci->timeout->tv_sec;
-	if (timeout != current)
-		session->ci->timeout->tv_sec = timeout;
+	if (session && session->ci && session->ci->timeout) {
+		int current = session->ci->timeout->tv_sec;
+		if (timeout != current)
+			session->ci->timeout->tv_sec = timeout;
+	}
 }
 
 void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)

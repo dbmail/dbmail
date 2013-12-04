@@ -304,14 +304,18 @@ int pop3_error(ClientSession_T * session, const char *formatstring, ...)
 		ci_write(ci, "-ERR too many errors\r\n");
 		client_session_bailout(&session);
 		return -3;
-	} else {
-		va_start(ap, formatstring);
-		va_copy(cp, ap);
-		s = g_strdup_vprintf(formatstring, cp);
-		va_end(cp);
-		va_end(ap);
-		ci_write(ci, s);
-		g_free(s);
+	} 
+	va_start(ap, formatstring);
+	va_copy(cp, ap);
+	s = g_strdup_vprintf(formatstring, cp);
+	va_end(cp);
+	va_end(ap);
+	ci_write(ci, s);
+	g_free(s);
+
+	if (ci->client_state & CLIENT_ERR) {
+		client_session_bailout(&session);
+		return -3;
 	}
 
 	TRACE(TRACE_DEBUG, "an invalid command was issued");
