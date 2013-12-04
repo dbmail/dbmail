@@ -99,10 +99,12 @@ static void tims_handle_input(void *arg)
 				client_session_bailout(&session);
 				return;
 			}
+			ci_cork(session->ci);
 			if (tims(session) == -3) {
 				client_session_bailout(&session);
 				return;
 			}
+			ci_uncork(session->ci);
 			client_session_reset_parser(session);
 		}
 	}
@@ -179,6 +181,12 @@ int tims_error(ClientSession_T * session, const char *formatstring, ...)
 
 	ci_write(session->ci, s);
 	g_free(s);
+
+	if (session->ci->client_state & CLIENT_ERR) {
+		client_session_bailout(&session);
+		return -3;
+	}
+
 
 	TRACE(TRACE_DEBUG, "an invalid command was issued");
 	session->error_count++;

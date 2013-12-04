@@ -124,7 +124,7 @@ static int client_error_cb(int sock, int error, void *arg)
 				break; // reschedule
 
 			default:
-				TRACE(TRACE_DEBUG,"[%p] %d %s[%d], %p", client, sock, strerror(error), error, arg);
+				TRACE(TRACE_DEBUG,"[%p] fd [%d] %s[%d], %p", client, sock, strerror(error), error, arg);
 				r = error;
 				client_rbuf_clear(client);
 				client_wbuf_clear(client);
@@ -532,7 +532,7 @@ void ci_close(ClientBase_T *client)
 	if (client->tx >= 0 && (close(client->tx)))
 		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
 	if (client->rx >= 0 && (close(client->rx)))
-			TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
+		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
 
 	ci_authlog_close(client);
 	client->tx = -1;
