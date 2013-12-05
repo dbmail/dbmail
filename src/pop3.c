@@ -454,7 +454,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 		if (session->ci->sock->ssl_state)
 			return pop3_error(session, "-ERR TLS already active\r\n");
 		ci_write(session->ci, "+OK Begin TLS now\r\n");
-		if (ci_starttls(session->ci) < 0) return 0;
+		if (ci_starttls(session->ci) < 0) return -1;
 		return 1;
 
 	case POP3_USER:
