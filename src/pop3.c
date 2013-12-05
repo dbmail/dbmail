@@ -243,9 +243,8 @@ static void pop3_handle_input(void *arg)
 	if (ci_readln(session->ci, buffer) == 0)
 		return;
 
-	ci_cork(session->ci);
-	pop3(session, buffer);
-	ci_uncork(session->ci);
+	if (pop3(session, buffer) < 0)
+		client_session_bailout(&session);
 }
 
 void pop3_cb_write(void *arg)
