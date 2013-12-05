@@ -1345,6 +1345,9 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 {
 	assert(self);
 	assert(self->id);
+	GMimeObject *part;
+	GMimeContentType *content_type;
+	GMimeContentDisposition *content_disp;
 
 	if (! GMIME_IS_MESSAGE(self->content)) {
 		TRACE(TRACE_ERR,"self->content is not a message");
@@ -1360,6 +1363,24 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 			GMIME_OBJECT(self->content));
 	g_mime_header_list_foreach(headers, (GMimeHeaderForeachFunc)_header_cache,
 			(gpointer)self);
+
+	/* 
+	 * gmime treats content-type and content-disposition differently
+	 *
+	 */
+	part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
+	if ((content_type = g_mime_object_get_content_type(part))) {
+		char *value = g_mime_content_type_to_string(content_type);
+		_header_cache("content-type", (const char *)value, (gpointer)self);
+		free(value);
+	}
+
+	if ((content_disp = g_mime_object_get_content_disposition(part))) {
+		char *value = g_mime_content_disposition_to_string(
+				content_disp, FALSE);
+		_header_cache("content-disposition", (const char *)value, (gpointer)self);
+		free(value);
+	}
 
 	/* 
 	 * if there is no Date: header, store the envelope's date
