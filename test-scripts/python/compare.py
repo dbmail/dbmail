@@ -1,9 +1,6 @@
 
-import time
 import sys
-import os
 import hashlib
-import tempfile
 import imaplib
 import poplib
 from multiprocessing import Pool
@@ -48,14 +45,13 @@ def pop_messages():
         message = '\n'.join(message[1])
         message.replace('\r', '')
         result.append((hashlib.sha1(message).hexdigest(), message))
+    POP.quit()
     return result
 
 
 def do_compare(left, right):
     assert(len(left) == len(right))
     for i in range(0, len(left)):
-        left_row = left[i]
-        right_row = right[i]
         if left[0] != right[0]:
             return "checksum error at [%d] %s != %s\n" % (
                             i, left[0], right[0])
