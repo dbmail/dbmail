@@ -102,10 +102,12 @@ static void lmtp_handle_input(void *arg)
 			}
 
 			if (l > 0) {
+				ci_cork(session->ci);
 				if (lmtp(session) == -3) {
 					client_session_bailout(&session);
 					return;
 				}
+				ci_uncork(session->ci);
 				client_session_reset_parser(session);
 			}
 
