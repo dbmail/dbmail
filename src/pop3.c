@@ -222,8 +222,6 @@ static void pop3_close(ClientSession_T *session)
 	} else {
 		ci_write(ci, "+OK see ya later\r\n");
 	}
-
-	client_session_bailout(&session);
 }
 
 
@@ -243,8 +241,12 @@ static void pop3_handle_input(void *arg)
 	if (ci_readln(session->ci, buffer) == 0)
 		return;
 
-	if (pop3(session, buffer) < 0)
+	ci_cork(session->ci);
+	if (pop3(session, buffer) <= 0) {
 		client_session_bailout(&session);
+		return;
+	}
+	ci_uncork(session->ci);
 }
 
 void pop3_cb_write(void *arg)
