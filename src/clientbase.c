@@ -565,14 +565,18 @@ void ci_close(ClientBase_T *client)
 
 	if ((client->sock->sock > 1) && (shutdown(client->sock->sock, SHUT_RDWR)))
 		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
-	if (client->tx >= 0 && (close(client->tx)))
-		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
-	if (client->rx >= 0 && (close(client->rx)))
-		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
+
+	if (client->tx >= 0) {
+		close(client->tx);
+		client->tx = -1;
+	}
+
+	if (client->rx >= 0) {
+	       	close(client->rx);
+		client->rx = -1;
+	}
 
 	ci_authlog_close(client);
-	client->tx = -1;
-	client->rx = -1;
 
 	if (client->auth) {
 		Cram_T c = client->auth;
