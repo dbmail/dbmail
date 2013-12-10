@@ -393,7 +393,7 @@ static void imap_handle_continue(ImapSession *session)
 	if (session->state < CLIENTSTATE_LOGOUT) {
 		if (session->buff && p_string_len(session->buff) > 0) {
 			int e = 0;
-			if ((e = ci_write(session->ci, (char *)p_string_str(session->buff))) < 0) {
+			if ((e = ci_write(session->ci, "%s", (char *)p_string_str(session->buff))) < 0) {
 				int serr = errno;
 				TRACE(TRACE_DEBUG,"ci_write returned error [%s]", strerror(serr));
 				imap_handle_abort(session);

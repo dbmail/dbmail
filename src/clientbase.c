@@ -281,7 +281,6 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	int e = 0;
 	uint64_t n, left;
 	char *s;
-	char buf[40];
 	int state;
 
 	if (! (client && client->write_buffer))
@@ -342,10 +341,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 			} 
 		} 
 
-		memset(buf, 0, sizeof(buf));
-		strncpy(buf, s, sizeof(buf)-1);
-
-		TRACE(TRACE_DEBUG, "[%p] S > [%" PRId64 "/%" PRIu64 ":%s]", client, t, left, buf);
+		TRACE(TRACE_DEBUG, "[%p] S > [%" PRId64 "/%" PRIu64 ":%s]", client, t, left, s);
 
 		client->bytes_tx += t;	// Update our byte counter
 		client->write_buffer_offset += t;
