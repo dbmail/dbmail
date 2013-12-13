@@ -2,11 +2,14 @@ CAPABILITY
 AUTHENTICATE "PLAIN" "cHJveHkAdGVzdHVzZXIxAHRlc3Q="
 HAVESPACE "myscript" 999999
 HAVESPACE "myscript" 1000
-PUTSCRIPT "myscript" {94+}
+PUTSCRIPT "myscript" {163+}
 require ["fileinto"];
 
 if envelope :contains "to" "tmartin+sent" {
   fileinto "INBOX.sent";
+}
+if header :contains ["Subject"] ["test","ć"] {
+   fileinto "test";
 }
 LISTSCRIPTS
 SETACTIVE "myscript"
