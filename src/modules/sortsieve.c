@@ -522,9 +522,11 @@ int sort_getscript(sieve2_context_t *s, void *my)
 
 int sort_getheader(sieve2_context_t *s, void *my)
 {
+#define HEADER_REPEAT 10
+#define HEADER_WIDTH 1024
 	struct sort_context *m = (struct sort_context *)my;
 	char *header;
-	char **bodylist;
+	char bodylist[HEADER_REPEAT][HEADER_WIDTH];
 	GList *headers;
 	unsigned i;
 
@@ -532,10 +534,14 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	
 	headers = dbmail_message_get_header_repeated(m->message, header);
 	
-	bodylist = g_new0(char *,g_list_length(headers)+1);
+	memset(bodylist, 0, sizeof(bodylist));
+
 	i = 0;
-	while (headers) {
-		bodylist[i++] = (char *)headers->data;
+	while (headers && i < HEADER_REPEAT) {
+		char *decoded = dbmail_iconv_decode_text((char *)headers->data);
+		strncpy(bodylist[i++], decoded, HEADER_WIDTH-1);
+		g_free(decoded);
+
 		if (! g_list_next(headers))
 			break;
 		headers = g_list_next(headers);
@@ -550,7 +556,7 @@ int sort_getheader(sieve2_context_t *s, void *my)
 			header, bodylist[i]);
 	}
 
-	sieve2_setvalue_stringlist(s, "body", bodylist);
+	sieve2_setvalue_stringlist(s, "body", (char ** const)bodylist);
 
 	return SIEVE2_OK;
 }
