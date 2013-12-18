@@ -1686,7 +1686,7 @@ int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 			// change from login_timeout to main timeout
 			assert(self->ci);
 			TRACE(TRACE_DEBUG,"[%p] set timeout to [%d]", self, server_conf->timeout);
-			self->ci->timeout->tv_sec = server_conf->timeout; 
+			self->ci->timeout.tv_sec = server_conf->timeout; 
 			Capa_remove(self->capa, "AUTH=login");
 			Capa_remove(self->capa, "AUTH=CRAM-MD5");
 

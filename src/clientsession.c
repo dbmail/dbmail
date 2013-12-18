@@ -243,14 +243,14 @@ void client_session_read(void *arg)
 
 void client_session_set_timeout(ClientSession_T *session, int timeout)
 {
-	if (session && session->ci && session->ci->timeout) {
-		int current = session->ci->timeout->tv_sec;
+	if (session && session->ci) {
+		int current = session->ci->timeout.tv_sec;
 		if (timeout != current)
-			session->ci->timeout->tv_sec = timeout;
+			session->ci->timeout.tv_sec = timeout;
 	}
 }
 
-void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
+void socket_read_cb(int fd UNUSED, short what, void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
 	if (what == EV_READ)
@@ -259,12 +259,17 @@ void socket_read_cb(int fd UNUSED, short what UNUSED, void *arg)
 		session->ci->cb_time(session);
 }
 
-void socket_write_cb(int fd UNUSED, short what UNUSED, void *arg)
+void socket_write_cb(int fd UNUSED, short what, void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
 
 	if (! session->ci->cb_write)
 		return;
+
+	if (what == EV_TIMEOUT && session->ci->cb_time) {
+		session->ci->cb_time(session);
+		return;
+	}
 
 	session->ci->cb_write(session);
 

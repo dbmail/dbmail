@@ -281,9 +281,9 @@ static void imap_session_reset(ImapSession *session)
 	PUNLOCK(session->lock);
 
 	if (current == CLIENTSTATE_AUTHENTICATED)
-		session->ci->timeout->tv_sec = server_conf->timeout; 
+		session->ci->timeout.tv_sec = server_conf->timeout; 
 	else
-		session->ci->timeout->tv_sec = server_conf->login_timeout; 
+		session->ci->timeout.tv_sec = server_conf->login_timeout; 
 
 	ci_uncork(session->ci);
 	
@@ -576,7 +576,7 @@ void imap_handle_input(ImapSession *session)
 static void reset_callbacks(ImapSession *session)
 {
 	session->ci->cb_time = imap_cb_time;
-	session->ci->timeout->tv_sec = server_conf->login_timeout;
+	session->ci->timeout.tv_sec = server_conf->login_timeout;
 
 	UNBLOCK(session->ci->rx);
 	UNBLOCK(session->ci->tx);

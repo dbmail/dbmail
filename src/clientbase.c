@@ -134,7 +134,6 @@ ClientBase_T * client_init(client_sock *c)
 
 	client           = mempool_pop(pool, sizeof(ClientBase_T));
 	client->pool     = pool;
-	client->timeout  = mempool_pop(pool, sizeof(struct timeval));
 	client->sock     = c;
 	client->cb_error = client_error_cb;
 
@@ -145,20 +144,21 @@ ClientBase_T * client_init(client_sock *c)
 	client->bytes_tx = 0;
 
 	/* make streams */
-	if (c->caddr == NULL) {
+	if (c->caddr_len == 0) {
 		client->rx		= STDIN_FILENO;
 		client->tx		= STDOUT_FILENO;
 	} else {
 		/* server-side */
-		if ((serr = getnameinfo(c->saddr, c->saddr_len, client->dst_ip, NI_MAXHOST, client->dst_port, NI_MAXSERV, 
-						NI_NUMERICHOST | NI_NUMERICSERV))) {
+		if ((serr = getnameinfo(&c->saddr, c->saddr_len, client->dst_ip, 
+						NI_MAXHOST, client->dst_port, 
+						NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV))) {
 			TRACE(TRACE_INFO, "getnameinfo::error [%s]", gai_strerror(serr));
 		}
 
 		/* client-side */
 		if (server_conf->resolveIP) {
-			if ((serr = getnameinfo(c->caddr, c->caddr_len, client->clientname, NI_MAXHOST-1, NULL, 0,
-						       	NI_NAMEREQD))) {
+			if ((serr = getnameinfo(&c->caddr, c->caddr_len, client->clientname,
+						       	NI_MAXHOST-1, NULL, 0, NI_NAMEREQD))) {
 				TRACE(TRACE_INFO, "getnameinfo:error [%s]", gai_strerror(serr));
 			} 
 
@@ -168,8 +168,9 @@ ClientBase_T * client_init(client_sock *c)
 					client->clientname[0] ? client->clientname : "Lookup failed");
 		} else {
 
-			if ((serr = getnameinfo(c->caddr, c->caddr_len, client->src_ip, NI_MAXHOST, client->src_port,
-						       	NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV))) {
+			if ((serr = getnameinfo(&c->caddr, c->caddr_len, client->src_ip,
+						       	NI_MAXHOST-1, client->src_port,
+						       	NI_MAXSERV-1, NI_NUMERICHOST | NI_NUMERICSERV))) {
 				TRACE(TRACE_INFO, "getnameinfo:error [%s]", gai_strerror(serr));
 			} 
 
@@ -196,15 +197,15 @@ ClientBase_T * client_init(client_sock *c)
 
 void ci_cork(ClientBase_T *s)
 {
-	TRACE(TRACE_DEBUG,"[%p]", s);
+	TRACE(TRACE_DEBUG,"[%p] [%d] [%d]", s, s->rx, s->tx);
 	if (s->rev) event_del(s->rev);
 	if (s->wev) event_del(s->wev);
 }
 
 void ci_uncork(ClientBase_T *s)
 {
-	TRACE(TRACE_DEBUG,"[%p]", s);
 	int state;
+	TRACE(TRACE_DEBUG,"[%p] [%d] [%d], [%d]", s, s->rx, s->tx, s->timeout.tv_sec);
 
 	PLOCK(s->lock);
 	state = s->client_state;
@@ -214,7 +215,7 @@ void ci_uncork(ClientBase_T *s)
 		return;
 
 	if (! (state & CLIENT_EOF))
-		event_add(s->rev, s->timeout);
+		event_add(s->rev, &s->timeout);
 	event_add(s->wev, NULL);
 }
 
@@ -591,15 +592,6 @@ void ci_close(ClientBase_T *client)
 	pthread_mutex_destroy(&client->lock);
 
 	Mempool_T pool = client->pool;
-	mempool_push(pool, client->timeout, sizeof(struct timeval));
-	client->timeout = NULL;
-
-	mempool_push(pool, client->sock->caddr, sizeof(struct sockaddr_storage));
-	client->sock->caddr = NULL;
-
-	mempool_push(pool, client->sock->saddr, sizeof(struct sockaddr_storage));
-	client->sock->saddr = NULL;
-
 	mempool_push(pool, client->sock, sizeof(client_sock));
 	client->sock = NULL;
 

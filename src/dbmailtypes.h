@@ -278,9 +278,9 @@ typedef struct  {
 	int sock;
 	SSL *ssl;                       /* SSL/TLS context for this client */
 	gboolean ssl_state;		/* SSL_accept done or not */
-	struct sockaddr *caddr;
+	struct sockaddr caddr;
 	socklen_t caddr_len;
-	struct sockaddr *saddr;
+	struct sockaddr saddr;
 	socklen_t saddr_len;
 	void (*cb_close) (void *);	/* termination callback */
 } client_sock;
@@ -322,7 +322,7 @@ typedef struct {
 	char dst_ip[NI_MAXHOST+1];	/* server IP-number */
 	char dst_port[NI_MAXSERV+1];      /* server port number */
 
-	struct timeval *timeout;	/**< timeout on socket */
+	struct timeval timeout;		/**< timeout on socket */
 
 	int service_before_smtp;
 

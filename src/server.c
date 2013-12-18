@@ -561,8 +561,9 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 	Mempool_T pool;
 	client_sock *c;
 	int csock;
-	struct sockaddr *caddr;
-	struct sockaddr *saddr;
+	struct sockaddr caddr;
+	struct sockaddr saddr;
+	socklen_t len;
 	struct event *ev = (struct event *)arg;
 
 #ifdef DEBUG
@@ -574,7 +575,6 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 			arg, ssl?"Y":"N");
 #endif
 	/* accept the active fd */
-	int len = sizeof(*caddr);
 
 	if (mainReload) {
 		config_read(configFile);
@@ -602,11 +602,10 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 	c = mempool_pop(pool, sizeof(client_sock));
 	c->pool = pool;
 	c->sock = csock;
-        caddr = mempool_pop(c->pool, sizeof(struct sockaddr_storage));
-	if (getpeername(c->sock, caddr, (socklen_t *)&len) < 0) {
+	len = sizeof(struct sockaddr);
+	if (getpeername(c->sock, &c->caddr, &len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_INFO, "getpeername::error [%s]", strerror(serr));
-		mempool_push(pool, caddr, sizeof(struct sockaddr_storage));
 		mempool_push(pool, c, sizeof(client_sock));
 		mempool_close(&pool);
 		close(csock);
@@ -614,12 +613,9 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 		return;
 	}
 
-        saddr = mempool_pop(c->pool, sizeof(struct sockaddr_storage));
-	if (getsockname(c->sock, saddr, (socklen_t *)&len) < 0) {
+	if (getsockname(c->sock, &c->saddr, &len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_EMERG, "getsockname::error [%s]", strerror(serr));
-		mempool_push(pool, caddr, sizeof(struct sockaddr_storage));
-		mempool_push(pool, saddr, sizeof(struct sockaddr_storage));
 		mempool_push(pool, c, sizeof(client_sock));
 		mempool_close(&pool);
 		close(csock);
@@ -627,10 +623,7 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 		return; // fatal 
 	}
 
-	c->caddr = caddr;
 	c->caddr_len = len;
-
-	c->saddr = saddr;
 	c->saddr_len = len;
 	
 	if (ssl) c->ssl_state = -1; // defer tls setup
