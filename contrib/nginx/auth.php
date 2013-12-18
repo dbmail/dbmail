@@ -71,7 +71,7 @@ $DBMAIL['POP3'] = 10110;
  *
  * $DBMAIL['HOST'] = array('10.1.1.1', '10.1.1.2');
  */
-$DBMAIL['HOST'] = array('localhost');
+$DBMAIL['HOST'] = array('127.0.0.1');
  
 /*
  * 
