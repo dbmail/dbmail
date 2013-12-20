@@ -532,14 +532,18 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	bodylist = g_new0(char *,g_list_length(headers)+1);
 	i = 0;
 	while (headers) {
-		bodylist[i++] = (char *)headers->data;
+		char *decoded = dbmail_iconv_decode_text((char *)headers->data);
+		bodylist[i++] = decoded;
+		/* queue the decoded value for freeing later on */
+		m->freelist = g_list_prepend(m->freelist, decoded);
+
 		if (! g_list_next(headers))
 			break;
 		headers = g_list_next(headers);
 	}
 	g_list_free(g_list_first(headers));
 
-	/* We have to free the header array, but not its contents. */
+	/* We have to free the header array. */
 	m->freelist = g_list_prepend(m->freelist, bodylist);
 
 	for (i = 0; bodylist[i] != NULL; i++) {
