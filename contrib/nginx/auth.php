@@ -52,6 +52,19 @@
  *
  */
 
+/* If you want to support APOP authentication
+ * this script will need to be able to retrieve 
+ * the plain-text password from the database
+ */
+
+// database connection parameters
+define("DBTYPE", "postgresql");
+//define("DBTYPE", "mysql");
+define("DBHOST", "127.0.0.1");
+define("DBNAME", "dbmail");
+define("DBUSER", "dbmail");
+define("DBPASS", "dbmail");
+
 // the port your DBMail IMAP server listens on 
 $DBMAIL['IMAP'] = 10143;
 
@@ -83,13 +96,6 @@ $DBMAIL['HOST'] = array('127.0.0.1');
 if (!isset($_SERVER["HTTP_AUTH_USER"] ) || !isset($_SERVER["HTTP_AUTH_PASS"] )){
 	fail("invalid request");
 }
-$username=$_SERVER["HTTP_AUTH_USER"] ;
-$userpass=$_SERVER["HTTP_AUTH_PASS"] ;
-$protocol=$_SERVER["HTTP_AUTH_PROTOCOL"] ;
- 
-get_mailserver($DBMAIL, $protocol, $username, $userpass);
-
-// END
 
 function fail($msg=''){
 	header("Auth-Status: Invalid login or password");
@@ -103,10 +109,78 @@ function pass($server,$port){
 	header("Auth-Status: OK");
 	header("Auth-Server: $server");
 	header("Auth-Port: $port");
-	exit;
 } 
 
-function get_mailserver($config, $protocol, $username, $userpass)
+function get_password($username) 
+{
+	# APOP needs access to the plain text passwords in the database.
+	#
+	#
+	#
+	# POSTGRESQL
+	if (DBTYPE=="postgresql") {
+		$conn = pg_connect(sprintf("dbname=%s host=%s user=%s password=%s",
+			DBNAME, DBHOST, DBUSER, DBPASS));
+		if (! $conn)
+			fail();
+
+		$result = pg_prepare($conn, "clearpw", 'SELECT passwd FROM dbmail_users WHERE userid = $1');
+		$result = pg_execute($conn, "clearpw", array($username));
+		if (! $result)
+			fail();
+		$row = pg_fetch_row($result);
+		if (! $row)
+			fail();
+		return $row[0];
+	}
+
+	# MySQLi
+	if (DBTYPE=="mysql") {
+		$conn = new mysqli(DBHOST, DBUSER, DBPASS, DBNAME);
+		if ($conn->connect_errno)
+			fail();
+
+		$stmt = $conn->prepare('SELECT passwd FROM dbmail_users WHERE userid = ?');
+		if (! $stmt)
+			fail();
+		$stmt->bind_param('s', $username);
+		$stmt->execute();
+		$stmt->bind_result($password);
+		$stmt->fetch();
+		$stmt->close();
+		return $password;
+	}
+}
+
+function verify_hash($password, $hash, $salt) 
+{
+	$md5 = md5($salt . $password);
+	return ($md5 == $hash);
+}
+
+
+$protocol=$_SERVER["HTTP_AUTH_PROTOCOL"] ;
+if ($_SERVER["HTTP_AUTH_METHOD"] == "apop") {
+	$username = $_SERVER["HTTP_AUTH_USER"];
+	$userpass = get_password($username);
+	if ($userpass) {
+		$hash = $_SERVER["HTTP_AUTH_PASS"];
+		$salt = $_SERVER["HTTP_AUTH_SALT"];
+		if (verify_hash($userpass, $hash, $salt)) {
+			get_mailserver($DBMAIL, $protocol);
+			header("Auth-Pass: $userpass");
+		} else {
+			fail();
+		}
+	} else {
+		fail();
+	}
+} else {
+	get_mailserver($DBMAIL, $protocol);
+}
+
+
+function get_mailserver($config, $protocol)
 {
 	// default backend port
 	$port=$config['POP3'];
@@ -137,12 +211,9 @@ function get_mailserver($config, $protocol, $username, $userpass)
 	} else {
 		fail("config invalid");
 	}
-
-	$uri = sprintf("{%s:%d/notls/novalidate-cert/readonly/%s}INBOX", $host, $port, $protocol);
-	if (! ($resource = imap_open($uri, $username, $userpass)))
-		fail("imap_open failed: $uri");
-	imap_close($resource);
 	pass($host, $port);
 }
+
+// END
 
 ?>
