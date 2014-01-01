@@ -209,7 +209,7 @@ void imap_cb_read(void *arg)
 	uint64_t have = p_string_len(session->ci->read_buffer);
 	uint64_t need = session->ci->rbuff_size;
 
-	int enough = (need>0?(have >= need):(have > 0));
+	int enough = (need>0?(have >= need):(have >= 0));
 	int state = session->ci->client_state;
 
 	TRACE(TRACE_DEBUG,"state [%d] enough %d: %" PRIu64 "/%" PRIu64 "", state, enough, have, need);
