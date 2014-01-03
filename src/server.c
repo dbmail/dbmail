@@ -502,11 +502,9 @@ static void server_close_sockets(ServerConfig_T *conf)
 			if (conf->ssl_listenSockets[i] > 0)
 				close(conf->ssl_listenSockets[i]);
 		conf->ssl_socketcount=0;
+
 		if (strlen(conf->socket))
 			unlink(conf->socket);
-
-		mempool_push(small_pool, conf->listenSockets, sizeof(int) * MAXSOCKETS);
-		mempool_push(small_pool, conf->ssl_listenSockets, sizeof(int) * MAXSOCKETS);
 	}
 }
 
@@ -561,8 +559,6 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 	Mempool_T pool;
 	client_sock *c;
 	int csock;
-	struct sockaddr caddr;
-	struct sockaddr saddr;
 	socklen_t len;
 	struct event *ev = (struct event *)arg;
 
@@ -769,12 +765,12 @@ int server_run(ServerConfig_T *conf)
  	TRACE(TRACE_NOTICE, "starting main service loop for [%s]", conf->service_name);
 
 	server_conf = conf;
-	if (db_connect() != 0) {
+	if (db_connect()) {
 		TRACE(TRACE_ERR, "could not connect to database");
 		return -1;
 	}
 
-	if (auth_connect() != 0) {
+	if (auth_connect()) {
 		TRACE(TRACE_ERR, "could not connect to authentication");
 		return -1;
 	}
@@ -791,7 +787,8 @@ int server_run(ServerConfig_T *conf)
 #endif
 	evbase = event_base_new();
 
-	if (server_setup(conf)) return -1;
+	if (server_setup(conf))
+		return -1;
 
 	if (strlen(conf->port)) {
 
@@ -877,8 +874,10 @@ static void server_config_free(ServerConfig_T * config)
 	assert(config);
 
 	g_strfreev(config->iplist);
-	mempool_push(small_pool, config->listenSockets, sizeof(int) * MAXSOCKETS);
-	mempool_push(small_pool, config->ssl_listenSockets, sizeof(int) * MAXSOCKETS);
+	if (small_pool) {
+		mempool_push(small_pool, config->listenSockets, sizeof(int) * MAXSOCKETS);
+		mempool_push(small_pool, config->ssl_listenSockets, sizeof(int) * MAXSOCKETS);
+	}
 
 	config->listenSockets = NULL;
 	config->ssl = FALSE;
