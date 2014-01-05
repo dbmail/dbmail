@@ -268,8 +268,6 @@ void pop3_cb_write(void *arg)
 void pop3_cb_time(void * arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	session->state = CLIENTSTATE_QUIT;
-
 	ci_write(session->ci, "-ERR I'm leaving, you're too slow\r\n");
 	client_session_bailout(&session);
 }

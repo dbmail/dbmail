@@ -79,8 +79,8 @@ void send_greeting(ClientSession_T *session)
 static void lmtp_cb_time(void *arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	session->state = CLIENTSTATE_QUIT;
 	ci_write(session->ci, "221 Connection timeout BYE\r\n");
+	client_session_bailout(&session);
 }
 		
 static void lmtp_handle_input(void *arg)
