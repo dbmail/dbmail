@@ -115,8 +115,8 @@ static void tims_handle_input(void *arg)
 void tims_cb_time(void * arg)
 {
 	ClientSession_T *session = (ClientSession_T *)arg;
-	session->state = CLIENTSTATE_QUIT;
 	ci_write(session->ci, "BYE \"Connection timed out.\"\r\n");
+	client_session_bailout(&session);
 }
 
 void tims_cb_write(void *arg)
