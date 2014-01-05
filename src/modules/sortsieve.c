@@ -831,7 +831,7 @@ const char * sort_listextensions(void)
 
 	/* So we'll make our own copy. */
 	if (extensions)
-		extensions = g_strdup(extensions);
+		extensions = g_strstrip(g_strdup(extensions));
 
 	/* If this fails, then we don't care about the
 	 * memory leak, because the program has to bomb out.
