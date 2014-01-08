@@ -21,6 +21,17 @@ char *simple = "From nobody Wed Sep 14 16:47:48 2005\n"
 	"    this is a test message\n"
 	"\n";
 
+char *simple_broken_envelope = " May 28 18:10:18 2010\n"
+	"X-Foo: bar\n"
+	"Message-Id: <1199706209l.3020l.0l@(none)>\n"
+	"Subject: dbmail test message\n"
+	"MIME-Version: 1.0\n"
+	"\n"
+	"\n"
+	"    this is a test message\n"
+	"\n";
+
+
 char *simple_with_from = "From nobody@pacific.net.sg Tue Dec 04 19:52:17 2007\n"
 	"X-Envelope-From: <nobody@pacific.net.sg>\n"
 	"Received: from [127.0.0.1] (port=49353 helo=test11)\n"
@@ -39,6 +50,7 @@ char *simple_with_from = "From nobody@pacific.net.sg Tue Dec 04 19:52:17 2007\n"
 	"From what I know, this line gets truncated\n"
 	"This line gets truncated\n"
 	"This other line get truncated too\n";
+
 
 char *simple_groups = "From user@domain  Fri Feb 22 17:06:23 2008\n"
 	"Date: Thu, 15 Feb 2007 01:02:03 +0200\n"
