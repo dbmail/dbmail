@@ -766,21 +766,29 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 
 	assert(self->content == NULL);
 
+	memset(from, 0, sizeof(from));
+
+	if ((strncmp(str, "From ", 5) == 0) || (strncmp(str, " ", 1) == 0)) {
+		/* don't use gmime's from scanner since body lines may begin with 'From ' */
+		char *end;
+		if ((end = g_strstr_len(str, FROMLINE, "\n"))) {
+			g_strlcpy(from, str, FROMLINE);
+			TRACE(TRACE_DEBUG, "From_ [%s]", from);
+
+			// skip broken first line if it starts with a ' '
+			// we will still try to decode the contents to a date
+			if (strncmp(str, " ", 1) == 0) {
+				str = end+1;
+			}
+		}
+	}
+
 	self->stream = g_mime_stream_mem_new();
 	g_mime_stream_write(self->stream, str, buflen);
 	g_mime_stream_reset(self->stream);
 
 	parser = g_mime_parser_new_with_stream(self->stream);
 
-	memset(from, 0, sizeof(from));
-	if (strncmp(str, "From ", 5) == 0) {
-		/* don't use gmime's from scanner since body lines may begin with 'From ' */
-		char *end;
-		if ((end = g_strstr_len(str, FROMLINE, "\n"))) {
-			g_strlcpy(from, str, FROMLINE);
-			TRACE(TRACE_DEBUG, "From_ [%s]", from);
-		}
-	}
 
 	content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 	if (content) {

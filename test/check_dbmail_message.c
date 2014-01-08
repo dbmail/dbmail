@@ -462,6 +462,7 @@ START_TEST(test_dbmail_message_get_internal_date)
 	const char *expect = "2005-09-14 16:47:48";
 	const char *expect03 = "2003-09-14 16:47:48";
 	const char *expect75 = "1975-09-14 16:47:48";
+	const char *expect10 = "2010-05-28 18:10:18";
 	char *result;
 
 	/* baseline */
@@ -490,7 +491,18 @@ START_TEST(test_dbmail_message_get_internal_date)
 	g_free(result);
 
 	dbmail_message_free(m);
-	
+
+	// test work-around for broken envelope header
+	m = dbmail_message_new(NULL);
+	m = dbmail_message_init_with_string(m, simple_broken_envelope);
+	char *before = dbmail_message_to_string(m);
+	char *after = store_and_retrieve(m);
+	result = dbmail_message_get_internal_date(m, 0);
+
+	fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
+	COMPARE(before, after);
+	g_free(before);
+	g_free(after);
 }
 END_TEST
 
