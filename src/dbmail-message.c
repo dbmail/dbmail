@@ -1361,8 +1361,8 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 	char *value;
 	char datefield[32];
 	char sortfield[CACHE_WIDTH];
-	uint64_t headervalue_id;
-	uint64_t headername_id;
+	uint64_t headervalue_id = 0;
+	uint64_t headername_id = 0;
 
 	value = g_mime_utils_header_format_date(
 			self->internal_date, 
@@ -1378,7 +1378,8 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 	strftime(datefield, sizeof(datefield)-1, "%Y-%m-%d", gmtime(&date));
 
 	_header_name_get_id(self, "Date", &headername_id);
-	_header_value_get_id(value, sortfield, datefield, &headervalue_id);
+	if (headername_id)
+		_header_value_get_id(value, sortfield, datefield, &headervalue_id);
 
 	if (headervalue_id && headername_id)
 		_header_insert(self->id, headername_id, headervalue_id);
@@ -1451,6 +1452,8 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 	gpointer cacheid;
 	gchar *case_header, *safe_header, *frag;
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
+	Field_T config;
+	volatile bool cache_readonly = false;
 	volatile int t = FALSE;
 
 	// rfc822 headernames are case-insensitive
@@ -1459,6 +1462,13 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 		*id = *(uint64_t *)cacheid;
 		g_free(safe_header);
 		return 1;
+	}
+
+	config_get_value("header_cache_readonly", "DBMAIL", config);
+	if (strlen(config)) {
+		if (SMATCH(config, "true") || SMATCH(config, "yes")) {
+			cache_readonly = true;
+		}
 	}
 
 	case_header = g_strdup_printf(db_get_sql(SQL_STRCASE),"headername");
@@ -1475,6 +1485,9 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 
 		if (db_result_next(r)) {
 			*tmp = db_result_get_u64(r,0);
+		} else if (cache_readonly) {
+			*tmp = 0;
+			TRACE(TRACE_DEBUG, "skip: [%s] since headername table is readonly", safe_header);
 		} else {
 			db_con_clear(c);
 
@@ -1690,7 +1703,7 @@ static GString * _header_addresses(InternetAddressList *ialist)
 
 static void _header_cache(const char *header, const char *raw, gpointer user_data)
 {
-	uint64_t headername_id;
+	uint64_t headername_id = 0;
 	uint64_t headervalue_id;
 	DbmailMessage *self = (DbmailMessage *)user_data;
 	time_t date;
@@ -1711,6 +1724,8 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	TRACE(TRACE_DEBUG,"headername [%s]", header);
 
 	if ((_header_name_get_id(self, header, &headername_id) < 0))
+		return;
+	if (! headername_id)
 		return;
 
 	if (g_ascii_strcasecmp(header,"From")==0)
