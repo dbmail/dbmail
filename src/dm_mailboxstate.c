@@ -730,8 +730,8 @@ static void state_load_metadata(T M, Connection_T c)
 	db_getmailbox_keywords(M, c);
 	db_getmailbox_info(M, c);
 
-	TRACE(TRACE_DEBUG, "[%s] exists [%d] recent [%d]", 
-			p_string_str(M->name), M->exists, M->recent);
+	TRACE(TRACE_DEBUG, "[%" PRIu64 "] exists [%d] recent [%d]", 
+			M->id, M->exists, M->recent);
 }
 
 int MailboxState_count(T M)
