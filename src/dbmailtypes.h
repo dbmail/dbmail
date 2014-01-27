@@ -396,7 +396,7 @@ typedef struct {
 	gboolean ssl;
 	int backlog;
 	int resolveIP;
-	struct evhttp *evh;		// http server
+	struct evhttp **evhs;           // http server sockets list
 	Field_T service_name;
         Field_T process_name;
 	Field_T serverUser;

@@ -489,10 +489,13 @@ static void create_inet_socket(ServerConfig_T *conf, int i, gboolean ssl)
 
 static void server_close_sockets(ServerConfig_T *conf)
 {
-	if (conf->evh) {
-		evhttp_free(conf->evh);
+	int i;
+	if (conf->evhs) {
+		for (i = 0; i < server_conf->ipcount; i++) {
+			evhttp_free(conf->evhs[i]);
+		}
+		g_free(conf->evhs);
 	} else {
-		int i;
 		for (i = 0; i < conf->socketcount; i++)
 			if (conf->listenSockets[i] > 0)
 				close(conf->listenSockets[i]);
@@ -793,20 +796,26 @@ int server_run(ServerConfig_T *conf)
 	if (strlen(conf->port)) {
 
 		if (MATCH(conf->service_name, "HTTP")) {
-			// FIXME: 
 			int port = atoi(conf->port);
 			if (! port) {
 				TRACE(TRACE_ERR, "Failed to convert port spec [%s]", conf->port);
 			} else {
+				gboolean http_started = FALSE;
+				conf->evhs = g_new0(struct evhttp *, server_conf->ipcount);
 				for (i = 0; i < server_conf->ipcount; i++) {
 					TRACE(TRACE_DEBUG, "starting HTTP service [%s:%d]", conf->iplist[i], port);
-					if (! (conf->evh = evhttp_start(conf->iplist[i], port))) {
+					conf->evhs[i] = evhttp_new(evbase);
+					if (evhttp_bind_socket(conf->evhs[i], conf->iplist[i], port)) {
 						int serr = errno;
 						TRACE(TRACE_EMERG, "[%s]", strerror(serr));
-						return -1;
+					} else {
+						TRACE(TRACE_DEBUG, "started HTTP service [%p]", conf->evhs[i]);
+						evhttp_set_gencb(conf->evhs[i], Request_cb, NULL);
+						http_started = TRUE;
 					}
-					TRACE(TRACE_DEBUG, "started HTTP service [%p]", conf->evh);
-					evhttp_set_gencb(conf->evh, Request_cb, NULL);
+				}
+				if (!http_started) {
+					return -1;
 				}
 			}
 		} else {
