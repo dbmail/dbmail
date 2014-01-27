@@ -59,7 +59,8 @@ MINOR OPTIONS
 -p  pwtype::
   Password type may be one of the following: plaintext, crypt,
   md5-hash, md5-digest, crypt-raw, md5-hash-raw, md5-digest-raw,
-  md5-base64, md5-base64-raw.
+  md5-base64, md5-base64-raw, whirlpool, sha512, sha256, sha1,
+  tiger.
 
 -P  [file]::
   Pull encrypted password from the shadow file
