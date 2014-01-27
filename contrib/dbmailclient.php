@@ -21,7 +21,7 @@ class DBMail
 
 	public function getUsers()
 	{
-		return json_decode($this->curl->get(sprintf("%s/users/", $this->curl->url)), TRUE);
+		return json_decode($this->curl->get(sprintf("%s/users/", $this->curl->url))->body, TRUE);
 	}
 
 	public function getUser($userid)
@@ -87,10 +87,12 @@ class DBMailUser
 	{
 		$url = $this->getUrl($method);
 		$result = $this->curl->get($url);
-		if ($json) 
-			$result = json_decode($result,TRUE);
-		else
-			$result = $result->body;
+		if ($result) {
+			if ($json)
+				$result = json_decode($result->body,TRUE);
+			else
+				$result = $result->body;
+		}
 
 		//if (! $result) print "FAILURE URL:[".$url."]\n";
 		return $result;
@@ -99,11 +101,12 @@ class DBMailUser
 	public function post($vars=array())
 	{
 		$url = $this->getUrl();
-		$result = json_decode($this->curl->post($url, $vars),TRUE);
+		$result = $this->curl->post($url, $vars);
 		if (! $result) {
 			//print "FAILURE URL:[".$url."]\n";
 			return;
 		}
+		$result = json_decode($result->body,TRUE);
 		foreach($result[$this->controller][$this->id] as $key => $value) {
 			$this->$key = $value;
 		}
