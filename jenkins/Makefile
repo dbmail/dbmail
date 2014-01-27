@@ -37,7 +37,9 @@ run-test:
 	#timeout 300 bin/py ../test-scripts/python/loadlmtp.py
 	#timeout 300 bin/py ../test-scripts/python/loadimap.py
 	#timeout 300 bin/py ../test-scripts/python/loadpop.py
+	/usr/bin/phpunit ../contrib/testdbmailclient.php
 	bin/supervisorctl shutdown || true
+
 
 
 .PHONY: test run-test
