@@ -5,7 +5,7 @@ buildout: bin/buildout
 	bin/buildout
 
 bin/buildout: bin/python2.7
-	bin/python ./bootstrap.py -v 2.1.1
+	bin/python ./bootstrap.py
 
 bin/python2.7:
 	virtualenv --python=python2.7 --clear .
