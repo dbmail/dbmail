@@ -926,21 +926,21 @@ extern DBParam_T db_params;
 int test_db_get_subject(uint64_t physid, char **subject)
 {
         Connection_T c; ResultSet_T r;
-        const char *query_result = NULL;
         volatile int t = DM_EGENERAL;
 
         c = db_con_get();
         TRY
-                r = db_query(c, "SELECT subjectfield "
-                                "FROM %ssubjectfield WHERE physmessage_id = %" PRIu64 "",
-                                DBPFX,physid);
-                if (db_result_next(r)) {
-                        query_result = db_result_get(r, 0);
-                        if (query_result && (strlen(query_result) > 0)) {
-                                *subject = g_strdup(query_result);
-                        }
-                }
-                t = DM_SUCCESS;
+		r = db_query(c, "SELECT subjectfield "
+				"FROM %ssubjectfield WHERE physmessage_id = %" PRIu64 "",
+				DBPFX, physid);
+		if (db_result_next(r)) {
+				int l;	
+				const void *blob;
+				blob = db_result_get_blob(r, 0, &l);
+				*subject = g_new0(char, l + 1);
+				strncpy(*subject, blob, l);
+		}
+		t = DM_SUCCESS;
         CATCH(SQLException)
                 LOG_SQLERROR;
         FINALLY
@@ -967,7 +967,8 @@ START_TEST(test_dbmail_message_utf8_headers)
 	s_dec = g_mime_utils_header_decode_phrase(s);
 	test_db_get_subject(physid,&t);
 
-        fail_unless(MATCH(s_dec,t), "utf8 long header failed");
+        fail_unless(MATCH(s_dec,t), "[%" PRIu64 "] utf8 long header failed:\n[%s] !=\n[%s]\n", 
+			physid, s_dec, t);
 
 	dbmail_message_free(m);
 	g_free(s_dec);
@@ -980,7 +981,7 @@ START_TEST(test_dbmail_message_utf8_headers)
 
 	s_dec = g_mime_utils_header_decode_phrase(utf8_invalid_fixed);
 	test_db_get_subject(physid,&t);
-        fail_unless(MATCH(s_dec,t), "utf8 invalid failed");
+        fail_unless(MATCH(s_dec,t), "utf8 invalid failed:\n[%s] !=\n[%s]\n", s_dec, t);
 
 	dbmail_message_free(m);
 }
