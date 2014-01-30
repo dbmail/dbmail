@@ -217,6 +217,8 @@ char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean i
 {
 	char *tmp_raw;
 	char *value;
+	char *bad_char;
+	char *cur_char;
 
 	if ((tmp_raw = dbmail_iconv_str_to_utf8((const char *)in, charset)) == NULL) {
 		TRACE(TRACE_WARNING, "unable to decode headervalue [%s] using charset [%s]", in, charset);
@@ -229,6 +231,12 @@ char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean i
 		value = dbmail_iconv_decode_text(tmp_raw);
 
 	g_free(tmp_raw);
+
+	cur_char = value;
+	while (!g_utf8_validate((const gchar *)cur_char,-1,(const char **)&bad_char)) {
+		*bad_char = '?';
+		cur_char = bad_char+1;
+	}
 
 	return value;
 }

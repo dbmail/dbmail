@@ -758,6 +758,24 @@ char *encoded_message_utf8_2 = "X-Mozilla-Status: 0001\n"
 	"тест\n"
 	"\n";
 
+char *utf8_long_header =
+"Subject: =?UTF-8?B?0J/RgNC40LzQtdGAINC00L7RgdGC0LDRgtC+0YfQvdC+INC00Ls=?=\n"
+" =?UTF-8?B?0LjQvdC90L7Qs9C+INGC0LXQutGB0YLQsCDQsiDQv9C+0LvQtQ==?= Subject\n"
+" =?UTF-8?B?0LIg0LzQvdC+0LPQvtCx0LDQudGC0L7QstGL0YUg0YHQuNC80LLQvtC70LA=?=\n"
+" =?UTF-8?B?0YUgKNC90LDQv9GA0LjQvNC10YAsINC90LDQv9C40YHQsNC90L3Ri9GFINC9?=\n"
+" =?UTF-8?B?0LAg0YDRg9GB0YHQutC+0Lwg0Y/Qt9GL0LrQtSkg0L/RgNC40LLQvtC00Lg=?=\n"
+" =?UTF-8?B?0YIg0Log0YLQvtC80YMsINGH0YLQvg==?= sortfield =?UTF-8?B?0YTQvtGA?=\n"
+" =?UTF-8?B?0LzQuNGA0YPQtdGC0YHRjyDQsdC10Lcg0YPRh9GR0YLQsCDQvNC90L7Qs9C+?=\n"
+" =?UTF-8?B?0LHQsNC50YLQvtCy0YvRhSDRgdC40LzQstC+0LvQvtCyLCDRh9GC0L4g0LIg?=\n"
+" =?UTF-8?B?0YHQstC+0Y4g0L7Rh9C10YDQtdC00Ywg0L/RgNC40LLQvtC00LjRgiDQuiA=?=\n"
+" =?UTF-8?B?0YLQvtC80YMsINGH0YLQviDQsiDRgdGC0YDQvtC60LUg0L/RgNC40YHRg9GC?=\n"
+" =?UTF-8?B?0YHRgtCy0YPQtdGCINGC0L7Qu9GM0LrQviDQvdCw0YfQsNC70L4g0YHQuNC8?=\n"
+" =?UTF-8?B?0LLQvtC70LAuINCa0LDQuiwg0L3QsNC/0YDQuNC80LXRgCwg0LIg0Y3RgtC+?=\n"
+" =?UTF-8?B?0Lkg0YHRgtGA0L7QutC1Lg==?=";
+
+char *utf8_invalid =
+"Subject: =?UTF-8?B?0J/RgNC40LPQu9Cw0YjQsNC10Lwg0L3QsCDRgdC10YDQ?= =?UTF-8?B?INC60L7QvdC10YYg0YHRgtGA0L7QutC4?=";
+
 char *multipart_mixed = "Received: from RAIVO (raivo.kisise [192.168.111.49])\n"
 	"	by test.kisise (Postfix) with ESMTP id 5C4981214C\n"
 	"	for <test@test.kisise>; Thu,  5 Oct 2006 04:18:26 +0300 (EEST)\n"
