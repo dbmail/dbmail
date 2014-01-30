@@ -1639,7 +1639,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	volatile gboolean isaddr = 0, isdate = 0, issubject = 0;
 	const char *charset = dbmail_message_get_charset(self);
 	char datefield[32];
-	char sortfield[CACHE_WIDTH];
+	char sortfield[CACHE_WIDTH*4];
 	char *value = NULL;
 	InternetAddressList *emaillist;
 	InternetAddress *ia;
@@ -1719,7 +1719,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	if(issubject) {
 		char *s, *t = dm_base_subject(value);
 		s = dbmail_iconv_str_to_db(t, charset);
-		g_strlcpy(sortfield, s, CACHE_WIDTH-1);
+		g_utf8_strncpy(sortfield, s, CACHE_WIDTH-1);
 		g_free(s);
 		g_free(t);
 	}
@@ -1738,7 +1738,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	}
 
 	if (sortfield[0] == '\0')
-		g_strlcpy(sortfield, value, CACHE_WIDTH-1);
+		g_utf8_strncpy(sortfield, value, CACHE_WIDTH-1);
 
 	/* Fetch header value id if exists, else insert, and return new id */
 	_header_value_get_id(value, sortfield, datefield, &headervalue_id);
