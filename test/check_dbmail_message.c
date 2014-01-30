@@ -495,11 +495,12 @@ START_TEST(test_dbmail_message_get_internal_date)
 	// test work-around for broken envelope header
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, simple_broken_envelope);
+
+	result = dbmail_message_get_internal_date(m, 0);
+	fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
+
 	char *before = dbmail_message_to_string(m);
 	char *after = store_and_retrieve(m);
-	result = dbmail_message_get_internal_date(m, 0);
-
-	fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
 	COMPARE(before, after);
 	g_free(before);
 	g_free(after);
@@ -912,8 +913,9 @@ START_TEST(test_dbmail_message_utf8_headers)
 {
 	DbmailMessage *m;
 	uint64_t physid = 0;
-	char *s,*s_dec,*t = NULL;
-	char *utf8_invalid_fixed = "=?UTF-8?B?0J/RgNC40LPQu9Cw0YjQsNC10Lwg0L3QsCDRgdC10YA/IA==?= =?UTF-8?B?0LrQvtC90LXRhiDRgdGC0YDQvtC60Lg=?=";
+	const char *s;
+	char *s_dec,*t = NULL;
+	const char *utf8_invalid_fixed = "=?UTF-8?B?0J/RgNC40LPQu9Cw0YjQsNC10Lwg0L3QsCDRgdC10YA/IA==?= =?UTF-8?B?0LrQvtC90LXRhiDRgdGC0YDQvtC60Lg=?=";
 
         m = dbmail_message_new(NULL);
         m = dbmail_message_init_with_string(m,utf8_long_header);
@@ -923,31 +925,23 @@ START_TEST(test_dbmail_message_utf8_headers)
 	s = dbmail_message_get_header(m,"Subject");
 	s_dec = g_mime_utils_header_decode_phrase(s);
 	test_db_get_subject(physid,&t);
-	//printf("Long [%s]\n[%s]\n",s_dec,t);
 
         fail_unless(MATCH(s_dec,t), "utf8 long header failed");
 
-	g_free(s);
+	dbmail_message_free(m);
 	g_free(s_dec);
-	t = NULL;
-	physid = 0;
-
+	//
 
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m,utf8_invalid);
 	dbmail_message_store(m);
 	physid = dbmail_message_get_physid(m);
 
-	s = g_mime_utils_header_decode_phrase(utf8_invalid_fixed);
+	s_dec = g_mime_utils_header_decode_phrase(utf8_invalid_fixed);
 	test_db_get_subject(physid,&t);
-	//printf("Invalid [%s]\n[%s]\n",s,t);
+        fail_unless(MATCH(s_dec,t), "utf8 invalid failed");
 
-        fail_unless(MATCH(s,t), "utf8 invalid failed");
-
-	g_free(s);
-	g_free(s_dec);
-	t = NULL;
-	physid = 0;
+	dbmail_message_free(m);
 }
 END_TEST
 
