@@ -17,7 +17,7 @@ test-postgresql:
 	$(MAKE) run-test
 
 test-mysql:
-	sed -i -e 's,^dburi.*,dburi = mysql://127.0.0.1:3306/dbmail?user=dbmail\&password=dbmail,' ./etc/dbmail.conf
+	sed -i -e 's,^dburi.*,dburi = mysql://127.0.0.1:3306/dbmail?user=dbmail\&password=dbmail\&charset=utf8,' ./etc/dbmail.conf
 	$(MAKE) run-test
 
 run-test:
