@@ -1886,11 +1886,12 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			(uint64_t)max, (uint64_t)self->ci->rbuff_size, s);
 
 	if (self->args[0]) {
-		String_T last_arg = self->args[self->args_idx];
-		if (last_arg && MATCH(p_string_str(last_arg), "*")) {
+		if (MATCH(s, "*")) {
 			/* cancel the authentication exchange */
 			return -1;
-		} else if (MATCH(p_string_str(self->args[0]),"LOGIN")) {
+		}
+
+		if (MATCH(p_string_str(self->args[0]),"LOGIN")) {
 			uint64_t len;
 			char *tmp = dm_base64_decode(s, &len);
 			if (! tmp) {
@@ -1899,10 +1900,10 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			self->args[self->args_idx++] = p_string_new(self->pool, tmp);
 			g_free(tmp);
 
-			if (self->args_idx == 2) {
+			if (self->args_idx == 3) {
 				/* got password */
 				goto finalize;
-			} else if (self->args_idx == 1) {
+			} else if (self->args_idx == 2) {
 				/* got username, ask for password */
 				dbmail_imap_session_prompt(self,"password");
 				return 0;
