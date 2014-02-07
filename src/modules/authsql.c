@@ -265,7 +265,7 @@ int auth_change_password(uint64_t user_idnr, const char *new_pass, const char *e
 	C c; S s; volatile int t = FALSE;
 	const char *encoding = enctype?enctype:"";
 
-	if (strlen(new_pass) >= 128) {
+	if (strlen(new_pass) > 128) {
 		TRACE(TRACE_ERR, "new password length is insane");
 		return -1;
 	}
