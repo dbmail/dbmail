@@ -388,7 +388,8 @@ void ci_read_cb(ClientBase_T *client)
 				if (client->cb_error(client->rx, t, (void *)client))
 					client->client_state |= CLIENT_ERR;
 			}
-			client->client_state |= CLIENT_EOF;
+			if (client->sock->ssl || client->rx) // EOF on stdin is not an error
+				client->client_state |= CLIENT_EOF;
 			break;
 
 		} else if (t > 0) {
