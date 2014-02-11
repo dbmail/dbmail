@@ -36,6 +36,7 @@ typedef struct {
 	int loop;              // IDLE loop counter
 
 	fetch_items *fi;       // FETCH
+	qresync_args qresync; // SELECT ... (QRESYNC ...)
 	search_order order;    // SORT/SEARCH
 
 	DbmailMailbox *mailbox; // currently selected mailbox
@@ -58,6 +59,7 @@ typedef struct {
 	gboolean error; // command result
 	int error_count;
 	ClientState_T state; // session status 
+	ImapEnabled_T enabled; // qresync/condstore enabled
 	Connection_T c; // database-connection;
 } ImapSession;
 
@@ -97,7 +99,7 @@ int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, c
 MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t mailbox_idnr);
 
 int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update);
-int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set);
+int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set, uint64_t *modseq);
 
 int dbmail_imap_session_fetch_get_items(ImapSession *self);
 int dbmail_imap_session_fetch_parse_args(ImapSession * self);

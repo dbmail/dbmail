@@ -183,48 +183,48 @@ struct message {
 **********************************************************************/
 
 enum IMAP_COMMAND_TYPES { 
-	IMAP_COMM_NONE,			// 0
-	IMAP_COMM_CAPABILITY, 		// 1 
-	IMAP_COMM_NOOP, 		// 2
-	IMAP_COMM_LOGOUT,		// 3
-	IMAP_COMM_AUTH, 		// 4
-	IMAP_COMM_LOGIN,		// 5
-	IMAP_COMM_SELECT, 		// 6
-	IMAP_COMM_EXAMINE, 		// 7
-	IMAP_COMM_CREATE,		// 8
-	IMAP_COMM_DELETE, 		// 9
-	IMAP_COMM_RENAME, 		// 10
-	IMAP_COMM_SUBSCRIBE,		// 11
-	IMAP_COMM_UNSUBSCRIBE, 		// 12
-	IMAP_COMM_LIST, 		// 13
-	IMAP_COMM_LSUB,			// 14
-	IMAP_COMM_STATUS, 		// 15
-	IMAP_COMM_APPEND,		// 16
-	IMAP_COMM_CHECK, 		// 17
-	IMAP_COMM_CLOSE, 		// 18
-	IMAP_COMM_EXPUNGE,		// 19
-	IMAP_COMM_SEARCH, 		// 20
-	IMAP_COMM_FETCH, 		// 21
-	IMAP_COMM_STORE,		// 22
-	IMAP_COMM_COPY, 		// 23
-	IMAP_COMM_UID, 			// 24
-	IMAP_COMM_SORT,			// 25
-	IMAP_COMM_GETQUOTAROOT, 	// 26
-	IMAP_COMM_GETQUOTA,		// 27
-	IMAP_COMM_SETACL, 		// 28
-	IMAP_COMM_DELETEACL, 		// 29
-	IMAP_COMM_GETACL,		// 30
-	IMAP_COMM_LISTRIGHTS, 		// 31
-	IMAP_COMM_MYRIGHTS,		// 32
-	IMAP_COMM_NAMESPACE, 		// 33
-	IMAP_COMM_THREAD, 		// 34
-	IMAP_COMM_UNSELECT,		// 35
-	IMAP_COMM_IDLE,			// 36
-	IMAP_COMM_STARTTLS,		// 37
-	IMAP_COMM_ID,			// 38
-	IMAP_COMM_LAST			// 39
+	IMAP_COMM_NONE,                 // 0
+	IMAP_COMM_CAPABILITY,           // 1 
+	IMAP_COMM_NOOP,                 // 2
+	IMAP_COMM_LOGOUT,               // 3
+	IMAP_COMM_AUTH,                 // 4
+	IMAP_COMM_LOGIN,                // 5
+	IMAP_COMM_SELECT,               // 6
+	IMAP_COMM_EXAMINE,              // 7
+	IMAP_COMM_ENABLE,               // 8
+	IMAP_COMM_CREATE,               // 9
+	IMAP_COMM_DELETE,               // 10
+	IMAP_COMM_RENAME,               // 11
+	IMAP_COMM_SUBSCRIBE,            // 12
+	IMAP_COMM_UNSUBSCRIBE,          // 13
+	IMAP_COMM_LIST,                 // 14
+	IMAP_COMM_LSUB,                 // 15
+	IMAP_COMM_STATUS,               // 16
+	IMAP_COMM_APPEND,               // 17
+	IMAP_COMM_CHECK,                // 18
+	IMAP_COMM_CLOSE,                // 19
+	IMAP_COMM_EXPUNGE,              // 20
+	IMAP_COMM_SEARCH,               // 21
+	IMAP_COMM_FETCH,                // 22
+	IMAP_COMM_STORE,                // 23
+	IMAP_COMM_COPY,                 // 24
+	IMAP_COMM_UID,                  // 25
+	IMAP_COMM_SORT,                 // 26
+	IMAP_COMM_GETQUOTAROOT,         // 27
+	IMAP_COMM_GETQUOTA,             // 28
+	IMAP_COMM_SETACL,               // 29
+	IMAP_COMM_DELETEACL,            // 30
+	IMAP_COMM_GETACL,               // 31
+	IMAP_COMM_LISTRIGHTS,           // 32
+	IMAP_COMM_MYRIGHTS,             // 33
+	IMAP_COMM_NAMESPACE,            // 34
+	IMAP_COMM_THREAD,               // 35
+	IMAP_COMM_UNSELECT,             // 36
+	IMAP_COMM_IDLE,                 // 37
+	IMAP_COMM_STARTTLS,             // 38
+	IMAP_COMM_ID,                   // 39
+	IMAP_COMM_LAST                  // 40
 };
-
 
 typedef enum { 
 	CLIENTSTATE_ANY 			= -1,
@@ -237,6 +237,11 @@ typedef enum {
 	CLIENTSTATE_ERROR			= 6,
 	CLIENTSTATE_QUIT_QUEUED			= 7
 } ClientState_T;
+
+typedef struct {
+	unsigned int condstore : 1;
+	unsigned int qresync   : 1;
+} ImapEnabled_T;
 
 enum {
 	IMAP_FLAG_SEEN,
@@ -527,8 +532,20 @@ typedef struct {
 
 	/* condstore */
 	uint64_t changedsince;
+	/* qresync */
+	bool vanished;
+
 	List_T   bodyfetch;
 } fetch_items;
+
+typedef struct {
+	uint64_t uidvalidity;
+	uint64_t modseq;
+	String_T known_uids;
+	String_T known_seqset;
+	String_T known_uidset;
+} qresync_args;
+
 
 /************************************************************************ 
  *                      simple cache mechanism
@@ -544,6 +561,7 @@ typedef struct { // map dbmail_messages
 	uint64_t uid;
 	uint64_t rfcsize;
 	uint64_t seq;
+	int status;
 	char internaldate[IMAP_INTERNALDATE_LEN];
 	int flags[IMAP_NFLAGS];
 	// reference dbmail_keywords

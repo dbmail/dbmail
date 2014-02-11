@@ -44,6 +44,7 @@ typedef struct {
 	gboolean uid; 
 	uint64_t modseq;
 	bool condstore;
+	bool qresync;
 
 	MailboxState_T mbstate;	// cache mailbox metadata;
 

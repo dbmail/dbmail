@@ -1521,47 +1521,6 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 	return s->found;
 }
 
-struct filter_range_helper {  
-        gboolean uid;   
-        uint64_t min;      
-        uint64_t max;      
-        GTree *a;       
-};                      
-                        
-static int filter_range(gpointer key, gpointer value, gpointer data)
-{                       
-	uint64_t *k, *v;   
-	struct filter_range_helper *d = (struct filter_range_helper *)data;
-
-	if (*(uint64_t *)key < d->min) return FALSE; // skip
-	if (*(uint64_t *)key > d->max) return TRUE; // done
-
-	k = mempool_pop(small_pool, sizeof(uint64_t));
-	v = mempool_pop(small_pool, sizeof(uint64_t));
-
-	*k = *(uint64_t *)key;
-	*v = *(uint64_t *)value;
-
-	if (d->uid)     
-		g_tree_insert(d->a, k, v);
-	else            
-		g_tree_insert(d->a, v, k);
-
-	return FALSE;   
-}                       
-
-static void find_range(GTree *c, uint64_t l, uint64_t r, GTree *a, gboolean uid)
-{                       
-	struct filter_range_helper data;
-
-	data.uid = uid; 
-	data.min = l;   
-	data.max = r;   
-	data.a = a;     
-
-	g_tree_foreach(c, (GTraverseFunc)filter_range, &data);
-}
-
 static int checkset(const char *s)
 {
 	int i;
@@ -1585,6 +1544,9 @@ static int filter_modseq(gpointer key, gpointer UNUSED value, gpointer data)
 
 	id = (uint64_t *)key;
 	MessageInfo *info = g_tree_lookup(d->msginfo, id);
+	if (! info)
+		return TRUE;
+
 	if (info->seq <= d->modseq)
 		d->remove = g_list_prepend(d->remove, key);
 	return FALSE;
@@ -1613,18 +1575,13 @@ GTree * find_modseq(DbmailMailbox *self, GTree *in)
 	return in;
 }
 
+
 GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean uid)
 {
-	GList *ids = NULL, *sets = NULL;
-	GString *t;
 	GTree *uids;
-	char *rest;
-	uint64_t l, r, lo = 0, hi = 0, maxmsn = 0;
-	GTree *a, *b, *c;
-	gboolean error = FALSE;
+	GTree *b;
 	
 	TRACE(TRACE_DEBUG, "[%s] uid [%d]", set, uid);
-
 
 	if (! self->mbstate)
 		return NULL;
@@ -1638,133 +1595,8 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	if (! checkset(set)) // invalid chars
 		return NULL;
 
-	maxmsn = MailboxState_getExists(self->mbstate);
-	ids = g_tree_keys(uids);
-	if (ids) {
-		ids = g_list_last(ids);
-		hi = *((uint64_t *)ids->data);
-		ids = g_list_first(ids);
-		lo = *((uint64_t *)ids->data);
-		g_list_free(g_list_first(ids));
-	}
 
-	a = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)uint64_free, (GDestroyNotify)uint64_free);
-	b = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL, (GDestroyNotify)uint64_free, (GDestroyNotify)uint64_free);
-
-	if (! uid) {
-		lo = 1;
-		hi = maxmsn;
-	}
-
-	t = g_string_new(set);
-	
-	sets = g_string_split(t,",");
-	sets = g_list_first(sets);
-	
-	while(sets) {
-		l = 0; r = 0;
-		
-		rest = (char *)sets->data;
-
-		if (strlen(rest) < 1) break;
-
-		if (g_tree_nnodes(uids) == 0) { // empty box
-			if (rest[0] == '*') {
-				uint64_t *k = mempool_pop(small_pool, sizeof(uint64_t));
-				uint64_t *v = mempool_pop(small_pool, sizeof(uint64_t));
-
-				*k = 1;
-				*v = MailboxState_getUidnext(self->mbstate);
-
-				g_tree_insert(b, k, v);
-			} else {
-				if (! (l = dm_strtoull(sets->data, &rest, 10))) {
-					error = TRUE;
-					break;
-				}
-				if (rest[0]) {
-					if (rest[0] != ':') {
-						error = TRUE;
-						break;
-					}
-					rest++;
-					if ((rest[0] != '*') && (! dm_strtoull(rest, NULL, 10))) {
-						error = TRUE;
-						break;
-					}
-				}
-				uint64_t *k = mempool_pop(small_pool, sizeof(uint64_t));
-				uint64_t *v = mempool_pop(small_pool, sizeof(uint64_t));
-
-				*k = 1;
-				*v = MailboxState_getUidnext(self->mbstate);
-
-				g_tree_insert(b, k, v);
-			}
-		} else {
-			if (rest[0] == '*') {
-				l = hi;
-				r = l;
-				if (strlen(rest) > 1)
-					rest++;
-			} else {
-				if (! (l = dm_strtoull(sets->data,&rest,10))) {
-					error = TRUE;
-					break;
-				}
-
-				if (l == 0xffffffff) l = hi; // outlook
-
-				l = max(l,lo);
-				r = l;
-			}
-			
-			if (rest[0]==':') {
-				if (strlen(rest)>1) rest++;
-				if (rest[0] == '*') r = hi;
-				else {
-					if (! (r = dm_strtoull(rest,NULL,10))) {
-						error = TRUE;
-						break;
-					}
-
-					if (r == 0xffffffff) r = hi; // outlook
-				}
-				
-				if (!r) break;
-			}
-		
-			if (! (l && r)) break;
-
-			if (uid)
-				c = MailboxState_getIds(self->mbstate);
-			else
-				c = MailboxState_getMsn(self->mbstate);
-
-			find_range(c, min(l,r), max(l,r), a, uid);
-
-			if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
-				error = TRUE;
-				TRACE(TRACE_ERR, "cannot compare null trees");
-				break;
-			}
-		}
-
-		if (! g_list_next(sets)) break;
-		sets = g_list_next(sets);
-	}
-
-	g_list_destroy(sets);
-	g_string_free(t,TRUE);
-
-	if (a) g_tree_destroy(a);
-
-	if (error) {
-		g_tree_destroy(b);
-		b = NULL;
-		TRACE(TRACE_DEBUG, "return NULL");
-	}
-
+	b = MailboxState_get_set(self->mbstate, set, uid);
 	return find_modseq(self, b);
 }
 

@@ -124,6 +124,8 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	Capa_remove(self->preauth_capa, "UIDPLUS");
 	Capa_remove(self->preauth_capa, "WITHIN");
 	Capa_remove(self->preauth_capa, "CONDSTORE");
+	Capa_remove(self->preauth_capa, "ENABLE");
+	Capa_remove(self->preauth_capa, "QRESYNC");
 
 	if (! (server_conf && server_conf->ssl))
 		Capa_remove(self->preauth_capa, "STARTTLS");
@@ -631,7 +633,13 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 		self->args_idx++;
 	} else if (Capa_match(self->capa, "CONDSTORE") && (MATCH(token, "modseq"))) {
 		self->mailbox->condstore = true;
+	} else if (MATCH(token, "vanished")) {
+		if (self->enabled.qresync && self->use_uid)
+			self->fi->vanished = true;
+		else
+			return -2;
 	}
+
 
 	return 1; //theres more...
 }
@@ -1061,7 +1069,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 	dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH (", *id);
 
-	if (self->mailbox->condstore) {
+	if (self->mailbox->condstore || self->enabled.qresync) {
 		SEND_SPACE;
 		dbmail_imap_session_buff_printf(self, "MODSEQ (%" PRIu64 ")",
 				msginfo->seq?msginfo->seq:1);
@@ -1717,7 +1725,7 @@ static gboolean _do_expunge(uint64_t *id, ImapSession *self)
 	return notify_expunge(self, id);
 }
 
-int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set)
+int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set, uint64_t *modseq)
 {
 	uint64_t mailbox_size;
 	int i;
@@ -1725,7 +1733,7 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set)
 	GTree *uids = NULL;
 	MailboxState_T M = self->mailbox->mbstate;
 
-	if (! (i = g_tree_nnodes(MailboxState_getMsginfo(M))))
+	if (! (i = g_tree_nnodes(MailboxState_getIds(M))))
 		return DM_SUCCESS;
 
 	if (db_get_mailbox_size(self->mailbox->id, 1, &mailbox_size) == DM_EQUERY)
@@ -1735,7 +1743,7 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set)
 		uids = dbmail_mailbox_get_set(self->mailbox, set, self->use_uid);
 		ids = g_tree_keys(uids);
 	} else {
-		ids = g_tree_keys(MailboxState_getMsginfo(M));
+		ids = g_tree_keys(MailboxState_getIds(M));
 	}
 
 	ids = g_list_reverse(ids);
@@ -1753,8 +1761,9 @@ int dbmail_imap_session_mailbox_expunge(ImapSession *self, const char *set)
 	if (uids)
 		g_tree_destroy(uids);
 
-	if (i > g_tree_nnodes(MailboxState_getMsginfo(M))) {
-		db_mailbox_seq_update(self->mailbox->id, 0);
+	*modseq = 0;
+	if (i > g_tree_nnodes(MailboxState_getIds(M))) {
+		*modseq = db_mailbox_seq_update(self->mailbox->id, 0);
 		if (! dm_quota_user_dec(self->userid, mailbox_size))
 			return DM_EQUERY;
 	}

@@ -43,6 +43,7 @@ int _ic_authenticate(ImapSession *self);
 /* auth state commands */
 int _ic_select(ImapSession *self);
 int _ic_examine(ImapSession *self);
+int _ic_enable(ImapSession *);
 int _ic_create(ImapSession *self);
 int _ic_delete(ImapSession *self);
 int _ic_rename(ImapSession *self);

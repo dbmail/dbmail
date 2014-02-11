@@ -620,6 +620,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
+
 	return s;
 }
 

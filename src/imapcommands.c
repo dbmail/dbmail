@@ -88,6 +88,8 @@ struct cmd_t {
 #define SESSION_OK_WITH_RESP_CODE(VALUE) \
 	SESSION_OK_COMMON("[%s] ", VALUE)
 
+static void _fetch_update(ImapSession *self, MessageInfo *msginfo, bool showmodseq, bool showflags);
+
 static int check_state_and_args(ImapSession * self, int minargs, int maxargs, ClientState_T state)
 {
 	int i;
@@ -342,6 +344,12 @@ static int imap_session_mailbox_close(ImapSession *self)
 
 		dbmail_mailbox_free(self->mailbox);
 		self->mailbox = NULL;
+		if (self->enabled.qresync && 
+				((self->command_type == IMAP_COMM_SELECT) || \
+				(self->command_type == IMAP_COMM_EXAMINE))) {
+			dbmail_imap_session_buff_printf(self,
+				       	"* OK [CLOSED]\r\n");
+		}
 	}
 
 	return 0;
@@ -410,17 +418,255 @@ static int imap_session_mailbox_open(ImapSession * self, const char * mailbox)
 	/* build list of recent messages */
 	MailboxState_build_recent(self->mailbox->mbstate);
 
+	self->mailbox->condstore = self->enabled.condstore;
+	self->mailbox->qresync = self->enabled.qresync;
+
 	return 0;
 }
 
+static int validate_arg(const char *arg)
+{
+	/* check for invalid characters */
+	int i;
+	const char valid[] = "0123456789,:";
+	for (i = 0; arg[i]; i++) {
+		if (!strchr(valid, arg[i])) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+static int _ic_select_parse_args(ImapSession *self)
+{
+	int i, idx;
+	int paren = 0;
+	uint64_t uidvalidity = 0;
+	uint64_t modseq = 0;
+	char *endptr;
+	String_T known_uids = NULL;
+	String_T known_seqset = NULL;
+	String_T known_uidset = NULL;
+
+	idx = self->args_idx;
+	while (self->args[idx++])
+		;
+	idx--;
+
+	if (idx == 1)
+		return 0;
+
+	if (idx == 4) {
+		if (Capa_match(self->capa, "CONDSTORE") && \
+				(MATCH(p_string_str(self->args[1]),"(")) && \
+				(MATCH(p_string_str(self->args[2]), "condstore")) && \
+				(MATCH(p_string_str(self->args[3]), ")"))) {
+			self->enabled.condstore = true;
+			return 0;
+		}
+	}
+	for (i = 1; i < idx; i++) {
+		const char *arg = p_string_str(self->args[i]);
+		if (MATCH(arg, "(")) {
+			paren++;
+			continue;
+		}
+		if (MATCH(arg, ")")) {
+			paren--;
+			continue;
+		}
+		switch (i) {
+			case 2:
+				if (! MATCH(arg, "qresync")) {
+					TRACE(TRACE_DEBUG, "unknown argument [%s]", arg);
+					return 1;
+				}
+				break;
+			case 4:
+				if ((uidvalidity = strtoull(arg, &endptr, 10))) {
+					if (*endptr != '\0')
+						return 1;
+					TRACE(TRACE_DEBUG, "uidvalidity [%" PRIu64 "]", uidvalidity);
+				}
+				break;
+			case 5:
+				if ((modseq = strtoull(arg, &endptr, 10))) {
+					if (*endptr != '\0')
+						return 1;
+					TRACE(TRACE_DEBUG, "mod-sequence [%" PRIu64 "]", modseq);
+				}
+				break;
+			case 6:
+				if (validate_arg(arg))
+					return 1;
+				known_uids = self->args[i];
+				break;
+			case 8:
+				if (validate_arg(arg))
+					return 1;
+				known_seqset = self->args[i];
+				break;
+			case 9:
+				if (validate_arg(arg))
+					return 1;
+				known_uidset = self->args[i];
+				break;
+		}
+	}
+
+	if (paren) {
+		TRACE(TRACE_DEBUG, "unbalanced parenthesis");
+		return 1;
+	}
+
+	if (known_seqset && (! known_uidset)) {
+		TRACE(TRACE_DEBUG, "known uidset missing");
+		return 1;
+	}
+
+	if (! (uidvalidity && modseq)) {
+		TRACE(TRACE_DEBUG, "required arguments missing");
+		return 1;
+	}
+
+	self->qresync.uidvalidity = uidvalidity;
+	self->qresync.modseq = modseq;
+	self->qresync.known_uids = known_uids;
+	self->qresync.known_seqset = known_seqset;
+	self->qresync.known_uidset = known_uidset;
+
+	return 0;
+}
+
+static gboolean _do_fetch_updates(uint64_t *id, gpointer UNUSED value, dm_thread_data *D)
+{
+	ImapSession *self = D->session;
+	MessageInfo *msginfo = g_tree_lookup(
+			MailboxState_getMsginfo(self->mailbox->mbstate), id);
+	if (! msginfo)
+		return TRUE;
+	
+	_fetch_update(self, msginfo, true, true);
+
+	return FALSE;
+}
+
+struct expunged_helper {
+	GString *response;
+	GTree *msgs;
+	GTree *expunged;
+	GTree *known_seqset;
+	GTree *known_uidset;
+	qresync_args *qresync;
+	uint64_t start_expunged;
+	uint64_t last_expunged;
+	bool prev_expunged;
+};
+
+static gboolean _get_expunged(uint64_t *id, gpointer UNUSED value, struct expunged_helper *data)
+{
+	MessageInfo *msg = g_tree_lookup(data->msgs, id);
+	bool expunged;
+
+	if (! msg)
+		return TRUE;
+
+	//
+	if (data->known_uidset && data->known_seqset) {
+		uint64_t *msn = NULL, *knownuid = NULL;
+		if ((msn = g_tree_lookup(data->known_uidset, id)))
+			knownuid = g_tree_lookup(data->known_seqset, msn);
+
+		if (((!msn) || (!knownuid)) || (msn && knownuid && (*id != *knownuid))) 
+			return TRUE;
+	}
+
+	if ((msg->seq > data->qresync->modseq) && (msg->status == MESSAGE_STATUS_DELETE)) {
+		g_tree_insert(data->expunged, id, id);
+		expunged = true;
+	} else {
+		expunged = false;
+	}
+
+	if (!expunged) {
+		if (data->prev_expunged && (data->start_expunged < data->last_expunged)) {
+			g_string_append_printf(data->response, ":%" PRIu64, data->last_expunged);
+		}
+		data->prev_expunged = expunged;
+		return FALSE;
+	}
+
+	if (! data->prev_expunged) {
+		if (data->last_expunged) {
+			g_string_append_printf(data->response, ",%" PRIu64, *id);
+		} else {
+			data->start_expunged = *id;
+			g_string_append_printf(data->response, "%" PRIu64, *id);
+		}
+	}
+
+	data->last_expunged = *id;
+	data->prev_expunged = expunged;
+
+	return FALSE;
+}
+
+static GTree *MailboxState_getExpunged(MailboxState_T M, qresync_args *qresync, char **out)
+{
+	struct expunged_helper data;
+
+	data.response = g_string_new("");
+	data.start_expunged = 0;
+	data.last_expunged = 0;
+	data.prev_expunged = false;
+	data.qresync = qresync;
+	data.msgs = MailboxState_getMsginfo(M);
+	data.expunged = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL, NULL, NULL);
+	data.known_seqset = NULL;
+	data.known_uidset = NULL;
+
+	if (qresync->known_seqset && qresync->known_uidset) {
+		data.known_seqset = MailboxState_get_set(
+				M, p_string_str(qresync->known_seqset), FALSE);
+
+		data.known_uidset = MailboxState_get_set(
+				M, p_string_str(qresync->known_uidset), TRUE);
+	}
+
+	g_tree_foreach(data.msgs, (GTraverseFunc) _get_expunged, &data);
+
+	g_tree_destroy(data.known_seqset);
+	g_tree_destroy(data.known_uidset);
+
+	TRACE(TRACE_DEBUG, "vanished [%d] messages", g_tree_nnodes(data.expunged));
+	if (data.prev_expunged && (data.start_expunged < data.last_expunged)) {
+		g_string_append_printf(data.response, ":%" PRIu64, data.last_expunged);
+	}
+	
+	TRACE(TRACE_DEBUG, "vanished (earlier) %s", data.response->str);
+
+	*out = data.response->str;
+
+	g_string_free(data.response, FALSE);
+
+	return data.expunged;
+}
+		
 static void _ic_select_enter(dm_thread_data *D)
 {
 	int err;
-	int idx;
 	char *flags;
 	const char *okarg;
 	MailboxState_T S;
 	SESSION_GET;
+
+	if (_ic_select_parse_args(self)) {
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid parameter\r\n",
+				self->tag);
+		D->status = 1;
+		SESSION_RETURN;
+	}
 
 	/* close the currently opened mailbox */
 	imap_session_mailbox_close(self);
@@ -429,24 +675,7 @@ static void _ic_select_enter(dm_thread_data *D)
 		D->status = err;
 		SESSION_RETURN;
 	}	
-	idx = self->args_idx;
-	while (self->args[idx++])
-		;
 
-	if (idx == 5) {
-		if (Capa_match(self->capa, "CONDSTORE") && \
-				(MATCH(p_string_str(self->args[1]),"(")) && \
-				(MATCH(p_string_str(self->args[2]), "condstore")) && \
-				(MATCH(p_string_str(self->args[3]), ")"))) {
-			self->mailbox->condstore = true;
-		} else {
-			dbmail_imap_session_buff_printf(self, "%s BAD invalid parameter\r\n",
-					self->tag);
-			D->status = 1;
-			SESSION_RETURN;
-		}
-	}
-	
 	dbmail_imap_session_set_state(self,CLIENTSTATE_SELECTED);
 
 	S = self->mailbox->mbstate;
@@ -491,6 +720,40 @@ static void _ic_select_enter(dm_thread_data *D)
 	} else {
 		okarg = "READ-ONLY";
 	}
+	
+	if (self->qresync.uidvalidity == MailboxState_getId(S)) {
+		TRACE(TRACE_DEBUG, "process QRESYNC arguments");
+		GTree *changed;
+		const char *set;
+		gboolean uid = self->use_uid;
+		self->mailbox->modseq = self->qresync.modseq;
+		self->use_uid = TRUE;
+		// report EXPUNGEs
+		char *out = NULL;
+		GTree *vanished = MailboxState_getExpunged(self->mailbox->mbstate, &self->qresync, &out);
+		TRACE(TRACE_DEBUG, "vanished [%u] messages", g_tree_nnodes(vanished));
+		if (g_tree_nnodes(vanished))
+			dbmail_imap_session_buff_printf(self, "* VANISHED (EARLIER) %s\r\n",
+					out);
+		g_free(out);
+		g_tree_destroy(vanished);
+
+		// report FLAG changes
+		if (self->qresync.known_uids) {
+			set = p_string_str(self->qresync.known_uids);
+		} else {
+			set = "1:*";
+		}
+		changed = dbmail_mailbox_get_set(self->mailbox, set, TRUE);
+		TRACE(TRACE_DEBUG, "messages changed since [%" PRIu64 "] [%u]",
+				self->mailbox->modseq, g_tree_nnodes(changed));
+
+		g_tree_foreach(changed, (GTraverseFunc) _do_fetch_updates, D);
+		g_tree_destroy(changed);
+		// done reporting
+		self->use_uid = uid;
+
+	}
 
 	dbmail_imap_session_buff_printf(self, "%s OK [%s] %s completed%s\r\n", 
 			self->tag, 
@@ -503,7 +766,7 @@ static void _ic_select_enter(dm_thread_data *D)
 
 int _ic_select(ImapSession *self) 
 {
-	if (!check_state_and_args(self, 1, 4, CLIENTSTATE_AUTHENTICATED)) return 1;
+	if (!check_state_and_args(self, 1, 0, CLIENTSTATE_AUTHENTICATED)) return 1;
 	dm_thread_data_push((gpointer)self, _ic_select_enter, _ic_cb_leave, NULL);
 	return 0;
 }
@@ -513,6 +776,46 @@ int _ic_examine(ImapSession *self)
 {
 	return _ic_select(self);
 }
+
+
+static void _ic_enable_enter(dm_thread_data *D)
+{
+	String_T capability;
+	SESSION_GET;
+
+	while ((capability = self->args[self->args_idx++])) {
+		const char *s = p_string_str(capability);
+		bool changed = false;
+		if (MATCH(s, "CONDSTORE") || MATCH(s, "QRESYNC")) {
+			if (Capa_match(self->capa, s)) {
+				if (MATCH(s, "CONDSTORE")) {
+					if (! self->enabled.condstore)
+						changed = true;
+					self->enabled.condstore = 1;
+				}
+				if (MATCH(s, "QRESYNC")) {
+					if (! self->enabled.qresync)
+						changed = true;
+					self->enabled.qresync = 1;
+				}
+				if (changed)
+					dbmail_imap_session_buff_printf(self, 
+							"* ENABLED %s\r\n", s);
+			}
+		}
+	}
+
+	SESSION_OK;
+	SESSION_RETURN;
+}
+
+int _ic_enable(ImapSession *self) 
+{
+	if (!check_state_and_args(self, 1, 0, CLIENTSTATE_AUTHENTICATED)) return 1;
+	dm_thread_data_push((gpointer)self, _ic_enable_enter, _ic_cb_leave, NULL);
+	return 0;
+}
+
 
 /*
  * _ic_create()
@@ -1499,6 +1802,7 @@ static void _ic_close_enter(dm_thread_data *D)
 {
 	SESSION_GET;
 	int result = acl_has_right(self->mailbox->mbstate, self->userid, ACL_RIGHT_EXPUNGE);
+	uint64_t modseq = 0;
 	if (result < 0) {
 		dbmail_imap_session_buff_printf(self, "* BYE Internal database error\r\n");
 		D->status=result;
@@ -1507,13 +1811,20 @@ static void _ic_close_enter(dm_thread_data *D)
 	/* only perform the expunge if the user has the right to do it */
 	if (result == 1) {
 		if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE)
-			dbmail_imap_session_mailbox_expunge(self, NULL);
+			dbmail_imap_session_mailbox_expunge(self, NULL, &modseq);
 		imap_session_mailbox_close(self);
 	}
 
 	dbmail_imap_session_set_state(self, CLIENTSTATE_AUTHENTICATED);
 
-	SESSION_OK;
+	if (self->enabled.qresync && modseq) {
+		char *response = g_strdup_printf("HIGHESTMODSEQ %" PRIu64, modseq);
+		SESSION_OK_WITH_RESP_CODE(response);
+		g_free(response);
+	} else {
+		SESSION_OK;
+	}
+
 	SESSION_RETURN;
 }
 	
@@ -1554,6 +1865,7 @@ static void _ic_expunge_enter(dm_thread_data *D)
 {
 	const char *set = NULL;
 	int result;
+	uint64_t modseq = 0;
 	SESSION_GET;
 
 	if ((result = mailbox_check_acl(self, self->mailbox->mbstate, ACL_RIGHT_EXPUNGE))) {
@@ -1564,13 +1876,19 @@ static void _ic_expunge_enter(dm_thread_data *D)
 	if (self->use_uid)
 		set = p_string_str(self->args[self->args_idx]);
 
-	if (dbmail_imap_session_mailbox_expunge(self, set) != DM_SUCCESS) {
+	if (dbmail_imap_session_mailbox_expunge(self, set, &modseq) != DM_SUCCESS) {
 		dbmail_imap_session_buff_printf(self, "* BYE expunge failed\r\n");
 		D->status = DM_EQUERY;
 		SESSION_RETURN;
 	}
 
-	SESSION_OK;
+	if (self->enabled.qresync && modseq) {
+		char *response = g_strdup_printf("HIGHESTMODSEQ %" PRIu64, modseq);
+		SESSION_OK_WITH_RESP_CODE(response);
+		g_free(response);
+	} else {
+		SESSION_OK;
+	}
 	SESSION_RETURN;
 }
 
@@ -1762,6 +2080,24 @@ static void _ic_fetch_enter(dm_thread_data *D)
 		self->args_idx++;
 	} while (state > 0);
 
+	if (self->fi->vanished && (! self->fi->changedsince)) {
+		dbmail_imap_session_buff_printf(self, "%s BAD invalid argument list to fetch\r\n", self->tag);
+		D->status = 1;
+		SESSION_RETURN;
+	}
+
+	if (self->fi->vanished) {
+		self->qresync.modseq = self->fi->changedsince;
+		char *out = NULL;
+		GTree *vanished = MailboxState_getExpunged(self->mailbox->mbstate, &self->qresync, &out);
+		if (g_tree_nnodes(vanished)) {
+			dbmail_imap_session_buff_printf(self,
+				       	"* VANISHED (EARLIER) %s\r\n", out);
+		}
+		g_free(out);
+		g_tree_destroy(vanished);
+	}
+
 	dbmail_imap_session_mailbox_status(self, FALSE);
 
 	if ((result = _dm_imapsession_get_ids(self, p_string_str(self->args[setidx]))) == DM_SUCCESS) {
@@ -1796,12 +2132,40 @@ int _ic_fetch(ImapSession *self)
  * alter message-associated data in selected mailbox
  */
 
+void _fetch_update(ImapSession *self, MessageInfo *msginfo, bool showmodseq, bool showflags)
+{
+	bool needspace = false;
+
+	uint64_t *msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), &msginfo->uid);
+
+	dbmail_imap_session_buff_printf(self,"* %" PRIu64 " FETCH (", *msn);
+	if (self->use_uid) {
+		dbmail_imap_session_buff_printf(self, "UID %" PRIu64 , msginfo->uid);
+		needspace = true;
+	}
+
+	if (showflags) {
+		GList *sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
+		char *s = dbmail_imap_plist_as_string(sublist);
+		g_list_destroy(sublist);
+		if (needspace) dbmail_imap_session_buff_printf(self, " ");
+		dbmail_imap_session_buff_printf(self, "FLAGS %s", s);
+		g_free(s);
+		needspace = true;
+	}
+	if (showmodseq) {
+		if (needspace) dbmail_imap_session_buff_printf(self, " ");
+		dbmail_imap_session_buff_printf(self, "MODSEQ (%" PRIu64 ")", msginfo->seq);
+	}
+
+	dbmail_imap_session_buff_printf(self, ")\r\n");
+}
+
 static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D)
 {
 	ImapSession *self = D->session;
 	struct cmd_t *cmd = self->cmd;
 
-	uint64_t *msn;
 	MessageInfo *msginfo = NULL;
 	int i;
 	int changed = 0;
@@ -1812,7 +2176,6 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 	if (! msginfo)
 		return TRUE;
 
-	msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), id);
 
 	if (MailboxState_getPermission(self->mailbox->mbstate) == IMAPPERM_READWRITE) {
 		changed = db_set_msgflag(*id, cmd->flaglist, cmd->keywords, cmd->action, cmd->unchangedsince, msginfo);
@@ -1822,6 +2185,7 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 			return TRUE;
 		} else if (changed) {
 			db_message_set_seq(*id, cmd->seq);
+			msginfo->seq = cmd->seq;
 		} else {
 			self->ids_list = g_list_prepend(self->ids_list, id);
 		}
@@ -1856,27 +2220,9 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 
 	// reporting callback
 	if ((! cmd->silent) || changed > 0) {
-		bool needspace = false;
-		dbmail_imap_session_buff_printf(self,"* %" PRIu64 " FETCH (", *msn);
-		if (self->use_uid) {
-			dbmail_imap_session_buff_printf(self, "UID %" PRIu64 , *id);
-			needspace = true;
-		}
-
-		if (changed && (cmd->unchangedsince || self->mailbox->condstore)) {
-			if (needspace) dbmail_imap_session_buff_printf(self, " ");
-			dbmail_imap_session_buff_printf(self, "MODSEQ (%" PRIu64 ")", cmd->seq);
-			needspace = true;
-		}
-		if (! cmd->silent) {
-			GList *sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
-			char *s = dbmail_imap_plist_as_string(sublist);
-			g_list_destroy(sublist);
-			if (needspace) dbmail_imap_session_buff_printf(self, " ");
-			dbmail_imap_session_buff_printf(self, "FLAGS %s", s);
-			g_free(s);
-		}
-		dbmail_imap_session_buff_printf(self, ")\r\n");
+		bool showmodseq = (changed && (cmd->unchangedsince || self->mailbox->condstore));
+		bool showflags = (! cmd->silent);
+		_fetch_update(self, msginfo, showmodseq, showflags);
 	}
 
 	return FALSE;

@@ -75,6 +75,7 @@ extern void         MailboxState_addKeyword(T, const char *);
 	
 extern char *       MailboxState_flags(T);
 extern GList *      MailboxState_message_flags(T, MessageInfo *);
+extern GTree *      MailboxState_get_set(T, const char *, gboolean);
 
 extern void         MailboxState_free(T *);
 
