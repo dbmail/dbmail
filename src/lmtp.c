@@ -196,7 +196,6 @@ int lmtp_error(ClientSession_T * session, const char *formatstring, ...)
 	g_free(s);
 
 	if (session->ci->client_state & CLIENT_ERR) {
-		client_session_bailout(&session);
 		return -3;
 	}
 
