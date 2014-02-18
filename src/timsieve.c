@@ -183,10 +183,8 @@ int tims_error(ClientSession_T * session, const char *formatstring, ...)
 	g_free(s);
 
 	if (session->ci->client_state & CLIENT_ERR) {
-		client_session_bailout(&session);
 		return -3;
 	}
-
 
 	TRACE(TRACE_DEBUG, "an invalid command was issued");
 	session->error_count++;
