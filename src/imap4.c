@@ -383,7 +383,7 @@ static int checktag(const char *s)
 
 void imap_handle_abort(ImapSession *session)
 {
-	if (dbmail_imap_session_set_state(session, CLIENTSTATE_ERROR)) {	/* fatal error occurred, kick this user */
+	if (! dbmail_imap_session_set_state(session, CLIENTSTATE_ERROR)) {	/* fatal error occurred, kick this user */
 		imap_session_reset(session);
 		imap_session_bailout(session);
 	}
