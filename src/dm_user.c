@@ -113,7 +113,7 @@ int do_username(const uint64_t useridnr, const char * const newuser)
 		return 1;
 	}
 
-	if ((result = auth_change_username(useridnr, newuser)))
+	if (! (result = auth_change_username(useridnr, newuser)))
 		qerrorf("Error: could not change username.\n");
 
 	return result;
