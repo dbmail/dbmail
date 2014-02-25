@@ -300,6 +300,7 @@ typedef struct {
 	uint64_t bytes_rx;		/* read byte counter */
 	uint64_t bytes_tx;		/* write byte counter */
 	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
+	int deferred;                   // deferred cleanup counter
 
 	struct event *pev;		/* self-pipe event */
 	void (*cb_pipe) (void *);	/* callback for self-pipe events */
