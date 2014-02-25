@@ -307,6 +307,7 @@ typedef struct {
 
 	pthread_mutex_t lock;
 	int client_state;		/* CLIENT_OK, CLIENT_AGAIN, CLIENT_EOF */
+	int deferred;                   // deferred cleanup counter
 
 	struct event *pev;		/* self-pipe event */
 	void (*cb_pipe) (void *);	/* callback for self-pipe events */

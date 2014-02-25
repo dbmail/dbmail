@@ -135,6 +135,8 @@ static int imap4(ImapSession *);
 static void imap_handle_input(ImapSession *);
 static void imap_handle_abort(ImapSession *);
 
+#define DEFERRED_MAX_LOOP 100
+
 void imap_cleanup_deferred(gpointer data)
 {
 	int rx;
@@ -142,11 +144,16 @@ void imap_cleanup_deferred(gpointer data)
 	ImapSession *session = (ImapSession *)D->session;
 	ClientBase_T *ci = session->ci;
 
+	ci->deferred++;
+
 	if (ci->rev) event_del(ci->rev);
-	if (ci_wbuf_len(ci)) {
+	if (ci_wbuf_len(ci) && (! (ci->client_state & CLIENT_ERR)) && (ci->deferred < DEFERRED_MAX_LOOP)) {
 		ci_write_cb(ci);
 		dm_queue_push(imap_cleanup_deferred, session, NULL);
 		return;
+	}
+	if (ci->deferred >= DEFERRED_MAX_LOOP) {
+		TRACE(TRACE_DEBUG, "[%p] DEFERRED_MAX_LOOP reached; cleanup session", ci);
 	}
 
 	rx = ci->rx;
