@@ -80,8 +80,8 @@ int do_showhelp(void) {
 	"               the time syntax is [<hours>h][<minutes>m]\n"
 	"               valid examples: 72h, 4h5m, 10m\n"
 	"     -M        migrate legacy 2.2.x messageblks to mimeparts table\n"
-	"     --erase days  Detele messages older than date in INBOX/Trash \n"       
-	"     --move  days   Move messages from INBOX to INBOX/Trash\n"
+	"     --erase days  Delete messages older than date in INBOX/Trash \n"       
+	"     --move  days  Move messages from INBOX to INBOX/Trash\n"
 	"     --inbox name  Inbox folder to move from, used in conjunction with --move\n"
 	"     --trash name  Trash folder to move to, used in conjunction with --move\n"
 	"     -m limit  limit migration to [limit] number of physmessages. Default 10000 per run\n"
@@ -1006,7 +1006,7 @@ int do_migrate(int migrate_limit)
 	
 	qprintf ("Migrate legacy 2.2.x messageblks to mimeparts...\n");
 	if (!yes_to_all) {
-		qprintf ("\tmigration skipped. Use -y option to perform mirgration.\n");
+		qprintf ("\tmigration skipped. Use -y option to perform migration.\n");
 		return 0;
 	}
 	qprintf ("Preparing to migrate up to %d physmessages.\n", migrate_limit);
@@ -1015,7 +1015,6 @@ int do_migrate(int migrate_limit)
 	TRY
 		db_begin_transaction(c);
 		r = db_query(c, "SELECT DISTINCT(physmessage_id) FROM %smessageblks LIMIT %d", DBPFX, migrate_limit);
-		qprintf ("Migrating %d physmessages...\n", migrate_limit);
 		while (db_result_next(r))
 		{
 			count++;
