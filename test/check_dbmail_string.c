@@ -119,6 +119,10 @@ START_TEST(test_string_append_printf)
 		p_string_append_printf(S, "%s TEST", ABCD);
 	}
 	p_string_free(S, TRUE);
+	
+	S = p_string_new(pool, "");
+	p_string_append_printf(S, "%s", "");
+	p_string_free(S, TRUE);
 }
 END_TEST
 

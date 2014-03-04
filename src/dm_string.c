@@ -45,6 +45,7 @@ struct T {
 	size_t used;
 };
 
+#define STRLEN 255
 static inline void append(T S, const char *s, va_list ap)
 {
 	va_list ap_copy;
@@ -59,7 +60,7 @@ static inline void append(T S, const char *s, va_list ap)
 			break;
 		}
 		oldsize = SIZE(S);
-		S->len += n;
+		S->len += STRLEN + n;
 		S->str = mempool_resize(S->pool, S->str, oldsize, SIZE(S));
 	}
 }
