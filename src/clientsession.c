@@ -138,6 +138,7 @@ void client_session_bailout(ClientSession_T **session)
 	List_T from = NULL;
 	List_T rcpt = NULL;
 	List_T messagelst = NULL;
+	ClientBase_T *client = c->ci;
 
 	assert(c);
 
@@ -152,7 +153,6 @@ void client_session_bailout(ClientSession_T **session)
 
 	client_session_reset(c);
 	c->state = CLIENTSTATE_QUIT_QUEUED;
-	ci_close(c->ci);
 
 	p_string_free(c->rbuff, TRUE);
 
@@ -215,8 +215,9 @@ void client_session_bailout(ClientSession_T **session)
 
 	pool = c->pool;
 	mempool_push(pool, c, sizeof(ClientSession_T));
-	mempool_close(&pool);
 	c = NULL;
+
+	ci_close(client);
 }
 
 void client_session_read(void *arg)

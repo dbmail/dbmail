@@ -562,6 +562,7 @@ void ci_close(ClientBase_T *client)
 	mempool_push(pool, client->sock->saddr, sizeof(struct sockaddr_storage));
 	mempool_push(pool, client->sock, sizeof(client_sock));
 	mempool_push(pool, client, sizeof(ClientBase_T));
+	mempool_close(&pool);
 }
 
 

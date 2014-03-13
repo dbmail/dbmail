@@ -156,10 +156,10 @@ void imap_cleanup_deferred(gpointer data)
 	}
 
 	rx = ci->rx;
-	ci_close(ci);
 
 	dbmail_imap_session_delete(&session);
 
+	ci_close(ci);
 	if (rx == STDIN_FILENO)
 		exit(0);
 }
