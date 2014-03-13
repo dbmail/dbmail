@@ -597,6 +597,7 @@ void ci_close(ClientBase_T *client)
 	client->sock = NULL;
 
 	mempool_push(pool, client, sizeof(ClientBase_T));
+	mempool_close(&pool);
 	client = NULL;
 }
 
