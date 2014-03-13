@@ -1466,7 +1466,7 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 
 	config_get_value("header_cache_readonly", "DBMAIL", config);
 	if (strlen(config)) {
-		if (SMATCH(config, "true") || SMATCH(config, "yes")) {
+		if (MATCH(config, "true") || MATCH(config, "yes")) {
 			cache_readonly = true;
 		}
 	}
