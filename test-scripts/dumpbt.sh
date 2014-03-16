@@ -14,7 +14,7 @@ PID=`pidof $PNAME`
 echo "generate backtrace for $PNAME($PID) with CPU > $MAXCPU"
 
 # find busy threads
-BUSY=`top -H -b -n1 -p $PID|awk '{if ($9 > $MAXCPU) print $1}'`
+BUSY=`top -H -b -n1 -p $PID|grep -E "${PNAME}|pool"| awk '{if ($9 > $MAXCPU) print $1}'`
 
 [ -n "$BUSY" ] || exit 0
 
