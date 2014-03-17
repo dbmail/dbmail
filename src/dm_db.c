@@ -3494,7 +3494,7 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 		if (bestlogin) g_free(bestlogin);
 		if (bestuserid) g_free(bestuserid);
 		TRACE(TRACE_DEBUG,"access denied");
-		return result;
+		return DM_EGENERAL;
 	}
 
 	if (! row) {
