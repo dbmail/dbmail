@@ -144,7 +144,7 @@ int cidr_match(T base, T test)
 	if (test_addr.s_addr == match_addr.s_addr) 
 		result = base->mask ? base->mask : 32;
 			
-	if (! base->mask)
+	if ((! base->mask) || (! test->mask))
 		result = 32;
 
 	return result;

@@ -60,13 +60,13 @@ void teardown(void)
 	db_disconnect();
 }
 #define X(a,b,c,d) fail_unless(dm_sock_compare((b),(c),(d))==(a),"dm_sock_compare failed")
-#define Y(a,b,c) fail_unless(dm_sock_score((b),(c))==(a),"dm_sock_score failed")
 START_TEST(test_dm_sock_compare) 
 {
 	X(0,"inet:127.0.0.1:143","inet:127.0.0.1:143","inet:127.0.0.1:143");
 	X(0,"inet:127.0.0.1:110","inet:127.0.0.1:143","");
 	X(0,"inet:127.0.0.1:143","inet:127.0.0.2:143","");
 	X(0,"inet:127.0.0.1:143","","inet:0.0.0.0/0:143");
+	X(1,"inet:127.0.0.1:143","","inet:0.0.0.0/0:110");
 	X(0,"inet:127.0.0.1:143","inet:0.0.0.0/0:110","inet:0.0.0.0/0:143");
 	X(1,"inet:127.0.0.1:143","inet:0.0.0.0/0:143","");
 	X(1,"inet:127.0.0.1:143","inet:0.0.0.0/0:143","inet:0.0.0.0/0:110");
@@ -80,14 +80,20 @@ START_TEST(test_dm_sock_compare)
 	X(1,"unix:/var/run/dbmail-imapd.sock","unix:/var/run/dbmail-imapd.sock","");
 	X(1,"unix:/var/run/dbmail-imapd.sock","unix:/var/run/dbmail*","");
 	X(0,"unix:/var/run/dbmail-imapd.sock","unix:/var/lib/dbmail-imapd.sock","");
+}
+END_TEST
 
+#define Y(a,b,c) fail_unless(dm_sock_score((b),(c))==(a),"dm_sock_score failed")
+START_TEST(test_dm_sock_score)
+{
 	Y(32,"inet:10.1.1.1:110","");
 	Y(0,"inet:10.1.1.1/16:110","inet:11.1.1.1:110");
 	Y(8,"inet:10.1.1.1/8:110","inet:10.1.1.1:110");
 	Y(16,"inet:10.1.1.1/16:110","inet:10.1.1.1:110");
 	Y(32,"inet:10.1.1.1/32:110","inet:10.1.1.1:110");
 	Y(0,"inet:10.0.0.6:143","inet:10.0.0.6:110");
-
+	Y(32,"inet:10.1.1.1:110", "inet:0.0.0.0/0:110");
+	Y(32,"inet:0.0.0.0/0:110", "inet:10.1.1.1:110");
 }
 END_TEST
 
@@ -104,6 +110,7 @@ Suite *dbmail_server_suite(void)
 	
 	tcase_add_checked_fixture(tc_server, setup, teardown);
 	tcase_add_test(tc_server, test_dm_sock_compare);
+	tcase_add_test(tc_server, test_dm_sock_score);
 	
 	return s;
 }
