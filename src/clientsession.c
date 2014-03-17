@@ -131,6 +131,8 @@ void client_session_bailout(ClientSession_T **session)
 {
 	ClientSession_T *c = *session;
 	Mempool_T pool;
+	size_t before = 0, after = 0;
+	int failcount = 0;
 	List_T args = NULL;
 	List_T from = NULL;
 	List_T rcpt = NULL;
@@ -138,8 +140,18 @@ void client_session_bailout(ClientSession_T **session)
 
 	assert(c);
 
-	while (ci_wbuf_len(c->ci))
+	before = after = ci_wbuf_len(c->ci);
+
+	while (after && (! (c->ci->client_state & CLIENT_ERR)) && (failcount < 100)) {
+		before = ci_wbuf_len(c->ci);
 		ci_write_cb(c->ci);
+		after = ci_wbuf_len(c->ci);
+		if (before == after)
+			failcount++;
+		else
+			failcount = 0;
+
+	}
 
 	ci_cork(c->ci);
 
