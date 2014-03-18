@@ -703,22 +703,33 @@ int do_check_integrity(void)
 	/* end part 5 */
 
 	/* part 6 */
-	start = stop;
-	qprintf("\n%s DBMAIL headernames integrity...\n", action);
-	if ((count = db_icheck_headernames(cleanup)) < 0) {
-		qerrorf("Failed. An error occurred. Please check log.\n");
-		serious_errors = 1;
-		return -1;
+        Field_T config;
+	bool cache_readonly = false;
+	config_get_value("header_cache_readonly", "DBMAIL", config);
+	if (strlen(config)) {
+		if (MATCH(config, "true") || MATCH(config, "yes")) {
+			cache_readonly = true;
+		}
 	}
 
-	qprintf("Ok. Found [%ld] unconnected headernames.\n", count);
-	if (count > 0 && cleanup) {
-		qerrorf("Ok. Orphaned headernames deleted.\n");
-	}
+        if (! cache_readonly) {
+		start = stop;
+		qprintf("\n%s DBMAIL headernames integrity...\n", action);
+		if ((count = db_icheck_headernames(cleanup)) < 0) {
+			qerrorf("Failed. An error occurred. Please check log.\n");
+			serious_errors = 1;
+			return -1;
+		}
 
-	time(&stop);
-	qverbosef("--- %s unconnected headernames took %g seconds\n",
-		action, difftime(stop, start));
+		qprintf("Ok. Found [%ld] unconnected headernames.\n", count);
+		if (count > 0 && cleanup) {
+			qerrorf("Ok. Orphaned headernames deleted.\n");
+		}
+
+		time(&stop);
+		qverbosef("--- %s unconnected headernames took %g seconds\n",
+			action, difftime(stop, start));
+	}
 	/* end part 6 */
 
 	/* part 7 */
