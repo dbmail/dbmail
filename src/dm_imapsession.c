@@ -62,7 +62,8 @@ static void send_data(ImapSession *self, const String_T stream, size_t offset, s
 	char *head;
 
 	assert(stream);
-	assert(p_string_len(stream) >= (offset+len));
+	if (p_string_len(stream) < (offset+len))
+		return;
 
 	head = (char *)p_string_str(stream)+offset;
 
@@ -490,8 +491,11 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 		token[strlen(token) - 1] = '\0';
 		token[delimpos] = '\0';
 		self->fi->msgparse_needed=1;
-		dbmail_imap_session_bodyfetch_set_octetstart(self, strtoll(&token[1], NULL, 10));
-		dbmail_imap_session_bodyfetch_set_octetcnt(self,strtoll(&token [delimpos + 1], NULL, 10));
+		guint64 octetstart = strtoull(&token[1], NULL, 10);
+		gint64 octetcnt = strtoll(&token [delimpos + 1], NULL, 10);
+		//TRACE(TRACE_DEBUG, "octetstart [%lu] octetcnt [%lu]", octetstart, octetcnt);
+		dbmail_imap_session_bodyfetch_set_octetstart(self, octetstart);
+		dbmail_imap_session_bodyfetch_set_octetcnt(self, octetcnt);
 
 		/* restore argument */
 		token[delimpos] = '.';
@@ -1142,10 +1146,12 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 		} else {
 			uint64_t start = dbmail_imap_session_bodyfetch_get_last_octetstart(self);
 			uint64_t count = dbmail_imap_session_bodyfetch_get_last_octetcnt(self);
-			count = ((start + count) > size)?(size - start):count;
+			uint64_t length = 0;
+			if (start <= size)
+				length = ((start + count) > size)?(size - start):count;
 			dbmail_imap_session_buff_printf(self, "BODY[]<%" PRIu64 "> {%" PRIu64 "}\r\n", 
-					start, count);
-			send_data(self, stream, start, count);
+					start, length);
+			send_data(self, stream, start, length);
 		}
 		if (self->fi->getBodyTotal)
 			self->fi->setseen = 1;
