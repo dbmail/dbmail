@@ -1,7 +1,8 @@
-/* 
-   (c) 2000-2005 IC&S, The Netherlands
-   (c) 2004-2012 NFG Net Facilities Group BV, The Netherlands, support@nfg.nl
-*/
+> 
+>   (c) 2004-2014 NFG Net Facilities Group BV, The Netherlands, support@nfg.nl
+>
+>   (c) 2000-2005 IC&S, The Netherlands
+>
 
 What is it?
 ===========
@@ -51,10 +52,10 @@ Both IC&S and NFG provide commercial support and consultancy for this
 product. For more information about this you can send an email to
 info@ic-s.nl and/or support@nfg.nl.
 
-***
-Disclaimer: IC&S nor NFG are responsible for any damages resulting from use 
-of this software. 
-***
+>
+> Disclaimer: IC&S nor NFG are responsible for any damages resulting from use 
+> of this software. 
+>
 
 It should work with almost no problem. We have clients that run dbmail
 with more than 25.000 useraccounts. The system is stable.
