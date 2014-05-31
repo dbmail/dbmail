@@ -289,10 +289,10 @@ static void imap_session_reset(ImapSession *session)
     switch (current) {
         case CLIENTSTATE_AUTHENTICATED:
         case CLIENTSTATE_SELECTED:
-            session->ci->timeout->tv_sec = server_conf->timeout; 
+            session->ci->timeout.tv_sec = server_conf->timeout; 
             break;
         default:
-            session->ci->timeout->tv_sec = server_conf->login_timeout; 
+            session->ci->timeout.tv_sec = server_conf->login_timeout; 
             break;
     }
 
