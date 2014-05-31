@@ -108,7 +108,7 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
 	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
-	$(top_srcdir)/acinclude.m4 $(top_srcdir)/configure.in
+	$(top_srcdir)/acinclude.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -514,9 +514,8 @@ IMAPD = dm_quota.c \
 	imapcommands.c \
 	dbmail-imapsession.c
 
-AM_CPPFLAGS = -DSYSCONFDIR='"$(sysconfdir)"' -DLIBDIR='"$(libdir)"' -DLOCALSTATEDIR='"$(localstatedir)"'
+AM_CPPFLAGS = I$(top_srcdir) -DSYSCONFDIR='"$(sysconfdir)"' -DLIBDIR='"$(libdir)"' -DLOCALSTATEDIR='"$(localstatedir)"'
 AM_CFLAGS = @SIEVEINC@ @LDAPINC@
-INCLUDES = -I$(top_srcdir)
 AM_LDFLAGS = -export-dynamic @CRYPTLIB@
 @SHARED_FALSE@MODULES = 
 @SHARED_TRUE@MODULES = authmodule.c sortmodule.c
