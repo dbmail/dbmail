@@ -104,7 +104,7 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
 	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
-	$(top_srcdir)/acinclude.m4 $(top_srcdir)/configure.in
+	$(top_srcdir)/acinclude.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -695,7 +695,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 @WITHCHECK_TRUE@AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 @WITHCHECK_TRUE@AM_LDFLAGS = -Wl,-u,Cram_getUsername 
-@WITHCHECK_TRUE@INCLUDES = -I$(top_srcdir)/src
+@WITHCHECK_TRUE@AM_CPPFLAGS = -I$(top_srcdir)/src
 @SHARED_FALSE@@WITHCHECK_TRUE@STATIC_MODULES = $(top_srcdir)/src/@SORTLTLIB@ $(top_srcdir)/src/@AUTHLTLIB@ 
 @SHARED_TRUE@@WITHCHECK_TRUE@STATIC_MODULES = 
 @WITHCHECK_TRUE@CHECK_LDADD = $(STATIC_MODULES) $(top_srcdir)/src/libdbmail.la @CHECK_LIBS@

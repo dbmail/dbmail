@@ -3,8 +3,7 @@ if WITHCHECK
 
 AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 AM_LDFLAGS = -Wl,-u,Cram_getUsername 
-
-INCLUDES = -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src
 
 if SHARED
 STATIC_MODULES=

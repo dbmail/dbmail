@@ -17,10 +17,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-INCLUDES = -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src
 AM_CFLAGS = @LDAPINC@ @SIEVEINC@
 
-#AM_LDFLAGS = -Wl,--export-dynamic
 if SHARED
 AM_LDFLAGS = -module
 else
