@@ -273,8 +273,6 @@ static void imap_session_reset(ImapSession *session)
 {
 	ClientState_T current;
 
-	TRACE(TRACE_DEBUG,"[%p]", session);
-
 	memset(session->tag, 0, sizeof(session->tag));
 	memset(session->command, 0, sizeof(session->command));
 
@@ -292,6 +290,9 @@ static void imap_session_reset(ImapSession *session)
 		session->ci->timeout.tv_sec = server_conf->timeout; 
 	else
 		session->ci->timeout.tv_sec = server_conf->login_timeout; 
+
+	TRACE(TRACE_DEBUG,"[%p] state [%d] timeout [%lu]", 
+            session, current, session->ci->timeout.tv_sec);
 
 	ci_uncork(session->ci);
 	
