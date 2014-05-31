@@ -286,10 +286,15 @@ static void imap_session_reset(ImapSession *session)
 	current = session->state;
 	PUNLOCK(session->lock);
 
-	if (current == CLIENTSTATE_AUTHENTICATED)
-		session->ci->timeout.tv_sec = server_conf->timeout; 
-	else
-		session->ci->timeout.tv_sec = server_conf->login_timeout; 
+    switch (current) {
+        case CLIENTSTATE_AUTHENTICATED:
+        case CLIENTSTATE_SELECTED:
+            session->ci->timeout->tv_sec = server_conf->timeout; 
+            break;
+        default:
+            session->ci->timeout->tv_sec = server_conf->login_timeout; 
+            break;
+    }
 
 	TRACE(TRACE_DEBUG,"[%p] state [%d] timeout [%lu]", 
             session, current, session->ci->timeout.tv_sec);
