@@ -74,7 +74,7 @@ IMAPD = dm_quota.c \
 	imapcommands.c \
 	dbmail-imapsession.c
 
-AM_CPPFLAGS = I$(top_srcdir) -DSYSCONFDIR='"$(sysconfdir)"' -DLIBDIR='"$(libdir)"' -DLOCALSTATEDIR='"$(localstatedir)"'
+AM_CPPFLAGS = -I$(top_srcdir) -DSYSCONFDIR='"$(sysconfdir)"' -DLIBDIR='"$(libdir)"' -DLOCALSTATEDIR='"$(localstatedir)"'
 AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 AM_LDFLAGS = -export-dynamic @CRYPTLIB@
 
