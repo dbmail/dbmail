@@ -284,7 +284,7 @@ static void imap_session_reset(ImapSession *session)
             break;
     }
 
-    TRACE(TRACE_DEBUG,"[%p] state [%d] timeout [%d]", 
+    TRACE(TRACE_DEBUG,"[%p] state [%d] timeout [%lu]", 
             session, current, session->ci->timeout->tv_sec);
 
 	ci_uncork(session->ci);
