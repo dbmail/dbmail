@@ -351,9 +351,9 @@ static bool simple_boundary(const char *s, char *boundary)
 static bool wrapped_boundary(const char *s, char *boundary)
 {
 	int i = 0;
-	char *match;
 	int decimal = 0;
-	size_t buflen = MAX_MIME_BLEN-1;
+	size_t buflen = strlen(s);
+	char match[128];
 	s += 11; // jump past 'boundary*0='
 	while (true) {
 		bool wantquote = false;
@@ -375,18 +375,21 @@ static bool wrapped_boundary(const char *s, char *boundary)
 
 		buflen -= i;
 		decimal++;
-		match = g_strdup_printf("boundary*%d=", decimal);
+
+		TRACE(TRACE_DEBUG, "search [%s]", &s[i]);
+		memset(match, 0, sizeof(match));
+		snprintf(match, sizeof(match)-1, "boundary*%d=", decimal);
+		TRACE(TRACE_DEBUG, "search [%s]", &s[i]);
+
 		TRACE(TRACE_DEBUG, "search [%s] for [%s]", &s[i], match);
 		s = g_strcasestr(&s[i], match);
 		TRACE(TRACE_DEBUG, "search: [%s]", s);
 		if (! s) {
-			g_free(match);
 			break;
 		}
 
 		s += strlen(match);
 		i = 0;
-		g_free(match);
 
 		if (! s[i])
 			break;
