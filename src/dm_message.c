@@ -376,7 +376,7 @@ static bool wrapped_boundary(const char *s, char *boundary)
 				break;
 			i++;
 		}
-		strncat(boundary, s, min(i, (int)buflen));
+		strncat(boundary, s, min(i, MAX_MIME_BLEN-1));
 
 		if (! s[i])
 			break;
