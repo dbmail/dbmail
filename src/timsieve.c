@@ -269,6 +269,7 @@ int tims_tokenizer(ClientSession_T *session, char *buffer)
 			}
 			if (c == '{') { // a literal...
 				session->ci->rbuff_size = strtoull(s+i, NULL, 10);
+				p_string_free(t, TRUE);
 				return FALSE;
 			}
 			p_string_append_len(t, &c, 1);

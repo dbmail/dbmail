@@ -930,8 +930,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 			}
 		}
 		(*idx) += i + 1;
-		if (! valid)
-			return -1;
+		RETURN_IF_FAIL(valid, -1);
 		self->modseq = seq;
 		self->condstore = true;
 	}

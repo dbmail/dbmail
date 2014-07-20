@@ -90,7 +90,9 @@ static int client_error_cb(int sock, int error, void *arg)
 		dm_tls_error();
 		switch (sslerr) {
 			case SSL_ERROR_ZERO_RETURN:
+				PLOCK(client->lock);
 				client->client_state |= CLIENT_EOF;
+				PUNLOCK(client->lock);
 				break;
 			case SSL_ERROR_WANT_READ:
 			case SSL_ERROR_WANT_WRITE:
