@@ -187,7 +187,6 @@ START_TEST(test_dbmail_message_store)
 {
 	DbmailMessage *m;
 	char *t, *e;
-	
 	//-----------------------------------------
 	m = message_init("From: paul\n");
 	e = dbmail_message_to_string(m);
