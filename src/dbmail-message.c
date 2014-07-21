@@ -326,93 +326,21 @@ static GMimeContentType *find_type(const char *s)
 #define MAX_MIME_DEPTH 64
 #define MAX_MIME_BLEN 128
 
-static bool simple_boundary(const char *s, char *boundary)
-{
-	int i = 0;
-	bool wantquote = false;
-	s += 9; // jump past 'boundary='
-	if (s[0] == '"') {
-		wantquote=true;
-		s++;
-	}
-	while (s[i]) {
-		if (wantquote && s[i]=='"') {
-			break;
-		}
-		if (! wantquote && (isspace(s[i]) || s[i]==';'))
-			break;
-		i++;
-	}
-		
-	strncpy(boundary, s, min(i, MAX_MIME_BLEN-1));
-	return true;
-}
-
-static bool wrapped_boundary(const char *s, char *boundary)
-{
-	int i = 0;
-	int decimal = 0;
-	size_t buflen = MAX_MIME_BLEN-1;
-	char match[128];
-	s += 11; // jump past 'boundary*0='
-	while (true) {
-		bool wantquote = false;
-		if (s[0] == '"') {
-			wantquote = true;
-			s++;
-		}
-		while (s[i]) {
-			if (wantquote && s[i] == '"')
-				break;
-			if (! wantquote && (isspace(s[i]) || s[i]==';'))
-				break;
-			i++;
-		}
-		strncat(boundary, s, min(i, buflen));
-
-		if (! s[i])
-			break;
-
-		buflen = MAX_MIME_BLEN - strlen(boundary) - 1;
-		decimal++;
-
-		memset(match, 0, sizeof(match));
-		snprintf(match, sizeof(match)-1, "boundary*%d=", decimal);
-		s = g_strcasestr(&s[i], match);
-		if (! s)
-			break;
-
-		s += strlen(match);
-		i = 0;
-
-		if (! s[i])
-			break;
-
-	}
-	return true;
-}
-
-
 static bool find_boundary(const char *s, char *boundary)
 {
-	char *rest = NULL;
-	char *type = find_type_header(s);
-
-	memset(boundary, 0, MAX_MIME_BLEN);
+	const gchar *param;
+	GMimeContentType *type = find_type(s);
 	if (! type)
 		return false;
-
-	if ((rest = g_strcasestr(type, "boundary="))) {
-		g_free(type);
-		return simple_boundary(rest, boundary);
+	param = g_mime_content_type_get_parameter(type, "boundary");
+	if (! param) {
+		g_object_unref(type);
+		return false;
 	}
-	if ((rest = g_strcasestr(type, "boundary*0="))) {
-		g_free(type);
-		return wrapped_boundary(rest, boundary);
-	}
-
-	g_free(type);
-	return false;
+	memset(boundary, 0, MAX_MIME_BLEN);
+	strncpy(boundary, param, MAX_MIME_BLEN-1);
+	g_object_unref(type);
+	return true;
 }
 
 static DbmailMessage * _mime_retrieve(DbmailMessage *self)
@@ -484,7 +412,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 			got_boundary = FALSE;
 
-			if (is_header && find_boundary(str, boundary)) {
+			if (is_header && find_boundary(str, &boundary[0])) {
 				got_boundary = TRUE;
 				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
 				strncpy(blist[depth], boundary, MAX_MIME_BLEN-1);
