@@ -1,6 +1,29 @@
-Upgrading from DBMail 2.2 to DBMail 3.0
+Upgrading from DBMail 3.0 to DBMail 3.2
+=======================================
 
 Dependencies
+------------
+
+* Database: MySQL 5.0 or better, PostgreSQL 8.3+, Sqlite3, Oracle
+* Glib: (>= 2.16.0)
+* GMime: (>= 2.6.20)
+* OpenSSL
+* libmhash
+* libzdb
+* libevent: (>= 2.0.21)
+
+Schema Changes
+--------------
+
+* As of dbmail-3.2 auto-migrations are supported, so no manual migrations
+  are required.
+
+
+Upgrading from DBMail 2.2 to DBMail 3.0
+=======================================
+
+Dependencies
+------------
 
 * Database: MySQL 5.0, PostgreSQL 8.3+, or SQLite3
 * Glib: (>= 2.16.0)
@@ -13,6 +36,7 @@ Dependencies
 * libevent
 
 Config Changes
+--------------
 
 * MySQL: notice!
 
@@ -75,6 +99,7 @@ FILE_LOGGING_LEVELS       = 7
 SYSLOG_LOGGING_LEVELS     = 31
 
 Schema Changes
+--------------
 
 Migration scripts from the previous stable releases are provided in
 sql/mysql, sql/postgresql and sql/sqlite. Please test them first
@@ -93,6 +118,7 @@ will have to be dropped, re-created, and re-filled using:
 dbmail-util -by
 
 Server Changes
+--------------
 
 Dbmail until 2.2 used a pre-forking server design with a dedicated
 connection to the database backend for each forked process. Even with
