@@ -900,10 +900,11 @@ static ResultSet_T check_table_exists(Connection_T c, const char *table)
 	return db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, table);
 }
 
-static int check_upgrade_step(Connection_T c, int from_version, int to_version)
+static int check_upgrade_step(int from_version, int to_version)
 {
 	const char *query = NULL;
 	volatile int result = 0;
+	Connection_T c = db_con_get();
 	PreparedStatement_T st; ResultSet_T r;
 
 	TRY
@@ -918,11 +919,14 @@ static int check_upgrade_step(Connection_T c, int from_version, int to_version)
 			result = to_version;
 	CATCH(SQLException)
 		LOG_SQLERROR;
+	FINALLY
+		db_con_clear(c);
 	END_TRY;
 
-	if (result)
+	if (result) {
+		db_con_close(c);
 		return result;
-
+	}
 
 	switch(db_params.db_driver) {
 		case DM_DRIVER_SQLITE:
@@ -945,21 +949,24 @@ static int check_upgrade_step(Connection_T c, int from_version, int to_version)
 		break;
 		default:
 			TRACE(TRACE_WARNING, "Migrations not supported for database driver");
+			db_con_close(c);
 			return DM_EQUERY;
 		break;
 	}
 
 	if (! query) {
 		TRACE(TRACE_INFO, "Unable to find migration query for upgrade step [%d]", to_version);
+		db_con_close(c);
 		return DM_EQUERY;
 	}
 
-	db_con_clear(c);
 	TRACE(TRACE_INFO, "Running upgrade step %d -> %d", from_version, to_version);
 	if (db_exec(c, query))
 		result = to_version;
 	else
 		result = DM_EQUERY;
+
+	db_con_close(c);
 
 	return result;
 }
@@ -1013,13 +1020,13 @@ int db_check_version(void)
 	db_con_clear(c);
 
 	do {
-		if ((ok = check_upgrade_step(c, 0, 32001)) == DM_EQUERY)
+		if ((ok = check_upgrade_step(0, 32001)) == DM_EQUERY)
 			break;
-		if ((ok = check_upgrade_step(c, 32001, 32002)) == DM_EQUERY)
+		if ((ok = check_upgrade_step(32001, 32002)) == DM_EQUERY)
 			break;
-		if ((ok = check_upgrade_step(c, 32001, 32003)) == DM_EQUERY)
+		if ((ok = check_upgrade_step(32001, 32003)) == DM_EQUERY)
 			break;
-		if ((ok = check_upgrade_step(c, 32001, 32004)) == DM_EQUERY)
+		if ((ok = check_upgrade_step(32001, 32004)) == DM_EQUERY)
 			break;
 		break;
 	} while (true);
