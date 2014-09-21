@@ -413,14 +413,18 @@ void ci_read_cb(ClientBase_T *client)
 			break;
 
 		} else if (t == 0) {
-			PLOCK(client->lock);
 			if (client->sock->ssl) {
-				if (client->cb_error(client->rx, t, (void *)client))
+				if (client->cb_error(client->rx, t, (void *)client)) {
+					PLOCK(client->lock);
 					client->client_state |= CLIENT_ERR;
+					PUNLOCK(client->lock);
+				}
 			}
-			if (client->sock->ssl || client->rx) // EOF on stdin is not an error
+			if (client->sock->ssl || client->rx) { // EOF on stdin is not an error
+				PLOCK(client->lock);
 				client->client_state |= CLIENT_EOF;
-			PUNLOCK(client->lock);
+				PUNLOCK(client->lock);
+			}
 			break;
 
 		} else if (t > 0) {
