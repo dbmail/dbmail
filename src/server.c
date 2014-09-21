@@ -793,7 +793,7 @@ int server_run(ServerConfig_T *conf)
 	if (server_setup(conf))
 		return -1;
 
-	if (strlen(conf->port)) {
+	if (strlen(conf->port) || strlen(conf->ssl_port)) {
 
 		if (MATCH(conf->service_name, "HTTP")) {
 			int port = atoi(conf->port);
@@ -829,7 +829,6 @@ int server_run(ServerConfig_T *conf)
 				event_assign(evsock[i], evbase, conf->listenSockets[i], EV_READ, server_sock_cb, evsock[i]);
 				event_add(evsock[i], NULL);
 			}
-			k = i+1;
 			for (k = i, i = 0; i < conf->ssl_socketcount; i++, k++) {
 				TRACE(TRACE_DEBUG, "Adding event for ssl socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, total);
 				evsock[k] = event_new(evbase, conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, NULL);
