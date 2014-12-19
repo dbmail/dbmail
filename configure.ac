@@ -1,7 +1,7 @@
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 # Copyright (C) 2004-2013 NFG Net Facilities Group support@nfg.nl
 
-AC_INIT([dbmail], [3.2.1], [dbmail@dbmail.org])
+AC_INIT([dbmail], [3.2.2], [dbmail@dbmail.org])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h:config.in)
 AC_CONFIG_MACRO_DIR([m4])
