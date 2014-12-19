@@ -27,6 +27,7 @@ run-test:
 	(cd ../ && CK_FORK=no make check)
 	sbin/dbmail-users -c testuser1 -w test -p plaintext || true
 	sbin/dbmail-users -a testuser2 -w test -p plaintext || true
+	sbin/dbmail-users -a testuser3 -w test -p sha256 || true
 	sbin/dbmail-users -y -e testuser1 || true
 	bin/py ../contrib/mailbox2dbmail/mailbox2dbmail -u testuser1 -m ../test-scripts/testbox -t mbox -p sbin/dbmail-deliver
 	timeout 300 imaptest user=testuser1 pass=test port=10143 test=../test-scripts/imap
