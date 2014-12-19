@@ -589,6 +589,12 @@ class testImapServer(unittest.TestCase):
         self.failUnlessRaises(Exception, o.login_cram_md5,
                               "fakeuser", "wrongpassword")
 
+        o = getsock()
+        o.debug = DEBUG
+        # testuser3 password stored as sha256 so this must fail
+        self.failUnlessRaises(Exception, o.login_cram_md5,
+                              "testuser3", "password123")
+
     def testLogout(self):
         """
         logout()

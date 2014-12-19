@@ -3695,6 +3695,8 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 		else 
 			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
         }
+	else if (ci && ci->auth) // CRAM-MD5 auth but storage is encrypted
+		is_validated = 0;
 
 	else if (SMATCH(encode, "crypt")) {
 		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
