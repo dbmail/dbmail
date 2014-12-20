@@ -3694,16 +3694,13 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 			is_validated = Cram_verify(ci->auth, dbpass);
 		else 
 			is_validated = (strcmp(dbpass, password) == 0) ? 1 : 0;
-        }
-	else if (ci && ci->auth) // CRAM-MD5 auth but storage is encrypted
-		is_validated = 0;
+	} else if (password == NULL)
+		return FALSE;
 
-	else if (SMATCH(encode, "crypt")) {
+	if (SMATCH(encode, "crypt")) {
 		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
 		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
-	} 
-	
-	else if (SMATCH(encode, "md5")) {
+	} else if (SMATCH(encode, "md5")) {
 		/* get password */
 		if (strncmp(dbpass, "$1$", 3)) { // no match
 			TRACE(TRACE_DEBUG, "validating using MD5 digest comparison");
