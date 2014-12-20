@@ -2063,13 +2063,13 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 		
 finalize:
 	if (self->args_idx == 1) {
-		if (MATCH(p_string_str(self->args[0]),"LOGIN")) {
+		if (Capa_match(self->preauth_capa, "AUTH=LOGIN") && MATCH(p_string_str(self->args[0]),"LOGIN")) {
 			TRACE(TRACE_DEBUG, "[%p] prompt for authenticate tokens", self);
 
 			/* ask for username */
 			dbmail_imap_session_prompt(self,"username");
 			return 0;
-		} else if (MATCH(p_string_str(self->args[0]),"CRAM-MD5")) {
+		} else if (Capa_match(self->preauth_capa, "AUTH=CRAM-MD5") && MATCH(p_string_str(self->args[0]),"CRAM-MD5")) {
 			const gchar *s;
 			gchar *t;
 			self->ci->auth = Cram_new();
