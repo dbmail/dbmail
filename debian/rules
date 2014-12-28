@@ -135,7 +135,7 @@ binary-arch: build-arch install
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 
 binary-%: build install
-        make -f debian/rules binary-common $* DH_OPTIONS=-p$*
+	make -f debian/rules binary-common $* DH_OPTIONS=-p$*
 	
 binary: binary-indep binary-arch
 
