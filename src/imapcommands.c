@@ -1517,7 +1517,7 @@ static void _ic_status_enter(dm_thread_data *D)
 			plst = g_list_append_printf(plst,"UIDVALIDITY %" PRIu64 "", MailboxState_getId(M));
 		else if (Capa_match(self->capa, "CONDSTORE") && MATCH(attr, "highestmodseq")) {
 			plst = g_list_append_printf(plst,"HIGHESTMODSEQ %" PRIu64, MailboxState_getSeq(M));
-			self->mailbox->condstore = true;
+			self->enabled.condstore = true;
 		}
 		else if (MATCH(attr, ")"))
 			break;
