@@ -366,6 +366,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 	int found = 0;
 	//int indx = 0;
 	int validate_result;
+    bool login_disabled = FALSE;
 	uint64_t result, top_lines, top_messageid, user_idnr;
 	unsigned char *md5_apop_he;
 	struct message *msg;
@@ -431,6 +432,15 @@ int pop3(ClientSession_T *session, const char *buffer)
 		}
 	}
 
+    if (state == CLIENTSTATE_INITIAL_CONNECT) {
+        if (server_conf->ssl) {
+            Field_T val;
+            GETCONFIGVALUE("login_disabled", "POP", val);
+            if (SMATCH(val, "yes"))
+                login_disabled = TRUE;
+        }
+    }
+
 	switch (cmdtype) {
 		
 	case POP3_QUIT:
@@ -459,6 +469,9 @@ int pop3(ClientSession_T *session, const char *buffer)
 		if (state != CLIENTSTATE_INITIAL_CONNECT)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
 
+        if (login_disabled && ! session->ci->sock->ssl_state)
+            return pop3_error(session, "-ERR try STLS\r\n");
+
 		if (session->username != NULL) {
 			/* reset username */
 			g_free(session->username);
@@ -477,6 +490,9 @@ int pop3(ClientSession_T *session, const char *buffer)
 	case POP3_PASS:
 		if (state != CLIENTSTATE_INITIAL_CONNECT)
 			return pop3_error(session, "-ERR wrong command mode\r\n");
+
+        if (login_disabled && ! session->ci->sock->ssl_state)
+            return pop3_error(session, "-ERR try STLS\r\n");
 
 		if (session->password != NULL) {
 			g_free(session->password);
