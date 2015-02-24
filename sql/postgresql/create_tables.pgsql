@@ -46,7 +46,8 @@ CREATE TABLE dbmail_authlog (
   dst_port INT8,
   status VARCHAR(32) DEFAULT 'active',
   bytes_rx INT8 DEFAULT '0' NOT NULL,
-  bytes_tx INT8 DEFAULT '0' NOT NULL
+  bytes_tx INT8 DEFAULT '0' NOT NULL,
+  PRIMARY KEY (id)
 );
 
 
