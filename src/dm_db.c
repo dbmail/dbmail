@@ -4290,6 +4290,12 @@ void db_message_set_seq(uint64_t message_id, uint64_t seq)
 	END_TRY;
 }
 
+int db_move_message(uint64_t message_id, uint64_t mailbox_id)
+{
+	return db_update("UPDATE %smessages SET mailbox_idnr = %" PRIu64 " WHERE message_idnr = %" PRIu64 "",
+		DBPFX, mailbox_id, message_id);
+}
+
 int db_rehash_store(void)
 {
 	GList *ids = NULL;

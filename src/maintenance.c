@@ -1184,7 +1184,7 @@ int do_erase_old(int days, char * mbtrash_name)
 /* Move message to Trash if the message is in INBOX mailbox and date less then passed date. */
 int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
 {
-	Connection_T c; ResultSet_T r; ResultSet_T r1; PreparedStatement_T s; PreparedStatement_T s1; PreparedStatement_T s2;
+	Connection_T c; ResultSet_T r; ResultSet_T r1; PreparedStatement_T s; PreparedStatement_T s1;
 	int skip = 1;
 	char expire [DEF_FRAGSIZE];
         uint64_t mailbox_to;
@@ -1200,9 +1200,7 @@ int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
 			      "WHERE mb.name = ? AND msg.status < %d "
 			      "AND phys.internal_date < %s", 
 			      DBPFX, DBPFX, DBPFX, MESSAGE_STATUS_DELETE, expire);
-
 	s1 = db_stmt_prepare(c, "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr = ? AND name = ?", DBPFX);
-	s2 = db_stmt_prepare(c, "UPDATE %smessages SET mailbox_idnr = ? WHERE message_idnr = ?", DBPFX);
 
 	db_stmt_set_str(s, 1, mbinbox_name);
 
@@ -1225,9 +1223,7 @@ int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
 			} 
 
 			if (!skip) {
-				db_stmt_set_u64(s2,1,mailbox_to);
-				db_stmt_set_u64(s2,2,id);
-				db_stmt_exec(s2);
+				db_move_message(id, mailbox_to);
 				db_mailbox_seq_update(mailbox_to, 0);
 				db_mailbox_seq_update(mailbox_from, 0);
 			}
