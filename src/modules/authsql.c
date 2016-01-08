@@ -97,7 +97,7 @@ int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr)
 {
 	assert(client_idnr != NULL);
 	*client_idnr = 0;
-	C c; R r; int t = TRUE;
+	C c; R r; volatile int t = TRUE;
 
 	c = db_con_get();
 	TRY
@@ -118,7 +118,7 @@ int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size)
 {
 	assert(maxmail_size != NULL);
 	*maxmail_size = 0;
-	C c; R r; int t = TRUE;
+	C c; R r; volatile int t = TRUE;
 	
 	c = db_con_get();
 	TRY
@@ -361,7 +361,7 @@ uint64_t auth_md5_validate(ClientBase_T *ci UNUSED, char *username,
 	uint64_t user_idnr = 0;
 	const char *dbpass;
 	C c; R r;
-	int t = FALSE;
+	volatile int t = FALSE;
 
 	/* lookup the user_idnr */
 	if (! auth_user_exists(username, &user_idnr))
@@ -430,7 +430,7 @@ char *auth_get_userid(uint64_t user_idnr)
 
 int auth_check_userid(uint64_t user_idnr)
 {
-	C c; R r; gboolean t = TRUE;
+	C c; R r; volatile gboolean t = TRUE;
 
 	c = db_con_get();
 	TRY
@@ -570,7 +570,7 @@ int auth_addalias_ext(const char *alias,
 
 int auth_removealias(uint64_t user_idnr, const char *alias)
 {
-	C c; S s; gboolean t = FALSE;
+	C c; S s; volatile gboolean t = FALSE;
 	
 	c = db_con_get();
 	TRY
@@ -590,7 +590,7 @@ int auth_removealias(uint64_t user_idnr, const char *alias)
 
 int auth_removealias_ext(const char *alias, const char *deliver_to)
 {
-	C c; S s; gboolean t = FALSE;
+	C c; S s; volatile gboolean t = FALSE;
 
 	c = db_con_get();
 	TRY

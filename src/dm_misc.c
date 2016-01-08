@@ -1029,7 +1029,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 
 			type=g_strdup("AND");
 
-			if (! g_tree_nnodes(a) > 0)
+			if (! (g_tree_nnodes(a) > 0))
 				break;
 
 			/* delete from A all keys not in B */
@@ -1053,7 +1053,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 		case IST_SUBSEARCH_OR:
 			type=g_strdup("OR");
 			
-			if (! g_tree_nnodes(b) > 0)
+			if (! (g_tree_nnodes(b) > 0))
 				break;
 
 			merger->tree = a;
@@ -1081,7 +1081,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 		case IST_SUBSEARCH_NOT:
 			type=g_strdup("NOT");
 
-			if (! g_tree_nnodes(b) > 0)
+			if (! (g_tree_nnodes(b) > 0))
 				break;
 			
 			keys = g_tree_keys(b);

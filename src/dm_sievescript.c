@@ -132,7 +132,7 @@ int dm_sievescript_list(uint64_t user_idnr, GList **scriptlist)
 
 int dm_sievescript_rename(uint64_t user_idnr, char *scriptname, char *newname)
 {
-	int active = 0;
+	volatile int active = 0;
 	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = FALSE;
 	assert(scriptname);
 

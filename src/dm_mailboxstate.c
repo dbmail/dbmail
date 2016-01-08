@@ -977,7 +977,7 @@ int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 	if (! owner_id) {
 		result = db_get_mailbox_owner(mboxid, &owner_id);
 		MailboxState_setOwner(M, owner_id);
-		if (! result > 0)
+		if (! (result > 0))
 			return result;
 	}
 
@@ -1116,7 +1116,7 @@ int MailboxState_build_recent(T M)
 	return 0;
 }
 
-static long long int _update_recent(GList *slices, uint64_t seq)
+static long long int _update_recent(volatile GList *slices, uint64_t seq)
 {
 	INIT_QUERY;
 	Connection_T c;

@@ -361,11 +361,11 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
        	ResultSet_T r;
 	char internal_date[SQL_INTERNALDATE_LEN];
 	GMimeContentType *mimetype = NULL;
-	int prevdepth, depth = 0, row = 0;
+	volatile int prevdepth, depth = 0, row = 0;
 	volatile int t = FALSE;
-	gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
-	gboolean prev_is_message = FALSE, is_message = FALSE;
-	String_T m = NULL, n = NULL;
+	volatile gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
+	volatile gboolean prev_is_message = FALSE, is_message = FALSE;
+	volatile String_T m = NULL, n = NULL;
 	const void *blob;
 	Field_T frag;
 
@@ -530,7 +530,7 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 {
 	const char *boundary;
 	const char *preface = NULL, *postface = NULL;
-	int n, i, c;
+	int n = 0, i, c;
 
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
@@ -1977,7 +1977,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 
 static int get_mailbox_from_filters(DbmailMessage *message, uint64_t useridnr, const char *mailbox, char *into, size_t into_n)
 {
-	int t = FALSE;
+	volatile int t = FALSE;
 	uint64_t anyone = 0;
 	PreparedStatement_T stmt;
 	Connection_T c;

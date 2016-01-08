@@ -181,7 +181,7 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream)
 	uint64_t msgid, physid, *id;
 	DbmailMessage *m;
 	GTree *uids;
-	int count = 0;
+	volatile int count = 0;
 	PreparedStatement_T stmt;
 	Connection_T c; 
 	ResultSet_T r;
@@ -475,7 +475,7 @@ char * dbmail_mailbox_sorted_as_string(DbmailMailbox *self)
 	uint64_t *msn;
 
 	l = g_list_first(self->sorted);
-	if (! g_list_length(l)>0)
+	if (! (g_list_length(l) > 0))
 		return s;
 
 	t = g_string_new("");
@@ -1224,7 +1224,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 	char partial[DEF_FRAGSIZE];
 	Connection_T c; ResultSet_T r; PreparedStatement_T st;
 	GTree *ids;
-	char *inset = NULL;
+	volatile char *inset = NULL;
 	
 	GString *t;
 	String_T q;

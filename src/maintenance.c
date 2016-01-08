@@ -1012,7 +1012,7 @@ int do_migrate(int migrate_limit)
 {
 	Connection_T c; ResultSet_T r;
 	int id = 0;
-	int count = 0;
+	volatile int count = 0;
 	DbmailMessage *m;
 	
 	qprintf ("Migrate legacy 2.2.x messageblks to mimeparts...\n");

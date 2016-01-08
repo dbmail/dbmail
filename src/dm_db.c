@@ -1047,7 +1047,7 @@ int db_check_version(void)
 /* test existence of usermap table */
 int db_use_usermap(void)
 {
-	int use_usermap = TRUE;
+	volatile int use_usermap = TRUE;
 	Connection_T c = db_con_get();
 	TRY
 		if (! db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "usermap"))
@@ -1214,7 +1214,7 @@ static int dm_quota_user_validate(uint64_t user_idnr, uint64_t msg_size)
 int dm_quota_rebuild_user(uint64_t user_idnr)
 {
 	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
-	uint64_t quotum = 0;
+	volatile uint64_t quotum = 0;
 
 	c = db_con_get();
 	TRY
@@ -1257,7 +1257,7 @@ int dm_quota_rebuild()
 
 	GList *quota = NULL;
 	struct used_quota *q;
-	int i = 0;
+	volatile int i = 0;
 	int result;
 
 	c = db_con_get();
@@ -1375,7 +1375,7 @@ int db_get_reply_body(uint64_t user_idnr, char **reply_body)
 uint64_t db_get_useridnr(uint64_t message_idnr)
 {
 	Connection_T c; ResultSet_T r;
-	uint64_t user_idnr = 0;
+	volatile uint64_t user_idnr = 0;
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT %smailboxes.owner_idnr FROM %smailboxes, %smessages "
@@ -1397,7 +1397,7 @@ uint64_t db_get_useridnr(uint64_t message_idnr)
 int db_log_ip(const char *ip)
 {
 	Connection_T c; ResultSet_T r; PreparedStatement_T s; volatile int t = DM_SUCCESS;
-	uint64_t id = 0;
+	volatile uint64_t id = 0;
 	
 	c = db_con_get();
 	TRY
@@ -1444,8 +1444,8 @@ int db_empty_mailbox(uint64_t user_idnr, int only_empty)
 	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	GList *mboxids = NULL;
 	uint64_t *id;
-	unsigned i = 0;
-	int result = 0;
+	volatile unsigned i = 0;
+	volatile int result = 0;
 
 	c = db_con_get();
 
@@ -2165,7 +2165,7 @@ static int mailboxes_by_regex(uint64_t user_idnr, int only_subscribed, const cha
 	char *spattern;
 	char *namespace, *username;
 	GString *qs = NULL;
-	int n_rows = 0;
+	volatile int n_rows = 0;
 	PreparedStatement_T stmt;
 	int prml;
 	
@@ -2862,7 +2862,7 @@ int db_movemsg(uint64_t mailbox_to, uint64_t mailbox_from)
 #define EXPIRE_DAYS 3
 int db_mailbox_has_message_id(uint64_t mailbox_idnr, const char *messageid)
 {
-	int rows = 0;
+	volatile int rows = 0;
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	char expire[DEF_FRAGSIZE], partial[DEF_FRAGSIZE];
 	INIT_QUERY;
@@ -2909,7 +2909,7 @@ int db_mailbox_has_message_id(uint64_t mailbox_idnr, const char *messageid)
 static uint64_t message_get_size(uint64_t message_idnr)
 {
 	Connection_T c; ResultSet_T r;
-	uint64_t size = 0;
+	volatile uint64_t size = 0;
 
 	c = db_con_get();
 	TRY
@@ -3443,8 +3443,8 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 {
 	char clientsock[DM_SOCKADDR_LEN];
 	const char *userid = NULL, *sockok = NULL, *sockno = NULL, *login = NULL;
-	unsigned row = 0;
-	int result = TRUE;
+	volatile unsigned row = 0;
+	volatile int result = TRUE;
 	int score, bestscore = -1;
 	char *bestlogin = NULL, *bestuserid = NULL;
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
@@ -3653,7 +3653,7 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 {
 	int is_validated = 0;
 	char salt[13], cryptres[35];
-	int t = FALSE;
+	volatile int t = FALSE;
 	char dbpass[COLUMN_WIDTH+1];
        	char encode[COLUMN_WIDTH+1];
 	char hashstr[FIELDSIZE];

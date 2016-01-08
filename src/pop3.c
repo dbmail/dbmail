@@ -99,7 +99,7 @@ static int db_createsession(uint64_t user_idnr, ClientSession_T * session)
 {
 	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
 	struct message *tmpmessage;
-	int message_counter = 0;
+	volatile int message_counter = 0;
 	const char *query_result;
 	uint64_t mailbox_idnr;
 	INIT_QUERY;
