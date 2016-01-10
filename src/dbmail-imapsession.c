@@ -832,19 +832,20 @@ static void _imap_send_part(ImapSession *self, GMimeObject *part, body_fetch *bo
 	} else {
 		char *tmp = imap_get_logical_part(part,type);
 		String_T str = p_string_new(self->pool, tmp);
+		size_t len = p_string_len(str);
 		g_free(tmp);
 
-		if (p_string_len(str) < 1) {
+		if (len < 1) {
 			dbmail_imap_session_buff_printf(self, "] NIL");
 		} else {
 			uint64_t cnt = 0;
 			if (bodyfetch->octetcnt > 0) {
-				cnt = get_dumpsize(bodyfetch, p_string_len(str));
+				cnt = get_dumpsize(bodyfetch, len);
 				dbmail_imap_session_buff_printf(self, "]<%" PRIu64 "> {%" PRIu64 "}\r\n", bodyfetch->octetstart, cnt);
-				p_string_erase(str,0,bodyfetch->octetstart);
+				p_string_erase(str,0,min(bodyfetch->octetstart,len));
 				p_string_truncate(str,cnt);
 			} else {
-				dbmail_imap_session_buff_printf(self, "] {%" PRIu64 "}\r\n", p_string_len(str));
+				dbmail_imap_session_buff_printf(self, "] {%" PRIu64 "}\r\n", len);
 			}
 			dbmail_imap_session_buff_printf(self,"%s", p_string_str(str));
 		}
