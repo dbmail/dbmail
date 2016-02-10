@@ -3687,6 +3687,10 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 		return t;
 	
 	if (! t) return FALSE;
+	if (! strlen(dbpass)) {
+		TRACE(TRACE_INFO, "Empty password for [%" PRIu64 "] in [%s]", *user_idnr, pwfield);
+	       	return FALSE;
+	}
 
 	if (SMATCH(encode, "")) {
 		TRACE(TRACE_DEBUG, "validating using plaintext passwords");
@@ -3699,7 +3703,8 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 
 	if (SMATCH(encode, "crypt")) {
 		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
-		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
+		strncpy(salt, dbpass, 2);
+		is_validated = (strcmp((const char *) crypt(password, salt), dbpass) == 0) ? 1 : 0;
 	} else if (SMATCH(encode, "md5")) {
 		/* get password */
 		if (strncmp(dbpass, "$1$", 3)) { // no match
