@@ -2422,4 +2422,16 @@ void uint64_free(void *data)
 	mempool_push(small_pool, data, sizeof(uint64_t));
 }
 
+/*
+ * calculate the difference between two timeval values
+ * as number of seconds, using default rounding
+ */
+int diff_time(struct timeval before, struct timeval after)
+{
+	int tbefore = before.tv_sec * 1000000 + before.tv_usec;
+	int tafter = after.tv_sec * 1000000 + after.tv_usec;
+	int tdiff = tafter - tbefore;
+	return (int)rint((double)tdiff/1000000);
+}
+
 

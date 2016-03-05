@@ -414,6 +414,32 @@ START_TEST(test_db_get_sql)
 }
 END_TEST
 
+START_TEST(test_diff_time)
+{
+	struct timeval before, after;
+	int diff;
+
+	before.tv_sec = 1; before.tv_usec = 0;
+	after.tv_sec = 2; after.tv_usec = 0;
+	diff = diff_time(before, after);
+	fail_unless(diff == 1);
+
+	before.tv_sec = 1; before.tv_usec = 1000000 - 1;
+	after.tv_sec = 2; after.tv_usec = 0;
+	diff = diff_time(before, after);
+	fail_unless(diff == 0);
+	
+	before.tv_sec = 1; before.tv_usec = 500001;
+	after.tv_sec = 2; after.tv_usec = 0;
+	diff = diff_time(before, after);
+	fail_unless(diff == 0);
+
+	before.tv_sec = 1; before.tv_usec = 499999;
+	after.tv_sec = 2; after.tv_usec = 0;
+	diff = diff_time(before, after);
+	fail_unless(diff == 1);
+}
+END_TEST
 
 Suite *dbmail_db_suite(void)
 {
@@ -435,6 +461,7 @@ Suite *dbmail_db_suite(void)
 	tcase_add_test(tc_db, test_mailbox_match_new);
 	tcase_add_test(tc_db, test_db_findmailbox_by_regex);
 	tcase_add_test(tc_db, test_db_get_sql);
+	tcase_add_test(tc_db, test_diff_time);
 
 	return s;
 }

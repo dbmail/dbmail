@@ -354,14 +354,14 @@ void db_con_clear(Connection_T c)
 
 void log_query_time(char *query, struct timeval before, struct timeval after)
 {
-	double elapsed = ((double)after.tv_sec + ((double)after.tv_usec / 1000000)) - ((double)before.tv_sec + ((double)before.tv_usec / 1000000));
-	TRACE(TRACE_DATABASE, "last query took [%.3f] seconds", elapsed);
-	if (elapsed > (double)db_params.query_time_warning)
-		TRACE(TRACE_WARNING, "slow query [%s] took [%.3f] seconds", query, elapsed);
-	else if (elapsed > (double)db_params.query_time_notice)
-		TRACE(TRACE_NOTICE, "slow query [%s] took [%.3f] seconds", query, elapsed);
-	else if (elapsed > (double)db_params.query_time_info)
-		TRACE(TRACE_INFO, "slow query [%s] took [%.3f] seconds", query, elapsed);
+	unsigned int elapsed = (unsigned int)diff_time(before, after);
+	TRACE(TRACE_DATABASE, "last query took [%d] seconds", elapsed);
+	if (elapsed > db_params.query_time_warning)
+		TRACE(TRACE_WARNING, "slow query [%s] took [%d] seconds", query, elapsed);
+	else if (elapsed > db_params.query_time_notice)
+		TRACE(TRACE_NOTICE, "slow query [%s] took [%d] seconds", query, elapsed);
+	else if (elapsed > db_params.query_time_info)
+		TRACE(TRACE_INFO, "slow query [%s] took [%d] seconds", query, elapsed);
 	return;
 }
 

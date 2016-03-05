@@ -178,4 +178,6 @@ gchar * get_crlf_encoded_opt(const gchar *string, int dots);
 void strip_crlf(char *buffer);
 void uint64_free(void *);
 
+int diff_time(struct timeval before, struct timeval after);
+
 #endif
