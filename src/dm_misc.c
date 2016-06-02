@@ -104,6 +104,26 @@ int drop_privileges(char *newuser, char *newgroup)
 	return 0;
 }
 
+int get_opened_fd_count(void)
+{
+	DIR* dir = NULL;
+	struct dirent* entry = NULL;
+	char buf[32];
+	int fd_count = 0;
+
+	snprintf(buf, 32, "/proc/%i/fd/", getpid());
+
+	dir = opendir(buf);
+	if (dir == NULL)
+		return -1;
+
+	while ((entry = readdir(dir)) != NULL)
+		fd_count++;
+	closedir(dir);
+
+	return fd_count - 2; /* exclude '.' and '..' entries */
+}
+
 void create_unique_id(char *target, uint64_t message_idnr)
 {
 	char md5_str[FIELDSIZE];

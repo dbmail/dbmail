@@ -69,12 +69,14 @@
 #include <string.h>
 #include <strings.h>
 #include <sysexits.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -251,6 +253,9 @@
 
 /* input reading linelimit */
 #define MAX_LINESIZE (64*1024)
+
+/* minumun number of free file descriptors required to run the daemon */
+#define FREE_DF_THRESHOLD 16
 
 /* string length for query */
 #define DEF_QUERYSIZE (32*1024)
