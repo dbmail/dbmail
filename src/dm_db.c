@@ -196,10 +196,15 @@ int db_connect(void)
 	int sweepInterval = 60;
 	Connection_T c;
 	GString *dsn;
-       
+	GString *uri;
+
 	if (strlen(db_params.dburi) != 0) {
-		TRACE(TRACE_DEBUG,"dburi: %s", db_params.dburi);
-		dburi = URL_new(db_params.dburi);
+		uri = g_string_new("");
+		g_string_append_printf(uri,"%s", db_params.dburi);
+		g_string_append_printf(uri, "&application-name=%s", server_conf ? server_conf->process_name : "dbmail_client");
+		TRACE(TRACE_DEBUG,"dburi: %s", uri->str);
+		dburi = URL_new(uri->str);
+		g_string_free(uri,TRUE);
 	} else {
 		dsn = g_string_new("");
 		g_string_append_printf(dsn,"%s://",db_params.driver);
@@ -237,6 +242,10 @@ int db_connect(void)
 
 		if (strlen((const char *)db_params.sock))
 			g_string_append_printf(dsn,"&unix-socket=%s", db_params.sock);
+
+		if (MATCH(db_params.driver,"postgresql")) {
+			g_string_append_printf(dsn, "&application-name=%s", server_conf ? server_conf->process_name : "dbmail_client");
+		}
 
 		dburi = URL_new(dsn->str);
 		g_string_free(dsn,TRUE);
