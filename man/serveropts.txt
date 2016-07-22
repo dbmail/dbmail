@@ -3,10 +3,12 @@ OPTIONS
 -------
 
 -p pidfile::
-  Specify an alternate pid file. The daemons are currently hardcoded
-  to use /var/run/dbmail-<daemon> for their pid files, and will halt
-  if the pid file cannot be written. Use the -p pidfile option to
-  place the pid file in your system's preferred location.
+  Specify an alternate pid file. By default the daemons use dbmail-<daemon>.pid
+  for their pid files, saving them in the directory specified by the
+  pid_directory entry in dbmail.conf or if that does not exist the value set by
+  the configuration option --localstatedir, and will halt if the pid file
+  cannot be written. Use the -p pidfile option to place the pid file in
+  your system's preferred location.
 
 -n::
   No daemonize: inetd mode. The program remains attached to the console from
