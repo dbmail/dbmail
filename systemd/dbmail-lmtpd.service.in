@@ -3,9 +3,8 @@ Description=DBMail LMTP Server
 After=syslog.target network.target mysqld.service postgresql.service
 
 [Service]
-Type=forking
-PIDFile=@piddir@/dbmail-lmtpd.pid
-ExecStart=@sbindir@/dbmail-lmtpd -p @piddir@/dbmail-lmtpd.pid
+Type=notify
+ExecStart=@sbindir@/dbmail-lmtpd -D
 
 [Install]
 WantedBy=multi-user.target

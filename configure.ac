@@ -47,6 +47,9 @@ AM_CONDITIONAL(MANPAGES, [ test "$enable_manpages" = "yes" ])
 AC_ARG_ENABLE([systemd],
     AS_HELP_STRING([--enable-systemd], [Enable systemd support]))
 AM_CONDITIONAL(SYSTEMD, [ test "$enable_systemd" = "yes" ])
+if [ test "$enable_systemd" = "yes" ]; then
+    DM_CHECK_SYSTEMD
+fi
 
 AC_PROG_CC
 AC_COMPILE_WARNINGS

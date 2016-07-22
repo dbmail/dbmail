@@ -322,6 +322,9 @@ int StartCliServer(ServerConfig_T * conf)
 {
 	assert(conf);
 	server_start_cli(conf);
+#ifdef HAVE_SYSTEMD
+	sd_notify(0, "STOPPING=1");
+#endif
 	return 0;
 }
 
@@ -846,7 +849,9 @@ int server_run(ServerConfig_T *conf)
 
 	if (MATCH(conf->service_name, "IMAP"))
 		dm_queue_heartbeat();
-
+#ifdef HAVE_SYSTEMD
+	sd_notify(0, "READY=1");
+#endif
 	TRACE(TRACE_DEBUG,"dispatching event loop...");
 
 	event_base_dispatch(evbase);

@@ -50,7 +50,6 @@ SUFFIXES=.service.in .service .tmpfiles.in .tmpfiles
 .service.in.service:
 	$(AM_V_GEN)sed						\
 	    -e 's|[@]sbindir[@]|$(sbindir)|g'			\
-	    -e 's|[@]piddir[@]|$(PID_DIR)|g'		\
 	    < $< > $@-t &&					\
 	    mv $@-t $@
 
