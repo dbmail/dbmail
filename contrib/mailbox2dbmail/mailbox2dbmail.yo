@@ -6,11 +6,11 @@ manpageoptions()
 startdit()
 dit(bf(-v,--version)) Version info
 dit(bf(-h,--help)) Help Display
-dit(bf(-b,--box)) IMAP folder to stick mail in under user (Default: Inbox)
-dit(bf(-m,--mail)) Location of Mailbox(required)
-dit(bf(-u,--user)) Username(required)
+dit(bf(-b,--box)) IMAP folder to stick mail in under user (default: Inbox)
+dit(bf(-m,--mail)) Location of Mailbox (required)
+dit(bf(-u,--user)) Username (required)
 dit(bf(-t,--type)) Type of Mailbox: mbox, maildir, mhdir (required)
-dit(bf(-p,--path)) Path to dbmail-deliver(default: /usr/sbin/dbmail-deliver)
+dit(bf(-p,--path)) Path to dbmail-deliver (default: /usr/sbin/dbmail-deliver)
 enddit()
 
 manpageseealso()
