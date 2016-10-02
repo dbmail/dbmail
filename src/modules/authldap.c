@@ -127,7 +127,7 @@ static LDAP * ldap_con_get(void)
 	}
 	int c = 0;
 	int err = -1; // Start wanting success
-	while (err != 0 && c++ < 5) {
+	while (err != 0 && c++ < 120) {
 		// Loop until success or too many retries
 		TRACE(TRACE_DEBUG, "No connection trying [%d]", c);
 
@@ -139,8 +139,8 @@ static LDAP * ldap_con_get(void)
 				TRACE(TRACE_DEBUG, "connection [%p]", ld);
 				break;
 			case LDAP_SERVER_DOWN:
-				TRACE(TRACE_WARNING, "LDAP gone away: %s. Trying to reconnect(%d/5).", ldap_err2string(err),c);
-				sleep(2); // reconnect failed. wait before trying again
+				TRACE(TRACE_WARNING, "LDAP gone away: %s. Trying to reconnect(%d/120).", ldap_err2string(err),c);
+				sleep(1); // reconnect failed. wait before trying again
 				break;
 			default:
 				TRACE(TRACE_ERR, "LDAP error(%d): %s", err, ldap_err2string(err));
