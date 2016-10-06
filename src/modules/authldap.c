@@ -266,7 +266,7 @@ static LDAPMessage * authldap_search(const gchar *query)
 	char **_ldap_attrs = NULL;
 	int err = -1; // Start wanting success
 	int c = 0;
-	int c_tries = 10;
+	int c_tries = 60;
 	LDAP *_ldap_conn;
 
 	g_return_val_if_fail(query!=NULL, NULL);
