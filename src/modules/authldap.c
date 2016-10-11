@@ -126,7 +126,7 @@ static LDAP * ldap_con_get(void)
 		return ld;
 	}
 	int c = 0;
-	int c_tries = 120;
+	int c_tries = 600;
 	int err = -1; // Start wanting success
 	while (err != 0 && c++ < c_tries) {
 		// Loop until success or too many retries
@@ -266,7 +266,7 @@ static LDAPMessage * authldap_search(const gchar *query)
 	char **_ldap_attrs = NULL;
 	int err = -1; // Start wanting success
 	int c = 0;
-	int c_tries = 60;
+	int c_tries = 600;
 	LDAP *_ldap_conn;
 
 	g_return_val_if_fail(query!=NULL, NULL);
