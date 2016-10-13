@@ -826,13 +826,11 @@ int server_run(ServerConfig_T *conf)
 			for (i = 0; i < conf->socketcount; i++) {
 				TRACE(TRACE_DEBUG, "Adding event for plain socket [%d] [%d/%d]", conf->listenSockets[i], i+1, total);
 				evsock[i] = event_new(evbase, conf->listenSockets[i], EV_READ, server_sock_cb, NULL);
-				event_assign(evsock[i], evbase, conf->listenSockets[i], EV_READ, server_sock_cb, evsock[i]);
 				event_add(evsock[i], NULL);
 			}
 			for (k = i, i = 0; i < conf->ssl_socketcount; i++, k++) {
 				TRACE(TRACE_DEBUG, "Adding event for ssl socket [%d] [%d/%d]", conf->ssl_listenSockets[i], k+1, total);
 				evsock[k] = event_new(evbase, conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, NULL);
-				event_assign(evsock[k], evbase, conf->ssl_listenSockets[i], EV_READ, server_sock_ssl_cb, evsock[k]);
 				event_add(evsock[k], NULL);
 			}
 		}
