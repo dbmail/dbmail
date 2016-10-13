@@ -656,9 +656,6 @@ void server_sig_cb(int UNUSED fd, short UNUSED event, void *arg)
 			mainReload = 1;
 		case SIGPIPE: // ignore
 		break;
-		case SIGUSR1:
-			g_mem_profile();
-		break;
 		default:
 			exit(0);
 		break;
