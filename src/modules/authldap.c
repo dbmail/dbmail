@@ -28,22 +28,7 @@
 
 extern char configFile[PATH_MAX];
 
-/*
- signal-safe releasing of thread-local ldap connection
-*/
-static void authldap_free(gpointer data)
-{
-	LDAP *c = (LDAP *)data;
-	struct sigaction act, oldact;
-
-	memset(&act, 0, sizeof(act));
-	memset(&oldact, 0, sizeof(oldact));
-	act.sa_handler = SIG_IGN;
-	sigaction(SIGPIPE, &act, &oldact);
-	ldap_unbind(c);
-	sigaction(SIGPIPE, &oldact, 0);
-}
-
+static void authldap_free(gpointer data);
 static GPrivate ldap_conn_key = G_PRIVATE_INIT (authldap_free);
 static GOnce ldap_conn_once = G_ONCE_INIT;
 static int authldap_connect(void);
@@ -174,6 +159,22 @@ static LDAP * ldap_con_get(void)
 	}
 	TRACE(TRACE_DEBUG, "connection [%p]", ld);
 	return ld;
+}
+
+/*
+ signal-safe releasing of thread-local ldap connection
+*/
+static void authldap_free(gpointer data)
+{
+	LDAP *c = (LDAP *)data;
+	struct sigaction act, oldact;
+
+	memset(&act, 0, sizeof(act));
+	memset(&oldact, 0, sizeof(oldact));
+	act.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &act, &oldact);
+	ldap_unbind(c);
+	sigaction(SIGPIPE, &oldact, 0);
 }
 
 /*
