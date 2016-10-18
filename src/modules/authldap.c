@@ -299,7 +299,7 @@ static LDAPMessage * authldap_search(const gchar *query)
 		sleep(1); // Search failed. Wait before trying again.
 	}
 
-	TRACE(TRACE_EMERG,"unrecoverable error while talking to ldap server");
+	TRACE(TRACE_ERR,"unrecoverable error while talking to ldap server");
 	return NULL;
 }
 
