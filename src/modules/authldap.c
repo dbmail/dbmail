@@ -282,8 +282,9 @@ static LDAPMessage * authldap_search(const gchar *query)
 	while (err != 0 && c++ < c_tries) {
 		// Loop until success or too many retries
 
-		err = ldap_search_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int, 
-				query, _ldap_attrs, _ldap_attrsonly, &ldap_res);
+		// timeout must be NULL as any value times out!
+		err = ldap_search_ext_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int, 
+				query, _ldap_attrs, _ldap_attrsonly, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_res);
 
 		switch (err) {
 			case LDAP_SUCCESS:
