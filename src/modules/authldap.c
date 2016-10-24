@@ -173,7 +173,7 @@ static void authldap_free(gpointer data)
 	memset(&oldact, 0, sizeof(oldact));
 	act.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &act, &oldact);
-	ldap_unbind(c);
+	ldap_unbind_ext(c, NULL, NULL);
 	sigaction(SIGPIPE, &oldact, 0);
 }
 
