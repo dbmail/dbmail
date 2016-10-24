@@ -282,6 +282,8 @@ static int server_start_cli(ServerConfig_T *conf)
 		TRACE(TRACE_ERR, "could not connect to authentication");
 		return -1;
 	}
+	// Disconnect this connection as threads will create their own
+	auth_disconnect();
 
 	srand((int) ((int) time(NULL) + (int) getpid()));
 
