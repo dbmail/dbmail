@@ -641,7 +641,7 @@ int auth_disconnect(void)
 	// Just free the pointer,
         // G_PRIVATE_INIT calls GDestroyNotify
 	// which calls authldap_free()
-	g_private_replace(&ldap_conn_key, NULL)
+	g_private_replace(&ldap_conn_key, NULL);
 	return 0;
 }
 
