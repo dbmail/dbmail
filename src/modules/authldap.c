@@ -167,14 +167,15 @@ static LDAP * ldap_con_get(void)
 static void authldap_free(gpointer data)
 {
 	LDAP *c = (LDAP *)data;
-	struct sigaction act, oldact;
 
-	memset(&act, 0, sizeof(act));
-	memset(&oldact, 0, sizeof(oldact));
-	act.sa_handler = SIG_IGN;
-	sigaction(SIGPIPE, &act, &oldact);
-	ldap_unbind_ext(c, NULL, NULL);
-	sigaction(SIGPIPE, &oldact, 0);
+	int err = ldap_set_option(c, LDAP_OPT_SERVER_CONTROLS, NULL );
+	if ( err != LDAP_OPT_SUCCESS ) {
+		TRACE(TRACE_ERR, "Could not unset controls");
+	}
+
+	if ((err = ldap_unbind_ext_s(c, NULL, NULL))) {
+		TRACE(TRACE_ERR, "ldap_unbind_ext_s failed: %s",  ldap_err2string(err));
+	}
 }
 
 /*
@@ -639,7 +640,7 @@ int auth_connect(void)
 int auth_disconnect(void)
 {
 	// Just free the pointer,
-        // G_PRIVATE_INIT calls GDestroyNotify
+	// G_PRIVATE_INIT calls GDestroyNotify
 	// which calls authldap_free()
 	g_private_replace(&ldap_conn_key, NULL);
 	return 0;
