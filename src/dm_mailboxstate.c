@@ -212,11 +212,12 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 		db_begin_transaction(c); // we need read-committed isolation
 		state_load_metadata(M, c);
 		state_load_messages(M, c);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
-		db_commit_transaction(c);
 		db_con_close(c);
 	END_TRY;
 
@@ -888,11 +889,12 @@ int MailboxState_info(T M)
 	TRY
 		db_begin_transaction(c);
 		db_getmailbox_info(M, c);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
-		db_commit_transaction(c);
 		db_con_close(c);
 	END_TRY;
 
@@ -928,11 +930,12 @@ int MailboxState_count(T M)
 	TRY
 		db_begin_transaction(c);
 		db_getmailbox_count(M, c);
+		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
+		db_rollback_transaction(c);
 		t = DM_EQUERY;
 	FINALLY
-		db_commit_transaction(c);
 		db_con_close(c);
 	END_TRY;
 
