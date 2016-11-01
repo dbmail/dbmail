@@ -431,6 +431,14 @@ START_TEST(test_dbmail_message_store)
 	COMPARE(e,t);
 	g_free(e);
 	g_free(t);
+	//-----------------------------------------
+	m = message_init(multipart_message_submessage);
+	e = dbmail_message_to_string(m);
+	t = store_and_retrieve(m);
+	COMPARE(e,t);
+	COMPARE(multipart_message_submessage, t);
+	g_free(e);
+	g_free(t);
 }
 END_TEST
 

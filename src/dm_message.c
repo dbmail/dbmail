@@ -387,7 +387,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				"FROM %smimeparts p "
 				"JOIN %spartlists l ON p.id = l.part_id "
 				"JOIN %sphysmessage ph ON ph.id = l.physmessage_id "
-				"WHERE l.physmessage_id = ? ORDER BY l.part_key,l.part_order ASC", 
+				"WHERE l.physmessage_id = ? ORDER BY l.part_key, l.part_order ASC, l.part_depth DESC", 
 				frag, p_string_str(n), DBPFX, DBPFX, DBPFX);
 		db_stmt_set_u64(stmt, 1, self->id);
 		r = db_stmt_query(stmt);
@@ -454,10 +454,14 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if ((depth > 0) && (blist[depth-1][0]))
 				strncpy(boundary, blist[depth-1], MAX_MIME_BLEN-1);
 
-			if (is_header && (!prev_header || prev_boundary || (prev_header && depth>0 && !prev_is_message))) {
+			if (is_header)
+			  if (prev_header && depth>0 && !prev_is_message) {
+				dprint("--%s\n", boundary);
+				p_string_append_printf(m, "--%s\n", boundary);
+			  } else if (!prev_header || prev_boundary) {
 				dprint("\n--%s\n", boundary);
 				p_string_append_printf(m, "\n--%s\n", boundary);
-			}
+			  }
 
 			p_string_append_printf(m, "%s", str);
 			dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 
@@ -558,7 +562,7 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 	if (boundary) {
 		n++;
 		m->part_depth--;
-		m->part_order=n;
+		m->part_order++;
 	}
 
 	if (g_mime_content_type_is_type(GMIME_CONTENT_TYPE(content_type), "multipart", "*") &&
