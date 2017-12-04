@@ -350,9 +350,9 @@ AC_DEFUN([DM_CHECK_SSL], [
 
 AC_DEFUN([DM_CHECK_SYSTEMD], [
 	PKG_CHECK_MODULES([SYSTEMD], [libsystemd-daemon], , [
-		PKG_CHECK_MODULES([SYSTEMD], [systemd >= 230])
+		PKG_CHECK_MODULES([SYSTEMD], [libsystemd >= 230])
 	])
-	if test [ -n $SYSTEMD_LIBS ]; then
+	if test [ -n "$SYSTEMD_LIBS" ]; then
 		AC_DEFINE([HAVE_SYSTEMD], [1], [Define if systemd will be used])
 		LDFLAGS="$LDFLAGS $SYSTEMD_LIBS"
 	fi
