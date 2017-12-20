@@ -4,7 +4,6 @@ CONFIG=/etc/dbmail/dbmail.conf
 CONFIG_EX=/usr/share/doc/dbmail/examples/dbmail.conf
 
 DEBIAN_CONFIG=/etc/default/dbmail
-DEBIAN_CONFIG_EX=/usr/share/doc/dbmail/examples/default.dbmail
 
 test $DEBIAN_SCRIPT_DEBUG && set -v -x
 
@@ -91,22 +90,10 @@ case "$1" in
 	oldmask=`umask`
 	umask 026
 	
-	if [ -e "${CONFIG_EX}.gz" ]; then
-		gunzip ${CONFIG_EX}.gz 2>/dev/null || true
-	fi
-
-	if [ -e "${DEBIAN_CONFIG_EX}.gz" ]; then
-		gunzip ${DEBIAN_CONFIG_EX}.gz 2>/dev/null || true
-	fi
-
 	if [ ! -e "$CONFIG" ]; then	
 		ucf --debconf-ok $CONFIG_EX $CONFIG
 		# activate the sqlite driver by default 
 		sed -i 's/\(^driver\W*=\)\(\W*$\)/\1 sqlite/' $CONFIG
-	fi
-
-	if [ ! -d "$DEBIAN_CONFIG" ]; then
-		ucf --debconf-ok $DEBIAN_CONFIG_EX $DEBIAN_CONFIG
 	fi
 
 	if [ "$DO_DEBCONF" = "true" ] && [ -e "$CONFIG" ] && [ -e "$DEBIAN_CONFIG" ]; then

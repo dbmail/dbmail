@@ -1,10 +1,12 @@
 [Unit]
 Description=DBMail Sieve Server
-After=syslog.target network.target mysqld.service postgresql.service
+After=network.target mysqld.service postgresql.service
 
 [Service]
-Type=notify
+Type=simple
 ExecStart=@sbindir@/dbmail-timsieved -D
+Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
