@@ -1,8 +1,15 @@
-dbmail (3.0.2-1) oneiric; urgency=low
+dbmail (3.2.3-3) unstable; urgency=medium
+
+  * new package from dbmail git head (8875c553e139d3ed2c49ac8f8d9b39a923089b56)
+  * systemd enabled
+
+ -- Casper Langemeijer <casper@procurios.nl>  Mon, 18 Dec 2017 14:32:31 +0100
+
+dbmail (3.2.3-1) unstable; urgency=low
 
   * upstream release
 
- -- Paul J Stevens <paul@nfg.nl>  Sun, 11 Mar 2012 09:01:44 +0100
+ -- Casper Langemeijer <casper@procurios.nl>  Thu, 10 Mar 2016 14:47:44 +0100
 
 dbmail (3.0.1-1) unstable; urgency=low
 

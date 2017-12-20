@@ -1,2 +1,5 @@
 usr/lib
-usr/share/dbmail
+etc/dbmail
+var/log/dbmail
+usr/lib/systemd/system
+usr/lib/tmpfiles.d

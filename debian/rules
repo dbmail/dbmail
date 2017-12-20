@@ -1,143 +1,15 @@
 #!/usr/bin/make -f
 
-# -*- sh -*-
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/autotools.mk
 
-DPKG_EXPORT_BUILDFLAGS = 1
-ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
-	export DEB_BUILD_MAINT_OPTIONS=hardening=+all,-pie
-else
-	export DEB_BUILD_MAINT_OPTIONS=hardening=+all
-endif
-
-include /usr/share/dpkg/buildflags.mk
-
-export WITH_LDAP=--with-ldap
-export WITH_SIEVE=--with-sieve
-export SHARED=--enable-shared=yes
-export STATIC=--enable-static=no
-export MANPAGES=--enable-manpages=yes
-export REAL_CLEAN=
-
-# These are used for cross-compiling and for saving the configure script
-# from having to guess our platform (since we know it already)
-DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
-DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
-
-DBMAIL_VERSION	?= $(shell cat VERSION)
-
-ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
-	export WITH_CHECK=--with-check
-	export MANPAGES=
-	export SHARED=--enable-shared=no
-	export STATIC=--enable-static=yes
-	export WITH_LDAP=
-	CFLAGS += -Wall -g -DDEBUG 
-	# avoid valgrind warnings
-	CFLAGS += -DEXTRA
-endif
+# Add here any variable or target overrides you need.
 
 
-CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
-	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
-	--with-jemalloc=no \
-	$(WITH_CHECK) $(SHARED) $(STATIC) $(MANPAGES) $(WITH_SIEVE) $(WITH_LDAP)
 
-build: stamps/build
-stamps/build: stamps dbmail
-	touch $@
 
-stamps:
-	mkdir stamps
-	
-configure: stamps/configure
-stamps/configure: 
-	[ -f configure ] || autoreconf -i
-	touch $@
 
-dbmail: stamps/dbmail
-stamps/dbmail: configure
-	if [ -e /usr/bin/clang ]; then \
-		env CC="/usr/bin/clang" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure $(CONFFLAGS); \
-	else \
-		env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure $(CONFFLAGS); \
-	fi
-	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
-	touch $@
+install/dbmail::
+	-rm debian/dbmail/usr/lib/dbmail/*.la
 
-clean: clean1 $(REAL_CLEAN)
-clean1: 
-	# run clean
-	dh_testroot
-	dh_testdir
-	[ ! -f Makefile ] || $(MAKE) distclean
-	dh_clean
-	debconf-updatepo
-	rm -rf stamps autom4te.cache || true
-
-# maintainer target
-mrproper:
-	[ ! -f Makefile ] || $(MAKE) distclean
-	rm -f `find . -name ".#*"`
-	rm -f `find . -name "*.la"`
-	rm -f `find . -name "*.lo"`
-	rm -f `find . -name "*.o"`
-	rm -f `find . -name "*.pyc"`
-	rm -f `find man -name "*.xml"`
-	rm -f `find man -name "*.[1-8]"`
-	# Add here commands to clean up after the build process.
-	for file in config.in aclocal.m4 acconfig.h configure `find . -name Makefile.in`; do \
-		rm -rf $$file || true; \
-	done
-	for file in Makefile config.h config.status libtool stamp-h .deps .libs; do \
-		rm -rf `find . -name $$file`; \
-	done
-	rm -rf config
-
-# Build architecture-dependent files here.
-binary-common: build
-	dh_testroot
-	dh_testdir
-	dh_installdirs -a
-	dh_install -a --sourcedir=debian/tmp
-	dh_installinit -a --name=dbmail -- defaults 25
-	dh_installcron -a --name=dbmail
-	dh_installlogrotate -a --name=dbmail
-	dh_installdebconf -a
-	dh_installman -a
-	dh_installdocs -a
-	dh_installchangelogs -a debian/upstream.changelog
-	## update examples
-	(cd $(CURDIR) && find sql/sqlite/ sql/mysql/ sql/postgresql/ -type f && cat debian/dbmail.examples) | \
-		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail.examples
-	rm -f stamps/tmpfile
-	dh_installexamples -a
-	dh_installdirs -A etc/dbmail var/log/dbmail usr/share/dbmail
-	install -m 644 $(CURDIR)/debian/default.dbmail $(CURDIR)/debian/dbmail/usr/share/doc/dbmail/examples/default.dbmail
-	dh_strip -a
-	dh_link -a
-	dh_compress -a
-	dh_fixperms -a
-	dh_makeshlibs -a
-	dh_shlibdeps -a
-	dh_installdeb -a
-	dh_gencontrol -a
-	dh_md5sums -a 
-	dh_builddeb -a
-	
-build-indep: build
-
-binary-indep: build-indep install
-
-build-arch: build
-
-binary-arch: build-arch install
-	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
-
-binary-%: build install
-	make -f debian/rules binary-common $* DH_OPTIONS=-p$*
-	
-binary: binary-indep binary-arch
-
-.PHONY: build clean clean1 mrproper binary binary-common binary-indep binary-arch install
-
+DEB_CONFIGURE_EXTRA_FLAGS = --sysconfdir=/etc/dbmail --localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --enable-shared=yes --enable-static=no --with-jemalloc --enable-manpages=yes --with-ldap --with-sieve --enable-systemd
