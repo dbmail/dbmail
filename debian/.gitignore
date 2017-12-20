@@ -1,0 +1,10 @@
+dbmail.debhelper.log
+dbmail.postinst.debhelper
+dbmail.postrm.debhelper
+dbmail.substvars
+dbmail/
+files
+stamp-autotools
+stamp-autotools-files
+stamp-makefile-build
+stamp-makefile-install
