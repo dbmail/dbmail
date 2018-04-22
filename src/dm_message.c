@@ -91,7 +91,7 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	
 	g_return_val_if_fail(object != NULL, NULL);
 
-	s = g_mime_object_to_string(GMIME_OBJECT(object));
+	s = g_mime_object_to_string(GMIME_OBJECT(object), NULL);
 	assert(s);
 
 	i = find_end_of_header(s);
@@ -980,7 +980,7 @@ const char * dbmail_message_get_charset(DbmailMessage *self)
 gchar * dbmail_message_to_string(const DbmailMessage *self) 
 {
 	assert(self && self->content);
-	return g_mime_object_to_string(GMIME_OBJECT(self->content));
+	return g_mime_object_to_string(GMIME_OBJECT(self->content), NULL);
 }
 gchar * dbmail_message_body_to_string(const DbmailMessage *self)
 {

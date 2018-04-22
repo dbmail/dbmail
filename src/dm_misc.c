@@ -2101,7 +2101,7 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 		strcat(s, "\r\n");
 	} else {
 		if (rfc822)
-			t = g_mime_object_to_string(GMIME_OBJECT(object));
+			t = g_mime_object_to_string(GMIME_OBJECT(object), NULL);
 		else
 			t = g_mime_object_get_body(GMIME_OBJECT(object));
 		s = get_crlf_encoded(t);

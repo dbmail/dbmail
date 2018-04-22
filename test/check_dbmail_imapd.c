@@ -546,7 +546,7 @@ START_TEST(test_imap_get_partspec)
 	message = dbmail_message_init_with_string(message, rfc822);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
-	result = g_mime_object_to_string(object);
+	result = g_mime_object_to_string(object, NULL);
 	fail_unless(MATCH(rfc822,result),
 			"imap_get_partsec failed \n[%s] !=\n[%s]\n",
 		       	rfc822, result);
@@ -680,7 +680,7 @@ START_TEST(test_imap_get_partspec)
 	g_free(expect);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
-	result = g_mime_object_to_string(object);
+	result = g_mime_object_to_string(object, NULL);
 	expect = g_strdup("Content-Type: message/rfc822;\n"
 			"Content-Transfer-Encoding: 7bit\n"
 			"Content-Disposition: attachment;\n"

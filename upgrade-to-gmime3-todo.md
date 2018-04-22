@@ -9,5 +9,11 @@ With every item checked from this list, the code changes and removal from this l
 will be in the same commit.
 
 
-Porting from GMime 2.6 to GMime 3.0
------------------------------------
+Additions to Porting from GMime 2.6 to GMime 3.0
+------------------------------------------------
+
+Well... apparently, the porting guide from gmime is not very complete. I will add my
+verbose documentation on the changes I made, and will probably shared them with the
+gmime project when I'm finished.
+
+- Modified g_mime_object_to_string() to take a GMimeFormatOptions argument.
