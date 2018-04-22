@@ -12,9 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- Removed g_mime_message_[get,set]_date_as_string(). This is unnecessary since
-  this can be done using g_mime_object_[get,set]_header().
-
 - GMimeObject's prepend_header(), append_header(), set_header(), get_header(),
   and remove_header() virtual methods have all been removed. They have been
   replaced by the header_added(), header_changed(), header_removed(), and
