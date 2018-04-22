@@ -506,7 +506,7 @@ static gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, Dbma
 static int store_head(GMimeObject *object, DbmailMessage *m)
 {
 	int r;
-	char *head = g_mime_object_get_headers(object);
+	char *head = g_mime_object_get_headers(object, NULL);
 	r = store_blob(m, head, 1);
 	g_free(head);
 	return r;

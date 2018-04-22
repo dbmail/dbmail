@@ -17,3 +17,5 @@ verbose documentation on the changes I made, and will probably shared them with 
 gmime project when I'm finished.
 
 - Modified g_mime_object_to_string() to take a GMimeFormatOptions argument.
+
+- Modified g_mime_object_get_header() to take a GMimeFormatOptions argument.

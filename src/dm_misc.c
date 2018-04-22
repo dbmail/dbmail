@@ -2094,7 +2094,7 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 	}
 
 	if (MATCH(specifier,"HEADER") || MATCH(specifier,"MIME")) {
-		t = g_mime_object_get_headers(GMIME_OBJECT(object));
+		t = g_mime_object_get_headers(GMIME_OBJECT(object), NULL);
 		s = get_crlf_encoded(t);
 		g_free(t);
 		s = g_realloc(s, strlen(s) + 3);
