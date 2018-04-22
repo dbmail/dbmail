@@ -610,7 +610,6 @@ gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessa
 		// part of the rfc822 headers
 		skiphead = TRUE;
 
-		g_mime_header_list_set_stream (GMIME_MESSAGE(object)->mime_part->headers, NULL);
 		mime_part = g_mime_message_get_mime_part((GMimeMessage *)object);
 	} else
 		mime_part = object;
