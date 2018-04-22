@@ -1913,7 +1913,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	// set basic headers
 	TRACE(TRACE_DEBUG, "from: [%s] to: [%s] subject: [%s] body: [%s]", from, to, subject, body);
 	g_mime_message_add_mailbox(message, GMIME_ADDRESS_TYPE_FROM, NULL, from);
-	g_mime_message_set_subject(message, subject);
+	g_mime_message_set_subject(message, subject, NULL);
 	g_mime_message_add_mailbox(message, GMIME_RECIPIENT_TYPE_TO, NULL, to);
 
 	// construct mime-part

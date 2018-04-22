@@ -12,10 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- g_mime_message_set_subject() now takes a charset argument used when encoding
-  the subject into rfc2047 encoded-word tokens (if needed). Use `NULL` to
-  get the old behavior of using a best-fit charset.
-
 - Removed g_mime_message_[get,set]_date_as_string(). This is unnecessary since
   this can be done using g_mime_object_[get,set]_header().
 
