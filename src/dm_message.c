@@ -1942,7 +1942,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	g_object_unref(fstream);
 
 	content = g_mime_data_wrapper_new_with_stream(stream, encoding);
-	g_mime_part_set_content_object(mime_part, content);
+	g_mime_part_set_content(mime_part, content);
 	g_object_unref(content);
 	
 	// Content-Type
