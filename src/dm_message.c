@@ -1369,7 +1369,7 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	 */
 	part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
 	if ((content_type = g_mime_object_get_content_type(part))) {
-		char *value = g_mime_content_type_to_string(content_type);
+		char *value = g_mime_content_type_get_mime_type(content_type);
 		_header_cache("content-type", (const char *)value, (gpointer)self);
 		free(value);
 	}

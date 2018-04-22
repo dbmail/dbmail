@@ -12,8 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- g_mime_content_type_to_string() has been renamed to g_mime_content_type_get_mime_type().
-
 - g_mime_content_disposition_new_from_string() has been replaced by
   g_mime_content_disposition_parse() and now takes a GMimeParserOptions argument.
 
