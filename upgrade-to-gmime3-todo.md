@@ -12,15 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- GMimeObject's prepend_header(), append_header(), set_header(), get_header(),
-  and remove_header() virtual methods have all been removed. They have been
-  replaced by the header_added(), header_changed(), header_removed(), and
-  headers_cleared() virtual methods to allow users to set headers on the
-  GMimeHeaderList directly and still get notifications of those changes.
-
-- g_mime_object_new() and g_mime_object_new_with_type() both now take a
-  GMimeParserOptions argument.
-
 - g_mime_content_type_to_string() has been renamed to g_mime_content_type_get_mime_type().
 
 - g_mime_content_disposition_new_from_string() has been replaced by
