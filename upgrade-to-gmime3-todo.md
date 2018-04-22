@@ -12,11 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- g_mime_part_new() now returns a GMimePart with a Content-Type of
-  "application/octet-stream" instead of "text/plain" since there is
-  now a GMimeTextPart who's g_mime_text_part_new() returns a
-  GMimeTextPart with a Content-Type of "text/plain".
-
 - g_mime_part_[get,set]_content_object() have been renamed to
   g_mime_part_[get,set]_content().
 
