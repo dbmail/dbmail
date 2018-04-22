@@ -27,7 +27,7 @@ What do you need?
 - Development files (libs, scripts and include files) for your database server.
   These will probably be provided by separate packages.
 - Glib (>= 2.16) development headers and libraries.
-- Gmime (>= 2.4) development headers and libraries.
+- Gmime (>= 3.0) development headers and libraries.
 - libSieve (>= 2.2.1) for Sieve support (libsieve.sf.net).
 - Any standard libldap for LDAP support (only tested with OpenLDAP, however).
 - mhash
