@@ -805,7 +805,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 	parser = g_mime_parser_new_with_stream(self->stream);
 
 
-	content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
+	content = GMIME_OBJECT(g_mime_parser_construct_message(parser, NULL));
 	if (content) {
 		g_object_unref(parser);
 		dbmail_message_set_class(self, DBMAIL_MESSAGE);
@@ -813,7 +813,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 		if (from[0])
 			dbmail_message_set_internal_date(self, from);
 	} else {
-		content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
+		content = GMIME_OBJECT(g_mime_parser_construct_part(parser, NULL));
 		g_object_unref(parser);
 		if (content) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);

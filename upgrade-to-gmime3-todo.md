@@ -12,8 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- g_mime_parser_construct_[part,message]() now take a GMimeParserOptions argument.
-
 - Renamed g_mime_multipart_[get,set]_preface() to g_mime_multipart_[get,set]_prologue().
 
 - Renamed g_mime_multipart_[get,set]_postface() to g_mime_multipart_[get,set]_epilogue().
