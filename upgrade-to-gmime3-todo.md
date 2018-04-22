@@ -12,9 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- g_mime_content_disposition_new_from_string() has been replaced by
-  g_mime_content_disposition_parse() and now takes a GMimeParserOptions argument.
-
 - g_mime_content_disposition_to_string() has been replaced by g_mime_content_disposition_encode().
 
 - internet_address_list_parse_string() has been replaced by

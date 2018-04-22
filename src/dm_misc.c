@@ -1469,7 +1469,7 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 	const char *disp = g_mime_object_get_header(part, "Content-Disposition");
 	
 	if(disp) {
-		disposition = g_mime_content_disposition_new_from_string(disp);
+		disposition = g_mime_content_disposition_parse(NULL, disp);
 		t = g_list_append_printf(t,"\"%s\"",
 				g_mime_content_disposition_get_disposition(disposition));
 		
