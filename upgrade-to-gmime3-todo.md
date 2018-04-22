@@ -12,10 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- g_mime_message_add_recipient() has been renamed to g_mime_message_add_mailbox()
-  due to the fact that it can now be used to add mailbox addresses to the
-  Sender, From, and Reply-To headers as well.
-
 - g_mime_message_set_subject() now takes a charset argument used when encoding
   the subject into rfc2047 encoded-word tokens (if needed). Use `NULL` to
   get the old behavior of using a best-fit charset.
