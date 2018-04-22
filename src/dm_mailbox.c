@@ -143,7 +143,7 @@ static size_t dump_message_to_stream(DbmailMailbox *self, DbmailMessage *message
 	s = dbmail_message_to_string(message);
 
 	if (! strncmp(s,"From ",5)==0) {
-		ialist = internet_address_list_parse_string(g_mime_message_get_sender(GMIME_MESSAGE(message->content)));
+		ialist = g_mime_message_get_from(GMIME_MESSAGE(message->content));
 		sender = p_string_new(self->pool, "nobody@foo");
 		if (ialist) {
 			ia = internet_address_list_get_address(ialist,0);

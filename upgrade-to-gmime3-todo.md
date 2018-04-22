@@ -12,10 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- g_mime_message_get_sender() no longer returns the value of the From header,
-  it now returns an InternetAddressList* containing the parsed address(es)
-  from the Sender header. For the From addresses, use g_mime_message_get_from().
-
 - g_mime_message_get_reply_to() no longer returns a const char*, instead it
   returns an InternetAddressList* for easier use.
 
