@@ -11,7 +11,3 @@ will be in the same commit.
 
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
-
-- Renamed g_mime_multipart_[get,set]_preface() to g_mime_multipart_[get,set]_prologue().
-
-- Renamed g_mime_multipart_[get,set]_postface() to g_mime_multipart_[get,set]_epilogue().

@@ -541,8 +541,8 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 	if (! skiphead && store_head(object,m) < 0) return TRUE;
 
 	boundary = g_mime_multipart_get_boundary((GMimeMultipart *)object);
-	preface = g_mime_multipart_get_preface((GMimeMultipart *)object);
-	postface = g_mime_multipart_get_postface((GMimeMultipart *)object);
+	preface = g_mime_multipart_get_prologue((GMimeMultipart *)object);
+	postface = g_mime_multipart_get_epilogue((GMimeMultipart *)object);
 
 	if (g_mime_content_type_is_type(GMIME_CONTENT_TYPE(content_type), "multipart", "*") &&
 			store_blob(m, preface, 0) < 0) return TRUE;
