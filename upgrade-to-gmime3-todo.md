@@ -12,11 +12,6 @@ will be in the same commit.
 Porting from GMime 2.6 to GMime 3.0
 -----------------------------------
 
-- g_mime_message_set_sender() and g_mime_message_set_reply_to() have been
-  removed. You will either need to use the appropriate getter method and
-  then internet_address_list_add() to add a new InternetAddressMailbox
-  or, alternatively, you can use g_mime_message_add_mailbox().
-
 - g_mime_message_add_recipient() has been renamed to g_mime_message_add_mailbox()
   due to the fact that it can now be used to add mailbox addresses to the
   Sender, From, and Reply-To headers as well.
