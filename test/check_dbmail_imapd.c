@@ -266,7 +266,7 @@ START_TEST(test_imap_get_structure)
 }
 END_TEST
 
-START_TEST(test_internet_address_list_parse_string)
+START_TEST(test_internet_address_list_parse)
 {
 	char * trythese [][2] = { 
 		{ "undisclosed-recipients", "((NIL NIL \"undisclosed-recipients\" NIL))"},
@@ -288,7 +288,7 @@ START_TEST(test_internet_address_list_parse_string)
 		GList *list = NULL;
 
 		t = imap_cleanup_address(input);
-		alist = internet_address_list_parse_string(t);
+		alist = internet_address_list_parse(NULL, t);
 		g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, alist);
 		g_object_unref(alist);
@@ -296,7 +296,7 @@ START_TEST(test_internet_address_list_parse_string)
 
 		result = dbmail_imap_plist_as_string(list);
 
-		fail_unless(strcmp(result,expect)==0, "internet_address_list_parse_string failed to generate correct undisclosed-recipients plist "
+		fail_unless(strcmp(result,expect)==0, "internet_address_list_parse failed to generate correct undisclosed-recipients plist "
 			"for [%s], expected\n[%s] got\n[%s]", input, expect, result);
 
 		g_list_destroy(list);
@@ -329,7 +329,7 @@ START_TEST(test_internet_address_list_parse_string)
 		int res;
 		char *t;
 		t = imap_cleanup_address(input);
-		alist = internet_address_list_parse_string(t);
+		alist = internet_address_list_parse(NULL, t);
 		list = dbmail_imap_append_alist_as_plist(list, alist);
 		result = dbmail_imap_plist_as_string(list);
 		res = strcmp(result, expect);
@@ -1050,7 +1050,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_cleanup_address);
-	tcase_add_test(tc_session, test_internet_address_list_parse_string);
+	tcase_add_test(tc_session, test_internet_address_list_parse);
 	tcase_add_test(tc_session, test_imap_get_envelope);
 	tcase_add_test(tc_session, test_imap_get_envelope_8bit_id);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);

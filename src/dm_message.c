@@ -947,7 +947,7 @@ GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *
 	
 	TRACE(TRACE_INFO, "mail address parser looking at field [%s] with value [%s]", field_name, field_value);
 	
-	if ((ialist = internet_address_list_parse_string(field_value)) == NULL) {
+	if ((ialist = internet_address_list_parse(NULL, field_value)) == NULL) {
 		TRACE(TRACE_NOTICE, "mail address parser error parsing header field");
 		return NULL;
 	}
@@ -1710,7 +1710,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	if(isaddr) {
 		GString *store;
 		int i,j=0;
-		emaillist = internet_address_list_parse_string(value);
+		emaillist = internet_address_list_parse(NULL, value);
 		store = _header_addresses(emaillist);
 
 		i = internet_address_list_length(emaillist);
@@ -2228,7 +2228,7 @@ static int parse_and_escape(const char *in, char **out)
 	const char *addr;
 
 	TRACE(TRACE_DEBUG, "parsing address [%s]", in);
-	ialist = internet_address_list_parse_string(in);
+	ialist = internet_address_list_parse(NULL, in);
 	if (!ialist) {
                 TRACE(TRACE_NOTICE, "unable to parse email address [%s]", in);
                 return -1;
