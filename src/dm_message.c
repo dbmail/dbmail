@@ -1375,8 +1375,7 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	}
 
 	if ((content_disp = g_mime_object_get_content_disposition(part))) {
-		char *value = g_mime_content_disposition_to_string(
-				content_disp, FALSE);
+		char *value = g_mime_content_disposition_encode(content_disp, NULL);
 		_header_cache("content-disposition", (const char *)value, (gpointer)self);
 		free(value);
 	}
