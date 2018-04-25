@@ -68,8 +68,8 @@ uint64_t dbmail_message_get_physid(const DbmailMessage *self);
 void dbmail_message_set_envelope_recipient(DbmailMessage *self, const char *envelope);
 const char * dbmail_message_get_envelope_recipient(const DbmailMessage *self);
 	
-void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date);
-gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear);
+void dbmail_message_set_date(DbmailMessage *self, char *date);
+gchar * dbmail_message_get_internal_date(const DbmailMessage *self);
 	
 int dbmail_message_set_class(DbmailMessage *self, int klass);
 int dbmail_message_get_class(const DbmailMessage *self);

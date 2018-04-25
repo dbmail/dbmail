@@ -4377,7 +4377,7 @@ int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr
 
         message = dbmail_message_new(NULL);
         message = dbmail_message_init_with_string(message, msgdata);
-	dbmail_message_set_internal_date(message, (char *)internal_date);
+        dbmail_message_set_date(message, (char *)internal_date);
         
         if (dbmail_message_store(message) < 0) {
 		dbmail_message_free(message);

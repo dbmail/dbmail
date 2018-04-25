@@ -533,29 +533,8 @@ START_TEST(test_dbmail_message_get_internal_date)
 	const char *expect10 = "2010-05-28 18:10:18";
 	char *result;
 
-	/* baseline */
-	result = dbmail_message_get_internal_date(m, 0);
+	result = dbmail_message_get_internal_date(m);
 	fail_unless(MATCH(expect,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect, result);
-	g_free(result);
-
-	/* should be the same */
-	result = dbmail_message_get_internal_date(m, 2007);
-	fail_unless(MATCH(expect,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect, result);
-	g_free(result);
-
-	/* capped to 2004, which should also be the same  */
-	result = dbmail_message_get_internal_date(m, 2004);
-	fail_unless(MATCH(expect,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect, result);
-	g_free(result);
-
-	/* capped to 2003, should be different */
-	result = dbmail_message_get_internal_date(m, 2003);
-	fail_unless(MATCH(expect03,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect03, result);
-	g_free(result);
-
-	/* capped to 1975, should be way different */
-	result = dbmail_message_get_internal_date(m, 1975);
-	fail_unless(MATCH(expect75,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect75, result);
 	g_free(result);
 
 	dbmail_message_free(m);
@@ -564,7 +543,7 @@ START_TEST(test_dbmail_message_get_internal_date)
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, simple_broken_envelope);
 
-	result = dbmail_message_get_internal_date(m, 0);
+	result = dbmail_message_get_internal_date(m);
 	//fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
 
 	char *before = dbmail_message_to_string(m);

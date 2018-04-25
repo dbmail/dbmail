@@ -142,8 +142,7 @@ typedef struct {
 	
 	// scanned values
 	const char *charset;
-	time_t internal_date;
-	int internal_date_gmtoff;
+	GDateTime *date;
 	String_T envelope_recipient;
 	
 	// Data access

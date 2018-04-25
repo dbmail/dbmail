@@ -21,3 +21,5 @@ gmime project when I'm finished.
 - Modified g_mime_object_get_header() to take a GMimeFormatOptions argument.
 
 - g_mime_header_list_set_stream() is removed
+
+- g_mime_utils_header_decode_date() is now based on GDateTime.

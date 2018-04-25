@@ -495,7 +495,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	}
 
 	self = dbmail_message_init_with_string(self,p_string_str(m));
-	dbmail_message_set_internal_date(self, internal_date);
+	dbmail_message_set_date(self, internal_date);
 	p_string_free(m,TRUE);
 	p_string_free(n,TRUE);
 	return self;
@@ -682,7 +682,7 @@ DbmailMessage * dbmail_message_new(Mempool_T pool)
 	self->pool = pool;
 	self->freepool = freepool;
 	
-	self->internal_date = time(NULL);
+	self->date = g_date_time_new_now_local();
 	self->envelope_recipient = p_string_new(self->pool, "");
 
 	/* provide quick case-insensitive header name searches */
@@ -706,6 +706,11 @@ void dbmail_message_free(DbmailMessage *self)
 	gboolean freepool;
 	if (! self)
 		return;
+
+	if (self->date) {
+		g_date_time_unref(self->date);
+		self->date = NULL;
+	}
 
 	if (self->content) {
 		g_object_unref(self->content);
@@ -810,7 +815,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 		dbmail_message_set_class(self, DBMAIL_MESSAGE);
 		self->content = content;
 		if (from[0])
-			dbmail_message_set_internal_date(self, from);
+			dbmail_message_set_date(self, from);
 	} else {
 		content = GMIME_OBJECT(g_mime_parser_construct_part(parser, NULL));
 		g_object_unref(parser);
@@ -839,39 +844,25 @@ uint64_t dbmail_message_get_physid(const DbmailMessage *self)
 	return self->id;
 }
 
-void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
+void dbmail_message_set_date(DbmailMessage *self, char *date)
 {
-	self->internal_date = time(NULL);
-	if (internal_date && strlen(internal_date)) {
-		time_t dt;
-	        if ((dt = g_mime_utils_header_decode_date(
-						internal_date,
-						&(self->internal_date_gmtoff)))) {
-			self->internal_date = dt;
-		}
-		TRACE(TRACE_DEBUG, "internal_date [%s] [%ld] offset [%d]",
-				internal_date,
-				self->internal_date,
-				self->internal_date_gmtoff);
+	g_date_time_unref(self->date);
+	if (date && strlen(date)) {
+		self->date = g_mime_utils_header_decode_date(date);
+		TRACE(TRACE_DEBUG, "date [%s]", date);
+	} else {
+		self->date = g_date_time_new_now_local();
 	}
 }
 
-/* thisyear is a workaround for some broken gmime version. */
-gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear)
+gchar * dbmail_message_get_internal_date(const DbmailMessage *self)
 {
 	char *res;
-	struct tm gmt;
-	assert(self->internal_date);
-	
-	memset(&gmt,'\0', sizeof(struct tm));
-	gmtime_r(&self->internal_date, &gmt);
+	GDateTime *utcdatetime;
 
-	/* override if the date is not sane */
-	if (thisyear && ((gmt.tm_year + 1900) > (thisyear + 1)))
-		gmt.tm_year = thisyear - 1900;
-
-	res = g_new0(char, TIMESTRING_SIZE+1);
-	strftime(res, TIMESTRING_SIZE, "%Y-%m-%d %T", &gmt);
+	utcdatetime = g_date_time_to_utc(self->date);
+    res = g_date_time_format(utcdatetime, "%Y-%m-%d %T");
+	g_date_time_unref(utcdatetime);
 
 	return res;
 }
@@ -1054,7 +1045,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	}
 	
 	self = dbmail_message_init_with_string(self,m->str);
-	dbmail_message_set_internal_date(self, internal_date);
+	dbmail_message_set_date(self, internal_date);
 
 	if (internal_date) g_free(internal_date);
 	g_string_free(m,TRUE);
@@ -1195,16 +1186,9 @@ static void insert_physmessage(DbmailMessage *self, Connection_T c)
 {
 	ResultSet_T r = NULL;
 	char *internal_date = NULL, *frag;
-	int thisyear;
 	volatile uint64_t id = 0;
-	struct timeval tv;
-	struct tm gmt;
 
-	/* get the messages date, but override it if it's from the future */
-	gettimeofday(&tv, NULL);
-	localtime_r(&tv.tv_sec, &gmt);
-	thisyear = gmt.tm_year + 1900;
-	internal_date = dbmail_message_get_internal_date(self, thisyear);
+	internal_date = dbmail_message_get_internal_date(self);
 
 	frag = db_returning("id");
 
@@ -1308,32 +1292,28 @@ int _message_insert(DbmailMessage *self,
 #define CACHE_WIDTH 255
 
 void _message_cache_envelope_date(const DbmailMessage *self)
-{
-	time_t date = self->internal_date;
+{	
 	char *value;
-	char datefield[CACHE_WIDTH];
-	char sortfield[CACHE_WIDTH];
+	char *datefield;
+	char *sortfield;
 	uint64_t headervalue_id = 0;
 	uint64_t headername_id = 0;
+	GDateTime *utcdatetime;
 
-	value = g_mime_utils_header_format_date(
-			self->internal_date, 
-			self->internal_date_gmtoff);
+	utcdatetime = g_date_time_to_utc(self->date);
+    sortfield = g_date_time_format(utcdatetime, "%Y-%m-%d %H:%M:%S");
+	g_date_time_unref(utcdatetime);
 
-	memset(sortfield, 0, sizeof(sortfield));
-	strftime(sortfield, CACHE_WIDTH-1, "%Y-%m-%d %H:%M:%S", gmtime(&date));
-
-	if (self->internal_date_gmtoff)
-		date += (self->internal_date_gmtoff * 36);
-
-	memset(datefield, 0, sizeof(datefield));
-	strftime(datefield, 20, "%Y-%m-%d", gmtime(&date));
+	value = g_mime_utils_header_format_date(self->date);
+	datefield = g_date_time_format(self->date, "%Y-%m-%d");
 
 	_header_name_get_id(self, "Date", &headername_id);
 	if (headername_id)
 		_header_value_get_id(value, sortfield, datefield, &headervalue_id);
 
 	g_free(value);
+	g_free(sortfield);
+	g_free(datefield);
 
 	if (headervalue_id && headername_id)
 		_header_insert(self->id, headername_id, headervalue_id);

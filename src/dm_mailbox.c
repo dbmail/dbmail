@@ -105,24 +105,17 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 	return DM_SUCCESS;
 }
 
-#define FROM_STANDARD_DATE "Tue Oct 11 13:06:24 2005"
 static String_T _message_get_envelope_date(DbmailMailbox *mailbox, const DbmailMessage *message)
 {
 	struct tm gmt;
 	String_T date;
+	GDateTime *utcdatetime;
+	char *res;
 
-	assert(message->internal_date);
+	utcdatetime = g_date_time_to_utc(message->date);
+    res = g_date_time_format(utcdatetime, "%a %b %d %H:%M:%S %Y");
+	date = p_string_new(mailbox->pool, res);
 	
-	memset(&gmt,0, sizeof(struct tm));
-	if (gmtime_r(&message->internal_date, &gmt)) {
-		char res[TIMESTRING_SIZE+1];
-		memset(res, 0, sizeof(res));
-		strftime(res, TIMESTRING_SIZE, "%a %b %d %H:%M:%S %Y", &gmt);
-		date = p_string_new(mailbox->pool, res);
-	} else {
-		date = p_string_new(mailbox->pool, FROM_STANDARD_DATE);
-	}
-
 	return date;
 }
 
