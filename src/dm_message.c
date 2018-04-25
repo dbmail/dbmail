@@ -329,7 +329,7 @@ static GMimeContentType *find_type(const char *s)
 	char *header = find_type_header(s);
 	if (! header)
 		return NULL;
-	type = g_mime_content_type_parse(header, NULL);
+	type = g_mime_content_type_parse(NULL, header);
 	g_free(header);
 	return type;
 }
