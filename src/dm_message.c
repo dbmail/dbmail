@@ -1637,7 +1637,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	uint64_t headername_id = 0;
 	uint64_t headervalue_id;
 	DbmailMessage *self = (DbmailMessage *)user_data;
-	time_t date;
+	GDateTime *date;
 	volatile gboolean isaddr = 0, isdate = 0, issubject = 0;
 	const char *charset = dbmail_message_get_charset(self);
 	char datefield[CACHE_WIDTH];
@@ -1730,14 +1730,23 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 
 	memset(datefield, 0, sizeof(datefield));
 	if(isdate) {
-		int offset;
-		date = g_mime_utils_header_decode_date(value,&offset);
-		strftime(sortfield, CACHE_WIDTH-1, "%Y-%m-%d %H:%M:%S", gmtime(&date));
+		GDateTime *utcdatetime;
+		char *res;
 
-		date += (offset * 36); // +0200 -> offset 200
-		strftime(datefield, 20,"%Y-%m-%d", gmtime(&date));
-		TRACE(TRACE_DEBUG,"Date is [%s] offset [%d], datefield [%s]",
-				value, offset, datefield);
+		date = g_mime_utils_header_decode_date(value);
+	
+		utcdatetime = g_date_time_to_utc(date);
+		res = g_date_time_format(utcdatetime, "%Y-%m-%d %H:%M:%S");
+		g_utf8_strncpy(sortfield, res, CACHE_WIDTH-1);
+		g_date_time_unref(utcdatetime);
+		g_free(res);
+
+		res = g_date_time_format(date, "%Y-%m-%d");
+		g_utf8_strncpy(datefield, res, CACHE_WIDTH-1);
+		g_free(res);
+
+		TRACE(TRACE_DEBUG,"Date is [%s] sortfield [%s], datefield [%s]",
+				value, sortfield, datefield);
 	}
 
 	if (sortfield[0] == '\0')
