@@ -883,7 +883,7 @@ const char * dbmail_message_get_envelope_recipient(const DbmailMessage *self)
 
 void dbmail_message_set_header(DbmailMessage *self, const char *header, const char *value)
 {
-	g_mime_object_prepend_header(GMIME_OBJECT(self->content), header, value);
+	g_mime_object_prepend_header(GMIME_OBJECT(self->content), header, value, NULL);
 }
 
 const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *header)

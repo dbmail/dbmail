@@ -23,3 +23,8 @@ gmime project when I'm finished.
 - g_mime_header_list_set_stream() is removed
 
 - g_mime_utils_header_decode_date() is now based on GDateTime.
+
+- g_mime_object_prepend_header() and g_mime_object_append_header() now require a charset
+  parameter that is nullable. It is not documented to be nullable, but following the 
+  charset variable getting passed around, it is finally used in
+  g_mime_utils_header_decode_text(), where it can be null.
