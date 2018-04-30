@@ -206,7 +206,7 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 
 char * dbmail_iconv_decode_text(const char *in)
 {
-	return g_mime_utils_header_decode_text(in);
+	return g_mime_utils_header_decode_text(NULL, in);
 }
 char * dbmail_iconv_decode_address(char *address)
 {

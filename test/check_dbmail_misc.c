@@ -195,14 +195,14 @@ START_TEST(test_dbmail_iconv_str_to_db)
 
 	char *u8, *val2, *u82, *u83, *val3;
 
-	u8 = g_mime_utils_header_decode_text(val);
+	u8 = g_mime_utils_header_decode_text(NULL, val);
 	val2 = g_mime_utils_header_encode_text(NULL, u8, NULL);
-	u82 = g_mime_utils_header_decode_text(val2);
+	u82 = g_mime_utils_header_decode_text(NULL, val2);
 
 	fail_unless(strcmp(u8,u82)==0,"decode/encode failed in test_dbmail_iconv_str_to_db");
 
 	val3 = dbmail_iconv_db_to_utf7(u8);
-	u83 = g_mime_utils_header_decode_text(val3);
+	u83 = g_mime_utils_header_decode_text(NULL, val3);
 
 	fail_unless(strcmp(u8,u83)==0,"decode/encode failed in test_dbmail_iconv_str_to_db\n[%s]\n[%s]\n", u8, u83);
 	g_free(u8);
@@ -264,7 +264,7 @@ START_TEST(test_dbmail_iconv_decode_address)
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_address(u73);
-	ex3 = g_mime_utils_header_decode_text(u73);
+	ex3 = g_mime_utils_header_decode_text(NULL, u73);
 	fail_unless(strcmp(u8,ex3)==0,"decode failed\n[%s] != \n[%s]\n", u8, ex3);
 	g_free(u8);
 	g_free(ex3);
