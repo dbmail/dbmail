@@ -1809,7 +1809,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 
 			/* personal name */
 			if (name) {
-				char * encname = g_mime_utils_header_encode_phrase(name);
+				char * encname = g_mime_utils_header_encode_phrase(NULL, name, NULL);
 				g_strdelimit(encname,"\"\\",' ');
 				g_strstrip(encname);
 				s = dbmail_imap_astring_as_string(encname);

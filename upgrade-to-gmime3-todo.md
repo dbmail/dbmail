@@ -36,3 +36,6 @@ gmime project when I'm finished.
   returns is completely different.
 
 - g_mime_header_list_foreach() is removed
+
+- g_mime_utils_header_decode_phrase() and g_mime_utils_header_encode_phrase() have options 
+  and charset parameters added to them, all are NULLable.

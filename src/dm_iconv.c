@@ -210,7 +210,7 @@ char * dbmail_iconv_decode_text(const char *in)
 }
 char * dbmail_iconv_decode_address(char *address)
 {
-	return g_mime_utils_header_decode_phrase(address);
+	return g_mime_utils_header_decode_phrase(NULL, address);
 }
 
 char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr)
