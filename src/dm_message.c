@@ -1805,39 +1805,42 @@ static void insert_field_cache(uint64_t physid, const char *field, const char *v
 
 void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 {
-	GMimeReferences *refs, *head;
+	GMimeReferences *refs;
 	GTree *tree;
-	const char *referencesfield, *inreplytofield;
-	char *field;
+	const char *referencesfield, *inreplytofield, *msgid;
+	char *field, *my_msgid;
+	int c, references_count;
 
 	referencesfield = (char *)dbmail_message_get_header(self,"References");
 	inreplytofield = (char *)dbmail_message_get_header(self,"In-Reply-To");
 
 	// Some clients will put parent in the in-reply-to header only and the grandparents and older in references
 	field = g_strconcat(referencesfield, " ", inreplytofield, NULL);
-	refs = g_mime_references_decode(field);
+	refs = g_mime_references_parse(NULL, field);
 	g_free(field);
 
 	if (! refs) {
-		TRACE(TRACE_DEBUG, "reference_decode failed [%" PRIu64 "]", self->id);
+		TRACE(TRACE_DEBUG, "references_parse failed [%" PRIu64 "]", self->id);
 		return;
 	}
 	
-	head = refs;
 	tree = g_tree_new_full((GCompareDataFunc)dm_strcmpdata, NULL, NULL, NULL);
 	
-	while (refs->msgid) {
-		if (! g_tree_lookup(tree,refs->msgid)) {
-			insert_field_cache(self->id, "references", refs->msgid);
-			g_tree_insert(tree,refs->msgid,refs->msgid);
+	references_count = g_mime_references_length(refs);
+	for (c = 0; c < references_count; c++) {
+		msgid = g_mime_references_get_message_id(refs, c);
+
+		my_msgid = g_strdup(msgid);
+		if (! g_tree_lookup(tree, my_msgid)) {
+			insert_field_cache(self->id, "references", my_msgid);
+			g_tree_insert(tree, my_msgid, my_msgid);
 		}
-		if (refs->next == NULL)
-			break;
-		refs = refs->next;
+		g_free(my_msgid);
 	}
 
 	g_tree_destroy(tree);
-	g_mime_references_clear(&head);
+	g_mime_references_clear(refs);
+	g_mime_references_free(refs);
 }
 	
 void dbmail_message_cache_envelope(const DbmailMessage *self)

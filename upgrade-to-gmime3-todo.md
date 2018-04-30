@@ -31,3 +31,6 @@ gmime project when I'm finished.
   g_mime_utils_header_decode_text(), where it can be null.
 
 - g_mime_utils_header_encode_text() has two new NULLable parameters: options and charset
+
+- g_mime_references_decode() is now g_mime_references_parse() and the data structure it
+  returns is completely different.
