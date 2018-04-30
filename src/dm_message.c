@@ -1945,13 +1945,13 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	// Content-Transfer-Encoding
 	switch(encoding) {
 		case GMIME_CONTENT_ENCODING_BASE64:
-			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "base64");
+			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "base64", NULL);
 			break;
 		case GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE:
-			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "quoted-printable");
+			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "quoted-printable", NULL);
 			break;
 		default:
-			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "7bit");
+			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "7bit", NULL);
 			break;
 	}
 
