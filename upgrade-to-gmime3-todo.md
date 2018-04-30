@@ -34,3 +34,5 @@ gmime project when I'm finished.
 
 - g_mime_references_decode() is now g_mime_references_parse() and the data structure it
   returns is completely different.
+
+- g_mime_header_list_foreach() is removed

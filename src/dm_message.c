@@ -891,33 +891,24 @@ const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *h
 	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
 
-struct payload {
-	const DbmailMessage *message;
-	const char *header;
-	GList *list;
-};
-
-void _get_header_repeated(const char *name, const char *value, gpointer data)
-{
-	struct payload *load = (struct payload *)data;
-	if (MATCH(load->header, name))
-		load->list = g_list_append(load->list, (gpointer)value);
-}
-
-
 GList * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header)
 {
 	GMimeHeaderList *headers = g_mime_object_get_header_list(
 			GMIME_OBJECT(self->content));
-       
-	struct payload data;
-	memset(&data, 0, sizeof(struct payload));
-	data.header = header;
-	data.list = NULL;
+	int c, header_count;
+	const GMimeHeader *header_object;
+	GList *list;
 
-	g_mime_header_list_foreach(headers, _get_header_repeated, &data);
+	header_count = g_mime_header_list_get_count(headers);
 
-	return data.list;
+	for (c = 0; c < header_count; c++) {
+		header_object = g_mime_header_list_get_header_at(headers, c);
+
+		if (MATCH(header, g_mime_header_get_name(header_object)))
+			list = g_list_append(list, (gpointer)g_mime_header_get_raw_value(header_object));
+	}
+
+	return list;
 }
 
 GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field_name)
@@ -1340,8 +1331,15 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	 * */
 	GMimeHeaderList *headers = g_mime_object_get_header_list(
 			GMIME_OBJECT(self->content));
-	g_mime_header_list_foreach(headers, (GMimeHeaderForeachFunc)_header_cache,
-			(gpointer)self);
+	int c, header_count;
+	const GMimeHeader *header_object;
+
+	header_count = g_mime_header_list_get_count(headers);
+
+	for (c = 0; c < header_count; c++) {
+		header_object = g_mime_header_list_get_header_at(headers, c);
+		_header_cache(g_mime_header_get_name(header_object), g_mime_header_get_raw_value(header_object), (gpointer)self);
+	}
 
 	/* 
 	 * gmime treats content-type and content-disposition differently
@@ -1653,7 +1651,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	if (strchr(header, ' '))
 		return;
 
-	TRACE(TRACE_DEBUG,"headername [%s]", header);
+	TRACE(TRACE_DEBUG,"header name [%s] value [%s]", header, raw);
 
 	if ((_header_name_get_id(self, header, &headername_id) < 0))
 		return;
