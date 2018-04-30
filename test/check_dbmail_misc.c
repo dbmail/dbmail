@@ -196,7 +196,7 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	char *u8, *val2, *u82, *u83, *val3;
 
 	u8 = g_mime_utils_header_decode_text(val);
-	val2 = g_mime_utils_header_encode_text(u8);
+	val2 = g_mime_utils_header_encode_text(NULL, u8, NULL);
 	u82 = g_mime_utils_header_decode_text(val2);
 
 	fail_unless(strcmp(u8,u82)==0,"decode/encode failed in test_dbmail_iconv_str_to_db");

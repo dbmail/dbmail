@@ -1426,7 +1426,7 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 			clean2 = g_strcompress(clean1);
 
 			if (g_mime_utils_text_is_8bit((const unsigned char *)clean2, strlen(clean2))) {
-				clean1 = g_mime_utils_header_encode_text(clean2);
+				clean1 = g_mime_utils_header_encode_text(NULL, clean2, NULL);
 				g_free(clean2);
 				clean2 = clean1;
 			}
@@ -2013,7 +2013,7 @@ char * imap_get_envelope(GMimeMessage *message)
 		char * subj = dbmail_iconv_str_to_utf8(result, charset);
 		TRACE(TRACE_DEBUG, "[%s] [%s] -> [%s]", charset, result, subj);
 		if (g_mime_utils_text_is_8bit((unsigned char *)subj, strlen(subj))) {
-			s = g_mime_utils_header_encode_text((const char *)subj);
+			s = g_mime_utils_header_encode_text(NULL, (const char *)subj, NULL);
 			TRACE(TRACE_DEBUG, "[%s] -> [%s]", subj, s);
 			g_free(subj);
 			subj = s;

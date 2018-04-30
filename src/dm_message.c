@@ -2452,7 +2452,7 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 
 	usubject = dbmail_iconv_decode_text(subject);
        	unewsubject = g_strconcat("Re: ", usubject, NULL);
-	newsubject = g_mime_utils_header_encode_text(unewsubject);
+	newsubject = g_mime_utils_header_encode_text(NULL, unewsubject, NULL);
 	g_free(usubject);
 	g_free(unewsubject);
 

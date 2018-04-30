@@ -28,3 +28,5 @@ gmime project when I'm finished.
   parameter that is nullable. It is not documented to be nullable, but following the 
   charset variable getting passed around, it is finally used in
   g_mime_utils_header_decode_text(), where it can be null.
+
+- g_mime_utils_header_encode_text() has two new NULLable parameters: options and charset
