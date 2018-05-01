@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 	char * mbtrash_name;
 	char * mbinbox_name;
 
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	
 	config_get_file();
 

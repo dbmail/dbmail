@@ -966,7 +966,7 @@ int server_mainloop(ServerConfig_T *config, const char *servicename)
 {
 	strncpy(config->process_name, servicename, FIELDSIZE-1);
 
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	g_mime_parser_get_type();
 	g_mime_stream_get_type();
 	g_mime_stream_mem_get_type();

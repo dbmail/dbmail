@@ -590,7 +590,7 @@ Suite *dbmail_misc_suite(void)
 int main(void)
 {
 	int nf;
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	Suite *s = dbmail_misc_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);
