@@ -973,7 +973,6 @@ int server_mainloop(ServerConfig_T *config, const char *servicename)
 	g_mime_stream_file_get_type();
 	g_mime_stream_buffer_get_type();
 	g_mime_stream_filter_get_type();
-	g_mime_filter_crlf_get_type();
 
 	tls_context = tls_init();
 

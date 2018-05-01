@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
 	g_mime_stream_file_get_type();
 	g_mime_stream_buffer_get_type();
 	g_mime_stream_filter_get_type();
-	g_mime_filter_crlf_get_type();
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
