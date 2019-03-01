@@ -2405,7 +2405,20 @@ static void _ic_store_enter(dm_thread_data *D)
 	if (self->ids_list) {
 		GString *failed_ids = g_list_join_u64(self->ids_list, ",");
 		buffer = p_string_new(self->pool, "");
-		p_string_printf(buffer, "MODIFIED [%s]", failed_ids->str);
+		Field_T val;
+		GETCONFIGVALUE("compatibility_report_skip_failed", "IMAP", val);
+		if (strlen(val)){
+			//if switch is yes then report, otherwise do not do anything
+			if (strcasecmp(val, "yes") == 0){
+				p_string_printf(buffer, "MODIFIED [%s]", failed_ids->str);
+				TRACE(TRACE_DEBUG,"[%p] MODIFIED IDS Reported (switch pressent and set to 'yes') [%s]", self, self->tag);
+			}else{
+				TRACE(TRACE_DEBUG,"[%p] MODIFIED IDS NOT Reported (switch pressent and set to 'no') [%s]", self, self->tag);
+			}
+		}else{
+			p_string_printf(buffer, "MODIFIED [%s]", failed_ids->str);
+			TRACE(TRACE_DEBUG,"[%p] MODIFIED IDS Reported [%s]", self, self->tag);
+		}
 		g_string_free(failed_ids, TRUE);
 		g_list_free(g_list_first(self->ids_list));
 		self->ids_list = NULL;

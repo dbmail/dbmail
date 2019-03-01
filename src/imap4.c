@@ -372,13 +372,14 @@ void imap_cb_time(void *arg)
 		GETCONFIGVALUE("idle_interval", "IMAP", interval);
 		if (strlen(interval) > 0) {
 			int i = atoi(interval);
-			if (i > 0 && i < 1000)
+			if (i >= 0 && i < 1000)
 				idle_interval = i;
 		}
 
 		ci_cork(session->ci);
-		if (! (++session->loop % idle_interval)) {
-			imap_session_printf(session, "* OK\r\n");
+		//if idle interval is 0 then no * OK is sent, still here
+		if ((idle_interval>0)&&(! (++session->loop % idle_interval))) {
+			imap_session_printf(session, "* OK Still Here\r\n");
 		}
 		dbmail_imap_session_mailbox_status(session,TRUE);
 		dbmail_imap_session_buff_flush(session);
