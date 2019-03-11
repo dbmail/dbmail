@@ -473,7 +473,7 @@ static void _strip_blob_prefix(char *subject)
 
 	return;
 }
-static bool _strip_refwd(char *subject) 
+static gboolean _strip_refwd(char *subject) 
 {
 	char *tmp;
 	size_t len;
@@ -2076,7 +2076,7 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 {
 	GMimeContentType *type;
 	gchar *s = NULL, *t=NULL;
-	bool rfc822 = false;
+	gboolean rfc822 = false;
 		
 	assert(object);
 

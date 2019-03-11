@@ -534,7 +534,7 @@ typedef struct {
 	/* condstore */
 	uint64_t changedsince;
 	/* qresync */
-	bool vanished;
+	gboolean vanished;
 
 	List_T   bodyfetch;
 } fetch_items;

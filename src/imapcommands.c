@@ -88,7 +88,7 @@ struct cmd_t {
 #define SESSION_OK_WITH_RESP_CODE(VALUE) \
 	SESSION_OK_COMMON("[%s] ", VALUE)
 
-static void _fetch_update(ImapSession *self, MessageInfo *msginfo, bool showmodseq, bool showflags);
+static void _fetch_update(ImapSession *self, MessageInfo *msginfo, gboolean showmodseq, gboolean showflags);
 
 static int check_state_and_args(ImapSession * self, int minargs, int maxargs, ClientState_T state)
 {
@@ -561,13 +561,13 @@ struct expunged_helper {
 	qresync_args *qresync;
 	uint64_t start_expunged;
 	uint64_t last_expunged;
-	bool prev_expunged;
+	gboolean prev_expunged;
 };
 
 static gboolean _get_expunged(uint64_t *id, gpointer UNUSED value, struct expunged_helper *data)
 {
 	MessageInfo *msg = g_tree_lookup(data->msgs, id);
-	bool expunged;
+	gboolean expunged;
 
 	if (! msg)
 		return TRUE;
@@ -785,7 +785,7 @@ static void _ic_enable_enter(dm_thread_data *D)
 
 	while ((capability = self->args[self->args_idx++])) {
 		const char *s = p_string_str(capability);
-		bool changed = false;
+		gboolean changed = false;
 		if (MATCH(s, "CONDSTORE") || MATCH(s, "QRESYNC")) {
 			if (Capa_match(self->capa, s)) {
 				if (MATCH(s, "CONDSTORE")) {
@@ -2024,7 +2024,7 @@ int _ic_thread(ImapSession *self)
 
 int _dm_imapsession_get_ids(ImapSession *self, const char *set)
 {
-	bool found = FALSE;
+	gboolean found = FALSE;
 	
 	dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 
@@ -2133,9 +2133,9 @@ int _ic_fetch(ImapSession *self)
  * alter message-associated data in selected mailbox
  */
 
-void _fetch_update(ImapSession *self, MessageInfo *msginfo, bool showmodseq, bool showflags)
+void _fetch_update(ImapSession *self, MessageInfo *msginfo, gboolean showmodseq, gboolean showflags)
 {
-	bool needspace = false;
+	gboolean needspace = false;
 
 	uint64_t *msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), &msginfo->uid);
 
@@ -2221,8 +2221,8 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 
 	// reporting callback
 	if ((! cmd->silent) || changed > 0) {
-		bool showmodseq = (changed && (cmd->unchangedsince || self->mailbox->condstore));
-		bool showflags = (! cmd->silent);
+		gboolean showmodseq = (changed && (cmd->unchangedsince || self->mailbox->condstore));
+		gboolean showflags = (! cmd->silent);
 		_fetch_update(self, msginfo, showmodseq, showflags);
 	}
 
@@ -2236,7 +2236,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	struct cmd_t cmd;
 	gboolean update = FALSE;
 	const char *token = NULL;
-	bool needflags = false;
+	gboolean needflags = false;
 	int startflags = 0, endflags = 0;
 	String_T buffer = NULL;
 

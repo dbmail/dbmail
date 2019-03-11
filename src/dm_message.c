@@ -337,7 +337,7 @@ static GMimeContentType *find_type(const char *s)
 #define MAX_MIME_DEPTH 64
 #define MAX_MIME_BLEN 128
 
-static bool find_boundary(const char *s, char *boundary)
+static gboolean find_boundary(const char *s, char *boundary)
 {
 	const gchar *param;
 	GMimeContentType *type = find_type(s);
@@ -1406,7 +1406,7 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 	gchar *case_header, *safe_header, *frag;
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	Field_T config;
-	volatile bool cache_readonly = false;
+	volatile gboolean cache_readonly = false;
 	volatile int t = FALSE;
 
 	// rfc822 headernames are case-insensitive

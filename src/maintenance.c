@@ -708,7 +708,7 @@ int do_check_integrity(void)
 
 	/* part 6 */
         Field_T config;
-	bool cache_readonly = false;
+	gboolean cache_readonly = false;
 	config_get_value("header_cache_readonly", "DBMAIL", config);
 	if (strlen(config)) {
 		if (SMATCH(config, "true") || SMATCH(config, "yes")) {

@@ -967,7 +967,7 @@ int MailboxState_hasPermission(T M, uint64_t userid, const char *right_flag)
 	Connection_T c;
        	ResultSet_T r;
 	volatile int result = FALSE;
-	volatile bool owner_acl = false;
+	volatile gboolean owner_acl = false;
 	uint64_t owner_id, mboxid;
 
 	mboxid = MailboxState_getId(M);

@@ -67,7 +67,7 @@ int do_password(const uint64_t useridnr,
                 const char * const enctype);
 int do_spasswd(const uint64_t useridnr, const char * const password);
 int do_saction(const uint64_t useridnr, long int saction);
-int do_enable(const uint64_t useridnr, bool enable);
+int do_enable(const uint64_t useridnr, gboolean enable);
 int do_aliases(const uint64_t useridnr,
                GList * alias_add,
                GList * alias_del);

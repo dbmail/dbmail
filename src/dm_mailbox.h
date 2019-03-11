@@ -43,8 +43,8 @@ typedef struct {
 	uint64_t size;
 	gboolean uid; 
 	uint64_t modseq;
-	bool condstore;
-	bool qresync;
+	gboolean condstore;
+	gboolean qresync;
 
 	MailboxState_T mbstate;	// cache mailbox metadata;
 

@@ -91,7 +91,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 {
 	ImapSession * self;
 	Field_T val;
-	bool login_disabled = TRUE;
+	gboolean login_disabled = TRUE;
 
 	self = mempool_pop(pool, sizeof(ImapSession));
 
@@ -1387,7 +1387,7 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 	char *oldflags = NULL, *newflags = NULL;
 	MessageInfo *old = NULL, *new = NULL;
 	MailboxState_T M = self->mailbox->mbstate;
-	bool flagschanged = false, modseqchanged = false;
+	gboolean flagschanged = false, modseqchanged = false;
 
 	assert(uid);
 

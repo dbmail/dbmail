@@ -534,7 +534,7 @@ int do_saction(const uint64_t useridnr, long int saction)
 	return db_user_set_security_action(useridnr, saction);
 }
 
-int do_enable(const uint64_t useridnr, bool enable)
+int do_enable(const uint64_t useridnr, gboolean enable)
 {
 	if (no_to_all) {
 		qprintf("Pretending to %s authentication for user [%" PRIu64 "]\n", enable?"enable":"disable", useridnr);

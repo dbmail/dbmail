@@ -366,7 +366,7 @@ int pop3(ClientSession_T *session, const char *buffer)
 	int found = 0;
 	//int indx = 0;
 	int validate_result;
-    bool login_disabled = FALSE;
+	gboolean login_disabled = FALSE;
 	uint64_t result, top_lines, top_messageid, user_idnr;
 	unsigned char *md5_apop_he;
 	struct message *msg;

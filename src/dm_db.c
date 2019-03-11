@@ -3545,7 +3545,7 @@ int db_usermap_resolve(ClientBase_T *ci, const char *username, char *real_userna
 
 }
 
-bool db_user_active(uint64_t user_idnr)
+gboolean db_user_active(uint64_t user_idnr)
 {
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	volatile int active = 1;
@@ -3565,7 +3565,7 @@ bool db_user_active(uint64_t user_idnr)
 	return active ? true : false;
 }
 
-int db_user_set_active(uint64_t user_idnr, bool active)
+int db_user_set_active(uint64_t user_idnr, gboolean active)
 {
 	Connection_T c; PreparedStatement_T s;
 	volatile int t = DM_SUCCESS;

@@ -910,7 +910,7 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 
 	} else if (MATCH(key, "modseq") ) {
 		const char *token;
-		bool valid = false;
+		gboolean valid = false;
 		uint64_t seq = 0;
 		int i = 0;
 		RETURN_IF_FAIL(search_keys[*idx + 1], -1);

@@ -36,8 +36,8 @@ M mempool_open(void)
 {
 	M MP;
 	mpool_t *pool = NULL;
-	static bool env_mpool = false;
-	static bool use_mpool = false;
+	static gboolean env_mpool = false;
+	static gboolean use_mpool = false;
 
 	if (! env_mpool) {
 		char *dm_pool = getenv("DM_POOL");

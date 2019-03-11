@@ -745,8 +745,8 @@ int char2date_str(const char *date, Field_T *frag);
  * db-user accessors
  */
 
-bool db_user_active(uint64_t user_idnr);
-int db_user_set_active(uint64_t user_idnr, bool active);
+gboolean db_user_active(uint64_t user_idnr);
+int db_user_set_active(uint64_t user_idnr, gboolean active);
 
 int db_user_get_security_action(uint64_t user_idnr);
 int db_user_set_security_action(uint64_t user_idnr, long int action);
