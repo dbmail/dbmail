@@ -2407,16 +2407,11 @@ static void _ic_store_enter(dm_thread_data *D)
 		buffer = p_string_new(self->pool, "");
 		Field_T val;
 		GETCONFIGVALUE("report_failed_message_updates", "IMAP", val);
-		if (strlen(val)) {
-			/* if switch is yes then report, otherwise do not do anything */
-			if (strcasecmp(val, "yes") == 0) {
-				p_string_printf(buffer, "MODIFIED [%s]", failed_ids->str);
-				TRACE(TRACE_DEBUG,"[%p] MODIFIED IDS Reported (switch pressent and set to 'yes') [%s]", self, self->tag);
-			} else {
-				TRACE(TRACE_DEBUG,"[%p] MODIFIED IDS NOT Reported (switch pressent and set to 'no') [%s]", self, self->tag);
-			}
+		if (strlen(val) && strcasecmp(val, "no") == 0) {
+			/* if switch is no then do not report */
+			TRACE(TRACE_DEBUG,"[%p] MODIFIED IDS NOT Reported [%s]", self, self->tag);
 		} else {
-			/* if the user does not add the field into dbmail.conf the flag should be considererd yes (patch in order to work in non updated dbmail.conf)  */
+			/* if switch is something else then no, report */
 			p_string_printf(buffer, "MODIFIED [%s]", failed_ids->str);
 			TRACE(TRACE_DEBUG,"[%p] MODIFIED IDS Reported [%s]", self, self->tag);
 		}
