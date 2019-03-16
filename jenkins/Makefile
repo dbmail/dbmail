@@ -4,11 +4,11 @@ default: buildout
 buildout: bin/buildout
 	bin/buildout
 
-bin/buildout: bin/python2.7
+bin/buildout: bin/python
 	bin/pip install zc.buildout
 
-bin/python2.7:
-	virtualenv --python=python2.7 --clear .
+bin/python:
+	virtualenv --clear .
 
 test: buildout test-postgresql test-mysql
 
