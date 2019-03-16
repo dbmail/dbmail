@@ -368,7 +368,7 @@ void imap_cb_time(void *arg)
 	TRACE(TRACE_DEBUG,"[%p]", session);
 
 	if ( session->command_type == IMAP_COMM_IDLE  && session->command_state == IDLE ) {
-	       	// session is in a IDLE loop
+	    /* session is in a IDLE loop */
 		GETCONFIGVALUE("idle_interval", "IMAP", interval);
 		if (strlen(interval) > 0) {
 			int i = atoi(interval);
@@ -377,8 +377,8 @@ void imap_cb_time(void *arg)
 		}
 
 		ci_cork(session->ci);
-		//if idle interval is 0 then no * OK is sent, still here
-		if ((idle_interval>0)&&(! (++session->loop % idle_interval))) {
+		/* if idle interval = 0 then no "* OK Still here" is sent */
+		if ((idle_interval > 0) && (! (++session->loop % idle_interval))) {
 			imap_session_printf(session, "* OK Still Here\r\n");
 		}
 		dbmail_imap_session_mailbox_status(session,TRUE);
