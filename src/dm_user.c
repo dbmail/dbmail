@@ -33,11 +33,6 @@ static char csalt[] = "........";
 static char *bgetpwent(const char *filename, const char *name);
 static char *cget_salt(void);
 
-/* valid characters for passwd/username */
-static const char ValidChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!@#$%^&*()-+=~[]{}<>:;\\/";
-
 int verbose = 0;
 int no_to_all = 0;
 int yes_to_all = 0;
