@@ -2189,7 +2189,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 
 	// if the mailbox already holds this message we're done
 	GETCONFIGVALUE("suppress_duplicates", "DELIVERY", val);
-	if (strcasecmp(val,"yes")==0) {
+	if (strcasecmp(val,"yes") == 0) {
 		const char *messageid = dbmail_message_get_header(message, "message-id");
 		if ( messageid && ((db_mailbox_has_message_id(mboxidnr, messageid)) > 0) ) {
 			TRACE(TRACE_INFO, "suppress_duplicate: [%s]", messageid);
