@@ -1,4 +1,6 @@
 > 
+>   (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+>
 >   (c) 2004-2014 NFG Net Facilities Group BV, The Netherlands, support@nfg.nl
 >
 >   (c) 2000-2005 IC&S, The Netherlands
@@ -17,48 +19,32 @@ Why is it useful?
 
 - it enables you to create mailboxes without the need of systemusers.
 
-- mail is more effeciently stored and therefore it can be inserted an
-retrieved much faster dan any regular system (DBMail is currently able to
-retrieve aprox. 250 mail messages per second)
+- Email is more effeciently stored and therefore it can be inserted an retrieved much faster dan any
+  regular system (DBMail is currently able to retrieve aprox. 250 mail messages per second)
 
-- It's scalable. You can run the dbmail programs on different servers
-talking to the same database(cluster).
+- It's scalable. You can run the dbmail programs on different servers talking to the same
+  database(cluster). LDAP integration allows you to integrate with existing authentication
+  backends, such as ActiveDirectory.
 
-- It is more secure. There's no need to maintain system users or write to
-the filesystem. All this is done through the database.
+- There's no need to maintain system users or write access to the filesystem. All this
+  is done through the database.
 
 
 Who created it?
 ===============
 
-Eelco van Beek <eelco@ic-s.nl> at first created a very sloppy version of
-this program which didn't work at all.
+DBMail was originally created by IC&S in the Netherlands.
 
-Because the DBMail mailing system is big he needed help. 
-So he asked Roel <roel@ic-s.nl>, one of the people working with him 
-at IC&S, to join in developing DBMail further.
+Around 2003, Paul Stevens at NFG also joined the development team, initially to provide debian
+packaging, later to take over development of the 2.1 release. Aaron Stone also deserves special
+thanks for initiating the LDAP driver, maintaining the delivery chain and of course sieve support.
 
-In 2003 Ilja Booij joined IC&S to work on the 2.x version. During that time,
-Paul Stevens at NFG also joined the development team, initially to provide 
-debian packaging, later to take over development of the 2.1 release. Aaron
-Stone also deserves special thanks for initiating the LDAP driver, maintaining 
-the delivery chain and of course sieve support.
+DBMail is now a community effort to create a fast, effecient and scalable database driven
+mailingsystem. Both IC&S and NFG are fully behind opensource and the GPL. Therefore DBMail has the
+GPL licence.
 
-DBMail is now a community effort to create a fast, effecient and scalable
-database driven mailingsystem. Both IC&S and NFG are fully behind 
-opensource and the GPL. Therefore DBMail has the GPL licence.
-
-Both IC&S and NFG provide commercial support and consultancy for this
-product. For more information about this you can send an email to
-info@ic-s.nl and/or support@nfg.nl.
-
->
-> Disclaimer: IC&S nor NFG are responsible for any damages resulting from use 
-> of this software. 
->
-
-It should work with almost no problem. We have clients that run dbmail
-with more than 25.000 useraccounts. The system is stable.
+Paul provides commercial support for this product. For more information about this you can send an
+email to support@nfg.nl.
 
 How do i install it?
 ====================
@@ -78,4 +64,3 @@ DBMail uses the GPL version 2 licence.
 
 It's included in the COPYING file.
 -------------------------------------------
-
