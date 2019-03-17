@@ -1,3 +1,6 @@
+
+[![Build Status](https://travis-ci.org/dbmail/dbmail.svg?branch=master)](https://travis-ci.org/dbmail/dbmail)
+
 > 
 >   (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
 >
