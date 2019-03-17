@@ -1240,6 +1240,7 @@ char * dm_shellesc(const char * command)
 		case '!':
 			// Add an escape before the offending char.
 			safe_command[end++] = '\\';
+			// fall-through
 		default:
 			// And then put in the character itself.
 			safe_command[end++] = command[pos];

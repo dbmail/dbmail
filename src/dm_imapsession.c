@@ -941,6 +941,7 @@ static int _imap_show_body_section(body_fetch *bodyfetch, gpointer data)
 			break;
 		case BFIT_HEADER_FIELDS_NOT:
 			condition=TRUE;
+			// fall-through
 		case BFIT_HEADER_FIELDS:
 			_fetch_headers(self, bodyfetch, condition);
 			break;
