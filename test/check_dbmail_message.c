@@ -700,7 +700,7 @@ END_TEST
 START_TEST(test_dbmail_message_encoded)
 {
 	DbmailMessage *m = dbmail_message_new(NULL);
-	//const char *exp = ":: [ Arrty ] :: [ Roy (L) Stï¿½phanie ]  <over.there@hotmail.com>";
+	//const char *exp = ":: [ Arrty ] :: [ Roy (L) Stèphanie ]  <over.there@hotmail.com>";
 	uint64_t id = 0;
 
 	m = dbmail_message_init_with_string(m, encoded_message_koi);
@@ -813,7 +813,7 @@ START_TEST(test_dbmail_message_construct)
 	const gchar *sender = "foo@bar.org";
 	const gchar *subject = "Some test";
 	const gchar *recipient = "<bar@foo.org> Bar";
-	gchar *body = g_strdup("\ntesting\n\nï¿½ï¿½ï¿½ï¿½ï¿½\n\n");
+	gchar *body = g_strdup("\ntesting\n\nááááä\n\n");
 	gchar *expect = g_strdup("From: foo@bar.org\n"
 	"Subject: Some test\n"
 	"To: bar@foo.org\n"
