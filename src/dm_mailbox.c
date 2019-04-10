@@ -107,7 +107,6 @@ int dbmail_mailbox_open(DbmailMailbox *self)
 
 static String_T _message_get_envelope_date(DbmailMailbox *mailbox, const DbmailMessage *message)
 {
-	struct tm gmt;
 	String_T date;
 	GDateTime *utcdatetime;
 	char *res;

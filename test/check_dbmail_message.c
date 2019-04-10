@@ -528,8 +528,6 @@ START_TEST(test_dbmail_message_get_internal_date)
 	m = dbmail_message_init_with_string(m, rfc822);
 	// From_ contains: Wed Sep 14 16:47:48 2005
 	const char *expect = "2005-09-14 16:47:48";
-	const char *expect03 = "2003-09-14 16:47:48";
-	const char *expect75 = "1975-09-14 16:47:48";
 	const char *expect10 = "2010-05-28 18:10:18";
 	char *result;
 
