@@ -1994,7 +1994,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	
 	part = GMIME_OBJECT(message);
 	/* date */
-	result = g_mime_object_get_header(GMIME_OBJECT(message),"Date");
+	result = (char *)g_mime_object_get_header(GMIME_OBJECT(message),"Date");
 	if (result) {
 		t = dbmail_imap_astring_as_string(result);
 		list = g_list_append_printf(list,"%s", t);
