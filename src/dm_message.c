@@ -714,7 +714,8 @@ void dbmail_message_free(DbmailMessage *self)
 	}
 
 	if (self->content) {
-		g_object_unref(self->content);
+		if GMIME_IS_OBJECT(self->content)
+			g_object_unref(self->content);
 		self->content = NULL;
 	}
 
@@ -847,12 +848,16 @@ uint64_t dbmail_message_get_physid(const DbmailMessage *self)
 
 void dbmail_message_set_date(DbmailMessage *self, char *date)
 {
-	g_date_time_unref(self->date);
+	GDateTime *newdate;
 	if (date && strlen(date)) {
-		self->date = g_mime_utils_header_decode_date(date);
+		newdate = g_mime_utils_header_decode_date(date);
 		TRACE(TRACE_DEBUG, "date [%s]", date);
 	} else {
-		self->date = g_date_time_new_now_local();
+		newdate = g_date_time_new_now_local();
+	}
+	if (newdate) {
+		g_date_time_unref(self->date);
+		self->date = newdate;
 	}
 }
 
@@ -862,7 +867,7 @@ gchar * dbmail_message_get_internal_date(const DbmailMessage *self)
 	GDateTime *utcdatetime;
 
 	utcdatetime = g_date_time_to_utc(self->date);
-    res = g_date_time_format(utcdatetime, "%Y-%m-%d %T");
+	res = g_date_time_format(utcdatetime, "%Y-%m-%d %T");
 	g_date_time_unref(utcdatetime);
 
 	return res;
@@ -897,7 +902,7 @@ GList * dbmail_message_get_header_repeated(const DbmailMessage *self, const char
 			GMIME_OBJECT(self->content));
 	int c, header_count;
 	const GMimeHeader *header_object;
-	GList *list;
+	GList *list = NULL;
 
 	header_count = g_mime_header_list_get_count(headers);
 
@@ -1293,7 +1298,7 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 	GDateTime *utcdatetime;
 
 	utcdatetime = g_date_time_to_utc(self->date);
-    sortfield = g_date_time_format(utcdatetime, "%Y-%m-%d %H:%M:%S");
+	sortfield = g_date_time_format(utcdatetime, "%Y-%m-%d %H:%M:%S");
 	g_date_time_unref(utcdatetime);
 
 	value = g_mime_utils_header_format_date(self->date);
@@ -1636,7 +1641,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	uint64_t headername_id = 0;
 	uint64_t headervalue_id;
 	DbmailMessage *self = (DbmailMessage *)user_data;
-	GDateTime *date;
+	GDateTime *date = NULL;
 	volatile gboolean isaddr = 0, isdate = 0, issubject = 0;
 	const char *charset = dbmail_message_get_charset(self);
 	char datefield[CACHE_WIDTH];
@@ -1734,18 +1739,20 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 
 		date = g_mime_utils_header_decode_date(value);
 	
-		utcdatetime = g_date_time_to_utc(date);
-		res = g_date_time_format(utcdatetime, "%Y-%m-%d %H:%M:%S");
-		g_utf8_strncpy(sortfield, res, CACHE_WIDTH-1);
-		g_date_time_unref(utcdatetime);
-		g_free(res);
+		if (date) {
+			utcdatetime = g_date_time_to_utc(date);
+			res = g_date_time_format(utcdatetime, "%Y-%m-%d %H:%M:%S");
+			g_utf8_strncpy(sortfield, res, CACHE_WIDTH-1);
+			g_date_time_unref(utcdatetime);
+			g_free(res);
 
-		res = g_date_time_format(date, "%Y-%m-%d");
-		g_utf8_strncpy(datefield, res, CACHE_WIDTH-1);
-		g_free(res);
+			res = g_date_time_format(date, "%Y-%m-%d");
+			g_utf8_strncpy(datefield, res, CACHE_WIDTH-1);
+			g_free(res);
 
-		TRACE(TRACE_DEBUG,"Date is [%s] sortfield [%s], datefield [%s]",
-				value, sortfield, datefield);
+			TRACE(TRACE_DEBUG,"Date is [%s] sortfield [%s], datefield [%s]",
+					value, sortfield, datefield);
+		}
 	}
 
 	if (sortfield[0] == '\0')
@@ -1765,7 +1772,8 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	headervalue_id=0;
 
 	emaillist=NULL;
-	date=0;
+	if (date)
+		g_date_time_unref(date);
 }
 
 static void insert_field_cache(uint64_t physid, const char *field, const char *value)
