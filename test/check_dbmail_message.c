@@ -814,7 +814,7 @@ START_TEST(test_dbmail_message_construct)
 	gchar *body = g_strdup("\ntesting\n\nááááä\n\n");
 	gchar *expect = g_strdup("From: foo@bar.org\n"
 	"Subject: Some test\n"
-	"To: bar@foo.org\n"
+	"To: <bar@foo.org> Bar\n"
 	"MIME-Version: 1.0\n"
 	"Content-Type: text/plain; charset=utf-8\n"
 	"Content-Transfer-Encoding: base64\n"
