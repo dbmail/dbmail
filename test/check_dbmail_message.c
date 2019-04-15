@@ -698,7 +698,7 @@ END_TEST
 START_TEST(test_dbmail_message_encoded)
 {
 	DbmailMessage *m = dbmail_message_new(NULL);
-	//const char *exp = ":: [ Arrty ] :: [ Roy (L) St�phanie ]  <over.there@hotmail.com>";
+	//const char *exp = ":: [ Arrty ] :: [ Roy (L) Stèphanie ]  <over.there@hotmail.com>";
 	uint64_t id = 0;
 
 	m = dbmail_message_init_with_string(m, encoded_message_koi);
@@ -811,7 +811,7 @@ START_TEST(test_dbmail_message_construct)
 	const gchar *sender = "foo@bar.org";
 	const gchar *subject = "Some test";
 	const gchar *recipient = "<bar@foo.org> Bar";
-	gchar *body = g_strdup("\ntesting\n\n�����\n\n");
+	gchar *body = g_strdup("\ntesting\n\nááááä\n\n");
 	gchar *expect = g_strdup("From: foo@bar.org\n"
 	"Subject: Some test\n"
 	"To: bar@foo.org\n"
@@ -819,7 +819,7 @@ START_TEST(test_dbmail_message_construct)
 	"Content-Type: text/plain; charset=utf-8\n"
 	"Content-Transfer-Encoding: base64\n"
 	"\n"
-	"CnRlc3RpbmcKCuHh4eHk");
+	"CnRlc3RpbmcKCsOhw6HDocOhw6QK\n");
 	gchar *result;
 
 	DbmailMessage *message = dbmail_message_new(NULL);
@@ -844,7 +844,7 @@ START_TEST(test_encoding)
 {
 	char *raw, *enc, *dec;
 
-	raw = g_strdup( "Kristoffer Br�nemyr");
+	raw = g_strdup("Kristoffer Brånemyr");
 	enc = g_mime_utils_header_encode_phrase(NULL, (char *)raw, NULL);
 	dec = g_mime_utils_header_decode_phrase(NULL, (char *)enc);
 	fail_unless(MATCH(raw,dec),"decode/encode failed");
