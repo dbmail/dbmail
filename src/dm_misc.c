@@ -1998,9 +1998,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	if (result) {
 		t = dbmail_imap_astring_as_string(result);
 		list = g_list_append_printf(list,"%s", t);
-		g_free(result);
 		g_free(t);
-		result = NULL;
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
