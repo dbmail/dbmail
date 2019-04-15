@@ -2000,7 +2000,7 @@ char * imap_get_envelope(GMimeMessage *message)
 		list = g_list_append_printf(list,"%s", t);
 		g_free(t);
 	} else {
-		list = g_list_append_printf(list,"NIL");
+		list = g_list_append_printf(list,"\"Thu, 01 Jan 1970 00:00:00 +0000\"");
 	}
 	
 	/* subject */
