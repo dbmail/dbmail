@@ -31,7 +31,7 @@ char *simple_broken_envelope = " May 28 18:10:18 2010\n"
 	"    this is a test message\n"
 	"\n";
 
-
+int simple_with_from_fromline_chars = 52;
 char *simple_with_from = "From nobody@pacific.net.sg Tue Dec 04 19:52:17 2007\n"
 	"X-Envelope-From: <nobody@pacific.net.sg>\n"
 	"Received: from [127.0.0.1] (port=49353 helo=test11)\n"
@@ -60,7 +60,8 @@ char *simple_groups = "From user@domain  Fri Feb 22 17:06:23 2008\n"
 	"body\n"
 	"\n";
 
-char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n" 
+int rfc822_fromline_chars = 38;
+char *rfc822 = "From nobody  Wed Sep 14 16:47:48 2005\n"
 	"Content-Type: text/plain; charset=\"us-ascii\"\n"
 	"MIME-Version: 1.0\n"
 	"Content-Transfer-Encoding: 7bit\n"

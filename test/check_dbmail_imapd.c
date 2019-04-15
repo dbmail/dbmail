@@ -547,13 +547,13 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = g_mime_object_to_string(object, NULL);
-	fail_unless(MATCH(rfc822,result),
+	fail_unless(MATCH(rfc822 + rfc822_fromline_chars,result),
 			"imap_get_partsec failed \n[%s] !=\n[%s]\n",
-		       	rfc822, result);
+		       	rfc822 + rfc822_fromline_chars, result);
 	g_free(result);
 
 	result = imap_get_logical_part(object,"HEADER");
-	expect = g_strdup("From nobody Wed Sep 14 16:47:48 2005\r\n"
+	expect = g_strdup(
 			"Content-Type: text/plain; charset=\"us-ascii\"\r\n"
 			"MIME-Version: 1.0\r\n"
 			"Content-Transfer-Encoding: 7bit\r\n"

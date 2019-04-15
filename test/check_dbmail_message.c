@@ -566,7 +566,7 @@ START_TEST(test_dbmail_message_to_string)
 	//
 	m = message_init(simple_with_from);
 	result = dbmail_message_to_string(m);
-	COMPARE(simple_with_from, result);
+	COMPARE(simple_with_from + simple_with_from_fromline_chars, result);
 	g_free(result);
 	dbmail_message_free(m);
 
@@ -861,7 +861,7 @@ START_TEST(test_dbmail_message_get_size)
 
 	/* */
 	m = dbmail_message_new(NULL);
-	m = dbmail_message_init_with_string(m, rfc822);
+	m = dbmail_message_init_with_string(m, rfc822 + rfc822_fromline_chars);
 
 	i = dbmail_message_get_size(m, FALSE);
 	fail_unless(i==277, "dbmail_message_get_size failed [%d]", i);
