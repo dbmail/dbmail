@@ -542,7 +542,7 @@ START_TEST(test_dbmail_message_get_internal_date)
 	m = dbmail_message_init_with_string(m, simple_broken_envelope);
 
 	result = dbmail_message_get_internal_date(m);
-	//fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
+	fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
 
 	char *before = dbmail_message_to_string(m);
 	char *after = store_and_retrieve(m);
