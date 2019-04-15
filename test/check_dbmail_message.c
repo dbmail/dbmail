@@ -864,9 +864,9 @@ START_TEST(test_dbmail_message_get_size)
 	m = dbmail_message_init_with_string(m, rfc822 + rfc822_fromline_chars);
 
 	i = dbmail_message_get_size(m, FALSE);
-	fail_unless(i==277, "dbmail_message_get_size failed [%d]", i);
+	fail_unless(i==240, "dbmail_message_get_size failed [%d]", i);
 	j = dbmail_message_get_size(m, TRUE);
-	fail_unless(j==289, "dbmail_message_get_size failed [%d]", j);
+	fail_unless(j==251, "dbmail_message_get_size failed [%d]", j);
 
 	dbmail_message_free(m);
 	return;
