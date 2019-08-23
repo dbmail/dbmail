@@ -3,7 +3,7 @@ Description=DBMail LMTP Server
 After=network.target mysqld.service postgresql.service
 
 [Service]
-Type=simple
+Type=notify
 ExecStart=@sbindir@/dbmail-lmtpd -D
 Restart=always
 RestartSec=1
