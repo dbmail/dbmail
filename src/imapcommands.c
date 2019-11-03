@@ -2405,7 +2405,9 @@ static void _ic_store_enter(dm_thread_data *D)
 	if (self->ids_list) {
 		GString *failed_ids = g_list_join_u64(self->ids_list, ",");
 		buffer = p_string_new(self->pool, "");
-		p_string_printf(buffer, "MODIFIED [%s]", failed_ids->str);
+		//according to RFC7162 section 3.1.3.0 MODIFIED keyword should be used as respnse like 
+		//"... OK [MODIFIED 7,9] ..." not "...OK [MODIFIED [7,9]]..."
+		p_string_printf(buffer, "MODIFIED %s", failed_ids->str);
 		g_string_free(failed_ids, TRUE);
 		g_list_free(g_list_first(self->ids_list));
 		self->ids_list = NULL;
