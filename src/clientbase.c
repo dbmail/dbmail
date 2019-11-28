@@ -419,7 +419,12 @@ void ci_read_cb(ClientBase_T *client)
 					client->client_state |= CLIENT_ERR;
 					PUNLOCK(client->lock);
 				}
+			} else { // connection was closed from client side
+				PLOCK(client->lock);
+				client->client_state |= CLIENT_ERR;
+				PUNLOCK(client->lock);
 			}
+
 			if (client->sock->ssl || client->rx) { // EOF on stdin is not an error
 				PLOCK(client->lock);
 				client->client_state |= CLIENT_EOF;
