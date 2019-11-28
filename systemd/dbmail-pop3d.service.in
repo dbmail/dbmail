@@ -3,7 +3,7 @@ Description=DBMail pop3 Server
 After=network.target mysqld.service postgresql.service
 
 [Service]
-Type=simple
+Type=notify
 ExecStart=@sbindir@/dbmail-pop3d -D
 Restart=always
 RestartSec=1
