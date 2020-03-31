@@ -195,22 +195,22 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 		G_UNLOCK(mutex);
 		if (subj != NULL){
 			gchar *subj2;
-			subj2 = g_mime_utils_header_encode_text((const char *)subj);
+			subj2 = g_mime_utils_header_encode_text(NULL, (const char *)subj, NULL);
 			g_free(subj);
 			return subj2;
 		}
 	}
 
-	return g_mime_utils_header_encode_text(str_in);
+	return g_mime_utils_header_encode_text(NULL, str_in, NULL);
 }
 
 char * dbmail_iconv_decode_text(const char *in)
 {
-	return g_mime_utils_header_decode_text(in);
+	return g_mime_utils_header_decode_text(NULL, in);
 }
 char * dbmail_iconv_decode_address(char *address)
 {
-	return g_mime_utils_header_decode_phrase(address);
+	return g_mime_utils_header_decode_phrase(NULL, address);
 }
 
 char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr)

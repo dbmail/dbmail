@@ -1025,7 +1025,7 @@ int main(void)
 	int nf;
 	Suite *s = dbmail_deliver_suite();
 	SRunner *sr = srunner_create(s);
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);

@@ -93,6 +93,9 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
+/* Define if systemd will be used */
+#undef HAVE_SYSTEMD
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
@@ -105,8 +108,7 @@
 /* Define to 1 if you have the <URL.h> header file. */
 #undef HAVE_URL_H
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
 /* Name of package */

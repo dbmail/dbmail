@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 	List_T dsnusers = p_list_new(pool);
 	Delivery_T *dsnuser;
 	
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	
 	config_get_file();
 

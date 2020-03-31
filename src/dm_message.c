@@ -91,7 +91,7 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	
 	g_return_val_if_fail(object != NULL, NULL);
 
-	s = g_mime_object_to_string(GMIME_OBJECT(object));
+	s = g_mime_object_to_string(GMIME_OBJECT(object), NULL);
 	assert(s);
 
 	i = find_end_of_header(s);
@@ -329,7 +329,7 @@ static GMimeContentType *find_type(const char *s)
 	char *header = find_type_header(s);
 	if (! header)
 		return NULL;
-	type = g_mime_content_type_new_from_string(header);
+	type = g_mime_content_type_parse(NULL, header);
 	g_free(header);
 	return type;
 }
@@ -454,7 +454,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if ((depth > 0) && (blist[depth-1][0]))
 				strncpy(boundary, blist[depth-1], MAX_MIME_BLEN-1);
 
-			if (is_header)
+			if (is_header) {
 			  if (prev_header && depth>0 && !prev_is_message) {
 				dprint("--%s\n", boundary);
 				p_string_append_printf(m, "--%s\n", boundary);
@@ -462,6 +462,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				dprint("\n--%s\n", boundary);
 				p_string_append_printf(m, "\n--%s\n", boundary);
 			  }
+			}
 
 			p_string_append_printf(m, "%s", str);
 			dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 
@@ -495,7 +496,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	}
 
 	self = dbmail_message_init_with_string(self,p_string_str(m));
-	dbmail_message_set_internal_date(self, internal_date);
+	dbmail_message_set_date(self, internal_date);
 	p_string_free(m,TRUE);
 	p_string_free(n,TRUE);
 	return self;
@@ -506,7 +507,7 @@ static gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, Dbma
 static int store_head(GMimeObject *object, DbmailMessage *m)
 {
 	int r;
-	char *head = g_mime_object_get_headers(object);
+	char *head = g_mime_object_get_headers(object, NULL);
 	r = store_blob(m, head, 1);
 	g_free(head);
 	return r;
@@ -541,8 +542,8 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 	if (! skiphead && store_head(object,m) < 0) return TRUE;
 
 	boundary = g_mime_multipart_get_boundary((GMimeMultipart *)object);
-	preface = g_mime_multipart_get_preface((GMimeMultipart *)object);
-	postface = g_mime_multipart_get_postface((GMimeMultipart *)object);
+	preface = g_mime_multipart_get_prologue((GMimeMultipart *)object);
+	postface = g_mime_multipart_get_epilogue((GMimeMultipart *)object);
 
 	if (g_mime_content_type_is_type(GMIME_CONTENT_TYPE(content_type), "multipart", "*") &&
 			store_blob(m, preface, 0) < 0) return TRUE;
@@ -610,7 +611,6 @@ gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessa
 		// part of the rfc822 headers
 		skiphead = TRUE;
 
-		g_mime_header_list_set_stream (GMIME_MESSAGE(object)->mime_part->headers, NULL);
 		mime_part = g_mime_message_get_mime_part((GMimeMessage *)object);
 	} else
 		mime_part = object;
@@ -683,7 +683,7 @@ DbmailMessage * dbmail_message_new(Mempool_T pool)
 	self->pool = pool;
 	self->freepool = freepool;
 	
-	self->internal_date = time(NULL);
+	self->date = g_date_time_new_now_local();
 	self->envelope_recipient = p_string_new(self->pool, "");
 
 	/* provide quick case-insensitive header name searches */
@@ -708,8 +708,14 @@ void dbmail_message_free(DbmailMessage *self)
 	if (! self)
 		return;
 
+	if (self->date) {
+		g_date_time_unref(self->date);
+		self->date = NULL;
+	}
+
 	if (self->content) {
-		g_object_unref(self->content);
+		if GMIME_IS_OBJECT(self->content)
+			g_object_unref(self->content);
 		self->content = NULL;
 	}
 
@@ -805,15 +811,15 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 	parser = g_mime_parser_new_with_stream(self->stream);
 
 
-	content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
+	content = GMIME_OBJECT(g_mime_parser_construct_message(parser, NULL));
 	if (content) {
 		g_object_unref(parser);
 		dbmail_message_set_class(self, DBMAIL_MESSAGE);
 		self->content = content;
 		if (from[0])
-			dbmail_message_set_internal_date(self, from);
+			dbmail_message_set_date(self, from);
 	} else {
-		content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
+		content = GMIME_OBJECT(g_mime_parser_construct_part(parser, NULL));
 		g_object_unref(parser);
 		if (content) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
@@ -840,39 +846,29 @@ uint64_t dbmail_message_get_physid(const DbmailMessage *self)
 	return self->id;
 }
 
-void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
+void dbmail_message_set_date(DbmailMessage *self, char *date)
 {
-	self->internal_date = time(NULL);
-	if (internal_date && strlen(internal_date)) {
-		time_t dt;
-	        if ((dt = g_mime_utils_header_decode_date(
-						internal_date,
-						&(self->internal_date_gmtoff)))) {
-			self->internal_date = dt;
-		}
-		TRACE(TRACE_DEBUG, "internal_date [%s] [%ld] offset [%d]",
-				internal_date,
-				self->internal_date,
-				self->internal_date_gmtoff);
+	GDateTime *newdate;
+	if (date && strlen(date)) {
+		newdate = g_mime_utils_header_decode_date(date);
+		TRACE(TRACE_DEBUG, "date [%s]", date);
+	} else {
+		newdate = g_date_time_new_now_local();
+	}
+	if (newdate) {
+		g_date_time_unref(self->date);
+		self->date = newdate;
 	}
 }
 
-/* thisyear is a workaround for some broken gmime version. */
-gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear)
+gchar * dbmail_message_get_internal_date(const DbmailMessage *self)
 {
 	char *res;
-	struct tm gmt;
-	assert(self->internal_date);
-	
-	memset(&gmt,'\0', sizeof(struct tm));
-	gmtime_r(&self->internal_date, &gmt);
+	GDateTime *utcdatetime;
 
-	/* override if the date is not sane */
-	if (thisyear && ((gmt.tm_year + 1900) > (thisyear + 1)))
-		gmt.tm_year = thisyear - 1900;
-
-	res = g_new0(char, TIMESTRING_SIZE+1);
-	strftime(res, TIMESTRING_SIZE, "%Y-%m-%d %T", &gmt);
+	utcdatetime = g_date_time_to_utc(self->date);
+	res = g_date_time_format(utcdatetime, "%Y-%m-%d %T");
+	g_date_time_unref(utcdatetime);
 
 	return res;
 }
@@ -892,7 +888,7 @@ const char * dbmail_message_get_envelope_recipient(const DbmailMessage *self)
 
 void dbmail_message_set_header(DbmailMessage *self, const char *header, const char *value)
 {
-	g_mime_object_prepend_header(GMIME_OBJECT(self->content), header, value);
+	g_mime_object_prepend_header(GMIME_OBJECT(self->content), header, value, NULL);
 }
 
 const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *header)
@@ -900,33 +896,24 @@ const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *h
 	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
 
-struct payload {
-	const DbmailMessage *message;
-	const char *header;
-	GList *list;
-};
-
-void _get_header_repeated(const char *name, const char *value, gpointer data)
-{
-	struct payload *load = (struct payload *)data;
-	if (MATCH(load->header, name))
-		load->list = g_list_append(load->list, (gpointer)value);
-}
-
-
 GList * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header)
 {
 	GMimeHeaderList *headers = g_mime_object_get_header_list(
 			GMIME_OBJECT(self->content));
-       
-	struct payload data;
-	memset(&data, 0, sizeof(struct payload));
-	data.header = header;
-	data.list = NULL;
+	int c, header_count;
+	const GMimeHeader *header_object;
+	GList *list = NULL;
 
-	g_mime_header_list_foreach(headers, _get_header_repeated, &data);
+	header_count = g_mime_header_list_get_count(headers);
 
-	return data.list;
+	for (c = 0; c < header_count; c++) {
+		header_object = g_mime_header_list_get_header_at(headers, c);
+
+		if (MATCH(header, g_mime_header_get_name(header_object)))
+			list = g_list_append(list, (gpointer)g_mime_header_get_raw_value(header_object));
+	}
+
+	return list;
 }
 
 GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field_name)
@@ -947,7 +934,7 @@ GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *
 	
 	TRACE(TRACE_INFO, "mail address parser looking at field [%s] with value [%s]", field_name, field_value);
 	
-	if ((ialist = internet_address_list_parse_string(field_value)) == NULL) {
+	if ((ialist = internet_address_list_parse(NULL, field_value)) == NULL) {
 		TRACE(TRACE_NOTICE, "mail address parser error parsing header field");
 		return NULL;
 	}
@@ -980,7 +967,7 @@ const char * dbmail_message_get_charset(DbmailMessage *self)
 gchar * dbmail_message_to_string(const DbmailMessage *self) 
 {
 	assert(self && self->content);
-	return g_mime_object_to_string(GMIME_OBJECT(self->content));
+	return g_mime_object_to_string(GMIME_OBJECT(self->content), NULL);
 }
 gchar * dbmail_message_body_to_string(const DbmailMessage *self)
 {
@@ -1055,7 +1042,7 @@ static DbmailMessage * _retrieve(DbmailMessage *self, const char *query_template
 	}
 	
 	self = dbmail_message_init_with_string(self,m->str);
-	dbmail_message_set_internal_date(self, internal_date);
+	dbmail_message_set_date(self, internal_date);
 
 	if (internal_date) g_free(internal_date);
 	g_string_free(m,TRUE);
@@ -1196,16 +1183,9 @@ static void insert_physmessage(DbmailMessage *self, Connection_T c)
 {
 	ResultSet_T r = NULL;
 	char *internal_date = NULL, *frag;
-	int thisyear;
 	volatile uint64_t id = 0;
-	struct timeval tv;
-	struct tm gmt;
 
-	/* get the messages date, but override it if it's from the future */
-	gettimeofday(&tv, NULL);
-	localtime_r(&tv.tv_sec, &gmt);
-	thisyear = gmt.tm_year + 1900;
-	internal_date = dbmail_message_get_internal_date(self, thisyear);
+	internal_date = dbmail_message_get_internal_date(self);
 
 	frag = db_returning("id");
 
@@ -1309,32 +1289,28 @@ int _message_insert(DbmailMessage *self,
 #define CACHE_WIDTH 255
 
 void _message_cache_envelope_date(const DbmailMessage *self)
-{
-	time_t date = self->internal_date;
+{	
 	char *value;
-	char datefield[CACHE_WIDTH];
-	char sortfield[CACHE_WIDTH];
+	char *datefield;
+	char *sortfield;
 	uint64_t headervalue_id = 0;
 	uint64_t headername_id = 0;
+	GDateTime *utcdatetime;
 
-	value = g_mime_utils_header_format_date(
-			self->internal_date, 
-			self->internal_date_gmtoff);
+	utcdatetime = g_date_time_to_utc(self->date);
+	sortfield = g_date_time_format(utcdatetime, "%Y-%m-%d %H:%M:%S");
+	g_date_time_unref(utcdatetime);
 
-	memset(sortfield, 0, sizeof(sortfield));
-	strftime(sortfield, CACHE_WIDTH-1, "%Y-%m-%d %H:%M:%S", gmtime(&date));
-
-	if (self->internal_date_gmtoff)
-		date += (self->internal_date_gmtoff * 36);
-
-	memset(datefield, 0, sizeof(datefield));
-	strftime(datefield, 20, "%Y-%m-%d", gmtime(&date));
+	value = g_mime_utils_header_format_date(self->date);
+	datefield = g_date_time_format(self->date, "%Y-%m-%d");
 
 	_header_name_get_id(self, "Date", &headername_id);
 	if (headername_id)
 		_header_value_get_id(value, sortfield, datefield, &headervalue_id);
 
 	g_free(value);
+	g_free(sortfield);
+	g_free(datefield);
 
 	if (headervalue_id && headername_id)
 		_header_insert(self->id, headername_id, headervalue_id);
@@ -1360,8 +1336,15 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	 * */
 	GMimeHeaderList *headers = g_mime_object_get_header_list(
 			GMIME_OBJECT(self->content));
-	g_mime_header_list_foreach(headers, (GMimeHeaderForeachFunc)_header_cache,
-			(gpointer)self);
+	int c, header_count;
+	const GMimeHeader *header_object;
+
+	header_count = g_mime_header_list_get_count(headers);
+
+	for (c = 0; c < header_count; c++) {
+		header_object = g_mime_header_list_get_header_at(headers, c);
+		_header_cache(g_mime_header_get_name(header_object), g_mime_header_get_raw_value(header_object), (gpointer)self);
+	}
 
 	/* 
 	 * gmime treats content-type and content-disposition differently
@@ -1369,14 +1352,13 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	 */
 	part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
 	if ((content_type = g_mime_object_get_content_type(part))) {
-		char *value = g_mime_content_type_to_string(content_type);
+		char *value = g_mime_content_type_get_mime_type(content_type);
 		_header_cache("content-type", (const char *)value, (gpointer)self);
 		free(value);
 	}
 
 	if ((content_disp = g_mime_object_get_content_disposition(part))) {
-		char *value = g_mime_content_disposition_to_string(
-				content_disp, FALSE);
+		char *value = g_mime_content_disposition_encode(content_disp, NULL);
 		_header_cache("content-disposition", (const char *)value, (gpointer)self);
 		free(value);
 	}
@@ -1659,7 +1641,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	uint64_t headername_id = 0;
 	uint64_t headervalue_id;
 	DbmailMessage *self = (DbmailMessage *)user_data;
-	time_t date;
+	GDateTime *date = NULL;
 	volatile gboolean isaddr = 0, isdate = 0, issubject = 0;
 	const char *charset = dbmail_message_get_charset(self);
 	char datefield[CACHE_WIDTH];
@@ -1674,7 +1656,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	if (strchr(header, ' '))
 		return;
 
-	TRACE(TRACE_DEBUG,"headername [%s]", header);
+	TRACE(TRACE_DEBUG,"header name [%s] value [%s]", header, raw);
 
 	if ((_header_name_get_id(self, header, &headername_id) < 0))
 		return;
@@ -1711,7 +1693,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	if(isaddr) {
 		GString *store;
 		int i,j=0;
-		emaillist = internet_address_list_parse_string(value);
+		emaillist = internet_address_list_parse(NULL, value);
 		store = _header_addresses(emaillist);
 
 		i = internet_address_list_length(emaillist);
@@ -1752,14 +1734,25 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 
 	memset(datefield, 0, sizeof(datefield));
 	if(isdate) {
-		int offset;
-		date = g_mime_utils_header_decode_date(value,&offset);
-		strftime(sortfield, CACHE_WIDTH-1, "%Y-%m-%d %H:%M:%S", gmtime(&date));
+		GDateTime *utcdatetime;
+		char *res;
 
-		date += (offset * 36); // +0200 -> offset 200
-		strftime(datefield, 20,"%Y-%m-%d", gmtime(&date));
-		TRACE(TRACE_DEBUG,"Date is [%s] offset [%d], datefield [%s]",
-				value, offset, datefield);
+		date = g_mime_utils_header_decode_date(value);
+	
+		if (date) {
+			utcdatetime = g_date_time_to_utc(date);
+			res = g_date_time_format(utcdatetime, "%Y-%m-%d %H:%M:%S");
+			g_utf8_strncpy(sortfield, res, CACHE_WIDTH-1);
+			g_date_time_unref(utcdatetime);
+			g_free(res);
+
+			res = g_date_time_format(date, "%Y-%m-%d");
+			g_utf8_strncpy(datefield, res, CACHE_WIDTH-1);
+			g_free(res);
+
+			TRACE(TRACE_DEBUG,"Date is [%s] sortfield [%s], datefield [%s]",
+					value, sortfield, datefield);
+		}
 	}
 
 	if (sortfield[0] == '\0')
@@ -1779,7 +1772,8 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	headervalue_id=0;
 
 	emaillist=NULL;
-	date=0;
+	if (date)
+		g_date_time_unref(date);
 }
 
 static void insert_field_cache(uint64_t physid, const char *field, const char *value)
@@ -1817,39 +1811,42 @@ static void insert_field_cache(uint64_t physid, const char *field, const char *v
 
 void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 {
-	GMimeReferences *refs, *head;
+	GMimeReferences *refs;
 	GTree *tree;
-	const char *referencesfield, *inreplytofield;
-	char *field;
+	const char *referencesfield, *inreplytofield, *msgid;
+	char *field, *my_msgid;
+	int c, references_count;
 
 	referencesfield = (char *)dbmail_message_get_header(self,"References");
 	inreplytofield = (char *)dbmail_message_get_header(self,"In-Reply-To");
 
 	// Some clients will put parent in the in-reply-to header only and the grandparents and older in references
 	field = g_strconcat(referencesfield, " ", inreplytofield, NULL);
-	refs = g_mime_references_decode(field);
+	refs = g_mime_references_parse(NULL, field);
 	g_free(field);
 
 	if (! refs) {
-		TRACE(TRACE_DEBUG, "reference_decode failed [%" PRIu64 "]", self->id);
+		TRACE(TRACE_DEBUG, "references_parse failed [%" PRIu64 "]", self->id);
 		return;
 	}
 	
-	head = refs;
 	tree = g_tree_new_full((GCompareDataFunc)dm_strcmpdata, NULL, NULL, NULL);
 	
-	while (refs->msgid) {
-		if (! g_tree_lookup(tree,refs->msgid)) {
-			insert_field_cache(self->id, "references", refs->msgid);
-			g_tree_insert(tree,refs->msgid,refs->msgid);
+	references_count = g_mime_references_length(refs);
+	for (c = 0; c < references_count; c++) {
+		msgid = g_mime_references_get_message_id(refs, c);
+
+		my_msgid = g_strdup(msgid);
+		if (! g_tree_lookup(tree, my_msgid)) {
+			insert_field_cache(self->id, "references", my_msgid);
+			g_tree_insert(tree, my_msgid, my_msgid);
 		}
-		if (refs->next == NULL)
-			break;
-		refs = refs->next;
+		g_free(my_msgid);
 	}
 
 	g_tree_destroy(tree);
-	g_mime_references_clear(&head);
+	g_mime_references_clear(refs);
+	g_mime_references_free(refs);
 }
 	
 void dbmail_message_cache_envelope(const DbmailMessage *self)
@@ -1912,9 +1909,9 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 
 	// set basic headers
 	TRACE(TRACE_DEBUG, "from: [%s] to: [%s] subject: [%s] body: [%s]", from, to, subject, body);
-	g_mime_message_set_sender(message, from);
-	g_mime_message_set_subject(message, subject);
-	g_mime_message_add_recipient(message, GMIME_RECIPIENT_TYPE_TO, NULL, to);
+	g_mime_message_add_mailbox(message, GMIME_ADDRESS_TYPE_FROM, NULL, from);
+	g_mime_message_set_subject(message, subject, NULL);
+	g_mime_message_add_mailbox(message, GMIME_ADDRESS_TYPE_TO, NULL, to);
 
 	// construct mime-part
 	mime_part = g_mime_part_new();
@@ -1943,7 +1940,7 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	g_object_unref(fstream);
 
 	content = g_mime_data_wrapper_new_with_stream(stream, encoding);
-	g_mime_part_set_content_object(mime_part, content);
+	g_mime_part_set_content(mime_part, content);
 	g_object_unref(content);
 	
 	// Content-Type
@@ -1957,13 +1954,13 @@ DbmailMessage * dbmail_message_construct(DbmailMessage *self,
 	// Content-Transfer-Encoding
 	switch(encoding) {
 		case GMIME_CONTENT_ENCODING_BASE64:
-			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "base64");
+			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "base64", NULL);
 			break;
 		case GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE:
-			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "quoted-printable");
+			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "quoted-printable", NULL);
 			break;
 		default:
-			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "7bit");
+			g_mime_object_set_header(GMIME_OBJECT(mime_part),"Content-Transfer-Encoding", "7bit", NULL);
 			break;
 	}
 
@@ -2229,7 +2226,7 @@ static int parse_and_escape(const char *in, char **out)
 	const char *addr;
 
 	TRACE(TRACE_DEBUG, "parsing address [%s]", in);
-	ialist = internet_address_list_parse_string(in);
+	ialist = internet_address_list_parse(NULL, in);
 	if (!ialist) {
                 TRACE(TRACE_NOTICE, "unable to parse email address [%s]", in);
                 return -1;
@@ -2464,7 +2461,7 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 
 	usubject = dbmail_iconv_decode_text(subject);
        	unewsubject = g_strconcat("Re: ", usubject, NULL);
-	newsubject = g_mime_utils_header_encode_text(unewsubject);
+	newsubject = g_mime_utils_header_encode_text(NULL, unewsubject, NULL);
 	g_free(usubject);
 	g_free(unewsubject);
 
