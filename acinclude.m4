@@ -288,16 +288,13 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 	else
 		CFLAGS="$CFLAGS -I${lookforzdb}/include/zdb"
 	fi
-	AC_CHECK_HEADERS([URL.h ResultSet.h PreparedStatement.h Connection.h ConnectionPool.h SQLException.h],
+	AC_CHECK_HEADERS([zdb.h],
 		[ZDBLIB="-lzdb"], 
 		[ZDBLIB="failed"],
 	[[
-#include <URL.h>
-#include <ResultSet.h>
-#include <PreparedStatement.h>
-#include <Connection.h>
-#include <ConnectionPool.h>
-#include <SQLException.h>	
+         #ifdef HAVE_ZDB_H
+         #include <zdb.h>
+         #endif
 	]])
 	if test [ "x$ZDBLIB" = "xfailed" ]; then
 		AC_MSG_ERROR([Could not find ZDB library.])
