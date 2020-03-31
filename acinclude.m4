@@ -292,9 +292,7 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 		[ZDBLIB="-lzdb"], 
 		[ZDBLIB="failed"],
 	[[
-         #ifdef HAVE_ZDB_H
          #include <zdb.h>
-         #endif
 	]])
 	if test [ "x$ZDBLIB" = "xfailed" ]; then
 		AC_MSG_ERROR([Could not find ZDB library.])
