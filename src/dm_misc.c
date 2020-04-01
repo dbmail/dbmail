@@ -1367,8 +1367,10 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 	char *head = (char *)type;
 	GList *l = NULL;
 
-	if (! type)
+	if (! type) {
+		list = g_list_append_printf(list, "NIL");
 		return list;
+	}
 
 	TRACE(TRACE_DEBUG, "analyse [%s]", type);
 	while (type[i]) {
