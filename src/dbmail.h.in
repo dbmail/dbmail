@@ -97,12 +97,7 @@
 #include <ldap.h>
 #endif
 
-#include <URL.h>
-#include <ResultSet.h>
-#include <PreparedStatement.h>
-#include <Connection.h>
-#include <ConnectionPool.h>
-#include <SQLException.h>
+#include <zdb.h>
 
 #include "dm_cram.h"
 #include "dm_capa.h"
