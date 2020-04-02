@@ -1366,7 +1366,7 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 	char value[1024];
 	char *head = (char *)type;
 	GList *l = NULL;
-
+	
 	if (! type)
 		return list;
 
@@ -1386,18 +1386,26 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 		}
 		break;
 	}
-
+	
 	head += i;
-
+	//implementing a hard protection
+	int maxSize=strlen(head);
+	maxSize=strlen(head);
+	if (maxSize>1536)
+		maxSize=1536;//hard limit max len of name+len of value
 	int offset = 0;
 	int inname = 1;
 	TRACE(TRACE_DEBUG, "analyse [%s]", head);
-	while (head) {
+	while (head && maxSize>0) {
+		//hard protection, preventing going maxsize
+		maxSize--;
 		curr = head[offset];
 		if ((! curr) && (offset==0))
 			break;
 		if (curr == '=' && inname) {
 			memset(name, 0, sizeof(name));
+			if (offset>512) 
+				offset=512; //hard limit
 			strncpy(name, head, offset);
 			g_strstrip(name);
 			head += offset+1;
@@ -1410,6 +1418,8 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 			size_t len;
 			char *clean1, *clean2, *clean3;
 			memset(value, 0, sizeof(value));
+			if (offset>1024) 
+				offset=1024; //hard limit
 			strncpy(value, head, offset);
 			head += offset+1;
 			inname = 1;
