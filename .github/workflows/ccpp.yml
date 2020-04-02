@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Install dependencies gmime
+      run: sudo apt-get install libgmime-2.6-dev
     - name: configure
       run: ./configure
     - name: make
