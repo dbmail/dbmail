@@ -780,6 +780,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			bodyfetch->names = g_list_next(bodyfetch->names);
 			fieldseq++;
 		}
+		fieldseq++;
 		//adding default value, useful in NOT conditions, Cosmin Cioranu
 		g_string_append_printf(fieldorder, "ELSE %d END AS seq",fieldseq);
 	}
