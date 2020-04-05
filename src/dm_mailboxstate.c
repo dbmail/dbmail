@@ -18,8 +18,11 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <string.h>
+
 #include "dbmail.h"
 #include "dm_mailboxstate.h"
+#include "dm_db.h"
 
 #define THIS_MODULE "MailboxState"
 
@@ -82,9 +85,17 @@ static void MessageInfo_free(MessageInfo *m)
 	g_free(m);
 }
 
+static char* split (char *str, const char *delim){
+    char *p = strstr(str, delim);
+    if (p == NULL) return NULL;     // delimiter not found
+    *p = '\0';                      // terminate string after head
+    return p + strlen(delim);       // return tail substring
+}
+
 static T state_load_messages(T M, Connection_T c)
 {
 	unsigned nrows = 0, i = 0, j;
+	struct timeval before, after; 
 	const char *query_result, *keyword;
 	MessageInfo *result;
 	GTree *msginfo;
@@ -93,22 +104,34 @@ static T state_load_messages(T M, Connection_T c)
 	PreparedStatement_T stmt;
 	Field_T frag;
 	INIT_QUERY;
-
+	
 	date2char_str("internal_date", &frag);
 	snprintf(query, DEF_QUERYSIZE-1,
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-			"draft_flag, recent_flag, %s, rfcsize, seq, message_idnr, status FROM %smessages m "
+			"draft_flag, recent_flag, %s, rfcsize, seq, m.message_idnr, status, "
+			"GROUP_CONCAT(DISTINCT k.keyword) keywords "
+			"FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
-			"WHERE m.mailbox_idnr = ? AND m.status IN (%d,%d,%d) ORDER BY message_idnr ASC",
-			frag, DBPFX, DBPFX, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, MESSAGE_STATUS_DELETE);
+			"LEFT JOIN %skeywords k ON m.status < %d and k.message_idnr = m.message_idnr "
+			//"WHERE m.mailbox_idnr = ? AND m.status IN (%d,%d,%d) "			//Cosmin Cioranu, no need to return deleted (final, based on status) messages
+			"WHERE m.mailbox_idnr = ? AND m.status < %d "
+			"GROUP BY m.message_idnr ",
+			//"ORDER BY message_idnr ASC",
+			frag, DBPFX, DBPFX, DBPFX, 
+			MESSAGE_STATUS_DELETE,
+			//MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, MESSAGE_STATUS_DELETE);		//Cosmin Cioranu,no need to return deleted (final, based on status) messages
+			MESSAGE_STATUS_DELETE);
 
 	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
 
 	stmt = db_stmt_prepare(c, query);
 	db_stmt_set_u64(stmt, 1, M->id);
+	gettimeofday(&before, NULL); 
 	r = db_stmt_query(stmt);
-
+	gettimeofday(&after, NULL); 
+	log_query_time(query,before,after);
 	i = 0;
+	gettimeofday(&before, NULL); 
 	while (db_result_next(r)) {
 		i++;
 
@@ -141,18 +164,31 @@ static T state_load_messages(T M, Connection_T c)
 		result->seq = db_result_get_u64(r,IMAP_NFLAGS + 2);
 		/* status */
 		result->status = db_result_get_int(r, IMAP_NFLAGS + 4);
-
+		/* keywords Cosmin Cioranu */ 
+		char * keywords = db_result_get(r, IMAP_NFLAGS + 5);
+		if (strlen(keywords)>0){
+		    //more keywords, spliting them 
+		    char delim[] = ",";
+		    char *keyword = strtok(keywords, delim);
+		    while(keyword != NULL)
+		    {
+			    result->keywords = g_list_append(result->keywords, g_strdup(keyword));
+			    keyword = strtok(NULL, delim);
+		    }
+		}
 		g_tree_insert(msginfo, uid, result); 
 
 	}
-
+	gettimeofday(&after, NULL); 
+	log_query_time("Parsing Previous Query",before,after);
 	if (! i) { // empty mailbox
 		MailboxState_setMsginfo(M, msginfo);
 		return M;
 	}
 
 	db_con_clear(c);
-
+	//drop keywords search, loaded all in the first query, Cosmin Cioranu
+	/*
 	memset(query,0,sizeof(query));
 	snprintf(query, DEF_QUERYSIZE-1,
 		"SELECT k.message_idnr, keyword FROM %skeywords k "
@@ -175,6 +211,7 @@ static T state_load_messages(T M, Connection_T c)
 			result->keywords = g_list_append(result->keywords, g_strdup(keyword));
 	}
 	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");
+	*/
 
 	MailboxState_setMsginfo(M, msginfo);
 

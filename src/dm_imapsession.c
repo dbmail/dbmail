@@ -789,8 +789,10 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
 			"LEFT JOIN %sheadername n ON h.headername_id=n.id "
 			"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
-			"WHERE m.mailbox_idnr = %" PRIu64 " "
+			"WHERE "
+			"m.mailbox_idnr = %" PRIu64 " "
 			"AND m.message_idnr %s "
+			"AND status < %d "
 			//"AND n.headername %s IN ('%s') "	//old, from the sql point of view is slow
 			"having seq %s %d "			//patch Cosmin Cioranu, removing the above conditions needs a restriction, patched added
 			"ORDER BY message_idnr, seq",
@@ -798,6 +800,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			DBPFX, DBPFX, DBPFX, DBPFX,
 			self->mailbox->id, p_string_str(range),
 			//not?"NOT":"", bodyfetch->hdrnames	//old 
+			MESSAGE_STATUS_DELETE,			//return information only related to valid messages
 			not?"=":"<",fieldseq			//patch Cosmin Cioranu, added the having conditions and also the 'not' handler
 		    );
 
