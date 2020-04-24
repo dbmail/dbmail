@@ -267,12 +267,11 @@ AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 			CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
 		fi
 	fi
-	AC_CHECK_HEADERS([jemalloc.h jemalloc_defs.h],
+	AC_CHECK_HEADERS([jemalloc.h],
 		[JEMALLOCLIB="-ljemalloc"], 
 		[JEMALLOCLIB="no"],
 	[[
 #include <jemalloc.h>
-#include <jemalloc_defs.h>
 	]])
 	if test [ "x$JEMALLOCLIB" != "xno" ]; then
 		LDFLAGS="$LDFLAGS $JEMALLOCLIB"
@@ -292,7 +291,7 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 		[ZDBLIB="-lzdb"], 
 		[ZDBLIB="failed"],
 	[[
-#include <zdb.h>
+         #include <zdb.h>
 	]])
 	if test [ "x$ZDBLIB" = "xfailed" ]; then
 		AC_MSG_ERROR([Could not find ZDB library.])
@@ -344,15 +343,14 @@ AC_DEFUN([DM_CHECK_SSL], [
 ])
 
 AC_DEFUN([DM_CHECK_SYSTEMD], [
-    PKG_CHECK_MODULES([SYSTEMD], [libsystemd-daemon], , [
-	PKG_CHECK_MODULES([SYSTEMD], [libsystemd >= 230])
-    ])
-    if test [ -n "$SYSTEMD_LIBS" ]; then
-	AC_DEFINE([HAVE_SYSTEMD], [1], [Define if systemd will be used])
-	LDFLAGS="$LDFLAGS $SYSTEMD_LIBS"
-    fi
+	PKG_CHECK_MODULES([SYSTEMD], [libsystemd-daemon], , [
+		PKG_CHECK_MODULES([SYSTEMD], [libsystemd >= 230])
+	])
+	if test [ -n "$SYSTEMD_LIBS" ]; then
+		AC_DEFINE([HAVE_SYSTEMD], [1], [Define if systemd will be used])
+		LDFLAGS="$LDFLAGS $SYSTEMD_LIBS"
+	fi
 ])
-
 
 AC_DEFUN([AC_COMPILE_WARNINGS],
 [AC_MSG_CHECKING(maximum warning verbosity option)
