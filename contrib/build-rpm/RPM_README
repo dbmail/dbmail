@@ -1,0 +1,45 @@
+Fedora and CentOS RPM Build Guide for DBMail
+This has been tested on a Fedora LXD Container but on a VM or a physical machine it will be the same process.
+Getting a build environment ready
+    1. Install general required build packages 
+dnf install git rpmdevtools rpm* gcc gcc-c++ kernel-devel bison flex libtool fileutils gpg* automake make autoconf rng-tools openssl-devel lzop lzo-devel pam-devel zlib-devel cmake asciidoc xmltoman xmlto -y
+    2. Install DBMail Specific build packages
+dnf install gmime-devel mhash-devel libevent-devel libzdb-devel jemalloc-devel openldap-devel
+    3. Create a build user since it’s highly NOT recommended to build as root user
+groupadd -g 5001 pkgbuilder
+useradd -u 5001 -g 5001 -c "RPM Package Builder" -s /bin/bash pkgbuilder
+    4. Switch to pkgbuilder user
+su – pkgbuilder
+    5. Create the rpmbuild tree
+rpmdev-setuptree
+Getting Ready for DBMail build
+DBMail has an optional dependency on the Standalone libSieve package which is  not available in Fedora repos, also DBMail has an optional dependency on LDAP which required openldap-devel package to be installed before the build process.
+LibSieve is available on GitHub here https://github.com/sodabrew/libsieve, however, I built my version from SRPM (Source RPM) provided by previous OpenSUSE Or Fedora from repos archives. I have it in case it’s needed by anyone.
+At this point it’s trivial to build the RPMs required for the build using the pre-made SPEC files for DBMail and Libsieve.
+The Source archives should be moved to the path:
+[pkgbuilder@build1 ~]$ ~/rpmbuild/SOURCES/
+The SPEC File should be moved to the path:
+[pkgbuilder@build1 ~]$ ~/rpmbuild/SPECS/
+The command to run as the user pkgbuilder :
+For Building Sieve
+[pkgbuilder@build1 ~]$ rpmbuild -ba rpmbuild/SPECS/libsieve.spec → This will build libsieve and libsieve-devel (Libsieve-devel) will need to be installed on the build system BEFORE building DBMail if we need to have Sieve support.
+For Building DBMail
+[pkgbuilder@build1 ~]$ rpmbuild -ba rpmbuild/SPECS/dbmail.spec  # → Build DBMail RPM with LDAP, Manpages, Systemd and Sieve support.
+You can edit the SPEC file and remove the features you don’t need like SYSTEMD or MANPAGES or SIEVE from the %configure section.
+
+After the build process is complete, all built RPMs will be located in the path
+[pkgbuilder@build1 ~]$ ~/rpmbuild/RPMS/<ARCH>/
+
+Notes:
+The SPEC file for DBMail is extracted from Previous Fedora SRPM but has been heavily modified to conform with the the packaging layout of the DBMail archive.
+Also New Files has been included in the Archive I built from, the files added are:
+    1. dbmail.cron → Crontab entry
+    2. dbmail.logrotate → Logrotate config for dbmail logs
+    3. dbmail.sysconfig → Some defaults by Fedora team
+The SPEC File for Libsieve is extracted from previous OpenSUSE SRPM.
+The Source files and SPEC Files are available.
+If The project team will Validate and approve a pull request for those files as well as the SPEC files and the packaged .
+
+
+
+Hany Badawy										April, 25th. 2020
