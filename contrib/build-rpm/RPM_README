@@ -37,7 +37,7 @@ Also New Files has been included in the archive I built from, the files added ar
     2. dbmail.logrotate → Logrotate config for dbmail logs
     3. dbmail.sysconfig → Some defaults by Fedora team
 The SPEC File for Libsieve is extracted from previous OpenSUSE SRPM.
-The Source files and SPEC Files are available in contrib/build-rpm.
+The SPEC Files and this guide are available in contrib/build-rpm.
 
 
 Hany Badawy										April, 25th. 2020
