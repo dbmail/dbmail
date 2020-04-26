@@ -31,15 +31,13 @@ After the build process is complete, all built RPMs will be located in the path
 [pkgbuilder@build1 ~]$ ~/rpmbuild/RPMS/<ARCH>/
 
 Notes:
-The SPEC file for DBMail is extracted from Previous Fedora SRPM but has been heavily modified to conform with the the packaging layout of the DBMail archive.
-Also New Files has been included in the Archive I built from, the files added are:
+The SPEC file for DBMail is extracted from Previous Fedora SRPM but has been heavily modified to conform with the packaging layout of the DBMail archive.
+Also New Files has been included in the archive I built from, the files added are:
     1. dbmail.cron → Crontab entry
     2. dbmail.logrotate → Logrotate config for dbmail logs
     3. dbmail.sysconfig → Some defaults by Fedora team
 The SPEC File for Libsieve is extracted from previous OpenSUSE SRPM.
-The Source files and SPEC Files are available.
-If The project team will Validate and approve a pull request for those files as well as the SPEC files and the packaged .
-
+The Source files and SPEC Files are available in contrib/build-rpm.
 
 
 Hany Badawy										April, 25th. 2020
