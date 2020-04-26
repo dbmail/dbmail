@@ -1,0 +1,14 @@
+/var/log/dbmail.log {
+    missingok
+    notifempty
+    create 0600 root root
+}
+
+/var/log/dbmail.err {
+    missingok
+    notifempty
+    create 0600 root root
+    postrotate
+       for pid in `ls /var/run/dbmail-*\.pid`; do kill -HUP `cat $pid` &> /dev/null; done
+    endscript
+}
