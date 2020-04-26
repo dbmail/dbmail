@@ -1,0 +1,2 @@
+LOGFILE=/var/log/dbmail.log
+UTIL_OPTS=-M -c -t -u -b -p -d -y
