@@ -108,7 +108,7 @@ static T state_load_messages(T M, Connection_T c)
 	date2char_str("internal_date", &frag);
 	snprintf(query, DEF_QUERYSIZE-1,
 			"SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-			"draft_flag, recent_flag, %s, rfcsize, seq, m.message_idnr, status "
+			"draft_flag, recent_flag, %s, rfcsize, seq, m.message_idnr, status, m.physmessage_id "
 			"FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
 			"WHERE m.mailbox_idnr = ? AND m.status < %d "
@@ -159,6 +159,8 @@ static T state_load_messages(T M, Connection_T c)
 		result->seq = db_result_get_u64(r,IMAP_NFLAGS + 2);
 		/* status */
 		result->status = db_result_get_int(r, IMAP_NFLAGS + 4);
+		/* physmessage_id */
+		result->phys_id = db_result_get_int(r, IMAP_NFLAGS + 5);
 		g_tree_insert(msginfo, uid, result); 
 
 	}

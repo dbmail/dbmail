@@ -562,6 +562,8 @@ typedef struct { // map dbmail_messages
 	uint64_t uid;
 	uint64_t rfcsize;
 	uint64_t seq;
+	// physmessage_id
+	uint64_t phys_id;
 	int status;
 	char internaldate[IMAP_INTERNALDATE_LEN];
 	int flags[IMAP_NFLAGS];
