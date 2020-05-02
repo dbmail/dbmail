@@ -161,20 +161,31 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 
 static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 {
+	TRACE(TRACE_DEBUG, "Call: dbmail_imap_session_message_load");
 	uint64_t *id = NULL;
-
+	
+	
 	if (! (id = g_tree_lookup(self->physids, &(self->msg_idnr)))) {
 		uint64_t *uid;
+		
 		id = mempool_pop(self->pool, sizeof(uint64_t));
-			
-		if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
-			TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
-			g_free(id);
-			return 0;
+		
+		if (self->mailbox->mbstate != NULL){
+			/* the state is ready, get the phys id from state, avoid one query in database */
+			MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), &self->msg_idnr);
+			*id=msginfo->phys_id;
+		}else{
+			/* previous behavior, a query will be performed in db */
+			if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
+				TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
+				g_free(id);
+				return 0;
+			}
 		}
 		uid = mempool_pop(self->pool, sizeof(uint64_t));
 		*uid = self->msg_idnr;
 		g_tree_insert(self->physids, uid, id);
+		
 	}
 		
 	if (self->message) {
@@ -1047,13 +1058,16 @@ static void _imap_show_body_sections(ImapSession *self)
 
 static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 {
+	
 	int result;
 	uint64_t size = 0;
 	gchar *s = NULL;
 	uint64_t *id = uid;
 	gboolean reportflags = FALSE;
 	String_T stream = NULL;
-
+	
+	TRACE(TRACE_DEBUG,"Call: _fetch_get_items");
+	
 	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), uid);
 
 	if (! msginfo) {
