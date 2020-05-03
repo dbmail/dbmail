@@ -450,7 +450,7 @@ static void imap_handle_retry(ImapSession *session)
 static void imap_handle_done(ImapSession *session)
 {
 	/* only do this in the main thread */
-	imap_session_printf(session, "* BYE\r\n");
+	imap_session_printf(session, "* BYE Requested\r\n");
 	imap_session_printf(session, "%s OK LOGOUT completed\r\n", session->tag);
 	imap_session_bailout(session);
 }
