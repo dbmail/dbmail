@@ -161,20 +161,31 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 
 static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 {
+	TRACE(TRACE_DEBUG, "Call: dbmail_imap_session_message_load");
 	uint64_t *id = NULL;
-
+	
+	
 	if (! (id = g_tree_lookup(self->physids, &(self->msg_idnr)))) {
 		uint64_t *uid;
+		
 		id = mempool_pop(self->pool, sizeof(uint64_t));
-			
-		if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
-			TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
-			g_free(id);
-			return 0;
+		
+		if (self->mailbox->mbstate != NULL){
+			/* the state is ready, get the phys id from state, avoid one query in database */
+			MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), &self->msg_idnr);
+			*id=msginfo->phys_id;
+		}else{
+			/* previous behavior, a query will be performed in db */
+			if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
+				TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
+				g_free(id);
+				return 0;
+			}
 		}
 		uid = mempool_pop(self->pool, sizeof(uint64_t));
 		*uid = self->msg_idnr;
 		g_tree_insert(self->physids, uid, id);
+		
 	}
 		
 	if (self->message) {
@@ -517,7 +528,6 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 {
 	int ispeek = 0;
-	
 	const char *token = TOKEN;
 	const char *nexttoken = NEXTTOKEN;
 
@@ -711,7 +721,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	GList *last;
 	GString *fieldorder = NULL;
 	int k;
-	int fieldseq;
+	int fieldseq=0;
 	String_T query;
 	String_T range;
 
@@ -781,22 +791,29 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			bodyfetch->names = g_list_next(bodyfetch->names);
 			fieldseq++;
 		}
-		g_string_append_printf(fieldorder, "END AS seq");
+		fieldseq++;
+		//adding default value, useful in NOT conditions, Cosmin Cioranu
+		g_string_append_printf(fieldorder, "ELSE %d END AS seq",fieldseq);
 	}
-
 	p_string_printf(query, "SELECT m.message_idnr, n.headername, v.headervalue%s "
 			"FROM %sheader h "
 			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
 			"LEFT JOIN %sheadername n ON h.headername_id=n.id "
 			"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
-			"WHERE m.mailbox_idnr = %" PRIu64 " "
+			"WHERE "
+			"m.mailbox_idnr = %" PRIu64 " "
 			"AND m.message_idnr %s "
-			"AND n.headername %s IN ('%s') "
+			"AND status < %d "
+			//"AND n.headername %s IN ('%s') "	//old, from the sql point of view is slow
+			"having seq %s %d "			//patch Cosmin Cioranu, removing the above conditions needs a restriction, patched added
 			"ORDER BY message_idnr, seq",
 			not?"":fieldorder->str,
 			DBPFX, DBPFX, DBPFX, DBPFX,
-			self->mailbox->id, p_string_str(range), 
-			not?"NOT":"", bodyfetch->hdrnames);
+			self->mailbox->id, p_string_str(range),
+			//not?"NOT":"", bodyfetch->hdrnames	//old 
+			MESSAGE_STATUS_DELETE,			//return information only related to valid messages
+			not?"=":"<",fieldseq			//patch Cosmin Cioranu, added the having conditions and also the 'not' handler
+		    );
 
 	if (fieldorder)
 		g_string_free(fieldorder, TRUE);
@@ -1041,13 +1058,16 @@ static void _imap_show_body_sections(ImapSession *self)
 
 static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 {
+	
 	int result;
 	uint64_t size = 0;
 	gchar *s = NULL;
 	uint64_t *id = uid;
 	gboolean reportflags = FALSE;
 	String_T stream = NULL;
-
+	
+	TRACE(TRACE_DEBUG,"Call: _fetch_get_items");
+	
 	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), uid);
 
 	if (! msginfo) {
@@ -1289,23 +1309,22 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
 {
-        va_list ap, cp;
-        uint64_t j = 0, l;
+	va_list ap, cp;
+	uint64_t j = 0, l;
 
-        assert(message);
-        j = p_string_len(self->buff);
+	assert(message);
+	j = p_string_len(self->buff);
 
-        va_start(ap, message);
+	va_start(ap, message);
 	va_copy(cp, ap);
-        p_string_append_vprintf(self->buff, message, cp);
-        va_end(cp);
-        va_end(ap);
-
-        l = p_string_len(self->buff);
+	p_string_append_vprintf(self->buff, message, cp);
+	va_end(cp);
+	va_end(ap);
+	l = p_string_len(self->buff);
 
 	if (l >= IMAP_BUF_SIZE) dbmail_imap_session_buff_flush(self);
 
-        return (int)(l-j);
+	return (int)(l-j);
 }
 
 int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, const char * password)

@@ -1,0 +1,8 @@
+#!/bin/sh
+ 
+# Read preferences
+. /etc/sysconfig/dbmail
+
+echo "" >> $LOGFILE
+date >> $LOGFILE
+dbmail-util $UTIL_OPTS >> $LOGFILE 2>&1
