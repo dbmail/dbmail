@@ -267,12 +267,11 @@ AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 			CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
 		fi
 	fi
-	AC_CHECK_HEADERS([jemalloc.h jemalloc_defs.h],
+	AC_CHECK_HEADERS([jemalloc.h],
 		[JEMALLOCLIB="-ljemalloc"], 
 		[JEMALLOCLIB="no"],
 	[[
 #include <jemalloc.h>
-#include <jemalloc_defs.h>
 	]])
 	if test [ "x$JEMALLOCLIB" != "xno" ]; then
 		LDFLAGS="$LDFLAGS $JEMALLOCLIB"

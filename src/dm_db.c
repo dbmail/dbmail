@@ -201,7 +201,15 @@ int db_connect(void)
 	if (strlen(db_params.dburi) != 0) {
 		uri = g_string_new("");
 		g_string_append_printf(uri,"%s", db_params.dburi);
-		g_string_append_printf(uri, "&application-name=%s", server_conf ? server_conf->process_name : "dbmail_client");
+		//add application-name to the uri, only if application-name parameter was not added.
+		if ( !strstr(uri->str,"application-name") ){
+		    //If it already has parameters then add it with "&" otherwise start adding them with "?"
+		    if ( strchr(uri->str,'?') ){
+				g_string_append_printf(uri, "&application-name=%s", server_conf ? server_conf->process_name : "dbmail_client");
+		    }else{
+				g_string_append_printf(uri, "?application-name=%s", server_conf ? server_conf->process_name : "dbmail_client");
+		    }
+		}
 		TRACE(TRACE_DEBUG,"dburi: %s", uri->str);
 		dburi = URL_new(uri->str);
 		g_string_free(uri,TRUE);

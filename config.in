@@ -15,12 +15,6 @@
 /* DBMail Version */
 #undef DM_VERSION
 
-/* Define to 1 if you have the <ConnectionPool.h> header file. */
-#undef HAVE_CONNECTIONPOOL_H
-
-/* Define to 1 if you have the <Connection.h> header file. */
-#undef HAVE_CONNECTION_H
-
 /* Define to 1 if you have the <crypt.h> header file. */
 #undef HAVE_CRYPT_H
 
@@ -48,9 +42,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the <jemalloc_defs.h> header file. */
-#undef HAVE_JEMALLOC_DEFS_H
-
 /* Define to 1 if you have the <jemalloc.h> header file. */
 #undef HAVE_JEMALLOC_H
 
@@ -72,15 +63,6 @@
 /* Define to 1 if you have the <openssl/ssl.h> header file. */
 #undef HAVE_OPENSSL_SSL_H
 
-/* Define to 1 if you have the <PreparedStatement.h> header file. */
-#undef HAVE_PREPAREDSTATEMENT_H
-
-/* Define to 1 if you have the <ResultSet.h> header file. */
-#undef HAVE_RESULTSET_H
-
-/* Define to 1 if you have the <SQLException.h> header file. */
-#undef HAVE_SQLEXCEPTION_H
-
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
@@ -93,6 +75,9 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
+/* Define if systemd will be used */
+#undef HAVE_SYSTEMD
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
@@ -102,8 +87,8 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to 1 if you have the <URL.h> header file. */
-#undef HAVE_URL_H
+/* Define to 1 if you have the <zdb.h> header file. */
+#undef HAVE_ZDB_H
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
