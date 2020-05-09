@@ -179,7 +179,7 @@ static T state_load_messages(T M, Connection_T c)
 		"SELECT k.message_idnr, group_concat(distinct keyword) FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 		"WHERE m.mailbox_idnr = ? AND m.status < %d "
-		"group by m.mailbox_idnr",
+		"group by m.message_idnr",
 		DBPFX, DBPFX,
 		MESSAGE_STATUS_DELETE);
 
