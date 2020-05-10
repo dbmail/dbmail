@@ -1508,16 +1508,21 @@ static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 	
 	if (ids) {
 		uid = (uint64_t *)ids->data;
-		msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), uid);
-		if (msn && (*msn > MailboxState_getExists(M))) {
-			TRACE(TRACE_DEBUG,"exists new [%d] old: [%d]", MailboxState_getExists(N), MailboxState_getExists(M)); 
-			dbmail_imap_session_buff_printf(self, "* %d EXISTS\r\n", MailboxState_getExists(M));
+		GTree * ids=MailboxState_getIds(self->mailbox->mbstate);
+		if (ids!=NULL){
+		    msn = g_tree_lookup(ids, uid);
+		    if (msn && (*msn > MailboxState_getExists(M))) {
+			    TRACE(TRACE_DEBUG,"exists new [%d] old: [%d]", MailboxState_getExists(N), MailboxState_getExists(M)); 
+			    dbmail_imap_session_buff_printf(self, "* %d EXISTS\r\n", MailboxState_getExists(M));
+		    }
 		}
 	}
-
 	while (ids) {
 		uid = (uint64_t *)ids->data;
-		if (! g_tree_lookup(MailboxState_getIds(N), uid)) {
+		MessageInfo *messageInfo=g_tree_lookup(MailboxState_getMsginfo(N), uid);
+		if (messageInfo!=NULL && !g_tree_lookup(MailboxState_getIds(N), uid)) {
+			/* mark message as expunged, it should be ok to be removed from list, see state_load_message*/
+			messageInfo->expunged=1;
 			notify_expunge(self, uid);
 		}
 
@@ -1591,8 +1596,24 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 
 		TRACE(TRACE_DEBUG, "seq: [%u] -> [%u]", oldseq, newseq);
 		if (oldseq != newseq) {
-			// do a full reload: re-read flags and counters
-			N = MailboxState_new(self->pool, self->mailbox->id);
+			Field_T optimized;
+			GETCONFIGVALUE("mailbox_update_strategy", "IMAP", optimized);
+			if (SMATCH(optimized, "1")){
+			    TRACE(TRACE_DEBUG, "Strategy reload: 1 (full reload)");
+			    /* do a full reload: re-read flags and counters */
+			    N = MailboxState_new(self->pool, self->mailbox->id);
+			}else{
+			    if (SMATCH(optimized, "2")){    
+				TRACE(TRACE_DEBUG, "Strategy reload: 2 (dif reload)");
+				/* do a dif reload */
+				N = MailboxState_update(self->pool, M);
+			    }else{
+				TRACE(TRACE_DEBUG, "Strategy reload: default (full reload)");
+				/* default strategy is full reload, case 1*/
+				N = MailboxState_new(self->pool, self->mailbox->id);
+			    }
+			}
+			
 			unsigned newexists = MailboxState_getExists(N);
 			MailboxState_setExists(N, max(oldexists, newexists));
 
