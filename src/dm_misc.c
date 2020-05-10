@@ -1000,13 +1000,7 @@ GList * g_tree_values(GTree *tree)
 }
 
 
-/*
- * boolean merge of two GTrees. The result is stored in GTree *a.
- * the state of GTree *b is undefined: it may or may not have been changed, 
- * depending on whether or not key/value pairs were moved from b to a.
- * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
- * for their construction.
- */
+
 static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_merger_t **merger)
 {
 	tree_merger_t *t = *(tree_merger_t **)merger;
@@ -1027,7 +1021,13 @@ static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_m
 
 	return FALSE;
 }
-
+/*
+ * boolean merge of two GTrees. The result is stored in GTree *a.
+ * the state of GTree *b is undefined: it may or may not have been changed, 
+ * depending on whether or not key/value pairs were moved from b to a.
+ * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
+ * for their construction.
+ */
 int g_tree_merge(GTree *a, GTree *b, int condition)
 {
 	char *type = NULL;
