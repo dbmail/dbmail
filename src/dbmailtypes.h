@@ -564,6 +564,10 @@ typedef struct { // map dbmail_messages
 	uint64_t seq;
 	// physmessage_id
 	uint64_t phys_id;
+        // expunge flag
+        int expunge;
+        // expunged (pushed to client), can be removed
+        int expunged;
 	int status;
 	char internaldate[IMAP_INTERNALDATE_LEN];
 	int flags[IMAP_NFLAGS];
