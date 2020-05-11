@@ -2129,7 +2129,7 @@ finalize:
 	TRACE(TRACE_DEBUG, "[%p] tag: [%s], command: [%s], [%" PRIu64 "] args", self, self->tag, self->command, self->args_idx);
 	self->args[self->args_idx] = NULL;	/* terminate */
 
-#if DEBUG
+#ifdef DEBUG
 	for (i = 0; i<=self->args_idx && self->args[i]; i++) { 
 		TRACE(TRACE_DEBUG, "[%p] arg[%d]: '%s'\n", self, i, p_string_str(self->args[i])); 
 	}
