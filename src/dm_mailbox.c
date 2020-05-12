@@ -1226,7 +1226,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s)
 	char gt_lt = 0;
 	const char *op;
 	char partial[DEF_FRAGSIZE];
-	Connection_T c; ResultSet_T r; PreparedStatement_T st;
+	Connection_T c; ResultSet_T r; PreparedStatement_T st=NULL;
 	GTree *ids;
 	volatile char *inset = NULL;
 	/* helper for some operations in TREE mode search */
