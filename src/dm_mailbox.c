@@ -37,8 +37,8 @@ extern Mempool_T small_pool;
 DbmailMailbox * dbmail_mailbox_new(Mempool_T pool, uint64_t id) {
 	gboolean freepool = FALSE;
 	if (!pool) {
-	pool = mempool_open();
-	freepool = TRUE;
+		pool = mempool_open();
+		freepool = TRUE;
 	}
 
 	DbmailMailbox *self = mempool_pop(pool, sizeof (DbmailMailbox));
@@ -58,7 +58,7 @@ static gboolean _node_free(GNode *node, gpointer data) {
 	DbmailMailbox *self = (DbmailMailbox *) data;
 	search_key *s = (search_key *) node->data;
 	if (s->found)
-	g_tree_destroy(s->found);
+		g_tree_destroy(s->found);
 	mempool_push(self->pool, s, sizeof (search_key));
 	return FALSE;
 }
@@ -69,13 +69,13 @@ void dbmail_mailbox_free(DbmailMailbox *self) {
 	if (self->found) g_tree_destroy(self->found);
 	if (self->sorted) g_list_destroy(self->sorted);
 	if (self->search) {
-	g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, (GNodeTraverseFunc) _node_free, self);
-	g_node_destroy(self->search);
+		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, (GNodeTraverseFunc) _node_free, self);
+		g_node_destroy(self->search);
 	}
 
 	mempool_push(pool, self, sizeof (DbmailMailbox));
 	if (freepool)
-	mempool_close(&pool);
+		mempool_close(&pool);
 }
 
 uint64_t dbmail_mailbox_get_id(DbmailMailbox *self) {
@@ -93,7 +93,7 @@ gboolean dbmail_mailbox_get_uid(DbmailMailbox *self) {
 
 int dbmail_mailbox_open(DbmailMailbox *self) {
 	if ((self->mbstate = MailboxState_new(self->pool, self->id)) == NULL)
-	return DM_EQUERY;
+		return DM_EQUERY;
 	return DM_SUCCESS;
 }
 
@@ -107,12 +107,12 @@ static String_T _message_get_envelope_date(DbmailMailbox *mailbox, const DbmailM
 
 	memset(&gmt, 0, sizeof (struct tm));
 	if (gmtime_r(&message->internal_date, &gmt)) {
-	char res[TIMESTRING_SIZE + 1];
-	memset(res, 0, sizeof (res));
-	strftime(res, TIMESTRING_SIZE, "%a %b %d %H:%M:%S %Y", &gmt);
-	date = p_string_new(mailbox->pool, res);
+		char res[TIMESTRING_SIZE + 1];
+		memset(res, 0, sizeof (res));
+		strftime(res, TIMESTRING_SIZE, "%a %b %d %H:%M:%S %Y", &gmt);
+		date = p_string_new(mailbox->pool, res);
 	} else {
-	date = p_string_new(mailbox->pool, FROM_STANDARD_DATE);
+		date = p_string_new(mailbox->pool, FROM_STANDARD_DATE);
 	}
 
 	return date;
@@ -133,28 +133,28 @@ static size_t dump_message_to_stream(DbmailMailbox *self, DbmailMessage *message
 	s = dbmail_message_to_string(message);
 
 	if (!strncmp(s, "From ", 5) == 0) {
-	ialist = internet_address_list_parse_string(g_mime_message_get_sender(GMIME_MESSAGE(message->content)));
-	sender = p_string_new(self->pool, "nobody@foo");
-	if (ialist) {
-		ia = internet_address_list_get_address(ialist, 0);
-		if (ia) {
-		char *addr = (char *) internet_address_mailbox_get_addr((InternetAddressMailbox *) ia);
-		g_strstrip(g_strdelimit(addr, "\"", ' '));
-		p_string_printf(sender, "%s", addr);
+		ialist = internet_address_list_parse_string(g_mime_message_get_sender(GMIME_MESSAGE(message->content)));
+		sender = p_string_new(self->pool, "nobody@foo");
+		if (ialist) {
+			ia = internet_address_list_get_address(ialist, 0);
+			if (ia) {
+				char *addr = (char *) internet_address_mailbox_get_addr((InternetAddressMailbox *) ia);
+				g_strstrip(g_strdelimit(addr, "\"", ' '));
+				p_string_printf(sender, "%s", addr);
+			}
 		}
-	}
-	g_object_unref(ialist);
+		g_object_unref(ialist);
 
-	date = _message_get_envelope_date(self, message);
-	t = p_string_new(self->pool, "From ");
-	p_string_append_printf(t, "%s %s\n",
-		p_string_str(sender), p_string_str(date));
+		date = _message_get_envelope_date(self, message);
+		t = p_string_new(self->pool, "From ");
+		p_string_append_printf(t, "%s %s\n",
+			p_string_str(sender), p_string_str(date));
 
-	r = g_mime_stream_write_string(ostream, p_string_str(t));
+		r = g_mime_stream_write_string(ostream, p_string_str(t));
 
-	p_string_free(t, TRUE);
-	p_string_free(sender, TRUE);
-	p_string_free(date, TRUE);
+		p_string_free(t, TRUE);
+		p_string_free(sender, TRUE);
+		p_string_free(date, TRUE);
 
 	}
 
@@ -191,13 +191,13 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream) {
 
 	ids = p_list_new(self->pool);
 	while (db_result_next(r)) {
-	physid = db_result_get_u64(r, 0);
-	msgid = db_result_get_u64(r, 1);
-	if (g_tree_lookup(uids, &msgid)) {
-		id = mempool_pop(self->pool, sizeof (uint64_t));
-		*id = physid;
-		ids = p_list_append(ids, id);
-	}
+		physid = db_result_get_u64(r, 0);
+		msgid = db_result_get_u64(r, 1);
+		if (g_tree_lookup(uids, &msgid)) {
+			id = mempool_pop(self->pool, sizeof (uint64_t));
+			*id = physid;
+			ids = p_list_append(ids, id);
+		}
 	}
 	CATCH(SQLException)
 	LOG_SQLERROR;
@@ -211,16 +211,16 @@ static int _mimeparts_dump(DbmailMailbox *self, GMimeStream *ostream) {
 	ids = p_list_first(ids);
 
 	while (ids) {
-	physid = *(uint64_t *) p_list_data(ids);
-	mempool_push(self->pool, p_list_data(ids), sizeof (uint64_t));
-	m = dbmail_message_new(self->pool);
-	m = dbmail_message_retrieve(m, physid);
-	if (dump_message_to_stream(self, m, ostream) > 0)
-		count++;
-	dbmail_message_free(m);
+		physid = *(uint64_t *) p_list_data(ids);
+		mempool_push(self->pool, p_list_data(ids), sizeof (uint64_t));
+		m = dbmail_message_new(self->pool);
+		m = dbmail_message_retrieve(m, physid);
+		if (dump_message_to_stream(self, m, ostream) > 0)
+			count++;
+		dbmail_message_free(m);
 
-	if (!p_list_next(ids)) break;
-	ids = p_list_next(ids);
+		if (!p_list_next(ids)) break;
+		ids = p_list_next(ids);
 	}
 
 	ids = p_list_first(ids);
@@ -239,8 +239,8 @@ int dbmail_mailbox_dump(DbmailMailbox *self, FILE *file) {
 	GTree *ids = self->found;
 
 	if (ids == NULL || g_tree_nnodes(ids) == 0) {
-	TRACE(TRACE_DEBUG, "cannot dump empty mailbox");
-	return 0;
+		TRACE(TRACE_DEBUG, "cannot dump empty mailbox");
+		return 0;
 	}
 
 	assert(ids);
@@ -264,17 +264,17 @@ static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * dat
 
 	sublist = g_list_first(sublist);
 	while (sublist) {
-	id = sublist->data;
-	g_string_append_printf(t, "(%" PRIu64 ")", *id);
+		id = sublist->data;
+		g_string_append_printf(t, "(%" PRIu64 ")", *id);
 
-	if (!g_list_next(sublist))
-		break;
-	sublist = g_list_next(sublist);
+		if (!g_list_next(sublist))
+			break;
+		sublist = g_list_next(sublist);
 	}
 	if (m > 1)
-	g_string_append_printf(data, "(%s)", t->str);
+		g_string_append_printf(data, "(%s)", t->str);
 	else
-	g_string_append_printf(data, "%s", t->str);
+		g_string_append_printf(data, "%s", t->str);
 
 	g_string_free(t, TRUE);
 
@@ -316,12 +316,12 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self) {
 
 	i = 0;
 	while (db_result_next(r)) {
-	i++;
-	idnr = db_result_get_u64(r, 0);
-	if (!g_tree_lookup(self->found, (gconstpointer) & idnr))
-		continue;
-	subj = (char *) db_result_get(r, 1);
-	g_tree_insert(tree, g_strdup(subj), NULL);
+		i++;
+		idnr = db_result_get_u64(r, 0);
+		if (!g_tree_lookup(self->found, (gconstpointer) & idnr))
+			continue;
+		subj = (char *) db_result_get(r, 1);
+		g_tree_insert(tree, g_strdup(subj), NULL);
 	}
 	CATCH(SQLException)
 	LOG_SQLERROR;
@@ -329,9 +329,9 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self) {
 	END_TRY;
 
 	if ((t == DM_EQUERY) || (!i)) {
-	g_tree_destroy(tree);
-	db_con_close(c);
-	return res;
+		g_tree_destroy(tree);
+		db_con_close(c);
+		return res;
 	}
 
 	db_con_clear(c);
@@ -354,21 +354,21 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self) {
 
 	i = 0;
 	while (db_result_next(r)) {
-	i++;
-	idnr = db_result_get_u64(r, 0);
-	if (!(msn = g_tree_lookup(self->found, (gconstpointer) & idnr)))
-		continue;
-	subj = (char *) db_result_get(r, 1);
+		i++;
+		idnr = db_result_get_u64(r, 0);
+		if (!(msn = g_tree_lookup(self->found, (gconstpointer) & idnr)))
+			continue;
+		subj = (char *) db_result_get(r, 1);
 
-	id = g_new0(uint64_t, 1);
-	if (dbmail_mailbox_get_uid(self))
-		*id = idnr;
-	else
-		*id = *msn;
+		id = g_new0(uint64_t, 1);
+		if (dbmail_mailbox_get_uid(self))
+			*id = idnr;
+		else
+			*id = *msn;
 
-	sublist = g_tree_lookup(tree, (gconstpointer) subj);
-	sublist = g_list_append(sublist, id);
-	g_tree_insert(tree, g_strdup(subj), sublist);
+		sublist = g_tree_lookup(tree, (gconstpointer) subj);
+		sublist = g_list_append(sublist, id);
+		g_tree_insert(tree, g_strdup(subj), sublist);
 	}
 	CATCH(SQLException)
 	LOG_SQLERROR;
@@ -378,8 +378,8 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self) {
 	END_TRY;
 
 	if ((t == DM_EQUERY) || (!i)) {
-	g_tree_destroy(tree);
-	return res;
+		g_tree_destroy(tree);
+		return res;
 	}
 
 	threads = g_string_new("");
@@ -405,15 +405,15 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const cha
 	uint64_t maxseq = 0;
 
 	if ((self->found == NULL) || g_tree_nnodes(self->found) <= 0) {
-	TRACE(TRACE_DEBUG, "no ids found");
-	return s;
+		TRACE(TRACE_DEBUG, "no ids found");
+		return s;
 	}
 
 	t = g_string_new("");
 	if (uid || dbmail_mailbox_get_uid(self)) {
-	l = g_tree_keys(self->found);
+		l = g_tree_keys(self->found);
 	} else {
-	l = g_tree_values(self->found);
+		l = g_tree_values(self->found);
 	}
 
 	h = l;
@@ -422,29 +422,29 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const cha
 	msn = MailboxState_getMsn(self->mbstate);
 
 	while (l->data) {
-	uint64_t *key = (uint64_t *) l->data;
-	if (self->modseq) {
-		uint64_t *id;
-		if (uid || dbmail_mailbox_get_uid(self)) {
-		id = key;
-		} else {
-		id = g_tree_lookup(msn, key);
-		}
+		uint64_t *key = (uint64_t *) l->data;
+		if (self->modseq) {
+			uint64_t *id;
+			if (uid || dbmail_mailbox_get_uid(self)) {
+				id = key;
+			} else {
+				id = g_tree_lookup(msn, key);
+			}
 
-		MessageInfo *info = g_tree_lookup(msginfo, id);
-		maxseq = max(maxseq, info->seq);
-	}
-	g_string_append_printf(t, "%" PRIu64 "", *key);
-	if (!g_list_next(l))
-		break;
-	g_string_append_printf(t, "%s", sep);
-	l = g_list_next(l);
+			MessageInfo *info = g_tree_lookup(msginfo, id);
+			maxseq = max(maxseq, info->seq);
+		}
+		g_string_append_printf(t, "%" PRIu64 "", *key);
+		if (!g_list_next(l))
+			break;
+		g_string_append_printf(t, "%s", sep);
+		l = g_list_next(l);
 	}
 
 	g_list_free(h);
 
 	if (self->modseq)
-	g_string_append_printf(t, " (MODSEQ %" PRIu64 ")", maxseq);
+		g_string_append_printf(t, " (MODSEQ %" PRIu64 ")", maxseq);
 
 	s = t->str;
 	g_string_free(t, FALSE);
@@ -462,22 +462,22 @@ char * dbmail_mailbox_sorted_as_string(DbmailMailbox *self) {
 
 	l = g_list_first(self->sorted);
 	if (!(g_list_length(l) > 0))
-	return s;
+		return s;
 
 	t = g_string_new("");
 	uid = dbmail_mailbox_get_uid(self);
 
 	while (l->data) {
-	msn = g_tree_lookup(self->found, l->data);
-	if (msn) {
-		if (uid)
-		g_string_append_printf(t, "%" PRIu64 " ", *(uint64_t *) l->data);
-		else
-		g_string_append_printf(t, "%" PRIu64 " ", *(uint64_t *) msn);
-	}
-	if (!g_list_next(l))
-		break;
-	l = g_list_next(l);
+		msn = g_tree_lookup(self->found, l->data);
+		if (msn) {
+			if (uid)
+				g_string_append_printf(t, "%" PRIu64 " ", *(uint64_t *) l->data);
+			else
+				g_string_append_printf(t, "%" PRIu64 " ", *(uint64_t *) msn);
+		}
+		if (!g_list_next(l))
+			break;
+		l = g_list_next(l);
 	}
 
 	s = t->str;
@@ -491,14 +491,14 @@ static int append_search(DbmailMailbox *self, search_key *value, gboolean descen
 	GNode *n;
 
 	if (self->search) {
-	n = g_node_append_data(self->search, value);
+		n = g_node_append_data(self->search, value);
 	} else {
-	descend = TRUE;
-	n = g_node_new(value);
+		descend = TRUE;
+		n = g_node_new(value);
 	}
 
 	if (descend)
-	self->search = n;
+		self->search = n;
 
 	TRACE(TRACE_DEBUG, "[%p] leaf [%d] type [%d] field [%s] search [%s] at depth [%u]\n", value, G_NODE_IS_LEAF(n),
 		value->type, value->hdrfld, value->search,
@@ -528,79 +528,62 @@ static int _handle_sort_args(DbmailMailbox *self, String_T *search_keys, search_
 	gboolean reverse = FALSE;
 
 	if (!(search_keys && search_keys[*idx]))
-	return -1;
+		return -1;
 
 	const char *key = p_string_str(search_keys[*idx]);
 
 	if (MATCH(key, "reverse")) {
-	reverse = TRUE;
-	(*idx)++;
-	key = p_string_str(search_keys[*idx]);
+		reverse = TRUE;
+		(*idx)++;
+		key = p_string_str(search_keys[*idx]);
 	}
 
 	if (MATCH(key, "arrival")) {
-	_append_sort(value->order, "internal_date", reverse);
-	(*idx)++;
-	}
-
-	else if (MATCH(key, "size")) {
-	_append_sort(value->order, "messagesize", reverse);
-	(*idx)++;
-	}
-
-	else if (MATCH(key, "from")) {
-	_append_join(value->table, "fromfield");
-	_append_sort(value->order, "fromfield", reverse);
-	(*idx)++;
-	}
-
-	else if (MATCH(key, "subject")) {
-	_append_join(value->table, "subjectfield");
-	_append_sort(value->order, "sortfield", reverse);
-	(*idx)++;
-	}
-
-	else if (MATCH(key, "cc")) {
-	_append_join(value->table, "ccfield");
-	_append_sort(value->order, "ccfield", reverse);
-	(*idx)++;
-	}
-
-	else if (MATCH(key, "to")) {
-	_append_join(value->table, "tofield");
-	_append_sort(value->order, "tofield", reverse);
-	(*idx)++;
-	}
-
-	else if (MATCH(key, "date")) {
-	_append_join(value->table, "datefield");
-	_append_sort(value->order, "sortfield", reverse);
-	(*idx)++;
-	}
-
-	else if (MATCH(key, "("))
-	(*idx)++;
+		_append_sort(value->order, "internal_date", reverse);
+		(*idx)++;
+	} else if (MATCH(key, "size")) {
+		_append_sort(value->order, "messagesize", reverse);
+		(*idx)++;
+	} else if (MATCH(key, "from")) {
+		_append_join(value->table, "fromfield");
+		_append_sort(value->order, "fromfield", reverse);
+		(*idx)++;
+	} else if (MATCH(key, "subject")) {
+		_append_join(value->table, "subjectfield");
+		_append_sort(value->order, "sortfield", reverse);
+		(*idx)++;
+	} else if (MATCH(key, "cc")) {
+		_append_join(value->table, "ccfield");
+		_append_sort(value->order, "ccfield", reverse);
+		(*idx)++;
+	} else if (MATCH(key, "to")) {
+		_append_join(value->table, "tofield");
+		_append_sort(value->order, "tofield", reverse);
+		(*idx)++;
+	} else if (MATCH(key, "date")) {
+		_append_join(value->table, "datefield");
+		_append_sort(value->order, "sortfield", reverse);
+		(*idx)++;
+	} else if (MATCH(key, "("))
+		(*idx)++;
 
 	else if (MATCH(key, ")"))
-	(*idx)++;
+		(*idx)++;
 
 	else if (MATCH(key, "utf-8")) {
-	(*idx)++;
-	append_search(self, value, 0);
-	return 1;
-	}
-	else if (MATCH(key, "us-ascii")) {
-	(*idx)++;
-	append_search(self, value, 0);
-	return 1;
-	}
-	else if (MATCH(key, "iso-8859-1")) {
-	(*idx)++;
-	append_search(self, value, 0);
-	return 1;
-	}
-	else
-	return -1; /* done */
+		(*idx)++;
+		append_search(self, value, 0);
+		return 1;
+	} else if (MATCH(key, "us-ascii")) {
+		(*idx)++;
+		append_search(self, value, 0);
+		return 1;
+	} else if (MATCH(key, "iso-8859-1")) {
+		(*idx)++;
+		append_search(self, value, 0);
+		return 1;
+	} else
+		return -1; /* done */
 
 	return 0;
 }
@@ -608,14 +591,14 @@ static int _handle_sort_args(DbmailMailbox *self, String_T *search_keys, search_
 static void pop_search(DbmailMailbox *self) {
 	// switch back to parent 
 	if (self->search && self->search->parent)
-	self->search = self->search->parent;
+		self->search = self->search->parent;
 }
 
 static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint64_t *idx) {
 	int result = 0;
 
 	if (!(search_keys && search_keys[*idx]))
-	return 1;
+		return 1;
 
 	char *p = NULL, *t = NULL;
 	const char *key = p_string_str(search_keys[*idx]);
@@ -627,12 +610,11 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	TRACE(TRACE_DEBUG, "key [%s]", key);
 
 	if (MATCH(key, "all")) {
-	value->type = IST_UIDSET;
-	strcpy(value->search, "1:*");
-	(*idx)++;
+		value->type = IST_UIDSET;
+		strcpy(value->search, "1:*");
+		(*idx)++;
 
 	}
-
 #define RETURN_IF_FAIL(x, y) \
 	if (! (x)) { \
 		mempool_push(self->pool, value, sizeof(search_key)); \
@@ -640,81 +622,80 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 	}
 
 	else if (MATCH(key, "uid")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	RETURN_IF_FAIL(check_msg_set(p_string_str(search_keys[*idx + 1])), -1);
-	value->type = IST_UIDSET;
-	(*idx)++;
-	strncpy(value->search, p_string_str(search_keys[(*idx)]), MAX_SEARCH_LEN - 1);
-	(*idx)++;
-	}
-	/*
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(check_msg_set(p_string_str(search_keys[*idx + 1])), -1);
+		value->type = IST_UIDSET;
+		(*idx)++;
+		strncpy(value->search, p_string_str(search_keys[(*idx)]), MAX_SEARCH_LEN - 1);
+		(*idx)++;
+	}/*
 	 * FLAG search keys
 	 */
 
 	else if (MATCH(key, "answered")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "answered_flag=1", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "answered_flag=1", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "deleted")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "deleted_flag=1", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "deleted_flag=1", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "flagged")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "flagged_flag=1", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "flagged_flag=1", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "recent")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "seen")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "seen_flag=1", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "seen_flag=1", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "draft")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "draft_flag=1", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "draft_flag=1", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "new")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "(seen_flag=0 AND recent_flag=1)", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "(seen_flag=0 AND recent_flag=1)", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "old")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "unanswered")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "undeleted")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "unflagged")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "unseen")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	} else if (MATCH(key, "undraft")) {
-	value->type = IST_FLAG;
-	strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_FLAG;
+		strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
 	}
 #define IMAP_SET_SEARCH  (*idx)++; \
@@ -727,332 +708,325 @@ static int _handle_search_args(DbmailMailbox *self, String_T *search_keys, uint6
 		g_free(t); \
 		(*idx)++
 
-	/* 
-	 * keyword search
-	 */
+		/* 
+		 * keyword search
+		 */
 
 	else if (MATCH(key, "keyword")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_KEYWORD;
-	IMAP_SET_SEARCH;
-	}
-	else if (MATCH(key, "unkeyword")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_UNKEYWORD;
-	IMAP_SET_SEARCH;
-	}
-	/*
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_KEYWORD;
+		IMAP_SET_SEARCH;
+	} else if (MATCH(key, "unkeyword")) {
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_UNKEYWORD;
+		IMAP_SET_SEARCH;
+	}/*
 	 * HEADER search keys
 	 */
 	else if (MATCH(key, "bcc")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_HDR;
-	strncpy(value->hdrfld, "bcc", MIME_FIELD_MAX - 1);
-	IMAP_SET_SEARCH;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "bcc", MIME_FIELD_MAX - 1);
+		IMAP_SET_SEARCH;
 
 	} else if (MATCH(key, "cc")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_HDR;
-	strncpy(value->hdrfld, "cc", MIME_FIELD_MAX - 1);
-	IMAP_SET_SEARCH;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "cc", MIME_FIELD_MAX - 1);
+		IMAP_SET_SEARCH;
 
 	} else if (MATCH(key, "from")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_HDR;
-	strncpy(value->hdrfld, "from", MIME_FIELD_MAX - 1);
-	IMAP_SET_SEARCH;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "from", MIME_FIELD_MAX - 1);
+		IMAP_SET_SEARCH;
 
 	} else if (MATCH(key, "to")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_HDR;
-	strncpy(value->hdrfld, "to", MIME_FIELD_MAX - 1);
-	IMAP_SET_SEARCH;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "to", MIME_FIELD_MAX - 1);
+		IMAP_SET_SEARCH;
 
 	} else if (MATCH(key, "subject")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_HDR;
-	strncpy(value->hdrfld, "subject", MIME_FIELD_MAX - 1);
-	IMAP_SET_SEARCH;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "subject", MIME_FIELD_MAX - 1);
+		IMAP_SET_SEARCH;
 
 	} else if (MATCH(key, "header")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	RETURN_IF_FAIL(search_keys[*idx + 2], -1);
-	value->type = IST_HDR;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 2], -1);
+		value->type = IST_HDR;
 
-	const char *hdr = p_string_str(search_keys[*idx + 1]);
-	char *hdrfld = g_ascii_strdown(hdr, strlen(hdr));
-	strncpy(value->hdrfld, hdrfld, MIME_FIELD_MAX - 1);
-	g_free(hdrfld);
+		const char *hdr = p_string_str(search_keys[*idx + 1]);
+		char *hdrfld = g_ascii_strdown(hdr, strlen(hdr));
+		strncpy(value->hdrfld, hdrfld, MIME_FIELD_MAX - 1);
+		g_free(hdrfld);
 
-	strncpy(value->search, p_string_str(search_keys[*idx + 2]), MAX_SEARCH_LEN - 1);
-	(*idx) += 3;
+		strncpy(value->search, p_string_str(search_keys[*idx + 2]), MAX_SEARCH_LEN - 1);
+		(*idx) += 3;
 
 	} else if (MATCH(key, "sentbefore")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_HDRDATE_BEFORE;
-	strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX - 1);
-	IMAP_SET_SEARCH;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_HDRDATE_BEFORE;
+		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX - 1);
+		IMAP_SET_SEARCH;
 
 	} else if (MATCH(key, "senton")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_HDRDATE_ON;
-	strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX - 1);
-	IMAP_SET_SEARCH;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_HDRDATE_ON;
+		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX - 1);
+		IMAP_SET_SEARCH;
 
 	} else if (MATCH(key, "sentsince")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_HDRDATE_SINCE;
-	strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX - 1);
-	IMAP_SET_SEARCH;
-	}
-	/*
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_HDRDATE_SINCE;
+		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX - 1);
+		IMAP_SET_SEARCH;
+	}/*
 	 * INTERNALDATE keys
 	 */
 
 	else if (MATCH(key, "before")) {
-	char s[SQL_INTERNALDATE_LEN];
-	memset(s, 0, sizeof (s));
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])), -1);
-	value->type = IST_IDATE;
-	(*idx)++;
-	date_imap2sql(p_string_str(search_keys[*idx]), s);
-	g_snprintf(value->search, MAX_SEARCH_LEN - 1, "p.internal_date < '%s'", s);
-	(*idx)++;
+		char s[SQL_INTERNALDATE_LEN];
+		memset(s, 0, sizeof (s));
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])), -1);
+		value->type = IST_IDATE;
+		(*idx)++;
+		date_imap2sql(p_string_str(search_keys[*idx]), s);
+		g_snprintf(value->search, MAX_SEARCH_LEN - 1, "p.internal_date < '%s'", s);
+		(*idx)++;
 
 	} else if (MATCH(key, "on")) {
-	char s[SQL_INTERNALDATE_LEN], d[MIME_FIELD_MAX];
-	memset(s, 0, sizeof (s));
-	memset(d, 0, sizeof (d));
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])), -1);
-	value->type = IST_IDATE;
-	(*idx)++;
-	date_imap2sql(p_string_str(search_keys[*idx]), s);
-	g_snprintf(d, MIME_FIELD_MAX - 1, db_get_sql(SQL_TO_DATE), "p.internal_date");
-	g_snprintf(value->search, MAX_SEARCH_LEN - 1, "%s = '%s'", d, s);
-	(*idx)++;
+		char s[SQL_INTERNALDATE_LEN], d[MIME_FIELD_MAX];
+		memset(s, 0, sizeof (s));
+		memset(d, 0, sizeof (d));
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])), -1);
+		value->type = IST_IDATE;
+		(*idx)++;
+		date_imap2sql(p_string_str(search_keys[*idx]), s);
+		g_snprintf(d, MIME_FIELD_MAX - 1, db_get_sql(SQL_TO_DATE), "p.internal_date");
+		g_snprintf(value->search, MAX_SEARCH_LEN - 1, "%s = '%s'", d, s);
+		(*idx)++;
 
 	} else if (MATCH(key, "since")) {
-	char s[SQL_INTERNALDATE_LEN];
-	memset(s, 0, sizeof (s));
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])), -1);
-	value->type = IST_IDATE;
-	(*idx)++;
-	date_imap2sql(p_string_str(search_keys[*idx]), s);
-	g_snprintf(value->search, MAX_SEARCH_LEN - 1, "p.internal_date > '%s'", s);
-	(*idx)++;
+		char s[SQL_INTERNALDATE_LEN];
+		memset(s, 0, sizeof (s));
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(check_date(p_string_str(search_keys[*idx + 1])), -1);
+		value->type = IST_IDATE;
+		(*idx)++;
+		date_imap2sql(p_string_str(search_keys[*idx]), s);
+		g_snprintf(value->search, MAX_SEARCH_LEN - 1, "p.internal_date > '%s'", s);
+		(*idx)++;
 
 	} else if (MATCH(key, "older")) {
-	uint64_t seconds;
-	char partial[DEF_FRAGSIZE];
-	memset(partial, 0, sizeof (partial));
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	errno = 0;
-	seconds = dm_strtoull(p_string_str(search_keys[*idx + 1]), NULL, 10);
-	int ser = errno;
-	if (ser) {
-		TRACE(TRACE_DEBUG, "%s", strerror(ser));
-		return -1;
-	}
-	value->type = IST_IDATE;
-	(*idx)++;
-	g_snprintf(partial, DEF_FRAGSIZE - 1, db_get_sql(SQL_WITHIN), seconds);
-	g_snprintf(value->search, MAX_SEARCH_LEN - 1, "p.internal_date < %s", partial);
-	(*idx)++;
+		uint64_t seconds;
+		char partial[DEF_FRAGSIZE];
+		memset(partial, 0, sizeof (partial));
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		errno = 0;
+		seconds = dm_strtoull(p_string_str(search_keys[*idx + 1]), NULL, 10);
+		int ser = errno;
+		if (ser) {
+			TRACE(TRACE_DEBUG, "%s", strerror(ser));
+			return -1;
+		}
+		value->type = IST_IDATE;
+		(*idx)++;
+		g_snprintf(partial, DEF_FRAGSIZE - 1, db_get_sql(SQL_WITHIN), seconds);
+		g_snprintf(value->search, MAX_SEARCH_LEN - 1, "p.internal_date < %s", partial);
+		(*idx)++;
 
 	} else if (MATCH(key, "younger")) {
-	uint64_t seconds;
-	char partial[DEF_FRAGSIZE];
-	memset(partial, 0, sizeof (partial));
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	errno = 0;
-	seconds = dm_strtoull(p_string_str(search_keys[*idx + 1]), NULL, 10);
-	int ser = errno;
-	if (ser) {
-		TRACE(TRACE_DEBUG, "%s", strerror(ser));
-		return -1;
-	}
-	value->type = IST_IDATE;
-	(*idx)++;
-	g_snprintf(partial, DEF_FRAGSIZE - 1, db_get_sql(SQL_WITHIN), seconds);
-	g_snprintf(value->search, MAX_SEARCH_LEN - 1, "p.internal_date > %s", partial);
-	(*idx)++;
+		uint64_t seconds;
+		char partial[DEF_FRAGSIZE];
+		memset(partial, 0, sizeof (partial));
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		errno = 0;
+		seconds = dm_strtoull(p_string_str(search_keys[*idx + 1]), NULL, 10);
+		int ser = errno;
+		if (ser) {
+			TRACE(TRACE_DEBUG, "%s", strerror(ser));
+			return -1;
+		}
+		value->type = IST_IDATE;
+		(*idx)++;
+		g_snprintf(partial, DEF_FRAGSIZE - 1, db_get_sql(SQL_WITHIN), seconds);
+		g_snprintf(value->search, MAX_SEARCH_LEN - 1, "p.internal_date > %s", partial);
+		(*idx)++;
 
 	} else if (MATCH(key, "modseq")) {
-	const char *token;
-	gboolean valid = false;
-	uint64_t seq = 0;
-	int i = 0;
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	(*idx)++;
-	for (i = 0; i <= 2; i++) {
-		char *rest;
-		token = p_string_str(search_keys[*idx + i]);
-		TRACE(TRACE_DEBUG, "check token [%d:%s]", i, token);
-		if (!token)
-		break;
-		if (i == 1)
-		continue;
-		seq = dm_strtoull(token, &rest, 10);
-		if (rest != token) {
-		valid = true;
-		break;
+		const char *token;
+		gboolean valid = false;
+		uint64_t seq = 0;
+		int i = 0;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		(*idx)++;
+		for (i = 0; i <= 2; i++) {
+			char *rest;
+			token = p_string_str(search_keys[*idx + i]);
+			TRACE(TRACE_DEBUG, "check token [%d:%s]", i, token);
+			if (!token)
+				break;
+			if (i == 1)
+				continue;
+			seq = dm_strtoull(token, &rest, 10);
+			if (rest != token) {
+				valid = true;
+				break;
+			}
 		}
-	}
-	(*idx) += i + 1;
-	RETURN_IF_FAIL(valid, -1);
-	self->modseq = seq;
-	self->condstore = true;
-	}
-
-	/*
+		(*idx) += i + 1;
+		RETURN_IF_FAIL(valid, -1);
+		self->modseq = seq;
+		self->condstore = true;
+	}		/*
 	 * DATA-keys
 	 */
 
 	else if (MATCH(key, "body")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_DATA_BODY;
-	IMAP_SET_SEARCH;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_DATA_BODY;
+		IMAP_SET_SEARCH;
 
 	} else if (MATCH(key, "text")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_DATA_TEXT;
-	IMAP_SET_SEARCH;
-	}
-	/*
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_DATA_TEXT;
+		IMAP_SET_SEARCH;
+	}/*
 	 * SIZE keys
 	 */
 
 	else if (MATCH(key, "larger")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_SIZE_LARGER;
-	(*idx)++;
-	value->size = strtoull(p_string_str(search_keys[(*idx)]), NULL, 10);
-	(*idx)++;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_SIZE_LARGER;
+		(*idx)++;
+		value->size = strtoull(p_string_str(search_keys[(*idx)]), NULL, 10);
+		(*idx)++;
 
 	} else if (MATCH(key, "smaller")) {
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
-	value->type = IST_SIZE_SMALLER;
-	(*idx)++;
-	value->size = strtoull(p_string_str(search_keys[(*idx)]), NULL, 10);
-	(*idx)++;
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		value->type = IST_SIZE_SMALLER;
+		(*idx)++;
+		value->size = strtoull(p_string_str(search_keys[(*idx)]), NULL, 10);
+		(*idx)++;
 
-	}
-	/*
+	}/*
 	 * NOT, OR, ()
 	 */
 
 	else if (MATCH(key, "not")) {
-	const char *nextkey;
+		const char *nextkey;
 
-	RETURN_IF_FAIL(search_keys[*idx + 1], -1);
+		RETURN_IF_FAIL(search_keys[*idx + 1], -1);
 
-	nextkey = p_string_str(search_keys[*idx + 1]);
+		nextkey = p_string_str(search_keys[*idx + 1]);
 
-	if (MATCH(nextkey, "answered")) {
-		value->type = IST_FLAG;
-		strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN - 1);
-		(*idx) += 2;
+		if (MATCH(nextkey, "answered")) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN - 1);
+			(*idx) += 2;
 
-	} else if (MATCH(nextkey, "deleted")) {
-		value->type = IST_FLAG;
-		strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN - 1);
-		(*idx) += 2;
+		} else if (MATCH(nextkey, "deleted")) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN - 1);
+			(*idx) += 2;
 
-	} else if (MATCH(nextkey, "flagged")) {
-		value->type = IST_FLAG;
-		strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN - 1);
-		(*idx) += 2;
+		} else if (MATCH(nextkey, "flagged")) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN - 1);
+			(*idx) += 2;
 
-	} else if (MATCH(nextkey, "recent")) {
-		value->type = IST_FLAG;
-		strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN - 1);
-		(*idx) += 2;
+		} else if (MATCH(nextkey, "recent")) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN - 1);
+			(*idx) += 2;
 
-	} else if (MATCH(nextkey, "seen")) {
-		value->type = IST_FLAG;
-		strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN - 1);
-		(*idx) += 2;
+		} else if (MATCH(nextkey, "seen")) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN - 1);
+			(*idx) += 2;
 
-	} else if (MATCH(nextkey, "draft")) {
-		value->type = IST_FLAG;
-		strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN - 1);
-		(*idx) += 2;
+		} else if (MATCH(nextkey, "draft")) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN - 1);
+			(*idx) += 2;
 
-	} else if (MATCH(nextkey, "new")) {
-		value->type = IST_FLAG;
-		strncpy(value->search, "(seen_flag=1 AND recent_flag=0)", MAX_SEARCH_LEN - 1);
-		(*idx) += 2;
+		} else if (MATCH(nextkey, "new")) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "(seen_flag=1 AND recent_flag=0)", MAX_SEARCH_LEN - 1);
+			(*idx) += 2;
 
-	} else if (MATCH(nextkey, "old")) {
-		value->type = IST_FLAG;
-		strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN - 1);
-		(*idx) += 2;
+		} else if (MATCH(nextkey, "old")) {
+			value->type = IST_FLAG;
+			strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN - 1);
+			(*idx) += 2;
 
-	} else {
-		value->type = IST_SUBSEARCH_NOT;
+		} else {
+			value->type = IST_SUBSEARCH_NOT;
+			(*idx)++;
+
+			append_search(self, value, 1);
+			if ((result = _handle_search_args(self, search_keys, idx)) < 0)
+				return result;
+			pop_search(self);
+
+			return 0;
+		}
+
+	} else if (MATCH(key, "or")) {
+		value->type = IST_SUBSEARCH_OR;
 		(*idx)++;
 
 		append_search(self, value, 1);
 		if ((result = _handle_search_args(self, search_keys, idx)) < 0)
-		return result;
+			return result;
+		if ((result = _handle_search_args(self, search_keys, idx)) < 0)
+			return result;
 		pop_search(self);
 
 		return 0;
-	}
-
-	} else if (MATCH(key, "or")) {
-	value->type = IST_SUBSEARCH_OR;
-	(*idx)++;
-
-	append_search(self, value, 1);
-	if ((result = _handle_search_args(self, search_keys, idx)) < 0)
-		return result;
-	if ((result = _handle_search_args(self, search_keys, idx)) < 0)
-		return result;
-	pop_search(self);
-
-	return 0;
 
 	} else if (MATCH(key, "(")) {
-	value->type = IST_SUBSEARCH_AND;
-	(*idx)++;
+		value->type = IST_SUBSEARCH_AND;
+		(*idx)++;
 
-	append_search(self, value, 1);
-	while ((result = dbmail_mailbox_build_imap_search(self, search_keys, idx, 0)) == 0);
-	pop_search(self);
+		append_search(self, value, 1);
+		while ((result = dbmail_mailbox_build_imap_search(self, search_keys, idx, 0)) == 0);
+		pop_search(self);
 
-	return 0;
+		return 0;
 
 	} else if (MATCH(key, ")")) {
-	(*idx)++;
-	mempool_push(self->pool, value, sizeof (search_key));
-	return 1;
+		(*idx)++;
+		mempool_push(self->pool, value, sizeof (search_key));
+		return 1;
 
 	} else if (check_msg_set(key)) {
-	value->type = IST_SET;
-	strncpy(value->search, key, MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		value->type = IST_SET;
+		strncpy(value->search, key, MAX_SEARCH_LEN - 1);
+		(*idx)++;
 
-	/* ignore the charset. Let the database handle this */
+		/* ignore the charset. Let the database handle this */
 	} else if (MATCH(key, "charset")) {
-	(*idx)++; // FIXME: check for valid charset here
-	self->charset = p_string_str(search_keys[*idx]);
-	TRACE(TRACE_DEBUG, "using charset [%s] for searching", self->charset);
-	(*idx)++;
+		(*idx)++; // FIXME: check for valid charset here
+		self->charset = p_string_str(search_keys[*idx]);
+		TRACE(TRACE_DEBUG, "using charset [%s] for searching", self->charset);
+		(*idx)++;
 	} else {
-	/* unknown search key */
-	TRACE(TRACE_DEBUG, "unknown search key [%s]", key);
-	mempool_push(self->pool, value, sizeof (search_key));
-	return -1;
+		/* unknown search key */
+		TRACE(TRACE_DEBUG, "unknown search key [%s]", key);
+		mempool_push(self->pool, value, sizeof (search_key));
+		return -1;
 	}
 
 	if (value->type)
-	append_search(self, value, 0);
+		append_search(self, value, 0);
 	else
-	mempool_push(self->pool, value, sizeof (search_key));
+		mempool_push(self->pool, value, sizeof (search_key));
 
 	return 0;
 }
@@ -1070,50 +1044,50 @@ int dbmail_mailbox_build_imap_search(DbmailMailbox *self, String_T *search_keys,
 	search_key * value, * s;
 
 	if (!(search_keys && search_keys[*idx]))
-	return 1;
+		return 1;
 
 	/* default initial key for ANDing */
 	value = mempool_pop(self->pool, sizeof (search_key));
 	value->type = IST_SET;
 
 	if (check_msg_set(p_string_str(search_keys[*idx]))) {
-	strncpy(value->search, p_string_str(search_keys[*idx]), MAX_SEARCH_LEN - 1);
-	(*idx)++;
+		strncpy(value->search, p_string_str(search_keys[*idx]), MAX_SEARCH_LEN - 1);
+		(*idx)++;
 	} else {
-	/* match all messages if no initial sequence set is defined */
-	strncpy(value->search, "1:*", MAX_SEARCH_LEN - 1);
+		/* match all messages if no initial sequence set is defined */
+		strncpy(value->search, "1:*", MAX_SEARCH_LEN - 1);
 	}
 	append_search(self, value, 0);
 
 	/* SORT */
 	switch (order) {
-	case SEARCH_SORTED:
-		value = mempool_pop(self->pool, sizeof (search_key));
-		value->type = IST_SORT;
-		s = value;
-		while (((result = _handle_sort_args(self, search_keys, value, idx)) == 0) && search_keys[*idx]);
-		if (result < 0)
-		mempool_push(self->pool, s, sizeof (search_key));
-		break;
-	case SEARCH_THREAD_ORDEREDSUBJECT:
-	case SEARCH_THREAD_REFERENCES:
-		(*idx)++;
-		TRACE(TRACE_DEBUG, "search_key: [%s]", p_string_str(search_keys[*idx]));
-		// eat the charset arg
-		if (MATCH(p_string_str(search_keys[*idx]), "utf-8"))
-		(*idx)++;
-		else if (MATCH(p_string_str(search_keys[*idx]), "us-ascii"))
-		(*idx)++;
-		else if (MATCH(p_string_str(search_keys[*idx]), "iso-8859-1"))
-		(*idx)++;
-		else
-		return -1;
+		case SEARCH_SORTED:
+			value = mempool_pop(self->pool, sizeof (search_key));
+			value->type = IST_SORT;
+			s = value;
+			while (((result = _handle_sort_args(self, search_keys, value, idx)) == 0) && search_keys[*idx]);
+			if (result < 0)
+				mempool_push(self->pool, s, sizeof (search_key));
+			break;
+		case SEARCH_THREAD_ORDEREDSUBJECT:
+		case SEARCH_THREAD_REFERENCES:
+			(*idx)++;
+			TRACE(TRACE_DEBUG, "search_key: [%s]", p_string_str(search_keys[*idx]));
+			// eat the charset arg
+			if (MATCH(p_string_str(search_keys[*idx]), "utf-8"))
+				(*idx)++;
+			else if (MATCH(p_string_str(search_keys[*idx]), "us-ascii"))
+				(*idx)++;
+			else if (MATCH(p_string_str(search_keys[*idx]), "iso-8859-1"))
+				(*idx)++;
+			else
+				return -1;
 
-		break;
-	case SEARCH_UNORDERED:
-	default:
-		// ignore
-		break;
+			break;
+		case SEARCH_UNORDERED:
+		default:
+			// ignore
+			break;
 
 	}
 
@@ -1149,8 +1123,8 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self) {
 		dbmail_mailbox_get_id(self), MESSAGE_STATUS_DELETE, s->order);
 
 	if (self->sorted) {
-	g_list_destroy(self->sorted);
-	self->sorted = NULL;
+		g_list_destroy(self->sorted);
+		self->sorted = NULL;
 	}
 
 	z = g_tree_new((GCompareFunc) ucmp);
@@ -1158,13 +1132,13 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self) {
 	TRY
 	r = db_query(c, q->str);
 	while (db_result_next(r)) {
-	tid = db_result_get_u64(r, 0);
-	if (g_tree_lookup(self->found, &tid) && (!g_tree_lookup(z, &tid))) {
-		id = g_new0(uint64_t, 1);
-		*id = tid;
-		g_tree_insert(z, id, id);
-		self->sorted = g_list_prepend(self->sorted, id);
-	}
+		tid = db_result_get_u64(r, 0);
+		if (g_tree_lookup(self->found, &tid) && (!g_tree_lookup(z, &tid))) {
+			id = g_new0(uint64_t, 1);
+			*id = tid;
+			g_tree_insert(z, id, id);
+			self->sorted = g_list_prepend(self->sorted, id);
+		}
 	}
 	CATCH(SQLException)
 	LOG_SQLERROR;
@@ -1201,7 +1175,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 	char *cond = NULL;
 	cond = malloc(30);
 	memset(cond, 0, 30);
-	int searchPerformed=0;
+	int searchPerformed = 0;
 	/* if the query will be performed in sql mode */
 	int sql;
 	sql = 1;
@@ -1214,11 +1188,11 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 	TRACE(TRACE_DEBUG, "mailbox_search_strategy %d", mailbox_search_strategy);
 
 	if (self->found && g_tree_nnodes(self->found) <= 200) {
-	char *setlist = dbmail_mailbox_ids_as_string(self, TRUE, ",");
-	if (setlist) {
-		inset = g_strdup_printf("AND m.message_idnr IN (%s)", setlist);
-		g_free(setlist);
-	}
+		char *setlist = dbmail_mailbox_ids_as_string(self, TRUE, ",");
+		if (setlist) {
+			inset = g_strdup_printf("AND m.message_idnr IN (%s)", setlist);
+			g_free(setlist);
+		}
 	}
 
 	c = db_con_get();
@@ -1229,209 +1203,412 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 
 
 	TRY
-	/* this searches cannot be made via state */
+		/* this searches cannot be made via state */
 	switch (s->type) {
-	case IST_HDRDATE_ON:
-	case IST_HDRDATE_SINCE:
-	case IST_HDRDATE_BEFORE:
-	{
-		searchPerformed=1;
-		char qs[DEF_FRAGSIZE];
-		char field[DEF_FRAGSIZE];
-		char d[SQL_INTERNALDATE_LEN];
-		char date[DEF_FRAGSIZE];
-		memset(d, 0, sizeof (d));
-		memset(qs, 0, sizeof (qs));
-		memset(date, 0, sizeof (date));
-		memset(field, 0, sizeof (field));
+		case IST_HDRDATE_ON:
+		case IST_HDRDATE_SINCE:
+		case IST_HDRDATE_BEFORE:
+		{
+			searchPerformed = 1;
+			char qs[DEF_FRAGSIZE];
+			char field[DEF_FRAGSIZE];
+			char d[SQL_INTERNALDATE_LEN];
+			char date[DEF_FRAGSIZE];
+			memset(d, 0, sizeof (d));
+			memset(qs, 0, sizeof (qs));
+			memset(date, 0, sizeof (date));
+			memset(field, 0, sizeof (field));
 
-		g_snprintf(field, DEF_FRAGSIZE - 1, db_get_sql(SQL_TO_DATE), s->hdrfld);
-		date_imap2sql(s->search, d);
-		g_snprintf(qs, DEF_FRAGSIZE - 1, "'%s'", d);
-		g_snprintf(date, DEF_FRAGSIZE - 1, db_get_sql(SQL_TO_DATE), qs);
+			g_snprintf(field, DEF_FRAGSIZE - 1, db_get_sql(SQL_TO_DATE), s->hdrfld);
+			date_imap2sql(s->search, d);
+			g_snprintf(qs, DEF_FRAGSIZE - 1, "'%s'", d);
+			g_snprintf(date, DEF_FRAGSIZE - 1, db_get_sql(SQL_TO_DATE), qs);
 
-		if (s->type == IST_HDRDATE_SINCE)
-		op = ">=";
-		else if (s->type == IST_HDRDATE_BEFORE)
-		op = "<";
-		else
-		op = "=";
-		TRACE(TRACE_DEBUG, "IST_HDRDATE_ON/IST_HDRDATE_SINCE/IST_HDRDATE_BEFORE sql (%s) %s",op,field);
-		p_string_printf(q, "SELECT message_idnr FROM %smessages m "
-			"LEFT JOIN %sheader h USING (physmessage_id) "
-			"LEFT JOIN %sheadername n ON h.headername_id = n.id "
-			"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
-			"WHERE m.mailbox_idnr=? AND m.status < ? "
-			"%s "
-			"AND n.headername = 'date' "
-			"AND %s %s %s ORDER BY message_idnr",
-			DBPFX, DBPFX, DBPFX, DBPFX,
-			inset ? inset : "",
-			field, op, date);
+			if (s->type == IST_HDRDATE_SINCE)
+				op = ">=";
+			else if (s->type == IST_HDRDATE_BEFORE)
+				op = "<";
+			else
+				op = "=";
+			TRACE(TRACE_DEBUG, "IST_HDRDATE_ON/IST_HDRDATE_SINCE/IST_HDRDATE_BEFORE sql (%s) %s", op, field);
+			p_string_printf(q, "SELECT message_idnr FROM %smessages m "
+				"LEFT JOIN %sheader h USING (physmessage_id) "
+				"LEFT JOIN %sheadername n ON h.headername_id = n.id "
+				"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
+				"WHERE m.mailbox_idnr=? AND m.status < ? "
+				"%s "
+				"AND n.headername = 'date' "
+				"AND %s %s %s ORDER BY message_idnr",
+				DBPFX, DBPFX, DBPFX, DBPFX,
+				inset ? inset : "",
+				field, op, date);
 
-		st = db_stmt_prepare(c, p_string_str(q));
-		db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
-		db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
-	}
+			st = db_stmt_prepare(c, p_string_str(q));
+			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
+			db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
+		}
 
-		break;
+			break;
 
-	case IST_HDR:
-		searchPerformed=1;
-		TRACE(TRACE_DEBUG, "IST_HDR sql");
-		p_string_printf(q, "SELECT message_idnr FROM %smessages m "
-			"LEFT JOIN %sheader h USING (physmessage_id) "
-			"LEFT JOIN %sheadername n ON h.headername_id = n.id "
-			"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
-			"WHERE mailbox_idnr=? AND status < ? "
-			"%s "
-			"AND n.headername = '%s' AND v.headervalue %s ? "
-			"ORDER BY message_idnr",
-			DBPFX, DBPFX, DBPFX, DBPFX,
-			inset ? inset : "",
-			s->hdrfld, db_get_sql(SQL_INSENSITIVE_LIKE));
+		case IST_HDR:
+			searchPerformed = 1;
+			TRACE(TRACE_DEBUG, "IST_HDR sql");
+			p_string_printf(q, "SELECT message_idnr FROM %smessages m "
+				"LEFT JOIN %sheader h USING (physmessage_id) "
+				"LEFT JOIN %sheadername n ON h.headername_id = n.id "
+				"LEFT JOIN %sheadervalue v ON h.headervalue_id = v.id "
+				"WHERE mailbox_idnr=? AND status < ? "
+				"%s "
+				"AND n.headername = '%s' AND v.headervalue %s ? "
+				"ORDER BY message_idnr",
+				DBPFX, DBPFX, DBPFX, DBPFX,
+				inset ? inset : "",
+				s->hdrfld, db_get_sql(SQL_INSENSITIVE_LIKE));
 
-		st = db_stmt_prepare(c, p_string_str(q));
-		db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
-		db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
-		memset(partial, 0, sizeof (partial));
-		if (snprintf(partial, DEF_FRAGSIZE - 1, "%%%s%%", s->search) < 0)
-		abort();
-		db_stmt_set_str(st, 3, partial);
+			st = db_stmt_prepare(c, p_string_str(q));
+			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
+			db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
+			memset(partial, 0, sizeof (partial));
+			if (snprintf(partial, DEF_FRAGSIZE - 1, "%%%s%%", s->search) < 0)
+				abort();
+			db_stmt_set_str(st, 3, partial);
 
-		break;
+			break;
 
-	case IST_DATA_TEXT:
-		searchPerformed=1;
-		TRACE(TRACE_DEBUG, "IST_DATA_TEXT sql");
-		p_string_printf(q, "SELECT DISTINCT m.message_idnr "
-			"FROM %smimeparts k "
-			"LEFT JOIN %spartlists l ON k.id=l.part_id "
-			"LEFT JOIN %sphysmessage p ON l.physmessage_id=p.id "
-			"LEFT JOIN %sheader h ON h.physmessage_id=p.id "
-			"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
-			"LEFT JOIN %smessages m ON m.physmessage_id=p.id "
-			"WHERE m.mailbox_idnr = ? AND m.status < ? "
-			"%s "
-			"AND (v.headervalue %s ? OR k.data %s ?) "
-			"ORDER BY m.message_idnr",
-			DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
-			inset ? inset : "",
-			db_get_sql(SQL_INSENSITIVE_LIKE),
-			db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
+		case IST_DATA_TEXT:
+			searchPerformed = 1;
+			TRACE(TRACE_DEBUG, "IST_DATA_TEXT sql");
+			p_string_printf(q, "SELECT DISTINCT m.message_idnr "
+				"FROM %smimeparts k "
+				"LEFT JOIN %spartlists l ON k.id=l.part_id "
+				"LEFT JOIN %sphysmessage p ON l.physmessage_id=p.id "
+				"LEFT JOIN %sheader h ON h.physmessage_id=p.id "
+				"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
+				"LEFT JOIN %smessages m ON m.physmessage_id=p.id "
+				"WHERE m.mailbox_idnr = ? AND m.status < ? "
+				"%s "
+				"AND (v.headervalue %s ? OR k.data %s ?) "
+				"ORDER BY m.message_idnr",
+				DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
+				inset ? inset : "",
+				db_get_sql(SQL_INSENSITIVE_LIKE),
+				db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
 
-		st = db_stmt_prepare(c, p_string_str(q));
-		db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
-		db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
+			st = db_stmt_prepare(c, p_string_str(q));
+			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
+			db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
 
-		memset(partial, 0, sizeof (partial));
-		if (snprintf(partial, DEF_FRAGSIZE - 1, "%%%s%%", s->search) < 0)
-		abort();
-		db_stmt_set_str(st, 3, partial);
-		db_stmt_set_str(st, 4, partial);
+			memset(partial, 0, sizeof (partial));
+			if (snprintf(partial, DEF_FRAGSIZE - 1, "%%%s%%", s->search) < 0)
+				abort();
+			db_stmt_set_str(st, 3, partial);
+			db_stmt_set_str(st, 4, partial);
 
-		break;
+			break;
 
-	case IST_DATA_BODY:
-		searchPerformed=1;
-		TRACE(TRACE_DEBUG, "IST_DATA_BODY sql %s",t->str);
-		g_string_printf(t, db_get_sql(SQL_ENCODE_ESCAPE), "p.data");
-		p_string_printf(q, "SELECT DISTINCT m.message_idnr FROM %smimeparts p "
-			"LEFT JOIN %spartlists l ON p.id=l.part_id "
-			"LEFT JOIN %sphysmessage s ON l.physmessage_id=s.id "
-			"LEFT JOIN %smessages m ON m.physmessage_id=s.id "
-			"LEFT JOIN %smailboxes b ON m.mailbox_idnr = b.mailbox_idnr "
-			"WHERE b.mailbox_idnr=? AND m.status < ? "
-			"%s "
-			"AND (l.part_key > 1 OR l.is_header=0) "
-			"AND %s %s ? "
-			"ORDER BY m.message_idnr",
-			DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
-			inset ? inset : "",
-			t->str, db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
+		case IST_DATA_BODY:
+			searchPerformed = 1;
+			TRACE(TRACE_DEBUG, "IST_DATA_BODY sql %s", t->str);
+			g_string_printf(t, db_get_sql(SQL_ENCODE_ESCAPE), "p.data");
+			p_string_printf(q, "SELECT DISTINCT m.message_idnr FROM %smimeparts p "
+				"LEFT JOIN %spartlists l ON p.id=l.part_id "
+				"LEFT JOIN %sphysmessage s ON l.physmessage_id=s.id "
+				"LEFT JOIN %smessages m ON m.physmessage_id=s.id "
+				"LEFT JOIN %smailboxes b ON m.mailbox_idnr = b.mailbox_idnr "
+				"WHERE b.mailbox_idnr=? AND m.status < ? "
+				"%s "
+				"AND (l.part_key > 1 OR l.is_header=0) "
+				"AND %s %s ? "
+				"ORDER BY m.message_idnr",
+				DBPFX, DBPFX, DBPFX, DBPFX, DBPFX,
+				inset ? inset : "",
+				t->str, db_get_sql(SQL_SENSITIVE_LIKE)); // pgsql will trip over ilike against bytea 
 
-		st = db_stmt_prepare(c, p_string_str(q));
-		db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
-		db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
+			st = db_stmt_prepare(c, p_string_str(q));
+			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
+			db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
 
-		memset(partial, 0, sizeof (partial));
-		if (snprintf(partial, DEF_FRAGSIZE - 1, "%%%s%%", s->search) < 0)
-		abort();
+			memset(partial, 0, sizeof (partial));
+			if (snprintf(partial, DEF_FRAGSIZE - 1, "%%%s%%", s->search) < 0)
+				abort();
 
-		db_stmt_set_str(st, 3, partial);
+			db_stmt_set_str(st, 3, partial);
 
-		break;
+			break;
 
-	case IST_KEYWORD:
-	case IST_UNKEYWORD:
-		searchPerformed=1;
-		TRACE(TRACE_DEBUG, "IST_KEYWORD/IST_UNKEYWORD sql %s",s->search);
-		p_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
-			"JOIN %skeywords k ON m.message_idnr=k.message_idnr "
-			"WHERE mailbox_idnr=? AND status < ? "
-			"%s "
-			"AND k.keyword = ? ORDER BY message_idnr",
-			DBPFX, DBPFX,
-			inset ? inset : "");
+		case IST_KEYWORD:
+		case IST_UNKEYWORD:
+			searchPerformed = 1;
+			TRACE(TRACE_DEBUG, "IST_KEYWORD/IST_UNKEYWORD sql %s", s->search);
+			p_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
+				"JOIN %skeywords k ON m.message_idnr=k.message_idnr "
+				"WHERE mailbox_idnr=? AND status < ? "
+				"%s "
+				"AND k.keyword = ? ORDER BY message_idnr",
+				DBPFX, DBPFX,
+				inset ? inset : "");
 
-		st = db_stmt_prepare(c, p_string_str(q));
-		db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
-		db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
-		db_stmt_set_str(st, 3, s->search);
-		break;
+			st = db_stmt_prepare(c, p_string_str(q));
+			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
+			db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
+			db_stmt_set_str(st, 3, s->search);
+			break;
 	}
 
 
 	if (searchPerformed == 0 && mailbox_search_strategy == 1) {
-	/* general queries have not been executed and strategy is sql */	
-	switch (s->type) {
-		case IST_IDATE:
-		TRACE(TRACE_DEBUG, "IST_IDATE sql %s",s->search);
-		/* implemented search by state, avoiding queries in DB */
-		p_string_printf(q, "SELECT message_idnr FROM %smessages m "
-			"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
-			"WHERE mailbox_idnr = ? AND status < ? "
-			"%s "
-			"AND %s "
-			"ORDER BY message_idnr",
-			DBPFX, DBPFX,
-			inset ? inset : "",
-			s->search);
+		/* general queries have not been executed and strategy is sql */
+		switch (s->type) {
+			case IST_IDATE:
+				TRACE(TRACE_DEBUG, "IST_IDATE sql %s", s->search);
+				/* implemented search by state, avoiding queries in DB */
+				p_string_printf(q, "SELECT message_idnr FROM %smessages m "
+					"LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
+					"WHERE mailbox_idnr = ? AND status < ? "
+					"%s "
+					"AND %s "
+					"ORDER BY message_idnr",
+					DBPFX, DBPFX,
+					inset ? inset : "",
+					s->search);
 
-		st = db_stmt_prepare(c, p_string_str(q));
-		db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
-		db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
+				st = db_stmt_prepare(c, p_string_str(q));
+				db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
+				db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
 
-		break;
-		case IST_SIZE_LARGER:
-		searchPerformed=1;
-		gt_lt = '>';
-		// fallthrough
+				break;
+			case IST_SIZE_LARGER:
+				searchPerformed = 1;
+				gt_lt = '>';
+				// fallthrough
 
-		case IST_SIZE_SMALLER:
-		if (!gt_lt) gt_lt = '<';
-		TRACE(TRACE_DEBUG, "IST_SIZE_SMALLER/IST_SIZE_LARGER sql %d",s->size);
-		p_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
-			"LEFT JOIN %sphysmessage p ON m.physmessage_id = p.id "
-			"WHERE m.mailbox_idnr = ? AND m.status < ? "
-			"%s "
-			"AND p.rfcsize %c ? "
-			"ORDER BY message_idnr",
-			DBPFX, DBPFX,
-			inset ? inset : "",
-			gt_lt);
+			case IST_SIZE_SMALLER:
+				if (!gt_lt) gt_lt = '<';
+				TRACE(TRACE_DEBUG, "IST_SIZE_SMALLER/IST_SIZE_LARGER sql %d", s->size);
+				p_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
+					"LEFT JOIN %sphysmessage p ON m.physmessage_id = p.id "
+					"WHERE m.mailbox_idnr = ? AND m.status < ? "
+					"%s "
+					"AND p.rfcsize %c ? "
+					"ORDER BY message_idnr",
+					DBPFX, DBPFX,
+					inset ? inset : "",
+					gt_lt);
 
-		st = db_stmt_prepare(c, p_string_str(q));
-		db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
-		db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
-		db_stmt_set_u64(st, 3, s->size);
+				st = db_stmt_prepare(c, p_string_str(q));
+				db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
+				db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
+				db_stmt_set_u64(st, 3, s->size);
 
-		break;
+				break;
 
-		
-		default:
-			TRACE(TRACE_DEBUG, "IST* sql %s",s->search);
-			/* other searches */
+
+			default:
+				TRACE(TRACE_DEBUG, "IST* sql %s", s->search);
+				/* other searches */
+				p_string_printf(q, "SELECT message_idnr FROM %smessages "
+					"WHERE mailbox_idnr = ? AND status < ? AND %s "
+					"ORDER BY message_idnr", DBPFX,
+					s->search); // FIXME: Sometimes s->search is ""
+
+				st = db_stmt_prepare(c, p_string_str(q));
+				db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
+				db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
+		}
+	}
+	if (searchPerformed == 0 && mailbox_search_strategy == 2) {
+		int IST_MBS_COND = 0;
+		/* general queries have not been executed and strategy is tree/state */
+		/* handle old default case, we need to test it the hard way */
+		if (strcmp(s->search, "answered_flag=1") == 0) {
+			TRACE(TRACE_DEBUG, "IST* answered_flag=1");
+			sql = 0;
+			IST_MBS_COND = 1;
+		}
+		if (strcmp(s->search, "deleted_flag=1") == 0) {
+			TRACE(TRACE_DEBUG, "IST* deleted_flag=1");
+			sql = 0;
+			IST_MBS_COND = 2;
+		}
+		if (strcmp(s->search, "flagged_flag=1") == 0) {
+			TRACE(TRACE_DEBUG, "IST* flagged_flag=1");
+			sql = 0;
+			IST_MBS_COND = 3;
+		}
+		if (strcmp(s->search, "recent_flag=1") == 0) {
+			TRACE(TRACE_DEBUG, "IST* recent_flag=1");
+			sql = 0;
+			IST_MBS_COND = 4;
+		}
+		if (strcmp(s->search, "seen_flag=1") == 0) {
+			TRACE(TRACE_DEBUG, "IST* seen_flag=1");
+			sql = 0;
+			IST_MBS_COND = 5;
+		}
+		if (strcmp(s->search, "draft_flag=1") == 0) {
+			TRACE(TRACE_DEBUG, "IST* draft_flag=1");
+			sql = 0;
+			IST_MBS_COND = 6;
+		}
+		if (strcmp(s->search, "(seen_flag=0 AND recent_flag=1)") == 0) {
+			TRACE(TRACE_DEBUG, "IST* (seen_flag=0 AND recent_flag=1)");
+			sql = 0;
+			IST_MBS_COND = 7;
+		}
+		if (strcmp(s->search, "recent_flag=0") == 0) {
+			TRACE(TRACE_DEBUG, "IST* recent_flag=1");
+			sql = 0;
+			IST_MBS_COND = 8;
+		}
+		if (strcmp(s->search, "answered_flag=0") == 0) {
+			TRACE(TRACE_DEBUG, "IST* answered_flag=1");
+			sql = 0;
+			IST_MBS_COND = 9;
+		}
+		if (strcmp(s->search, "deleted_flag=0") == 0) {
+			TRACE(TRACE_DEBUG, "IST* deleted_flag=1");
+			sql = 0;
+			IST_MBS_COND = 10;
+		}
+		if (strcmp(s->search, "flagged_flag=0") == 0) {
+			TRACE(TRACE_DEBUG, "IST* flagged_flag=1");
+			sql = 0;
+			IST_MBS_COND = 11;
+		}
+		if (strcmp(s->search, "seen_flag=0") == 0) {
+			TRACE(TRACE_DEBUG, "IST* seen_flag=1");
+			sql = 0;
+			IST_MBS_COND = 12;
+		}
+		if (strcmp(s->search, "draft_flag=0") == 0) {
+			TRACE(TRACE_DEBUG, "IST* draft_flag=1");
+			sql = 0;
+			IST_MBS_COND = 13;
+		}
+		/* handle IST_DATE */
+		if (strstr(s->search, "p.internal_date")) {
+			/* the equivalent in query is at IST_IDATE, see above */
+			if (strstr(s->search, ">")) {
+				sql = 0;
+				IST_MBS_COND = 14;
+				strcpy(cond, strstr(s->search, ">") + 1);
+				TRACE(TRACE_DEBUG, "IST_IDATE [>]");
+			}
+			if (strstr(s->search, "=")) {
+				sql = 0;
+				IST_MBS_COND = 15;
+				strcpy(cond, strstr(s->search, "=") + 1);
+				TRACE(TRACE_DEBUG, "IST_IDATE [=]");
+			}
+			if (strstr(s->search, "<")) {
+				sql = 0;
+				IST_MBS_COND = 16;
+				strcpy(cond, strstr(s->search, "<") + 1);
+				TRACE(TRACE_DEBUG, "IST_IDATE [<]");
+			}
+			if (IST_MBS_COND != 0) {
+				p_trim(cond, " '><="); //trimming, just a safety precaution
+				TRACE(TRACE_DEBUG, "IST_IDATE %s -> %s ", s->search, cond);
+			}
+
+		}
+		if (s->type == IST_SIZE_LARGER) {
+			TRACE(TRACE_DEBUG, "IST_SIZE_LARGER");
+			sql = 0;
+			IST_MBS_COND = 17;
+
+		}
+		if (s->type == IST_SIZE_SMALLER) {
+			TRACE(TRACE_DEBUG, "IST_SIZE_SMALLER");
+			sql = 0;
+			IST_MBS_COND = 18;
+		}		
+		//TRACE(TRACE_DEBUG,"IST_IDATE %s -> %d %d", s->search, sql,IST_MBS_COND);
+		if (sql == 0) {
+			int foundItems = 0;
+			ids = MailboxState_getIds(self->mbstate);
+			GList *uids = g_tree_keys(ids);
+			uids = g_list_first(uids);
+			/* creating another tree by rebuilding it against a condition */
+			/* we shoud have used g_tree_foreach?! may have been faster and more memory efficient */
+			/* @todo  g_tree_foreach */
+			while (uids) {
+				uint64_t id = *(uint64_t *) uids->data;
+				/* no need to check it, is the same list*/
+				/*if (! (w = g_tree_lookup(ids, &id))) {
+					TRACE(TRACE_ERR, "key missing in ids: [%" PRIu64 "]", id);
+					if (! g_list_next(uids)) break;
+					uids = g_list_next(uids);
+					continue;
+				}*/
+				MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mbstate), &id);
+
+				int found = 0;
+				switch (IST_MBS_COND) {
+					case 1: found = (int) (msginfo->flags[IMAP_FLAG_ANSWERED] == 1);
+						break;
+					case 2: found = (int) (msginfo->flags[IMAP_FLAG_DELETED] == 1);
+						break;
+					case 3: found = (int) (msginfo->flags[IMAP_FLAG_FLAGGED] == 1);
+						break;
+					case 4: found = (int) (msginfo->flags[IMAP_FLAG_RECENT] == 1);
+						break;
+					case 5: found = (int) (msginfo->flags[IMAP_FLAG_SEEN] == 1);
+						break;
+					case 6: found = (int) (msginfo->flags[IMAP_FLAG_DRAFT] == 1);
+						break;
+					case 7: found = (int) (msginfo->flags[IMAP_FLAG_SEEN] == 0 && msginfo->flags[IMAP_FLAG_RECENT] == 1);
+						break;
+					case 8: found = (int) (msginfo->flags[IMAP_FLAG_RECENT] == 0);
+						break;
+					case 9: found = (int) (msginfo->flags[IMAP_FLAG_ANSWERED] == 0);
+						break;
+					case 10: found = (int) (msginfo->flags[IMAP_FLAG_DELETED] == 0);
+						break;
+					case 11: found = (int) (msginfo->flags[IMAP_FLAG_FLAGGED] == 0);
+						break;
+					case 12: found = (int) (msginfo->flags[IMAP_FLAG_SEEN] == 0);
+						break;
+					case 13: found = (int) (msginfo->flags[IMAP_FLAG_DRAFT] == 0);
+						break;
+					case 14: found = (int) (strcmp(msginfo->internaldate, cond) > 0);
+						break;
+					case 15: found = (int) (strcmp(msginfo->internaldate, cond) == 0);
+						break;
+					case 16: found = (int) (strcmp(msginfo->internaldate, cond) < 0);
+						break;
+						//IST_SIZE_LARGER
+					case 17: found = (int) (msginfo->rfcsize > s->size);
+						break;
+						//IST_SIZE_SMALLER
+					case 18: found = (int) (msginfo->rfcsize < s->size);
+						break;
+
+				}
+				if (found == 1) {
+					//TRACE(TRACE_DEBUG, "Found (%d) %ld vs %ld ",IST_MBS_COND,id,msginfo->uid); 
+					k = mempool_pop(small_pool, sizeof (uint64_t));
+					v = mempool_pop(small_pool, sizeof (uint64_t));
+					*k = id;
+					*v = id;
+
+					g_tree_insert(s->found, k, v);
+					foundItems++;
+				}
+				if (!g_list_next(uids)) break;
+				uids = g_list_next(uids);
+			}
+			g_list_free(g_list_first(uids));
+			if (cond) {
+				TRACE(TRACE_DEBUG, "IST RESULT TREE (message_search_strategy=2) found %s (%s), found  %d",
+					s->search,
+					cond,
+					foundItems);
+			} else {
+				TRACE(TRACE_DEBUG, "IST RESULT TREE (message_search_strategy=2) found %s, found  %d", s->search, foundItems);
+			}
+		} else {
+			TRACE(TRACE_WARNING, "IST unhandled search for message_search_strategy=2 so fall back (should be handled)");
 			p_string_printf(q, "SELECT message_idnr FROM %smessages "
 				"WHERE mailbox_idnr = ? AND status < ? AND %s "
 				"ORDER BY message_idnr", DBPFX,
@@ -1440,274 +1617,76 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 			st = db_stmt_prepare(c, p_string_str(q));
 			db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
 			db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
-	}
-	}
-	if (searchPerformed == 0 && mailbox_search_strategy == 2) {
-	int IST_MBS_COND = 0;
-	/* general queries have not been executed and strategy is tree/state */	
-	if (strstr(s->search, "p.internal_date")) {
-		/* the equivalent in query is at IST_IDATE, see above */
-		if (strstr(s->search, ">")) {
-		sql = 0;
-		IST_MBS_COND = 14;
-		strcpy(cond, strstr(s->search, ">") + 1);
-		TRACE(TRACE_DEBUG, "IST_IDATE [>]");
-		}
-		if (strstr(s->search, "=")) {
-		sql = 0;
-		IST_MBS_COND = 15;
-		strcpy(cond, strstr(s->search, "=") + 1);
-		TRACE(TRACE_DEBUG, "IST_IDATE [=]");
-		}
-		if (strstr(s->search, "<")) {
-		sql = 0;
-		IST_MBS_COND = 16;
-		strcpy(cond, strstr(s->search, "<") + 1);
-		TRACE(TRACE_DEBUG, "IST_IDATE [<]");
-		}
-		if (IST_MBS_COND != 0) {
-		p_trim(cond, " '><="); //trimming, just a safety precaution
-		TRACE(TRACE_DEBUG, "IST_IDATE %s -> %s ", s->search, cond);
 		}
 
+
 	}
-	if ( s->type==IST_SIZE_LARGER){
-		TRACE(TRACE_DEBUG, "IST_SIZE_LARGER");
-		sql=0;
-		IST_MBS_COND=17;
-		
-	}
-	if ( s->type==IST_SIZE_SMALLER){
-			TRACE(TRACE_DEBUG, "IST_SIZE_SMALLER");
-		sql=0;
-		IST_MBS_COND=18;
-	}
-	if (strcmp(s->search, "answered_flag=1") == 0) {
-		TRACE(TRACE_DEBUG, "IST* answered_flag=1");
-		sql = 0;
-		IST_MBS_COND = 1;
-	}
-	if (strcmp(s->search, "deleted_flag=1") == 0) {
-		TRACE(TRACE_DEBUG, "IST* deleted_flag=1");
-		sql = 0;
-		IST_MBS_COND = 2;
-	}
-	if (strcmp(s->search, "flagged_flag=1") == 0) {
-		TRACE(TRACE_DEBUG, "IST* flagged_flag=1");
-		sql = 0;
-		IST_MBS_COND = 3;
-	}
-	if (strcmp(s->search, "recent_flag=1") == 0) {
-		TRACE(TRACE_DEBUG, "IST* recent_flag=1");
-		sql = 0;
-		IST_MBS_COND = 4;
-	}
-	if (strcmp(s->search, "seen_flag=1") == 0) {
-		TRACE(TRACE_DEBUG, "IST* seen_flag=1");
-		sql = 0;
-		IST_MBS_COND = 5;
-	}
-	if (strcmp(s->search, "draft_flag=1") == 0) {
-		TRACE(TRACE_DEBUG, "IST* draft_flag=1");
-		sql = 0;
-		IST_MBS_COND = 6;
-	}
-	if (strcmp(s->search, "(seen_flag=0 AND recent_flag=1)") == 0) {
-		TRACE(TRACE_DEBUG, "IST* (seen_flag=0 AND recent_flag=1)");
-		sql = 0;
-		IST_MBS_COND = 7;
-	}
-	if (strcmp(s->search, "recent_flag=0") == 0) {
-		TRACE(TRACE_DEBUG, "IST* recent_flag=1");
-		sql = 0;
-		IST_MBS_COND = 8;
-	}
-	if (strcmp(s->search, "answered_flag=0") == 0) {
-		TRACE(TRACE_DEBUG, "IST* answered_flag=1");
-		sql = 0;
-		IST_MBS_COND = 9;
-	}
-	if (strcmp(s->search, "deleted_flag=0") == 0) {
-		TRACE(TRACE_DEBUG, "IST* deleted_flag=1");
-		sql = 0;
-		IST_MBS_COND = 10;
-	}
-	if (strcmp(s->search, "flagged_flag=0") == 0) {
-		TRACE(TRACE_DEBUG, "IST* flagged_flag=1");
-		sql = 0;
-		IST_MBS_COND = 11;
-	}
-	if (strcmp(s->search, "seen_flag=0") == 0) {
-		TRACE(TRACE_DEBUG, "IST* seen_flag=1");
-		sql = 0;
-		IST_MBS_COND = 12;
-	}
-	if (strcmp(s->search, "draft_flag=0") == 0) {
-		TRACE(TRACE_DEBUG, "IST* draft_flag=1");
-		sql = 0;
-		IST_MBS_COND = 13;
-	}
-	//TRACE(TRACE_DEBUG,"IST_IDATE %s -> %d %d", s->search, sql,IST_MBS_COND);
-	if (sql == 0) {
+	/* due to the fact that may be some issues related to the redirecting of queries for strategy = 2*/
+	/* we may need to test for st not being null */
+	if (st && sql == 1) {
 		int foundItems = 0;
-		ids = MailboxState_getIds(self->mbstate);
-		GList *uids = g_tree_keys(ids);
-		uids = g_list_first(uids);
-		while (uids) {
-		uint64_t id = *(uint64_t *) uids->data;
-		/* no need to check it, is the same list*/
-		/*if (! (w = g_tree_lookup(ids, &id))) {
-			TRACE(TRACE_ERR, "key missing in ids: [%" PRIu64 "]", id);
-			if (! g_list_next(uids)) break;
-			uids = g_list_next(uids);
-			continue;
-		}*/
-		MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mbstate), &id);
+		r = db_stmt_query(st);
 
-		int found = 0;
-		switch (IST_MBS_COND) {
-			case 1: found = (int) (msginfo->flags[IMAP_FLAG_ANSWERED] == 1);
-			break;
-			case 2: found = (int) (msginfo->flags[IMAP_FLAG_DELETED] == 1);
-			break;
-			case 3: found = (int) (msginfo->flags[IMAP_FLAG_FLAGGED] == 1);
-			break;
-			case 4: found = (int) (msginfo->flags[IMAP_FLAG_RECENT] == 1);
-			break;
-			case 5: found = (int) (msginfo->flags[IMAP_FLAG_SEEN] == 1);
-			break;
-			case 6: found = (int) (msginfo->flags[IMAP_FLAG_DRAFT] == 1);
-			break;
-			case 7: found = (int) (msginfo->flags[IMAP_FLAG_SEEN] == 0 && msginfo->flags[IMAP_FLAG_RECENT] == 1);
-			break;
-			case 8: found = (int) (msginfo->flags[IMAP_FLAG_RECENT] == 0);
-			break;
-			case 9: found = (int) (msginfo->flags[IMAP_FLAG_ANSWERED] == 0);
-			break;
-			case 10: found = (int) (msginfo->flags[IMAP_FLAG_DELETED] == 0);
-			break;
-			case 11: found = (int) (msginfo->flags[IMAP_FLAG_FLAGGED] == 0);
-			break;
-			case 12: found = (int) (msginfo->flags[IMAP_FLAG_SEEN] == 0);
-			break;
-			case 13: found = (int) (msginfo->flags[IMAP_FLAG_DRAFT] == 0);
-			break;
-			case 14: found = (int) (strcmp(msginfo->internaldate, cond) > 0);
-			break;
-			case 15: found = (int) (strcmp(msginfo->internaldate, cond) == 0);
-			break;
-			case 16: found = (int) (strcmp(msginfo->internaldate, cond) < 0);
-			break;
-			//IST_SIZE_LARGER
-			case 17: found = (int) (msginfo->rfcsize > s->size );
-			break;
-			//IST_SIZE_SMALLER
-			case 18: found = (int) (msginfo->rfcsize < s->size);
-			break;	
-			
-		}
-		if (found == 1) {
-			//TRACE(TRACE_DEBUG, "Found (%d) %ld vs %ld ",IST_MBS_COND,id,msginfo->uid); 
+		ids = MailboxState_getIds(self->mbstate);
+		while (db_result_next(r)) {
+			id = db_result_get_u64(r, 0);
+			if (!(w = g_tree_lookup(ids, &id))) {
+				TRACE(TRACE_ERR, "key missing in ids: [%" PRIu64 "]\n", id);
+				continue;
+			}
+			assert(w);
+
 			k = mempool_pop(small_pool, sizeof (uint64_t));
 			v = mempool_pop(small_pool, sizeof (uint64_t));
 			*k = id;
-			*v = id;
-
+			*v = *w;
 			g_tree_insert(s->found, k, v);
 			foundItems++;
 		}
-		if (!g_list_next(uids)) break;
-		uids = g_list_next(uids);
-		}
-		g_list_free(g_list_first(uids));
-		if (cond) {
-		TRACE(TRACE_DEBUG, "IST RESULT TREE (message_search_strategy=2) found %s (%s), found  %d",
-			s->search,
-			cond,
-			foundItems);
-		} else {
-		TRACE(TRACE_DEBUG, "IST RESULT TREE (message_search_strategy=2) found %s, found  %d", s->search, foundItems);
-		}
-	} else {
-		TRACE(TRACE_WARNING,"IST unhandled search for message_search_strategy=2 so fall back (should be handled)");
-		p_string_printf(q, "SELECT message_idnr FROM %smessages "
-			"WHERE mailbox_idnr = ? AND status < ? AND %s "
-			"ORDER BY message_idnr", DBPFX,
-			s->search); // FIXME: Sometimes s->search is ""
-
-		st = db_stmt_prepare(c, p_string_str(q));
-		db_stmt_set_u64(st, 1, dbmail_mailbox_get_id(self));
-		db_stmt_set_int(st, 2, MESSAGE_STATUS_DELETE);
-	}
-
-
-	}
-
-	if (st && sql == 1) {
-	int foundItems = 0;
-	r = db_stmt_query(st);
-
-
-	ids = MailboxState_getIds(self->mbstate);
-	while (db_result_next(r)) {
-		id = db_result_get_u64(r, 0);
-		if (!(w = g_tree_lookup(ids, &id))) {
-		TRACE(TRACE_ERR, "key missing in ids: [%" PRIu64 "]\n", id);
-		continue;
-		}
-		assert(w);
-
-		k = mempool_pop(small_pool, sizeof (uint64_t));
-		v = mempool_pop(small_pool, sizeof (uint64_t));
-		*k = id;
-		*v = *w;
-		g_tree_insert(s->found, k, v);
-		foundItems++;
-	}
-	TRACE(TRACE_DEBUG, "IST RESULT SQL found %s, found  %d", s->search, foundItems);
+		TRACE(TRACE_DEBUG, "IST RESULT SQL found %s, found  %d", s->search, foundItems);
 	}
 	if (s->type == IST_UNKEYWORD) {
-	GTree *old = NULL;
-	GTree *invert = g_tree_new_full((GCompareDataFunc) ucmpdata, NULL, (GDestroyNotify) uint64_free, (GDestroyNotify) uint64_free);
-	GList *uids = g_tree_keys(ids);
-	uids = g_list_first(uids);
-	while (uids) {
-		uint64_t id = *(uint64_t *) uids->data;
-		if (!(w = g_tree_lookup(ids, &id))) {
-		TRACE(TRACE_ERR, "key missing in ids: [%" PRIu64 "]", id);
+		GTree *old = NULL;
+		GTree *invert = g_tree_new_full((GCompareDataFunc) ucmpdata, NULL, (GDestroyNotify) uint64_free, (GDestroyNotify) uint64_free);
+		GList *uids = g_tree_keys(ids);
+		uids = g_list_first(uids);
+		while (uids) {
+			uint64_t id = *(uint64_t *) uids->data;
+			if (!(w = g_tree_lookup(ids, &id))) {
+				TRACE(TRACE_ERR, "key missing in ids: [%" PRIu64 "]", id);
 
-		if (!g_list_next(uids)) break;
-		uids = g_list_next(uids);
-		continue;
+				if (!g_list_next(uids)) break;
+				uids = g_list_next(uids);
+				continue;
+			}
+
+			assert(w);
+
+			if (g_tree_lookup(s->found, &id)) {
+				TRACE(TRACE_DEBUG, "skip key [%" PRIu64 "]", id);
+
+				if (!g_list_next(uids)) break;
+				uids = g_list_next(uids);
+				continue;
+			}
+
+			k = mempool_pop(small_pool, sizeof (uint64_t));
+			v = mempool_pop(small_pool, sizeof (uint64_t));
+			*k = id;
+			*v = *w;
+
+			g_tree_insert(invert, k, v);
+
+
+			if (!g_list_next(uids)) break;
+			uids = g_list_next(uids);
+
 		}
 
-		assert(w);
-
-		if (g_tree_lookup(s->found, &id)) {
-		TRACE(TRACE_DEBUG, "skip key [%" PRIu64 "]", id);
-
-		if (!g_list_next(uids)) break;
-		uids = g_list_next(uids);
-		continue;
-		}
-
-		k = mempool_pop(small_pool, sizeof (uint64_t));
-		v = mempool_pop(small_pool, sizeof (uint64_t));
-		*k = id;
-		*v = *w;
-
-		g_tree_insert(invert, k, v);
-
-
-		if (!g_list_next(uids)) break;
-		uids = g_list_next(uids);
-
-	}
-
-	old = s->found;
-	s->found = invert;
-	g_tree_destroy(old);
-	g_list_free(g_list_first(uids));
+		old = s->found;
+		s->found = invert;
+		g_tree_destroy(old);
+		g_list_free(g_list_first(uids));
 	}
 
 	CATCH(SQLException)
@@ -1717,7 +1696,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 	END_TRY;
 
 	if (inset)
-	g_free((char *) inset);
+		g_free((char *) inset);
 
 	p_string_free(q, TRUE);
 	g_string_free(t, TRUE);
@@ -1729,8 +1708,8 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 static int checkset(const char *s) {
 	int i;
 	for (i = 0; s[i]; i++) {
-	if (!strchr("0123456789:,*", s[i]))
-		return 0;
+		if (!strchr("0123456789:,*", s[i]))
+			return 0;
 	}
 	return 1;
 }
@@ -1748,16 +1727,16 @@ static int filter_modseq(gpointer key, gpointer UNUSED value, gpointer data) {
 	id = (uint64_t *) key;
 	MessageInfo *info = g_tree_lookup(d->msginfo, id);
 	if (!info)
-	return TRUE;
+		return TRUE;
 
 	if (info->seq <= d->modseq)
-	d->remove = g_list_prepend(d->remove, key);
+		d->remove = g_list_prepend(d->remove, key);
 	return FALSE;
 }
 
 GTree * find_modseq(DbmailMailbox *self, GTree *in) {
 	if (!self->modseq)
-	return in;
+		return in;
 	GList *remove;
 	struct filter_modseq_helper data;
 	data.msginfo = MailboxState_getMsginfo(self->mbstate);
@@ -1767,11 +1746,11 @@ GTree * find_modseq(DbmailMailbox *self, GTree *in) {
 	g_tree_foreach(in, (GTraverseFunc) filter_modseq, &data);
 	remove = data.remove;
 	while (remove) {
-	uint64_t *key = (uint64_t *) remove->data;
-	g_tree_remove(in, key);
-	if (!g_list_next(remove))
-		break;
-	remove = g_list_next(remove);
+		uint64_t *key = (uint64_t *) remove->data;
+		g_tree_remove(in, key);
+		if (!g_list_next(remove))
+			break;
+		remove = g_list_next(remove);
 	}
 
 	return in;
@@ -1784,16 +1763,16 @@ GTree * dbmail_mailbox_get_set(DbmailMailbox *self, const char *set, gboolean ui
 	TRACE(TRACE_DEBUG, "[%s] uid [%d]", set, uid);
 
 	if (!self->mbstate)
-	return NULL;
+		return NULL;
 
 	assert(self && self->mbstate && set);
 
 	uids = MailboxState_getIds(self->mbstate);
 	if ((!uid) && (g_tree_nnodes(uids) == 0))
-	return NULL;
+		return NULL;
 
 	if (!checkset(set)) // invalid chars
-	return NULL;
+		return NULL;
 
 
 	b = MailboxState_get_set(self->mbstate, set, uid);
@@ -1821,16 +1800,16 @@ static gboolean _prescan_search(GNode *node, DbmailMailbox *self) {
 	if (s->searched) return FALSE;
 
 	switch (s->type) {
-	case IST_SET:
-		if (!(s->found = dbmail_mailbox_get_set(self, (const char *) s->search, 0)))
-		return TRUE;
-		break;
-	case IST_UIDSET:
-		if (!(s->found = dbmail_mailbox_get_set(self, (const char *) s->search, 1)))
-		return TRUE;
-		break;
-	default:
-		return FALSE;
+		case IST_SET:
+			if (!(s->found = dbmail_mailbox_get_set(self, (const char *) s->search, 0)))
+				return TRUE;
+			break;
+		case IST_UIDSET:
+			if (!(s->found = dbmail_mailbox_get_set(self, (const char *) s->search, 1)))
+				return TRUE;
+			break;
+		default:
+			return FALSE;
 
 	}
 	s->searched = TRUE;
@@ -1853,44 +1832,44 @@ static gboolean _do_search(GNode *node, DbmailMailbox *self) {
 	if (s->searched) return FALSE;
 
 	switch (s->type) {
-	case IST_SORT:
-		return FALSE;
-		break;
+		case IST_SORT:
+			return FALSE;
+			break;
 
-	case IST_SET:
-		if (!(s->found = dbmail_mailbox_get_set(self, (const char *) s->search, 0)))
-		return TRUE;
-		break;
-	case IST_UIDSET:
-		if (!(s->found = dbmail_mailbox_get_set(self, (const char *) s->search, 1)))
-		return TRUE;
-		break;
+		case IST_SET:
+			if (!(s->found = dbmail_mailbox_get_set(self, (const char *) s->search, 0)))
+				return TRUE;
+			break;
+		case IST_UIDSET:
+			if (!(s->found = dbmail_mailbox_get_set(self, (const char *) s->search, 1)))
+				return TRUE;
+			break;
 
-	case IST_KEYWORD:
-	case IST_UNKEYWORD:
-	case IST_SIZE_LARGER:
-	case IST_SIZE_SMALLER:
-	case IST_HDRDATE_BEFORE:
-	case IST_HDRDATE_SINCE:
-	case IST_HDRDATE_ON:
-	case IST_IDATE:
-	case IST_FLAG:
-	case IST_HDR:
-	case IST_DATA_TEXT:
-	case IST_DATA_BODY:
-		mailbox_search(self, s);
-		break;
+		case IST_KEYWORD:
+		case IST_UNKEYWORD:
+		case IST_SIZE_LARGER:
+		case IST_SIZE_SMALLER:
+		case IST_HDRDATE_BEFORE:
+		case IST_HDRDATE_SINCE:
+		case IST_HDRDATE_ON:
+		case IST_IDATE:
+		case IST_FLAG:
+		case IST_HDR:
+		case IST_DATA_TEXT:
+		case IST_DATA_BODY:
+			mailbox_search(self, s);
+			break;
 
-	case IST_SUBSEARCH_NOT:
-	case IST_SUBSEARCH_AND:
-	case IST_SUBSEARCH_OR:
-		g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc) _do_search, (gpointer) self);
-		s->found = g_tree_new_full((GCompareDataFunc) ucmpdata, NULL, (GDestroyNotify) g_free, (GDestroyNotify) g_free);
-		break;
+		case IST_SUBSEARCH_NOT:
+		case IST_SUBSEARCH_AND:
+		case IST_SUBSEARCH_OR:
+			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc) _do_search, (gpointer) self);
+			s->found = g_tree_new_full((GCompareDataFunc) ucmpdata, NULL, (GDestroyNotify) g_free, (GDestroyNotify) g_free);
+			break;
 
 
-	default:
-		return TRUE;
+		default:
+			return TRUE;
 	}
 
 	s->searched = TRUE;
@@ -1907,67 +1886,67 @@ static gboolean _merge_search(GNode *node, GTree *found) {
 	GNode *x, *y;
 
 	if (s->type == IST_SORT)
-	return FALSE;
+		return FALSE;
 
 	if (s->merged == TRUE)
-	return FALSE;
+		return FALSE;
 
 
 	switch (s->type) {
-	case IST_SUBSEARCH_AND:
-		g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc) _merge_search, (gpointer) found);
-		break;
+		case IST_SUBSEARCH_AND:
+			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc) _merge_search, (gpointer) found);
+			break;
 
-	case IST_SUBSEARCH_NOT:
-		g_tree_foreach(found, (GTraverseFunc) _found_tree_copy, s->found);
-		g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc) _merge_search, (gpointer) s->found);
-		g_tree_merge(found, s->found, IST_SUBSEARCH_NOT);
-		s->merged = TRUE;
-		g_tree_destroy(s->found);
-		s->found = NULL;
+		case IST_SUBSEARCH_NOT:
+			g_tree_foreach(found, (GTraverseFunc) _found_tree_copy, s->found);
+			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc) _merge_search, (gpointer) s->found);
+			g_tree_merge(found, s->found, IST_SUBSEARCH_NOT);
+			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
 
-		break;
+			break;
 
-	case IST_SUBSEARCH_OR:
-		x = g_node_nth_child(node, 0);
-		y = g_node_nth_child(node, 1);
-		a = (search_key *) x->data;
-		b = (search_key *) y->data;
+		case IST_SUBSEARCH_OR:
+			x = g_node_nth_child(node, 0);
+			y = g_node_nth_child(node, 1);
+			a = (search_key *) x->data;
+			b = (search_key *) y->data;
 
-		if (a->type == IST_SUBSEARCH_AND) {
-		g_tree_foreach(found, (GTraverseFunc) _found_tree_copy, a->found);
-		g_node_children_foreach(x, G_TRAVERSE_ALL, (GNodeForeachFunc) _merge_search, (gpointer) a->found);
-		}
+			if (a->type == IST_SUBSEARCH_AND) {
+				g_tree_foreach(found, (GTraverseFunc) _found_tree_copy, a->found);
+				g_node_children_foreach(x, G_TRAVERSE_ALL, (GNodeForeachFunc) _merge_search, (gpointer) a->found);
+			}
 
-		if (b->type == IST_SUBSEARCH_AND) {
-		g_tree_foreach(found, (GTraverseFunc) _found_tree_copy, b->found);
-		g_node_children_foreach(y, G_TRAVERSE_ALL, (GNodeForeachFunc) _merge_search, (gpointer) b->found);
-		}
+			if (b->type == IST_SUBSEARCH_AND) {
+				g_tree_foreach(found, (GTraverseFunc) _found_tree_copy, b->found);
+				g_node_children_foreach(y, G_TRAVERSE_ALL, (GNodeForeachFunc) _merge_search, (gpointer) b->found);
+			}
 
-		g_tree_merge(a->found, b->found, IST_SUBSEARCH_OR);
-		b->merged = TRUE;
-		g_tree_destroy(b->found);
-		b->found = NULL;
+			g_tree_merge(a->found, b->found, IST_SUBSEARCH_OR);
+			b->merged = TRUE;
+			g_tree_destroy(b->found);
+			b->found = NULL;
 
-		g_tree_merge(s->found, a->found, IST_SUBSEARCH_OR);
-		a->merged = TRUE;
-		g_tree_destroy(a->found);
-		a->found = NULL;
+			g_tree_merge(s->found, a->found, IST_SUBSEARCH_OR);
+			a->merged = TRUE;
+			g_tree_destroy(a->found);
+			a->found = NULL;
 
-		g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
-		s->merged = TRUE;
-		g_tree_destroy(s->found);
-		s->found = NULL;
+			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
 
-		break;
+			break;
 
-	default:
-		g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
-		s->merged = TRUE;
-		g_tree_destroy(s->found);
-		s->found = NULL;
+		default:
+			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+			s->merged = TRUE;
+			g_tree_destroy(s->found);
+			s->found = NULL;
 
-		break;
+			break;
 	}
 
 	TRACE(TRACE_DEBUG, "[%p] leaf [%d] depth [%d] type [%d] found [%d]",
@@ -1991,7 +1970,7 @@ int dbmail_mailbox_search(DbmailMailbox *self) {
 	if (!self->search) return 0;
 
 	if (!self->mbstate)
-	dbmail_mailbox_open(self);
+		dbmail_mailbox_open(self);
 
 	if (self->found) g_tree_destroy(self->found);
 	self->found = g_tree_new_full((GCompareDataFunc) ucmpdata, NULL, NULL, NULL);
@@ -2010,9 +1989,9 @@ int dbmail_mailbox_search(DbmailMailbox *self) {
 		(GNodeTraverseFunc) _merge_search, (gpointer) self->found);
 
 	if (self->found == NULL)
-	TRACE(TRACE_DEBUG, "found no ids\n");
+		TRACE(TRACE_DEBUG, "found no ids\n");
 	else
-	TRACE(TRACE_DEBUG, "found [%d] ids\n", self->found ? g_tree_nnodes(self->found) : 0);
+		TRACE(TRACE_DEBUG, "found [%d] ids\n", self->found ? g_tree_nnodes(self->found) : 0);
 
 	return 0;
 }
