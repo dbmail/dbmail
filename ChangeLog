@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 
 ### Optimizations 
 - IMAP Daemon: sql in select headers
+- libevent optimizations (accepting new connection, reading and writing to sockets)
+
 
 ### Issues
 - segmentation fault in imap_append_hash_as_string fixed [#12]
