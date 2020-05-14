@@ -72,6 +72,28 @@ void g_string_maybe_shrink(GString *s)
 	}
 }
 
+/**
+ * Print the trace. The appropieate debug level has to be enabled. 
+ * 
+ */
+void print_trace (void)
+{
+  void *array[10];
+  size_t size;
+  char **strings;
+  size_t i;
+
+  size = backtrace (array, 10);
+  strings = backtrace_symbols (array, size);
+
+  TRACE(TRACE_DEBUG, "Obtained %zd stack frames.\n", size);
+
+  for (i = 0; i < size; i++)
+     TRACE(TRACE_DEBUG, "#%d %s\n", i,strings[i]);
+
+  free (strings);
+}
+
 int drop_privileges(char *newuser, char *newgroup)
 {
 	/* will drop running program's priviledges to newuser and newgroup */
