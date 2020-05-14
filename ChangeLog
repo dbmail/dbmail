@@ -3,9 +3,9 @@ All notable changes to this project will be documented in this file.
 
 ## [3.2.4] - 2020-??-??
 ### Added
-- IMAP Daemon: mailbox-update-strategy switch 
+- IMAP Daemon: mailbox-update-strategy switch (see dbmail.conf)
 - support for application_name in database connection uri
-- IMAP Daemon: some of searches in current mailbox is performed the state
+- IMAP Daemon: mailbox_search_strategy switch (see dbmail.conf)
 
 ### Changed
 - systemd unit changed to type notify
@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 - IMAP Daemon: random hangs when single user is connected [#37]
 - fix fd leaks
 - IMAP Daemon: fix for MODIFIED keyword
+- segmentation fault in find_end_of_header
 
 ## [3.2.3] 
 
