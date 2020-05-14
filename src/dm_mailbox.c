@@ -1419,43 +1419,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 	if (searchPerformed == 0 && mailbox_search_strategy == 2) {
 		int IST_MBS_COND = 0;
 		/* general queries have not been executed and strategy is tree/state */
-		if (strstr(s->search, "p.internal_date")) {
-			/* the equivalent in query is at IST_IDATE, see above */
-			if (strstr(s->search, ">")) {
-				sql = 0;
-				IST_MBS_COND = 14;
-				strcpy(cond, strstr(s->search, ">") + 1);
-				TRACE(TRACE_DEBUG, "IST_IDATE [>]");
-			}
-			if (strstr(s->search, "=")) {
-				sql = 0;
-				IST_MBS_COND = 15;
-				strcpy(cond, strstr(s->search, "=") + 1);
-				TRACE(TRACE_DEBUG, "IST_IDATE [=]");
-			}
-			if (strstr(s->search, "<")) {
-				sql = 0;
-				IST_MBS_COND = 16;
-				strcpy(cond, strstr(s->search, "<") + 1);
-				TRACE(TRACE_DEBUG, "IST_IDATE [<]");
-			}
-			if (IST_MBS_COND != 0) {
-				p_trim(cond, " '><="); //trimming, just a safety precaution
-				TRACE(TRACE_DEBUG, "IST_IDATE %s -> %s ", s->search, cond);
-			}
-
-		}
-		if (s->type == IST_SIZE_LARGER) {
-			TRACE(TRACE_DEBUG, "IST_SIZE_LARGER");
-			sql = 0;
-			IST_MBS_COND = 17;
-
-		}
-		if (s->type == IST_SIZE_SMALLER) {
-			TRACE(TRACE_DEBUG, "IST_SIZE_SMALLER");
-			sql = 0;
-			IST_MBS_COND = 18;
-		}
+		/* handle old default case, we need to test it the hard way */
 		if (strcmp(s->search, "answered_flag=1") == 0) {
 			TRACE(TRACE_DEBUG, "IST* answered_flag=1");
 			sql = 0;
@@ -1521,12 +1485,53 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 			sql = 0;
 			IST_MBS_COND = 13;
 		}
+		/* handle IST_DATE */
+		if (strstr(s->search, "p.internal_date")) {
+			/* the equivalent in query is at IST_IDATE, see above */
+			if (strstr(s->search, ">")) {
+				sql = 0;
+				IST_MBS_COND = 14;
+				strcpy(cond, strstr(s->search, ">") + 1);
+				TRACE(TRACE_DEBUG, "IST_IDATE [>]");
+			}
+			if (strstr(s->search, "=")) {
+				sql = 0;
+				IST_MBS_COND = 15;
+				strcpy(cond, strstr(s->search, "=") + 1);
+				TRACE(TRACE_DEBUG, "IST_IDATE [=]");
+			}
+			if (strstr(s->search, "<")) {
+				sql = 0;
+				IST_MBS_COND = 16;
+				strcpy(cond, strstr(s->search, "<") + 1);
+				TRACE(TRACE_DEBUG, "IST_IDATE [<]");
+			}
+			if (IST_MBS_COND != 0) {
+				p_trim(cond, " '><="); //trimming, just a safety precaution
+				TRACE(TRACE_DEBUG, "IST_IDATE %s -> %s ", s->search, cond);
+			}
+
+		}
+		if (s->type == IST_SIZE_LARGER) {
+			TRACE(TRACE_DEBUG, "IST_SIZE_LARGER");
+			sql = 0;
+			IST_MBS_COND = 17;
+
+		}
+		if (s->type == IST_SIZE_SMALLER) {
+			TRACE(TRACE_DEBUG, "IST_SIZE_SMALLER");
+			sql = 0;
+			IST_MBS_COND = 18;
+		}		
 		//TRACE(TRACE_DEBUG,"IST_IDATE %s -> %d %d", s->search, sql,IST_MBS_COND);
 		if (sql == 0) {
 			int foundItems = 0;
 			ids = MailboxState_getIds(self->mbstate);
 			GList *uids = g_tree_keys(ids);
 			uids = g_list_first(uids);
+			/* creating another tree by rebuilding it against a condition */
+			/* we shoud have used g_tree_foreach?! may have been faster and more memory efficient */
+			/* @todo  g_tree_foreach */
 			while (uids) {
 				uint64_t id = *(uint64_t *) uids->data;
 				/* no need to check it, is the same list*/
@@ -1616,11 +1621,11 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 
 
 	}
-
+	/* due to the fact that may be some issues related to the redirecting of queries for strategy = 2*/
+	/* we may need to test for st not being null */
 	if (st && sql == 1) {
 		int foundItems = 0;
 		r = db_stmt_query(st);
-
 
 		ids = MailboxState_getIds(self->mbstate);
 		while (db_result_next(r)) {
