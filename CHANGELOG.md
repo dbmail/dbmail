@@ -28,6 +28,7 @@ All notable changes to this project will be documented in this file.
 - fix fd leaks
 - IMAP Daemon: fix for MODIFIED keyword
 - segmentation fault in find_end_of_header
+- fix gcc 10 compilation issue, duplicated definition
 
 ## [3.2.3] 
 
