@@ -1183,7 +1183,6 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 	GString *t;
 	String_T q;
 
-	Field_T msc;
 	int mailbox_search_strategy = config_get_value_default_int("mailbox_search_strategy", "IMAP", 1);
 	TRACE(TRACE_DEBUG, "mailbox_search_strategy %d", mailbox_search_strategy);
 
@@ -1384,7 +1383,7 @@ static GTree * mailbox_search(DbmailMailbox *self, search_key *s) {
 
 			case IST_SIZE_SMALLER:
 				if (!gt_lt) gt_lt = '<';
-				TRACE(TRACE_DEBUG, "IST_SIZE_SMALLER/IST_SIZE_LARGER sql %d", s->size);
+				TRACE(TRACE_DEBUG, "IST_SIZE_SMALLER/IST_SIZE_LARGER sql %ld", s->size);
 				p_string_printf(q, "SELECT m.message_idnr FROM %smessages m "
 					"LEFT JOIN %sphysmessage p ON m.physmessage_id = p.id "
 					"WHERE m.mailbox_idnr = ? AND m.status < ? "
