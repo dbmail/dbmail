@@ -28,6 +28,7 @@
 typedef struct T *T;
 
 extern T            MailboxState_new(Mempool_T pool, uint64_t id);
+extern T			MailboxState_update(Mempool_T pool, T OldM);
 
 extern int          MailboxState_info(T);
 extern int          MailboxState_count(T);
