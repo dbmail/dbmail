@@ -25,6 +25,7 @@
  */
 
 #include <libgen.h>
+#include <stdlib.h>
 #include "dbmail.h"
 
 #define THIS_MODULE "config"
@@ -198,6 +199,43 @@ config_get_value_done:
 	g_free(key);
 	return 0;
 }
+
+/**
+ * Return the config value and if not found return the default value
+ * @param field_name
+ * @param service_name
+ * @param value
+ * @param defaultValue
+ * @return 
+ */
+
+int config_get_value_default_int(const Field_T field_name,
+                     const char * const service_name,
+                     int default_value){
+    Field_T value;
+    int result_fetch = config_get_value(field_name, service_name, value);
+    int result=default_value;
+    if (result_fetch==0){
+	/* no error */
+	result=atoi(value);
+    }
+    return result;
+}
+
+
+Field_T* config_get_value_default_string(const Field_T field_name,
+                     const char * const service_name,
+                     Field_T value, Field_T default_value){
+    int result_fetch = config_get_value(field_name, service_name, value);
+     
+    if (result_fetch==0){
+	/* no error */
+	return &value;
+    }
+    return &default_value;
+}
+
+
 
 void SetTraceLevel(const char *service_name)
 {
