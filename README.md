@@ -88,7 +88,8 @@ Installing
 ----------
 * Download DBMail package
 * Install dependencies (some provided from your linux distribution and some (libzdb and/or libsieve) need to be compiled
-* # ./configure
-* # make 
-* # make install
+* ./configure
+* make 
+* make install
+
 -------------------------------------------
