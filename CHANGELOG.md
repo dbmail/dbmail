@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [3.2.4] - 2020-??-??
+## [3.2.4] - 2020-06-08
 ### Added
 - IMAP Daemon: mailbox-update-strategy switch (see dbmail.conf)
 - support for application_name in database connection uri
@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 
 
 ### Optimizations 
-- IMAP Daemon: optimization of sql queries in relation to select headers
+- IMAP Daemon: optimization of sql queries in relation to message headers
 - libevent increased priority on accepting new connections
 - libevent optimization on reading and writing to sockets
 - simplify libzdb configuration (AC_CHECK_HEADERS)
@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 - IMAP Daemon: fix MODIFIED keyword, too many '[' and ']'
 - fix segmentation fault in find_end_of_header
 - fix gcc 10 compilation issue, duplicated definition
+
 
 ## [3.2.3] 
 
