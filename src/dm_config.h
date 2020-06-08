@@ -53,6 +53,15 @@ void config_free(void);
 int config_get_value(const Field_T name, const char *service_name,
                      /*@out@*/ Field_T value);
 
+
+int config_get_value_default_int(const Field_T field_name,
+                     const char * const service_name,
+                     int default_value);
+
+Field_T* config_get_value_default_string(const Field_T field_name,
+                     const char * const service_name,
+                     Field_T value, Field_T default_value);
+					 
 /* some common used functions reading config options */
 /**
  \brief get parameters for database connection

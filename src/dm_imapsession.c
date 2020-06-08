@@ -1508,9 +1508,9 @@ static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 	
 	if (ids) {
 		uid = (uint64_t *)ids->data;
-		GTree * ids=MailboxState_getIds(self->mailbox->mbstate);
-		if (ids!=NULL){
-		    msn = g_tree_lookup(ids, uid);
+		GTree * treeM=MailboxState_getIds(M);
+		if (treeM != NULL){
+		    msn = g_tree_lookup(treeM, uid);
 		    if (msn && (*msn > MailboxState_getExists(M))) {
 			    TRACE(TRACE_DEBUG,"exists new [%d] old: [%d]", MailboxState_getExists(N), MailboxState_getExists(M)); 
 			    dbmail_imap_session_buff_printf(self, "* %d EXISTS\r\n", MailboxState_getExists(M));
@@ -1521,7 +1521,7 @@ static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 		uid = (uint64_t *)ids->data;
 		MessageInfo *messageInfo=g_tree_lookup(MailboxState_getMsginfo(N), uid);
 		if (messageInfo!=NULL && !g_tree_lookup(MailboxState_getIds(N), uid)) {
-			/* mark message as expunged, it should be ok to be removed from list, see state_load_message*/
+			/* mark message as expunged, it should be ok to be removed from list, see state_load_message */
 			messageInfo->expunged=1;
 			notify_expunge(self, uid);
 		}
