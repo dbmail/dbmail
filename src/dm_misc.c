@@ -78,6 +78,8 @@ void g_string_maybe_shrink(GString *s)
  */
 void print_trace (void)
 {
+#ifdef DEBUG
+	/* activate this function only if DEBUG variable is defined */
 	void *array[10];
 	size_t size;
 	char **strings;
@@ -92,6 +94,7 @@ void print_trace (void)
 		TRACE(TRACE_DEBUG, "#%d %s\n", i,strings[i]);
 
 	free (strings);
+#endif
 }
 
 int drop_privileges(char *newuser, char *newgroup)
