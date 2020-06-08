@@ -44,6 +44,7 @@ extern uint64_t        p_string_len(String_T);
 extern const char *    p_string_str(String_T);
 extern void            p_string_unescape(String_T);
 extern char *          p_string_free(String_T, gboolean);
+extern char *          p_trim(char *str, const char *seps);
 
 #define p_string_append(S, s) p_string_append_len(S, s, strlen(s))
 
