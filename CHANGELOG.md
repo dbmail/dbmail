@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [3.2.4] - 2020-??-??
+## [3.2.4] - 2020-06-08
 ### Added
 - IMAP Daemon: mailbox-update-strategy switch (see dbmail.conf)
 - support for application_name in database connection uri
@@ -10,24 +10,27 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - systemd unit changed to type notify
 - mailbox state is build using only valid messages [#39]
-- simplify libzdb configuration (AC_CHECK_HEADERS)
+
 
 ### Optimizations 
-- IMAP Daemon: sql in select headers
-- libevent optimizations (accepting new connection, reading and writing to sockets)
-
+- IMAP Daemon: optimization of sql queries in relation to message headers
+- libevent increased priority on accepting new connections
+- libevent optimization on reading and writing to sockets
+- simplify libzdb configuration (AC_CHECK_HEADERS)
 
 ### Issues
-- segmentation fault in imap_append_hash_as_string fixed [#12]
+- fix segmentation fault in imap_append_hash_as_string [#12]
 - dbmail-users: sql issue on deleting alias user [#18]
 - IMAP Daemon: generation of invalid BODYSTRUCTURE in Content-Type field [#23]
-- support for jemalloc latest version [#35]
-- IMAP Deamon: BYE Command now offer optional message even on normal operations [#46]
+- fix support for jemalloc latest version [#35]
+- IMAP Deamon: BYE Command now offers optional message even on normal operations [#46]
 - IMAP Deamon: idle message now offers optional message (* OK Still Here)
 - IMAP Daemon: random hangs when single user is connected [#37]
 - fix fd leaks
-- IMAP Daemon: fix for MODIFIED keyword
-- segmentation fault in find_end_of_header
+- IMAP Daemon: fix MODIFIED keyword, too many '[' and ']'
+- fix segmentation fault in find_end_of_header
+- fix gcc 10 compilation issue, duplicated definition
+
 
 ## [3.2.3] 
 

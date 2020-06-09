@@ -575,9 +575,9 @@ int auth_removealias(uint64_t user_idnr, const char *alias)
 	c = db_con_get();
 	TRY
 		s = db_stmt_prepare(c, "DELETE FROM %saliases WHERE deliver_to=? AND lower(alias) = lower(?)",DBPFX);
-		//convert to string, Cosmin Cioranu, #18
+		/* convert to string to string, due to the nature of deliver_to field */
 		char user_idnr_str[12]; 
-		sprintf(user_idnr_str, "%d", user_idnr);
+		sprintf(user_idnr_str, "%ld", user_idnr);
 		db_stmt_set_str(s, 1, user_idnr_str);
 		db_stmt_set_str(s, 2, alias);
 		db_stmt_exec(s);

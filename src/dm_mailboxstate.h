@@ -48,6 +48,9 @@ extern GTree *      MailboxState_getMsn(T);
 extern void         MailboxState_setId(T, uint64_t);
 extern uint64_t     MailboxState_getId(T);
 extern uint64_t     MailboxState_getSeq(T);
+extern void         MailboxState_resetSeq(T);
+extern uint64_t     MailboxState_resyncSeq(T);
+
 extern uint64_t     MailboxState_getUidnext(T);
 extern unsigned	    MailboxState_getExists(T);
 extern void	    MailboxState_setExists(T, unsigned);

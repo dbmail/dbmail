@@ -85,14 +85,8 @@ static void MessageInfo_free(MessageInfo *m)
 	g_free(m);
 }
 
-static char* split (char *str, const char *delim){
-    char *p = strstr(str, delim);
-    if (p == NULL) return NULL;     // delimiter not found
-    *p = '\0';                      // terminate string after head
-    return p + strlen(delim);       // return tail substring
-}
 
-static T state_load_messages(T M, Connection_T c, bool coldLoad)
+static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 {
 	unsigned nrows = 0, i = 0, j;
 	struct timeval before, after; 
@@ -237,7 +231,7 @@ static T state_load_messages(T M, Connection_T c, bool coldLoad)
 	db_con_clear(c);
 	//Optimize Keywords search, Cosmin Cioranu
 	
-	memset(query,0,sizeof(query));
+	memset(query, 0, sizeof(query));
 	snprintf(query, DEF_QUERYSIZE-1,
 		"SELECT k.message_idnr, group_concat(distinct keyword) FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
@@ -254,25 +248,37 @@ static T state_load_messages(T M, Connection_T c, bool coldLoad)
 	while (db_result_next(r)) {
 		nrows++;
 		id = db_result_get_u64(r,0);
-		//TRACE(TRACE_INFO, "Keyword line [%d]", nrows);
-		/* old code
-		keyword = db_result_get(r,1);
-		if ((result = g_tree_lookup(msginfo, &id)) != NULL)
-			result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-		*/
-		/* keywords Cosmin Cioranu */ 
-		char * keywords = db_result_get(r,1);
+		
+		/* process keywords, keywords are grouped by in order to avoid search over tree */ 
+		const char * keywords = db_result_get(r,1);
+		TRACE(TRACE_INFO, "Keyword line [%d %s]", nrows, keywords);
 		if (strlen(keywords)>0){
 		    if ((result = g_tree_lookup(msginfo, &id)) != NULL){
-				//more keywords, splitting it 
+				/* keywords, splitting */
+				GList *klist = NULL; 
+				GString *t; 
+				t = g_string_new(keywords);  
+				klist = g_string_split(t, ","); 
+				g_string_free(t,TRUE); 
+				klist = g_list_first(klist);
+				while(klist) { 
+					char *keyword = (char *)klist->data;
+					TRACE(TRACE_INFO, "\tKeyword %s", keyword);
+					if (strlen(keyword) < 1) continue;
+					result->keywords = g_list_append(result->keywords, g_strdup(keyword));
+					if (! g_list_next(klist)) break;
+					klist = g_list_next(klist); 
+				}
+				g_list_destroy(klist); 
+				/*
 				char delim[] = ",";
 				char *keyword = strtok(keywords, delim);
-				while(keyword != NULL)
-				{
+				while(keyword != NULL){
 					//TRACE(TRACE_INFO, "Keyword [%s]", keyword);
 					result->keywords = g_list_append(result->keywords, g_strdup(keyword));
 					keyword = strtok(NULL, delim);
 				}
+				*/
 			}
 		}
 	}
@@ -319,7 +325,7 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 	TRY
 		db_begin_transaction(c); // we need read-committed isolation
 		state_load_metadata(M, c);
-		state_load_messages(M, c,true);
+		state_load_messages(M, c, true);
 		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -376,15 +382,15 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	//g_tree_merge(M->ids, OldM->ids, IST_SUBSEARCH_OR);
 	//g_tree_merge(M->msn, OldM->msn, IST_SUBSEARCH_OR);
 	
-	
+	/* reset the sequence */ 
 	MailboxState_resetSeq(OldM);
-	uint64_t seq = MailboxState_getSeq(OldM);
+	//uint64_t seq = MailboxState_getSeq(OldM);
 			
 	c = db_con_get();
 	TRY 
 		db_begin_transaction(c); // we need read-committed isolation
 		state_load_metadata(M, c);
-		state_load_messages(M, c,false); //do a soft refresh
+		state_load_messages(M, c, false); // do a soft refresh
 		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -508,14 +514,30 @@ uint64_t MailboxState_getSeq(T M)
 }
 
 /**
- * Reset the sequence stored at structure level
+ * Reset the sequence stored at structure level.
+ * Subsequent call for MailboxState_getSeq will be required to retrieve the the sequence
  * @param M
- * @return 
+ * @return void
  */
-void MailboxState_resetSeq(T M){
-    M->seq=NULL;
+void MailboxState_resetSeq(T M)
+{
+    M->seq=0;
     
 }
+
+
+/**
+ * Reset the sequence stored at structure level and store the new seq from db
+ * Internally it will use MailboxState_getSeq
+ * @param M
+ * @return void
+ */
+uint64_t MailboxState_resyncSeq(T M)
+{
+    M->seq=0;
+    return MailboxState_getSeq(M);
+}
+
 
 unsigned MailboxState_getExists(T M)
 {
@@ -718,7 +740,7 @@ GTree * MailboxState_get_set(MailboxState_T M, const char *set, gboolean uid)
 	}
 
 	t = g_string_new(set);
-	sets = g_string_split(t,",");
+	sets = g_string_split(t, ",");
 	g_string_free(t,TRUE);
 
 	sets = g_list_first(sets);
@@ -1306,8 +1328,8 @@ static long long int _update_recent(volatile GList *slices, uint64_t seq)
 	INIT_QUERY;
 	Connection_T c;
 	volatile long long int count = 0;
-
-	if (! (slices = g_list_first(slices)))
+	
+	if (! (slices = g_list_first((GList*)slices)))
 		return count;
 
 	c = db_con_get();
@@ -1329,7 +1351,7 @@ static long long int _update_recent(volatile GList *slices, uint64_t seq)
 		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
-		g_list_destroy(slices);
+		g_list_destroy((GList*)slices);
 	END_TRY;
 
 	return count;

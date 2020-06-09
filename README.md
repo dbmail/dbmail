@@ -66,4 +66,30 @@ What kind of licence is DBMail?
 DBMail uses the GPL version 2 licence. 
 
 It's included in the COPYING file.
+
+
+Installation Procedure
+======================
+
+Dependencies
+------------
+
+* Database: MySQL 5.0 or better, PostgreSQL 8.3+, Sqlite3, Oracle
+* Glib: (>= 2.16.0)
+* GMime: (>= 2.6.20)
+* OpenSSL
+* libmhash
+* libzdb (http://www.tildeslash.com/libzdb/)
+* libevent: (>= 2.0.21)
+* Optional: libsieve (>= 2.2.1) (https://github.com/sodabrew/libsieve)
+* Optional: jemalloc
+
+Installing
+----------
+* Download DBMail package
+* Install dependencies (some provided from your linux distribution and some (libzdb and/or libsieve) need to be compiled
+* ./configure
+* make 
+* make install
+
 -------------------------------------------
