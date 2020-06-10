@@ -1554,6 +1554,9 @@ static void mailbox_notify_fetch(ImapSession *self, MailboxState_T N)
 	self->mailbox->mbstate = N;
 	id = mempool_pop(small_pool, sizeof(uint64_t));
 	*id = MailboxState_getId(N);
+
+	 
+
 	g_tree_replace(self->mbxinfo, id, N);
 
 	MailboxState_flush_recent(N);
@@ -1605,9 +1608,9 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 			}else{
 			    if (SMATCH(optimized, "2")){    
 				TRACE(TRACE_DEBUG, "Strategy reload: 2 (dif reload)");
-				/* do a dif reload */
+				/* do a diff reload, experimental */
 				N = MailboxState_update(self->pool, M);
-			    }else{
+			}else{
 				TRACE(TRACE_DEBUG, "Strategy reload: default (full reload)");
 				/* default strategy is full reload, case 1*/
 				N = MailboxState_new(self->pool, self->mailbox->id);
