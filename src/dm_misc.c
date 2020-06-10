@@ -1058,7 +1058,7 @@ static gboolean traverse_tree_copy_MessageInfo(gpointer key, gpointer value, tre
 {
 	int i;
 	tree_copy_t *t = *(tree_copy_t **)copy;
-	GTree *source = t->treeSource;
+	//GTree *source = t->treeSource;
 	GTree *destination = t->treeDestination;
 	uint64_t *uid;
 	uid = g_new0(uint64_t,1); 	
@@ -1092,7 +1092,7 @@ static gboolean traverse_tree_copy_MessageInfo(gpointer key, gpointer value, tre
 	return FALSE;
 }
 
-static gboolean traverse_tree_copy_String(gpointer key, gpointer value, tree_copy_t **copy)
+static gboolean traverse_tree_copy_String(gpointer key, gpointer value UNUSED, tree_copy_t **copy)
 {
 	
 	tree_copy_t *t = *(tree_copy_t **)copy;
@@ -1101,11 +1101,11 @@ static gboolean traverse_tree_copy_String(gpointer key, gpointer value, tree_cop
 	uint64_t *uid;
 	uid = g_new0(uint64_t,1); 	
 	*uid = *(uint64_t *) key;
-
+	/* @todo get from value, not do search */
 	char * src = g_tree_lookup(source, key);
 	if (src==NULL)
 		return TRUE;
-	TRACE(TRACE_INFO, "TRAVERSE S[%s]", key);
+	
 	char * dst=g_new0(char,strlen(src)+1); 
 	int i=0;
 	for(i=0;i<strlen(src);i++){
@@ -1113,24 +1113,37 @@ static gboolean traverse_tree_copy_String(gpointer key, gpointer value, tree_cop
 	}
 	dst[i]="\0";
 	g_tree_insert(destination, uid,dst);
-	TRACE(TRACE_DEBUG,"TRAVERSE String add %ld",key);
 	return FALSE;
 }
 
-void g_tree_copy_MessageInfo(GTree *a, GTree *b){
+/**
+ * duplicate a GTree containing MessageInfo structures and keys as uint64_t
+ * @param a
+ * @param b
+ * @return 
+ */
+int g_tree_copy_MessageInfo(GTree *a, GTree *b){
 	g_return_val_if_fail(a && b,1);
 	tree_copy_t *copier = g_new0(tree_copy_t,1);
 	copier->treeDestination=a;
 	copier->treeSource=b;
 	g_tree_foreach(b,(GTraverseFunc)traverse_tree_copy_MessageInfo, &copier);
+	return 0;
 }
 
-void g_tree_copy_String(GTree *a, GTree *b){
+/**
+ * duplicate a GRee containing char * as structures and keys as uint64_t
+ * @param a
+ * @param b
+ * @return 
+ */
+int g_tree_copy_String(GTree *a, GTree *b){
 	g_return_val_if_fail(a && b,1);
 	tree_copy_t *copier = g_new0(tree_copy_t,1);
 	copier->treeDestination=a;
 	copier->treeSource=b;
 	g_tree_foreach(b,(GTraverseFunc)traverse_tree_copy_String, &copier);
+	return 0;
 }
 /*
  * boolean merge of two GTrees. The result is stored in GTree *a.
