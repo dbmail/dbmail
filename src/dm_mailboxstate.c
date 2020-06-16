@@ -99,13 +99,16 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	Field_T frag;
 	INIT_QUERY;
 	char filterCondition[64];  memset(filterCondition,0,64);
+	/* the initialization should be done elsewhere, see ols MailboxState_new and MailboxState_update */
+	msginfo=MailboxState_getMsginfo(M);
+	
 	if (coldLoad){
-	    msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
+	    //msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
 	    TRACE(TRACE_DEBUG, "SEQ New");
 	    snprintf(filterCondition,64-1,"/*SEQ New*/ AND m.status < %d ", MESSAGE_STATUS_DELETE);
 	}else{
 	    uint64_t seq=MailboxState_getSeq(M);
-	    msginfo=MailboxState_getMsginfo(M);
+	    //msginfo=MailboxState_getMsginfo(M);
 	    
 	    TRACE(TRACE_DEBUG, "SEQ RENew");
 	    //MailboxState_uid_msn_new(M);
@@ -153,8 +156,8 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 			//TRACE(TRACE_DEBUG, "SEQ CREATED %ld",id);
 		}else{
 		    /* soft renew, so search */
-		    result = g_tree_lookup(msginfo,  &id);     
-		    if (result==NULL){
+		    result = g_tree_lookup(msginfo, uid);     
+		    if (result == NULL){
 				/* not found so create*/
 				result = g_new0(MessageInfo,1);
 				shouldAdd=1;
@@ -203,6 +206,7 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		    }else{
 				if (shouldAdd==1){
 					/* message is in state of state=2 or already deleted but not in our state */
+					g_tree_remove(msginfo,uid);
 					g_free(result);
 					continue;
 				}
@@ -213,7 +217,7 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		if (shouldAdd==1){
 			//TRACE(TRACE_DEBUG, "SEQ ADDED %ld",id);
 		    /* it's new */
-		    g_tree_insert(msginfo, uid, result);  
+			g_tree_insert(msginfo, uid, result);  
 		}else{
 		    /* do not forget to remove unused references */
 		    //g_free(uid);
@@ -286,12 +290,8 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	
 	gettimeofday(&after, NULL); 
 	log_query_time("Parsing Keywords ",before,after);
-	if (coldLoad){
-	    MailboxState_setMsginfo(M, msginfo);
-	}else{
-	    MailboxState_remap(M);
-	}
-
+	/* on both cases can use the same function due to some checks at MailboxState_setMsgInfo*/ 
+	MailboxState_setMsginfo(M, msginfo);
 	return M;
 }
 
@@ -320,7 +320,8 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 	M->id = id;
 	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
 	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
-
+	M->msginfo		= g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
+	
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c); // we need read-committed isolation
@@ -373,15 +374,25 @@ T MailboxState_update(Mempool_T pool, T OldM)
 
 	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	M->msginfo     = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
+	
 	//M->ids     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	//M->msn     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	
 	//g_tree_merge(M->recent, OldM->recent, IST_SUBSEARCH_OR);
-	g_tree_merge(M->keywords, OldM->keywords, IST_SUBSEARCH_OR);
-	g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
+	
+	
+	//g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
+	g_tree_copy_MessageInfo(M->msginfo,OldM->msginfo);
+	
+	//g_tree_merge(M->keywords, OldM->keywords, IST_SUBSEARCH_OR);
+	g_tree_copy_String(M->keywords,OldM->keywords);
+	
+	//g_tree_copy_String(M->ids,OldM->ids);
+	//g_tree_copy_String(M->msn,OldM->msn);
 	//g_tree_merge(M->ids, OldM->ids, IST_SUBSEARCH_OR);
 	//g_tree_merge(M->msn, OldM->msn, IST_SUBSEARCH_OR);
 	
+	//MailboxState_remap(M);
 	/* reset the sequence */ 
 	MailboxState_resetSeq(OldM);
 	//uint64_t seq = MailboxState_getSeq(OldM);
@@ -447,7 +458,11 @@ static void MailboxState_setMsginfo(T M, GTree *msginfo)
 	GTree *oldmsginfo = M->msginfo;
 	M->msginfo = msginfo;
 	MailboxState_remap(M);
-	if (oldmsginfo) g_tree_destroy(oldmsginfo);
+	if (oldmsginfo){
+		/* might be situations when old msginfo is the same as the new */
+		if (msginfo != oldmsginfo)
+			g_tree_destroy(oldmsginfo);
+	}
 }
 
 void MailboxState_addMsginfo(T M, uint64_t uid, MessageInfo *msginfo)
@@ -855,6 +870,7 @@ static gboolean _free_recent_queue(gpointer key, gpointer UNUSED value, gpointer
 
 void MailboxState_free(T *M)
 {
+
 	T s = *M;
 	if (s->name) 
 		p_string_free(s->name, TRUE);
