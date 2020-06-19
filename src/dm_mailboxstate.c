@@ -144,22 +144,26 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		i++;
 
 		id = db_result_get_u64(r, IMAP_NFLAGS + 3);
-
-		uid = g_new0(uint64_t,1); *uid = id;
 		
+		/* reset */
+		shouldAdd=0;
 		if (coldLoad){
 		    /* new element*/
 		    result = g_new0(MessageInfo,1);
+			uid = g_new0(uint64_t,1); 
+			*uid = id;
 		    shouldAdd=1;
 		    result->expunge=0;
 		    result->expunged=0;
 			//TRACE(TRACE_DEBUG, "SEQ CREATED %ld",id);
 		}else{
 		    /* soft renew, so search */
-		    result = g_tree_lookup(msginfo, uid);     
+		    result = g_tree_lookup(msginfo, &id);     
 		    if (result == NULL){
 				/* not found so create*/
 				result = g_new0(MessageInfo,1);
+				uid = g_new0(uint64_t,1); 
+				*uid = id;
 				shouldAdd=1;
 				result->expunge=0;
 				result->expunged=0;
@@ -208,7 +212,8 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 					/* message is in state of state=2 or already deleted but not in our state */
 					g_tree_remove(msginfo,uid);
 					g_free(result);
-					continue;
+					g_free(uid);
+					continue; 
 				}
 			
 		    }
@@ -219,9 +224,7 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		    /* it's new */
 			g_tree_insert(msginfo, uid, result);  
 		}else{
-		    /* do not forget to remove unused references */
-		    //g_free(uid);
-		    //g_free(result);
+		    /* no need, result was updated */
 		}
 
 	}
