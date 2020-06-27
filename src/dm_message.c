@@ -713,9 +713,8 @@ void dbmail_message_free(DbmailMessage *self)
 		self->date = NULL;
 	}
 
-	if (self->content) {
-		if GMIME_IS_OBJECT(self->content)
-			g_object_unref(self->content);
+	if (self->content && GMIME_IS_OBJECT(self->content)) {
+		g_object_unref(self->content);
 		self->content = NULL;
 	}
 
@@ -726,6 +725,10 @@ void dbmail_message_free(DbmailMessage *self)
 	if (self->crlf) {
 		p_string_free(self->crlf, TRUE);
 		self->crlf = NULL;
+	}
+	if (self->mbox_marker) {
+		g_free(self->mbox_marker);
+		self->mbox_marker = NULL;
 	}
 
 	p_string_free(self->envelope_recipient,TRUE);
@@ -809,9 +812,11 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 	g_mime_stream_reset(self->stream);
 
 	parser = g_mime_parser_new_with_stream(self->stream);
-
+	self->mbox_marker = g_mime_parser_get_mbox_marker(parser);
 
 	content = GMIME_OBJECT(g_mime_parser_construct_message(parser, NULL));
+
+
 	if (content) {
 		g_object_unref(parser);
 		dbmail_message_set_class(self, DBMAIL_MESSAGE);
@@ -967,7 +972,15 @@ const char * dbmail_message_get_charset(DbmailMessage *self)
 gchar * dbmail_message_to_string(const DbmailMessage *self) 
 {
 	assert(self && self->content);
-	return g_mime_object_to_string(GMIME_OBJECT(self->content), NULL);
+	gchar *message = g_mime_object_to_string(GMIME_OBJECT(self->content), NULL);
+	if (self->mbox_marker) {
+		size_t marker_len = strlen(self->mbox_marker);
+		size_t message_len = strlen(message);
+		g_realloc(message, message_len + marker_len + 1);
+		memmove(message + marker_len, message, message_len);
+		memcpy(message, self->mbox_marker, marker_len);
+	}
+	return message;
 }
 gchar * dbmail_message_body_to_string(const DbmailMessage *self)
 {

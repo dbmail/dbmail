@@ -544,7 +544,8 @@ START_TEST(test_dbmail_message_get_internal_date)
 	m = dbmail_message_init_with_string(m, simple_broken_envelope);
 
 	result = dbmail_message_get_internal_date(m);
-	//fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
+	fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
+	g_free(result);
 
 	char *before = dbmail_message_to_string(m);
 	char *after = store_and_retrieve(m);
@@ -814,14 +815,14 @@ START_TEST(test_dbmail_message_construct)
 	const gchar *subject = "Some test";
 	const gchar *recipient = "<bar@foo.org> Bar";
 	gchar *body = g_strdup("\ntesting\n\nבבבבה\n\n");
-	gchar *expect = g_strdup("From: foo@bar.org\n"
+	const gchar *expect = "From: foo@bar.org\n"
 	"Subject: Some test\n"
 	"To: bar@foo.org\n"
 	"MIME-Version: 1.0\n"
 	"Content-Type: text/plain; charset=utf-8\n"
 	"Content-Transfer-Encoding: base64\n"
 	"\n"
-	"CnRlc3RpbmcKCuHh4eHk");
+	"CnRlc3RpbmcKCuHh4eHk";
 	gchar *result;
 
 	DbmailMessage *message = dbmail_message_new(NULL);
@@ -831,7 +832,6 @@ START_TEST(test_dbmail_message_construct)
 	dbmail_message_free(message);
 	g_free(body);
 	g_free(result);
-	g_free(expect);
 
 	body = g_strdup("Mit freundlichen Gr=C3=BC=C3=9Fen");
 	message = dbmail_message_new(NULL);
@@ -969,9 +969,9 @@ START_TEST(test_dbmail_message_utf8_headers)
 	dbmail_message_store(m);
 	physid = dbmail_message_get_physid(m);
 
-	s = dbmail_message_get_header(m,"Subject");
+	s = dbmail_message_get_header(m, "Subject");
 	s_dec = g_mime_utils_header_decode_phrase(NULL, s);
-	test_db_get_subject(physid,&t);
+	test_db_get_subject(physid, &t);
 
         fail_unless(MATCH(s_dec,t), "[%" PRIu64 "] utf8 long header failed:\n[%s] !=\n[%s]\n", 
 			physid, s_dec, t);

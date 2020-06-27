@@ -149,6 +149,7 @@ typedef struct {
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;
 	GMimeStream *stream;
+	char *mbox_marker;
 	String_T crlf; 
 
 	// Mappings
