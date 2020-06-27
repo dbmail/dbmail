@@ -138,22 +138,26 @@ int drop_privileges(char *newuser, char *newgroup)
 
 int get_opened_fd_count(void)
 {
-	DIR* dir = NULL;
-	struct dirent* entry = NULL;
-	char buf[32];
-	int fd_count = 0;
+	#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__SUNPRO_C)
+		return 0;
+	#else
+		DIR* dir = NULL;
+		struct dirent* entry = NULL;
+		char buf[32];
+		int fd_count = 0;
 
-	snprintf(buf, 32, "/proc/%i/fd/", getpid());
+		snprintf(buf, 32, "/proc/%i/fd/", getpid());
 
-	dir = opendir(buf);
-	if (dir == NULL)
-		return -1;
+		dir = opendir(buf);
+		if (dir == NULL)
+			return -1;
 
-	while ((entry = readdir(dir)) != NULL)
-		fd_count++;
-	closedir(dir);
+		while ((entry = readdir(dir)) != NULL)
+			fd_count++;
+		closedir(dir);
 
-	return fd_count - 2; /* exclude '.' and '..' entries */
+		return fd_count - 2; /* exclude '.' and '..' entries */
+	#elseif
 }
 
 void create_unique_id(char *target, uint64_t message_idnr)
