@@ -234,14 +234,12 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	}
 
 	db_con_clear(c);
-	//Optimize Keywords search, Cosmin Cioranu
 	
 	memset(query, 0, sizeof(query));
 	snprintf(query, DEF_QUERYSIZE-1,
-		"SELECT k.message_idnr, keyword FROM %skeywords k "
+		"SELECT k.message_idnr, k.keyword FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 		"WHERE m.mailbox_idnr = ? %s "
-		"group by m.message_idnr "
 		"order by m.message_idnr "
 		,
 		DBPFX, DBPFX,
@@ -253,15 +251,16 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	r = db_stmt_query(stmt);
 	gettimeofday(&before, NULL); 
 	tempId=0;
+	
 	while (db_result_next(r)) {
 		nrows++;
 		id = db_result_get_u64(r,0);
 		
 		const char * keyword = db_result_get(r,1);
-		TRACE(TRACE_INFO, "Keyword line [%d %s]", nrows, keywords);
 		if (strlen(keyword)>0){
+			TRACE(TRACE_INFO, "Keyword line [%d %s]", nrows, keyword);
 			/* id is presented via query in ordered fashion so, we use tempId as a cached last tree lookup */
-			if ( tempId!=id ){
+			if ( tempId!=id || tempId==0 ){
 				result = g_tree_lookup(msginfo, &id);
 				tempId=id;
 			}
