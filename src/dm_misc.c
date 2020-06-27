@@ -157,7 +157,7 @@ int get_opened_fd_count(void)
 		closedir(dir);
 
 		return fd_count - 2; /* exclude '.' and '..' entries */
-	#elseif
+	#endif
 }
 
 void create_unique_id(char *target, uint64_t message_idnr)
