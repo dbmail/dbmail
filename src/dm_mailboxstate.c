@@ -91,6 +91,7 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	unsigned nrows = 0, i = 0, j;
 	struct timeval before, after; 
 	const char *query_result;
+	uint64_t tempId;
 	MessageInfo *result;
 	GTree *msginfo;
 	uint64_t *uid, id = 0;
@@ -236,14 +237,14 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	}
 
 	db_con_clear(c);
-	//Optimize Keywords search, Cosmin Cioranu
 	
 	memset(query, 0, sizeof(query));
 	snprintf(query, DEF_QUERYSIZE-1,
-		"SELECT k.message_idnr, group_concat(distinct keyword) FROM %skeywords k "
+		"SELECT k.message_idnr, k.keyword FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
 		"WHERE m.mailbox_idnr = ? %s "
-		"group by m.message_idnr",
+		"order by m.message_idnr "
+		,
 		DBPFX, DBPFX,
 		filterCondition);
 
@@ -252,40 +253,22 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	db_stmt_set_u64(stmt, 1, M->id);
 	r = db_stmt_query(stmt);
 	gettimeofday(&before, NULL); 
+	tempId=0;
+	
 	while (db_result_next(r)) {
 		nrows++;
 		id = db_result_get_u64(r,0);
 		
-		/* process keywords, keywords are grouped by in order to avoid search over tree */ 
-		const char * keywords = db_result_get(r,1);
-		TRACE(TRACE_INFO, "Keyword line [%d %s]", nrows, keywords);
-		if (strlen(keywords)>0){
-		    if ((result = g_tree_lookup(msginfo, &id)) != NULL){
-				/* keywords, splitting */
-				GList *klist = NULL; 
-				GString *t; 
-				t = g_string_new(keywords);  
-				klist = g_string_split(t, ","); 
-				g_string_free(t,TRUE); 
-				klist = g_list_first(klist);
-				while(klist) { 
-					char *keyword = (char *)klist->data;
-					TRACE(TRACE_INFO, "\tKeyword %s", keyword);
-					if (strlen(keyword) < 1) continue;
-					result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-					if (! g_list_next(klist)) break;
-					klist = g_list_next(klist); 
-				}
-				g_list_destroy(klist); 
-				/*
-				char delim[] = ",";
-				char *keyword = strtok(keywords, delim);
-				while(keyword != NULL){
-					//TRACE(TRACE_INFO, "Keyword [%s]", keyword);
-					result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-					keyword = strtok(NULL, delim);
-				}
-				*/
+		const char * keyword = db_result_get(r,1);
+		if (strlen(keyword)>0){
+			TRACE(TRACE_INFO, "Keyword line [%d %s]", nrows, keyword);
+			/* id is presented via query in ordered fashion so, we use tempId as a cached last tree lookup */
+			if ( tempId!=id || tempId==0 ){
+				result = g_tree_lookup(msginfo, &id);
+				tempId=id;
+			}
+		    if ( result != NULL ){
+				result->keywords = g_list_append(result->keywords, keyword);
 			}
 		}
 	}
