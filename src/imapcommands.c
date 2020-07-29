@@ -702,18 +702,20 @@ static void _ic_select_enter(dm_thread_data *D)
 		dbmail_imap_session_buff_printf(self, "* OK [HIGHESTMODSEQ %" PRIu64 "] Highest\r\n",
 				MailboxState_getSeq(S));
 	}
-
-	if (MailboxState_getExists(S)) { 
-		/* show msn of first unseen msg (if present) */
-		GTree *uids = MailboxState_getIds(S);
-		GTree *info = MailboxState_getMsginfo(S);
-		uint64_t key = 0, *msn = NULL;
-		g_tree_foreach(info, (GTraverseFunc)mailbox_first_unseen, &key);
-		if ( (key > 0) && (msn = g_tree_lookup(uids, &key))) {
-			dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %" PRIu64 "] first unseen message\r\n", *msn);
+	/* UNSEEN first element*/
+	int command_select_allow_unseen = config_get_value_default_int("command_select_allow_unseen", "IMAP", 1);
+	if(self->command_type == IMAP_COMM_SELECT && command_select_allow_unseen == 1){
+		if (MailboxState_getExists(S)) { 
+			/* show msn of first unseen msg (if present) */
+			GTree *uids = MailboxState_getIds(S);
+			GTree *info = MailboxState_getMsginfo(S);
+			uint64_t key = 0, *msn = NULL;
+			g_tree_foreach(info, (GTraverseFunc)mailbox_first_unseen, &key);
+			if ( (key > 0) && (msn = g_tree_lookup(uids, &key))) {
+				dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %" PRIu64 "] first unseen message\r\n", *msn);
+			}
 		}
 	}
-
 	if (self->command_type == IMAP_COMM_SELECT) {
 		okarg = "READ-WRITE";
 		MailboxState_flush_recent(S);
