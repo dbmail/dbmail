@@ -240,7 +240,7 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 				tempId=id;
 			}
 		    if ( result != NULL ){
-				result->keywords = g_list_append(result->keywords, keyword);
+				result->keywords = g_list_append(result->keywords, g_strdup(keyword));
 			}
 		}
 	}
