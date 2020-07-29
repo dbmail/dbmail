@@ -25,6 +25,38 @@
 
 #define T MailboxState_T
 
+
+struct MailboxState_T {
+	Mempool_T pool;
+	gboolean freepool;
+	uint64_t id;
+	uint64_t uidnext;
+	uint64_t owner_id;
+	uint64_t seq;
+	// when loading is in differential mode, this flag will be incremented
+	unsigned differential_iterations;
+	//
+	unsigned no_select;
+	unsigned no_children;
+	unsigned no_inferiors;
+	unsigned recent;
+	unsigned exists;
+	unsigned unseen;
+	unsigned permission;
+	// 
+	gboolean is_subscribed;
+	gboolean is_public;
+	gboolean is_users;
+	gboolean is_inbox;
+	//
+	String_T name;
+	GTree *keywords;
+	GTree *msginfo;
+	GTree *ids;
+	GTree *msn;
+	GTree *recent_queue;
+};
+
 typedef struct T *T;
 
 extern T            MailboxState_new(Mempool_T pool, uint64_t id);
