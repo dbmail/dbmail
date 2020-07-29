@@ -1082,8 +1082,14 @@ static gboolean traverse_tree_copy_MessageInfo(gpointer key, gpointer value, tre
 	dst->uid=		src->uid;
 	
 	strcpy(dst->internaldate,src->internaldate);
-	dst->keywords=	g_list_copy(src->keywords);
-	
+	//dst->keywords=	g_list_copy(src->keywords);
+	// copy keywords 
+	GList *tk = g_list_first(src->keywords);
+	while (tk) { 
+		dst->keywords = g_list_append(dst->keywords, g_strdup((gchar *)tk->data));
+		if (! g_list_next(tk)) break;
+		tk = g_list_next(tk);
+	} 
 	*uid = src->uid;
 	//TRACE(TRACE_DEBUG,"TRAVERSE MessageInfo add %ld %ld=%d %ld=%d",*uid, source,g_tree_nnodes(source), destination,g_tree_nnodes(destination));
 
@@ -1103,16 +1109,19 @@ static gboolean traverse_tree_copy_String(gpointer key, gpointer value UNUSED, t
 	*uid = *(uint64_t *) key;
 	/* @todo get from value, not do search */
 	char * src = g_tree_lookup(source, key);
-	if (src==NULL)
+	if (src == NULL)
 		return TRUE;
 	
-	char * dst=g_new0(char,strlen(src)+1); 
+	/*char * dst=g_new0(char,strlen(src)+1); 
 	int i=0;
 	for(i=0;i<strlen(src);i++){
 		dst[i]=src[i];
 	}
-	dst[i]="\0";
+	g_strdup(src);
+	dst[i]=0;
 	g_tree_insert(destination, uid,dst);
+	*/
+	g_tree_insert(destination, uid,g_strdup(src));
 	return FALSE;
 }
 

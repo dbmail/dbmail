@@ -1596,24 +1596,24 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		newseq = MailboxState_getSeq(N);
 		MailboxState_free(&N);
 		N = NULL;
-
+ 
 		TRACE(TRACE_DEBUG, "seq: [%u] -> [%u]", oldseq, newseq);
 		if (oldseq != newseq) {
-			Field_T optimized;
-			GETCONFIGVALUE("mailbox_update_strategy", "IMAP", optimized);
-			if (SMATCH(optimized, "1")){
+			int mailbox_update_strategy = config_get_value_default_int("mailbox_update_strategy", "IMAP", 1); 
+			
+			if (mailbox_update_strategy == 1){
 			    TRACE(TRACE_DEBUG, "Strategy reload: 1 (full reload)");
 			    /* do a full reload: re-read flags and counters */
 			    N = MailboxState_new(self->pool, self->mailbox->id);
 			}else{
-			    if (SMATCH(optimized, "2")){    
-				TRACE(TRACE_DEBUG, "Strategy reload: 2 (dif reload)");
-				/* do a diff reload, experimental */
-				N = MailboxState_update(self->pool, M);
-			}else{
-				TRACE(TRACE_DEBUG, "Strategy reload: default (full reload)");
-				/* default strategy is full reload, case 1*/
-				N = MailboxState_new(self->pool, self->mailbox->id);
+			    if (mailbox_update_strategy == 2){    
+					TRACE(TRACE_DEBUG, "Strategy reload: 2 (differential reload)");
+					/* do a diff reload, experimental */
+					N = MailboxState_update(self->pool, M);
+				}else{
+					TRACE(TRACE_DEBUG, "Strategy reload: default (full reload)");
+					/* default strategy is full reload, case 1*/
+					N = MailboxState_new(self->pool, self->mailbox->id);
 			    }
 			}
 			
