@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.2.5] - 2020-08-xx
+### Added
+- IMAP Daemon: added switch to control mailbox_update_strategy=2 (see mailbox_update_strategy_2_max_iterations) 
+
+### Changed
+ 
+### Optimizations 
+- optimizing differential state [#81]
+
+### Issues
+- fixing issues related group_concat for PostgreSql [#75], [#78]
+- fixing issue related to lastRowId [#71]
+- fixing issues related with differential update [#70], [#73]
+- fixing proc not being used in BSD systems [#74]
+- IMAP Daemon: segmentation fault [#68]
+
 ## [3.2.4] - 2020-06-08
 ### Added
 - IMAP Daemon: mailbox-update-strategy switch (see dbmail.conf)
