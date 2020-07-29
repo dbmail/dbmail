@@ -3,12 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [3.2.5] - 2020-08-xx
 ### Added
-- IMAP Daemon: added switch to control mailbox_update_strategy=2 (see mailbox_update_strategy_2_max_iterations) 
+- IMAP Daemon: added switch to control mailbox_update_strategy=2 (see mailbox_update_strategy_2_max_iterations) [#81]
+- IMAP Daemon: added switch to control UNSEEN first message in SELECT commands [#83]
 
 ### Changed
  
 ### Optimizations 
 - optimizing differential state [#81]
+
 
 ### Issues
 - fixing issues related group_concat for PostgreSql [#75], [#78]
