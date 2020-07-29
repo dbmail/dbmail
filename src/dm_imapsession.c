@@ -804,9 +804,10 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			"m.mailbox_idnr = %" PRIu64 " "
 			"AND m.message_idnr %s "
 			"AND status < %d "
-			//"AND n.headername %s IN ('%s') "	//old, from the sql point of view is slow
-			"having seq %s %d "			//patch Cosmin Cioranu, removing the above conditions needs a restriction, patched added
-			"ORDER BY message_idnr, seq",
+			//"AND n.headername %s IN ('%s') "	//old, from the sql point of view is slow, CC 2020
+			"GROUP By m.message_idnr, n.headername, v.headervalue "
+			"having seq %s %d "
+			"ORDER BY m.message_idnr, seq",
 			not?"":fieldorder->str,
 			DBPFX, DBPFX, DBPFX, DBPFX,
 			self->mailbox->id, p_string_str(range),
@@ -1554,6 +1555,9 @@ static void mailbox_notify_fetch(ImapSession *self, MailboxState_T N)
 	self->mailbox->mbstate = N;
 	id = mempool_pop(small_pool, sizeof(uint64_t));
 	*id = MailboxState_getId(N);
+
+	 
+
 	g_tree_replace(self->mbxinfo, id, N);
 
 	MailboxState_flush_recent(N);
@@ -1593,24 +1597,24 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		newseq = MailboxState_getSeq(N);
 		MailboxState_free(&N);
 		N = NULL;
-
+ 
 		TRACE(TRACE_DEBUG, "seq: [%u] -> [%u]", oldseq, newseq);
 		if (oldseq != newseq) {
-			Field_T optimized;
-			GETCONFIGVALUE("mailbox_update_strategy", "IMAP", optimized);
-			if (SMATCH(optimized, "1")){
+			int mailbox_update_strategy = config_get_value_default_int("mailbox_update_strategy", "IMAP", 1); 
+			
+			if (mailbox_update_strategy == 1){
 			    TRACE(TRACE_DEBUG, "Strategy reload: 1 (full reload)");
 			    /* do a full reload: re-read flags and counters */
 			    N = MailboxState_new(self->pool, self->mailbox->id);
 			}else{
-			    if (SMATCH(optimized, "2")){    
-				TRACE(TRACE_DEBUG, "Strategy reload: 2 (dif reload)");
-				/* do a dif reload */
-				N = MailboxState_update(self->pool, M);
-			    }else{
-				TRACE(TRACE_DEBUG, "Strategy reload: default (full reload)");
-				/* default strategy is full reload, case 1*/
-				N = MailboxState_new(self->pool, self->mailbox->id);
+			    if (mailbox_update_strategy == 2){    
+					TRACE(TRACE_DEBUG, "Strategy reload: 2 (differential reload)");
+					/* do a diff reload, experimental */
+					N = MailboxState_update(self->pool, M);
+				}else{
+					TRACE(TRACE_DEBUG, "Strategy reload: default (full reload)");
+					/* default strategy is full reload, case 1*/
+					N = MailboxState_new(self->pool, self->mailbox->id);
 			    }
 			}
 			

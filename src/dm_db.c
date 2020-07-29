@@ -585,16 +585,43 @@ uint64_t db_insert_result(Connection_T c, ResultSet_T r)
 
 	if (! db_result_next(r)) { /* ignore */ }
 
+	/* In PostgreSQL 9.1 lastRowId is _not_ always zero
+	 *
+dbmail=# INSERT INTO dbmail_physmessage (internal_date) VALUES 
+dbmail-# (TO_TIMESTAMP('2013-07-20 07:22:34'::text, 'YYYY-MM-DD HH24:MI:SS')) RETURNING id;
+    id    
+----------
+ 29196224
+(1 row)
+
+INSERT 0 1
+dbmail=# INSERT INTO dbmail_messages(mailbox_idnr, physmessage_id, unique_id,recent_flag, status) VALUES (10993, 29196223, 'acc98da420bfe6d3dc2c707a9863001c', 1, 5) RETURNING message_idnr;
+ message_idnr 
+--------------
+     36650725
+(1 row)
+
+INSERT 82105867 1
+	 *
+	 * Connection_lastRowId(c) is returning the OID instead of 
+	 * the message_idnr we are expecting.
+	 * However, we are expecting only one row to be returned so 
+	 * we should always use db_result_get_u64(r, 0);
+	 */
+	if (db_params.db_driver == DM_DRIVER_POSTGRESQL) {
+		id = db_result_get_u64(r, 0); // postgresql
+	}
+
 	// lastRowId is always zero for pgsql tables without OIDs
 	// or possibly for sqlite after calling executeQuery but 
 	// before calling db_result_next
 
-	if ((id = (uint64_t )Connection_lastRowId(c)) == 0) { // mysql
+	else if ((id = (uint64_t )Connection_lastRowId(c)) == 0) { // mysql
 		// but if we're using 'RETURNING id' clauses on inserts
 		// or we're using the sqlite backend, we can do this
 
 		if ((id = (uint64_t )Connection_lastRowId(c)) == 0) // sqlite
-			id = db_result_get_u64(r, 0); // postgresql
+			id = db_result_get_u64(r, 0); // postgresql - should not get this far
 	}
 	assert(id);
 	return id;
