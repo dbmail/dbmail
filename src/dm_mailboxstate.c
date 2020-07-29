@@ -35,34 +35,6 @@ extern const char *imap_flag_desc_escaped[];
 
 #define T MailboxState_T
 
-struct T {
-	Mempool_T pool;
-	gboolean freepool;
-	uint64_t id;
-	uint64_t uidnext;
-	uint64_t owner_id;
-	uint64_t seq;
-	//
-	unsigned no_select;
-	unsigned no_children;
-	unsigned no_inferiors;
-	unsigned recent;
-	unsigned exists;
-	unsigned unseen;
-	unsigned permission;
-	// 
-	gboolean is_subscribed;
-	gboolean is_public;
-	gboolean is_users;
-	gboolean is_inbox;
-	//
-	String_T name;
-	GTree *keywords;
-	GTree *msginfo;
-	GTree *ids;
-	GTree *msn;
-	GTree *recent_queue;
-};
    
 static void db_getmailbox_seq(T M, Connection_T c);
 static void db_getmailbox_permission(T M, Connection_T c);
@@ -307,7 +279,7 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
 	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	M->msginfo		= g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
-	
+	M->differential_iterations = 0;
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c); // we need read-committed isolation
@@ -343,6 +315,15 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	volatile int t = DM_SUCCESS;
 	gboolean freepool = FALSE;
 	uint64_t id;
+	
+	/* differential mode, evaluate max iterations */
+	int mailbox_diffential_max_iterations = config_get_value_default_int("mailbox_update_strategy_2_max_iterations", "IMAP", 300); 
+	if (mailbox_diffential_max_iterations > 0 &&  OldM->differential_iterations >= mailbox_diffential_max_iterations-1 ){
+		TRACE(TRACE_DEBUG, "Strategy differential mode override due to max iterations, see config [IMAP] mailbox_update_strategy_2_max_iterations");
+		return MailboxState_new(pool, OldM->id);
+	} 
+
+	
 	if (! pool) {
 		pool = mempool_open();
 		freepool = TRUE;
@@ -352,7 +333,6 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	M->pool = pool;
 	M->freepool = freepool;
 
-	TRACE(TRACE_DEBUG, "SEQ UPDATE");
 	if (! id) return M;
 	
 	M->id = id;
@@ -360,7 +340,9 @@ T MailboxState_update(Mempool_T pool, T OldM)
 
 	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	M->msginfo     = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
-	
+	// increase differential iterations in order to apply mailbox_update_strategy_2_max_iterations
+	M->differential_iterations = OldM->differential_iterations + 1;
+	TRACE(TRACE_DEBUG, "Strategy SEQ UPDATE, iterations %d", M->differential_iterations);
 	//M->ids     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	//M->msn     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	
@@ -370,13 +352,10 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	//g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
 	g_tree_copy_MessageInfo(M->msginfo,OldM->msginfo);
 	
-	//g_tree_merge(M->keywords, OldM->keywords, IST_SUBSEARCH_OR);
-	g_tree_copy_String(M->keywords,OldM->keywords);
+	//no need, those keywords will be populated at metadata
+	//@todo change this behaviour in state_load_metadata
+	//g_tree_copy_String(M->keywords,OldM->keywords);
 	
-	//g_tree_copy_String(M->ids,OldM->ids);
-	//g_tree_copy_String(M->msn,OldM->msn);
-	//g_tree_merge(M->ids, OldM->ids, IST_SUBSEARCH_OR);
-	//g_tree_merge(M->msn, OldM->msn, IST_SUBSEARCH_OR);
 	
 	//MailboxState_remap(M);
 	/* reset the sequence */ 
