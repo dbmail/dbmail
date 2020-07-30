@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
  
 ### Optimizations 
 - optimizing differential state [#81]
+- optimizing fetch message headers [#85]
 
 
 ### Issues
