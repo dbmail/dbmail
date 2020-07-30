@@ -720,10 +720,11 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	uint64_t id;
 	GList *last;
 	GString *fieldorder = NULL;
+	GString *headerIDs = NULL;
 	int k;
 	int fieldseq=0;
-	String_T query;
-	String_T range;
+	String_T query = NULL;
+	String_T range = NULL;
 
 	if (! bodyfetch->headers) {
 		TRACE(TRACE_DEBUG, "[%p] init bodyfetch->headers", self);
@@ -762,7 +763,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 	// let's fetch the required message and prefetch a batch if needed.
 	range = p_string_new(self->pool, "");
-	query = p_string_new(self->pool, "");
+	
 
 	if (! (last = g_list_nth(self->ids_list, self->lo+(uint64_t)QUERY_BATCHSIZE)))
 		last = g_list_last(self->ids_list);
@@ -774,9 +775,11 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		p_string_printf(range, "BETWEEN %" PRIu64 " AND %" PRIu64 "", self->msg_idnr, self->hi);
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %" PRIu64 ":%" PRIu64 " ceiling %" PRIu64 " [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
-
+	
+	headerIDs = g_string_new("0");
 	if (! not) {
 		fieldorder = g_string_new(", CASE ");
+		
 		fieldseq = 0;
 		bodyfetch->names = g_list_first(bodyfetch->names);
 
@@ -785,40 +788,70 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			char *name = g_ascii_strdown(raw, strlen(raw));
 			g_string_append_printf(fieldorder, "WHEN n.headername='%s' THEN %d ",
 					name, fieldseq);
-			g_free(name);
-			if (! g_list_next(bodyfetch->names))
+			
+			if (! g_list_next(bodyfetch->names)){
+				g_free(name);
 				break;
+			}
 			bodyfetch->names = g_list_next(bodyfetch->names);
 			fieldseq++;
+			/* get the id of the header */
+			query = p_string_new(self->pool, "");
+			p_string_printf(query, "select id from %sheadername "
+				"where headername='%s' ",
+				DBPFX,
+				name);
+			
+			c = db_con_get();	
+			TRY
+				r = db_query(c, p_string_str(query));	
+				while (db_result_next(r)) { 
+					id = db_result_get_u64(r, 0);
+					g_string_append_printf(headerIDs, ",%ld",id);
+				}
+			CATCH(SQLException) 
+				LOG_SQLERROR;
+				t = DM_EQUERY; 
+			FINALLY
+				db_con_close(c);
+			END_TRY;
+			p_string_free(query, TRUE);		
+			g_free(name);
 		}
 		fieldseq++;
 		//adding default value, useful in NOT conditions, Cosmin Cioranu
 		g_string_append_printf(fieldorder, "ELSE %d END AS seq",fieldseq);
 	}
+	TRACE(TRACE_DEBUG, "[headername ids %s] ", headerIDs->str);
+	query = p_string_new(self->pool, "");
 	p_string_printf(query, "SELECT m.message_idnr, n.headername, v.headervalue%s "
 			"FROM %sheader h "
 			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
 			"LEFT JOIN %sheadername n ON h.headername_id=n.id "
 			"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
 			"WHERE "
-			"m.mailbox_idnr = %" PRIu64 " "
+			"h.headername_id %s IN (%s) "
+			"AND m.mailbox_idnr = %" PRIu64 " "
 			"AND m.message_idnr %s "
 			"AND status < %d "
+
 			//"AND n.headername %s IN ('%s') "	//old, from the sql point of view is slow, CC 2020
-			"GROUP By m.message_idnr, n.headername, v.headervalue "
-			"having seq %s %d "
+			// "GROUP By m.message_idnr, n.headername, v.headervalue "
+			// "having seq %s %d "
 			"ORDER BY m.message_idnr, seq",
 			not?"":fieldorder->str,
 			DBPFX, DBPFX, DBPFX, DBPFX,
+			not?"NOT":"", headerIDs->str,
 			self->mailbox->id, p_string_str(range),
 			//not?"NOT":"", bodyfetch->hdrnames	//old 
-			MESSAGE_STATUS_DELETE,			//return information only related to valid messages
-			not?"=":"<",fieldseq			//patch Cosmin Cioranu, added the having conditions and also the 'not' handler
+			MESSAGE_STATUS_DELETE			//return information only related to valid messages
+			//not?"=":"<",fieldseq			//patch Cosmin Cioranu, added the having conditions and also the 'not' handler
 		    );
 
 	if (fieldorder)
 		g_string_free(fieldorder, TRUE);
-
+	if (headerIDs)
+		g_string_free(headerIDs, TRUE);
 	c = db_con_get();	
 	TRY
 		r = db_query(c, p_string_str(query));
@@ -845,6 +878,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 				old = g_tree_lookup(bodyfetch->headers, (gconstpointer)mid);
 				fld[0] = toupper(fld[0]);
+				/* Build content as Header: value \n */
 				new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
 				g_free(val);
 				g_tree_insert(bodyfetch->headers,mid,new);
