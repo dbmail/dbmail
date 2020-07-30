@@ -1,0 +1,5 @@
+
+BEGIN;
+ALTER TABLE `dbmail_sievescripts` CHANGE COLUMN `owner_idnr` `owner_idnr` BIGINT(20) UNSIGNED NULL DEFAULT NULL FIRST;
+INSERT INTO dbmail_upgrade_steps (from_version, to_version) values (32001, 32005);
+COMMIT;

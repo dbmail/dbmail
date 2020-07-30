@@ -69,11 +69,10 @@ unsigned find_end_of_header(const char *h)
 
 	l  = strlen(h);
 
-	while (h++ && i<=l) {
+	while (h++ && i<l) {
 		i++;
 		c = *h;
-		if (c == '\n' && ((p1 == '\n') || (p1 == '\r' && p2 == '\n'))) {
-			if (l > i)
+		if (c == '\n' && ((p1 == '\n') || (p1 == '\r' && p2 == '\n'))) {			if (l > i)
 				i++;
 			break;
 		}
@@ -454,14 +453,15 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			if ((depth > 0) && (blist[depth-1][0]))
 				strncpy(boundary, blist[depth-1], MAX_MIME_BLEN-1);
 
-			if (is_header)
-			  if (prev_header && depth>0 && !prev_is_message) {
-				dprint("--%s\n", boundary);
-				p_string_append_printf(m, "--%s\n", boundary);
-			  } else if (!prev_header || prev_boundary) {
-				dprint("\n--%s\n", boundary);
-				p_string_append_printf(m, "\n--%s\n", boundary);
-			  }
+			if (is_header){
+				if (prev_header && depth>0 && !prev_is_message) {
+					dprint("--%s\n", boundary);
+					p_string_append_printf(m, "--%s\n", boundary);
+				}else if (!prev_header || prev_boundary) {
+					dprint("\n--%s\n", boundary);
+					p_string_append_printf(m, "\n--%s\n", boundary);
+				}
+			}
 
 			p_string_append_printf(m, "%s", str);
 			dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 

@@ -35,34 +35,6 @@ extern const char *imap_flag_desc_escaped[];
 
 #define T MailboxState_T
 
-struct T {
-	Mempool_T pool;
-	gboolean freepool;
-	uint64_t id;
-	uint64_t uidnext;
-	uint64_t owner_id;
-	uint64_t seq;
-	//
-	unsigned no_select;
-	unsigned no_children;
-	unsigned no_inferiors;
-	unsigned recent;
-	unsigned exists;
-	unsigned unseen;
-	unsigned permission;
-	// 
-	gboolean is_subscribed;
-	gboolean is_public;
-	gboolean is_users;
-	gboolean is_inbox;
-	//
-	String_T name;
-	GTree *keywords;
-	GTree *msginfo;
-	GTree *ids;
-	GTree *msn;
-	GTree *recent_queue;
-};
    
 static void db_getmailbox_seq(T M, Connection_T c);
 static void db_getmailbox_permission(T M, Connection_T c);
@@ -85,18 +57,13 @@ static void MessageInfo_free(MessageInfo *m)
 	g_free(m);
 }
 
-static char* split (char *str, const char *delim){
-    char *p = strstr(str, delim);
-    if (p == NULL) return NULL;     // delimiter not found
-    *p = '\0';                      // terminate string after head
-    return p + strlen(delim);       // return tail substring
-}
 
-static T state_load_messages(T M, Connection_T c)
+static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 {
 	unsigned nrows = 0, i = 0, j;
 	struct timeval before, after; 
 	const char *query_result;
+	uint64_t tempId;
 	MessageInfo *result;
 	GTree *msginfo;
 	uint64_t *uid, id = 0;
@@ -104,6 +71,24 @@ static T state_load_messages(T M, Connection_T c)
 	PreparedStatement_T stmt;
 	Field_T frag;
 	INIT_QUERY;
+	char filterCondition[64];  memset(filterCondition,0,64);
+	/* the initialization should be done elsewhere, see ols MailboxState_new and MailboxState_update */
+	msginfo=MailboxState_getMsginfo(M);
+	
+	if (coldLoad){
+	    //msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
+	    TRACE(TRACE_DEBUG, "SEQ New");
+	    snprintf(filterCondition,64-1,"/*SEQ New*/ AND m.status < %d ", MESSAGE_STATUS_DELETE);
+	}else{
+	    uint64_t seq=MailboxState_getSeq(M);
+	    //msginfo=MailboxState_getMsginfo(M);
+	    
+	    TRACE(TRACE_DEBUG, "SEQ RENew");
+	    //MailboxState_uid_msn_new(M);
+	    /* use seq to select only changed elements, event this which are deleted*/
+	    snprintf(filterCondition,64-1,"/*SEQ ReNew*/ AND m.seq >= %" PRIu64 "-1 AND m.status <= %d ", seq, MESSAGE_STATUS_DELETE );    
+	}
+	
 	
 	date2char_str("internal_date", &frag);
 	snprintf(query, DEF_QUERYSIZE-1,
@@ -111,13 +96,13 @@ static T state_load_messages(T M, Connection_T c)
 			"draft_flag, recent_flag, %s, rfcsize, seq, m.message_idnr, status, m.physmessage_id "
 			"FROM %smessages m "
 			"LEFT JOIN %sphysmessage p ON p.id = m.physmessage_id "
-			"WHERE m.mailbox_idnr = ? AND m.status < %d "
+			"WHERE m.mailbox_idnr = ? %s "
 			"ORDER BY m.seq DESC",
 			frag,  
 			DBPFX, DBPFX, 
-			MESSAGE_STATUS_DELETE);
+			filterCondition);
 
-	msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
+	
 
 	stmt = db_stmt_prepare(c, query);
 	db_stmt_set_u64(stmt, 1, M->id);
@@ -127,14 +112,38 @@ static T state_load_messages(T M, Connection_T c)
 	log_query_time(query,before,after);
 	i = 0;
 	gettimeofday(&before, NULL); 
+	int shouldAdd = 0;
 	while (db_result_next(r)) {
 		i++;
 
 		id = db_result_get_u64(r, IMAP_NFLAGS + 3);
-
-		uid = g_new0(uint64_t,1); *uid = id;
-
-		result = g_new0(MessageInfo,1);
+		
+		/* reset */
+		shouldAdd=0;
+		if (coldLoad){
+		    /* new element*/
+		    result = g_new0(MessageInfo,1);
+			uid = g_new0(uint64_t,1); 
+			*uid = id;
+		    shouldAdd=1;
+		    result->expunge=0;
+		    result->expunged=0;
+			//TRACE(TRACE_DEBUG, "SEQ CREATED %ld",id);
+		}else{
+		    /* soft renew, so search */
+		    result = g_tree_lookup(msginfo, &id);     
+		    if (result == NULL){
+				/* not found so create*/
+				result = g_new0(MessageInfo,1);
+				uid = g_new0(uint64_t,1); 
+				*uid = id;
+				shouldAdd=1;
+				result->expunge=0;
+				result->expunged=0;
+		    }else{
+				//TRACE(TRACE_DEBUG, "SEQ FOUND %ld",id);
+		    }
+		}
 
 		/* id */
 		result->uid = id;
@@ -161,7 +170,35 @@ static T state_load_messages(T M, Connection_T c)
 		result->status = db_result_get_int(r, IMAP_NFLAGS + 4);
 		/* physmessage_id */
 		result->phys_id = db_result_get_int(r, IMAP_NFLAGS + 5);
-		g_tree_insert(msginfo, uid, result); 
+		
+		if (result->status>=MESSAGE_STATUS_DELETE /*|| result->flags[IMAP_FLAG_DELETED]==1*/ ){
+		    /* message is delete so mark as to be expunged */
+		    result->expunge++;
+		    if (result->expunged==1){
+				if (shouldAdd==0){
+					/* remove the node if exists  from message info, should be removed, but we will not due to some references present*/
+					//g_tree_remove(msginfo, &id); 
+					continue;
+				}
+		    }else{
+				if (shouldAdd==1){
+					/* message is in state of state=2 or already deleted but not in our state */
+					g_tree_remove(msginfo,uid);
+					g_free(result);
+					g_free(uid);
+					continue; 
+				}
+			
+		    }
+		}
+		
+		if (shouldAdd==1){
+			//TRACE(TRACE_DEBUG, "SEQ ADDED %ld",id);
+		    /* it's new */
+			g_tree_insert(msginfo, uid, result);  
+		}else{
+		    /* no need, result was updated */
+		}
 
 	}
 	gettimeofday(&after, NULL); 
@@ -172,44 +209,38 @@ static T state_load_messages(T M, Connection_T c)
 	}
 
 	db_con_clear(c);
-	//Optimize Keywords search, Cosmin Cioranu
 	
-	memset(query,0,sizeof(query));
+	memset(query, 0, sizeof(query));
 	snprintf(query, DEF_QUERYSIZE-1,
-		"SELECT k.message_idnr, group_concat(distinct keyword) FROM %skeywords k "
+		"SELECT k.message_idnr, k.keyword FROM %skeywords k "
 		"LEFT JOIN %smessages m ON k.message_idnr=m.message_idnr "
-		"WHERE m.mailbox_idnr = ? AND m.status < %d "
-		"group by m.mailbox_idnr",
+		"WHERE m.mailbox_idnr = ? %s "
+		"order by m.message_idnr "
+		,
 		DBPFX, DBPFX,
-		MESSAGE_STATUS_DELETE);
+		filterCondition);
 
 	nrows = 0;
 	stmt = db_stmt_prepare(c, query);
 	db_stmt_set_u64(stmt, 1, M->id);
 	r = db_stmt_query(stmt);
 	gettimeofday(&before, NULL); 
+	tempId=0;
+	
 	while (db_result_next(r)) {
 		nrows++;
 		id = db_result_get_u64(r,0);
-		//TRACE(TRACE_INFO, "Keyword line [%d]", nrows);
-		/* old code
-		keyword = db_result_get(r,1);
-		if ((result = g_tree_lookup(msginfo, &id)) != NULL)
-			result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-		*/
-		/* keywords Cosmin Cioranu */ 
-		char * keywords = db_result_get(r,1);
-		if (strlen(keywords)>0){
-		    if ((result = g_tree_lookup(msginfo, &id)) != NULL){
-				//more keywords, splitting it 
-				char delim[] = ",";
-				char *keyword = strtok(keywords, delim);
-				while(keyword != NULL)
-				{
-					//TRACE(TRACE_INFO, "Keyword [%s]", keyword);
-					result->keywords = g_list_append(result->keywords, g_strdup(keyword));
-					keyword = strtok(NULL, delim);
-				}
+		
+		const char * keyword = db_result_get(r,1);
+		if (strlen(keyword)>0){
+			TRACE(TRACE_INFO, "Keyword line [%d %s]", nrows, keyword);
+			/* id is presented via query in ordered fashion so, we use tempId as a cached last tree lookup */
+			if ( tempId!=id || tempId==0 ){
+				result = g_tree_lookup(msginfo, &id);
+				tempId=id;
+			}
+		    if ( result != NULL ){
+				result->keywords = g_list_append(result->keywords, keyword);
 			}
 		}
 	}
@@ -217,9 +248,8 @@ static T state_load_messages(T M, Connection_T c)
 	
 	gettimeofday(&after, NULL); 
 	log_query_time("Parsing Keywords ",before,after);
-	
+	/* on both cases can use the same function due to some checks at MailboxState_setMsgInfo*/ 
 	MailboxState_setMsginfo(M, msginfo);
-
 	return M;
 }
 
@@ -248,12 +278,13 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 	M->id = id;
 	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
 	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
-
+	M->msginfo		= g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
+	M->differential_iterations = 0;
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c); // we need read-committed isolation
 		state_load_metadata(M, c);
-		state_load_messages(M, c);
+		state_load_messages(M, c, true);
 		db_commit_transaction(c);
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -268,6 +299,88 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 		MailboxState_free(&M);
 	}
 
+	return M;
+}
+
+/**
+ * Update only the mailbox. 
+ * @param M
+ * @return 
+ */
+
+T MailboxState_update(Mempool_T pool, T OldM)
+{
+	
+	T M; Connection_T c;
+	volatile int t = DM_SUCCESS;
+	gboolean freepool = FALSE;
+	uint64_t id;
+	
+	/* differential mode, evaluate max iterations */
+	int mailbox_diffential_max_iterations = config_get_value_default_int("mailbox_update_strategy_2_max_iterations", "IMAP", 300); 
+	if (mailbox_diffential_max_iterations > 0 &&  OldM->differential_iterations >= mailbox_diffential_max_iterations-1 ){
+		TRACE(TRACE_DEBUG, "Strategy differential mode override due to max iterations, see config [IMAP] mailbox_update_strategy_2_max_iterations");
+		return MailboxState_new(pool, OldM->id);
+	} 
+
+	
+	if (! pool) {
+		pool = mempool_open();
+		freepool = TRUE;
+	}
+	id = OldM->id;
+	M = mempool_pop(pool, sizeof(*M));
+	M->pool = pool;
+	M->freepool = freepool;
+
+	if (! id) return M;
+	
+	M->id = id;
+	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
+
+	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
+	M->msginfo     = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
+	// increase differential iterations in order to apply mailbox_update_strategy_2_max_iterations
+	M->differential_iterations = OldM->differential_iterations + 1;
+	TRACE(TRACE_DEBUG, "Strategy SEQ UPDATE, iterations %d", M->differential_iterations);
+	//M->ids     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
+	//M->msn     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
+	
+	//g_tree_merge(M->recent, OldM->recent, IST_SUBSEARCH_OR);
+	
+	
+	//g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
+	g_tree_copy_MessageInfo(M->msginfo,OldM->msginfo);
+	
+	//no need, those keywords will be populated at metadata
+	//@todo change this behaviour in state_load_metadata
+	//g_tree_copy_String(M->keywords,OldM->keywords);
+	
+	
+	//MailboxState_remap(M);
+	/* reset the sequence */ 
+	MailboxState_resetSeq(OldM);
+	//uint64_t seq = MailboxState_getSeq(OldM);
+			
+	c = db_con_get();
+	TRY 
+		db_begin_transaction(c); // we need read-committed isolation
+		state_load_metadata(M, c);
+		state_load_messages(M, c, false); // do a soft refresh
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		db_rollback_transaction(c);
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	if (t == DM_EQUERY) {
+		TRACE(TRACE_ERR, "SEQ Error opening mailbox");
+		MailboxState_free(&M);
+	}
+	    
 	return M;
 }
 
@@ -310,7 +423,11 @@ static void MailboxState_setMsginfo(T M, GTree *msginfo)
 	GTree *oldmsginfo = M->msginfo;
 	M->msginfo = msginfo;
 	MailboxState_remap(M);
-	if (oldmsginfo) g_tree_destroy(oldmsginfo);
+	if (oldmsginfo){
+		/* might be situations when old msginfo is the same as the new */
+		if (msginfo != oldmsginfo)
+			g_tree_destroy(oldmsginfo);
+	}
 }
 
 void MailboxState_addMsginfo(T M, uint64_t uid, MessageInfo *msginfo)
@@ -375,6 +492,32 @@ uint64_t MailboxState_getSeq(T M)
  
 	return M->seq;
 }
+
+/**
+ * Reset the sequence stored at structure level.
+ * Subsequent call for MailboxState_getSeq will be required to retrieve the the sequence
+ * @param M
+ * @return void
+ */
+void MailboxState_resetSeq(T M)
+{
+    M->seq=0;
+    
+}
+
+
+/**
+ * Reset the sequence stored at structure level and store the new seq from db
+ * Internally it will use MailboxState_getSeq
+ * @param M
+ * @return void
+ */
+uint64_t MailboxState_resyncSeq(T M)
+{
+    M->seq=0;
+    return MailboxState_getSeq(M);
+}
+
 
 unsigned MailboxState_getExists(T M)
 {
@@ -577,7 +720,7 @@ GTree * MailboxState_get_set(MailboxState_T M, const char *set, gboolean uid)
 	}
 
 	t = g_string_new(set);
-	sets = g_string_split(t,",");
+	sets = g_string_split(t, ",");
 	g_string_free(t,TRUE);
 
 	sets = g_list_first(sets);
@@ -692,6 +835,7 @@ static gboolean _free_recent_queue(gpointer key, gpointer UNUSED value, gpointer
 
 void MailboxState_free(T *M)
 {
+
 	T s = *M;
 	if (s->name) 
 		p_string_free(s->name, TRUE);
@@ -1165,8 +1309,8 @@ static long long int _update_recent(volatile GList *slices, uint64_t seq)
 	INIT_QUERY;
 	Connection_T c;
 	volatile long long int count = 0;
-
-	if (! (slices = g_list_first(slices)))
+	
+	if (! (slices = g_list_first((GList*)slices)))
 		return count;
 
 	c = db_con_get();
@@ -1188,7 +1332,7 @@ static long long int _update_recent(volatile GList *slices, uint64_t seq)
 		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
-		g_list_destroy(slices);
+		g_list_destroy((GList*)slices);
 	END_TRY;
 
 	return count;
