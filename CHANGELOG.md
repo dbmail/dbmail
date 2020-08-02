@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 - IMAP Daemon: added switch to control UNSEEN first message in SELECT commands [#83]
 
 ### Changed
+- IMAP Daemon: allow reporting UID COPY success in case of various failures (except quota), reporting issues are sent to error log as warnings.
+
  
 ### Optimizations 
 - optimizing differential state [#81]
