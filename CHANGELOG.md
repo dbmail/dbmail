@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 
 
 ### Issues
+- fixing issue related to copy message in regard to RFC 3501, section 6.4.8 [#87]
 - fixing issues related group_concat for PostgreSql [#75], [#78]
 - fixing issue related to lastRowId [#71]
 - fixing issues related with differential update [#70], [#73]
