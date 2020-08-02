@@ -2439,14 +2439,23 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 	uint64_t newid = 0;
 	int result;
 	uint64_t *new_ids_element = NULL;
-
+	if (!g_tree_lookup(self->mailbox->mbstate->msginfo, id)){
+		TRACE(TRACE_WARNING,"Copy message [%ld] failed security issue, trying to copy message that are not in this mailbox",*id);
+		//dbmail_imap_session_buff_printf(self, "%s NO security issue, trying to copy message that are not in this mailbox\r\n",self->tag);
+		return TRUE;
+	}
 	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid, TRUE);
 	db_message_set_seq(*id, cmd->seq);
 	if (result == -1) {
-		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
+		/* uid not found, according to RFC 3501 section 6.4.8, should continue  */
+		TRACE(TRACE_WARNING,"Copy message [%ld] failed due to missing in database. continue.",*id);
+		/* continue operation, do not close or send various info on connection */
+		//dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
+		//return TRUE;
 		return TRUE;
 	}
 	if (result == -2) {
+		TRACE(TRACE_WARNING,"Copy message [%ld] failed due to `%s NO quotum would exceed`",*id,self->tag);
 		dbmail_imap_session_buff_printf(self, "%s NO quotum would exceed\r\n", self->tag);
 		return TRUE;
 	}
