@@ -2442,7 +2442,7 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 	if (!g_tree_lookup(self->mailbox->mbstate->msginfo, id)){
 		TRACE(TRACE_WARNING,"Copy message [%ld] failed security issue, trying to copy message that are not in this mailbox",*id);
 		//dbmail_imap_session_buff_printf(self, "%s NO security issue, trying to copy message that are not in this mailbox\r\n",self->tag);
-		return TRUE;
+		return FALSE;
 	}
 	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid, TRUE);
 	db_message_set_seq(*id, cmd->seq);
@@ -2452,7 +2452,7 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 		/* continue operation, do not close or send various info on connection */
 		//dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		//return TRUE;
-		return TRUE;
+		return FALSE;
 	}
 	if (result == -2) {
 		TRACE(TRACE_WARNING,"Copy message [%ld] failed due to `%s NO quotum would exceed`",*id,self->tag);
