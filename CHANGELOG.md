@@ -1,19 +1,17 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [3.2.5] - 2020-08-xx
+## [3.2.5] - 2020-08-03
 ### Added
-- IMAP Daemon: added switch to control mailbox_update_strategy=2 (see mailbox_update_strategy_2_max_iterations) [#81]
+- IMAP Daemon: added switch to control the diffential state reload (mailbox_update_strategy=2), more information in dbmail.conf, mailbox_update_strategy_2_max_iterations [#81]
 - IMAP Daemon: added switch to control UNSEEN first message in SELECT commands [#83]
 
 ### Changed
-- IMAP Daemon: allow reporting UID COPY success in case of various failures (except quota), reporting issues are sent to error log as warnings.
-
+- IMAP Daemon: allow reporting UID COPY success in case of various failures (except quota), reporting issues are sent to error log as warnings [#87]
  
 ### Optimizations 
 - optimizing differential state [#81]
 - optimizing fetch message headers [#85]
-
 
 ### Issues
 - fixing issue related to copy message in regard to RFC 3501, section 6.4.8 [#87]
