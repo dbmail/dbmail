@@ -277,7 +277,7 @@ CREATE TABLE `dbmail_partlists` (
 DROP TABLE IF EXISTS `dbmail_pbsp`;
 CREATE TABLE `dbmail_pbsp` (
   `idnr` bigint(20) UNSIGNED NOT NULL auto_increment,
-  `since` datetime NOT NULL default '0000-00-00 00:00:00',
+  `since` datetime NOT NULL default '1000-01-01 00:00:00',
   `ipnumber` varchar(40) NOT NULL,
   PRIMARY KEY  (`idnr`),
   UNIQUE KEY `ipnumber_index` (`ipnumber`),
@@ -293,7 +293,7 @@ CREATE TABLE `dbmail_physmessage` (
   `id` bigint(20) UNSIGNED NOT NULL auto_increment,
   `messagesize` bigint(20) UNSIGNED NOT NULL default '0',
   `rfcsize` bigint(20) UNSIGNED NOT NULL default '0',
-  `internal_date` datetime NOT NULL default '0000-00-00 00:00:00',
+  `internal_date` datetime NOT NULL default '1000-01-01 00:00:00',
   PRIMARY KEY  (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -320,7 +320,7 @@ CREATE TABLE `dbmail_replycache` (
   `to_addr` varchar(255) NOT NULL default '',
   `from_addr` varchar(255) NOT NULL default '',
   `handle` varchar(255) NOT NULL default '',
-  `lastseen` datetime NOT NULL default '0000-00-00 00:00:00',
+  `lastseen` datetime NOT NULL default '1000-01-01 00:00:00',
   UNIQUE KEY `replycache_1` (`to_addr`,`from_addr`,`handle`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

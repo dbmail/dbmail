@@ -167,7 +167,7 @@ CREATE TABLE dbmail_replycache (
   to_addr varchar(100) NOT NULL default '',
   from_addr varchar(100) NOT NULL default '',
   handle varchar(100) NOT NULL default '',
-  lastseen datetime NOT NULL default '0000-00-00 00:00:00',
+  lastseen datetime NOT NULL default '1000-01-01 00:00:00',
   UNIQUE KEY replycache_1 (to_addr,from_addr, handle)
 ) ENGINE=InnoDB;
 

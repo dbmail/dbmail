@@ -26,7 +26,7 @@ CREATE TABLE `dbmail_partlists` (
 
 SET FOREIGN_KEY_CHECKS=1;
 
-ALTER TABLE dbmail_mailboxes ADD mtime DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00';
+ALTER TABLE dbmail_mailboxes ADD mtime DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00';
 ALTER TABLE dbmail_mailboxes ADD KEY mtime (mtime);
 ALTER TABLE dbmail_mailboxes CHANGE name name VARCHAR(255) NOT NULL DEFAULT '';
 
