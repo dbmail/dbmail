@@ -107,7 +107,7 @@ CREATE TABLE dbmail_physmessage (
 	id bigint(21) NOT NULL auto_increment,
 	messagesize bigint(21) NOT NULL default '0',
 	rfcsize bigint(21) NOT NULL default '0',
-	internal_date datetime NOT NULL default '0000-00-00 00:00:00',
+	internal_date datetime NOT NULL default '1000-01-01 00:00:00',
 	PRIMARY KEY (id)
 ) ENGINE=InnoDB;
 # fill the dbmail_physmessage table
@@ -195,7 +195,7 @@ DROP TABLE IF EXISTS pbsp;
 DROP TABLE IF EXISTS dbmail_pbsp;
 CREATE TABLE dbmail_pbsp (
    idnr bigint(21) NOT NULL auto_increment,
-   since datetime default '0000-00-00 00:00:00' not null,
+   since datetime default '1000-01-01 00:00:00' not null,
    ipnumber varchar(40) NOT NULL,
    PRIMARY KEY (idnr),
    UNIQUE INDEX ipnumber_idx (ipnumber),
