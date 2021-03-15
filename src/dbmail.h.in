@@ -97,12 +97,7 @@
 #include <ldap.h>
 #endif
 
-#include <URL.h>
-#include <ResultSet.h>
-#include <PreparedStatement.h>
-#include <Connection.h>
-#include <ConnectionPool.h>
-#include <SQLException.h>
+#include <zdb.h>
 
 #include "dm_cram.h"
 #include "dm_capa.h"
@@ -213,6 +208,10 @@
 #define DM_MYSQL_32004 @MYSQL_32004@
 #define DM_PGSQL_32004 @PGSQL_32004@
 #define DM_SQLITE_32004 @SQLITE_32004@
+
+#define DM_MYSQL_32005 @MYSQL_32005@
+#define DM_PGSQL_32005 @PGSQL_32005@
+#define DM_SQLITE_32005 @SQLITE_32005@
 
 /* include dbmail.conf for autocreation */
 #define DM_DEFAULT_CONFIGURATION @DM_DEFAULT_CONFIGURATION@

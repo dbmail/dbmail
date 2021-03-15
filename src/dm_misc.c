@@ -64,12 +64,44 @@ typedef struct {
 	int condition;
 } tree_merger_t;
 
+/* only locally used  for various operations mostly duplicates*/
+typedef struct {
+	GTree *treeSource;
+	GTree *treeDestination;
+} tree_copy_t;
+
+
 void g_string_maybe_shrink(GString *s)
 {
 	if (s->len+1 < s->allocated_len) {
 		s->str = g_realloc(s->str, s->len+1);
 		s->allocated_len = s->len+1;
 	}
+}
+
+/**
+ * Print the trace. The DEBUG level has to be enabled. 
+ * 
+ */
+void print_trace (void)
+{
+#ifdef DEBUG
+	/* activate this function only if DEBUG variable is defined */
+	void *array[10];
+	size_t size;
+	char **strings;
+	size_t i;
+
+	size = backtrace (array, 10);
+	strings = backtrace_symbols (array, size);
+
+	TRACE(TRACE_DEBUG, "Obtained %zd stack frames.\n", size);
+
+	for (i = 0; i < size; i++)
+		TRACE(TRACE_DEBUG, "#%d %s\n", i,strings[i]);
+
+	free (strings);
+#endif
 }
 
 int drop_privileges(char *newuser, char *newgroup)
@@ -106,22 +138,26 @@ int drop_privileges(char *newuser, char *newgroup)
 
 int get_opened_fd_count(void)
 {
-	DIR* dir = NULL;
-	struct dirent* entry = NULL;
-	char buf[32];
-	int fd_count = 0;
+	#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__SUNPRO_C)
+		return 0;
+	#else
+		DIR* dir = NULL;
+		struct dirent* entry = NULL;
+		char buf[32];
+		int fd_count = 0;
 
-	snprintf(buf, 32, "/proc/%i/fd/", getpid());
+		snprintf(buf, 32, "/proc/%i/fd/", getpid());
 
-	dir = opendir(buf);
-	if (dir == NULL)
-		return -1;
+		dir = opendir(buf);
+		if (dir == NULL)
+			return -1;
 
-	while ((entry = readdir(dir)) != NULL)
-		fd_count++;
-	closedir(dir);
+		while ((entry = readdir(dir)) != NULL)
+			fd_count++;
+		closedir(dir);
 
-	return fd_count - 2; /* exclude '.' and '..' entries */
+		return fd_count - 2; /* exclude '.' and '..' entries */
+	#endif
 }
 
 void create_unique_id(char *target, uint64_t message_idnr)
@@ -1000,13 +1036,6 @@ GList * g_tree_values(GTree *tree)
 }
 
 
-/*
- * boolean merge of two GTrees. The result is stored in GTree *a.
- * the state of GTree *b is undefined: it may or may not have been changed, 
- * depending on whether or not key/value pairs were moved from b to a.
- * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
- * for their construction.
- */
 static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_merger_t **merger)
 {
 	tree_merger_t *t = *(tree_merger_t **)merger;
@@ -1028,6 +1057,114 @@ static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_m
 	return FALSE;
 }
 
+
+static gboolean traverse_tree_copy_MessageInfo(gpointer key, gpointer value, tree_copy_t **copy)
+{
+	int i;
+	tree_copy_t *t = *(tree_copy_t **)copy;
+	//GTree *source = t->treeSource;
+	GTree *destination = t->treeDestination;
+	uint64_t *uid;
+	uid = g_new0(uint64_t,1); 	
+	*uid = *(uint64_t *) key;
+	
+	MessageInfo *src=(MessageInfo *) value;
+	//MessageInfo * src = g_tree_lookup(source, key);
+	MessageInfo *dst = g_new0(MessageInfo, 1);
+	//TRACE(TRACE_INFO, "TR MI [%s]", key);
+	dst->expunge=	src->expunge;
+	dst->expunged=	src->expunged;
+	for(i=0;i<IMAP_NFLAGS;i++){
+		dst->flags[i]=src->flags[i];
+	}
+	dst->mailbox_id=src->mailbox_id;
+	dst->msn=		src->msn;
+	dst->phys_id=	src->phys_id;
+	dst->rfcsize=	src->rfcsize;
+	dst->seq=		src->seq;
+	dst->status=	src->status; 
+	dst->uid=		src->uid;
+	
+	strcpy(dst->internaldate,src->internaldate);
+	//dst->keywords=	g_list_copy(src->keywords);
+	// copy keywords 
+	GList *tk = g_list_first(src->keywords);
+	while (tk) { 
+		dst->keywords = g_list_append(dst->keywords, g_strdup((gchar *)tk->data));
+		if (! g_list_next(tk)) break;
+		tk = g_list_next(tk);
+	} 
+	*uid = src->uid;
+	//TRACE(TRACE_DEBUG,"TRAVERSE MessageInfo add %ld %ld=%d %ld=%d",*uid, source,g_tree_nnodes(source), destination,g_tree_nnodes(destination));
+
+	
+	g_tree_insert(destination, uid, dst);
+	return FALSE;
+}
+
+static gboolean traverse_tree_copy_String(gpointer key, gpointer value UNUSED, tree_copy_t **copy)
+{
+	
+	tree_copy_t *t = *(tree_copy_t **)copy;
+	GTree *source = t->treeSource;
+	GTree *destination = t->treeDestination;
+	uint64_t *uid;
+	uid = g_new0(uint64_t,1); 	
+	*uid = *(uint64_t *) key;
+	/* @todo get from value, not do search */
+	char * src = g_tree_lookup(source, key);
+	if (src == NULL)
+		return TRUE;
+	
+	/*char * dst=g_new0(char,strlen(src)+1); 
+	int i=0;
+	for(i=0;i<strlen(src);i++){
+		dst[i]=src[i];
+	}
+	g_strdup(src);
+	dst[i]=0;
+	g_tree_insert(destination, uid,dst);
+	*/
+	g_tree_insert(destination, uid,g_strdup(src));
+	return FALSE;
+}
+
+/**
+ * duplicate a GTree containing MessageInfo structures and keys as uint64_t
+ * @param a
+ * @param b
+ * @return 
+ */
+int g_tree_copy_MessageInfo(GTree *a, GTree *b){
+	g_return_val_if_fail(a && b,1);
+	tree_copy_t *copier = g_new0(tree_copy_t,1);
+	copier->treeDestination=a;
+	copier->treeSource=b;
+	g_tree_foreach(b,(GTraverseFunc)traverse_tree_copy_MessageInfo, &copier);
+	return 0;
+}
+
+/**
+ * duplicate a GRee containing char * as structures and keys as uint64_t
+ * @param a
+ * @param b
+ * @return 
+ */
+int g_tree_copy_String(GTree *a, GTree *b){
+	g_return_val_if_fail(a && b,1);
+	tree_copy_t *copier = g_new0(tree_copy_t,1);
+	copier->treeDestination=a;
+	copier->treeSource=b;
+	g_tree_foreach(b,(GTraverseFunc)traverse_tree_copy_String, &copier);
+	return 0;
+}
+/*
+ * boolean merge of two GTrees. The result is stored in GTree *a.
+ * the state of GTree *b is undefined: it may or may not have been changed, 
+ * depending on whether or not key/value pairs were moved from b to a.
+ * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
+ * for their construction.
+ */
 int g_tree_merge(GTree *a, GTree *b, int condition)
 {
 	char *type = NULL;
@@ -1366,9 +1503,13 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 	char value[1024];
 	char *head = (char *)type;
 	GList *l = NULL;
-
-	if (! type)
+	
+	if (! type){
+		//in case of tye null, it should return NIL, same process is applied at the end of this function
+		TRACE(TRACE_DEBUG, "hash_as_string: is null (missing): NIL");
+		list = g_list_append_printf(list, "NIL");
 		return list;
+	}
 
 	TRACE(TRACE_DEBUG, "analyse [%s]", type);
 	while (type[i]) {
@@ -1386,18 +1527,26 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 		}
 		break;
 	}
-
+	
 	head += i;
-
+	//implementing a hard protection
+	int maxSize=strlen(head);
+	maxSize=strlen(head);
+	if (maxSize>1536)
+		maxSize=1536;//hard limit max len of name+len of value
 	int offset = 0;
 	int inname = 1;
 	TRACE(TRACE_DEBUG, "analyse [%s]", head);
-	while (head) {
+	while (head && maxSize>=0) {
+		//hard protection, preventing going maxsize, until the \0
+		maxSize--;
 		curr = head[offset];
 		if ((! curr) && (offset==0))
 			break;
 		if (curr == '=' && inname) {
 			memset(name, 0, sizeof(name));
+			if (offset>512) 
+				offset=512; //hard limit
 			strncpy(name, head, offset);
 			g_strstrip(name);
 			head += offset+1;
@@ -1410,6 +1559,8 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 			size_t len;
 			char *clean1, *clean2, *clean3;
 			memset(value, 0, sizeof(value));
+			if (offset>1024) 
+				offset=1024; //hard limit
 			strncpy(value, head, offset);
 			head += offset+1;
 			inname = 1;
@@ -1447,13 +1598,13 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 
 	if (l) {
 		char *s = dbmail_imap_plist_as_string(l);
-		TRACE(TRACE_DEBUG, "plist from content-type: %s", s);
+		TRACE(TRACE_DEBUG, "hash_as_string: from %s => %s", type, s);
 		list = g_list_append_printf(list, "%s", s);
 		g_free(s);
 		
 		g_list_destroy(l);
 	} else {
-		TRACE(TRACE_DEBUG, "plist from content-type: NIL");
+		TRACE(TRACE_DEBUG, "hash_as_string: from %s => NIL",type);
 		list = g_list_append_printf(list, "NIL");
 	}
 	

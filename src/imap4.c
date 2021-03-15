@@ -378,7 +378,7 @@ void imap_cb_time(void *arg)
 
 		ci_cork(session->ci);
 		if (! (++session->loop % idle_interval)) {
-			imap_session_printf(session, "* OK\r\n");
+			imap_session_printf(session, "* OK Still here\r\n");
 		}
 		dbmail_imap_session_mailbox_status(session,TRUE);
 		dbmail_imap_session_buff_flush(session);
@@ -450,7 +450,7 @@ static void imap_handle_retry(ImapSession *session)
 static void imap_handle_done(ImapSession *session)
 {
 	/* only do this in the main thread */
-	imap_session_printf(session, "* BYE\r\n");
+	imap_session_printf(session, "* BYE Requested\r\n");
 	imap_session_printf(session, "%s OK LOGOUT completed\r\n", session->tag);
 	imap_session_bailout(session);
 }

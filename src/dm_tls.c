@@ -31,7 +31,7 @@
 #define THIS_MODULE "tls"
 
 
-SSL_CTX *tls_context;
+extern SSL_CTX *tls_context;
 
 /* Create the initial SSL context structure */
 SSL_CTX *tls_init(void) {

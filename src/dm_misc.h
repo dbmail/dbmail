@@ -120,7 +120,9 @@ GList * g_tree_keys(GTree *tree);
 GList * g_tree_values(GTree *tree);
 void tree_dump(GTree *t);
 int g_tree_merge(GTree *a, GTree *b, int condition);
-	
+int g_tree_copy_MessageInfo(GTree *a, GTree *b);
+int g_tree_copy_String(GTree *a, GTree *b);
+    
 void pack_char(char *in, char c);
 
 char * dm_shellesc(const char * command);

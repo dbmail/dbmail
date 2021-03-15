@@ -1,12 +1,14 @@
 [Unit]
 Description=DBMail Imap Server
-After=network.target mysqld.service postgresql.service
+After=network.target network-online.target mysqld.service postgresql.service
 
 [Service]
-Type=simple
+Type=notify
+ExecStartPre=-mkdir -p @runstatedir@/dbmail
+ExecStartPre=-chown dbmail:dbmail @runstatedir@/dbmail
 ExecStart=@sbindir@/dbmail-imapd -D
 Restart=always
-RestartSec=1
+RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target

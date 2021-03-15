@@ -267,12 +267,11 @@ AC_DEFUN([DM_CHECK_JEMALLOC], [dnl
 			CFLAGS="$CFLAGS -I${lookforjemalloc}/include/jemalloc"
 		fi
 	fi
-	AC_CHECK_HEADERS([jemalloc.h jemalloc_defs.h],
+	AC_CHECK_HEADERS([jemalloc.h],
 		[JEMALLOCLIB="-ljemalloc"], 
 		[JEMALLOCLIB="no"],
 	[[
 #include <jemalloc.h>
-#include <jemalloc_defs.h>
 	]])
 	if test [ "x$JEMALLOCLIB" != "xno" ]; then
 		LDFLAGS="$LDFLAGS $JEMALLOCLIB"
@@ -288,16 +287,11 @@ AC_DEFUN([DM_CHECK_ZDB], [dnl
 	else
 		CFLAGS="$CFLAGS -I${lookforzdb}/include/zdb"
 	fi
-	AC_CHECK_HEADERS([URL.h ResultSet.h PreparedStatement.h Connection.h ConnectionPool.h SQLException.h],
+	AC_CHECK_HEADERS([zdb.h],
 		[ZDBLIB="-lzdb"], 
 		[ZDBLIB="failed"],
 	[[
-#include <URL.h>
-#include <ResultSet.h>
-#include <PreparedStatement.h>
-#include <Connection.h>
-#include <ConnectionPool.h>
-#include <SQLException.h>	
+         #include <zdb.h>
 	]])
 	if test [ "x$ZDBLIB" = "xfailed" ]; then
 		AC_MSG_ERROR([Could not find ZDB library.])
@@ -350,9 +344,9 @@ AC_DEFUN([DM_CHECK_SSL], [
 
 AC_DEFUN([DM_CHECK_SYSTEMD], [
 	PKG_CHECK_MODULES([SYSTEMD], [libsystemd-daemon], , [
-		PKG_CHECK_MODULES([SYSTEMD], [systemd >= 230])
+		PKG_CHECK_MODULES([SYSTEMD], [libsystemd >= 230])
 	])
-	if test [ -n $SYSTEMD_LIBS ]; then
+	if test [ -n "$SYSTEMD_LIBS" ]; then
 		AC_DEFINE([HAVE_SYSTEMD], [1], [Define if systemd will be used])
 		LDFLAGS="$LDFLAGS $SYSTEMD_LIBS"
 	fi
@@ -596,7 +590,17 @@ AC_DEFUN([DM_UPGRADE_STEPS], [dnl
 	PGSQL_32004=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/32004.psql`
 	MYSQL_32004=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/32004.mysql`
 	SQLITE_32004=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/32004.sqlite`
+	
 	AC_SUBST(PGSQL_32004)
 	AC_SUBST(MYSQL_32004)
 	AC_SUBST(SQLITE_32004)
+	
+	PGSQL_32005=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/32005.psql`
+	MYSQL_32005=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/32005.mysql`
+	SQLITE_32005=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/32005.sqlite`
+	
+	AC_SUBST(PGSQL_32005)
+	AC_SUBST(MYSQL_32005)
+	AC_SUBST(SQLITE_32005)
+	
 ])

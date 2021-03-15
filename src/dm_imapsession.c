@@ -161,20 +161,31 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 
 static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 {
+	TRACE(TRACE_DEBUG, "Call: dbmail_imap_session_message_load");
 	uint64_t *id = NULL;
-
+	
+	
 	if (! (id = g_tree_lookup(self->physids, &(self->msg_idnr)))) {
 		uint64_t *uid;
+		
 		id = mempool_pop(self->pool, sizeof(uint64_t));
-			
-		if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
-			TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
-			g_free(id);
-			return 0;
+		
+		if (self->mailbox->mbstate != NULL){
+			/* the state is ready, get the phys id from state, avoid one query in database */
+			MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), &self->msg_idnr);
+			*id=msginfo->phys_id;
+		}else{
+			/* previous behavior, a query will be performed in db */
+			if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
+				TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
+				g_free(id);
+				return 0;
+			}
 		}
 		uid = mempool_pop(self->pool, sizeof(uint64_t));
 		*uid = self->msg_idnr;
 		g_tree_insert(self->physids, uid, id);
+		
 	}
 		
 	if (self->message) {
@@ -517,7 +528,6 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 {
 	int ispeek = 0;
-	
 	const char *token = TOKEN;
 	const char *nexttoken = NEXTTOKEN;
 
@@ -710,10 +720,11 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	uint64_t id;
 	GList *last;
 	GString *fieldorder = NULL;
+	GString *headerIDs = NULL;
 	int k;
-	int fieldseq;
-	String_T query;
-	String_T range;
+	int fieldseq=0;
+	String_T query = NULL;
+	String_T range = NULL;
 
 	if (! bodyfetch->headers) {
 		TRACE(TRACE_DEBUG, "[%p] init bodyfetch->headers", self);
@@ -752,7 +763,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 	// let's fetch the required message and prefetch a batch if needed.
 	range = p_string_new(self->pool, "");
-	query = p_string_new(self->pool, "");
+	
 
 	if (! (last = g_list_nth(self->ids_list, self->lo+(uint64_t)QUERY_BATCHSIZE)))
 		last = g_list_last(self->ids_list);
@@ -764,9 +775,11 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 		p_string_printf(range, "BETWEEN %" PRIu64 " AND %" PRIu64 "", self->msg_idnr, self->hi);
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %" PRIu64 ":%" PRIu64 " ceiling %" PRIu64 " [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
-
+	
+	headerIDs = g_string_new("0");
 	if (! not) {
 		fieldorder = g_string_new(", CASE ");
+		
 		fieldseq = 0;
 		bodyfetch->names = g_list_first(bodyfetch->names);
 
@@ -775,32 +788,70 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			char *name = g_ascii_strdown(raw, strlen(raw));
 			g_string_append_printf(fieldorder, "WHEN n.headername='%s' THEN %d ",
 					name, fieldseq);
-			g_free(name);
-			if (! g_list_next(bodyfetch->names))
+			
+			if (! g_list_next(bodyfetch->names)){
+				g_free(name);
 				break;
+			}
 			bodyfetch->names = g_list_next(bodyfetch->names);
 			fieldseq++;
+			/* get the id of the header */
+			query = p_string_new(self->pool, "");
+			p_string_printf(query, "select id from %sheadername "
+				"where headername='%s' ",
+				DBPFX,
+				name);
+			
+			c = db_con_get();	
+			TRY
+				r = db_query(c, p_string_str(query));	
+				while (db_result_next(r)) { 
+					id = db_result_get_u64(r, 0);
+					g_string_append_printf(headerIDs, ",%ld",id);
+				}
+			CATCH(SQLException) 
+				LOG_SQLERROR;
+				t = DM_EQUERY; 
+			FINALLY
+				db_con_close(c);
+			END_TRY;
+			p_string_free(query, TRUE);		
+			g_free(name);
 		}
-		g_string_append_printf(fieldorder, "END AS seq");
+		fieldseq++;
+		//adding default value, useful in NOT conditions, Cosmin Cioranu
+		g_string_append_printf(fieldorder, "ELSE %d END AS seq",fieldseq);
 	}
-
+	TRACE(TRACE_DEBUG, "[headername ids %s] ", headerIDs->str);
+	query = p_string_new(self->pool, "");
 	p_string_printf(query, "SELECT m.message_idnr, n.headername, v.headervalue%s "
 			"FROM %sheader h "
 			"LEFT JOIN %smessages m ON h.physmessage_id=m.physmessage_id "
 			"LEFT JOIN %sheadername n ON h.headername_id=n.id "
 			"LEFT JOIN %sheadervalue v ON h.headervalue_id=v.id "
-			"WHERE m.mailbox_idnr = %" PRIu64 " "
+			"WHERE "
+			"h.headername_id %s IN (%s) "
+			"AND m.mailbox_idnr = %" PRIu64 " "
 			"AND m.message_idnr %s "
-			"AND n.headername %s IN ('%s') "
-			"ORDER BY message_idnr, seq",
+			"AND status < %d "
+
+			//"AND n.headername %s IN ('%s') "	//old, from the sql point of view is slow, CC 2020
+			// "GROUP By m.message_idnr, n.headername, v.headervalue "
+			// "having seq %s %d "
+			"ORDER BY m.message_idnr, seq",
 			not?"":fieldorder->str,
 			DBPFX, DBPFX, DBPFX, DBPFX,
-			self->mailbox->id, p_string_str(range), 
-			not?"NOT":"", bodyfetch->hdrnames);
+			not?"NOT":"", headerIDs->str,
+			self->mailbox->id, p_string_str(range),
+			//not?"NOT":"", bodyfetch->hdrnames	//old 
+			MESSAGE_STATUS_DELETE			//return information only related to valid messages
+			//not?"=":"<",fieldseq			//patch Cosmin Cioranu, added the having conditions and also the 'not' handler
+		    );
 
 	if (fieldorder)
 		g_string_free(fieldorder, TRUE);
-
+	if (headerIDs)
+		g_string_free(headerIDs, TRUE);
 	c = db_con_get();	
 	TRY
 		r = db_query(c, p_string_str(query));
@@ -827,6 +878,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 				old = g_tree_lookup(bodyfetch->headers, (gconstpointer)mid);
 				fld[0] = toupper(fld[0]);
+				/* Build content as Header: value \n */
 				new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
 				g_free(val);
 				g_tree_insert(bodyfetch->headers,mid,new);
@@ -1041,13 +1093,16 @@ static void _imap_show_body_sections(ImapSession *self)
 
 static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 {
+	
 	int result;
 	uint64_t size = 0;
 	gchar *s = NULL;
 	uint64_t *id = uid;
 	gboolean reportflags = FALSE;
 	String_T stream = NULL;
-
+	
+	TRACE(TRACE_DEBUG,"Call: _fetch_get_items");
+	
 	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), uid);
 
 	if (! msginfo) {
@@ -1289,23 +1344,22 @@ void dbmail_imap_session_buff_flush(ImapSession *self)
 
 int dbmail_imap_session_buff_printf(ImapSession * self, char * message, ...)
 {
-        va_list ap, cp;
-        uint64_t j = 0, l;
+	va_list ap, cp;
+	uint64_t j = 0, l;
 
-        assert(message);
-        j = p_string_len(self->buff);
+	assert(message);
+	j = p_string_len(self->buff);
 
-        va_start(ap, message);
+	va_start(ap, message);
 	va_copy(cp, ap);
-        p_string_append_vprintf(self->buff, message, cp);
-        va_end(cp);
-        va_end(ap);
-
-        l = p_string_len(self->buff);
+	p_string_append_vprintf(self->buff, message, cp);
+	va_end(cp);
+	va_end(ap);
+	l = p_string_len(self->buff);
 
 	if (l >= IMAP_BUF_SIZE) dbmail_imap_session_buff_flush(self);
 
-        return (int)(l-j);
+	return (int)(l-j);
 }
 
 int dbmail_imap_session_handle_auth(ImapSession * self, const char * username, const char * password)
@@ -1489,16 +1543,21 @@ static void mailbox_notify_expunge(ImapSession *self, MailboxState_T N)
 	
 	if (ids) {
 		uid = (uint64_t *)ids->data;
-		msn = g_tree_lookup(MailboxState_getIds(self->mailbox->mbstate), uid);
-		if (msn && (*msn > MailboxState_getExists(M))) {
-			TRACE(TRACE_DEBUG,"exists new [%d] old: [%d]", MailboxState_getExists(N), MailboxState_getExists(M)); 
-			dbmail_imap_session_buff_printf(self, "* %d EXISTS\r\n", MailboxState_getExists(M));
+		GTree * treeM=MailboxState_getIds(M);
+		if (treeM != NULL){
+		    msn = g_tree_lookup(treeM, uid);
+		    if (msn && (*msn > MailboxState_getExists(M))) {
+			    TRACE(TRACE_DEBUG,"exists new [%d] old: [%d]", MailboxState_getExists(N), MailboxState_getExists(M)); 
+			    dbmail_imap_session_buff_printf(self, "* %d EXISTS\r\n", MailboxState_getExists(M));
+		    }
 		}
 	}
-
 	while (ids) {
 		uid = (uint64_t *)ids->data;
-		if (! g_tree_lookup(MailboxState_getIds(N), uid)) {
+		MessageInfo *messageInfo=g_tree_lookup(MailboxState_getMsginfo(N), uid);
+		if (messageInfo!=NULL && !g_tree_lookup(MailboxState_getIds(N), uid)) {
+			/* mark message as expunged, it should be ok to be removed from list, see state_load_message */
+			messageInfo->expunged=1;
 			notify_expunge(self, uid);
 		}
 
@@ -1530,6 +1589,9 @@ static void mailbox_notify_fetch(ImapSession *self, MailboxState_T N)
 	self->mailbox->mbstate = N;
 	id = mempool_pop(small_pool, sizeof(uint64_t));
 	*id = MailboxState_getId(N);
+
+	 
+
 	g_tree_replace(self->mbxinfo, id, N);
 
 	MailboxState_flush_recent(N);
@@ -1569,11 +1631,27 @@ int dbmail_imap_session_mailbox_status(ImapSession * self, gboolean update)
 		newseq = MailboxState_getSeq(N);
 		MailboxState_free(&N);
 		N = NULL;
-
+ 
 		TRACE(TRACE_DEBUG, "seq: [%u] -> [%u]", oldseq, newseq);
 		if (oldseq != newseq) {
-			// do a full reload: re-read flags and counters
-			N = MailboxState_new(self->pool, self->mailbox->id);
+			int mailbox_update_strategy = config_get_value_default_int("mailbox_update_strategy", "IMAP", 1); 
+			
+			if (mailbox_update_strategy == 1){
+			    TRACE(TRACE_DEBUG, "Strategy reload: 1 (full reload)");
+			    /* do a full reload: re-read flags and counters */
+			    N = MailboxState_new(self->pool, self->mailbox->id);
+			}else{
+			    if (mailbox_update_strategy == 2){    
+					TRACE(TRACE_DEBUG, "Strategy reload: 2 (differential reload)");
+					/* do a diff reload, experimental */
+					N = MailboxState_update(self->pool, M);
+				}else{
+					TRACE(TRACE_DEBUG, "Strategy reload: default (full reload)");
+					/* default strategy is full reload, case 1*/
+					N = MailboxState_new(self->pool, self->mailbox->id);
+			    }
+			}
+			
 			unsigned newexists = MailboxState_getExists(N);
 			MailboxState_setExists(N, max(oldexists, newexists));
 
@@ -2089,7 +2167,7 @@ finalize:
 	TRACE(TRACE_DEBUG, "[%p] tag: [%s], command: [%s], [%" PRIu64 "] args", self, self->tag, self->command, self->args_idx);
 	self->args[self->args_idx] = NULL;	/* terminate */
 
-#if DEBUG
+#ifdef DEBUG
 	for (i = 0; i<=self->args_idx && self->args[i]; i++) { 
 		TRACE(TRACE_DEBUG, "[%p] arg[%d]: '%s'\n", self, i, p_string_str(self->args[i])); 
 	}
