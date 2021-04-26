@@ -1925,6 +1925,7 @@ static void sorted_search_enter(dm_thread_data *D)
 	DbmailMailbox *mb;
 	int result = 0;
 	gchar *s = NULL;
+	gchar *imap_modseq = NULL;
 	const gchar *cmd;
 
 	search_order order = self->order;
@@ -1972,6 +1973,9 @@ static void sorted_search_enter(dm_thread_data *D)
 			break;
 			case SEARCH_UNORDERED:
 				s = dbmail_mailbox_ids_as_string(mb, FALSE, " ");
+				imap_modseq = dbmail_mailbox_imap_modseq_as_string(mb, FALSE);
+				s = g_strconcat(s, imap_modseq, NULL);
+				g_free(imap_modseq);
 			break;
 			case SEARCH_THREAD_ORDEREDSUBJECT:
 				s = dbmail_mailbox_orderedsubject(mb);
