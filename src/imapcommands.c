@@ -702,18 +702,20 @@ static void _ic_select_enter(dm_thread_data *D)
 		dbmail_imap_session_buff_printf(self, "* OK [HIGHESTMODSEQ %" PRIu64 "] Highest\r\n",
 				MailboxState_getSeq(S));
 	}
-
-	if (MailboxState_getExists(S)) { 
-		/* show msn of first unseen msg (if present) */
-		GTree *uids = MailboxState_getIds(S);
-		GTree *info = MailboxState_getMsginfo(S);
-		uint64_t key = 0, *msn = NULL;
-		g_tree_foreach(info, (GTraverseFunc)mailbox_first_unseen, &key);
-		if ( (key > 0) && (msn = g_tree_lookup(uids, &key))) {
-			dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %" PRIu64 "] first unseen message\r\n", *msn);
+	/* UNSEEN first element*/
+	int command_select_allow_unseen = config_get_value_default_int("command_select_allow_unseen", "IMAP", 1);
+	if(self->command_type == IMAP_COMM_SELECT && command_select_allow_unseen == 1){
+		if (MailboxState_getExists(S)) { 
+			/* show msn of first unseen msg (if present) */
+			GTree *uids = MailboxState_getIds(S);
+			GTree *info = MailboxState_getMsginfo(S);
+			uint64_t key = 0, *msn = NULL;
+			g_tree_foreach(info, (GTraverseFunc)mailbox_first_unseen, &key);
+			if ( (key > 0) && (msn = g_tree_lookup(uids, &key))) {
+				dbmail_imap_session_buff_printf(self, "* OK [UNSEEN %" PRIu64 "] first unseen message\r\n", *msn);
+			}
 		}
 	}
-
 	if (self->command_type == IMAP_COMM_SELECT) {
 		okarg = "READ-WRITE";
 		MailboxState_flush_recent(S);
@@ -1923,6 +1925,7 @@ static void sorted_search_enter(dm_thread_data *D)
 	DbmailMailbox *mb;
 	int result = 0;
 	gchar *s = NULL;
+	gchar *imap_modseq = NULL;
 	const gchar *cmd;
 
 	search_order order = self->order;
@@ -1970,6 +1973,9 @@ static void sorted_search_enter(dm_thread_data *D)
 			break;
 			case SEARCH_UNORDERED:
 				s = dbmail_mailbox_ids_as_string(mb, FALSE, " ");
+				imap_modseq = dbmail_mailbox_imap_modseq_as_string(mb, FALSE);
+				s = g_strconcat(s, imap_modseq, NULL);
+				g_free(imap_modseq);
 			break;
 			case SEARCH_THREAD_ORDEREDSUBJECT:
 				s = dbmail_mailbox_orderedsubject(mb);
@@ -2439,14 +2445,23 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 	uint64_t newid = 0;
 	int result;
 	uint64_t *new_ids_element = NULL;
-
+	if (!g_tree_lookup(self->mailbox->mbstate->msginfo, id)){
+		TRACE(TRACE_WARNING,"Copy message [%ld] failed security issue, trying to copy message that are not in this mailbox",*id);
+		//dbmail_imap_session_buff_printf(self, "%s NO security issue, trying to copy message that are not in this mailbox\r\n",self->tag);
+		return FALSE;
+	}
 	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid, TRUE);
 	db_message_set_seq(*id, cmd->seq);
 	if (result == -1) {
-		dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
-		return TRUE;
+		/* uid not found, according to RFC 3501 section 6.4.8, should continue  */
+		TRACE(TRACE_WARNING,"Copy message [%ld] failed due to missing in database. continue.",*id);
+		/* continue operation, do not close or send various info on connection */
+		//dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
+		//return TRUE;
+		return FALSE;
 	}
 	if (result == -2) {
+		TRACE(TRACE_WARNING,"Copy message [%ld] failed due to `%s NO quotum would exceed`",*id,self->tag);
 		dbmail_imap_session_buff_printf(self, "%s NO quotum would exceed\r\n", self->tag);
 		return TRUE;
 	}

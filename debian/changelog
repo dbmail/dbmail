@@ -1,3 +1,19 @@
+dbmail (3.2.5-1) unstable; urgency=medium
+
+  * new package from dbmail 3.2.5
+  * IMAP daemon enhancements
+  * Bug fixes
+
+ -- Mauro Mozzarelli <mauro@ezplanet.org>  Thu, 6 Aug 2020 17:30:00 +0100
+
+dbmail (3.2.4-1) unstable; urgency=medium
+
+  * new package from dbmail 3.2.4
+  * IMAP daemon enhancments 
+  * Optimizations and Bug fixes
+
+ -- Mauro Mozzarelli <mauro@ezplanet.org>  Thu, 6 Aug 2020 17:15:00 +0100
+
 dbmail (3.2.3-3) unstable; urgency=medium
 
   * new package from dbmail git head (8875c553e139d3ed2c49ac8f8d9b39a923089b56)
