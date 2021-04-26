@@ -393,9 +393,74 @@ char * dbmail_mailbox_orderedsubject(DbmailMailbox *self) {
 }
 
 /*
- * return self->ids as a string
+ * Returns imap modseq response for a user's mailbox
+ * 
+ * This function came from and is used with dbmail_mailbox_ids_as_string
  */
-char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const char *sep) {
+char * dbmail_mailbox_imap_modseq_as_string(DbmailMailbox *self, gboolean uid) {
+	TRACE(TRACE_DEBUG, "Call: dbmail_mailbox_imap_modseq_as_string");
+	GString *t;
+	gchar *s = NULL;
+	GList *l = NULL;
+	GTree *msginfo;
+	GTree *msn;
+	uint64_t maxseq = 0;
+
+	if ((self->found == NULL) || g_tree_nnodes(self->found) <= 0) {
+		TRACE(TRACE_DEBUG, "no ids found");
+		return s;
+	}
+
+	t = g_string_new("");
+	if (uid || dbmail_mailbox_get_uid(self)) {
+		l = g_tree_keys(self->found);
+	} else {
+		l = g_tree_values(self->found);
+	}
+
+	msginfo = MailboxState_getMsginfo(self->mbstate);
+	msn = MailboxState_getMsn(self->mbstate);
+
+	while (l->data) {
+		uint64_t *key = (uint64_t *) l->data;
+		if (self->modseq) {
+			uint64_t *id;
+			if (uid || dbmail_mailbox_get_uid(self)) {
+				id = key;
+			} else {
+				id = g_tree_lookup(msn, key);
+			}
+
+			MessageInfo *info = g_tree_lookup(msginfo, id);
+			maxseq = max(maxseq, info->seq);
+		}
+		if (!g_list_next(l))
+			break;
+		l = g_list_next(l);
+	}
+
+	g_list_free(l);
+
+	if (self->modseq)
+		g_string_append_printf(t, " (MODSEQ %" PRIu64 ")", maxseq);
+
+	s = t->str;
+	g_string_free(t, FALSE);
+
+	return g_strchomp(s);
+
+}
+
+/*
+ * Returns users mailbox self->ids as a string concatenated with a seperator
+ * 
+ * Use with dbmail_mailbox_imap_modseq_as_string to generate imap response
+ */
+char * dbmail_mailbox_ids_as_string(
+		DbmailMailbox *self,
+		gboolean uid,
+		const char *sep
+	) {
 	TRACE(TRACE_DEBUG, "Call: dbmail_mailbox_ids_as_string");
 	GString *t;
 	gchar *s = NULL;
@@ -442,9 +507,6 @@ char * dbmail_mailbox_ids_as_string(DbmailMailbox *self, gboolean uid, const cha
 	}
 
 	g_list_free(h);
-
-	if (self->modseq)
-		g_string_append_printf(t, " (MODSEQ %" PRIu64 ")", maxseq);
 
 	s = t->str;
 	g_string_free(t, FALSE);
