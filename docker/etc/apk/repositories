@@ -2,7 +2,3 @@ http://dl-cdn.alpinelinux.org/alpine/edge/main
 http://dl-cdn.alpinelinux.org/alpine/edge/community
 # mhash
 http://dl-cdn.alpinelinux.org/alpine/edge/testing
-# gmime-2.6
-http://dl-cdn.alpinelinux.org/alpine/v3.6/main
-# libsieve
-http://dl-cdn.alpinelinux.org/alpine/v3.0/testing
