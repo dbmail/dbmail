@@ -1,5 +1,5 @@
 # ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
-FROM alpine:edge AS build-base
+FROM alpine AS build-base
 
 RUN apk add --no-cache alpine-sdk sudo su-exec
 
