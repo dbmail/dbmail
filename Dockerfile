@@ -1,4 +1,4 @@
-FROM alpine:3.11 AS build-base
+FROM alpine:3.12 AS build-base
 
 RUN apk add --no-cache alpine-sdk sudo
 
@@ -68,7 +68,7 @@ RUN abuild -F rootbld
 RUN abuild -F package
 
 ####
-FROM alpine:3.11 AS base-image
+FROM alpine:3.12 AS base-image
 
 ADD . /app
 COPY docker/etc/ /etc/
