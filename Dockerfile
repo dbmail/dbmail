@@ -1,5 +1,5 @@
 # ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
-FROM alpine:3.8 AS build-base
+FROM alpine:latest AS build-base
 #users
 RUN addgroup root abuild
 
@@ -73,7 +73,7 @@ RUN abuild -F rootbld
 RUN abuild -F package
 
 ####
-FROM alpine:3.8 AS base-image
+FROM alpine:latest AS base-image
 
 ADD . /app
 COPY docker/etc/ /etc/
@@ -101,7 +101,7 @@ RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-${LIBZDB_V
 ####
 FROM base-image AS build-image
 WORKDIR /app
-RUN apk add --no-cache libc-dev gcc curl make libmhash-dev libevent-dev bsd-compat-headers check-dev pkgconf
+RUN apk add --no-cache libc-dev gcc curl make libmhash-dev libevent-dev bsd-compat-headers check-dev pkgconf libtool m4 automake autoconf build-base
 
 ARG LIBSIEVE_VERSION=2.2.7-r1
 COPY --from=build-libsieve /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk
@@ -119,7 +119,8 @@ RUN mkdir -p /etc/dbmail
 RUN chmod a+w -R /app 
 RUN chgrp root /app 
 
-RUN ./configure \
+RUN cd /app
+	&& ./configure \
         --prefix=/usr \
         --with-sieve=/usr \
         --sysconfdir=/etc/dbmail \
