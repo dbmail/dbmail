@@ -1,4 +1,5 @@
-FROM alpine:3.13 AS build-base
+# ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
+FROM alpine:3.14 AS build-base
 
 RUN apk add --no-cache alpine-sdk sudo
 
@@ -68,7 +69,7 @@ RUN abuild -F rootbld
 RUN abuild -F package
 
 ####
-FROM alpine:3.13 AS base-image
+FROM alpine:3.14 AS base-image
 
 ADD . /app
 COPY docker/etc/ /etc/
