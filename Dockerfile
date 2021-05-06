@@ -1,5 +1,5 @@
 # ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
-FROM alpine AS build-base
+FROM alpine:3.8 AS build-base
 
 RUN apk add --no-cache alpine-sdk sudo su-exec
 
@@ -70,7 +70,7 @@ RUN abuild -F rootbld
 RUN abuild -F package
 
 ####
-FROM alpine:edge AS base-image
+FROM alpine:3.8 AS base-image
 
 ADD . /app
 COPY docker/etc/ /etc/
