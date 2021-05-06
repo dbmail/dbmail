@@ -118,7 +118,7 @@ RUN pwd \
         --enable-static=no \
 		--enable-shared=yes \
         --with-check=/usr \
-	&& make \
+	&& make --debug=a \
 	&& make install
 
 #RUN make all
