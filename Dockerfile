@@ -119,7 +119,7 @@ RUN mkdir -p /etc/dbmail
 RUN chmod a+w -R /app 
 RUN chgrp root /app 
 
-RUN cd /app
+RUN cd /app \
 	&& ./configure \
         --prefix=/usr \
         --with-sieve=/usr \
