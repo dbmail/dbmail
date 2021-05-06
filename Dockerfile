@@ -1,7 +1,7 @@
 # ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
 FROM alpine:edge AS build-base
 
-RUN apk add --no-cache alpine-sdk sudo
+RUN apk add --no-cache alpine-sdk sudo su-exec
 
 #RUN set -xe \
 #    ; mkdir -p /var/cache/distfiles \
@@ -13,7 +13,8 @@ RUN set -xe
 RUN mkdir -p /var/cache/distfiles
 RUN chmod a+w /var/cache/distfiles
 RUN chgrp abuild /var/cache/distfiles
-RUN abuild-keygen -a -i
+RUN adduser abuild -G abuild; \
+    su-exec abuild abuild-keygen -ai
 
 	
 env \
