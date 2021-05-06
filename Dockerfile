@@ -1,11 +1,20 @@
 FROM alpine AS build-base
 
 RUN apk add --no-cache alpine-sdk sudo
-RUN set -xe \
-    ; mkdir -p /var/cache/distfiles \
-    ; chmod a+w /var/cache/distfiles \
-    ; chgrp abuild /var/cache/distfiles \
-    ; abuild-keygen -a -i
+
+#RUN set -xe \
+#    ; mkdir -p /var/cache/distfiles \
+#    ; chmod a+w /var/cache/distfiles \
+#    ; chgrp abuild /var/cache/distfiles \
+#    ; abuild-keygen -a -i
+	
+RUN set -xe
+RUN mkdir -p /var/cache/distfiles
+RUN chmod a+w /var/cache/distfiles
+RUN chgrp abuild /var/cache/distfiles
+RUN abuild-keygen -a -i
+
+	
 env \
     PKGDEST=/root/packages/ \
     REPODEST=/root/packages/
@@ -59,7 +68,7 @@ RUN abuild -F rootbld
 RUN abuild -F package
 
 ####
-FROM alpine:edge AS base-image
+FROM alpine AS base-image
 
 ADD . /app
 COPY docker/etc/ /etc/
