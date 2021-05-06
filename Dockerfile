@@ -13,8 +13,8 @@ RUN set -xe
 RUN mkdir -p /var/cache/distfiles
 RUN chmod a+w /var/cache/distfiles
 RUN chgrp abuild /var/cache/distfiles
-RUN adduser abuild -G abuild; \
-    abuild-keygen -ai
+#RUN adduser abuild -G abuild; \
+#    abuild-keygen -ai
 
 	
 env \
