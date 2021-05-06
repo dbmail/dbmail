@@ -111,15 +111,15 @@ COPY --from=build-libzdb /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk 
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 
 RUN mkdir -p /etc/dbmail
-RUN pwd \
-	&& ./configure \
+RUN chmod a+w -R /app 
+RUN ./configure \
         --prefix=/usr \
         --with-sieve=/usr \
         --sysconfdir=/etc/dbmail \
         --enable-static=no \
 		--enable-shared=yes \
         --with-check=/usr \
-	&& make --debug=a \
+	&& make --debug=a all \
 	&& make install
 
 #RUN make all
