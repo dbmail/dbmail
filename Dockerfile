@@ -116,10 +116,10 @@ RUN ./configure \
         --enable-static=no \
 		--enable-shared=yes \
         --with-check=/usr \
-	; make \
-	; ARG CK_FORK=no \
-	; make check \
-	; make install
+	&& make \
+	&& ARG CK_FORK=no \
+	&& make check \
+	&& make install
 
 #RUN make all
 #ARG CK_FORK=no
