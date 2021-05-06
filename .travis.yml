@@ -1,6 +1,6 @@
 services:
         - docker
 
-dist: bionic
+dist: trusty
 script:
         - docker build -t dbmail:alpine .
