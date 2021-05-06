@@ -95,6 +95,7 @@ RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-${LIBZDB_V
 
 ####
 FROM base-image AS build-image
+WORKDIR /app
 RUN apk add --no-cache libc-dev gcc curl make libmhash-dev libevent-dev bsd-compat-headers check-dev pkgconf
 
 ARG LIBSIEVE_VERSION=2.2.7-r1
@@ -109,7 +110,8 @@ ARG LIBZDB_VERSION=3.1-r1
 COPY --from=build-libzdb /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 
-RUN ./configure \
+RUN pwd \
+	&& ./configure \
         --prefix=/usr \
         --with-sieve=/usr \
         --sysconfdir=/etc/dbmail \
@@ -117,8 +119,6 @@ RUN ./configure \
 		--enable-shared=yes \
         --with-check=/usr \
 	&& make \
-	&& ARG CK_FORK=no \
-	&& make check \
 	&& make install
 
 #RUN make all
