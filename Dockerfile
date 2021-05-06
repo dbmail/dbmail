@@ -1,4 +1,4 @@
-FROM alpine AS build-base
+FROM alpine:latest AS build-base
 
 RUN apk add --no-cache alpine-sdk sudo
 
@@ -68,7 +68,7 @@ RUN abuild -F rootbld
 RUN abuild -F package
 
 ####
-FROM alpine AS base-image
+FROM alpine:latest AS base-image
 
 ADD . /app
 COPY docker/etc/ /etc/
@@ -110,6 +110,7 @@ ARG LIBZDB_VERSION=3.1-r1
 COPY --from=build-libzdb /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 
+RUN RUN mkdir -p /etc/dbmail
 RUN pwd \
 	&& ./configure \
         --prefix=/usr \
