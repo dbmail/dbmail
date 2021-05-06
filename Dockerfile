@@ -110,7 +110,7 @@ ARG LIBZDB_VERSION=3.1-r1
 COPY --from=build-libzdb /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 
-RUN RUN mkdir -p /etc/dbmail
+RUN mkdir -p /etc/dbmail
 RUN pwd \
 	&& ./configure \
         --prefix=/usr \
