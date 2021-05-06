@@ -1,7 +1,7 @@
 # ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
 FROM alpine:3.8 AS build-base
 #users
-RUN usermod -a -G abuild root
+RUN addgroup root abuild
 
 RUN apk add --no-cache alpine-sdk sudo su-exec
 
