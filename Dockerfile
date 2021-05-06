@@ -112,6 +112,8 @@ RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-dev-${LIBZ
 
 RUN mkdir -p /etc/dbmail
 RUN chmod a+w -R /app 
+RUN chgrp root /app 
+
 RUN ./configure \
         --prefix=/usr \
         --with-sieve=/usr \
