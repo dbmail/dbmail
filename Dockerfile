@@ -1,18 +1,24 @@
-FROM alpine AS build-base
+# ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
+FROM alpine:latest AS build-base
+RUN df
+#users
+RUN addgroup root abuild
 
-RUN apk add --no-cache alpine-sdk sudo
+RUN apk add --no-cache alpine-sdk sudo su-exec
 
 #RUN set -xe \
 #    ; mkdir -p /var/cache/distfiles \
 #    ; chmod a+w /var/cache/distfiles \
 #    ; chgrp abuild /var/cache/distfiles \
 #    ; abuild-keygen -a -i
+
 	
 RUN set -xe
 RUN mkdir -p /var/cache/distfiles
 RUN chmod a+w /var/cache/distfiles
 RUN chgrp abuild /var/cache/distfiles
-RUN abuild-keygen -a -i
+RUN adduser abuild -G abuild; \
+    abuild-keygen -ai
 
 	
 env \
@@ -68,7 +74,7 @@ RUN abuild -F rootbld
 RUN abuild -F package
 
 ####
-FROM alpine AS base-image
+FROM alpine:latest AS base-image
 
 ADD . /app
 COPY docker/etc/ /etc/
@@ -95,7 +101,8 @@ RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-${LIBZDB_V
 
 ####
 FROM base-image AS build-image
-RUN apk add --no-cache libc-dev gcc curl make libmhash-dev libevent-dev bsd-compat-headers check-dev pkgconf
+WORKDIR /app
+RUN apk add --no-cache libc-dev gcc curl make libmhash-dev libevent-dev bsd-compat-headers check-dev pkgconf libtool m4 automake autoconf build-base
 
 ARG LIBSIEVE_VERSION=2.2.7-r1
 COPY --from=build-libsieve /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk
@@ -109,22 +116,35 @@ ARG LIBZDB_VERSION=3.1-r1
 COPY --from=build-libzdb /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-dev-${LIBZDB_VERSION}.apk
 
-RUN ./configure \
-        --prefix=/usr \
+RUN mkdir -p /etc/dbmail
+RUN chmod a+w -R /app 
+RUN chgrp root /app 
+
+RUN df
+RUN cd /app \
+	&& ./configure \
+        --prefix=/root \
         --with-sieve=/usr \
         --sysconfdir=/etc/dbmail \
         --enable-static=no \
-	--enable-shared=yes \
-        --with-check=/usr
-RUN make
-ARG CK_FORK=no
-RUN make check
-RUN make install
+		--enable-shared=yes \
+		--disable-libtool-lock \
+		--disable-dependency-tracking \
+		--disable-systemd \
+        # --with-check=/usr \
+	&& make --debug=a -d \
+	&& make --debug=a install
+
+RUN df
+#RUN make all
+#ARG CK_FORK=no
+#RUN make check
+#RUN make install
 
 ####
 FROM base-image
-COPY --from=build-image /usr/sbin/dbmail* /usr/sbin/
-COPY --from=build-image /usr/lib/dbmail/ /usr/lib/dbmail/
+COPY --from=build-image /root/sbin/dbmail* /usr/sbin/
+COPY --from=build-image /root/lib/dbmail/ /usr/lib/dbmail/
 
 EXPOSE 24
 EXPOSE 143
