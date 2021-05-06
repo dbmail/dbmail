@@ -121,13 +121,16 @@ RUN chgrp root /app
 
 RUN cd /app \
 	&& ./configure \
-        --prefix=/usr \
+        --prefix=/root \
         --with-sieve=/usr \
         --sysconfdir=/etc/dbmail \
         --enable-static=no \
 		--enable-shared=yes \
+		--disable-libtool-lock \
+		--disable-dependency-tracking \
+		--disable-systemd \
         # --with-check=/usr \
-	&& make --debug=a \
+	&& make --debug=a -d \
 	&& make --debug=a install
 
 #RUN make all
@@ -137,8 +140,8 @@ RUN cd /app \
 
 ####
 FROM base-image
-COPY --from=build-image /usr/sbin/dbmail* /usr/sbin/
-COPY --from=build-image /usr/lib/dbmail/ /usr/lib/dbmail/
+COPY --from=build-image /root/sbin/dbmail* /usr/sbin/
+COPY --from=build-image /root/lib/dbmail/ /usr/lib/dbmail/
 
 EXPOSE 24
 EXPOSE 143
