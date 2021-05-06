@@ -1,5 +1,6 @@
 # ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
 FROM alpine:latest AS build-base
+RUN df
 #users
 RUN addgroup root abuild
 
@@ -119,6 +120,7 @@ RUN mkdir -p /etc/dbmail
 RUN chmod a+w -R /app 
 RUN chgrp root /app 
 
+RUN df
 RUN cd /app \
 	&& ./configure \
         --prefix=/root \
@@ -133,6 +135,7 @@ RUN cd /app \
 	&& make --debug=a -d \
 	&& make --debug=a install
 
+RUN df
 #RUN make all
 #ARG CK_FORK=no
 #RUN make check
