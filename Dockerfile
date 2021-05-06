@@ -1,4 +1,4 @@
-FROM alpine:edge AS build-base
+FROM alpine AS build-base
 
 RUN apk add --no-cache alpine-sdk sudo
 RUN set -xe \
