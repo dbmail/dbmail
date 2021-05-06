@@ -14,7 +14,7 @@ RUN mkdir -p /var/cache/distfiles
 RUN chmod a+w /var/cache/distfiles
 RUN chgrp abuild /var/cache/distfiles
 RUN adduser abuild -G abuild; \
-    su-exec abuild abuild-keygen -ai
+    abuild-keygen -ai
 
 	
 env \
