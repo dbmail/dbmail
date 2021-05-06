@@ -115,11 +115,16 @@ RUN ./configure \
         --sysconfdir=/etc/dbmail \
         --enable-static=no \
 		--enable-shared=yes \
-        --with-check=/usr
-RUN make all
-ARG CK_FORK=no
-RUN make check
-RUN make install
+        --with-check=/usr 
+	; make 
+	; ARG CK_FORK=no
+	; make check
+	; make install
+
+#RUN make all
+#ARG CK_FORK=no
+#RUN make check
+#RUN make install
 
 ####
 FROM base-image
