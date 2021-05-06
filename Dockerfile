@@ -114,9 +114,9 @@ RUN ./configure \
         --with-sieve=/usr \
         --sysconfdir=/etc/dbmail \
         --enable-static=no \
-	--enable-shared=yes \
+		--enable-shared=yes \
         --with-check=/usr
-RUN make
+RUN make all
 ARG CK_FORK=no
 RUN make check
 RUN make install
