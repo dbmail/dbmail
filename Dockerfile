@@ -1,5 +1,7 @@
 # ISSUE: https://gitlab.alpinelinux.org/alpine/aports/-/issues/12519
 FROM alpine:3.8 AS build-base
+#users
+RUN usermod -a -G abuild root
 
 RUN apk add --no-cache alpine-sdk sudo su-exec
 
@@ -8,13 +10,14 @@ RUN apk add --no-cache alpine-sdk sudo su-exec
 #    ; chmod a+w /var/cache/distfiles \
 #    ; chgrp abuild /var/cache/distfiles \
 #    ; abuild-keygen -a -i
+
 	
 RUN set -xe
 RUN mkdir -p /var/cache/distfiles
 RUN chmod a+w /var/cache/distfiles
 RUN chgrp abuild /var/cache/distfiles
-#RUN adduser abuild -G abuild; \
-#    abuild-keygen -ai
+RUN adduser abuild -G abuild; \
+    abuild-keygen -ai
 
 	
 env \
