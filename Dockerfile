@@ -120,8 +120,7 @@ RUN mkdir -p /etc/dbmail
 RUN chmod a+w -R /app 
 RUN chgrp root /app 
 
-RUN cd /app \
-	&& ./configure \
+RUN ./configure \
         --prefix=/root \
         --with-sieve=/usr \
         --sysconfdir=/etc/dbmail \
@@ -130,16 +129,12 @@ RUN cd /app \
 		--disable-libtool-lock \
 		--disable-dependency-tracking \
 		--disable-systemd \
-        --with-check=/usr \
-	&& make all \
-	&& ARG CK_FORK=no \
-	&& make check \
-	&& make install
-
-#RUN make all
-#ARG CK_FORK=no
-#RUN make check
-#RUN make install
+        --with-check=/usr
+	
+RUN make all
+ARG CK_FORK=no
+RUN make check
+RUN make install
 
 ####
 FROM base-image
