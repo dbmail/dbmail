@@ -3,12 +3,13 @@
 ######################################################################
 
 
-# This is a modified default Exim configuration file integrating dbmail.
+# This is an Exim configuration file integrating dbmail.
 # It uses dbmail's aliases table to lookup both domains and emails as
 # well as using the same sql or ldap authentication as dbmail.
 # DBMail supports PostgreSQL, MySQL and Oracle via libzdb
 # https://www.tildeslash.com/libzdb/ and authentication via ldap.
 # 
+# Sponsored by XML Team Solutions LLC https://xmlteam.com
 
 # This file is divided into several parts, all but the first of which are
 # headed by a line starting with the word "begin". Only those parts that
