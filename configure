@@ -674,6 +674,9 @@ SORTLTLIB
 SORTALIB
 CRYPTLIB
 DM_DEFAULT_CONFIGURATION
+SQLITE_32006
+MYSQL_32006
+PGSQL_32006
 SQLITE_32005
 MYSQL_32005
 PGSQL_32005
@@ -7059,6 +7062,10 @@ fi
 	PGSQL_32005=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/32005.psql`
 	MYSQL_32005=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/32005.mysql`
 	SQLITE_32005=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/32005.sqlite`
+
+	PGSQL_32006=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/32006.psql`
+	MYSQL_32006=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/32006.mysql`
+	SQLITE_32006=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/32006.sqlite`
 
 
 

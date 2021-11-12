@@ -17,6 +17,8 @@ sql/mysql/upgrades/32001.mysql
 sql/mysql/upgrades/32002.mysql
 sql/mysql/upgrades/32003.mysql
 sql/mysql/upgrades/32004.mysql
+sql/mysql/upgrades/32005.mysql
+sql/mysql/upgrades/32006.mysql
 sql/postgresql/2_1_7-2_2_0.pgsql
 sql/postgresql/2_2-3_0.pgsql
 sql/postgresql/2_2_5-2_3_0.pgsql
@@ -31,6 +33,8 @@ sql/postgresql/upgrades/32001.psql
 sql/postgresql/upgrades/32002.psql
 sql/postgresql/upgrades/32003.psql
 sql/postgresql/upgrades/32004.psql
+sql/postgresql/upgrades/32005.psql
+sql/postgresql/upgrades/32006.psql
 sql/sqlite/2_1_7-2_2_0.sqlite
 sql/sqlite/2_2-3_0.sqlite
 sql/sqlite/2_2_5-2_3_0.sqlite
@@ -44,3 +48,5 @@ sql/sqlite/upgrades/32001.sqlite
 sql/sqlite/upgrades/32002.sqlite
 sql/sqlite/upgrades/32003.sqlite
 sql/sqlite/upgrades/32004.sqlite
+sql/sqlite/upgrades/32005.sqlite
+sql/sqlite/upgrades/32006.sqlite
