@@ -33,6 +33,8 @@ struct MailboxState_T {
 	uint64_t uidnext;
 	uint64_t owner_id;
 	uint64_t seq;
+	// the seq of the mailbox when the state is loaded
+	uint64_t state_seq;
 	// when loading is in differential mode, this flag will be incremented
 	unsigned differential_iterations;
 	//

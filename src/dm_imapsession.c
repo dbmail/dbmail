@@ -836,7 +836,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			"AND status < %d "
 
 			//"AND n.headername %s IN ('%s') "	//old, from the sql point of view is slow, CC 2020
-			// "GROUP By m.message_idnr, n.headername, v.headervalue "
+			"GROUP By m.message_idnr, n.headername, v.headervalue "
 			// "having seq %s %d "
 			"ORDER BY m.message_idnr, seq",
 			not?"":fieldorder->str,
