@@ -107,6 +107,10 @@ What do you need?
 	setting up the user and database it's time to create the tables, do a:
 
 	psql -U dbmail -h localhost dbmail < sql/postgresql/create_tables.pgsql
+	
+	followed by:
+	
+	cat sql/postgresql/upgrades/*.psql | psql -U dbmail dbmail
 
 	Don't forget to start postgresql with the -i option, so it accepts
 	TCP/IP connections.
@@ -116,7 +120,10 @@ What do you need?
 
 	bytea_output = 'escape'
 
-	because DBMail can't handle the default 'hex' type output.	
+	because DBMail can't handle the default 'hex' type output. If you do not want
+	to change this cluster-wide, it can be done at the database level thus:
+	
+	psql -U postgres postgres -c "alter database dbmail set bytea_output =  'escape';"
 
 	SQLite setup
 	------------
