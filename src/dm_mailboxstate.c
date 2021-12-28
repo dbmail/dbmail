@@ -71,22 +71,25 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	PreparedStatement_T stmt;
 	Field_T frag;
 	INIT_QUERY;
-	char filterCondition[64];  memset(filterCondition,0,64);
+	int idsAdded = 0;
+	char filterCondition[96];  memset(filterCondition,0,96);
+	int mailbox_sync_deleted = config_get_value_default_int("mailbox_sync_deleted", "IMAP", 1); 
+	int mailbox_sync_batch_size= config_get_value_default_int("mailbox_sync_batch_size", "IMAP", 64); 
 	/* the initialization should be done elsewhere, see ols MailboxState_new and MailboxState_update */
 	msginfo=MailboxState_getMsginfo(M);
-	
+	uint64_t seq=MailboxState_getSeq(M);
 	if (coldLoad){
 	    //msginfo = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
-	    TRACE(TRACE_DEBUG, "SEQ New");
+	    TRACE(TRACE_DEBUG, "SEQ Cold Load [ %" PRIu64 " ]", seq);
 	    snprintf(filterCondition,64-1,"/*SEQ New*/ AND m.status < %d ", MESSAGE_STATUS_DELETE);
 	}else{
-	    uint64_t seq=MailboxState_getSeq(M);
+		uint64_t state_seq=M->state_seq;
 	    //msginfo=MailboxState_getMsginfo(M);
 	    
-	    TRACE(TRACE_DEBUG, "SEQ RENew");
+	    TRACE(TRACE_DEBUG, "SEQ RENEW [ %" PRIu64 " %" PRIu64 " ]",state_seq , seq);
 	    //MailboxState_uid_msn_new(M);
 	    /* use seq to select only changed elements, event this which are deleted*/
-	    snprintf(filterCondition,64-1,"/*SEQ ReNew*/ AND m.seq >= %" PRIu64 "-1 AND m.status <= %d ", seq, MESSAGE_STATUS_DELETE );    
+	    snprintf(filterCondition,64-1,"/*SEQ ReNew*/ AND m.seq >= %" PRIu64 "-1 AND m.status <= %d ", state_seq, MESSAGE_STATUS_DELETE );    
 	}
 	
 	
@@ -112,20 +115,20 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	log_query_time(query,before,after);
 	i = 0;
 	gettimeofday(&before, NULL); 
-	int shouldAdd = 0;
+	
 	while (db_result_next(r)) {
 		i++;
 
 		id = db_result_get_u64(r, IMAP_NFLAGS + 3);
 		
 		/* reset */
-		shouldAdd=0;
+		idsAdded=0;
 		if (coldLoad){
 		    /* new element*/
 		    result = g_new0(MessageInfo,1);
 			uid = g_new0(uint64_t,1); 
 			*uid = id;
-		    shouldAdd=1;
+		    idsAdded=1;
 		    result->expunge=0;
 		    result->expunged=0;
 			//TRACE(TRACE_DEBUG, "SEQ CREATED %ld",id);
@@ -133,14 +136,22 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		    /* soft renew, so search */
 		    result = g_tree_lookup(msginfo, &id);     
 		    if (result == NULL){
+				/* check deletion */
+				if (db_result_get_int(r, IMAP_NFLAGS + 4)>=MESSAGE_STATUS_DELETE){
+					// item is already deleted and is not in tree, so do not even add it. 
+					continue;
+				}	
 				/* not found so create*/
 				result = g_new0(MessageInfo,1);
 				uid = g_new0(uint64_t,1); 
 				*uid = id;
-				shouldAdd=1;
+				idsAdded=1;
 				result->expunge=0;
 				result->expunged=0;
 		    }else{
+				/* initialize uid, result is not null */
+				uid = g_new0(uint64_t,1); 
+				*uid = id;
 				//TRACE(TRACE_DEBUG, "SEQ FOUND %ld",id);
 		    }
 		}
@@ -170,40 +181,43 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		result->status = db_result_get_int(r, IMAP_NFLAGS + 4);
 		/* physmessage_id */
 		result->phys_id = db_result_get_int(r, IMAP_NFLAGS + 5);
-		
-		if (result->status>=MESSAGE_STATUS_DELETE /*|| result->flags[IMAP_FLAG_DELETED]==1*/ ){
-		    /* message is delete so mark as to be expunged */
-		    result->expunge++;
-		    if (result->expunged==1){
-				if (shouldAdd==0){
-					/* remove the node if exists  from message info, should be removed, but we will not due to some references present*/
-					//g_tree_remove(msginfo, &id); 
-					continue;
-				}
-		    }else{
-				if (shouldAdd==1){
-					/* message is in state of state=2 or already deleted but not in our state */
-					g_tree_remove(msginfo,uid);
-					g_free(result);
-					g_free(uid);
-					continue; 
-				}
-			
-		    }
+		if (result->flags[IMAP_FLAG_DELETED]==1 && result->status < MESSAGE_STATUS_DELETE){
+			TRACE(TRACE_DEBUG, "DESYNC Meessage marked as deleted but not deleted [ %" PRIu64 " ] consider using `mailbox_sync_deleted`", *uid);
+			if (mailbox_sync_deleted==2  && mailbox_sync_batch_size>0){
+				db_set_message_status(id,MESSAGE_STATUS_DELETE);
+				result->status=MESSAGE_STATUS_DELETE;
+				mailbox_sync_batch_size--;
+				TRACE(TRACE_DEBUG, "DESYNC marked as deleted[ %" PRIu64 " ]", *uid);
+			}
+		}
+		if (result->status >= MESSAGE_STATUS_DELETE || result->flags[IMAP_FLAG_DELETED]==1 || result->expunged==1 || result->expunge>=1){
+			result->expunge ++;
+			if (result->expunged == 1){
+				//TRACE(TRACE_DEBUG, "SEQ Remove MSG EXPUNGED [ %" PRIu64 " ]", *uid);
+				/* result does not need to be freed, it is freed in tree remove */
+				g_tree_remove(msginfo, uid);
+				g_free(uid);
+				continue;
+			}else{
+				//TRACE(TRACE_DEBUG, "SEQ Remove MSG EXPUNGING [ %" PRIu64 " expunge flag %d, was expunged %d]", *uid, result->expunge, result->expunged);
+			}
 		}
 		
-		if (shouldAdd==1){
+		if (idsAdded==1){
 			//TRACE(TRACE_DEBUG, "SEQ ADDED %ld",id);
 		    /* it's new */
 			g_tree_insert(msginfo, uid, result);  
 		}else{
 		    /* no need, result was updated */
+			/* free uid, is it always allocated */
+			g_free(uid);
 		}
-
 	}
 	gettimeofday(&after, NULL); 
 	log_query_time("Parsing State ",before,after);
 	if (! i) { // empty mailbox
+		/* update the state seq */
+		M->state_seq = seq;
 		MailboxState_setMsginfo(M, msginfo);
 		return M;
 	}
@@ -233,21 +247,33 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		
 		const char * keyword = db_result_get(r,1);
 		if (strlen(keyword)>0){
-			TRACE(TRACE_INFO, "Keyword line [%d %s]", nrows, keyword);
-			/* id is presented via query in ordered fashion so, we use tempId as a cached last tree lookup */
+			// TRACE(TRACE_INFO, "Keyword line [%d %s]", nrows, keyword);
+			/* use tempId a temporary store the id of the item in order to avoid unnecessary lookups */
 			if ( tempId!=id || tempId==0 ){
 				result = g_tree_lookup(msginfo, &id);
 				tempId=id;
 			}
 		    if ( result != NULL ){
 				result->keywords = g_list_append(result->keywords, g_strdup(keyword));
+				/*
+				GList *kL = g_tree_keys(M->keywords);
+				GString *kStr = g_list_join(kL," ");
+				TRACE(TRACE_INFO, "MSG Keyworkds [%s]",kStr->str);
+				g_string_free(kStr,TRUE);
+				g_list_free(g_list_first(kL));
+				*/
 			}
 		}
 	}
+	db_con_clear(c);
+	TRACE(TRACE_DEBUG, "SEQ Keywords [ %" PRIu64 " ]", nrows);
 	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");
 	
 	gettimeofday(&after, NULL); 
 	log_query_time("Parsing Keywords ",before,after);
+	/* update the state seq */
+	M->state_seq = seq;
+	TRACE(TRACE_DEBUG, "SEQ STATE [ %" PRIu64 " %" PRIu64 " ]", M->state_seq , seq);
 	/* on both cases can use the same function due to some checks at MailboxState_setMsgInfo*/ 
 	MailboxState_setMsginfo(M, msginfo);
 	return M;
@@ -342,6 +368,10 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	M->msginfo     = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
 	// increase differential iterations in order to apply mailbox_update_strategy_2_max_iterations
 	M->differential_iterations = OldM->differential_iterations + 1;
+	
+	// copy state_seq
+	M->state_seq = OldM->state_seq;
+	
 	TRACE(TRACE_DEBUG, "Strategy SEQ UPDATE, iterations %d", M->differential_iterations);
 	//M->ids     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	//M->msn     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
