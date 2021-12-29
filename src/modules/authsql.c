@@ -441,7 +441,7 @@ char *auth_get_userid(uint64_t user_idnr)
  */
 int auth_check_userid(uint64_t user_idnr)
 {
-	C c; R r; volatile gboolean t = 1;
+	C c; R r; volatile gboolean t = TRUE;
 
 	c = db_con_get();
 	TRY
