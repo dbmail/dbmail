@@ -213,23 +213,30 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 		 * else it could be the first query failure */
 		id = strtoull(username, &endptr, 10);
 		if (*endptr == 0) {
-			/* numeric deliver-to --> this is a userid */
-			uid = g_new0(uint64_t,1);
-			*uid = id;
-			*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
-
+			TRACE(TRACE_DEBUG, "checking user [%d] occurences [%d]", id, occurences);
+			/* check user active */
+			if (db_user_active(id)){
+				/* numeric deliver-to --> this is a userid */
+				uid = g_new0(uint64_t,1);
+				*uid = id;
+				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
+				occurences=1;
+				TRACE(TRACE_DEBUG, "adding [%s] to deliver_to address occurences [%d]", username, occurences);
+			}else{
+				TRACE(TRACE_DEBUG, "user [%s] is not active", username);
+			}
 		} else {
 			*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(username));
+			TRACE(TRACE_DEBUG, "adding [%s] to deliver_to address occurences [%d]", username, occurences);
 		}
-		TRACE(TRACE_DEBUG, "adding [%s] to deliver_to address", username);
-		return 1;
+		return occurences;
 	} 
-
+ 
 	while (d) {
 		/* do a recursive search for deliver_to */
 		char *deliver_to = (char *)d->data;
 		TRACE(TRACE_DEBUG, "checking user %s to %s", username, deliver_to);
-
+		
 		occurences += auth_check_user_ext(deliver_to, userids, fwds, checks+1);
 
 		if (! g_list_next(d)) break;
@@ -428,6 +435,10 @@ char *auth_get_userid(uint64_t user_idnr)
 	return result;
 }
 
+/**
+ * Check the user and return the error code
+ * return 0 on no error, others if different
+ */
 int auth_check_userid(uint64_t user_idnr)
 {
 	C c; R r; volatile gboolean t = TRUE;
@@ -435,8 +446,13 @@ int auth_check_userid(uint64_t user_idnr)
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT userid FROM %susers WHERE user_idnr = %" PRIu64 "", DBPFX, user_idnr);
-		if (db_result_next(r))
-			t = FALSE;
+		if (db_result_next(r)){
+			/* user found */
+			if (db_user_active(user_idnr)){
+				/* user active, then no error */
+				t = 0;	
+			}
+		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
 	FINALLY
