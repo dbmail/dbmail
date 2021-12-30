@@ -434,8 +434,8 @@ int sort_errparse(sieve2_context_t *s, void *my)
 	lineno = sieve2_getvalue_int(s, "lineno");
 	message = sieve2_getvalue_string(s, "message");
 
-	TRACE(TRACE_INFO, "Error is PARSE: Line is [%d], Message is [%s]", lineno, message);
-
+	TRACE(TRACE_ERR, "SIEVE Error is PARSE: Line is [%d], Message is [%s]", lineno, message);
+	/*
 	g_string_append_printf(m->result->errormsg, "Parse error on line [%d]: %s", lineno, message);
 
 	if (m->message) {
@@ -448,7 +448,7 @@ int sort_errparse(sieve2_context_t *s, void *my)
 		send_alert(m->user_idnr, "Sieve script parse error", alertbody);
 		g_free(alertbody);
 	}
-
+	*/
 	m->result->error_parse = 1;
 	return SIEVE2_OK;
 }
@@ -460,7 +460,7 @@ int sort_errexec(sieve2_context_t *s, void *my)
 
 	message = sieve2_getvalue_string(s, "message");
 
-	TRACE(TRACE_INFO, "Error is EXEC: Message is [%s]", message);
+	TRACE(TRACE_ERR, "SIEVE Error is EXEC: Message is [%s]", message);
 
 	/* This turns out to be incredibly annoying, as libSieve
 	 * throws execution errors on malformed addresses coming
@@ -513,6 +513,7 @@ int sort_getscript(sieve2_context_t *s, void *my)
 			return SIEVE2_ERROR_FAIL;
 		}
 		sieve2_setvalue_string(s, "script", m->s_buf);
+		TRACE(TRACE_INFO, "Script\n%s", m->s_buf);
 	} else {
 		return SIEVE2_ERROR_BADARGS;
 	}

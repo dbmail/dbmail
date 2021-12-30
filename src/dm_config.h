@@ -21,6 +21,14 @@
 #define DM_CONFIG_H
 
 
+
+/* 
+ * determine the app version name 
+ * it is retrieved from the internal configuration and it cannot be overwritten
+ */
+long config_get_app_version(void);
+
+
 /* 
  * determine the default configuration filename
  * may be overridden by a -f switch
@@ -84,6 +92,7 @@ void config_get_security_actions(ServerConfig_T *config);
 
 char * config_get_pidfile(ServerConfig_T *config, const char *name);
 char * config_get_statefile(ServerConfig_T *config, const char *name);
+
 
 
 

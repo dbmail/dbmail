@@ -554,10 +554,43 @@ int do_delete(const uint64_t useridnr, const char * const name)
 		return 1;
 	}
 
+	qprintf("Deleting forwarders for user [%d] and alias [%s]\n",useridnr,name);
+	/* get all aliases for the specified userid  */
+	aliases = auth_get_user_aliases(useridnr);
+	
+	while (aliases) {	
+		char *localAlias=(char *)aliases->data;
+		/* avoid numeric numeric alias */
+		if ((unsigned int) strtol(localAlias, NULL, 10)!=0){
+			aliases = g_list_next(aliases);
+			continue;
+		}
+		GList * aliasesLocal = auth_get_aliases_ext(localAlias);
+		qprintf("Deleting forwarders for user [%d] and alias [%s]\n",useridnr, localAlias);
+		while (aliasesLocal) {
+			char *deliver_to = (char *)aliasesLocal->data;
+			/* avoid numeric deliver_to */
+			if ((unsigned int) strtol(deliver_to, NULL, 10)!=0){
+				aliasesLocal = g_list_next(aliasesLocal);
+				continue;
+			}	
+			qprintf("\tDeleting forward for [%s]\n",deliver_to);
+			auth_removealias_ext(localAlias, deliver_to);		
+			if (! g_list_next(aliasesLocal))
+				break;
+			aliasesLocal = g_list_next(aliasesLocal);
+		}
+		if (! g_list_next(aliases))
+				break;
+		aliases = g_list_next(aliases);
+	}
+	
 	qprintf("Deleting aliases for user [%s]...\n", name);
 	aliases = auth_get_user_aliases(useridnr);
 	do_aliases(useridnr, NULL, aliases);
 
+	
+	
 	qprintf("Deleting user [%s]...\n", name);
 	result = auth_delete_user(name);
 

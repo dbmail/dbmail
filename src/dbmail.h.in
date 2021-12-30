@@ -32,7 +32,7 @@
 
 #define __EXTENSIONS__ /* solaris */
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__SUNPRO_C)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__SUNPRO_C) || defined(__SMARTOS__) || defined(__ILLUMOS__) || defined(__sun)
 
 #define _XOPEN_SOURCE
 
@@ -85,7 +85,16 @@
 #include <termios.h>
 #include <unistd.h>
 #include <mhash.h>
-#include <sys/queue.h>
+/* 
+ * check if queue.h can be included
+ * in some systems the file cannot be found
+ */
+#if __has_include(<sys/queue.h>)
+	#include <sys/queue.h>
+#else
+	#include "compatibility/queue.h"
+#endif
+
 #include <event2/event.h>
 #include <event2/thread.h>
 #include <evhttp.h>

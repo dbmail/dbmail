@@ -270,6 +270,7 @@ int main(int argc, char *argv[])
 
 		case 'V':
 			PRINTF_THIS_IS_DBMAIL;
+			printf("Internal Version %ld\n\n", config_get_app_version());
 			return 1;
 
 		default:
