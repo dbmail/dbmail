@@ -1026,7 +1026,8 @@ int db_check_version(void)
 	Connection_T c = db_con_get();
 	volatile int ok = 0;
 	volatile int db = 0;
-
+	volatile long version = config_get_app_version();
+	/* @todo: use version to run upgrades */
 	TRY
 		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
 			db = 1;

@@ -39,6 +39,42 @@ static GKeyFile *config_dict = NULL;
 static int configured = 0;
 
 
+long config_get_app_version(void)
+{
+	long version=0;
+	long temp=0;
+	char version_str_long[64];
+	sprintf(version_str_long,"%s",DM_VERSION);
+	TRACE(TRACE_INFO, "Version string expression [%s] => %s", version_str_long, DM_VERSION);
+	
+	GString *g_version_str_long=g_string_new(version_str_long);
+	GList *parts_version_str_long=g_string_split(g_version_str_long,"-");
+	GString *g_version_str=g_string_new(parts_version_str_long->data);
+	GList *parts_version_str=g_string_split(g_version_str,".");
+	
+	
+	temp=strtol((char *)parts_version_str->data, NULL, 10);
+	version=temp;
+	TRACE(TRACE_INFO, "\tVersion Part 1 [%d] => final [%d]", temp, version);
+	
+	parts_version_str = g_list_next(parts_version_str);
+	temp=strtol((char *)parts_version_str->data, NULL, 10);
+	version=version*10+temp;
+	TRACE(TRACE_INFO, "\tVersion Part 2 [%d] => final [%d]", temp, version);
+	
+	parts_version_str = g_list_next(parts_version_str);
+	temp=strtol((char *)parts_version_str->data, NULL, 10);
+	version=version*1000+temp;
+	TRACE(TRACE_INFO, "\tVersion Part 3 [%d] => final [%d]", temp, version);
+	
+	g_string_free(g_version_str_long,TRUE);
+	g_string_free(g_version_str,TRUE);
+	g_list_destroy(parts_version_str_long);
+	g_list_destroy(parts_version_str);
+		
+	return version;
+}
+
 void config_get_file(void)
 {
 	strncpy(configFile, DEFAULT_CONFIG_FILE, sizeof(configFile)-1);
