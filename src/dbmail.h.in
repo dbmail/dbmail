@@ -71,7 +71,7 @@
 #include <sysexits.h>
 #include <dirent.h>
 #include <sys/types.h>
-#include <sys/stat.h>
+#include <sys/stat.h> 
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -85,7 +85,16 @@
 #include <termios.h>
 #include <unistd.h>
 #include <mhash.h>
-#include <sys/queue.h>
+/* 
+ * check if queue.h can be included
+ * in some systems the file cannot be found
+ */
+#if __has_include(<sys/queue.h>)
+	#include <sys/queue.h>
+#else
+	#include "compatibilityss/queue.h"
+#endif
+
 #include <event2/event.h>
 #include <event2/thread.h>
 #include <evhttp.h>
