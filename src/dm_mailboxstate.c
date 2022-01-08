@@ -153,6 +153,10 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 				uid = g_new0(uint64_t,1); 
 				*uid = id;
 				//TRACE(TRACE_DEBUG, "SEQ FOUND %ld",id);
+				/* free all keywords, it will be added later again */
+				if (!result->keywords){
+					g_list_destroy(result->keywords);
+				}
 		    }
 		}
 
@@ -202,7 +206,13 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 				//TRACE(TRACE_DEBUG, "SEQ Remove MSG EXPUNGING [ %" PRIu64 " expunge flag %d, was expunged %d]", *uid, result->expunge, result->expunged);
 			}
 		}
-		
+		/* add Seen as flag when IMAP_FLAGS_SEEN=1 */
+		if (result->flags[IMAP_FLAG_SEEN]==1){
+			result->keywords = g_list_append(result->keywords, g_strdup("\\Seen"));	
+			/* some strange clients like it this way */
+			//result->keywords = g_list_append(result->keywords, g_strdup("\\SEEN"));	
+		}
+		/* cleaning up */
 		if (idsAdded==1){
 			//TRACE(TRACE_DEBUG, "SEQ ADDED %ld",id);
 		    /* it's new */
@@ -266,7 +276,7 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		}
 	}
 	db_con_clear(c);
-	TRACE(TRACE_DEBUG, "SEQ Keywords [ %" PRIu64 " ]", nrows);
+	TRACE(TRACE_DEBUG, "SEQ Keywords Rows [ %d ]", nrows);
 	if (! nrows) TRACE(TRACE_DEBUG, "no keywords");
 	
 	gettimeofday(&after, NULL); 
@@ -344,7 +354,7 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	
 	/* differential mode, evaluate max iterations */
 	int mailbox_diffential_max_iterations = config_get_value_default_int("mailbox_update_strategy_2_max_iterations", "IMAP", 300); 
-	if (mailbox_diffential_max_iterations > 0 &&  OldM->differential_iterations >= mailbox_diffential_max_iterations-1 ){
+	if (mailbox_diffential_max_iterations > 0 &&  (int)OldM->differential_iterations >= mailbox_diffential_max_iterations-1 ){
 		TRACE(TRACE_DEBUG, "Strategy differential mode override due to max iterations, see config [IMAP] mailbox_update_strategy_2_max_iterations");
 		return MailboxState_new(pool, OldM->id);
 	} 
