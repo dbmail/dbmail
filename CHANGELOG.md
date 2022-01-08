@@ -1,5 +1,29 @@
 # Changelog
 All notable changes to this project will be documented in this file.
+## [3.2.6] - 2021-12-31
+### WARNING
+- the update process should be issues in a maintenance window do to massive changes on database, see [#108]
+- compatibility compiler standard was raised to C17
+
+### Added
+- IMAP Daemon: added switch to control the sequence update strategy
+- IMAP Daemon: added switch to control the sync between \DELETE flag and the actual state of the message (deleted), see also mailbox_sync_batch_size.
+
+### Optimizations
+- IMAP: optimizing differential state
+
+### Issues
+- fixing Outlook issue found on making a message read [#139]
+- fixing duplicate key by adding necessary handlers [#134]
+- fixing deleting forwards and aliases when deleting a user [#129]
+- fixing LMTP delivery in case of disabled users [#122]
+- fixing compilation issue on alpine and SmartOS [#123] [#124]
+- fixing sql issues related to MODSEQ [#111]
+- fixing LMTP segmentation fault on sieve error [#106]
+- fixing invalid utf-8 character adding sql conversion [#108]
+- fixing other sql issues (upgrade process) [#103] [#102] [#99] [#97] [#105] [#93]
+- fixing SIEVE crash on error [#106]
+- fixing debian build [#91]
 
 ## [3.2.5] - 2020-08-03
 ### Added

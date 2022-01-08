@@ -1,305 +1,368 @@
-/*
- (c) 2000-2004 IC&S, The Netherlands 
- (c) 2004-2012 NFG Net Facilities Group BV, The Netherlands, support@nfg.nl
-
-FIXME: this information is somewhat outdated
-TODO:
-tell more about where to find what library
-add information about utf8 setups for mysql users
-add information about advanced setups with connection pools
-
-*/
-
-DBMAIL Installation
-===================
-
-What do you need?
-
-- A working database, one of the following:
-  - MySQL 5.0 or higher with InnoDB.
-  - PostgreSQL 8.3 or higher.
-  - SQLite 3 or higher.
-  - Oracle 11.1 or higher.
-- A working SMTP server (such as Postfix, Exim, QMail or Sendmail).
-- The DBMail source (www.dbmail.org).
-- GNU Make. On Linux systems, your standard 'make' program is GNU Make. On *BSD
-  systems, make sure you install and use 'gmake'. 
-- Development files (libs, scripts and include files) for your database server.
-  These will probably be provided by separate packages.
-- Glib (>= 2.16) development headers and libraries.
-- Gmime (>= 2.4) development headers and libraries.
-- libSieve (>= 2.2.1) for Sieve support (libsieve.sf.net).
-- Any standard libldap for LDAP support (only tested with OpenLDAP, however).
-- mhash
-- openssl
-- libzdb (http://www.tildeslash.com/libzdb/)
-- libevent
-
-
-1.	Setup a database
-
-	MySQL setup
-	-----------
-
-	First you'll need to create the DBMail database in MYSQL. You can do
-	this by issuing the following command. This step is only necessary when
-	you do not have a database for DBMail yet. Note that you will be
-	prompted for the MySQL root password.
-
-	mysqladmin create dbmail -u root -p
-
-	This creates a database with the name "dbmail". Now you have to give
-	a non-root user access to this database. Start the MySQL command-line
-	client as root:
-
-	mysql -u root -p 
-
-	and enter the following command:
-
-	GRANT ALL ON dbmail.* to dbmail@localhost identified by '<pass>'
-
-	Where <pass> should be replaced with the password you want for
-	the dbmail user. After this step, the database is ready to be
-	used by the dbmail user. The next step is the creation of the
-	database tables used by DBMail. Log out of the MySQL client and run 
-	the following command from the command line. You will have to
-	enter the password you set in the previous step.
-
-	mysql -u dbmail dbmail -p < sql/mysql/create_tables.mysql
-
-	After this, the DBMAIL tables will have been created and we can go
-	on to the compilation and installation of DBMail itself.
-
-	A special note to MySQL users: since DBMail 3.0 stores attachments in
-	single rows, you need to set 'max_allowed_packet' in /etc/mysql/my.cnf 
-	to a value that is larger than the largest email attachment you expect 
-	to support.
-
-	So if you accept emails upto say 20MB, you should set a value for
-	'max_allowed_packet' of no less than 21MB, leaving some room for 
-	network overhead. If you want to be safe: use 1.5 times the max 
-	message size.
-
-
-	PostgreSQL setup
-	----------------
-	
-	First you need to create the PostgreSQL user dbmail is going to use.
-	This is done by. Note that this command can only be performed by
-	user postgres or another PostgreSQL user with the privileges to
-	create users and and databases.
-
-	createuser -U postgres dbmail
-
-	Off course you can use an other username than dbmail, simply replace
-	it. You can set a password for the user by doing a:
-
-	ALTER USER dbmail WITH PASSWORD '<password>';
-
-	In a PostgreSQL console, with <password> replaced by the actual 
-	password you want to use. After doing this you should create the
-	database for dbmail:
-
-	createdb -E utf8 -U postgres -O dbmail dbmail
-
-	The first dbmail is the user you just created, the second the name of
-	the database. Of course you can use an other database name. After
-	setting up the user and database it's time to create the tables, do a:
-
-	psql -U dbmail -h localhost dbmail < sql/postgresql/create_tables.pgsql
-	
-	followed by:
-	
-	cat sql/postgresql/upgrades/*.psql | psql -U dbmail dbmail
-
-	Don't forget to start postgresql with the -i option, so it accepts
-	TCP/IP connections.
-
-	Finally, if you run PostgreSQL 9 or later you must make sure your
-	postgresql.conf contains the following setting:
-
-	bytea_output = 'escape'
-
-	because DBMail can't handle the default 'hex' type output. If you do not want
-	to change this cluster-wide, it can be done at the database level thus:
-	
-	psql -U postgres postgres -c "alter database dbmail set bytea_output =  'escape';"
-
-	SQLite setup
-	------------
-
-	FIXME: this doesn't work in 3.0 (yet/anymore)
-
-	Dbmail will automatically create the database specified in dbmail.conf. 
-	All you need to do is make sure that the directory which will contain
-	the database file exists, and is writable for the dbmail user.
-	
-	Oracle setup
-	------------
-	First create Oracle table spaces for DBMAIL schema. You can use as
-	example script sql/oracle/dbmail_ts.sql. In case when you are performing
-	this action on server where Oracle DB is installed you can invoke the
-	script in following way
-
-	sqlplus "/ as sysdba" @dbmail_ts.sql 
-
-	Note that most likely you will need to alter this script in order to set 
-	storage	limit values in way which meet your storage requirement/size. 
-
-	Don't forget that for script execution you should have configured environment 
-	with ORACLE_HOME, ORACLE_SID, ORACLE_BASE variables set. 
-
-	Then create DBMAIL user:
-
-	sqlplus "/ as sysdba" @sql/oracle/dbmail_grant.sql 
-
-	If you need to you can change DBMAIL user name in this script. Also
-	please note that the script will drop previously created DBMAIL user
-	and schema. 
-
-	After that you can upload DBMAIL data schema:
-	sqlplus dbmail/dbmail @sql/oracle/dbmail_schema.sql 
-	Please note that you should execute dbmail_schema.sql using 'dbmail'
-	user instead of DBA user.
-
-	However depending on you DB configuration you may need to perform 
-	slightly other or some additional steps to properly configure DB
-	storage and connectivity options so please ask Oracle DBA to assist you. 
-
-
-2. 	Set the database settings
-
-	Copy the dbmail.conf file to /etc
-	Edit the dbmail.conf file and set everything in there
-	to your likings.
-
-	Make sure to set your database name, user and host are configured
-        in dbmail.conf. Other options in the configuration file are 
-        documented there.
-
-	dbmail.conf settings for Oracle (remote access)
-	-----------------------------------------------
-	First you should set up environment variable $ORACLE_HOME with path to Oracle
-	instant client on your DBMAIL host.
-	There is at least two possible way to fill DB connection options in dmail.conf. 
-	1) You can configure dbmail.conf without using tnsnames.ora and Oracle services.
-	In such case you should specify in 'host' and 'sqlport' a host and port where
-	Oracle TNS listener accept connections. 'db' parameter should contain DBMAIL
-	schema name.
-
-	2) Or if you have Oracle Service configured for access to DBMAIL
-	schema and this service described in $ORACLE_HOME/network/admin/tnsnames.ora
-	then you should configure only following values in dbmail.conf - 'user', 'pass'
-	and 'db'. 'db' option should contain service name. Options 'host' and 'sqlport'
-	should be empty.
-	E.g. 
-	tnsnames.ora:
-		DBMAIL_SRV = (DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)
-			(HOST = 1.1.1.1)(PORT = 4521))
-			(CONNECT_DATA = (SERVER = DEDICATED)(SERVICE_NAME = DBMAIL_SRV)
-			(FAILOVER_MODE = (TYPE = SELECT)(METHOD = BASIC))))
-	dbmail.conf:
-		host =
-		sqlport =
-		user = dbmail
-		pass = dbmail
-		db = DBMAIL_SRV
-	
-
-3.	Run configure & make
-	Run the configure script.
-
-	e.g. 
-
-	./configure --with-sieve 
-
-	After running configure, 'make all' will build the executables.
-	
-	Running 'make install' will install the executables in /usr/local/sbin
-
-4.	Create users in the dbmail system
-
-	Next you will need to create some users into the dbmail mailing system.
-	Currently this can be done in two ways. One way is using the
-	dbmail-users utility. The other way is doing it in the database
-	itself. To do it using the dbmail-users utility and do the following:
-
-	dbmail-users -a <username> -w <password> -g <clientid> -m <maxmail> [-s aliases]
-	
-	clientid can be left 0 (this is if you want certain mail administrators
-	administer specific groups of mail users). maxmail is the maximum
-	number of bytes this user may have in his/her mailboxes. 0 is
-	unlimited. Add K or M for kilobytes and megabytes. Aliases are a 
-	number of aliases for this user. @domain are domain aliases. 
-	A user always needs to have at least one alias to receive mail, unless
-	the users username is something like foo@bar.org, where bar.org is 
-	a domain the mail server delivers to.
-	
-	example: 
-	./dbmail-users -a john -w secret -g 0 -m 25M -s john@dude.org,john@dude.net,@net.com
-	
-	This will create a user john, with a password secret. It will set
-	john's mail limit 25 Mb and all mail for john@dude.org, john@dude.net
-	and @net.com will be sent to john. The @net.com is a fallback alias.
-	This means that all mail that cannot be delivered to an existing alias
-	for a @net.com address will sent to john.
-
-5.	Configure your MTA 
-
-	There are two ways to connect your MTA to DBMail. The MTA can start a
-	dbmail-deliver process and pipe SMTP commands and messages to it, or it
-	can use LMTP (Local Mail Transport Protocol) to deliver via
-	dbmail-lmtpd. LMTP is the preferred solution because it offers more
-	robust error handling and because it is a daemon, high traffic servers
-	will have reduced delays which would be incurred starting up a
-	dbmail-deliver process for each message.
-
-	The specifics of delivering to DBMail from your MTA can be found in the
-	README.<MTA Name> files. Currently there is documentation for Postfix,
-	Exim and QMail. Other setup information can also be found on the
-	project wiki, at http://www.dbmail.org/dokuwiki
-
-	If you use a different kind of MTA that we do not have documentation
-	for: The dbmail injector program, dbmail-deliver, can receive information
-	in two ways. Either through raw mail (for example, delivered by
-	procmail) using the -n option or from a MTA with recipients in the
-	command line using the -d option. Be careful, the -n option is not
-	fully tested and may behave unexpected. If possible use the -d option.
-
-	Setup for LMTP should be straightforward if your MTA supports it.
-
-6.	Setting up the maintenance run
-
-	The dbmail daemons and the smtp injector itself will never actually
-	delete mail from the database. The only program that will do this is
-	the dbmail-util program. This program will also check the integrity of
-	the dbmail database and, if necessary, fix it. The dbmail-util program
-	will first delete all messages that are set for final deletion. After
-	that it will set all messages that have the delete status set to status
-	final deletion. This way dbmail always has a backup based upon the
-	interval difference between maintenance jobs. We recommend running the
-	dbmail-util program in a daily interval from cron:
-
-	0 3 * * * /usr/local/sbin/dbmail-util -ay &>/dev/null
-	
-7.	Starting the servers
-
-	If you want users to be able to retrieve email via IMAP or POP3, run
-	dbmail-imapd and/or dbmail-pop3d. If you are delivering email via
-	LMTP, run dbmail-lmtpd (you should start LMTP before your MTA!).
-
-8.	Problems
-	--------
-	For problems you can subscribe to the dbmail mailing list: 
-	http://mailman.fastxs.nl/mailman/listinfo/dbmail
-	
-	Please also check the mailing list archives,
-	the wiki at: http://www.dbmail.org/dokuwiki
-	and the bugs at: http://www.dbmail.org/mantis
-
-	Please note that DBMail logs a lot of relevant data to the mail log
-	(often located at /var/log/maillog or /var/log/mail.log). This can
-	help you often if something is not working, e.g. if there's no
-	connection to the database.
-
-
+Installation Instructions
+*************************
+
+   Copyright (C) 1994-1996, 1999-2002, 2004-2016 Free Software
+Foundation, Inc.
+
+   Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without warranty of any kind.
+
+Basic Installation
+==================
+
+   Briefly, the shell command './configure && make && make install'
+should configure, build, and install this package.  The following
+more-detailed instructions are generic; see the 'README' file for
+instructions specific to this package.  Some packages provide this
+'INSTALL' file but do not implement all of the features documented
+below.  The lack of an optional feature in a given package is not
+necessarily a bug.  More recommendations for GNU packages can be found
+in *note Makefile Conventions: (standards)Makefile Conventions.
+
+   The 'configure' shell script attempts to guess correct values for
+various system-dependent variables used during compilation.  It uses
+those values to create a 'Makefile' in each directory of the package.
+It may also create one or more '.h' files containing system-dependent
+definitions.  Finally, it creates a shell script 'config.status' that
+you can run in the future to recreate the current configuration, and a
+file 'config.log' containing compiler output (useful mainly for
+debugging 'configure').
+
+   It can also use an optional file (typically called 'config.cache' and
+enabled with '--cache-file=config.cache' or simply '-C') that saves the
+results of its tests to speed up reconfiguring.  Caching is disabled by
+default to prevent problems with accidental use of stale cache files.
+
+   If you need to do unusual things to compile the package, please try
+to figure out how 'configure' could check whether to do them, and mail
+diffs or instructions to the address given in the 'README' so they can
+be considered for the next release.  If you are using the cache, and at
+some point 'config.cache' contains results you don't want to keep, you
+may remove or edit it.
+
+   The file 'configure.ac' (or 'configure.in') is used to create
+'configure' by a program called 'autoconf'.  You need 'configure.ac' if
+you want to change it or regenerate 'configure' using a newer version of
+'autoconf'.
+
+   The simplest way to compile this package is:
+
+  1. 'cd' to the directory containing the package's source code and type
+     './configure' to configure the package for your system.
+
+     Running 'configure' might take a while.  While running, it prints
+     some messages telling which features it is checking for.
+
+  2. Type 'make' to compile the package.
+
+  3. Optionally, type 'make check' to run any self-tests that come with
+     the package, generally using the just-built uninstalled binaries.
+
+  4. Type 'make install' to install the programs and any data files and
+     documentation.  When installing into a prefix owned by root, it is
+     recommended that the package be configured and built as a regular
+     user, and only the 'make install' phase executed with root
+     privileges.
+
+  5. Optionally, type 'make installcheck' to repeat any self-tests, but
+     this time using the binaries in their final installed location.
+     This target does not install anything.  Running this target as a
+     regular user, particularly if the prior 'make install' required
+     root privileges, verifies that the installation completed
+     correctly.
+
+  6. You can remove the program binaries and object files from the
+     source code directory by typing 'make clean'.  To also remove the
+     files that 'configure' created (so you can compile the package for
+     a different kind of computer), type 'make distclean'.  There is
+     also a 'make maintainer-clean' target, but that is intended mainly
+     for the package's developers.  If you use it, you may have to get
+     all sorts of other programs in order to regenerate files that came
+     with the distribution.
+
+  7. Often, you can also type 'make uninstall' to remove the installed
+     files again.  In practice, not all packages have tested that
+     uninstallation works correctly, even though it is required by the
+     GNU Coding Standards.
+
+  8. Some packages, particularly those that use Automake, provide 'make
+     distcheck', which can by used by developers to test that all other
+     targets like 'make install' and 'make uninstall' work correctly.
+     This target is generally not run by end users.
+
+Compilers and Options
+=====================
+
+   Some systems require unusual options for compilation or linking that
+the 'configure' script does not know about.  Run './configure --help'
+for details on some of the pertinent environment variables.
+
+   You can give 'configure' initial values for configuration parameters
+by setting variables in the command line or in the environment.  Here is
+an example:
+
+     ./configure CC=c99 CFLAGS=-g LIBS=-lposix
+
+   *Note Defining Variables::, for more details.
+
+Compiling For Multiple Architectures
+====================================
+
+   You can compile the package for more than one kind of computer at the
+same time, by placing the object files for each architecture in their
+own directory.  To do this, you can use GNU 'make'.  'cd' to the
+directory where you want the object files and executables to go and run
+the 'configure' script.  'configure' automatically checks for the source
+code in the directory that 'configure' is in and in '..'.  This is known
+as a "VPATH" build.
+
+   With a non-GNU 'make', it is safer to compile the package for one
+architecture at a time in the source code directory.  After you have
+installed the package for one architecture, use 'make distclean' before
+reconfiguring for another architecture.
+
+   On MacOS X 10.5 and later systems, you can create libraries and
+executables that work on multiple system types--known as "fat" or
+"universal" binaries--by specifying multiple '-arch' options to the
+compiler but only a single '-arch' option to the preprocessor.  Like
+this:
+
+     ./configure CC="gcc -arch i386 -arch x86_64 -arch ppc -arch ppc64" \
+                 CXX="g++ -arch i386 -arch x86_64 -arch ppc -arch ppc64" \
+                 CPP="gcc -E" CXXCPP="g++ -E"
+
+   This is not guaranteed to produce working output in all cases, you
+may have to build one architecture at a time and combine the results
+using the 'lipo' tool if you have problems.
+
+Installation Names
+==================
+
+   By default, 'make install' installs the package's commands under
+'/usr/local/bin', include files under '/usr/local/include', etc.  You
+can specify an installation prefix other than '/usr/local' by giving
+'configure' the option '--prefix=PREFIX', where PREFIX must be an
+absolute file name.
+
+   You can specify separate installation prefixes for
+architecture-specific files and architecture-independent files.  If you
+pass the option '--exec-prefix=PREFIX' to 'configure', the package uses
+PREFIX as the prefix for installing programs and libraries.
+Documentation and other data files still use the regular prefix.
+
+   In addition, if you use an unusual directory layout you can give
+options like '--bindir=DIR' to specify different values for particular
+kinds of files.  Run 'configure --help' for a list of the directories
+you can set and what kinds of files go in them.  In general, the default
+for these options is expressed in terms of '${prefix}', so that
+specifying just '--prefix' will affect all of the other directory
+specifications that were not explicitly provided.
+
+   The most portable way to affect installation locations is to pass the
+correct locations to 'configure'; however, many packages provide one or
+both of the following shortcuts of passing variable assignments to the
+'make install' command line to change installation locations without
+having to reconfigure or recompile.
+
+   The first method involves providing an override variable for each
+affected directory.  For example, 'make install
+prefix=/alternate/directory' will choose an alternate location for all
+directory configuration variables that were expressed in terms of
+'${prefix}'.  Any directories that were specified during 'configure',
+but not in terms of '${prefix}', must each be overridden at install time
+for the entire installation to be relocated.  The approach of makefile
+variable overrides for each directory variable is required by the GNU
+Coding Standards, and ideally causes no recompilation.  However, some
+platforms have known limitations with the semantics of shared libraries
+that end up requiring recompilation when using this method, particularly
+noticeable in packages that use GNU Libtool.
+
+   The second method involves providing the 'DESTDIR' variable.  For
+example, 'make install DESTDIR=/alternate/directory' will prepend
+'/alternate/directory' before all installation names.  The approach of
+'DESTDIR' overrides is not required by the GNU Coding Standards, and
+does not work on platforms that have drive letters.  On the other hand,
+it does better at avoiding recompilation issues, and works well even
+when some directory options were not specified in terms of '${prefix}'
+at 'configure' time.
+
+Optional Features
+=================
+
+   If the package supports it, you can cause programs to be installed
+with an extra prefix or suffix on their names by giving 'configure' the
+option '--program-prefix=PREFIX' or '--program-suffix=SUFFIX'.
+
+   Some packages pay attention to '--enable-FEATURE' options to
+'configure', where FEATURE indicates an optional part of the package.
+They may also pay attention to '--with-PACKAGE' options, where PACKAGE
+is something like 'gnu-as' or 'x' (for the X Window System).  The
+'README' should mention any '--enable-' and '--with-' options that the
+package recognizes.
+
+   For packages that use the X Window System, 'configure' can usually
+find the X include and library files automatically, but if it doesn't,
+you can use the 'configure' options '--x-includes=DIR' and
+'--x-libraries=DIR' to specify their locations.
+
+   Some packages offer the ability to configure how verbose the
+execution of 'make' will be.  For these packages, running './configure
+--enable-silent-rules' sets the default to minimal output, which can be
+overridden with 'make V=1'; while running './configure
+--disable-silent-rules' sets the default to verbose, which can be
+overridden with 'make V=0'.
+
+Particular systems
+==================
+
+   On HP-UX, the default C compiler is not ANSI C compatible.  If GNU CC
+is not installed, it is recommended to use the following options in
+order to use an ANSI C compiler:
+
+     ./configure CC="cc -Ae -D_XOPEN_SOURCE=500"
+
+and if that doesn't work, install pre-built binaries of GCC for HP-UX.
+
+   HP-UX 'make' updates targets which have the same time stamps as their
+prerequisites, which makes it generally unusable when shipped generated
+files such as 'configure' are involved.  Use GNU 'make' instead.
+
+   On OSF/1 a.k.a. Tru64, some versions of the default C compiler cannot
+parse its '<wchar.h>' header file.  The option '-nodtk' can be used as a
+workaround.  If GNU CC is not installed, it is therefore recommended to
+try
+
+     ./configure CC="cc"
+
+and if that doesn't work, try
+
+     ./configure CC="cc -nodtk"
+
+   On Solaris, don't put '/usr/ucb' early in your 'PATH'.  This
+directory contains several dysfunctional programs; working variants of
+these programs are available in '/usr/bin'.  So, if you need '/usr/ucb'
+in your 'PATH', put it _after_ '/usr/bin'.
+
+   On Haiku, software installed for all users goes in '/boot/common',
+not '/usr/local'.  It is recommended to use the following options:
+
+     ./configure --prefix=/boot/common
+
+Specifying the System Type
+==========================
+
+   There may be some features 'configure' cannot figure out
+automatically, but needs to determine by the type of machine the package
+will run on.  Usually, assuming the package is built to be run on the
+_same_ architectures, 'configure' can figure that out, but if it prints
+a message saying it cannot guess the machine type, give it the
+'--build=TYPE' option.  TYPE can either be a short name for the system
+type, such as 'sun4', or a canonical name which has the form:
+
+     CPU-COMPANY-SYSTEM
+
+where SYSTEM can have one of these forms:
+
+     OS
+     KERNEL-OS
+
+   See the file 'config.sub' for the possible values of each field.  If
+'config.sub' isn't included in this package, then this package doesn't
+need to know the machine type.
+
+   If you are _building_ compiler tools for cross-compiling, you should
+use the option '--target=TYPE' to select the type of system they will
+produce code for.
+
+   If you want to _use_ a cross compiler, that generates code for a
+platform different from the build platform, you should specify the
+"host" platform (i.e., that on which the generated programs will
+eventually be run) with '--host=TYPE'.
+
+Sharing Defaults
+================
+
+   If you want to set default values for 'configure' scripts to share,
+you can create a site shell script called 'config.site' that gives
+default values for variables like 'CC', 'cache_file', and 'prefix'.
+'configure' looks for 'PREFIX/share/config.site' if it exists, then
+'PREFIX/etc/config.site' if it exists.  Or, you can set the
+'CONFIG_SITE' environment variable to the location of the site script.
+A warning: not all 'configure' scripts look for a site script.
+
+Defining Variables
+==================
+
+   Variables not defined in a site shell script can be set in the
+environment passed to 'configure'.  However, some packages may run
+configure again during the build, and the customized values of these
+variables may be lost.  In order to avoid this problem, you should set
+them in the 'configure' command line, using 'VAR=value'.  For example:
+
+     ./configure CC=/usr/local2/bin/gcc
+
+causes the specified 'gcc' to be used as the C compiler (unless it is
+overridden in the site shell script).
+
+Unfortunately, this technique does not work for 'CONFIG_SHELL' due to an
+Autoconf limitation.  Until the limitation is lifted, you can use this
+workaround:
+
+     CONFIG_SHELL=/bin/bash ./configure CONFIG_SHELL=/bin/bash
+
+'configure' Invocation
+======================
+
+   'configure' recognizes the following options to control how it
+operates.
+
+'--help'
+'-h'
+     Print a summary of all of the options to 'configure', and exit.
+
+'--help=short'
+'--help=recursive'
+     Print a summary of the options unique to this package's
+     'configure', and exit.  The 'short' variant lists options used only
+     in the top level, while the 'recursive' variant lists options also
+     present in any nested packages.
+
+'--version'
+'-V'
+     Print the version of Autoconf used to generate the 'configure'
+     script, and exit.
+
+'--cache-file=FILE'
+     Enable the cache: use and save the results of the tests in FILE,
+     traditionally 'config.cache'.  FILE defaults to '/dev/null' to
+     disable caching.
+
+'--config-cache'
+'-C'
+     Alias for '--cache-file=config.cache'.
+
+'--quiet'
+'--silent'
+'-q'
+     Do not print messages saying which checks are being made.  To
+     suppress all normal output, redirect it to '/dev/null' (any error
+     messages will still be shown).
+
+'--srcdir=DIR'
+     Look for the package's source code in directory DIR.  Usually
+     'configure' can determine that directory automatically.
+
+'--prefix=DIR'
+     Use DIR as the installation prefix.  *note Installation Names:: for
+     more details, including other options available for fine-tuning the
+     installation locations.
+
+'--no-create'
+'-n'
+     Run the configure checks, but stop before creating any output
+     files.
+
+'configure' also accepts some other, not widely useful, options.  Run
+'configure --help' for more details.
