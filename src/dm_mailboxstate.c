@@ -149,10 +149,6 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 				result->expunge=0;
 				result->expunged=0;
 		    }else{
-				/* free all keywords, it will be added later again */
-				if (!result->keywords){
-					g_list_free(result->keywords);
-				}
 				/* initialize uid, result is not null */
 				uid = g_new0(uint64_t,1); 
 				*uid = id;
@@ -205,6 +201,10 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 			}else{
 				//TRACE(TRACE_DEBUG, "SEQ Remove MSG EXPUNGING [ %" PRIu64 " expunge flag %d, was expunged %d]", *uid, result->expunge, result->expunged);
 			}
+		}
+		/* free all keywords, it will be added later again */
+		if (!result->keywords){
+			g_list_free(result->keywords);
 		}
 		/* add Seen as flag when IMAP_FLAGS_SEEN=1 */
 		if (result->flags[IMAP_FLAG_SEEN]==1){
