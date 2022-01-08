@@ -2387,6 +2387,7 @@ static void _ic_store_enter(dm_thread_data *D)
 	self->cmd = &cmd;
 
 	if ( update ) {
+		db_mailbox_seq_update(MailboxState_getId(self->mailbox->mbstate), 0);
 		char *flags = MailboxState_flags(self->mailbox->mbstate);
 		dbmail_imap_session_buff_printf(self, "* FLAGS (%s)\r\n", flags);
 		dbmail_imap_session_buff_printf(self, "* OK [PERMANENTFLAGS (%s \\*)] Flags allowed.\r\n", flags);
