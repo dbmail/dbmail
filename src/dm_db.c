@@ -3333,7 +3333,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		db_begin_transaction(c);
 		if (seen) {
 			db_exec(c, query);
-			if (Connection_rowsChanged(c) || is_flag == 1)
+			if (Connection_rowsChanged(c))
 				count = 1;
 		}
 		if (db_set_msgkeywords(c, msg_idnr, keywords, action_type, msginfo))
