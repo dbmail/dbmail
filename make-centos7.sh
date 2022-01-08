@@ -1,4 +1,10 @@
 #!/bin/bash
+# Automated Installation, Centos 7
+# V 0.5
+# Author  Cosmin Cioranu - cosmin.cioranu@gmail.com
+# copyright: Cosmin Cioranu
+#
+
 L=`pwd`
 LOG=$L'/make.log'
 execute(){

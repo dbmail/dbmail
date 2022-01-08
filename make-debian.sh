@@ -1,4 +1,9 @@
 #!/bin/bash
+# Automated Installation, debian 10
+# V 0.5
+# Author  Cosmin Cioranu - cosmin.cioranu@gmail.com
+# copyright: Cosmin Cioranu
+#
 L=`pwd`
 LOG=$L'/make.log'
 execute(){
