@@ -3270,14 +3270,17 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	Connection_T c;
 	size_t i, pos = 0;
 	volatile int seen = 0, count = 0;
+	int is_flag=0;
 	INIT_QUERY;
 
 	memset(query,0,DEF_QUERYSIZE);
 	pos += snprintf(query, DEF_QUERYSIZE-1, "UPDATE %smessages SET ", DBPFX);
 
 	for (i = 0; flags && i < IMAP_NFLAGS; i++) {
-		if (flags[i])
-			TRACE(TRACE_DEBUG,"set %s", db_flag_desc[i]);
+		if (flags[i]){
+			TRACE(TRACE_DEBUG,"set %s for action type %d", db_flag_desc[i], action_type);
+			is_flag = 1;
+		}
 
 		switch (action_type) {
 		case IMAPFA_ADD:
@@ -3330,7 +3333,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		db_begin_transaction(c);
 		if (seen) {
 			db_exec(c, query);
-			if (Connection_rowsChanged(c))
+			if (Connection_rowsChanged(c) || is_flag == 1)
 				count = 1;
 		}
 		if (db_set_msgkeywords(c, msg_idnr, keywords, action_type, msginfo))
