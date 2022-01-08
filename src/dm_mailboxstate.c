@@ -208,9 +208,9 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		}
 		/* add Seen as flag when IMAP_FLAGS_SEEN=1 */
 		if (result->flags[IMAP_FLAG_SEEN]==1){
-			result->keywords = g_list_append(result->keywords, g_strdup("Seen"));	
+			result->keywords = g_list_append(result->keywords, g_strdup("\\Seen"));	
 			/* some strange clients like it this way */
-			result->keywords = g_list_append(result->keywords, g_strdup("SEEN"));	
+			//result->keywords = g_list_append(result->keywords, g_strdup("\\SEEN"));	
 		}
 		/* cleaning up */
 		if (idsAdded==1){
