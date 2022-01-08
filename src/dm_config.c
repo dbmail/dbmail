@@ -55,17 +55,17 @@ long config_get_app_version(void)
 	
 	temp=strtol((char *)parts_version_str->data, NULL, 10);
 	version=temp;
-	TRACE(TRACE_INFO, "\tVersion Part 1 [%d] => final [%d]", temp, version);
+	TRACE(TRACE_INFO, "\tVersion Part 1 [%ld] => final [%ld]", temp, version);
 	
 	parts_version_str = g_list_next(parts_version_str);
 	temp=strtol((char *)parts_version_str->data, NULL, 10);
 	version=version*10+temp;
-	TRACE(TRACE_INFO, "\tVersion Part 2 [%d] => final [%d]", temp, version);
+	TRACE(TRACE_INFO, "\tVersion Part 2 [%ld] => final [%ld]", temp, version);
 	
 	parts_version_str = g_list_next(parts_version_str);
 	temp=strtol((char *)parts_version_str->data, NULL, 10);
 	version=version*1000+temp;
-	TRACE(TRACE_INFO, "\tVersion Part 3 [%d] => final [%d]", temp, version);
+	TRACE(TRACE_INFO, "\tVersion Part 3 [%ld] => final [%ld]", temp, version);
 	
 	g_string_free(g_version_str_long,TRUE);
 	g_string_free(g_version_str,TRUE);

@@ -59,6 +59,7 @@ static int do_check_replycache(const char *timespec);
 static int do_vacuum_db(void);
 static int do_rehash(void);
 static int do_migrate(int migrate_limit);
+static int do_upgrade_schema(void);
 
 int do_showhelp(void) {
 	printf("*** dbmail-util ***\n");
@@ -94,6 +95,9 @@ int do_showhelp(void) {
 	"     -v        verbose details\n"
 	"     -V        show the version\n"
 	"     -h        show this help message\n"
+	"\nSpecific Tasks:\n"
+	"     --upgrade-schema        upgrade sql schema\n"
+
 	);
 
 	return 0;
@@ -108,6 +112,7 @@ int main(int argc, char *argv[])
 	int show_help = 0;
 	int do_nothing = 1;
 	int is_header = 0;
+	int upgrade_schema = 0;
 	int migrate = 0, migrate_limit = 10000;
 	static struct option long_options[] = {
 		{ "rehash", 0, 0, 0 },
@@ -115,6 +120,8 @@ int main(int argc, char *argv[])
 		{ "erase", 1, 0, 0 },
 		{ "trash", 1, 0, 0 },
 		{ "inbox", 1, 0, 0 },
+		{ "upgrade-schema", 0, 0, 0 },
+		{ "upgrade", 0, 0, 0 },
 		{ 0, 0, 0, 0 }
 	};
 	int opt_index = 0;
@@ -132,7 +139,7 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt_long(argc, argv, "-acbtl:r:pudsMm:" "i" "f:qnyvVh", long_options, &opt_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, "-acgbtl:r:pudsMm:" "i" "f:qnyvVh", long_options, &opt_index)) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
@@ -159,6 +166,9 @@ int main(int argc, char *argv[])
 				mbinbox_name = optarg;
 			}
 			
+			if (strcmp(long_options[opt_index].name,"upgrade-schema")==0) {
+				upgrade_schema = 1;
+			}
 			break;
 		case 'a':
 			/* This list should be kept up to date. */
@@ -321,6 +331,7 @@ int main(int argc, char *argv[])
 	if (vacuum_db) do_vacuum_db();
 	if (rehash) do_rehash();
 	if (migrate) do_migrate(migrate_limit);
+	if (upgrade_schema) do_upgrade_schema();
 
 	if (!has_errors && !serious_errors) {
 		qprintf("\nMaintenance done. No errors found.\n");
@@ -1052,6 +1063,43 @@ int do_migrate(int migrate_limit)
 	return 0;
 }
 
+int do_upgrade_schema(void)
+{
+	const char *query = NULL;
+	Connection_T c;	
+	if (!yes_to_all) {
+		qprintf ("\tupgrading skipped. Use -y option to perform migration.\n");
+		return 0;
+	}
+	qprintf ("Preparing to upgrade \n");
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		
+		switch(db_params.db_driver) {
+			case DM_DRIVER_SQLITE:
+				query = DM_SQLITE_UPGRADE;
+			break;
+			case DM_DRIVER_MYSQL:
+				query = DM_MYSQL_UPGRADE;
+			break;
+			case DM_DRIVER_POSTGRESQL:
+				query = DM_PGSQL_UPGRADE;
+			break;
+		}
+		qprintf ("Executing\n%s\n...",query);
+		db_exec(c, query);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		db_rollback_transaction(c);
+		return -1;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+	
+	qprintf ("Upgrading complete.\n");
+	return 0;
+}
 /* Makes a date/time string: YYYY-MM-DD HH:mm:ss
  * based on current time minus timespec
  * timespec contains: <n>h<m>m for a timespan of n hours, m minutes
