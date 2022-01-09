@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - IMAP Daemon: added switch to control the sequence update strategy
 - IMAP Daemon: added switch to control the sync between \DELETE flag and the actual state of the message (deleted), see also mailbox_sync_batch_size.
 - Build: automatic installation script (v 0.5), #104
-- Maintenance(dbmail-util): added option tu upgrade to utf8mb4(MariaDB/MySQL), --upgrade, beaware this is an intensive process (depending on you database), a backup is advised #108
+- Maintenance(dbmail-util): added option to upgrade to utf8mb4(MariaDB/MySQL), --upgrade, beaware this is an intensive process (depending on you database), a backup is advised #108
 
 ### Optimizations
 - IMAP: optimizing differential state
