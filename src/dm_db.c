@@ -3720,7 +3720,7 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 	char salt[13], cryptres[35];
 	volatile int t = FALSE;
 	char dbpass[COLUMN_WIDTH+1];
-       	char encode[COLUMN_WIDTH+1];
+	char encode[COLUMN_WIDTH+1];
 	char hashstr[FIELDSIZE];
 	Connection_T c; ResultSet_T r;
 
@@ -3768,8 +3768,7 @@ int db_user_validate(ClientBase_T *ci, const char *pwfield, uint64_t *user_idnr,
 
 	if (SMATCH(encode, "crypt")) {
 		TRACE(TRACE_DEBUG, "validating using crypt() encryption");
-		strncpy(salt, dbpass, 2);
-		is_validated = (strcmp((const char *) crypt(password, salt), dbpass) == 0) ? 1 : 0;
+		is_validated = (strcmp((const char *) crypt(password, dbpass), dbpass) == 0) ? 1 : 0;
 	} else if (SMATCH(encode, "md5")) {
 		/* get password */
 		if (strncmp(dbpass, "$1$", 3)) { // no match
