@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
 	setvbuf(stdout, 0, _IONBF, 0);
 
 	small_pool = mempool_open();
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 
 	config_get_file();
 	/* get options */

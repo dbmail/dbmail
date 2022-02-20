@@ -1577,7 +1577,7 @@ static GList * imap_append_hash_as_string(GList *list, const char *type)
 			clean2 = g_strcompress(clean1);
 
 			if (g_mime_utils_text_is_8bit((const unsigned char *)clean2, strlen(clean2))) {
-				clean1 = g_mime_utils_header_encode_text(clean2);
+				clean1 = g_mime_utils_header_encode_text(NULL, clean2, NULL);
 				g_free(clean2);
 				clean2 = clean1;
 			}
@@ -1620,7 +1620,7 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 	const char *disp = g_mime_object_get_header(part, "Content-Disposition");
 	
 	if(disp) {
-		disposition = g_mime_content_disposition_new_from_string(disp);
+		disposition = g_mime_content_disposition_parse(NULL, disp);
 		t = g_list_append_printf(t,"\"%s\"",
 				g_mime_content_disposition_get_disposition(disposition));
 		
@@ -1960,7 +1960,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 
 			/* personal name */
 			if (name) {
-				char * encname = g_mime_utils_header_encode_phrase(name);
+				char * encname = g_mime_utils_header_encode_phrase(NULL, name, NULL);
 				g_strdelimit(encname,"\"\\",' ');
 				g_strstrip(encname);
 				s = dbmail_imap_astring_as_string(encname);
@@ -2086,7 +2086,7 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 		result_enc = dbmail_iconv_str_to_utf8(result, charset);
 		t = imap_cleanup_address(result_enc);
 	       	g_free(result_enc);
-		alist = internet_address_list_parse_string(t);
+		alist = internet_address_list_parse(NULL, t);
 		g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, (InternetAddressList *)alist);
 		g_object_unref(alist);
@@ -2133,7 +2133,7 @@ char * imap_get_envelope(GMimeMessage *message)
 {
 	GMimeObject *part;
 	GList *list = NULL;
-	char *result;
+	const char *result;
 	char *s = NULL, *t = NULL;
 	const char *h;
 
@@ -2145,7 +2145,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	
 	part = GMIME_OBJECT(message);
 	/* date */
-	result = g_mime_message_get_date_as_string(message);
+	result = g_mime_object_get_header(part, "Date");
 	if (result) {
 		t = dbmail_imap_astring_as_string(result);
 		list = g_list_append_printf(list,"%s", t);
@@ -2164,7 +2164,7 @@ char * imap_get_envelope(GMimeMessage *message)
 		char * subj = dbmail_iconv_str_to_utf8(result, charset);
 		TRACE(TRACE_DEBUG, "[%s] [%s] -> [%s]", charset, result, subj);
 		if (g_mime_utils_text_is_8bit((unsigned char *)subj, strlen(subj))) {
-			s = g_mime_utils_header_encode_text((const char *)subj);
+			s = g_mime_utils_header_encode_text(NULL, (const char *)subj, NULL);
 			TRACE(TRACE_DEBUG, "[%s] -> [%s]", subj, s);
 			g_free(subj);
 			subj = s;
@@ -2245,14 +2245,14 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 	}
 
 	if (MATCH(specifier,"HEADER") || MATCH(specifier,"MIME")) {
-		t = g_mime_object_get_headers(GMIME_OBJECT(object));
+		t = g_mime_object_get_headers(GMIME_OBJECT(object), NULL);
 		s = get_crlf_encoded(t);
 		g_free(t);
 		s = g_realloc(s, strlen(s) + 3);
 		strcat(s, "\r\n");
 	} else {
 		if (rfc822)
-			t = g_mime_object_to_string(GMIME_OBJECT(object));
+			t = g_mime_object_to_string(GMIME_OBJECT(object), NULL);
 		else
 			t = g_mime_object_get_body(GMIME_OBJECT(object));
 		s = get_crlf_encoded(t);
