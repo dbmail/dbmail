@@ -24,7 +24,7 @@ execute(){
 
 echo >$LOG
 execute 'tools'	'apt -y install pkg-config autoconf libtool'
-execute 'prerequisites' 'apt -y install libssl-dev  libgmime-2.6-dev libmhash-dev libssl-dev  libevent-dev libzdb-dev flex libsystemd-dev libjemalloc-dev'
+execute 'prerequisites' 'apt -y install libssl-dev  libgmime-3.0-dev libmhash-dev libssl-dev  libevent-dev libzdb-dev flex libsystemd-dev libjemalloc-dev'
 execute 'unarchive' 'apt -y install tar unzip'
 
 
