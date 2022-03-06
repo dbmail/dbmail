@@ -14,5 +14,5 @@ install/dbmail::
 	-dh_install -X "dbmail/.svn"
 	-dh_install -X ".github"
 	-rm debian/dbmail/usr/lib/dbmail/*.la
-
-DEB_CONFIGURE_EXTRA_FLAGS = --sysconfdir=/etc/dbmail --localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --enable-shared=yes --enable-static=no --with-jemalloc --enable-manpages=yes --with-ldap --with-sieve --enable-systemd=yes
+	
+DEB_CONFIGURE_EXTRA_FLAGS = --sysconfdir=/etc/dbmail --localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --enable-shared=yes --enable-static=no --with-jemalloc --enable-manpages=yes --with-ldap --with-sieve 
