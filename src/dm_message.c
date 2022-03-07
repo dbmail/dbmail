@@ -1864,7 +1864,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 
 		if (! g_tree_lookup(tree, (gconstpointer) msgid)) {
 			insert_field_cache(self->id, "references", msgid);
-			g_tree_insert(tree, &msgid, &msgid);
+			g_tree_insert(tree, msgid, msgid);
 		}
 	}
 
