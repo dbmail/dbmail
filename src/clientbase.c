@@ -207,7 +207,7 @@ void ci_cork(ClientBase_T *s)
 void ci_uncork(ClientBase_T *s)
 {
 	int state;
-	TRACE(TRACE_DEBUG,"[%p] [%d] [%d], [%d]", s, s->rx, s->tx, s->timeout.tv_sec);
+	TRACE(TRACE_DEBUG,"[%p] [%d] [%d], [%ld]", s, s->rx, s->tx, s->timeout.tv_sec);
 
 	PLOCK(s->lock);
 	state = s->client_state;

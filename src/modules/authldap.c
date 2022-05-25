@@ -1344,7 +1344,7 @@ GList * auth_get_user_aliases(uint64_t user_idnr)
 	GList *entlist, *fldlist, *attlist;
 	
 	g_string_printf(t,"%s=%" PRIu64 "", _ldap_cfg.field_nid, user_idnr);
-	if ((entlist = __auth_get_every_match(t->str, fields))) {
+	if ((entlist = __auth_get_every_match(t->str, (const char **)fields))) {
 		entlist = g_list_first(entlist);
 		fldlist = g_list_first(entlist->data);
 		attlist = g_list_first(fldlist->data);

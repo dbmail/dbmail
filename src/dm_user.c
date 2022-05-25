@@ -554,7 +554,7 @@ int do_delete(const uint64_t useridnr, const char * const name)
 		return 1;
 	}
 
-	qprintf("Deleting forwarders for user [%d] and alias [%s]\n",useridnr,name);
+	qprintf("Deleting forwarders for user [%lu] and alias [%s]\n",useridnr,name);
 	/* get all aliases for the specified userid  */
 	aliases = auth_get_user_aliases(useridnr);
 	
@@ -566,7 +566,7 @@ int do_delete(const uint64_t useridnr, const char * const name)
 			continue;
 		}
 		GList * aliasesLocal = auth_get_aliases_ext(localAlias);
-		qprintf("Deleting forwarders for user [%d] and alias [%s]\n",useridnr, localAlias);
+		qprintf("Deleting forwarders for user [%lu] and alias [%s]\n",useridnr, localAlias);
 		while (aliasesLocal) {
 			char *deliver_to = (char *)aliasesLocal->data;
 			/* avoid numeric deliver_to */
