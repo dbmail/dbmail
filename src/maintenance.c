@@ -1086,6 +1086,10 @@ int do_upgrade_schema(void)
 			case DM_DRIVER_POSTGRESQL:
 				query = DM_PGSQL_UPGRADE;
 			break;
+			case DM_DRIVER_ORACLE:
+				qprintf ("\tPlease upgrade Oracle manually.\n");
+				return -1;
+			break;
 		}
 		qprintf ("Executing\n%s\n...",query);
 		db_exec(c, query);
