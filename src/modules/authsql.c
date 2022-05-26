@@ -213,7 +213,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 		 * else it could be the first query failure */
 		id = strtoull(username, &endptr, 10);
 		if (*endptr == 0) {
-			TRACE(TRACE_DEBUG, "checking user [%d] occurences [%d]", id, occurences);
+			TRACE(TRACE_DEBUG, "checking user [%lu] occurences [%d]", id, occurences);
 			/* check user active */
 			if (db_user_active(id)){
 				/* numeric deliver-to --> this is a userid */

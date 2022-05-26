@@ -633,7 +633,7 @@ int imap_handle_connection(client_sock *c)
 		disconnect_user(session);
 	} else if (fd_limit.rlim_cur - fd_count < FREE_DF_THRESHOLD) {
 		TRACE(TRACE_WARNING,
-			"[%p] fd count [%d], fd limit [%d], fd threshold [%d]: dropping client connection",
+			"[%p] fd count [%d], fd limit [%ld], fd threshold [%d]: dropping client connection",
 			session, fd_count, fd_limit.rlim_cur, FREE_DF_THRESHOLD);
 		disconnect_user(session);
 	} else {

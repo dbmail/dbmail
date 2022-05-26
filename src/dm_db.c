@@ -587,25 +587,25 @@ uint64_t db_insert_result(Connection_T c, ResultSet_T r)
 
 	/* In PostgreSQL 9.1 lastRowId is _not_ always zero
 	 *
-dbmail=# INSERT INTO dbmail_physmessage (internal_date) VALUES 
+dbmail=# INSERT INTO dbmail_physmessage (internal_date) VALUES
 dbmail-# (TO_TIMESTAMP('2013-07-20 07:22:34'::text, 'YYYY-MM-DD HH24:MI:SS')) RETURNING id;
-    id    
+    id
 ----------
  29196224
 (1 row)
 
 INSERT 0 1
 dbmail=# INSERT INTO dbmail_messages(mailbox_idnr, physmessage_id, unique_id,recent_flag, status) VALUES (10993, 29196223, 'acc98da420bfe6d3dc2c707a9863001c', 1, 5) RETURNING message_idnr;
- message_idnr 
+ message_idnr
 --------------
      36650725
 (1 row)
 
 INSERT 82105867 1
 	 *
-	 * Connection_lastRowId(c) is returning the OID instead of 
+	 * Connection_lastRowId(c) is returning the OID instead of
 	 * the message_idnr we are expecting.
-	 * However, we are expecting only one row to be returned so 
+	 * However, we are expecting only one row to be returned so
 	 * we should always use db_result_get_u64(r, 0);
 	 */
 	if (db_params.db_driver == DM_DRIVER_POSTGRESQL) {
@@ -613,7 +613,7 @@ INSERT 82105867 1
 	}
 
 	// lastRowId is always zero for pgsql tables without OIDs
-	// or possibly for sqlite after calling executeQuery but 
+	// or possibly for sqlite after calling executeQuery but
 	// before calling db_result_next
 
 	else if ((id = (uint64_t )Connection_lastRowId(c)) == 0) { // mysql
@@ -1026,7 +1026,7 @@ int db_check_version(void)
 	Connection_T c = db_con_get();
 	volatile int ok = 0;
 	volatile int db = 0;
-	volatile long version = config_get_app_version();
+	// volatile long version = config_get_app_version();
 	/* @todo: use version to run upgrades */
 	TRY
 		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
@@ -3270,7 +3270,6 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	Connection_T c;
 	size_t i, pos = 0;
 	volatile int seen = 0, count = 0;
-	int is_flag=0;
 	INIT_QUERY;
 
 	memset(query,0,DEF_QUERYSIZE);
@@ -3279,7 +3278,6 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	for (i = 0; flags && i < IMAP_NFLAGS; i++) {
 		if (flags[i]){
 			TRACE(TRACE_DEBUG,"set %s for action type %d", db_flag_desc[i], action_type);
-			is_flag = 1;
 		}
 
 		switch (action_type) {
