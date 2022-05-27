@@ -848,9 +848,10 @@ void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
 	if (internal_date && strlen(internal_date)) {
 		time_t dt;
 		GDateTime* gdt;
-	        if ((gdt = g_mime_utils_header_decode_date(internal_date))) {
+		if ((gdt = g_mime_utils_header_decode_date(internal_date))) {
 			dt = g_date_time_to_unix(gdt);
 			self->internal_date = dt;
+			g_free(gdt);
 		}
 		TRACE(TRACE_DEBUG, "internal_date [%s] [%ld] offset [%d]",
 				internal_date,
@@ -1332,6 +1333,7 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 
 	gdate = g_date_time_new_from_unix_local(self->internal_date);
 	value = g_mime_utils_header_format_date(gdate);
+	g_free(gdate);
 
 	memset(sortfield, 0, sizeof(sortfield));
 	strftime(sortfield, CACHE_WIDTH-1, "%Y-%m-%d %H:%M:%S", gmtime(&date));
