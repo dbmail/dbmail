@@ -23,6 +23,7 @@ This program is free software; you can redistribute it and/or
  * main file for dbmail-deliver  */
 
 #include "dbmail.h"
+
 #define THIS_MODULE "deliver"
 
 #define MESSAGEIDSIZE 100
@@ -255,6 +256,11 @@ int main(int argc, char *argv[])
 	}
 
 	msg = dbmail_message_new(NULL);
+	if (! raw) {
+		TRACE(TRACE_ERR, "Please supply the message");
+		exitcode = EX_TEMPFAIL;
+		goto freeall;
+	}
 	if (! (msg = dbmail_message_init_with_string(msg, raw->str))) {
 		TRACE(TRACE_ERR, "error reading message");
 		exitcode = EX_TEMPFAIL;
@@ -266,10 +272,13 @@ int main(int argc, char *argv[])
 	 * or copy the From header,
 	 * debug message if all fails. */
 	if (returnpath) {
+		TRACE(TRACE_DEBUG, "Setting provided Return-Path: [%s]", returnpath);
 		dbmail_message_set_header(msg, "Return-Path", returnpath);
 	} else if (dbmail_message_get_header(msg, "Return-Path")) {
+		TRACE(TRACE_DEBUG, "Return-Path provided so doing nothing");
 		// Do nothing.
 	} else if (dbmail_message_get_header(msg, "From")) {
+		TRACE(TRACE_DEBUG, "Setting Return-Path using From");
 		// FIXME: This might not be a valid address;
 		// mail_address_build_list used to fix that, I think.
 		dbmail_message_set_header(msg, "Return-Path", dbmail_message_get_header(msg, "From"));

@@ -216,11 +216,11 @@ int db_connect(void)
 	} else {
 		dsn = g_string_new("");
 		g_string_append_printf(dsn,"%s://",db_params.driver);
-		if (db_params.host)
+		if (*db_params.host)
 			g_string_append_printf(dsn,"%s", db_params.host);
 		if (db_params.port)
 			g_string_append_printf(dsn,":%u", db_params.port);
-		if (db_params.db) {
+		if (*db_params.db) {
 			if (SMATCH(db_params.driver,"sqlite")) {
 
 				/* expand ~ in db name to HOME env variable */
@@ -238,12 +238,12 @@ int db_connect(void)
 				g_string_append_printf(dsn,"/%s", db_params.db);
 			}
 		}
-		if (db_params.user && strlen((const char *)db_params.user)) {
+		if (*db_params.user && strlen((const char *)db_params.user)) {
 			g_string_append_printf(dsn,"?user=%s", db_params.user);
-			if (db_params.pass && strlen((const char *)db_params.pass)) 
+			if (*db_params.pass && strlen((const char *)db_params.pass))
 				g_string_append_printf(dsn,"&password=%s", db_params.pass);
 			if (SMATCH(db_params.driver,"mysql")) {
-				if (db_params.encoding && strlen((const char *)db_params.encoding))
+				if (*db_params.encoding && strlen((const char *)db_params.encoding))
 					g_string_append_printf(dsn,"&charset=%s", db_params.encoding);
 			}
 		}
@@ -482,7 +482,7 @@ gboolean db_update(const char *q, ...)
 PreparedStatement_T db_stmt_prepare(Connection_T c, const char *q, ...)
 {
 	va_list ap, cp;
-	char *query;
+	const char *query;
 	PreparedStatement_T s;
 
 	va_start(ap, q);
@@ -491,9 +491,9 @@ PreparedStatement_T db_stmt_prepare(Connection_T c, const char *q, ...)
 	va_end(cp);
 	va_end(ap);
 
-	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
-	s = Connection_prepareStatement(c, "%s", (const char *)query);
-	g_free(query);
+	TRACE(TRACE_DATABASE,"[%p] [%s]", c, q);
+	s = Connection_prepareStatement(c, "%s", query);
+	//g_free(query);
 	return s;
 }
 
@@ -4458,39 +4458,39 @@ int db_rehash_store(void)
 }
 
 int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr,
-		char* internal_date, uint64_t * msg_idnr, gboolean recent)
+		const char* internal_date, uint64_t * msg_idnr, gboolean recent)
 {
-        DbmailMessage *message;
+	DbmailMessage *message;
 	int result;
 
 	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
 
-        message = dbmail_message_new(NULL);
-        message = dbmail_message_init_with_string(message, msgdata);
-	dbmail_message_set_internal_date(message, (char *)internal_date);
-        
-        if (dbmail_message_store(message) < 0) {
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, msgdata);
+	dbmail_message_set_internal_date(message, internal_date);
+
+	if (dbmail_message_store(message) < 0) {
 		dbmail_message_free(message);
 		return DM_EQUERY;
 	}
 
 	result = db_copymsg(message->msg_idnr, mailbox_idnr, user_idnr, msg_idnr, recent);
 	db_delete_message(message->msg_idnr);
-        dbmail_message_free(message);
-	
-        switch (result) {
-            case -2:
-                    TRACE(TRACE_DEBUG, "error copying message to user [%" PRIu64 "],"
-                            "maxmail exceeded", user_idnr);
-                    return -2;
-            case -1:
-                    TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "]", 
-                            user_idnr);
-                    return -1;
-        }
-                
-        TRACE(TRACE_NOTICE, "message id=%" PRIu64 " is inserted", *msg_idnr);
-        
-        return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
+	dbmail_message_free(message);
+
+	switch (result) {
+		case -2:
+			TRACE(TRACE_DEBUG, "error copying message to user [%" PRIu64 "],"
+				"maxmail exceeded", user_idnr);
+			return -2;
+		case -1:
+			TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "]",
+				user_idnr);
+			return -1;
+	}
+
+	TRACE(TRACE_NOTICE, "message id=%" PRIu64 " is inserted", *msg_idnr);
+
+	return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
 }
 
