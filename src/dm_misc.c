@@ -1457,6 +1457,8 @@ char *dbmail_imap_astring_as_string(const char *s)
 
 	if (! s)
 		return g_strdup("\"\"");
+	if (! strlen(s))
+		return g_strdup("\"\"");
 
 	l = g_strdup(s);
 	t = l;
@@ -2085,10 +2087,10 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 	if (result) {
 		result_enc = dbmail_iconv_str_to_utf8(result, charset);
 		t = imap_cleanup_address(result_enc);
-	       	g_free(result_enc);
+		g_free(result_enc);
 		alist = internet_address_list_parse(NULL, t);
 		g_free(t);
-		list = dbmail_imap_append_alist_as_plist(list, (InternetAddressList *)alist);
+		list = dbmail_imap_append_alist_as_plist(list, alist);
 		g_object_unref(alist);
 		alist = NULL;
 	} else {
@@ -2149,15 +2151,13 @@ char * imap_get_envelope(GMimeMessage *message)
 	if (result) {
 		t = dbmail_imap_astring_as_string(result);
 		list = g_list_append_printf(list,"%s", t);
-		g_free(result);
 		g_free(t);
-		result = NULL;
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
 	
 	/* subject */
-	result = (char *)g_mime_object_get_header(GMIME_OBJECT(message),"Subject");
+	result = g_mime_object_get_header(GMIME_OBJECT(message),"Subject");
 
 	if (result) {
 		const char *charset = message_get_charset(message);
@@ -2204,13 +2204,14 @@ char * imap_get_envelope(GMimeMessage *message)
 	/* in-reply-to */
 	list = imap_append_header_as_string(list,part,"In-Reply-to");
 	/* message-id */
-	result = (char *)g_mime_message_get_message_id(message);
+	result = g_mime_message_get_message_id(message);
 	if (result && (! g_strrstr(result,"=")) && (! g_strrstr(result,"@(none)"))) {
                 t = g_strdup_printf("<%s>", result);
 		s = dbmail_imap_astring_as_string(t);
 		list = g_list_append_printf(list,"%s", s);
 		g_free(s);
-                g_free(t);
+		g_free(t);
+		g_free((char *)result);
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
@@ -2218,7 +2219,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	s = dbmail_imap_plist_as_string(list);
 
 	g_list_destroy(list);
-	
+
 	return s;
 }
 

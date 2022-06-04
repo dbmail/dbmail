@@ -23,6 +23,11 @@
  */
 
 #include "dbmail.h"
+//#include "gmime/gmime-header.h"
+//#include "gmime/gmime-message.h"
+//#include "gmime/gmime-object.h"
+//#include "gmime/gmime-stream.h"
+//#include "gmime/gmime-stream-mem.h"
 
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
@@ -87,7 +92,7 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	gchar *s = NULL, *b = NULL;
         unsigned i;
 	size_t l;
-	
+
 	g_return_val_if_fail(object != NULL, NULL);
 
 	s = g_mime_object_to_string(GMIME_OBJECT(object), NULL);
@@ -98,7 +103,7 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 		g_free(s);
 		return g_strdup("");
 	}
-	
+
 	b = s+i;
 	l = strlen(b);
 	memmove(s,b,l);
@@ -318,7 +323,6 @@ static char *find_type_header(const char *s)
 	}
 	h = header->str;
 	g_string_free(header,FALSE);
-	header = NULL;
 	return g_strstrip(h);
 }
 
@@ -559,7 +563,7 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 		GMimeObject *part = g_mime_multipart_get_part((GMimeMultipart *)object, i);
 		// if (store_mime_object(object, part, m)) return TRUE;
 		store_mime_object_result = store_mime_object(object, part, m);
-		dprint("store_mime_object: %d %d\n", i, store_mime_object_result);
+		TRACE(TRACE_DEBUG,"store_mime_object: [%d] [%d]", i, store_mime_object_result);
 	}
 
 	if (boundary) {
@@ -698,6 +702,9 @@ DbmailMessage * dbmail_message_new(Mempool_T pool)
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
 			(GEqualFunc)g_str_equal, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	
+	/* set the charset */
+	self->charset = "utf-8";
+
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
 	
 	return self;
@@ -711,7 +718,6 @@ void dbmail_message_free(DbmailMessage *self)
 		return;
 
 	if (self->content) {
-		g_object_unref(self->content);
 		self->content = NULL;
 	}
 
@@ -842,16 +848,15 @@ uint64_t dbmail_message_get_physid(const DbmailMessage *self)
 	return self->id;
 }
 
-void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date)
+void dbmail_message_set_internal_date(DbmailMessage *self, const char *internal_date)
 {
 	self->internal_date = time(NULL);
 	if (internal_date && strlen(internal_date)) {
 		time_t dt;
-		GDateTime* gdt;
+		GDateTime * gdt;
 		if ((gdt = g_mime_utils_header_decode_date(internal_date))) {
 			dt = g_date_time_to_unix(gdt);
 			self->internal_date = dt;
-			g_free(gdt);
 		}
 		TRACE(TRACE_DEBUG, "internal_date [%s] [%ld] offset [%d]",
 				internal_date,
@@ -1391,13 +1396,11 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	if ((content_type = g_mime_object_get_content_type(part))) {
 		char *value = g_mime_content_type_get_mime_type(content_type);
 		_header_cache("content-type", (const char *)value, (gpointer)self);
-		free(value);
 	}
 
 	if ((content_disp = g_mime_object_get_content_disposition(part))) {
 		char *value = g_mime_content_disposition_encode(content_disp, NULL);
 		_header_cache("content-disposition", (const char *)value, (gpointer)self);
-		free(value);
 	}
 
 	/* 
@@ -1421,7 +1424,6 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 static int _header_name_get_id(const DbmailMessage *self, const char *header, uint64_t *id)
 {
 	uint64_t *tmp = NULL;
-	gpointer cacheid;
 	gchar *case_header, *safe_header, *frag;
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	Field_T config;
@@ -1430,11 +1432,6 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 
 	// rfc822 headernames are case-insensitive
 	safe_header = g_ascii_strdown(header,-1);
-	if ((cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)safe_header)) != NULL) {
-		*id = *(uint64_t *)cacheid;
-		g_free(safe_header);
-		return 1;
-	}
 
 	config_get_value("header_cache_readonly", "DBMAIL", config);
 	if (strlen(config)) {
@@ -1498,6 +1495,7 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 	}
 
 	*id = *tmp;
+	TRACE(TRACE_DEBUG,"Adding cache: [%s] [%lu]", safe_header, *tmp);
 	g_hash_table_insert(self->header_dict, (gpointer)(safe_header), (gpointer)(tmp));
 	return 1;
 }
@@ -1599,6 +1597,7 @@ static gboolean _header_insert(uint64_t physmessage_id, uint64_t headername_id, 
 
 	Connection_T c; PreparedStatement_T s; volatile gboolean t = TRUE;
 
+	TRACE(TRACE_DEBUG, "Inserting header: [%lu] [%lu] [%lu]", physmessage_id, headername_id, headervalue_id);
 	c = db_con_get();
 	db_con_clear(c);
 	TRY
@@ -1719,12 +1718,11 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	else if (g_ascii_strcasecmp(header,"Date")==0)
 		isdate=1;
 
-
 	value = dbmail_iconv_decode_field(raw, charset, isaddr);
 
 	TRACE(TRACE_DEBUG,
-		"headername [%s] raw [%s] value [%s] isaddr [%d] issubject [%d] isdate [%d]",
-		header, raw, value, isaddr, issubject, isdate
+		"headername [%s] id [%lu] raw [%s] value [%s] isaddr [%d] issubject [%d] isdate [%d]",
+		header, headername_id, raw, value, isaddr, issubject, isdate
 	);
 
 	if ((! value) || (strlen(value) == 0)) {
@@ -2753,7 +2751,6 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 	else
 		TRACE(TRACE_INFO, "Using default hard bounce for quota failure");
 
-
 	tmpid = message->msg_idnr; // for later removal
 
 	// TODO: Run a Sieve script associated with the internal delivery user.
@@ -2856,6 +2853,9 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 				 * having a transient error. They'll resend. */
 				TRACE(TRACE_NOTICE, "forwaring failed, reporting transient error.");
 				set_dsn(&delivery->dsn, DSN_CLASS_TEMP, 1, 1);
+			}
+			if (from) {
+				g_free((char *)from);
 			}
 		}
 		if (! p_list_next(dsnusers))

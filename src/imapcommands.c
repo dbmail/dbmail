@@ -1704,7 +1704,7 @@ void _ic_append_enter(dm_thread_data *D)
 	
 	message = p_string_str(self->args[i]);
 
-	D->status = db_append_msg(message, mboxid, self->userid, (char *)internal_date, &message_id, recent);
+	D->status = db_append_msg(message, mboxid, self->userid, internal_date, &message_id, recent);
 
 	switch (D->status) {
 	case -1:
