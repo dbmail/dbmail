@@ -548,7 +548,9 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	g_list_free(g_list_first(headers));
 
 	/* We have to free the header array. */
-	m->freelist = g_list_prepend(m->freelist, bodylist);
+	if (m->freelist) {
+		m->freelist = g_list_prepend(m->freelist, bodylist);
+	}
 
 	for (i = 0; bodylist[i] != NULL; i++) {
 		TRACE(TRACE_INFO, "Getting header [%s] returning value [%s]",

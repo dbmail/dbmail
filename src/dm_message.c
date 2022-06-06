@@ -1778,15 +1778,16 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 	if(isdate) {
 		date = g_mime_utils_header_decode_date(value);
 		date_fmt = g_date_time_format(date, "%Y-%m-%d %H:%M:%S");
-		g_utf8_strncpy(sortfield, date_fmt, CACHE_WIDTH-1);
-		TRACE(TRACE_DEBUG,"sortfield [%s]", sortfield);
-
-		date_fmt = g_date_time_format(date, "%Y-%m-%d");
-		g_utf8_strncpy(datefield, date_fmt, CACHE_WIDTH-1);
-		TRACE(TRACE_DEBUG,"Date is [%s] datefield [%s]", value, datefield);
-		g_date_time_unref(date);
-		g_free(date_fmt);
-		// g_free(date);
+		TRACE(TRACE_DEBUG,"date_fmt [%s]", date_fmt);
+		if (date_fmt) {
+			g_utf8_strncpy(sortfield, date_fmt, CACHE_WIDTH-1);
+			TRACE(TRACE_DEBUG,"sortfield [%s]", sortfield);
+			date_fmt = g_date_time_format(date, "%Y-%m-%d");
+			g_utf8_strncpy(datefield, date_fmt, CACHE_WIDTH-1);
+			TRACE(TRACE_DEBUG,"Date is [%s] datefield [%s]", value, datefield);
+			g_date_time_unref(date);
+			g_free(date_fmt);
+		}
 	}
 
 	if (sortfield[0] == '\0')

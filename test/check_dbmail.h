@@ -1274,6 +1274,26 @@ char * broken_message3 = "Message-ID: <002001ca32fe$dc7668b0$9600000a@ricardo>\n
 	"MIME-Version: 1.0\n\n"
 	"\ntest\n";
 	
+char * broken_message4 = "Return-Path: Alan Hicks <ahicks@p-o.co.uk>\n"
+	"Received: from alan by p-o.co.uk\n"
+	"	with local (Exim 4.95 (FreeBSD))	(envelope-from <alan@p-o.co.uk>)\n"
+	"	id 1no8eq-000Ie5-02	for alan@p-o.co.uk;	Tue, 31 May 202225 20:03:00 +0100\n"
+	"From: Alan Hicks <ahicks@p-o.co.uk>\n"
+	"To: ahicks@p-o.co.uk\n"
+	"Subject: Broken test message 4 with invalid date\n"
+	"Message-Id: <broken-test-04@p-o.co.uk>\n"
+	"Date: Fri, 3 Jun 202225 20:03:00 +0100\n\n"
+	"Test line 1\n"
+	"Test line 2\n";
+
+char * broken_message5 = "From Alan Hicks <ahicks@p-o.co.uk>\n"
+	"From: Alan Hicks <ahicks@p-o.co.uk>\n"
+	"To: ahicks@p-o.co.uk\n"
+	"Subject: Broken test message 5 without body\n"
+	"Message-Id: <broken-test-05@p-o.co.uk>\n"
+	"Date: Fri, 3 Jun 2022 20:03:00 +0100\n\n";
+
+char * broken_message6 = "From Alan Hicks <ahicks@p-o.co.uk>\n";
 
 char * multipart_apple = "Subject: Re: Einladung\n"
 	"From: John Doe <john@doe>\n"
