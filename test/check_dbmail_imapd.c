@@ -288,7 +288,7 @@ START_TEST(test_internet_address_list_parse_string)
 		GList *list = NULL;
 
 		t = imap_cleanup_address(input);
-		alist = internet_address_list_parse_string(t);
+		alist = internet_address_list_parse(NULL, t);
 		g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, alist);
 		g_object_unref(alist);
@@ -296,7 +296,7 @@ START_TEST(test_internet_address_list_parse_string)
 
 		result = dbmail_imap_plist_as_string(list);
 
-		fail_unless(strcmp(result,expect)==0, "internet_address_list_parse_string failed to generate correct undisclosed-recipients plist "
+		fail_unless(strcmp(result,expect)==0, "internet_address_list_parse failed to generate correct undisclosed-recipients plist "
 			"for [%s], expected\n[%s] got\n[%s]", input, expect, result);
 
 		g_list_destroy(list);
@@ -329,7 +329,7 @@ START_TEST(test_internet_address_list_parse_string)
 		int res;
 		char *t;
 		t = imap_cleanup_address(input);
-		alist = internet_address_list_parse_string(t);
+		alist = internet_address_list_parse(NULL, t);
 		list = dbmail_imap_append_alist_as_plist(list, alist);
 		result = dbmail_imap_plist_as_string(list);
 		res = strcmp(result, expect);
@@ -401,6 +401,19 @@ START_TEST(test_imap_get_envelope)
 	g_free(result);
 	result = NULL;
 
+	/* message with invalid date*/
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, broken_message4);
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	// This will intentionally fail until the correct message is evaluated
+	strncpy(expect,"(\"Fri, 11 Sep 2009 17:42:32 +0100\" \"Re: Anexo II para RO\" ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<002001ca32fe$dc7668b0$9600000a@ricardo>\")",1024);
+
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
+
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
 
 	//
 	g_free(expect);
@@ -546,7 +559,7 @@ START_TEST(test_imap_get_partspec)
 	message = dbmail_message_init_with_string(message, rfc822);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
-	result = g_mime_object_to_string(object);
+	result = g_mime_object_to_string(object, NULL);
 	fail_unless(MATCH(rfc822,result),
 			"imap_get_partsec failed \n[%s] !=\n[%s]\n",
 		       	rfc822, result);
@@ -680,7 +693,7 @@ START_TEST(test_imap_get_partspec)
 	g_free(expect);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
-	result = g_mime_object_to_string(object);
+	result = g_mime_object_to_string(object, NULL);
 	expect = g_strdup("Content-Type: message/rfc822;\n"
 			"Content-Transfer-Encoding: 7bit\n"
 			"Content-Disposition: attachment;\n"
@@ -1072,7 +1085,7 @@ Suite *dbmail_suite(void)
 int main(void)
 {
 	int nf;
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	Suite *s = dbmail_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);

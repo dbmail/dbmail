@@ -171,7 +171,7 @@ START_TEST(test_g_mime_object_get_body)
 	m = message_init(multipart_message);
 	
 	result = g_mime_object_get_body(GMIME_OBJECT(m->content));
-	fail_unless(strlen(result)==1057,"g_mime_object_get_body failed [%d:%s]\n", strlen(result), result);
+	fail_unless(strlen(result)==1057,"g_mime_object_get_body failed [%lu:%s]\n", strlen(result), result);
 	g_free(result);
 	dbmail_message_free(m);
 	
@@ -567,7 +567,7 @@ START_TEST(test_dbmail_message_get_internal_date)
 	m = dbmail_message_init_with_string(m, simple_broken_envelope);
 
 	result = dbmail_message_get_internal_date(m, 0);
-	//fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
+	fail_unless(MATCH(expect10,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect10, result);
 
 	char *before = dbmail_message_to_string(m);
 	char *after = store_and_retrieve(m);
@@ -609,7 +609,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
         m = dbmail_message_init_with_string(m, multipart_message);
 
 	result = dbmail_message_hdrs_to_string(m);
-	fail_unless(strlen(result)==676, "dbmail_message_hdrs_to_string failed [%d] != [634]\n[%s]\n", strlen(result), result);
+	fail_unless(strlen(result)==676, "dbmail_message_hdrs_to_string failed [%lu] != [634]\n[%s]\n", strlen(result), result);
 	
         dbmail_message_free(m);
 	g_free(result);
@@ -626,7 +626,7 @@ START_TEST(test_dbmail_message_body_to_string)
 	m = dbmail_message_new(NULL);
         m = dbmail_message_init_with_string(m,multipart_message);
 	result = dbmail_message_body_to_string(m);
-	fail_unless(strlen(result)==1057, "dbmail_message_body_to_string failed [%d] != [1057]\n[%s]\n", strlen(result),result);
+	fail_unless(strlen(result)==1057, "dbmail_message_body_to_string failed [%lu] != [1057]\n[%s]\n", strlen(result),result);
 	
         dbmail_message_free(m);
 	g_free(result);
@@ -634,7 +634,7 @@ START_TEST(test_dbmail_message_body_to_string)
 	m = dbmail_message_new(NULL);
         m = dbmail_message_init_with_string(m,outlook_multipart);
 	result = dbmail_message_body_to_string(m);
-	fail_unless(strlen(result)==330, "dbmail_message_body_to_string failed [330 != %d:%s]", strlen(result), result);
+	fail_unless(strlen(result)==330, "dbmail_message_body_to_string failed [330 != %lu:%s]", strlen(result), result);
 	
         dbmail_message_free(m);
 	g_free(result);
@@ -867,13 +867,14 @@ END_TEST
 
 START_TEST(test_encoding)
 {
-	char *raw, *enc, *dec;
+	const char *raw;
+	char *enc, *dec;
 
 	raw = g_strdup( "Kristoffer Bronemyr");
-	enc = g_mime_utils_header_encode_phrase((char *)raw);
-	dec = g_mime_utils_header_decode_phrase((char *)enc);
+	enc = g_mime_utils_header_encode_phrase(NULL, raw, NULL);
+	dec = g_mime_utils_header_decode_phrase(NULL, enc);
 	fail_unless(MATCH(raw,dec),"decode/encode failed");
-	g_free(raw);
+	g_free((char *)raw);
 	g_free(dec);
 	g_free(enc);
 }
@@ -889,9 +890,9 @@ START_TEST(test_dbmail_message_get_size)
 	m = dbmail_message_init_with_string(m, rfc822);
 
 	i = dbmail_message_get_size(m, FALSE);
-	fail_unless(i==277, "dbmail_message_get_size failed [%d]", i);
+	fail_unless(i==277, "dbmail_message_get_size failed [%zu]", i);
 	j = dbmail_message_get_size(m, TRUE);
-	fail_unless(j==289, "dbmail_message_get_size failed [%d]", j);
+	fail_unless(j==289, "dbmail_message_get_size failed [%zu]", j);
 
 	dbmail_message_free(m);
 	return;
@@ -901,9 +902,9 @@ START_TEST(test_dbmail_message_get_size)
 	m = dbmail_message_init_with_string(m, "From: paul\n\n");
 
 	i = dbmail_message_get_size(m, FALSE);
-	fail_unless(i==12, "dbmail_message_get_size failed [%d]", i);
+	fail_unless(i==12, "dbmail_message_get_size failed [%zu]", i);
 	j = dbmail_message_get_size(m, TRUE);
-	fail_unless(j==14, "dbmail_message_get_size failed [%d]", j);
+	fail_unless(j==14, "dbmail_message_get_size failed [%zu]", j);
 
 	dbmail_message_free(m);
 
@@ -993,7 +994,7 @@ START_TEST(test_dbmail_message_utf8_headers)
 	physid = dbmail_message_get_physid(m);
 
 	s = dbmail_message_get_header(m,"Subject");
-	s_dec = g_mime_utils_header_decode_phrase(s);
+	s_dec = g_mime_utils_header_decode_phrase(NULL, s);
 	test_db_get_subject(physid,&t);
 
         fail_unless(MATCH(s_dec,t), "[%" PRIu64 "] utf8 long header failed:\n[%s] !=\n[%s]\n", 
@@ -1008,7 +1009,7 @@ START_TEST(test_dbmail_message_utf8_headers)
 	dbmail_message_store(m);
 	physid = dbmail_message_get_physid(m);
 
-	s_dec = g_mime_utils_header_decode_phrase(utf8_invalid_fixed);
+	s_dec = g_mime_utils_header_decode_phrase(NULL, utf8_invalid_fixed);
 	test_db_get_subject(physid,&t);
         fail_unless(MATCH(s_dec,t), "utf8 invalid failed:\n[%s] !=\n[%s]\n", s_dec, t);
 
@@ -1055,7 +1056,7 @@ Suite *dbmail_message_suite(void)
 int main(void)
 {
 	int nf;
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	Suite *s = dbmail_message_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);

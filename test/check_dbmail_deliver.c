@@ -797,7 +797,7 @@ START_TEST(test_g_tree_merge_not)
 	}
 
 	g_tree_merge(a,b,IST_SUBSEARCH_NOT);
-	fail_unless(g_tree_nnodes(a)==5002,"g_tree_merge failed. Too few nodes in a. [%ld]", g_tree_nnodes(a));
+	fail_unless(g_tree_nnodes(a)==5002,"g_tree_merge failed. Too few nodes in a. [%d]", g_tree_nnodes(a));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -810,7 +810,7 @@ START_TEST(test_g_tree_merge_not)
 		tree_add_key(a, r);
 
 	g_tree_merge(a,b,IST_SUBSEARCH_NOT);
-	fail_unless(g_tree_nnodes(a)==5002,"g_tree_merge failed. Too few nodes in a. [%ld]", g_tree_nnodes(a));
+	fail_unless(g_tree_nnodes(a)==5002,"g_tree_merge failed. Too few nodes in a. [%d]", g_tree_nnodes(a));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -831,7 +831,7 @@ START_TEST(test_g_tree_merge_or)
 		tree_add_key(b, r);
 
 	g_tree_merge(a,b,IST_SUBSEARCH_OR);
-	fail_unless(g_tree_nnodes(a)==45002,"g_tree_merge failed. Too many nodes in a. [%ld]", g_tree_nnodes(a));
+	fail_unless(g_tree_nnodes(a)==45002,"g_tree_merge failed. Too many nodes in a. [%d]", g_tree_nnodes(a));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -858,7 +858,7 @@ START_TEST(test_g_tree_merge_and)
 	}
 
 	g_tree_merge(a,b,IST_SUBSEARCH_AND);
-	fail_unless(g_tree_nnodes(a)==9001,"g_tree_merge failed. Too few nodes in a.[%ld]", g_tree_nnodes(a));
+	fail_unless(g_tree_nnodes(a)==9001,"g_tree_merge failed. Too few nodes in a.[%d]", g_tree_nnodes(a));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -875,7 +875,7 @@ START_TEST(test_g_tree_merge_and)
 		tree_add_key(b, r);
 
 	g_tree_merge(a,b,IST_SUBSEARCH_AND);
-	fail_unless(g_tree_nnodes(a)==45001,"g_tree_merge failed. Too few nodes in a. [%ld]", g_tree_nnodes(a));
+	fail_unless(g_tree_nnodes(a)==45001,"g_tree_merge failed. Too few nodes in a. [%d]", g_tree_nnodes(a));
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
@@ -1025,7 +1025,7 @@ int main(void)
 	int nf;
 	Suite *s = dbmail_deliver_suite();
 	SRunner *sr = srunner_create(s);
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
