@@ -1338,7 +1338,7 @@ void _message_cache_envelope_date(const DbmailMessage *self)
 
 	gdate = g_date_time_new_from_unix_local(self->internal_date);
 	value = g_mime_utils_header_format_date(gdate);
-	g_free(gdate);
+	gdate = NULL;
 
 	memset(sortfield, 0, sizeof(sortfield));
 	strftime(sortfield, CACHE_WIDTH-1, "%Y-%m-%d %H:%M:%S", gmtime(&date));
