@@ -1396,11 +1396,13 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 	if ((content_type = g_mime_object_get_content_type(part))) {
 		char *value = g_mime_content_type_get_mime_type(content_type);
 		_header_cache("content-type", (const char *)value, (gpointer)self);
+		g_free(value);
 	}
 
 	if ((content_disp = g_mime_object_get_content_disposition(part))) {
 		char *value = g_mime_content_disposition_encode(content_disp, NULL);
 		_header_cache("content-disposition", (const char *)value, (gpointer)self);
+		g_free(value);
 	}
 
 	/* 

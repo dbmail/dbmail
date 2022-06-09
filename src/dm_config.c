@@ -133,7 +133,7 @@ int config_read(const char *config_filename)
 	if (stat(config_filename, &buf) == -1)
 		config_create(config_filename);
 
-        config_dict = g_key_file_new();
+	config_dict = g_key_file_new();
 	if (! g_key_file_load_from_file(config_dict, config_filename, G_KEY_FILE_NONE, NULL)) {
 		g_key_file_free(config_dict);
                 TRACE(TRACE_EMERG, "error reading config [%s]", config_filename);

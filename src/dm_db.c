@@ -195,11 +195,9 @@ int db_connect(void)
 {
 	int sweepInterval = 60;
 	Connection_T c;
-	GString *dsn;
-	GString *uri;
 
 	if (strlen(db_params.dburi) != 0) {
-		uri = g_string_new("");
+		GString *uri = g_string_new("");
 		g_string_append_printf(uri,"%s", db_params.dburi);
 		//add application-name to the uri, only if postgresql and application-name parameter was not added.
 		if ( strncmp(uri->str,"postgresql:",11) == 0 && !strstr(uri->str,"application-name") ){
@@ -214,7 +212,7 @@ int db_connect(void)
 		dburi = URL_new(uri->str);
 		g_string_free(uri,TRUE);
 	} else {
-		dsn = g_string_new("");
+		GString *dsn = g_string_new("");
 		g_string_append_printf(dsn,"%s://",db_params.driver);
 		if (*db_params.host)
 			g_string_append_printf(dsn,"%s", db_params.host);
@@ -482,7 +480,7 @@ gboolean db_update(const char *q, ...)
 PreparedStatement_T db_stmt_prepare(Connection_T c, const char *q, ...)
 {
 	va_list ap, cp;
-	const char *query;
+	gchar *query;
 	PreparedStatement_T s;
 
 	va_start(ap, q);
@@ -493,7 +491,7 @@ PreparedStatement_T db_stmt_prepare(Connection_T c, const char *q, ...)
 
 	TRACE(TRACE_DATABASE,"[%p] [%s]", c, q);
 	s = Connection_prepareStatement(c, "%s", query);
-	//g_free(query);
+	g_free(query);
 	return s;
 }
 
@@ -1016,6 +1014,7 @@ static int check_upgrade_step(int from_version, int to_version)
 	else
 		result = DM_EQUERY;
 
+	query = NULL;
 	db_con_close(c);
 
 	return result;
