@@ -220,7 +220,7 @@ char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean i
 	char *bad_char;
 	char *cur_char;
 
-	if ((tmp_raw = dbmail_iconv_str_to_utf8((const char *)in, charset)) == NULL) {
+	if ((tmp_raw = dbmail_iconv_str_to_utf8(in, charset)) == NULL) {
 		TRACE(TRACE_WARNING, "unable to decode headervalue [%s] using charset [%s]", in, charset);
 		return NULL;
 	}

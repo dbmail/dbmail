@@ -208,7 +208,9 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		}
 		/* add Seen as flag when IMAP_FLAGS_SEEN=1 */
 		if (result->flags[IMAP_FLAG_SEEN]==1){
-			result->keywords = g_list_append(result->keywords, g_strdup("\\Seen"));
+			gchar *value = g_strdup("\\Seen");
+			result->keywords = g_list_append(result->keywords, value);
+			g_free(value);
 			/* some strange clients like it this way */
 		}
 		/* cleaning up */
@@ -263,7 +265,9 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 				tempId=id;
 			}
 		    if (result && keyword){
-				result->keywords = g_list_append(result->keywords, g_strdup(keyword));
+				gchar *keyword2 = g_strdup(keyword);
+				result->keywords = g_list_append(result->keywords, keyword2);
+				g_free(keyword2);
 			}
 		}
 	}
@@ -427,7 +431,7 @@ void MailboxState_remap(T M)
 	ids = g_tree_keys(M->msginfo);
 	ids = g_list_first(ids);
 	while (ids) {
-		uid = (uint64_t *)ids->data;
+		uid = ids->data;
 
 		msginfo = g_tree_lookup(M->msginfo, uid);
 		if (msginfo->status < MESSAGE_STATUS_DELETE) {
