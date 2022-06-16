@@ -2220,6 +2220,13 @@ char * imap_get_envelope(GMimeMessage *message)
 
 	s = dbmail_imap_plist_as_string(list);
 
+	GList * element;
+	list = g_list_first(list);
+	while ((element = g_list_next(list))) {
+		g_free(element->data);
+		list = g_list_next(list);
+	}
+
 	g_list_destroy(list);
 
 	return s;
