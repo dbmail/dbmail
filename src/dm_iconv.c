@@ -35,6 +35,15 @@ G_LOCK_DEFINE_STATIC(mutex);
 static void dbmail_iconv_close(void)
 {
 	TRACE(TRACE_DEBUG,"closing");
+	if(ic->to_db){
+		g_mime_iconv_close(ic->to_db);
+	}
+	if(ic->from_db){
+		g_mime_iconv_close(ic->from_db);
+	}
+	if(ic->from_msg){
+		g_mime_iconv_close(ic->from_msg);
+	}
 	ic->to_db = NULL;
 	ic->from_db = NULL;
 	ic->from_msg = NULL;
@@ -89,7 +98,7 @@ void dbmail_iconv_init(void)
 /* convert not encoded field to utf8 */
 char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 {
-	char * subj=NULL, *t;
+	char * subj=NULL;
 	iconv_t conv_iconv = (iconv_t)-1;
 
 	dbmail_iconv_init();
@@ -97,10 +106,8 @@ char * dbmail_iconv_str_to_utf8(const char* str_in, const char *charset)
 	if (str_in==NULL)
 		return NULL;
 
-	t = (char *)str_in;
-
 	if (g_utf8_validate((const gchar *)str_in, -1, NULL) || !g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in)))
-		return g_strdup(t);
+		return g_strdup(str_in);
 
 	if (charset) {
 		if ((conv_iconv=g_mime_iconv_open("UTF-8",charset)) != (iconv_t)-1) {
