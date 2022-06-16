@@ -1,5 +1,7 @@
 /*
  *  Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
+ *  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ *  Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
  *
  *  licence: GPLv2
  *  see COPYING for details.
