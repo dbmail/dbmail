@@ -6,7 +6,7 @@
 >
 >   (c) 2004-2014 NFG Net Facilities Group BV, The Netherlands, support@nfg.nl
 >
->   (c) 2000-2005 IC&S, The Netherlands
+>   (c) 1999-2005 IC&S, The Netherlands
 >
 
 What is it?
