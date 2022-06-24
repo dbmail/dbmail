@@ -2,13 +2,13 @@
 #                  Runtime configuration file for Exim               #
 ######################################################################
 
-
-# This is an Exim configuration file integrating dbmail.
+# This is an Exim configuration file integrating dbmail based on
+# exim's default.
 # It uses dbmail's aliases table to lookup both domains and emails as
 # well as using the same sql or ldap authentication as dbmail.
 # DBMail supports PostgreSQL, MySQL and Oracle via libzdb
 # https://www.tildeslash.com/libzdb/ and authentication via ldap.
-# 
+#
 # Sponsored by XML Team Solutions LLC https://xmlteam.com
 
 # This file is divided into several parts, all but the first of which are
@@ -48,7 +48,7 @@
 #
 # ROUTER_SMARTHOST=MAIL.HOSTNAME.FOR.CENTRAL.SERVER.EXAMPLE
 # If your smarthost requires authentication, set the location of your
-# passwd.client in CONFDIR and uncomment the PASSWDLINE macro and 
+# passwd.client in CONFDIR and uncomment the PASSWDLINE macro and
 # fixed_plain authenticator
 # CONFDIR=/usr/local/etc/exim
 
@@ -64,6 +64,11 @@ hide pgsql_servers = host/database/user/password
 
 ALIAS_VIRT_USER = SELECT alias FROM dbmail_aliases WHERE \
         alias='${quote_pgsql:$local_part}@${quote_pgsql:$domain}';
+ALIAS_LDAP_VIRT_USER = \
+        user="uid=lookup,dc=example,dc=com" \
+        pass="password" \
+        ldap:///ou=users,dc=example,dc=com?uid?sub?(mail=${quote_ldap:$local_part}@${quote_ldap:$domain})} \
+        {$value}fail
 ALIAS_VIRT_DOMAIN = SELECT \
         SUBSTR(alias, POSITION('@' IN alias) + 1) AS domains \
         FROM dbmail_aliases \
@@ -81,7 +86,10 @@ ALIAS_SERVER_AUTH_LOGIN = SELECT CASE Count(*) \
 #
 # If dbmail is configured for ldap authentication authdriver = ldap
 # Then comment out dbmail_login, uncomment and configure both
-# ldap_default_servers and ldap_login authenticator
+# ldap_default_servers and ldap_login authenticator.
+# Local domains may be more easily defined by reverting to exim's
+# default as ALIAS_VIRT_DOMAIN doesn't easily translate into ldap or
+# you may prefer a local_domains sql table.
 
 # ldap_default_servers = example.com::389
 
@@ -195,7 +203,7 @@ acl_smtp_data =         acl_check_data
 # authenticators will only work if the following TLS settings are turned on
 # as well.
 
-# Allow any client to use TLS.
+# This is equivalent to the default.
 
 # tls_advertise_hosts = *
 tls_advertise_hosts = *
@@ -437,8 +445,6 @@ acl_check_rcpt:
   accept  hosts = :
           control = dkim_disable_verify
 
-  warn    domains       = ${lookup pgsql{ALIAS_VIRT_DOMAIN}}
-
   #############################################################################
   # The following section of the ACL is concerned with local parts that contain
   # @ or % or ! or / or | or dots in unusual places.
@@ -494,6 +500,20 @@ acl_check_rcpt:
   # Deny unless the sender address can be verified.
 
   require verify        = sender
+
+  # Reject all RCPT commands after too many bad recipients
+  # This is partly a defense against spam abuse and partly attacker abuse.
+  # Real senders should manage, by the time they get to 10 RCPT directives,
+  # to have had at least half of them be real addresses.
+  #
+  # This is a lightweight check and can protect you against repeated
+  # invocations of more heavy-weight checks which would come after it.
+
+  deny    condition     = ${if and {\
+                        {>{$rcpt_count}{10}}\
+                        {<{$recipients_count}{${eval:$rcpt_count/2}}} }}
+          message       = Rejected for too many bad recipients
+          logwrite      = REJECT [$sender_host_address]: bad recipient count high [${eval:$rcpt_count-$recipients_count}]
 
   # Accept if the message comes from one of the hosts for which we are an
   # outgoing relay. It is assumed that such hosts are most likely to be MUAs,
@@ -577,11 +597,11 @@ acl_check_rcpt:
   # to the first recipient must be deferred unless the sender talks PRDR.
   #
   # defer  !condition     = $prdr_requested
-  #        condition      = ${if > {0}{$receipients_count}}
+  #        condition      = ${if > {0}{$recipients_count}}
   #        condition      = ${if !eq {$acl_m_content_filter} \
   #                                  {${lookup PER_RCPT_CONTENT_FILTER}}}
   # warn   !condition     = $prdr_requested
-  #        condition      = ${if > {0}{$receipients_count}}
+  #        condition      = ${if > {0}{$recipients_count}}
   #        set acl_m_content_filter = ${lookup PER_RCPT_CONTENT_FILTER}
   #############################################################################
 
@@ -827,7 +847,9 @@ userforward:
 
 localuser:
   driver = accept
-  check_local_user
+  #check_local_user
+  condition = ${lookup pgsql{ALIAS_VIRT_USER}}
+  #condition = hide ${lookup ldap{ALIAS_LDAP_VIRT_USER}}
 # local_part_suffix = +* : -*
 # local_part_suffix_optional
   # transport = local_delivery
@@ -876,9 +898,9 @@ smarthost_smtp:
   # request with your smarthost provider to get things fixed:
   hosts_require_tls = *
   tls_verify_hosts = *
-  # As long as tls_verify_hosts is enabled, this won't matter, but if you
-  # have to comment it out then this will at least log whether you succeed
-  # or not:
+  # As long as tls_verify_hosts is enabled, this this will have no effect,
+  # but if you have to comment it out then this will at least log whether
+  # you succeed or not:
   tls_try_verify_hosts = *
   #
   # The SNI name should match the name which we'll expect to verify;
@@ -1012,7 +1034,28 @@ begin authenticators
 # credentials in one lump, containing an authorization ID (which we do not
 # use), an authentication ID, and a password. The latter two appear as
 # $auth2 and $auth3 in the configuration and should be checked against a
-# valid username and password.
+# valid username and password. In a real configuration you would typically
+# use $auth2 as a lookup key, and compare $auth3 against the result of the
+# lookup, perhaps using the crypteq{}{} condition.
+
+#PLAIN:
+#  driver                     = plaintext
+#  server_set_id              = $auth2
+#  server_prompts             = :
+#  server_condition           = Authentication is not yet configured
+#  server_advertise_condition = ${if def:tls_in_cipher }
+
+# LOGIN authentication has traditional prompts and responses. There is no
+# authorization ID in this mechanism, so unlike PLAIN the username and
+# password are $auth1 and $auth2. Apart from that you can use the same
+# server_condition setting for both authenticators.
+
+#LOGIN:
+#  driver                     = plaintext
+#  server_set_id              = $auth1
+#  server_prompts             = <| Username: | Password:
+#  server_condition           = Authentication is not yet configured
+#  server_advertise_condition = ${if def:tls_in_cipher }
 
 dbmail_login:
   driver = plaintext
@@ -1033,7 +1076,7 @@ dbmail_login:
 #  server_set_id = uid=$auth1
 
 # Smarthost client authentication
-# Whwn using Exim as a client with a smarthost that requires authentication
+# When using Exim as a client with a smarthost that requires authentication
 # the following PASSWDLINE extracts credentials for the host then
 # fixed_plain extracts the username and password to authenticate
 # The format is a colon seperated list host:user:password
