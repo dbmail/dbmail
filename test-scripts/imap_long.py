@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (C) 2013 Paul J Stevens paul at nfg dot nl
+# Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+# Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License

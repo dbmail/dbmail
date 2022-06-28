@@ -1,6 +1,8 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -81,7 +83,8 @@ int do_showhelp(void) {
 	"               the time syntax is [<hours>h][<minutes>m]\n"
 	"               valid examples: 72h, 4h5m, 10m\n"
 	"     -M        migrate legacy 2.2.x messageblks to mimeparts table\n"
-	"     --erase days  Delete messages older than date in INBOX/Trash \n"       
+	"     --rehash  Rebuild hash keys for stored messages\n"
+	"     --erase days  Delete messages older than date in INBOX/Trash \n"
 	"     --move  days  Move messages from INBOX to INBOX/Trash\n"
 	"     --inbox name  Inbox folder to move from, used in conjunction with --move\n"
 	"     --trash name  Trash folder to move to, used in conjunction with --move\n"
@@ -1087,7 +1090,9 @@ int do_upgrade_schema(void)
 				query = DM_PGSQL_UPGRADE;
 			break;
 			case DM_DRIVER_ORACLE:
-				query = "BEGIN; COMMIT;";
+				qprintf ("\tPlease upgrade Oracle manually.\n");
+				return -1;
+
 			break;
 		}
 		qprintf ("Replacing\n");

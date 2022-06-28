@@ -1,6 +1,8 @@
 /*
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
-  Copyright (c) 2008 John T. Guthrie III guthrie@counterexample.org
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2008 John T. Guthrie III guthrie@counterexample.org
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -57,7 +59,7 @@ void tls_load_certs(ServerConfig_T *conf)
 
 	if (SSL_CTX_load_verify_locations(tls_context, conf->tls_cafile, NULL) == 0) {
 		TRACE(TRACE_WARNING, "Error loading CA file [%s]: %s",
-				conf->tls_cafile ? conf->tls_cafile : "",
+				conf->tls_cafile,
 				tls_get_error());
 		e = TRUE;
 	}
@@ -65,7 +67,7 @@ void tls_load_certs(ServerConfig_T *conf)
 	/* load certificate */
 	if (SSL_CTX_use_certificate_file(tls_context, conf->tls_cert, SSL_FILETYPE_PEM) != 1) {
 		TRACE(TRACE_WARNING, "Error loading certificate file [%s]: %s",
-				conf->tls_cert ? conf->tls_cert : "",
+				conf->tls_cert,
 				tls_get_error());
 		e = TRUE;
 	}
@@ -73,7 +75,7 @@ void tls_load_certs(ServerConfig_T *conf)
 	/* load private key */
 	if (SSL_CTX_use_PrivateKey_file(tls_context, conf->tls_key, SSL_FILETYPE_PEM) != 1) {
 		TRACE(TRACE_WARNING, "Error loading key file [%s]: %s",
-				conf->tls_key ? conf->tls_key : "",
+				conf->tls_key,
 				tls_get_error());
 		e = TRUE;
 	}
@@ -81,8 +83,8 @@ void tls_load_certs(ServerConfig_T *conf)
 	/* check certificate/private key consistency */
 	if (SSL_CTX_check_private_key(tls_context) != 1) {
 		TRACE(TRACE_WARNING, "Mismatch between certificate file [%s] and key file [%s]: %s",
-				conf->tls_cert ? conf->tls_cert : "",
-				conf->tls_key ? conf->tls_key : "",
+				conf->tls_cert,
+				conf->tls_key,
 				tls_get_error());
 		e = TRUE;
 	}
