@@ -82,7 +82,7 @@ WORKDIR /app
 RUN apk add --no-cache libc-dev libmhash libevent file
 # libzdb
 # libsieve
-# gmime=2.6.20-r0
+# gmime=3.2
 
 
 COPY --from=build-base /root/.abuild/ /root/.abuild/
@@ -91,7 +91,7 @@ ARG LIBSIEVE_VERSION=2.2.7-r1
 COPY --from=build-libsieve /root/packages/x86_64/libsieve-${LIBSIEVE_VERSION}.apk /root/packages/x86_64/libsieve-${LIBSIEVE_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libsieve-${LIBSIEVE_VERSION}.apk
 
-ARG GMIME_VERSION=2.6.20-r0
+ARG GMIME_VERSION=3.2.7-r2
 COPY --from=build-gmime /root/packages/x86_64/gmime-${GMIME_VERSION}.apk /root/packages/x86_64/gmime-${GMIME_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/gmime-${GMIME_VERSION}.apk
 
@@ -108,7 +108,7 @@ ARG LIBSIEVE_VERSION=2.2.7-r1
 COPY --from=build-libsieve /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk
 
-ARG GMIME_VERSION=2.6.20-r0
+ARG GMIME_VERSION=3.2.7-r2
 COPY --from=build-gmime /root/packages/x86_64/gmime-dev-${GMIME_VERSION}.apk /root/packages/x86_64/gmime-dev-${GMIME_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/gmime-dev-${GMIME_VERSION}.apk
 

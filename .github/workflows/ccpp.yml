@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies gmime
-      run: sudo apt-get install libgmime-2.6-dev libmhash-dev libssl-dev  libevent-dev libzdb-dev
+      run: sudo apt-get install libgmime-3.0-dev libmhash-dev libssl-dev  libevent-dev libzdb-dev
 
     - name: configure
       run: ./configure
