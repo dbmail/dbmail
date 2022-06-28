@@ -251,4 +251,18 @@ char *p_trim(char *str, const char *seps)
     return p_ltrim(p_rtrim(str, seps), seps);
 }
 
+/**
+ * String replace
+ *
+ */
+*char *p_string_replace(const char *in, const char *from, const char *to)
+{
+	char *p;
+	char **split;
+	
+	split = g_strsplit(in,from,0);
+	p = g_strjoinv(to,split);
+	g_strfreev(split);
+	return p;
+}
 #undef T

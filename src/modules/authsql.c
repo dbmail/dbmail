@@ -215,7 +215,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 		 * else it could be the first query failure */
 		id = strtoull(username, &endptr, 10);
 		if (*endptr == 0) {
-			TRACE(TRACE_DEBUG, "checking user [%lu] occurences [%d]", id, occurences);
+			TRACE(TRACE_DEBUG, "checking user [ %" PRIu64 "] occurences [%d]", id, occurences);
 			/* check user active */
 			if (db_user_active(id)){
 				/* numeric deliver-to --> this is a userid */
@@ -271,19 +271,19 @@ int auth_change_username(uint64_t user_idnr, const char *new_name)
 
 int auth_change_password(uint64_t user_idnr, const char *new_pass, const char *enctype)
 {
-	C c; S s; volatile int t = FALSE;
-	const char *encoding = enctype?enctype:"";
-
+	C c;
+	S s; 
+	int t = FALSE;
 	if (strlen(new_pass) > 128) {
 		TRACE(TRACE_ERR, "new password length is insane");
 		return -1;
 	}
-
 	c = db_con_get();
 	TRY
+		
 		s = db_stmt_prepare(c, "UPDATE %susers SET passwd = ?, encryption_type = ? WHERE user_idnr=?", DBPFX);
 		db_stmt_set_str(s, 1, new_pass);
-		db_stmt_set_str(s, 2, encoding);
+		db_stmt_set_str(s, 2, enctype ? enctype : "");
 		db_stmt_set_u64(s, 3, user_idnr);
 		db_stmt_exec(s);
 		t = TRUE;

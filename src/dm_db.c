@@ -1008,8 +1008,10 @@ static int check_upgrade_step(int from_version, int to_version)
 		db_con_close(c);
 		return DM_EQUERY;
 	}
-
 	TRACE(TRACE_INFO, "Running upgrade step %d -> %d", from_version, to_version);
+	TRACE(TRACE_INFO, "Replacing query {DB} and {PREFIX}");
+	query = p_string_replace(query,"{DB}",db_params.db);
+	query = p_string_replace(query,"{PREFIX}",config_get_value_default_string("table_prefix","DBMAIL","dbmail_"));
 	if (db_exec(c, query))
 		result = to_version;
 	else
@@ -1026,7 +1028,8 @@ int db_check_version(void)
 	Connection_T c = db_con_get();
 	volatile int ok = 0;
 	volatile int db = 0;
-	// volatile long version = config_get_app_version();
+	volatile long version = config_get_app_version();
+	TRACE(TRACE_DEBUG, "Version Internal %ld", version);
 	/* @todo: use version to run upgrades */
 	TRY
 		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
@@ -3270,8 +3273,9 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	Connection_T c;
 	size_t i, pos = 0;
 	volatile int seen = 0, count = 0;
-	INIT_QUERY;
 
+	INIT_QUERY;
+	
 	memset(query,0,DEF_QUERYSIZE);
 	pos += snprintf(query, DEF_QUERYSIZE-1, "UPDATE %smessages SET ", DBPFX);
 
