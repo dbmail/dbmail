@@ -1,6 +1,8 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -633,7 +635,7 @@ int imap_handle_connection(client_sock *c)
 		disconnect_user(session);
 	} else if (fd_limit.rlim_cur - fd_count < FREE_DF_THRESHOLD) {
 		TRACE(TRACE_WARNING,
-			"[%p] fd count [%d], fd limit [%d], fd threshold [%d]: dropping client connection",
+			"[%p] fd count [%d], fd limit [%ld], fd threshold [%d]: dropping client connection",
 			session, fd_count, fd_limit.rlim_cur, FREE_DF_THRESHOLD);
 		disconnect_user(session);
 	} else {

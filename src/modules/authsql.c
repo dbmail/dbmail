@@ -1,6 +1,8 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -213,7 +215,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 		 * else it could be the first query failure */
 		id = strtoull(username, &endptr, 10);
 		if (*endptr == 0) {
-			TRACE(TRACE_DEBUG, "checking user [%d] occurences [%d]", id, occurences);
+			TRACE(TRACE_DEBUG, "checking user [%lu] occurences [%d]", id, occurences);
 			/* check user active */
 			if (db_user_active(id)){
 				/* numeric deliver-to --> this is a userid */
