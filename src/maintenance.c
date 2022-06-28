@@ -1065,12 +1065,12 @@ int do_migrate(int migrate_limit)
 
 int do_upgrade_schema(void)
 {
-	const char *query = NULL;
-	Connection_T c;	
 	if (!yes_to_all) {
 		qprintf ("\tupgrading skipped. Use -y option to perform migration.\n");
 		return 0;
 	}
+	char *query = NULL;
+	Connection_T c;	
 	qprintf ("Preparing to upgrade \n");
 	c = db_con_get();
 	TRY
@@ -1086,7 +1086,13 @@ int do_upgrade_schema(void)
 			case DM_DRIVER_POSTGRESQL:
 				query = DM_PGSQL_UPGRADE;
 			break;
+			case DM_DRIVER_ORACLE:
+				query = "BEGIN; COMMIT;";
+			break;
 		}
+		qprintf ("Replacing\n");
+		query = p_string_replace(query,"{DB}",db_params.db);
+		query = p_string_replace(query,"{PREFIX}",config_get_value_default_string("table_prefix","DBMAIL","dbmail_"));
 		qprintf ("Executing\n%s\n...",query);
 		db_exec(c, query);
 	CATCH(SQLException)
