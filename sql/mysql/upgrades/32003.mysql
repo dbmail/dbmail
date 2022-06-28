@@ -1,9 +1,9 @@
 
 BEGIN;
 
-ALTER TABLE dbmail_messages ADD seq BIGINT not null default '0';
-CREATE INDEX dbmail_messages_seq_index ON dbmail_messages(seq);
+ALTER TABLE {PREFIX}messages ADD seq BIGINT not null default '0';
+CREATE INDEX {PREFIX}messages_seq_index ON {PREFIX}messages(seq);
 
-INSERT INTO dbmail_upgrade_steps (from_version, to_version, applied) values (32001, 32003, now());
+INSERT INTO {PREFIX}upgrade_steps (from_version, to_version, applied) values (32001, 32003, now());
 
 COMMIT;

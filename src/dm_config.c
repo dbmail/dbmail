@@ -259,16 +259,17 @@ int config_get_value_default_int(const Field_T field_name,
 }
 
 
-Field_T* config_get_value_default_string(const Field_T field_name,
+char* config_get_value_default_string(const Field_T field_name,
 					const char * const service_name,
-					Field_T value, Field_T default_value){
+					char* default_value){
+	Field_T value;
 	int result_fetch = config_get_value(field_name, service_name, value);
 
 	if (result_fetch==0){
 		/* no error */
-		return (Field_T*)value;
+		return (char*)value;
 	}
-	return (Field_T*)default_value;
+	return default_value;
 }
 
 

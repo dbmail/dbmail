@@ -1,13 +1,13 @@
 
 BEGIN;
 
-CREATE TABLE dbmail_upgrade_steps (
+CREATE TABLE {PREFIX}upgrade_steps (
   from_version int not null,
   to_version int not null,
   applied datetime not null,
   unique key (from_version, to_version)
 );
 
-INSERT INTO dbmail_upgrade_steps (from_version, to_version, applied) values (0, 32001, now());
+INSERT INTO {PREFIX}upgrade_steps (from_version, to_version, applied) values (0, 32001, now());
 
 COMMIT;

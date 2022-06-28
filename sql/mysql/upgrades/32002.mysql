@@ -1,14 +1,14 @@
 
 BEGIN;
-DROP VIEW IF EXISTS dbmail_subjectfield;
-CREATE VIEW dbmail_subjectfield AS
+DROP VIEW IF EXISTS {PREFIX}subjectfield;
+CREATE VIEW {PREFIX}subjectfield AS
    SELECT physmessage_id, headervalue AS subjectfield, sortfield
-   FROM dbmail_messages m
-   JOIN dbmail_header h USING (physmessage_id)
-   JOIN dbmail_headername n ON h.headername_id = n.id
-   JOIN dbmail_headervalue v ON h.headervalue_id = v.id
+   FROM {PREFIX}messages m
+   JOIN {PREFIX}header h USING (physmessage_id)
+   JOIN {PREFIX}headername n ON h.headername_id = n.id
+   JOIN {PREFIX}headervalue v ON h.headervalue_id = v.id
 WHERE n.headername = 'subject';
 
-INSERT INTO dbmail_upgrade_steps (from_version, to_version, applied) values (32001, 32002, now());
+INSERT INTO {PREFIX}upgrade_steps (from_version, to_version, applied) values (32001, 32002, now());
 COMMIT;
 
