@@ -1387,6 +1387,7 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 		header_name = g_mime_header_get_name (header);
 		// Need to remove leading and trailing spaces
 		header_raw_value = g_strstrip((char*)g_mime_header_get_raw_value (header));
+		g_mime_header_set_raw_value(header, header_raw_value);
 		_header_cache(header_name, header_raw_value, (gpointer)self);
 	}
 
