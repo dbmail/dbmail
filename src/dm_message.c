@@ -1385,9 +1385,7 @@ int dbmail_message_cache_headers(const DbmailMessage *self)
 		GMimeHeader *header = g_mime_header_list_get_header_at((GMimeHeaderList*)headers, i);
 
 		header_name = g_mime_header_get_name (header);
-		// Need to remove leading and trailing spaces
-		header_raw_value = g_strstrip((char*)g_mime_header_get_raw_value (header));
-		g_mime_header_set_raw_value(header, header_raw_value);
+		header_raw_value = g_mime_header_get_raw_value (header);
 		_header_cache(header_name, header_raw_value, (gpointer)self);
 	}
 
@@ -1724,6 +1722,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 		isdate=1;
 
 	value = dbmail_iconv_decode_field(raw, charset, isaddr);
+	value = g_strstrip(value);
 
 	TRACE(TRACE_DEBUG,
 		"headername [%s] id [%lu] raw [%s] value [%s] isaddr [%d] issubject [%d] isdate [%d]",
