@@ -1,16 +1,16 @@
-Upgrading from DBMail 3.0 to DBMail 3.2
+Upgrading from DBMail 3.0 to DBMail 3.3
 =======================================
 
 Dependencies
 ------------
 
-* Database: MySQL 5.0 or better, PostgreSQL 8.3+, Sqlite3, Oracle
-* Glib: (>= 2.16.0)
-* GMime: (>= 2.6.20)
+* Database: Current versions of MySQL, PostgreSQL, Sqlite3 and Oracle
+* Glib: (>= 2.16)
+* GMime: (>= 3 (3.2))
 * OpenSSL
 * libmhash
 * libzdb
-* libevent: (>= 2.0.21)
+* libevent: (>= 2.1)
 
 Schema Changes
 --------------
@@ -25,7 +25,7 @@ Upgrading from DBMail 2.2 to DBMail 3.0
 Dependencies
 ------------
 
-* Database: MySQL 5.0, PostgreSQL 8.3+, or SQLite3
+* Database: Current versions of MySQL, PostgreSQL and Sqlite3
 * Glib: (>= 2.16.0)
 * GMime: (>= 2.4.0)
 * Optional: libSieve (>= 2.2.1)
