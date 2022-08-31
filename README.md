@@ -2,8 +2,11 @@
 [![Build Status](https://travis-ci.org/dbmail/dbmail.svg?branch=master)](https://travis-ci.org/dbmail/dbmail)
 
 > Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+>
 > Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+>
 > Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+>
 > Copyright (c) 2000-2006 IC&S, The Netherlands
 
 What is it?
