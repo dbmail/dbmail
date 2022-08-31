@@ -1,5 +1,7 @@
 /*
- *   Copyright (c) 2005-2012 NFG Net Facilities Group BV support@nfg.nl
+ *   Copyright (c) 2005-2013 NFG Net Facilities Group BV support@nfg.nl
+ *   Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ *   Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -118,7 +120,7 @@ Suite *dbmail_server_suite(void)
 int main(void)
 {
 	int nf;
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 	Suite *s = dbmail_server_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);

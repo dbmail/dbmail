@@ -2,6 +2,8 @@
  Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl
  Copyright (C) 2001-2007 Aaron Stone, aaron@serendipity.cx
  Copyright (C) 2004-2013 NFG Net Facilities Group BV, support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License as
@@ -186,6 +188,8 @@
 "Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl\n" \
 "Copyright (C) 2001-2007 Aaron Stone, aaron@serendipity.cx\n" \
 "Copyright (C) 2004-2013 NFG Net Facilities Group BV, support@nfg.nl\n" \
+"Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl\n" \
+"Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk\n" \
 "\n" \
 "Please see the AUTHORS and THANKS files for additional contributors.\n" \
 "\n" \

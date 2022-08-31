@@ -1,5 +1,7 @@
 /*
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -132,19 +134,16 @@ static size_t dump_message_to_stream(DbmailMailbox *self, DbmailMessage *message
 
 	s = dbmail_message_to_string(message);
 
-	if (!strncmp(s, "From ", 5) == 0) {
-		ialist = internet_address_list_parse(
-			NULL,
-			g_mime_message_get_sender(GMIME_MESSAGE(message->content))
-		);
-		sender = p_string_new(self->pool, "nobody@foo");
-		if (ialist) {
-			ia = internet_address_list_get_address(ialist, 0);
-			if (ia) {
-				char *addr = (char *) internet_address_mailbox_get_addr((InternetAddressMailbox *) ia);
-				g_strstrip(g_strdelimit(addr, "\"", ' '));
-				p_string_printf(sender, "%s", addr);
-			}
+	if (!strncmp(s, "From ", 5)) {
+		ialist = g_mime_message_get_sender(GMIME_MESSAGE(message->content));
+		if (internet_address_list_length(ialist) > 0) {
+			ia = internet_address_list_get_address (ialist, 0);
+			sender = p_string_new(self->pool, internet_address_to_string (ia, NULL, TRUE));
+			g_free(ia);
+			TRACE(TRACE_DEBUG, "Sender is: [%s]", (char *)sender);
+		} else {
+			TRACE(TRACE_DEBUG, "Setting sender to nobody@foo");
+			sender = p_string_new(self->pool, "nobody@foo");
 		}
 		g_object_unref(ialist);
 

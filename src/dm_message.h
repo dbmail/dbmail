@@ -1,5 +1,7 @@
 /*
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -68,7 +70,7 @@ uint64_t dbmail_message_get_physid(const DbmailMessage *self);
 void dbmail_message_set_envelope_recipient(DbmailMessage *self, const char *envelope);
 const char * dbmail_message_get_envelope_recipient(const DbmailMessage *self);
 	
-void dbmail_message_set_internal_date(DbmailMessage *self, char *internal_date);
+void dbmail_message_set_internal_date(DbmailMessage *self, const char *internal_date);
 gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear);
 	
 int dbmail_message_set_class(DbmailMessage *self, int klass);

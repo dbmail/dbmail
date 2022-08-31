@@ -1,6 +1,8 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -167,8 +169,6 @@ T p_list_remove(T L, T E)
 void g_list_destroy(GList *l)
 {
 	if (! l) return;
-	l = g_list_first(l);
-	g_list_foreach(l,(GFunc)g_free,NULL);
 
 	l = g_list_first(l);
 	g_list_free(l);

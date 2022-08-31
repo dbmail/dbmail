@@ -1,6 +1,8 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -1704,7 +1706,7 @@ void _ic_append_enter(dm_thread_data *D)
 	
 	message = p_string_str(self->args[i]);
 
-	D->status = db_append_msg(message, mboxid, self->userid, (char *)internal_date, &message_id, recent);
+	D->status = db_append_msg(message, mboxid, self->userid, internal_date, &message_id, recent);
 
 	switch (D->status) {
 	case -1:
