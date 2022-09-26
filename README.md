@@ -22,7 +22,7 @@ Why is it useful?
 
 - it enables you to create mailboxes without the need of systemusers.
 
-- Email is more effeciently stored and therefore it can be inserted an retrieved much faster dan any
+- Email is more effeciently stored and therefore it can be inserted an retrieved much faster than any
   regular system (DBMail is currently able to retrieve aprox. 250 mail messages per second)
 
 - It's scalable. You can run the dbmail programs on different servers talking to the same
