@@ -388,12 +388,13 @@ CREATE TABLE `dbmail_users` (
   UNIQUE KEY `userid_index` (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS dbmail_auto_notifications;                                                                                                                                        
+DROP TABLE IF EXISTS dbmail_auto_notifications;
 CREATE TABLE dbmail_auto_notifications (
         user_idnr bigint(20) UNSIGNED NOT NULL,
         notify_address varchar(100) NOT NULL default '',
         INDEX user_idnr_index (user_idnr),
-        FOREIGN KEY user_idnr_fk (user_idnr)
+        CONSTRAINT `dbmail_auto_notifications_fk_dbmail_users`
+                FOREIGN KEY (user_idnr)
                 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE InnoDB DEFAULT CHARSET=utf8;
                              
@@ -404,7 +405,8 @@ CREATE TABLE dbmail_auto_replies (
         stop_date DATETIME NOT NULL,
         reply_body MEDIUMTEXT,
         INDEX user_idnr_index (user_idnr),
-        FOREIGN KEY user_idnr_fk (user_idnr)
+        CONSTRAINT `dbmail_auto_replies_fk_dbmail_users`
+                FOREIGN KEY (user_idnr)
                 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE InnoDB DEFAULT CHARSET=utf8;
                              
