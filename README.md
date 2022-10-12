@@ -70,6 +70,8 @@ Installation Procedure
 Dependencies
 ------------
 
+Note: There are issues with MySQL 8 that prevent email delivery. If you are using MySQL please remain on 5.7 until this issue is resolved
+
 * Database: Current versions of MySQL, PostgreSQL, Sqlite3 and Oracle
 * Glib: (>= 2.16)
 * GMime: (>= 3 (3.2))
