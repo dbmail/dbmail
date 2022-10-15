@@ -1,25 +1,27 @@
+# DBMail
 
 [![Build Status](https://travis-ci.org/dbmail/dbmail.svg?branch=master)](https://travis-ci.org/dbmail/dbmail)
 
 > Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+>
 > Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+>
 > Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+>
 > Copyright (c) 2000-2006 IC&S, The Netherlands
 
-What is it?
-===========
+## What is it?
 
 DBMail is a collection of programs that enables email to be stored in and
 retrieved from a database. 
 
 Read the INSTALL file for installation of DBMail.
 
-Why is it useful?
-==================
+## Why is it useful?
 
 - it enables you to create mailboxes without the need of systemusers.
 
-- Email is more effeciently stored and therefore it can be inserted an retrieved much faster dan any
+- Email is more effeciently stored and therefore it can be inserted an retrieved much faster than any
   regular system (DBMail is currently able to retrieve aprox. 250 mail messages per second)
 
 - It's scalable. You can run the dbmail programs on different servers talking to the same
@@ -30,8 +32,7 @@ Why is it useful?
   is done through the database.
 
 
-Who created it?
-===============
+## Who created it?
 
 DBMail was originally created by IC&S in the Netherlands.
 
@@ -45,30 +46,25 @@ GPL licence.
 
 Support is available by raising an issue at https://github.com/dbmail/dbmail
 
-How do i install it?
-====================
+## How do i install it?
 
-Check the different README files and the wiki pages on dbmail.org for detailed 
+Check the different README files and on https://dbmail.org for detailed
 information and howtos.
 
-Future
-======
+## Future
 
 Check the website for further DBMail plans.
 
-What kind of licence is DBMail?
-===============================
+## What kind of licence is DBMail?
 
 DBMail uses the GPL version 2 licence. 
 
 It's included in the COPYING file.
 
 
-Installation Procedure
-======================
+## Installation Procedure
 
-Dependencies
-------------
+### Dependencies
 
 Note: There are issues with MySQL 8 that prevent email delivery. If you are using MySQL please remain on 5.7 until this issue is resolved
 
@@ -82,12 +78,10 @@ Note: There are issues with MySQL 8 that prevent email delivery. If you are usin
 * Optional: libsieve (>= 2.2.1) (https://github.com/sodabrew/libsieve)
 * Optional: jemalloc
 
-Installing
-----------
+### Installing
+
 * Download DBMail package
 * Install dependencies (some provided from your linux distribution and some (libzdb and/or libsieve) need to be compiled
 * ./configure
 * make 
 * make install
-
--------------------------------------------
