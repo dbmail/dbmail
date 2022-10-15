@@ -2987,10 +2987,19 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 	       uint64_t * newmsg_idnr, gboolean recent)
 {
 	Connection_T c; ResultSet_T r;
+	PreparedStatement_T s;
 	uint64_t msgsize;
 	char *frag;
 	int valid=FALSE;
 	char unique_id[UID_SIZE];
+	int tmp_physmessage = 0;
+	int tmp_seen = 0;
+	int tmp_answered = 0;
+	int tmp_deleted = 0;
+	int tmp_flagged = 0;
+	int tmp_recent = 0;
+	int tmp_draft = 0;
+	int tmp_status = 0;
 
 	/* Get the size of the message to be copied. */
 	if (! (msgsize = message_get_size(msg_idnr))) {
@@ -3015,20 +3024,59 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 	TRY
 		db_begin_transaction(c);
 		create_unique_id(unique_id, msg_idnr);
-		if (db_params.db_driver == DM_DRIVER_ORACLE) {
-			db_exec(c, "INSERT INTO %smessages ("
-				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
-				" SELECT %" PRIu64 ",physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,%d,draft_flag,'%s',status"
-				" FROM %smessages WHERE message_idnr = %" PRIu64 " %s",DBPFX, mailbox_to, recent, unique_id, DBPFX, msg_idnr, frag);
-			*newmsg_idnr = db_get_pk(c, "messages");
-		} else {
-			r = db_query(c, "INSERT INTO %smessages ("
-				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
-				" SELECT %" PRIu64 ",physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,%d,draft_flag,'%s',status"
-				" FROM %smessages WHERE message_idnr = %" PRIu64 " %s",DBPFX, mailbox_to, recent, unique_id, DBPFX, msg_idnr, frag);
-			*newmsg_idnr = db_insert_result(c, r);
+		s = db_stmt_prepare(c,
+			"SELECT"
+			"  physmessage_id,\n"
+			"  seen_flag,\n"
+			"  answered_flag,\n"
+			"  deleted_flag,\n"
+			"  flagged_flag,\n"
+			"  recent_flag,\n"
+			"  draft_flag,\n"
+			"  status\n"
+			"FROM %smessages\n"
+			"WHERE message_idnr = ?", DBPFX);
+		db_stmt_set_u64(s, 1, msg_idnr);
+		r = db_stmt_query(s);
+		if (db_result_next(r)) {
+			tmp_physmessage = db_result_get_u64(r, 0);
+			tmp_seen = db_result_get_bool(r, 1);
+			tmp_answered = db_result_get_int(r, 2);
+			tmp_deleted = db_result_get_int(r, 3);
+			tmp_flagged = db_result_get_int(r, 4);
+			tmp_recent = db_result_get_int(r, 5);
+			tmp_draft = db_result_get_int(r, 6);
+			tmp_status = db_result_get_int(r, 7);
 		}
+
+		s = db_stmt_prepare(c,
+			"INSERT INTO %smessages (\n"
+			"mailbox_idnr,\n"
+			"physmessage_id,\n"
+			"seen_flag,\n"
+			"answered_flag,\n"
+			"deleted_flag,\n"
+			"flagged_flag,\n"
+			"recent_flag,\n"
+			"draft_flag,\n"
+			"unique_id,\n"
+			"status)\n"
+		"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) %s", DBPFX, frag);
+		db_stmt_set_u64(s, 1, mailbox_to);
+		db_stmt_set_u64(s, 2, tmp_physmessage);
+		db_stmt_set_int(s, 3, tmp_seen);
+		db_stmt_set_int(s, 4, tmp_answered);
+		db_stmt_set_int(s, 5, tmp_deleted);
+		db_stmt_set_int(s, 6, tmp_flagged);
+		db_stmt_set_int(s, 7, tmp_recent);
+		db_stmt_set_int(s, 8, tmp_draft);
+		db_stmt_set_str(s, 9, unique_id);
+		db_stmt_set_int(s, 10, tmp_status);
+		r = db_stmt_query(s);
+		*newmsg_idnr = db_insert_result(c, r);
+
 		db_commit_transaction(c);
+		TRACE(TRACE_INFO, "message [%" PRIu64 "] inserted", *newmsg_idnr);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);

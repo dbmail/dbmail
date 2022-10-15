@@ -1,5 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
+
+## [3.3.1] - 2022-10-15
+- Fixed issue #175 with mysql 8.0.31
+
 ## [3.3.0] - 2022-05-26
 - gmime updated to 3
 
