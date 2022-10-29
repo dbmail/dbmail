@@ -1,3 +1,9 @@
+dbmail (3.3.1) unstable; urgency=medium
+
+  * new package from dbmail master (3.3.1)
+  * Bug fixes
+ -- Cosmin Cioranu <cosmin.cioranu@nbeta.ro>  Thu, 6 Aug 2020 17:30:00 +0100
+
 dbmail (3.2.6) unstable; urgency=medium
 
   * new package from dbmail master (3.2.6)

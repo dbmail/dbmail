@@ -4,8 +4,6 @@ After=network.target network-online.target mysqld.service postgresql.service
 
 [Service]
 Type=notify
-ExecStartPre=-mkdir -p @runstatedir@/dbmail
-ExecStartPre=-chown dbmail:dbmail @runstatedir@/dbmail
 ExecStart=@sbindir@/dbmail-pop3d -D
 Restart=always
 RestartSec=3s
