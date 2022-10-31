@@ -26,7 +26,7 @@ PID_DIR=/run/dbmail
 
 if SYSTEMD
 install-systemd: dbmail-imapd.service dbmail-lmtpd.service dbmail-pop3d.service dbmail-timsieved.service dbmail.tmpfiles
-#	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_UNIT_DIR)
+	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_UNIT_DIR)
 	$(INSTALL_DATA) dbmail-imapd.service \
 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-imapd.service
 	$(INSTALL_DATA) dbmail-lmtpd.service \
@@ -35,7 +35,7 @@ install-systemd: dbmail-imapd.service dbmail-lmtpd.service dbmail-pop3d.service 
 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-pop3d.service
 	$(INSTALL_DATA) dbmail-timsieved.service \
 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-timsieved.service
-#	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)
+	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)
 	$(INSTALL_DATA) dbmail.tmpfiles \
 	  $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)/dbmail.conf
 

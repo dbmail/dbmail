@@ -1,0 +1,36 @@
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -26,7 +26,6 @@ PID_DIR=/run/dbmail
+ 
+ if SYSTEMD
+ install-systemd: dbmail-imapd.service dbmail-lmtpd.service dbmail-pop3d.service dbmail-timsieved.service dbmail.tmpfiles
+-	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_UNIT_DIR)
+ 	$(INSTALL_DATA) dbmail-imapd.service \
+ 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-imapd.service
+ 	$(INSTALL_DATA) dbmail-lmtpd.service \
+@@ -35,7 +34,6 @@ install-systemd: dbmail-imapd.service dbmail-lmtpd.service dbmail-pop3d.service
+ 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-pop3d.service
+ 	$(INSTALL_DATA) dbmail-timsieved.service \
+ 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-timsieved.service
+-	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)
+ 	$(INSTALL_DATA) dbmail.tmpfiles \
+ 	  $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)/dbmail.conf
+ 
+--- a/systemd/Makefile.in
++++ b/systemd/Makefile.in
+@@ -510,7 +510,6 @@ uninstall-am: uninstall-local
+ 
+ 
+ @SYSTEMD_TRUE@install-systemd: dbmail-imapd.service dbmail-lmtpd.service dbmail-pop3d.service dbmail-timsieved.service dbmail.tmpfiles
+-@SYSTEMD_TRUE@	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_UNIT_DIR)
+ @SYSTEMD_TRUE@	$(INSTALL_DATA) dbmail-imapd.service \
+ @SYSTEMD_TRUE@	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-imapd.service
+ @SYSTEMD_TRUE@	$(INSTALL_DATA) dbmail-lmtpd.service \
+@@ -519,7 +518,6 @@ uninstall-am: uninstall-local
+ @SYSTEMD_TRUE@	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-pop3d.service
+ @SYSTEMD_TRUE@	$(INSTALL_DATA) dbmail-timsieved.service \
+ @SYSTEMD_TRUE@	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-timsieved.service
+-@SYSTEMD_TRUE@	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)
+ @SYSTEMD_TRUE@	$(INSTALL_DATA) dbmail.tmpfiles \
+ @SYSTEMD_TRUE@	  $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)/dbmail.conf
+ 
