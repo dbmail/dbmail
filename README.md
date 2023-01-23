@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/dbmail/dbmail.svg?branch=master)](https://travis-ci.org/dbmail/dbmail)
 
-> Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+> Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 >
 > Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
 >
