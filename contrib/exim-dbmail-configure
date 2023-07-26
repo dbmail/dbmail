@@ -990,8 +990,8 @@ address_reply:
 # This transport delivers email to DBMail
 dbmail_delivery:
   driver = pipe
-  command = "/usr/local/sbin/dbmail-deliver -d "$local_part_data@$domain_data"
-  #command = "/usr/local/sbin/dbmail-deliver -d "$address_data"
+  command = /usr/local/sbin/dbmail-deliver -d "$local_part_data@$domain_data"
+  #command = /usr/local/sbin/dbmail-deliver -d "$address_data"
   return_fail_output
   user = mail
 
