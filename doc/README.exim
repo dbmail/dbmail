@@ -1,42 +1,14 @@
 
 
 Using DBMail with Exim4
-by Thomas Mueller
 =======================
 
-1.	Prerequisites
-	
-	* A Exim installation
-	* A DBMail installation
+DBMail works well with Exim.
 
-2.	Generic
+Both sql and ldap authentication are supported.
 
-	LOCAL_DELIVERY=transport_dbmail
+Using ldap to search for aliases using the mail attribute is supported, though
+since exim 4.96 delivery addresses must be looked up. There is a sample dbmail
+alias that may be helpful as a starting point for your ldap search.
 
-	Every router with local mail has to use 'transport = LOCAL_DELIVERY' then.
-
-3. 	dbmail-deliver
-
-	# transport using pipe
-	transport_dbmail:  
-		driver = pipe
-		command = "/usr/local/sbin/dbmail-deliver -d $local_part@$domain"
-		return_fail_output
-		user = dbmail
-
-3. 	dbmail-lmtp
-	
-	# transport using lmtp; exim and dbmail on the same host
-	transport_dbmail:
-		driver = smtp
-		protocol = lmtp
-		hosts = localhost
-		allow_localhost
-		return_path_add
-
-	LMTP requires lmtp entries in /etc/services (they are not there in Debian!).
-
-	lmtp 24/tcp
-	lmtp 24/udp
-
-	
+Sample configuration: contrib/exim-dbmail-configure

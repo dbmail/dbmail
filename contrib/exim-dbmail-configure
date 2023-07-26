@@ -16,6 +16,15 @@
 # are required need to be present. Blank lines, and lines starting with #
 # are ignored.
 
+# As of Exim 4.96 it is no longer possible to rely on local_part and domain
+# in received email as they are considered tained. Both the local_part and
+# domain must be checked before they can be used and after a successful match
+# are available de-tainted in $local_part_data and $domain_data.
+# If using ldap to search for aliases in the mail attribute, a sample
+# alias lookup ALIAS_LDAP_ADDRESS_DATA may be useful. The uid is usually
+# equal to the primary local_part and any other mail attribues can be
+# considered aliases, this is used to construct the delivery email.
+
 
 ########### IMPORTANT ########## IMPORTANT ########### IMPORTANT ###########
 #                                                                          #
@@ -79,6 +88,15 @@ ALIAS_SERVER_AUTH_LOGIN = SELECT CASE Count(*) \
         FROM dbmail_users \
         WHERE userid = '${quote_pgsql:$auth1}' \
         AND passwd = '${quote_pgsql:$auth2}';
+ALIAS_USER_LOCAL_PART = SELECT SUBSTR(alias, 0, POSITION('@' IN alias)) AS local_part \
+        FROM dbmail_aliases \
+        WHERE alias='${quote_pgsql:$local_part@$domain}';
+ALIAS_LDAP_ADDRESS_DATA = ${lookup ldap{ \
+        user="uid=lookup,ou=misc,dc=example,dc=com" \
+        pass="password" \
+        ldap:///ou=users,dc=example,dc=com?uid?sub?(mail=${quote_ldap: \
+        ${local_part}@${quote_ldap:$domain}})}}@${lookup \
+        pgsql{ALIAS_VIRT_DOMAIN}}
 
 ######################################################################
 #                    LDAP SETTINGS                                   #
@@ -848,8 +866,10 @@ userforward:
 localuser:
   driver = accept
   #check_local_user
-  condition = ${lookup pgsql{ALIAS_VIRT_USER}}
+  local_parts = ${lookup pgsql{ALIAS_USER_LOCAL_PART}}
+  domains   = ${lookup pgsql{ALIAS_VIRT_DOMAIN}}
   #condition = hide ${lookup ldap{ALIAS_LDAP_VIRT_USER}}
+  #address_data = ALIAS_LDAP_ADDRESS_DATA
 # local_part_suffix = +* : -*
 # local_part_suffix_optional
   # transport = local_delivery
@@ -970,7 +990,8 @@ address_reply:
 # This transport delivers email to DBMail
 dbmail_delivery:
   driver = pipe
-  command = "/usr/local/sbin/dbmail-deliver -d ${local_part}\@$domain"
+  command = "/usr/local/sbin/dbmail-deliver -d "$local_part_data@$domain_data"
+  #command = "/usr/local/sbin/dbmail-deliver -d "$address_data"
   return_fail_output
   user = mail
 
