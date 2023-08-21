@@ -273,33 +273,37 @@ static LDAPMessage * authldap_search(const gchar *query)
 	char **_ldap_attrs = NULL;
 	int err = -1; // Start wanting success
 	int c = 0;
+	const char *err_msg = NULL;
 	int c_tries = _ldap_cfg.query_timeout_int;
 	LDAP *_ldap_conn;
 
 	g_return_val_if_fail(query!=NULL, NULL);
 
-	_ldap_conn = ldap_con_get();
-
 	TRACE(TRACE_DEBUG, " [%s]", query);
 
 	while (err != 0 && c++ < c_tries) {
 		// Loop until success or too many retries
+		_ldap_conn = ldap_con_get();
 
 		// timeout must be NULL as any value times out!
-		err = ldap_search_ext_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int, 
-				query, _ldap_attrs, _ldap_attrsonly, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_res);
+		err = ldap_search_ext_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int,
+			query, _ldap_attrs, _ldap_attrsonly, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_res);
 
 		switch (err) {
 			case LDAP_SUCCESS:
 				return ldap_res;
 				break;
 			case LDAP_SERVER_DOWN:
-				TRACE(TRACE_WARNING, "LDAP gone away: %s. Trying again(%d/%d).", ldap_err2string(err), c, c_tries);
+				ldap_get_option(_ldap_conn, LDAP_OPT_DIAGNOSTIC_MESSAGE, &err_msg);
+				TRACE(TRACE_WARNING, "LDAP gone away(%d): %s. Trying again(%d/%d). Error message: %s", err, ldap_err2string(err), c, c_tries, err_msg);
+				ldap_memfree(&err_msg);
 				break;
 			default:
 				TRACE(TRACE_ERR, "LDAP error(%d): %s. Trying again (%d/%d).", err, ldap_err2string(err), c, c_tries);
 				break;
 		}
+		ldap_msgfree(ldap_res);
+		ldap_unbind_ext(_ldap_conn, NULL, NULL);
 		sleep(1); // Search failed. Wait before trying again.
 	}
 
