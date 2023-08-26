@@ -2,7 +2,7 @@
 BUGS
 ----
 If you experience inexplicable problems with DBMail, please report the issue
-to the http://dbmail.org/mantis/[DBMail Bug Tracker].
+to the https://github.com/dbmail/dbmail/issues[DBMail Bug Tracker].
 
 LICENSE
 -------
@@ -15,6 +15,7 @@ DBMail is a collaborative effort among the core developers listed below and
 the tremendous help of the testers, patchers and bug hunters listed in the
 AUTHORS and THANKS files found in the DBMail source distribution.
 
+  Alan Hicks          Persistent Objects Ltd https://p-o.co.uk
   Eelco van Beek      Aaron Stone            Paul J Stevens
   Roel Rozendaal      Open Source Engineer   NFG Net Facilities Group BV
   Ilja Booij          Palo Alto, CA USA      http://www.nfg.nl

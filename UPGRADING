@@ -1,3 +1,9 @@
+Upgrading from DBMail 3.3 to DBMail 3.4
+=======================================
+
+* dbmail-sieved added
+* dbmail-timsieved deprecated and will be removed in 3.5
+
 Upgrading from DBMail 3.0 to DBMail 3.3
 =======================================
 

@@ -23,7 +23,7 @@ SUBDIRS = modules
 
 
 if SIEVE
-SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
+SIEVEPROGS = dbmail-sievecmd dbmail-timsieved dbmail-sieved
 endif
 
 if USE_DM_GETOPT
@@ -115,6 +115,9 @@ dbmail_httpd_LDADD = $(STATIC_MODULES) libdbmail.la
 if SIEVE
 dbmail_sievecmd_SOURCES = sievecmd.c 
 dbmail_sievecmd_LDADD = $(STATIC_MODULES) libdbmail.la
+
+dbmail_sieved_SOURCES = sieve.c sieved.c
+dbmail_sieved_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_timsieved_SOURCES = timsieve.c timsieved.c
 dbmail_timsieved_LDADD = $(STATIC_MODULES) libdbmail.la
