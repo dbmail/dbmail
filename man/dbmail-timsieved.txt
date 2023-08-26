@@ -4,7 +4,7 @@ DBMAIL-TIMSIEVED(8)
 
 NAME
 ----
-dbmail-timsieved - speaks the Manage Sieve draft protocol, used for managing
+dbmail-timsieved - (deprecated) speaks the Manage Sieve draft protocol, used for managing
 Sieve scripts for a user's email account.
 
 SYNOPSIS
@@ -15,6 +15,11 @@ DESCRIPTION
 -----------
 The dbmail-timsieved process listens, by default, on port 2000
 of the localhost interface.
+
+NOTES
+-----
+dbmail-timsieved is deprecated and will be removed in version 3.5
+use dbmail-sieved instead.
 
 include::serveropts.txt[]
 

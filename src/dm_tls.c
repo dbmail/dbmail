@@ -43,7 +43,7 @@ SSL_CTX *tls_init(void) {
 	/* FIXME: We need to allow for the allowed SSL/TLS versions to be */
 	/* configurable. */
 	
-	ctx = SSL_CTX_new(SSLv23_server_method());
+	ctx = SSL_CTX_new(TLS_server_method());
 	return ctx;
 }
 
@@ -108,7 +108,7 @@ char *tls_get_error(void)
 	return ERR_error_string(ERR_get_error(), NULL);
 }
 
-SSL *tls_setup(int fd) 
+SSL *tls_setup(int fd)
 {
 	SSL *ssl;
 

@@ -29,6 +29,8 @@
  
 ClientBase_T * client_init(client_sock *);
 
+#define IBUFLEN 65535
+
 int    ci_starttls(ClientBase_T *);
 void   ci_cork(ClientBase_T *);
 void   ci_uncork(ClientBase_T *);

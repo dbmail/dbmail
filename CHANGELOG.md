@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.4.0] - 2023-08-26
+- dbmail-sieved added
+- dbmail-timsieved deprecated and will be removed in 3.5
+- configure scripts updated with autoconf 2.71 automake 1.6.5
+
 ## [3.3.1] - 2022-10-15
 - Fixed issue #175 with mysql 8.0.31 and libzdb
 

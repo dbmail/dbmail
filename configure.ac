@@ -3,9 +3,9 @@
 # Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
 # Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
-AC_INIT([dbmail], [3.3.1], [dbmail@dbmail.org])
+AC_INIT([dbmail],[3.4.0],[dbmail@dbmail.org])
 AC_CONFIG_AUX_DIR(config)
-AM_CONFIG_HEADER(config.h:config.in)
+AC_CONFIG_HEADERS(config.h:config.in)
 AC_CONFIG_MACRO_DIR([m4])
 
 # ---------------------------------------------
@@ -17,8 +17,8 @@ AC_DEFINE(_GNU_SOURCE,'TRUE','Defined GNU SOURCE')
 # ---------------------------------------------
 # shared or static
 # ---------------------------------------------
-AM_ENABLE_SHARED(no)
-AM_ENABLE_STATIC(no)
+AC_ENABLE_SHARED([no])
+AC_ENABLE_STATIC([no])
 DM_SET_SHARED_OR_STATIC
 AM_CONDITIONAL(SHARED, [ test "$enable_shared" = "yes" ])
 AM_CONDITIONAL(STATIC, [ test "$enable_static" = "yes" ])
@@ -88,8 +88,9 @@ AC_SUBST(DM_STATEDIR)
 AC_SUBST(DM_PKGLIBDIR)
 AC_SUBST(CHECK_LIBS)
 AC_SUBST(DM_PWD)
-AC_PROG_LIBTOOL
+LT_INIT
 
-AC_OUTPUT(src/dbmail.h Makefile src/Makefile src/modules/Makefile man/Makefile test/Makefile systemd/Makefile)
+AC_CONFIG_FILES([src/dbmail.h Makefile src/Makefile src/modules/Makefile man/Makefile test/Makefile systemd/Makefile])
+AC_OUTPUT
 
 DM_MSG_CONFIGURE_RESULTS

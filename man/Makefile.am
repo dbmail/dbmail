@@ -26,6 +26,7 @@ man8_MANS = dbmail-util.8 \
 	dbmail-users.8 \
 	dbmail-export.8 \
 	dbmail-sievecmd.8 \
+	dbmail-sieved.8 \
 	dbmail-imapd.8 \
 	dbmail-lmtpd.8 \
 	dbmail-pop3d.8 \

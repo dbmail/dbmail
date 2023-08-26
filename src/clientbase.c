@@ -286,6 +286,9 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 	uint64_t n, left;
 	char *s;
 	int state;
+	int ssl_ret;
+	int count = 0;
+	int count_tries = server_conf->timeout;
 
 	if (! (client && client->write_buffer))
 		return -1; // stale
@@ -322,6 +325,37 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 			t = (int64_t)write(client->tx, (gconstpointer)s, n);
 		}
 
+		if ((client->sock->ssl) && (t < 0)) {
+			ssl_ret = SSL_get_error(client->sock->ssl, t);
+			if (ssl_ret == SSL_ERROR_NONE) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_NONE");
+			} else if (ssl_ret == SSL_ERROR_ZERO_RETURN) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_ZERO_RETURN");
+			} else if (ssl_ret == SSL_ERROR_WANT_READ) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_WANT_READ");
+				while (t < 0 && count++ < count_tries) {
+					t = (int64_t)SSL_write(client->sock->ssl, (gconstpointer)client->tls_wbuf, client->tls_wbuf_n);
+					TRACE(TRACE_DEBUG, "SSL Retry [%d/%d] t[%ld]", count, count_tries, t);
+					usleep(10);
+				}
+			} else if (ssl_ret == SSL_ERROR_WANT_WRITE) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_WANT_WRITE");
+			} else if (ssl_ret == SSL_ERROR_WANT_CONNECT) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_WANT_CONNECT");
+			} else if (ssl_ret == SSL_ERROR_WANT_X509_LOOKUP) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_WANT_X509_LOOKUP");
+			} else if (ssl_ret == SSL_ERROR_WANT_ASYNC) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_WANT_ASYNC");
+			} else if (ssl_ret == SSL_ERROR_WANT_ASYNC_JOB) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_WANT_ASYNC_JOB");
+			} else if (ssl_ret == SSL_ERROR_WANT_CLIENT_HELLO_CB) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_WANT_CLIENT_HELLO_CB");
+			} else if (ssl_ret == SSL_ERROR_SYSCALL) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_SYSCALL");
+			} else if (ssl_ret == SSL_ERROR_SSL) {
+				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_SSL");
+			}
+		}
 		if (t == -1) {
 			if (client->sock->ssl)
 				e = t;
@@ -380,8 +414,6 @@ size_t ci_wbuf_len(ClientBase_T *client)
 	return len;
 }
 
-
-#define IBUFLEN 65535
 void ci_read_cb(ClientBase_T *client)
 {
 	/* 

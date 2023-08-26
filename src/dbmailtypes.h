@@ -373,7 +373,7 @@ typedef struct {
 	char hostname[64];
 	char *apop_stamp;		/**< timestamp for APOP */
 
-	uint64_t useridnr;			/**< Used by timsieved */
+	uint64_t useridnr;			/**< Used by sieved */
 	uint64_t totalsize;		/**< total size of messages */
 	uint64_t virtual_totalsize;
 	uint64_t totalmessages; 		/**< number of messages */
