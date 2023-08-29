@@ -73,7 +73,7 @@ int auth_load_driver(void)
 		g_free(lib);
 
 		if (!module)
-			TRACE(TRACE_INFO, "cannot load %s", g_module_error());
+			TRACE(TRACE_DEBUG, "cannot load %s", g_module_error());
 		if (module)
 			break;
 	}
