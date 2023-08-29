@@ -722,12 +722,12 @@ int do_check_integrity(void)
 	/* end part 5 */
 
 	/* part 6 */
-        Field_T config;
-	gboolean cache_readonly = false;
+	Field_T config;
+	gboolean cache_readonly = true;
 	config_get_value("header_cache_readonly", "DBMAIL", config);
 	if (strlen(config)) {
-		if (SMATCH(config, "true") || SMATCH(config, "yes")) {
-			cache_readonly = true;
+		if (SMATCH(config, "false") || SMATCH(config, "no")) {
+			cache_readonly = false;
 		}
 	}
 
