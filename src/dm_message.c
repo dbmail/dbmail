@@ -1430,7 +1430,7 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 	gchar *case_header, *safe_header, *frag;
 	Connection_T c; ResultSet_T r; PreparedStatement_T s;
 	Field_T config;
-	volatile gboolean cache_readonly = false;
+	volatile gboolean cache_readonly = true;
 	volatile int t = FALSE;
 
 	// rfc822 headernames are case-insensitive
@@ -1438,8 +1438,8 @@ static int _header_name_get_id(const DbmailMessage *self, const char *header, ui
 
 	config_get_value("header_cache_readonly", "DBMAIL", config);
 	if (strlen(config)) {
-		if (SMATCH(config, "true") || SMATCH(config, "yes")) {
-			cache_readonly = true;
+		if (SMATCH(config, "false") || SMATCH(config, "no")) {
+			cache_readonly = false;
 		}
 	}
 
