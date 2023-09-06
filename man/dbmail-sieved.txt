@@ -1,0 +1,22 @@
+DBMAIL-SIEVED(8)
+================
+
+NAME
+----
+dbmail-sieved - speaks the Manage Sieve draft protocol, used for managing
+Sieve scripts for a user's email account.
+
+SYNOPSIS
+--------
+dbmail-sieved [-f configfile] [-p pidfile] [-nvVh]
+
+DESCRIPTION
+-----------
+The dbmail-sieved process listens, by default, on port 2000
+of the localhost interface.
+
+include::serveropts.txt[]
+
+include::commonopts.txt[]
+
+include::footer.txt[]
