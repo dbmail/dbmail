@@ -8,4 +8,4 @@ man/dbmail-util.8
 man/dbmail.1
 man/dbmail.conf.5
 man/dbmail-sievecmd.8
-man/dbmail-timsieved.8
+man/dbmail-sieved.8
