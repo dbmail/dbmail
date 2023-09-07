@@ -1,2 +1,1 @@
-debian/dbmail.conf etc/dbmail
-debian/dbmail.db var/lib/dbmail
+dbmail.conf etc/dbmail
