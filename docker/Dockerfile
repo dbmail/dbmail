@@ -2,13 +2,13 @@
 # Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 # LICENSE GPL2+
 
-FROM ubuntu:jammy AS build_base
+FROM ubuntu:latest AS build_base
 LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
       org.opencontainers.image.url="https://dbmail.org/docs/docker-images/" \
       org.opencontainers.image.source="https://github.com/dbmail/dbmail/tree/master/docker" \
       org.opencontainers.image.licenses="GPL-2.0+" \
       org.opencontainers.image.title="DBMail-build-environment" \
-      org.opencontainers.image.description="This image contains everything to build dbmail"
+      org.opencontainers.image.description="This image contains everything to build dbmail-imapd"
 
 RUN apt update && \
     apt install -y build-essential libgmime-3.0-dev libzdb-dev libldap2-dev \
@@ -20,7 +20,7 @@ LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
       org.opencontainers.image.source="https://github.com/dbmail/dbmail/tree/master/docker" \
       org.opencontainers.image.licenses="GPL-2.0+" \
       org.opencontainers.image.title="DBMail-build" \
-      org.opencontainers.image.description="This image builds dbmail"
+      org.opencontainers.image.description="This image builds dbmail-imapd"
 
 COPY . /dbmail
 
@@ -30,13 +30,13 @@ RUN ./configure --with-ldap=/usr
 RUN make
 RUN make install
 
-FROM ubuntu:jammy
+FROM ubuntu:latest
 LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
       org.opencontainers.image.url="https://dbmail.org/docs/docker-images/" \
       org.opencontainers.image.source="https://github.com/dbmail/dbmail/tree/master/docker" \
       org.opencontainers.image.licenses="GPL-2.0+" \
       org.opencontainers.image.title="DBMail" \
-      org.opencontainers.image.description="This image runs dbmail"
+      org.opencontainers.image.description="This image runs dbmail-imapd"
 
 WORKDIR /
 

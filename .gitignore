@@ -56,3 +56,4 @@ src/.libs/
 src/modules/.libs/
 stamp-h1
 stamps/
+docker/dbmail.conf
