@@ -628,7 +628,7 @@ int do_show(const char * const name)
 					break;
 				users = g_list_next(users);
 			}
-			g_list_free_full (g_steal_pointer (&users), g_object_unref);
+			g_list_foreach(users,(GFunc)g_free,NULL);
 		}
 		g_list_free(g_list_first(users));
 
@@ -645,7 +645,7 @@ int do_show(const char * const name)
 					break;
 				aliases = g_list_next(aliases);
 			}
-			g_list_free_full (g_steal_pointer (&aliases), g_object_unref);
+			g_list_foreach(aliases,(GFunc)g_free,NULL);
 		}
 		g_list_free(g_list_first(aliases));
 	} else {
@@ -744,7 +744,7 @@ static int show_user(uint64_t useridnr, int concise UNUSED)
 		userlist = g_list_first(userlist);
 		s = g_list_join(userlist,",");
 		g_list_append_printf(out,"%s", s->str);
-		g_list_free_full (g_steal_pointer (&userlist), g_object_unref);
+		g_list_foreach(userlist,(GFunc)g_free, NULL);
 	} else {
 		g_list_append_printf(out,"");
 	}

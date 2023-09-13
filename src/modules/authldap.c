@@ -378,9 +378,7 @@ static char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GLi
 
 	g_string_free(t,TRUE);
 	g_string_free(q,FALSE);
-	// g_list_foreach(l,(GFunc)g_free,NULL);
-	g_list_free_full (g_steal_pointer (&l), g_object_unref);
-	g_list_free(l);
+	g_list_foreach(l,(GFunc)g_free,NULL);
 
 	return s;
 }
@@ -495,7 +493,7 @@ static uint64_t dm_ldap_get_freeid(const gchar *attribute)
 	
 	/* cleanup */
 	g_free(key);
-	g_list_free_full (g_steal_pointer (&ids), g_object_unref);
+	g_list_foreach(ids,(GFunc)g_free,NULL);
 	g_list_free(ids);
 	
 	id=t;
@@ -905,8 +903,8 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
  		query = q->str;
  		g_string_free(t,TRUE);
  		g_string_free(q,FALSE);
-		g_list_free_full (g_steal_pointer (&l), g_object_unref);
- 		g_list_free(l);	
+		g_list_foreach(l,(GFunc)g_free,NULL);
+		g_list_free(l);
  	} else {
  		int i;
  		GString *q = g_string_new("");
