@@ -1041,7 +1041,7 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 		else if (MATCH(service, "POP"))
 			strncpy(config->port, "110", FIELDSIZE-1);
 		else if (MATCH(service, "SIEVE"))
-			strncpy(config->port, "2000", FIELDSIZE-1);
+			strncpy(config->port, "4090", FIELDSIZE-1);
 		else if (MATCH(service, "HTTP"))
 			strncpy(config->port, "41380", FIELDSIZE-1);
 	} else {
