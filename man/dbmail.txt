@@ -23,7 +23,7 @@ of a DBMail system:
 | POP3 daemon             | link:dbmail-pop3d.html[dbmail-pop3d(8)]
 | LMTP daemon             | link:dbmail-lmtpd.html[dbmail-lmtpd(8)]
 | HTTP daemon             | link:dbmail-httpd.html[dbmail-httpd(8)]
-| ManageSieve daemon      | link:dbmail-timsieved.html[dbmail-timsieved(8)]
+| ManageSieve daemon      | link:dbmail-sieved.html[dbmail-sieved(8)]
 |==========================================================================
 
 include::footer.txt[]
