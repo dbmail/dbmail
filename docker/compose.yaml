@@ -1,0 +1,51 @@
+services:
+  dbmail-imap:
+    image: dbmail:latest
+    command: [ "/usr/local/sbin/dbmail-imapd", "-p", "/var/run/dbmail/dbmail-imapd.pid", "-f", "/var/run/secrets/dbmail.conf", "-D" ]
+    expose:
+      - "143"
+      - "993"
+    ports:
+      - "143:143"
+      - "993:993"
+    secrets:
+      - dbmail.conf
+      - ca.crt
+      - cert.pem
+      - key.pem
+    working_dir: /
+  dbmail-lmtp:
+    image: dbmail:latest
+    command: [ "/usr/local/sbin/dbmail-lmtpd", "-p", "/var/run/dbmail/dbmail-lmtpd.pid", "-f", "/var/run/secrets/dbmail.conf", "-D" ]
+    expose:
+      - "24"
+    ports:
+      - "24:24"
+    secrets:
+      - dbmail.conf
+      - ca.crt
+      - cert.pem
+      - key.pem
+    working_dir: /
+  dbmail-sieve:
+    image: dbmail:latest
+    command: [ "/usr/local/sbin/dbmail-sieved", "-p", "/var/run/dbmail/dbmail-sieved.pid", "-f", "/var/run/secrets/dbmail.conf", "-D" ]
+    expose:
+      - "4190"
+    ports:
+      - "4190:4190"
+    secrets:
+      - dbmail.conf
+      - ca.crt
+      - cert.pem
+      - key.pem
+    working_dir: /
+secrets:
+  dbmail.conf:
+    file: ./dbmail.conf
+  ca.crt:
+    file: ./ca.crt
+  cert.pem:
+    file: ./cert.pem
+  key.pem:
+    file: ./key.pem
