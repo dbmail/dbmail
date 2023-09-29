@@ -1,16 +1,19 @@
 # DBMail Docker
 
-An experimental docker image is available, this article documents how to use it with docker-composer.
+An experimental [docker image](https://hub.docker.com/r/alanhicks/dbmail)
+is available, this article documents how to use it with docker-compose.
 
-Forwards, replies, notifies and vacations have not been tested and are unlikely to work.
-
-All the files can be found on GitHub.
+The aim is for this to become an official dbmail image.
 
 Using the Docker philosophy, there is a single dbmail image that is used for
 imap, lmtp and sieve. This image is intended to be configured and run using
 compose.yaml.
 
-The aim is to become an official dbmail image.
+Default values for auto_notify and auto_reply are no, and are not currently supported in this docker image.
+
+SIEVE notify, redirect and vacation are not currently supported in this docker image.
+
+All the files can be found on GitHub.
 
 ## DBMail applications
 
