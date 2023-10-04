@@ -98,8 +98,6 @@ int do_showhelp(void) {
 	"     -v        verbose details\n"
 	"     -V        show the version\n"
 	"     -h        show this help message\n"
-	"\nSpecific Tasks:\n"
-	"     --upgrade-schema        upgrade sql schema\n"
 
 	);
 

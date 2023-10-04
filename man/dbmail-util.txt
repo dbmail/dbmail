@@ -9,7 +9,7 @@ datatables.
 
 SYNOPSIS
 --------
-dbmail-util [-actubpds] [-l time] [-yn] [-qvVh] [-f configFile]
+dbmail-util [-actbpds] [-l time] [-yn] [-qvVh] [-f configFile]
 
 DESCRIPTION
 -----------
@@ -40,9 +40,6 @@ OPTIONS
 
 -t::
  Test for message integrity.
-
--u::
- Null message check.
 
 -b::
  Check and rebuild the body/header/envelope cache tables.
