@@ -310,6 +310,7 @@
 #define AUTHLOG_FIN "closed"
 
 #define LOG_SQLERROR TRACE(TRACE_ERR,"SQLException: %s", Exception_frame.message)
+#define LOG_SQLWARNING TRACE(TRACE_WARNING,"SQLException: %s", Exception_frame.message)
 #define DISPATCH(f,a) \
 	{ \
 		GError *err = NULL; \

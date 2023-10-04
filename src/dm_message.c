@@ -1612,7 +1612,7 @@ static gboolean _header_insert(uint64_t physmessage_id, uint64_t headername_id, 
 		db_stmt_exec(s);
 		db_commit_transaction(c);
 	CATCH(SQLException)
-		LOG_SQLERROR;
+		LOG_SQLWARNING;
 		db_rollback_transaction(c);
 		t = FALSE;
 	FINALLY
