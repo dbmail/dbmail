@@ -211,7 +211,6 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		if (result->flags[IMAP_FLAG_SEEN]==1){
 			gchar *value = g_strdup("\\Seen");
 			result->keywords = g_list_append(result->keywords, value);
-			g_free(value);
 			/* some strange clients like it this way */
 		}
 		/* cleaning up */
@@ -268,7 +267,6 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		    if (result && keyword){
 				gchar *keyword2 = g_strdup(keyword);
 				result->keywords = g_list_append(result->keywords, keyword2);
-				g_free(keyword2);
 			}
 		}
 	}
@@ -877,8 +875,7 @@ void MailboxState_free(T *M)
 	if (s->name) 
 		p_string_free(s->name, TRUE);
 
-	g_tree_destroy(s->keywords);
-	s->keywords = NULL;
+	g_tree_remove_all(s->keywords);
 
 	if (s->msn) g_tree_destroy(s->msn);
 	s->msn = NULL;
