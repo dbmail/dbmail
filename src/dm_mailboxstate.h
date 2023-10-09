@@ -53,7 +53,7 @@ struct MailboxState_T {
 	gboolean is_inbox;
 	//
 	String_T name;
-	GTree *keywords;
+	GList *keywords;
 	GTree *msginfo;
 	GTree *ids;
 	GTree *msn;

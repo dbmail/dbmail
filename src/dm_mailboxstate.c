@@ -65,7 +65,7 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 	struct timeval before, after; 
 	const char *query_result;
 	uint64_t tempId;
-	MessageInfo *result;
+	MessageInfo *result = NULL;
 	GTree *msginfo;
 	uint64_t *uid, id = 0;
 	ResultSet_T r;
@@ -155,9 +155,8 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 				*uid = id;
 				//TRACE(TRACE_DEBUG, "SEQ FOUND %ld",id);
 				/* free all keywords, it will be added later again */
-				if (!result->keywords){
-					g_list_destroy(result->keywords);
-				}
+				g_list_destroy(result->keywords);
+				result->keywords = NULL;
 		    }
 		}
 
@@ -308,7 +307,7 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 
 	M->id = id;
 	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
-	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
+	M->keywords     = NULL;
 	M->msginfo		= g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);
 	M->differential_iterations = 0;
 	c = db_con_get();
@@ -369,8 +368,8 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	M->id = id;
 	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
 
-	M->keywords     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
-	M->msginfo     = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free,(GDestroyNotify)MessageInfo_free);    
+	M->keywords    = NULL;
+	M->msginfo     = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free, (GDestroyNotify)MessageInfo_free);
 	// increase differential iterations in order to apply mailbox_update_strategy_2_max_iterations
 	M->differential_iterations = OldM->differential_iterations + 1;
 	
@@ -641,17 +640,17 @@ gboolean MailboxState_isPublic(T M)
 {
 	return M->is_public;
 }
-	
+
 gboolean MailboxState_hasKeyword(T M, const char *keyword)
 {
-	if (g_tree_lookup(M->keywords, (gpointer)keyword))
+	if (g_list_find_custom(M->keywords, (gpointer)keyword, dm_strcmpdata))
 		return TRUE;
 	return FALSE;
 }
 void MailboxState_addKeyword(T M, const char *keyword)
 {
 	char *kw = g_strdup(keyword);
-	g_tree_insert(M->keywords, kw, kw);
+	M->keywords = g_list_append(M->keywords, kw);
 }
 
 void MailboxState_setNoSelect(T M, gboolean no_select)
@@ -875,7 +874,9 @@ void MailboxState_free(T *M)
 	if (s->name) 
 		p_string_free(s->name, TRUE);
 
-	g_tree_remove_all(s->keywords);
+	if (s->keywords) {
+		g_list_free_full(g_steal_pointer (&s->keywords), g_free);
+	}
 
 	if (s->msn) g_tree_destroy(s->msn);
 	s->msn = NULL;
@@ -1168,11 +1169,9 @@ char * MailboxState_flags(T M)
 	assert(M);
 
 	if (M->keywords) {
-		GList *k = g_tree_keys(M->keywords);
-		GString *keywords = g_list_join(k," ");
+		GString *keywords = g_list_join(M->keywords," ");
 		g_string_append_printf(string, " %s", keywords->str);
 		g_string_free(keywords,TRUE);
-		g_list_free(g_list_first(k));
 	}
 
 	s = string->str;
