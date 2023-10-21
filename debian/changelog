@@ -1,3 +1,11 @@
+dbmail (3.4.1) unstable; urgency=medium
+
+  * new package from dbmail main (3.4.1)
+  * Missing flags fixed
+  * Experimental Docker image created
+  * Bug fixes
+ -- Alan Hicks <ahicks@p-o.co.uk>  Sat, 21 Oct 2023 13:49:37 +0100
+
 dbmail (3.4.0) unstable; urgency=medium
 
   * new package from dbmail master (3.4.0)
