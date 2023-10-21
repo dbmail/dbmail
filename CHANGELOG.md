@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.4.1] - 2023-10-21
+- Missing flags fixed
+- dbmail-sieved.txt added
+- Experimental Docker image created
+- Version bump to 3.4.1
+
 ## [3.4.0] - 2023-08-26
 - dbmail-sieved added
 - dbmail-timsieved deprecated and will be removed in 3.5
