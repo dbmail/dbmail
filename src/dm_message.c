@@ -720,6 +720,7 @@ void dbmail_message_free(DbmailMessage *self)
 		return;
 
 	if (self->content) {
+		g_object_unref(self->content);
 		self->content = NULL;
 	}
 
