@@ -514,7 +514,10 @@ int dsnuser_resolve(Delivery_T *delivery)
 	uint64_t *uid;
 	/* If the userid is already set, then we're doing direct-to-userid.
 	 * We just want to make sure that the userid actually exists... */
-	if (delivery->useridnr != 0) {
+	if (! delivery) {
+		TRACE(TRACE_ERR, "This delivery had nothing to go on.");
+		return -1;
+	} else if (delivery->useridnr != 0) {
 
 		TRACE(TRACE_INFO, "checking if [%" PRIu64 "] is a valid useridnr.", delivery->useridnr);
 

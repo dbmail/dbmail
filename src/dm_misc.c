@@ -2213,7 +2213,6 @@ char * imap_get_envelope(GMimeMessage *message)
 		list = g_list_append_printf(list,"%s", s);
 		g_free(s);
 		g_free(t);
-		g_free((char *)result);
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
