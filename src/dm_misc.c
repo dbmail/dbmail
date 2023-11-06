@@ -2002,11 +2002,12 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 			} else {
 				t = g_list_append_printf(t, "NIL NIL");
 			}
-			
+
 			s = dbmail_imap_plist_as_string(t);
 			p = g_list_append_printf(p, "%s", s);
 			g_free(s);
-			
+
+			// Dont free list data, it's free'd elsewhere
 			g_list_destroy(t);
 			t = NULL;
 		}
@@ -2219,13 +2220,7 @@ char * imap_get_envelope(GMimeMessage *message)
 
 	s = dbmail_imap_plist_as_string(list);
 
-	GList * element;
-	list = g_list_first(list);
-	while ((element = g_list_next(list))) {
-		g_free(element->data);
-		list = g_list_next(list);
-	}
-
+	// Dont free list data, it's free'd elsewhere
 	g_list_destroy(list);
 
 	return s;
