@@ -1786,6 +1786,7 @@ static void _header_cache(const char *header, const char *raw, gpointer user_dat
 		TRACE(TRACE_DEBUG,"date_fmt [%s]", date_fmt);
 		if (date_fmt) {
 			g_utf8_strncpy(sortfield, date_fmt, CACHE_WIDTH-1);
+			g_free(date_fmt);
 			TRACE(TRACE_DEBUG,"sortfield [%s]", sortfield);
 			date_fmt = g_date_time_format(date, "%Y-%m-%d");
 			g_utf8_strncpy(datefield, date_fmt, CACHE_WIDTH-1);
