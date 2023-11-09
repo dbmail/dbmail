@@ -860,6 +860,7 @@ void dbmail_message_set_internal_date(DbmailMessage *self, const char *internal_
 		if ((gdt = g_mime_utils_header_decode_date(internal_date))) {
 			dt = g_date_time_to_unix(gdt);
 			self->internal_date = dt;
+			g_date_time_unref(gdt);
 		}
 		TRACE(TRACE_DEBUG, "internal_date [%s] [%ld] offset [%d]",
 				internal_date,

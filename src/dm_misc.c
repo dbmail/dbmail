@@ -427,16 +427,19 @@ int zap_between(const char * const instring, signed char left, signed char right
 GList * g_string_split(GString * string, const gchar * sep)
 {
 	GList * list = NULL;
-	char **array;
+	gchar ** array;
 	int i = 0;
 	
 	if (string->len == 0)
 		return NULL;
 	
-	array = (char **)g_strsplit((const gchar *)string->str, sep, 0);
+	array = g_strsplit(string->str, sep, 0);
 	while(array[i])
 		list = g_list_append(list,array[i++]);
 
+	// array should be freed with g_strfreev()
+	// but as the strings are appended to list
+	// it's list that should free the elements
 	g_free(array);
 
 	return list;

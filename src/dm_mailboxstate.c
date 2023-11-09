@@ -842,10 +842,14 @@ GTree * MailboxState_get_set(MailboxState_T M, const char *set, gboolean uid)
 			}
 		}
 
-		if (! g_list_next(sets)) break;
-		sets = g_list_next(sets);
+		sets = sets->next;
 	}
 
+	GList * element;
+	sets = g_list_first(sets);
+	while ((element = g_list_next(sets))) {
+		g_free(element->data);
+	}
 	g_list_destroy(sets);
 
 	if (a) g_tree_destroy(a);
