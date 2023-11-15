@@ -204,8 +204,25 @@ void dsnuser_free(Delivery_T * dsnuser)
 	dsnuser->dsn.detail = 0;
 	dsnuser->source = BOX_NONE;
 
-	g_list_destroy(dsnuser->userids);
-	g_list_destroy(dsnuser->forwards);
+	if (dsnuser->userids) {
+		dsnuser->userids = g_list_first(dsnuser->userids);
+		while(dsnuser->userids) {
+			g_free(dsnuser->userids->data);
+			dsnuser->userids = g_list_next(dsnuser->userids);
+		}
+		g_list_destroy(dsnuser->userids);
+		dsnuser->userids = NULL;
+	}
+
+	if (dsnuser->forwards) {
+		dsnuser->forwards = g_list_first(dsnuser->forwards);
+		while(dsnuser->forwards) {
+			g_free(dsnuser->forwards->data);
+			dsnuser->forwards = g_list_next(dsnuser->forwards);
+		}
+		g_list_destroy(dsnuser->forwards);
+		dsnuser->forwards = NULL;
+	}
 
 	if (dsnuser->address) {
 		g_free(dsnuser->address);
