@@ -1,7 +1,5 @@
 # DBMail
 
-[![Build Status](https://travis-ci.org/dbmail/dbmail.svg?branch=master)](https://travis-ci.org/dbmail/dbmail)
-
 > Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 >
 > Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
@@ -12,25 +10,36 @@
 
 ## What is it?
 
-DBMail is a collection of programs that enables email to be stored in and
+DBMail is a collection of programs that enables email to be managed, stored in and
 retrieved from a database. 
-
-Read the INSTALL file for installation of DBMail.
 
 ## Why is it useful?
 
-- it enables you to create mailboxes without the need of systemusers.
+- Securely and scaleably manages user emails with industry standard IMAP;
 
-- Email is more effeciently stored and therefore it can be inserted an retrieved much faster than any
-  regular system (DBMail is currently able to retrieve aprox. 250 mail messages per second)
+- Integrates with existing authentication backends including ActiveDirectory
+  and OpenLDAP;
 
-- It's scalable. You can run the dbmail programs on different servers talking to the same
-  database(cluster). LDAP integration allows you to integrate with existing authentication
-  backends, such as ActiveDirectory.
+- DBMail is scalable including multiple terrabyte installations;
 
-- There's no need to maintain system users or write access to the filesystem. All this
-  is done through the database.
+- DBMail is flexible. You can run dbmail programs on different servers talking
+  to the same database;
 
+- Email filtering is integrated into DBMail and managed using SIEVE;
+
+- An experimental Docker image is available;
+
+- High Availability thanks to database replication and Docker images;
+
+- Data safety thanks to database replication;
+
+- Secure connections thanks to TLS;
+
+- DBMail is database driven so no need of systemusers;
+
+- No need to maintain system users or write access to the filesystem;
+
+- DBMail is Free with a recognised GPL2 Open Source licence.
 
 ## Who created it?
 
@@ -44,12 +53,20 @@ DBMail is now a community effort to create a fast, effecient and scalable databa
 mailingsystem. Both IC&S and NFG are fully behind opensource and the GPL. Therefore DBMail has the
 GPL licence.
 
+## Support
+
 Support is available by raising an issue at https://github.com/dbmail/dbmail
 
-## How do i install it?
+## Wikipedia
 
-Check the different README files and on https://dbmail.org for detailed
-information and howtos.
+DBMail is on Wikipedia https://en.wikipedia.org/wiki/DBMail
+
+Please add any links, articles and references.
+
+### Architecture
+
+For an architectural overview of DBMail and its components please visit:
+https://dbmail.org/architecture/
 
 ## Future
 
@@ -61,8 +78,39 @@ DBMail uses the GPL version 2 licence.
 
 It's included in the COPYING file.
 
+## How do I install it?
+
+DBMail is available on many Linux and BSD distributions.
+
+There is also an experimental
+[Docker image](https://hub.docker.com/r/alanhicks/dbmail)
+with instructions to configure compose.yaml at
+https://dbmail.org/docker/
 
 ## Installation Procedure
+
+Check README and INSTALL files and on https://dbmail.org for detailed
+information and HOWTOs including how to use the Docker image.
+
+See also contrib, debian and docker on https://github.com/dbmail/dbmail
+
+### Configuration
+
+There are various settings including database access, authentication and
+logging. Please see dbmail.conf or https://dbmail.org/man-pages/dbmailconf/
+
+Exim is a modern MTA and there is an example configure at
+https://github.com/dbmail/dbmail/blob/main/contrib/exim-dbmail-configure
+
+### Integration
+
+DBMail integrates with most MTAs. There are a number of examples on
+https://dbmail.org/docs/
+
+Web frontends including [SquirrelMail](https://squirrelmail.org/) and
+[Roundcube](https://roundcube.net/) work well with IMAP using dbmail-imapd
+plus Roundcube and most desktop software has integration with email filtering
+via dbmail-sieved.
 
 ### Dependencies
 
@@ -79,7 +127,8 @@ It's included in the COPYING file.
 ### Installing
 
 * Download DBMail package
-* Install dependencies (some provided from your linux distribution and some (libzdb and/or libsieve) need to be compiled
+* Install dependencies (some provided from your linux / BSD distribution and
+  some (libzdb and/or libsieve) need to be compiled
 * ./configure
 * make 
 * make install
