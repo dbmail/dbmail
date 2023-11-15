@@ -273,7 +273,7 @@ static LDAPMessage * authldap_search(const gchar *query)
 	char **_ldap_attrs = NULL;
 	int err = -1; // Start wanting success
 	int c = 0;
-	const char *err_msg = NULL;
+	char *err_msg = NULL;
 	int c_tries = _ldap_cfg.query_timeout_int;
 	LDAP *_ldap_conn;
 
@@ -296,7 +296,10 @@ static LDAPMessage * authldap_search(const gchar *query)
 			case LDAP_SERVER_DOWN:
 				ldap_get_option(_ldap_conn, LDAP_OPT_DIAGNOSTIC_MESSAGE, &err_msg);
 				TRACE(TRACE_WARNING, "LDAP gone away(%d): %s. Trying again(%d/%d). Error message: %s", err, ldap_err2string(err), c, c_tries, err_msg);
-				ldap_memfree(&err_msg);
+				if (err_msg) {
+					ldap_memfree(err_msg);
+					err_msg = NULL;
+				}
 				break;
 			default:
 				TRACE(TRACE_ERR, "LDAP error(%d): %s. Trying again (%d/%d).", err, ldap_err2string(err), c, c_tries);
@@ -317,18 +320,24 @@ void dm_ldap_freeresult(GList *entlist)
 	entlist = g_list_first(entlist);
 	while (entlist) {
 		fldlist = entlist->data;
+		fldlist = g_list_first(fldlist);
 		while(fldlist) {
 			attlist = fldlist->data;
+			attlist = g_list_first(attlist);
+			while(attlist) {
+				g_free(attlist->data);
+				attlist = g_list_next(attlist);
+			}
 			g_list_destroy(attlist);
-			if (! g_list_next(fldlist)) break;
+			g_free(fldlist->data);
 			fldlist = g_list_next(fldlist);
 		}
-		g_list_free(g_list_first(fldlist));
-
-		if (! g_list_next(entlist)) break;
+		fldlist = g_list_first(fldlist);
+		g_list_free(fldlist);
 		entlist = g_list_next(entlist);
 	}
-	g_list_free(g_list_first(entlist));
+	entlist = g_list_first(entlist);
+	g_list_free(entlist);
 }
 
 static GList * dm_ldap_ent_get_values(GList *entlist)
