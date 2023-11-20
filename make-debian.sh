@@ -43,9 +43,17 @@ pwd
 ls
 execute '	unarchive' 'tar xvf '$LIBSIEVE_FILE
 cd ${LIBSIEVE_DIR}'/'$LIBSIEVE_NAME'/src'
-execute '	configure' './configure'
+
+# libsieve fails to ./configure on arm64 (aarch64) due to config.guess.
+if [ $(uname -m) == "aarch64" ]; then
+    execute '	configure' './configure --build=unknown-unknown-linux'
+else
+    execute '	configure' './configure'
+fi
+
 execute '	make' 'make'
 execute '	make install' 'make install'
+
 
 # already installed
 #echo "Install libzdb" >>$LOG
