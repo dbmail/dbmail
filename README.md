@@ -57,12 +57,6 @@ GPL licence.
 
 Support is available by raising an issue at https://github.com/dbmail/dbmail
 
-## Wikipedia
-
-DBMail is on Wikipedia https://en.wikipedia.org/wiki/DBMail
-
-Please add any links, articles and references.
-
 ### Architecture
 
 For an architectural overview of DBMail and its components please visit:
