@@ -995,6 +995,15 @@ dbmail_delivery:
   return_fail_output
   user = mail
 
+# Deliver via dbmail-lmtpd
+#dbmail_delivery:
+#  driver = smtp
+#  protocol = lmtp
+#  hosts_avoid_tls = example.com
+#  hosts = example.com
+#  port = 24
+#  allow_localhost = true
+
 ######################################################################
 #                      RETRY CONFIGURATION                           #
 ######################################################################
