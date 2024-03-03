@@ -965,19 +965,13 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 		while(fldlist) {
 			attlist = g_list_first(fldlist->data);
 			while(attlist) {
-				attrvalue = (char *)attlist->data;
+				attrvalue = attlist->data;
 				occurences += auth_check_user_ext(attrvalue, userids, fwds, checks+1);
-				
-				if (! g_list_next(attlist))
-					break;
+
 				attlist = g_list_next(attlist);
 			}
-			if (! g_list_next(fldlist))
-				break;
 			fldlist = g_list_next(fldlist);
 		}
-		if (! g_list_next(entlist))
-			break;
 		entlist = g_list_next(entlist);
 	}
 	dm_ldap_freeresult(entlist);

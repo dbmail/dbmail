@@ -1,4 +1,4 @@
-
+//
 /* Dynamic loading of the authentication backend.
  * We use GLib's multiplatform dl() wrapper
  * to open up libauthsql or libauthldap and
@@ -130,7 +130,7 @@ int auth_disconnect(void)
 {
 	if (!auth) return 0;
 	auth->disconnect();
-	g_free(auth);
+	// auth should be free'd on auth_unload_driver to avoid Invalid read
 	return 0;
 }
 

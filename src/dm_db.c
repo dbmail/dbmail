@@ -1307,7 +1307,7 @@ struct used_quota {
 	uint64_t curmail;
 };
 
-int dm_quota_rebuild()
+int dm_quota_rebuild(void)
 {
 	Connection_T c; ResultSet_T r;
 

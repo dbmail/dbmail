@@ -227,7 +227,6 @@ char *acl_get_acl(uint64_t mboxid)
 	char rightsstring[NR_ACL_FLAGS + 1];
 	int result;
 	GList *identifier_list = NULL;
-	unsigned nr_identifiers = 0;
 
 	result = db_acl_get_identifier(mboxid, &identifier_list);
 
@@ -258,7 +257,6 @@ char *acl_get_acl(uint64_t mboxid)
 	
 	identifier_list = g_list_first(identifier_list);
 	while (identifier_list) {
-		nr_identifiers++;
 		identifier_astring = dbmail_imap_astring_as_string((const char *)identifier_list->data);
 		acl_string_size += strlen(identifier_astring) + NR_ACL_FLAGS + 2;
 		g_free(identifier_astring);

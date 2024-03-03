@@ -1934,7 +1934,7 @@ void dbmail_imap_session_bodyfetch_free(ImapSession *self)
 int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 {
 	int inquote = 0, quotestart = 0;
-	int nnorm = 0, nsquare = 0, paridx = 0, argstart = 0;
+	int paridx = 0, argstart = 0;
 	unsigned int i = 0;
 	size_t max;
 	char parlist[MAX_LINESIZE];
@@ -2045,7 +2045,6 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 				if (paridx < 0 || parlist[paridx] != NORMPAR)
 					paridx = -1;
 				else {
-					nnorm--;
 					paridx--;
 				}
 
@@ -2057,7 +2056,6 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 					paridx = -1;
 				else {
 					paridx--;
-					nsquare--;
 				}
 
 				break;
@@ -2065,14 +2063,12 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 				case '(':
 				
 				parlist[++paridx] = NORMPAR;
-				nnorm++;
 				
 				break;
 
 				case '[':
 				
 				parlist[++paridx] = SQUAREPAR;
-				nsquare++;
 
 				break;
 			}
