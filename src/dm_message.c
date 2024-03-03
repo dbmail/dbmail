@@ -540,7 +540,7 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 {
 	const char *boundary;
 	const char *preface = NULL, *postface = NULL;
-	int n = 0, i, c;
+	int i, c;
 
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
@@ -555,7 +555,6 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 
 	if (boundary) {
 		m->part_depth++;
-		n = m->part_order;
 		m->part_order=0;
 	}
 
@@ -569,7 +568,6 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 	}
 
 	if (boundary) {
-		n++;
 		m->part_depth--;
 		m->part_order++;
 	}

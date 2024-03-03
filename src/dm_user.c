@@ -849,7 +849,7 @@ char *bgetpwent(const char *filename, const char *name)
 	return "";
 }
 
-char *cget_salt()
+char *cget_salt(void)
 {
 	unsigned long seed[2];
 	const char *const seedchars =

@@ -38,7 +38,7 @@ extern DBParam_T db_params;
 #define U URL_T
 
 
-int auth_connect()
+int auth_connect(void)
 {
 	/* this function is only called after a connection has been made
 	 * if, in the future this is not the case, db.h should export a 
@@ -47,7 +47,7 @@ int auth_connect()
 	return 0;
 }
 
-int auth_disconnect()
+int auth_disconnect(void)
 {
 	return 0;
 }
