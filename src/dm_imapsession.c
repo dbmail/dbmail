@@ -812,10 +812,6 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			END_TRY;
 			p_string_free(query, TRUE);		
 			g_free(name);
-			//if (! g_list_next(bodyfetch->names)){
-			//	g_free(name);
-			//	break;
-			//}
 			bodyfetch->names = g_list_next(bodyfetch->names);
 			fieldseq++;
 		}
