@@ -70,6 +70,7 @@ void do_showhelp(void) {
 
 	"\nCommon options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
+	"               Default: %s\n"
 	"     -q        quietly skip interactive prompts\n"
 	"               use twice to suppress error messages\n"
 	"     -n        show the intended action but do not perform it, no to all\n"
@@ -77,7 +78,7 @@ void do_showhelp(void) {
 	"     -v        verbose details\n"
 	"     -V        show the version\n"
 	"     -h        show this help message\n"
-	);
+	, configFile);
 }
 
 int main(int argc, char *argv[])
@@ -200,6 +201,10 @@ int main(int argc, char *argv[])
 			 * into the mail server config and thus may lose mail. */
 			PRINTF_THIS_IS_DBMAIL;
 			return 1;
+
+		case 'h':
+			do_showhelp();
+			return 0;
 
 		default:
 			usage_error = 1;

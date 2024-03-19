@@ -868,6 +868,7 @@ void server_showhelp(const char *name, const char *greeting) {
 
         printf("\nCommon options for all DBMail daemons:\n");
 	printf("     -f file   specify an alternative config file\n");
+	printf("               Default: %s\n", configFile);
 	printf("     -p file   specify an alternative runtime pidfile\n");
 	printf("     -n        stdin/stdout mode\n");
 	printf("     -D        foreground mode\n");
