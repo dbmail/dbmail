@@ -68,12 +68,13 @@ void do_showhelp(void)
 	"\n"
         "Common options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
+	"               Default: %s\n"
 	"     -q        quietly skip interactive prompts\n"
 	"               use twice to suppress error messages\n"
 	"     -v        verbose details\n"
 	"     -V        show the version\n"
 	"     -h        show this help message\n"
-	);
+	, configFile);
 }
 
 static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
