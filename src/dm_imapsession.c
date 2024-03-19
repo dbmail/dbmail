@@ -790,12 +790,6 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			g_string_append_printf(fieldorder, "WHEN n.headername='%s' THEN %d ",
 					name, fieldseq);
 			
-			if (! g_list_next(bodyfetch->names)){
-				g_free(name);
-				break;
-			}
-			bodyfetch->names = g_list_next(bodyfetch->names);
-			fieldseq++;
 			/* get the id of the header */
 			query = p_string_new(self->pool, "");
 			p_string_printf(query, "select id from %sheadername "
@@ -818,8 +812,13 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			END_TRY;
 			p_string_free(query, TRUE);		
 			g_free(name);
+			//if (! g_list_next(bodyfetch->names)){
+			//	g_free(name);
+			//	break;
+			//}
+			bodyfetch->names = g_list_next(bodyfetch->names);
+			fieldseq++;
 		}
-		fieldseq++;
 		//adding default value, useful in NOT conditions, Cosmin Cioranu
 		g_string_append_printf(fieldorder, "ELSE %d END AS seq",fieldseq);
 	}
