@@ -1021,6 +1021,82 @@ static int check_upgrade_step(int from_version, int to_version)
 	return result;
 }
 
+/**
+ * Check dbmail_headernames
+ * for core values used for caching
+ * inserting any that don't exist
+ */
+int db_check_headernames(void)
+{
+	ResultSet_T result = 0;
+	PreparedStatement_T s;
+	Connection_T c = db_con_get();
+	int headername_exists = 0;
+	int ret = 0;
+	GList *headernames = NULL;
+	headernames = g_list_append(headernames, "from");
+	headernames = g_list_append(headernames, "to");
+	headernames = g_list_append(headernames, "cc");
+	headernames = g_list_append(headernames, "bcc");
+	headernames = g_list_append(headernames, "date");
+	headernames = g_list_append(headernames, "subject");
+	headernames = g_list_append(headernames, "content-type");
+	headernames = g_list_append(headernames, "content-disposition");
+	headernames = g_list_append(headernames, "references");
+	headernames = g_list_append(headernames, "in-reply-to");
+	headernames = g_list_append(headernames, "reply-to");
+	headernames = g_list_append(headernames, "return-path");
+
+	headernames = g_list_first(headernames);
+
+	const char *sql_check =
+		"SELECT count(*) "
+		"FROM %sheadername "
+		"WHERE headername = '%s'"
+	;
+	const char *sql_insert =
+		"INSERT INTO %sheadername (headername) "
+		"VALUES (?)"
+	;
+
+	// check exists
+	while (headernames) {
+		TRY
+			result = db_query(c, sql_check, DBPFX, headernames->data);
+			while (db_result_next(result)) {
+				headername_exists = db_result_get_u64(result, 0);
+			}
+			TRACE(TRACE_DEBUG, "headername %s: %d", (char*)headernames->data, headername_exists);
+			if (headername_exists != 1) {
+				TRACE(TRACE_DEBUG, "Inserting missing headername %s", (char*)headernames->data);
+				s = db_stmt_prepare(c, sql_insert, DBPFX);
+				db_begin_transaction(c);
+				db_stmt_set_str(s, 1, headernames->data);
+				db_stmt_exec(s);
+				db_commit_transaction(c);
+			}
+			ret = 1;
+		CATCH(SQLException)
+			ret = 0;
+			LOG_SQLERROR;
+		END_TRY;
+
+		// Get the next header
+		headernames = g_list_next(headernames);
+		headername_exists = 0;
+	}
+
+	db_con_close(c);
+
+	// Go to the first headernames
+	headernames = g_list_first(headernames);
+
+	// free allocated memory
+	g_list_destroy(headernames);
+
+	return ret;
+}
+
 int db_check_version(void)
 {
 	Connection_T c = db_con_get();
@@ -1093,6 +1169,11 @@ int db_check_version(void)
 	} else {
 		TRACE(TRACE_WARNING,"Schema version incompatible [%d]. Bailing out",
 				ok);
+		return DM_EQUERY;
+	}
+
+	if (! db_check_headernames()) {
+		TRACE(TRACE_DEBUG, "Headernames check failed");
 		return DM_EQUERY;
 	}
 

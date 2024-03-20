@@ -63,6 +63,13 @@ int db_connect(void);
  */
 int db_check_version(void);
 
+/**
+ * Check dbmail_headernames
+ * for core values used for caching
+ * inserting any that don't exist
+ */
+int db_check_headernames(void);
+
 /* get a connection from the pool */
 C db_con_get(void);
 
