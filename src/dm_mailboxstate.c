@@ -643,7 +643,7 @@ gboolean MailboxState_isPublic(T M)
 
 gboolean MailboxState_hasKeyword(T M, const char *keyword)
 {
-	if (g_list_find_custom(M->keywords, (gpointer)keyword, dm_strcmpdata))
+	if (g_list_find_custom(M->keywords, (gpointer)keyword, (GCompareFunc) dm_strcmpdata))
 		return TRUE;
 	return FALSE;
 }
