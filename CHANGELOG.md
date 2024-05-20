@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.5.0] - 2024-05-20
+- Version bump to 3.5.0
+- Create tables automated
+- dbmail-timsieve removed
+- MySQL utf8mb4 moved to upgrade 35001
+
 ## [3.4.1] - 2023-10-21
 - Missing flags fixed
 - dbmail-sieved.txt added
