@@ -23,7 +23,7 @@ SUBDIRS = modules
 
 
 if SIEVE
-SIEVEPROGS = dbmail-sievecmd dbmail-timsieved dbmail-sieved
+SIEVEPROGS = dbmail-sievecmd dbmail-sieved
 endif
 
 if USE_DM_GETOPT
@@ -118,9 +118,6 @@ dbmail_sievecmd_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_sieved_SOURCES = sieve.c sieved.c
 dbmail_sieved_LDADD = $(STATIC_MODULES) libdbmail.la
-
-dbmail_timsieved_SOURCES = timsieve.c timsieved.c
-dbmail_timsieved_LDADD = $(STATIC_MODULES) libdbmail.la
 endif
 
 if SHARED
@@ -133,5 +130,3 @@ libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(MODULES)
 libdbmail_la_LIBADD = $(STATIC_MODULES)
 libdbmail_la_LDFLAGS = $(AM_LDFLAGS) @SOCKETLIB@
 libdbmail_la_CFLAGS = $(AM_CFLAGS)
-
-

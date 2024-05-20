@@ -30,8 +30,7 @@ man8_MANS = dbmail-util.8 \
 	dbmail-imapd.8 \
 	dbmail-lmtpd.8 \
 	dbmail-pop3d.8 \
-	dbmail-httpd.8 \
-	dbmail-timsieved.8
+	dbmail-httpd.8
 
 EXTRA_DIST = $(man1_MANS) $(man5_MANS) $(man8_MANS)
 

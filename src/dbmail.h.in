@@ -211,8 +211,11 @@
 /* include sql/sqlite/create_tables.sqlite for autocreation */
 #define DM_SQLITECREATE @SQLITECREATE@
 
-/* upgrade steps
- */
+/* database creation */
+#define DM_MYSQL_CREATE @MYSQL_CREATE@
+#define DM_PGSQL_CREATE @PGSQL_CREATE@
+
+/* upgrade steps */
 #define DM_MYSQL_32001 @MYSQL_32001@
 #define DM_PGSQL_32001 @PGSQL_32001@
 #define DM_SQLITE_32001 @SQLITE_32001@
@@ -237,10 +240,9 @@
 #define DM_PGSQL_32006 @PGSQL_32006@
 #define DM_SQLITE_32006 @SQLITE_32006@
 
-#define DM_MYSQL_UPGRADE @MYSQL_UPGRADE@
-#define DM_PGSQL_UPGRADE @PGSQL_UPGRADE@
-#define DM_SQLITE_UPGRADE @SQLITE_UPGRADE@
-
+#define DM_MYSQL_35001 @MYSQL_35001@
+#define DM_PGSQL_35001 @PGSQL_35001@
+#define DM_SQLITE_35001 @SQLITE_35001@
 
 /* include dbmail.conf for autocreation */
 #define DM_DEFAULT_CONFIGURATION @DM_DEFAULT_CONFIGURATION@
