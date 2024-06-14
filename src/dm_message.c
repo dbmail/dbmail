@@ -481,7 +481,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		}
 
 		// Add final boundary delimiter line if required
-		if (row > 2 && blist[0]) {
+		if (row > 2 && blist[0][0]) {
 			dprint("\n--%s-- final\n", blist[0]);
 			p_string_append_printf(m, "\n--%s--\n", blist[0]);
 		}
