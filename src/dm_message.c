@@ -480,12 +480,11 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			row++;
 		}
 
-		if (row > 2 && boundary[0] && !finalized) {
-			dprint("\n--%s-- final\n", boundary);
-			p_string_append_printf(m, "\n--%s--\n", boundary);
-			finalized=1;
+		// Add final boundary delimiter line if required
+		if (row > 2 && blist[0][0]) {
+			dprint("\n--%s-- final\n", blist[0]);
+			p_string_append_printf(m, "\n--%s--\n", blist[0]);
 		}
-
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
