@@ -92,8 +92,10 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_get_known_users",        (gpointer)&auth->get_known_users        )
 	||  !g_module_symbol(module, "auth_get_known_aliases",      (gpointer)&auth->get_known_aliases      )
 	||  !g_module_symbol(module, "auth_getclientid",            (gpointer)&auth->getclientid            )
+	||  !g_module_symbol(module, "auth_get_override_fw_sender", (gpointer)&auth->get_override_fw_sender )
 	||  !g_module_symbol(module, "auth_getmaxmailsize",         (gpointer)&auth->getmaxmailsize         )
 	||  !g_module_symbol(module, "auth_getencryption",          (gpointer)&auth->getencryption          )
+	||  !g_module_symbol(module, "auth_check_user_ext_fw",      (gpointer)&auth->check_user_ext_fw      )
 	||  !g_module_symbol(module, "auth_check_user_ext",         (gpointer)&auth->check_user_ext         )
 	||  !g_module_symbol(module, "auth_adduser",                (gpointer)&auth->adduser                )
 	||  !g_module_symbol(module, "auth_delete_user",            (gpointer)&auth->delete_user            )
@@ -146,10 +148,14 @@ GList * auth_get_known_aliases(void)
 	{ return auth->get_known_aliases(); }
 int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr)
 	{ return auth->getclientid(user_idnr, client_idnr); }
+int auth_get_override_fw_sender(const char *username_from,const char *username_to, uint64_t * override_fw_sender)
+	{ return auth->get_override_fw_sender(username_from, username_to, override_fw_sender); }
 int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size)
 	{ return auth->getmaxmailsize(user_idnr, maxmail_size); }
 char *auth_getencryption(uint64_t user_idnr)
 	{ return auth->getencryption(user_idnr); }
+int auth_check_user_ext_fw(const char *username, GList **userids, GList **fwds, int checks)
+	{ return auth->check_user_ext_fw(username, userids, fwds, checks); }
 int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int checks)
 	{ return auth->check_user_ext(username, userids, fwds, checks); }
 int auth_adduser(const char *username, const char *password, const char *enctype,

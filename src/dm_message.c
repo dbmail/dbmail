@@ -186,13 +186,15 @@ static uint64_t blob_insert(const char *buf, const char *hash)
 	volatile uint64_t id = 0;
 	char *frag = db_returning("id");
 
+	TRACE(TRACE_DEBUG, "final blob store size [%d] hash %s", strlen(buf),hash);
+
 	assert(buf);
 	l = strlen(buf);
 
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
-		s = db_stmt_prepare(c, "INSERT INTO %smimeparts (hash, data, %ssize%s) VALUES (?, ?, ?) %s", 
+		s = db_stmt_prepare(c, "INSERT INTO %smimeparts (hash, data, %ssize%s) VALUES (?, ?, ?) %s",
 				DBPFX, db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN), frag);
 		db_stmt_set_str(s, 1, hash);
 		db_stmt_set_blob(s, 2, buf, l);
@@ -271,9 +273,8 @@ static uint64_t blob_store(const char *buf)
 static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 {
 	uint64_t id;
-
 	if (! buf) return 0;
-
+	TRACE(TRACE_DEBUG, "blob store size [%d]", strlen(buf));
 	if (is_header) {
 		m->part_key++;
 		m->part_order=0;
@@ -909,6 +910,9 @@ const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *h
 	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
 
+const gchar* dbmail_message_get_headers(const DbmailMessage *self){
+	return g_mime_object_get_headers(GMIME_OBJECT(self->content),NULL);
+}
 struct payload {
 	const DbmailMessage *message;
 	const char *header;
@@ -2656,9 +2660,12 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 			from = DEFAULT_POSTMASTER;
 	}
 	targets = g_list_first(targets);
-	TRACE(TRACE_INFO, "delivering to [%u] external addresses", g_list_length(targets));
+	TRACE(TRACE_INFO, "SENDING delivering to [%u] external addresses", g_list_length(targets));
 	while (targets) {
-		char *to = (char *)targets->data;
+		//char *to = (char *)targets->data;
+		DeliveryItem_T *pair = (DeliveryItem_T *)targets->data;
+		char *to=pair->to;
+		char *from_local=pair->from; //local from, it will be used if override_fw_sender=1
 
 		if (!to || strlen(to) < 1) {
 			TRACE(TRACE_ERR, "forwarding address is zero length, message not forwarded.");
@@ -2685,10 +2692,16 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 			} else if (to[0] == '|') {
 				// The forward is a command to execute.
 				result |= send_mail(message, "", "", NULL, SENDRAW, to+1);
-
 			} else {
+
 				// The forward is an email address.
-				result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+				if (pair->override_fw_sender==1){
+					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender=%d)", from_local,to,pair->override_fw_sender);
+					result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
+				}else{
+					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender=%d)", from,to,pair->override_fw_sender);
+					result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+				}
 			}
 		}
 		if (! g_list_next(targets))
@@ -2844,16 +2857,16 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 			break;
 		}
 
-		TRACE(TRACE_DEBUG, "deliver [%u] messages to external addresses", g_list_length(delivery->forwards));
+		TRACE(TRACE_DEBUG, "deliver [%u] messages to external addresses", g_list_length(delivery->forwards_ext));
 
 		/* Each user may also have a list of external forwarding addresses. */
-		if (g_list_length(delivery->forwards) > 0) {
+		//if (g_list_length(delivery->forwards) > 0) {
+		if (g_list_length(delivery->forwards_ext) > 0) {
 
 			TRACE(TRACE_DEBUG, "delivering to external addresses");
-			const char *from = dbmail_message_get_header(message, "Return-Path");
-
+			const char *from = g_strdup(dbmail_message_get_header(message, "Return-Path"));
 			/* Forward using the temporary stored message. */
-			if (send_forward_list(message, delivery->forwards, from)) {
+			if (send_forward_list(message, delivery->forwards_ext, from)) {
 				/* If forward fails, tell the sender that we're
 				 * having a transient error. They'll resend. */
 				TRACE(TRACE_NOTICE, "forwaring failed, reporting transient error.");
@@ -2863,6 +2876,7 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 				g_free((char *)from);
 			}
 		}
+
 		if (! p_list_next(dsnusers))
 			break;
 		dsnusers = p_list_next(dsnusers);

@@ -115,7 +115,43 @@ int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr)
 
 	return t;
 }
+/**
+ *  retrieves the status of using the alias as origin of the message and not the origininal sender
+ */
+int auth_get_override_fw_sender(const char *username_from, const char *username_to, uint64_t * override_fw_sender)
+{
+	assert(override_fw_sender != NULL);
+	*override_fw_sender = 0;
 
+	INIT_QUERY;
+	C c; R r; S s;
+	volatile int t = TRUE;
+	snprintf(query, DEF_QUERYSIZE-1,
+		 "SELECT override_fw_sender FROM %saliases "
+		 "WHERE lower(alias) = lower(?) "
+		 "AND lower(deliver_to) = lower(?)"
+		 "and override_fw_sender = 1"
+		 "",
+		 DBPFX);
+
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, query);
+		db_stmt_set_str(s, 1, username_from);
+		db_stmt_set_str(s, 2, username_to);
+
+		r = db_stmt_query(s);
+		if (db_result_next(r))
+				*override_fw_sender = db_result_get_u64(r,0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+
+}
 int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size)
 {
 	assert(maxmail_size != NULL);
@@ -188,6 +224,154 @@ static GList *user_get_deliver_to(const char *username)
 	return d;
 }
 
+static GList *user_get_alias_deliver_to_pair(const char *username)
+{
+	INIT_QUERY;
+	C c; R r; S s;
+	GList *d = NULL;
+
+	snprintf(query, DEF_QUERYSIZE-1,
+		 "SELECT alias, deliver_to FROM %saliases "
+		 "WHERE lower(alias) = lower(?) "
+		 "AND lower(alias) <> lower(deliver_to)",
+		 DBPFX);
+
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c, query);
+		db_stmt_set_str(s, 1, username);
+
+		r = db_stmt_query(s);
+		while (db_result_next(r)){
+			DeliveryItem_T *item = g_new0(DeliveryItem_T,1);
+			item->from=g_strdup(db_result_get(r,0));
+			item->to=g_strdup(db_result_get(r,1));
+			d = g_list_prepend(d, item);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return d;
+}
+/**
+ * Compatibilization method, it basically calls the auth_check_user_ext and create the forward structure as compatible with new requirement
+ * old method, keeping it here until the new implementation proves is working ok.
+ */
+/*int auth_check_user_ext_fw(const char *address, GList **userids, GList **fwds, int checks){
+	GList *fwds_local = NULL;
+	int occurences=auth_check_user_ext(address, userids, &fwds_local, checks);
+	while(fwds_local){
+		char *deliver_to = (char *)fwds_local->data;
+		TRACE(TRACE_DEBUG, "checking user %s to %s", address, deliver_to);
+
+		DeliveryItem_T *item = g_new0(DeliveryItem_T,1);
+		item->from = NULL;
+		item->to = g_strdup(deliver_to);
+		item->override_fw_sender = 0;
+		*(GList **)fwds = g_list_prepend(*(GList **)fwds, item);
+		if (! g_list_next(fwds_local)) break;
+			fwds_local = g_list_next(fwds_local);
+	}
+	g_list_destroy(fwds_local);
+	return occurences;
+}
+*/
+/**
+ * \brief Return extended user information, in fwds you can find extended information about delivered to/extend
+ * Return
+ */
+int auth_check_user_ext_fw(const char *username, GList **userids, GList **fwds, int checks){
+	int occurences = 0;
+	GList *d = NULL;
+	char *endptr;
+	uint64_t id, *uid;
+
+	if (checks > 20) {
+		TRACE(TRACE_ERR,"too many checks. Possible loop detected.");
+		return 0;
+	}
+
+	TRACE(TRACE_DEBUG, "[%d] checking user [%s] in alias table", checks, username);
+
+	d = user_get_alias_deliver_to_pair(username);
+
+	if (! d) {
+		if (checks == 0) {
+			TRACE(TRACE_DEBUG, "user %s not in aliases table", username);
+			return 0;
+		}
+		/* found the last one, this is the deliver to
+		 * but checks needs to be bigger then 0 because
+		 * else it could be the first query failure */
+		id = strtoull(username, &endptr, 10);
+		if (*endptr == 0) {
+			TRACE(TRACE_DEBUG, "checking user [%lu] occurences [%d]", id, occurences);
+			/* check user active */
+			if (db_user_active(id)){
+				/* numeric deliver-to --> this is a userid */
+				uid = g_new0(uint64_t,1);
+				*uid = id;
+				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
+				occurences=1;
+				TRACE(TRACE_DEBUG, "[FW] adding [%s] to deliver_to address occurences [%d]", username, occurences);
+			}else{
+				TRACE(TRACE_DEBUG, "[FW] user [%s] is not active", username);
+			}
+		} else {
+			/*
+			nothing to do
+			DeliveryItem_T *item = g_new0(DeliveryItem_T,1);
+			item->from=g_strdup(username);
+			item->to=g_strdup(username);
+			*(GList **)fwds = g_list_prepend(*(GList **)fwds, item);
+			TRACE(TRACE_DEBUG, "[FW] adding single from [%s] to [%s] occurences [%d]", item->from,item->to, occurences);
+			*/
+		}
+		return occurences;
+	}
+
+	while (d) {
+		/* do a recursive search for deliver_to */
+		DeliveryItem_T *pair = (DeliveryItem_T *)d->data;
+		TRACE(TRACE_DEBUG, "checking user %s to %s", pair->from, pair->to);
+		DeliveryItem_T *item = g_new0(DeliveryItem_T,1);
+		item->from=g_strdup(pair->from);
+		item->to=g_strdup(pair->to);
+		int occurences_temp=auth_get_override_fw_sender(item->from, item->to, &item->override_fw_sender);
+
+		TRACE(TRACE_DEBUG, "[FW] adding from [%s] to [%s] using original message from [%d]", item->from, item->to, item->override_fw_sender);
+
+		occurences_temp = auth_check_user_ext_fw(pair->to, userids, fwds, checks+1);
+		if (occurences_temp==0){
+			//skip if user addition
+			*(GList **)fwds = g_list_prepend(*(GList **)fwds, item);
+		}else{
+			g_free(item->from);
+			item->from = NULL;
+			g_free(item->to);
+			item->to = NULL;
+			g_free(item);
+		}
+		occurences += occurences_temp;
+		if (! g_list_next(d)) break;
+		d = g_list_next(d);
+	}
+
+	while(d) {
+		DeliveryItem_T *pair = (DeliveryItem_T *)d->data;
+		g_free(pair->from);
+		pair->from = NULL;
+		g_free(pair->to);
+		pair->to = NULL;
+		if (! g_list_next(d)) break;
+		d = g_list_next(d); 
+	}
+	g_list_destroy(d);
+	return occurences;
+}
 
 int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int checks)
 {

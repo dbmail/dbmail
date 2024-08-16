@@ -1,3 +1,4 @@
+
 /*
  Copyright (c) 2002 Aaron Stone, aaron@serendipity.cx
  Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
@@ -762,7 +763,19 @@ int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr)
 
 	return TRUE;
 }
-
+/**
+ *  \brief this method is only o stub in order to compabilize th extended forwarding scheme
+ *   future ideas: one idea is to implement it via aliases, to ldap gives you the information and here you can decide
+ *   To be used in conjunction with auth_check_user_ext_fw
+ */
+int auth_get_override_fw_sender(const char *username_from,const char *username_to, uint64_t * override_fw_sender)
+{
+	assert(override_fw_sender != NULL);
+	//on LDAP is always 0, this feature is not implemented
+	*override_fw_sender = 0;
+	TRACE(TRACE_DEBUG, "found override_fw_sender [%" PRIu64 "]", *override_fw_sender);
+	return TRUE;
+}
 
 int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size)
 {
@@ -858,6 +871,30 @@ GList * auth_get_known_aliases(void)
 	return aliases;
 }
 
+/**
+ * auth_check_user_ext_fw
+ * compatibilization, "override fw_sender" field in aliases table does not have any effect on ldap connector
+ * So this method is present here in order to create a data structure that can be used in the future.
+ */
+int auth_check_user_ext_fw(const char *address, GList **userids, GList **fwds, int checks){
+	GList *fwds_local = NULL;
+	int occurences=auth_check_user_ext(address, userids, &fwds_local, checks);
+	while(fwds_local){
+		char *deliver_to = (char *)fwds_local->data;
+		TRACE(TRACE_DEBUG, "checking user %s to %s", address, deliver_to);
+
+		DeliveryItem_T *item = g_new0(DeliveryItem_T,1);
+		item->from = NULL;
+		item->to = g_strdup(deliver_to);
+		item->override_fw_sender = 0;
+		*(GList **)fwds = g_list_prepend(*(GList **)fwds, item);
+		if (! g_list_next(fwds_local)) break;
+			fwds_local = g_list_next(fwds_local);
+	}
+	g_list_destroy(fwds_local);
+	return occurences;
+}
+
 /*
  * auth_check_user_ext()
  * 
@@ -866,7 +903,6 @@ GList * auth_get_known_aliases(void)
  * 
  * returns the number of occurences. 
  */
-
 
 	
 int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int checks)
