@@ -58,6 +58,7 @@
  */
 int db_connect(void);
 
+const char *db_get_db_name(void);
 /*
  * make sure we're running against a current database layout 
  */
