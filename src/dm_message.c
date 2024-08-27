@@ -119,8 +119,13 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 {
 	volatile uint64_t id = 0;
 	volatile uint64_t id_old = 0;
+	int message_part_hash=config_get_value_default_int("message_part_hash","DBMAIL",0);
 	size_t l;
 	assert(buf);
+	TRACE(TRACE_ERR,"mimeparts hash evaluation message_part_hash = %d value",message_part_hash);
+	//no hash
+	if (message_part_hash==2)
+		return id;
 	Connection_T c; PreparedStatement_T s; ResultSet_T r;
 	char blob_cmp[DEF_FRAGSIZE];
 	memset(blob_cmp, 0, sizeof(blob_cmp));
@@ -142,10 +147,20 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 			db_stmt_set_int(s, 3, l);
 			db_stmt_exec(s);
 			id = db_get_pk(c, "mimeparts");
-			s = db_stmt_prepare(c, "SELECT a.id, b.id FROM dbmail_mimeparts a INNER JOIN " 
-					"%smimeparts b ON a.hash=b.hash AND DBMS_LOB.COMPARE(a.data, b.data) = 0 " 
-					" AND a.id<>b.id AND b.id=?", DBPFX);
-			db_stmt_set_u64(s, 1, id);
+			//for oracle the optimization of message part hash are not implemented
+			switch(message_part_hash){
+			case 0:
+			case 1:
+				s = db_stmt_prepare(c, "SELECT a.id, b.id FROM dbmail_mimeparts a INNER JOIN "
+									"%smimeparts b ON a.hash=b.hash AND DBMS_LOB.COMPARE(a.data, b.data) = 0 "
+									" AND a.id<>b.id AND b.id=?", DBPFX);
+
+
+				db_stmt_set_u64(s, 1, id);
+				break;
+			default:
+				TRACE(TRACE_ERR,"unknown message_part_hash = %d value",message_part_hash);
+			}
 			r = db_stmt_query(s);
 			if (db_result_next(r))
 				id_old = db_result_get_u64(r,0);			
@@ -157,13 +172,27 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 				db_commit_transaction(c);
 			}
 		} else {
-			snprintf(blob_cmp, DEF_FRAGSIZE-1, db_get_sql(SQL_COMPARE_BLOB), "data");
-			s = db_stmt_prepare(c,"SELECT id FROM %smimeparts WHERE hash=? AND %ssize%s=? AND %s", 
-					DBPFX,db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN),
-					blob_cmp);
-			db_stmt_set_str(s,1,hash);
-			db_stmt_set_u64(s,2,l);
-			db_stmt_set_blob(s,3,buf,l);
+			switch(message_part_hash){
+			case 0:
+				snprintf(blob_cmp, DEF_FRAGSIZE-1, db_get_sql(SQL_COMPARE_BLOB), "data");
+				s = db_stmt_prepare(c,"SELECT id FROM %smimeparts WHERE hash=? AND %ssize%s=? AND %s limit 1",
+						DBPFX,db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN),
+						blob_cmp);
+				db_stmt_set_str(s,1,hash);
+				db_stmt_set_u64(s,2,l);
+				db_stmt_set_blob(s,3,buf,l);
+				break;
+			case 1:
+				s = db_stmt_prepare(c,"SELECT id FROM %smimeparts WHERE hash=? AND %ssize%s=? limit 1",
+						DBPFX,db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN)
+					);
+				db_stmt_set_str(s,1,hash);
+				db_stmt_set_u64(s,2,l);
+				break;
+			default:
+				TRACE(TRACE_ERR,"unknown message_part_hash = %d value",message_part_hash);
+			}
+
 			r = db_stmt_query(s);
 			if (db_result_next(r))
 				id = db_result_get_u64(r,0);
