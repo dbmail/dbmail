@@ -158,7 +158,7 @@ void mailbox_match_free(struct mailbox_match *m)
 
 
 /** list of tables used in dbmail */
-#define DB_NTABLES 20
+#define DB_NTABLES 19
 const char *DB_TABLENAMES[DB_NTABLES] = {
 	"acl",
 	"aliases",
@@ -309,6 +309,13 @@ int db_disconnect(void)
 	if(db_connected >= 1) URL_free(&dburi);
 	db_connected = 0;
 	return 0;
+}
+
+const char *db_get_db_name(void)
+{
+	const char * path=URL_getPath(dburi);
+	path=path+1;
+	return path;
 }
 
 Connection_T db_con_get(void)
