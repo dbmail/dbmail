@@ -820,13 +820,60 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 		self->content = content;
 		if (from[0])
 			dbmail_message_set_internal_date(self, from);
-	} else {
+	}
+	if (!content) {
 		content = GMIME_OBJECT(g_mime_parser_construct_part(parser, NULL));
 		g_object_unref(parser);
 		if (content) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 			self->content = content;
 		}
+	}
+	if (!content) {
+		/* MIME part is invalid so add a simple text/plain mime header */
+		TRACE(TRACE_INFO, "Fixing message to text/plain [%s] [%ld] offset [%d]",
+			"internal_date",
+			self->internal_date,
+			self->internal_date_gmtoff);
+
+		const char *fixheader = "MIME-Version: 1.0\r\nContent-Type: text/plain\r\n\r\n";
+		char *fixdata = NULL;
+		memset(fixdata, 0, sizeof(strlen(fixheader) + buflen + 1));
+		//malloc(sizeof(char)*(strlen(fixheader)+buflen+1));
+
+		*fixdata = '\0';
+		strcat(fixdata, fixheader);
+		strcat(fixdata, str);
+
+		// Re-create the message part
+		g_object_unref(self->stream);
+		self->stream = g_mime_stream_mem_new();
+		g_mime_stream_write(self->stream, fixdata, strlen(fixheader) + buflen + 1);
+		g_mime_stream_reset(self->stream);
+
+		parser = g_mime_parser_new_with_stream(self->stream);
+
+		content = GMIME_OBJECT(g_mime_parser_construct_message(parser, NULL));
+		g_object_unref(parser);
+
+		if (content) {
+				dbmail_message_set_class(self, DBMAIL_MESSAGE);
+				self->content = content;
+				if (from[0]) {
+						dbmail_message_set_internal_date(self, from);
+				}
+		} else {
+			qprintf("Unable to fix message to text/plain [%s] [%ld] offset [%d].\n",
+					"internal_date",
+					self->internal_date,
+					self->internal_date_gmtoff);
+			TRACE(TRACE_ERR, "Unable to fix message to text/plain [%s] [%ld] offset [%d]",
+				"internal_date",
+				self->internal_date,
+				self->internal_date_gmtoff);
+		}
+
+		g_free(fixdata);
 	}
 
 	buf = dbmail_message_to_string(self);

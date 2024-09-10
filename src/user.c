@@ -34,13 +34,6 @@ extern char configFile[PATH_MAX];
 #define SHADOWFILE "/etc/shadow"
 #define PNAME "dbmail/user"
 
-/* UI policy */
-extern int yes_to_all;
-extern int no_to_all;
-extern int verbose;
-extern int quiet;          /* Don't be helpful. */
-extern int reallyquiet;    /* Don't print errors. */
-
 struct change_flags {
 	unsigned int newuser         : 1;
 	unsigned int newmaxmail      : 1;

@@ -36,11 +36,6 @@ extern Mempool_T small_pool;
 
 #define DBPFX db_params.pfx
 
-/* UI policy */
-int quiet = 0;
-int reallyquiet = 0;
-int verbose = 0;
-
 void do_showhelp(void)
 {
 	printf(
