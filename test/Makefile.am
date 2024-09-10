@@ -26,6 +26,7 @@ TESTS=check_dbmail_common \
 	check_dbmail_mempool \
 	check_dbmail_user \
 	check_dbmail_util \
+	check_dbmail_util_empty_envelope \
 	check_dbmail_dsn \
 	check_dbmail_capa \
 	check_dbmail_sset \
@@ -62,6 +63,10 @@ check_dbmail_mempool_INCLUDES=@CHECK_CFLAGS@
 check_dbmail_util_SOURCES=check_dbmail_util.c
 check_dbmail_util_LDADD=$(CHECK_LDADD)
 check_dbmail_util_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_util_empty_envelope_SOURCES=check_dbmail_util_empty_envelope.c
+check_dbmail_util_empty_envelope_LDADD=$(CHECK_LDADD)
+check_dbmail_util_empty_envelope_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_dsn_SOURCES=check_dbmail_dsn.c
 check_dbmail_dsn_LDADD=$(CHECK_LDADD)

@@ -28,19 +28,6 @@
 #define THIS_MODULE "sievecmd"
 #define PNAME "dbmail/sievecmd"
 
-/* Loudness and assumptions. */
-int yes_to_all = 0;
-int no_to_all = 0;
-int verbose = 0;
-/* Don't be helpful. */
-int quiet = 0;
-/* Don't print errors. */
-int reallyquiet = 0;
-
-#define qverbosef(fmt, args...) if (verbose) printf(fmt, ##args)
-#define qprintf(fmt, args...) if (! (quiet||reallyquiet)) printf(fmt, ##args) 
-#define qerrorf(fmt, args...) if (! reallyquiet) fprintf(stderr, fmt, ##args) 
-
 extern char configFile[PATH_MAX];
 
 static int do_showhelp(void);

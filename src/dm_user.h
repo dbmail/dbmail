@@ -24,6 +24,12 @@
 
 #include "dbmail.h"
 
+/* Loudness and assumptions. */
+extern int verbose;
+extern int no_to_all;
+extern int yes_to_all;
+extern int reallyquiet;
+extern int quiet;
 
 #define qverbosef(fmt, args...) if (verbose) printf(fmt, ##args)
 #define qprintf(fmt, args...) if (! (quiet||reallyquiet)) printf(fmt, ##args) 
