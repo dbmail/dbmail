@@ -1,0 +1,4 @@
+BEGIN;
+ALTER TABLE dbmail_aliases ADD override_fw_sender smallint null default 0;
+INSERT INTO dbmail_upgrade_steps (from_version, to_version, applied) values (35001, 35002, now());
+COMMIT;
