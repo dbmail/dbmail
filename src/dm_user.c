@@ -25,6 +25,13 @@
 
 #include "dbmail.h"
 
+/* Loudness and assumptions. */
+int verbose = 0;
+int no_to_all = 0;
+int yes_to_all = 0;
+int reallyquiet = 0;
+int quiet = 0;
+
 extern char configFile[PATH_MAX];
 
 #define SHADOWFILE "/etc/shadow"
@@ -34,12 +41,6 @@ static char *getToken(char **str, const char *delims);
 static char csalt[] = "........";
 static char *bgetpwent(const char *filename, const char *name);
 static char *cget_salt(void);
-
-int verbose = 0;
-int no_to_all = 0;
-int yes_to_all = 0;
-int reallyquiet = 0;
-int quiet = 0;
 
 int do_add(const char * const user,
            const char * const password, const char * const enctype,
