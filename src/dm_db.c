@@ -2048,6 +2048,37 @@ int db_icheck_envelope(GList **lost)
 	return t;
 }
 
+/* Check for empty envelopes
+ * (NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL)
+ * ("Thu, 01 Jan 1970 00:00:00 +0000" NIL NIL NIL NIL NIL NIL NIL NIL NIL)
+ */
+int db_icheck_empty_envelope(GList **lost)
+{
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
+	uint64_t *id;
+
+	c = db_con_get();
+	TRY
+		r = db_query(c,
+				"SELECT p.id "
+				"FROM %sphysmessage p "
+				"INNER JOIN %senvelope e "
+				"ON p.id = e.physmessage_id "
+				"WHERE length(e.envelope) < 100", DBPFX, DBPFX);
+		while (db_result_next(r)) {
+			id = g_new0(uint64_t,1);
+			*id = db_result_get_u64(r, 0);
+			*(GList **)lost = g_list_prepend(*(GList **)lost,id);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+}
 
 int db_set_message_status(uint64_t message_idnr, MessageStatus_T status)
 {

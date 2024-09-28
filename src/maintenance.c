@@ -92,6 +92,7 @@ static int do_check_replycache(const char *timespec);
 static int do_vacuum_db(void);
 static int do_rehash(void);
 static int do_migrate(int migrate_limit);
+static int do_check_empty_envelope(void);
 
 int do_showhelp(void) {
 	printf("*** dbmail-util ***\n");
@@ -105,6 +106,7 @@ int do_showhelp(void) {
 	"     -c        clean up database (optimize/vacuum)\n"
 	"     -t        test for message integrity\n"
 	"     -b        body/header/envelope cache check\n"
+	"     -e        empty envelope cache check\n"
 	"     -p        purge messages have the DELETE status set\n"
 	"     -d        set DELETE status for deleted messages\n"
 	"     -s        remove dangling/invalid aliases and forwards\n"
@@ -140,6 +142,7 @@ int main(int argc, char *argv[])
 {
 	int check_integrity = 0;
 	int check_iplog = 0, check_replycache = 0;
+	int check_empty_envelope = 0;
 	char *timespec_iplog = NULL, *timespec_replycache = NULL;
 	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0, rehash = 0, move_old = 0, erase_old = 0, enable_forward=0, enable_utf8mb4=0;
 	int show_help = 0;
@@ -172,7 +175,7 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt_long(argc, argv, "-acgbtl:r:pudsMm:" "i" "f:qnyvVh", long_options, &opt_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, "-abcegtl:r:pudsMm:" "i" "f:qnyvVh", long_options, &opt_index)) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
@@ -224,6 +227,11 @@ int main(int argc, char *argv[])
 			do_nothing = 0;
 			break;
 
+		case 'e':
+			check_empty_envelope = 1;
+			do_nothing = 0;
+			break;
+
 		case 'p':
 			purge_deleted = 1;
 			do_nothing = 0;
@@ -272,7 +280,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'i':
-			qerrorf("Interactive console is not supported in this release.\n");
+			qprintf("Interactive console is not supported in this release.\n");
 			return 1;
 
 		/* Common options */
@@ -302,7 +310,7 @@ int main(int argc, char *argv[])
 				memset(configFile, 0, sizeof(configFile));
 				strncpy(configFile, optarg, sizeof(configFile)-1);
 			} else {
-				qerrorf("dbmail-util: -f requires a filename\n\n" );
+				qprintf("dbmail-util: -f requires a filename\n\n" );
 				return 1;
 			}
 			break;
@@ -331,6 +339,7 @@ int main(int argc, char *argv[])
  	/* Don't make any changes unless specifically authorized. */
  	if (!yes_to_all) {
 		qprintf("Choosing dry-run mode. No changes will be made at this time.\n");
+		TRACE(TRACE_INFO, "Choosing dry-run mode. No changes will be made at this time.");
 		no_to_all = 1;
  	}
 
@@ -340,13 +349,13 @@ int main(int argc, char *argv[])
 
 	qverbosef("Opening connection to database... \n");
 	if (db_connect() != 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
+		qprintf("Failed. An error occured. Please check log.\n");
 		return -1;
 	}
 
 	qverbosef("Opening connection to authentication... \n");
 	if (auth_connect() != 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
+		qprintf("Failed. An error occured. Please check log.\n");
 		return -1;
 	}
 
@@ -366,26 +375,27 @@ int main(int argc, char *argv[])
 	if (enable_forward) do_enable_forward();
 	if (enable_utf8mb4) do_upgrade_utf8mb4();
 	if (migrate) do_migrate(migrate_limit);
+	if (check_empty_envelope) do_check_empty_envelope();
 
 	if (!has_errors && !serious_errors) {
 		qprintf("\nMaintenance done. No errors found.\n");
 	} else {
-		qerrorf("\nMaintenance done. Errors were found");
+		qprintf("\nMaintenance done. Errors were found");
 		if (serious_errors) {
-			qerrorf(" but not fixed due to failures.\n");
-			qerrorf("Please check the logs for further details, "
+			qprintf(" but not fixed due to failures.\n");
+			qprintf("Please check the logs for further details, "
 				"turning up the trace level as needed.\n");
 			// Indicate that something went really wrong
 			has_errors = 3;
 		} else if (no_to_all) {
-			qerrorf(" but not fixed.\n");
-			qerrorf("Run again with the '-y' option to "
+			qprintf(" but not fixed.\n");
+			qprintf("Run again with the '-y' option to "
 				"repair the errors.\n");
 			// Indicate that the program should be run with -y
 			has_errors = 2;
 		} else if (yes_to_all) {
-			qerrorf(" and fixed.\n");
-			qerrorf("We suggest running dbmail-util again to "
+			qprintf(" and fixed.\n");
+			qprintf("We suggest running dbmail-util again to "
 				"confirm that all errors were repaired.\n");
 			// Indicate that the program should be run again
 			has_errors = 1;
@@ -547,20 +557,22 @@ int do_purge_deleted(void)
 	if (no_to_all) {
 		qprintf("\nCounting messages with DELETE status...\n");
 		if (! db_deleted_count(&deleted_messages)) {
-			qerrorf ("Failed. An error occured. Please check log.\n");
+			qprintf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%" PRIu64 "] messages have DELETE status.\n", deleted_messages);
+		TRACE(TRACE_INFO, "Ok. [%" PRIu64 "] messages have DELETE status.", deleted_messages);
 	}
 	if (yes_to_all) {
 		qprintf("\nDeleting messages with DELETE status...\n");
 		if (! db_deleted_purge()) {
-			qerrorf ("Failed. An error occured. Please check log.\n");
+			qprintf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. Messages deleted.\n");
+		TRACE(TRACE_INFO, "Ok. Messages deleted.");
 	}
 	return 0;
 }
@@ -572,28 +584,34 @@ int do_set_deleted(void)
 	if (no_to_all) {
 		// TODO: Count messages to delete.
 		qprintf("\nCounting deleted messages that need the DELETE status set...\n");
+		TRACE(TRACE_INFO, "Counting deleted messages that need the DELETE status set...");
 		if (! db_count_deleted(&messages_set_to_delete)) {
-			qerrorf ("Failed. An error occured. Please check log.\n");
+			qprintf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%" PRIu64 "] messages need to be set for deletion.\n", messages_set_to_delete);
+		TRACE(TRACE_INFO, "Ok. [%" PRIu64 "] messages need to be set for deletion.", messages_set_to_delete);
 	}
 	if (yes_to_all) {
 		qprintf("\nSetting DELETE status for deleted messages...\n");
+		TRACE(TRACE_INFO, "Setting DELETE status for deleted messages...");
 		if (! db_set_deleted()) {
-			qerrorf ("Failed. An error occured. Please check log.\n");
+			qprintf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. Messages set for deletion.\n");
+		TRACE(TRACE_INFO, "Ok. Messages set for deletion.");
 		qprintf("Re-calculating used quota for all users...\n");
+		TRACE(TRACE_INFO, "Re-calculating used quota for all users...");
 		if (dm_quota_rebuild() < 0) {
-			qerrorf ("Failed. An error occured. Please check log.\n");
+			qprintf ("Failed. An error occured. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. Used quota updated for all users.\n");
+		TRACE(TRACE_INFO, "Ok. Used quota updated for all users.");
 	}
 	return 0;
 }
@@ -612,7 +630,8 @@ GList *find_dangling_aliases(const char * const name)
 	result = auth_check_user_ext(name,&uids,&fwds,0);
 	
 	if (!result) {
-		qerrorf("Nothing found searching for [%s].\n", name);
+		qprintf("Nothing found searching for [%s].\n", name);
+		TRACE(TRACE_INFO, "Nothing found searching for [%s].", name);
 		serious_errors = 1;
 		return dangling;
 	}
@@ -640,8 +659,10 @@ int do_dangling_aliases(void)
 
 	if (no_to_all)
 		qprintf("\nCounting aliases with nonexistent delivery userid's...\n");
+		TRACE(TRACE_INFO, "nCounting aliases with nonexistent delivery userid's...");
 	if (yes_to_all)
 		qprintf("\nRemoving aliases with nonexistent delivery userid's...\n");
+		TRACE(TRACE_INFO, "Removing aliases with nonexistent delivery userid's...");
 
 	aliases = auth_get_known_aliases();
 	aliases = g_list_dedup(aliases, (GCompareFunc)strcmp, TRUE);
@@ -656,9 +677,13 @@ int do_dangling_aliases(void)
 			g_snprintf(deliver_to, 21, "%" PRIu64 "", *(uint64_t *)dangling->data);
 			qverbosef("Dangling alias [%s] delivers to nonexistent user [%s]\n",
 				(char *)aliases->data, deliver_to);
+			TRACE(TRACE_INFO, "Dangling alias [%s] delivers to nonexistent user [%s]",
+				(char *)aliases->data, deliver_to);
 			if (yes_to_all) {
 				if (auth_removealias_ext(aliases->data, deliver_to) < 0) {
-					qerrorf("Error: could not remove alias [%s] deliver to [%s] \n",
+					qprintf("Error: could not remove alias [%s] deliver to [%s]\n",
+						(char *)aliases->data, deliver_to);
+					TRACE(TRACE_INFO, "Error: could not remove alias [%s] deliver to [%s]",
 						(char *)aliases->data, deliver_to);
 					serious_errors = 1;
 					result = -1;
@@ -676,11 +701,10 @@ int do_dangling_aliases(void)
 	}
 	g_list_destroy(g_list_first(aliases));
 
+	qprintf("Ok. Found [%d] dangling aliases.\n", count);
+	TRACE(TRACE_INFO, "Ok. Found [%d] dangling aliases.", count);
 	if (count > 0) {
-		qerrorf("Ok. Found [%d] dangling aliases.\n", count);
 		has_errors = 1;
-	} else {
-		qprintf("Ok. Found [%d] dangling aliases.\n", count);
 	}
 
 	return result;
@@ -703,6 +727,7 @@ int do_check_integrity(void)
 	}
 
 	qprintf("\n%s DBMAIL message integrity...\n", action);
+	TRACE(TRACE_INFO, "%s DBMAIL message integrity...", action);
 
 	/* This is what we do:
 	 3. Check for loose physmessages
@@ -715,18 +740,18 @@ int do_check_integrity(void)
 	/* part 3 */
 	time(&start);
 	qprintf("\n%s DBMAIL physmessage integrity...\n", action);
+	TRACE(TRACE_INFO, "%s DBMAIL physmessage integrity...", action);
 	if ((count = db_icheck_physmessages(cleanup)) < 0) {
-		qerrorf("Failed. An error occurred. Please check log.\n");
+		qprintf("Failed. An error occurred. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
+	qprintf("Ok. Found [%ld] unconnected physmessages.\n", count);
+	TRACE(TRACE_INFO, "Ok. Found [%ld] unconnected physmessages.", count);
 	if (count > 0) {
-		qerrorf("Ok. Found [%ld] unconnected physmessages.\n", count);
 		if (cleanup) {
-			qerrorf("Ok. Orphaned physmessages deleted.\n");
+			qprintf("Ok. Orphaned physmessages deleted.\n");
 		}
-	} else {
-		qprintf("Ok. Found [%ld] unconnected physmessages.\n", count);
 	}
 
 	time(&stop);
@@ -738,17 +763,16 @@ int do_check_integrity(void)
 	start = stop;
 	qprintf("\n%s DBMAIL partlists integrity...\n", action);
 	if ((count = db_icheck_partlists(cleanup)) < 0) {
-		qerrorf("Failed. An error occurred. Please check log.\n");
+		qprintf("Failed. An error occurred. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
+	qprintf("Ok. Found [%ld] unconnected partlists.\n", count);
+	TRACE(TRACE_INFO, "Ok. Found [%ld] unconnected partlists.", count);
 	if (count > 0) {
-		qerrorf("Ok. Found [%ld] unconnected partlists.\n", count);
 		if (cleanup) {
-			qerrorf("Ok. Orphaned partlists deleted.\n");
+			qprintf("Ok. Orphaned partlists deleted.\n");
 		}
-	} else {
-		qprintf("Ok. Found [%ld] unconnected partlists.\n", count);
 	}
 
 	time(&stop);
@@ -759,18 +783,18 @@ int do_check_integrity(void)
 	/*  part 5 */
 	start = stop;
 	qprintf("\n%s DBMAIL mimeparts integrity...\n", action);
+	TRACE(TRACE_INFO, "%s DBMAIL mimeparts integrity...", action);
 	if ((count = db_icheck_mimeparts(cleanup)) < 0) {
-		qerrorf("Failed. An error occurred. Please check log.\n");
+		qprintf("Failed. An error occurred. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
+	TRACE(TRACE_INFO, "Ok. Found [%ld] unconnected mimeparts.", count);
+	qprintf("Ok. Found [%ld] unconnected mimeparts.\n", count);
 	if (count > 0) {
-		qerrorf("Ok. Found [%ld] unconnected mimeparts.\n", count);
 		if (cleanup) {
-			qerrorf("Ok. Orphaned mimeparts deleted.\n");
+			qprintf("Ok. Orphaned mimeparts deleted.\n");
 		}
-	} else {
-		qprintf("Ok. Found [%ld] unconnected mimeparts.\n", count);
 	}
 
 	time(&stop);
@@ -788,18 +812,20 @@ int do_check_integrity(void)
 		}
 	}
 
-        if (! cache_readonly) {
+	if (! cache_readonly) {
 		start = stop;
 		qprintf("\n%s DBMAIL headernames integrity...\n", action);
+		TRACE(TRACE_INFO, "%s DBMAIL headernames integrity...", action);
 		if ((count = db_icheck_headernames(cleanup)) < 0) {
-			qerrorf("Failed. An error occurred. Please check log.\n");
+			qprintf("Failed. An error occurred. Please check log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 
 		qprintf("Ok. Found [%ld] unconnected headernames.\n", count);
+		TRACE(TRACE_INFO, "Ok. Found [%ld] unconnected headernames.", count);
 		if (count > 0 && cleanup) {
-			qerrorf("Ok. Orphaned headernames deleted.\n");
+			qprintf("Ok. Orphaned headernames deleted.\n");
 		}
 
 		time(&stop);
@@ -811,15 +837,16 @@ int do_check_integrity(void)
 	/* part 7 */
 	start = stop;
 	qprintf("\n%s DBMAIL headervalues integrity...\n", action);
+	TRACE(TRACE_INFO, "%s DBMAIL headervalues integrity...", action);
 	if ((count = db_icheck_headervalues(cleanup)) < 0) {
-		qerrorf("Failed. An error occurred. Please check log.\n");
+		qprintf("Failed. An error occurred. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
 	qprintf("Ok. Found [%ld] unconnected headervalues.\n", count);
 	if (count > 0 && cleanup) {
-		qerrorf("Ok. Orphaned headervalues deleted.\n");
+		qprintf("Ok. Orphaned headervalues deleted.\n");
 	}
 
 	time(&stop);
@@ -843,28 +870,30 @@ static int do_rfc_size(void)
 
 	if (no_to_all) {
 		qprintf("\nChecking DBMAIL for rfcsize field...\n");
+		TRACE(TRACE_INFO, "Checking DBMAIL for rfcsize field...");
 	}
 	if (yes_to_all) {
 		qprintf("\nRepairing DBMAIL for rfcsize field...\n");
+		TRACE(TRACE_INFO, "Repairing DBMAIL for rfcsize field...");
 	}
 	time(&start);
 
 	if (db_icheck_rfcsize(&lost) < 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
+		qprintf("Failed. An error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
+	TRACE(TRACE_INFO, "Ok. Found [%d] missing rfcsize values.", g_list_length(lost));
+	qprintf("Ok. Found [%d] missing rfcsize values.\n", g_list_length(lost));
 	if (g_list_length(lost) > 0) {
-		qerrorf("Ok. Found [%d] missing rfcsize values.\n", g_list_length(lost));
 		has_errors = 1;
-	} else {
-		qprintf("Ok. Found [%d] missing rfcsize values.\n", g_list_length(lost));
 	}
 
 	if (yes_to_all) {
 		if (db_update_rfcsize(lost) < 0) {
-			qerrorf("Error setting the rfcsize values");
+			TRACE(TRACE_INFO, "Error setting the rfcsize values");
+			qprintf("Error setting the rfcsize values");
 			has_errors = 1;
 		}
 	}
@@ -886,28 +915,29 @@ static int do_envelope(void)
 
 	if (no_to_all) {
 		qprintf("\nChecking DBMAIL for cached envelopes...\n");
+		TRACE(TRACE_INFO, "Checking DBMAIL for cached envelopes...");
 	}
 	if (yes_to_all) {
 		qprintf("\nRepairing DBMAIL for cached envelopes...\n");
+		TRACE(TRACE_INFO, "Repairing DBMAIL for cached envelopes...");
 	}
 	time(&start);
 
 	if (db_icheck_envelope(&lost) < 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
+		qprintf("Failed. An error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
+	TRACE(TRACE_INFO, "Ok. Found [%d] missing envelope values.", g_list_length(lost));
+	qprintf("Ok. Found [%d] missing envelope values.\n", g_list_length(lost));
 	if (g_list_length(lost) > 0) {
-		qerrorf("Ok. Found [%d] missing envelope values.\n", g_list_length(lost));
 		has_errors = 1;
-	} else {
-		qprintf("Ok. Found [%d] missing envelope values.\n", g_list_length(lost));
 	}
 
 	if (yes_to_all) {
 		if (db_set_envelope(lost) < 0) {
-			qerrorf("Error setting the envelope cache");
+			qprintf("Error setting the envelope cache");
 			has_errors = 1;
 		}
 	}
@@ -918,6 +948,51 @@ static int do_envelope(void)
 	qverbosef("--- checking envelope cache took %g seconds\n",
 	       difftime(stop, start));
 	
+	return 0;
+
+}
+
+static int do_check_empty_envelope(void)
+{
+	time_t start, stop;
+	GList *lost = NULL;
+
+	if (no_to_all) {
+		qprintf("\nChecking DBMAIL for empty cached envelopes...\n");
+		TRACE(TRACE_INFO, "Checking DBMAIL for empty cached envelopes...");
+	}
+	if (yes_to_all) {
+		qprintf("\nRepairing DBMAIL for empty cached envelopes...\n");
+		TRACE(TRACE_INFO, "Repairing DBMAIL for empty cached envelopes...");
+	}
+	time(&start);
+
+	if (db_icheck_empty_envelope(&lost) < 0) {
+		qprintf("Failed. An error occured. Please check log.\n");
+		serious_errors = 1;
+		return -1;
+	}
+
+	qprintf("Ok. Found [%d] empty envelope values.\n", g_list_length(lost));
+	TRACE(TRACE_INFO, "Ok. Found [%d] empty envelope values.", g_list_length(lost));
+	if (g_list_length(lost) > 0) {
+		has_errors = 1;
+	}
+
+	if (yes_to_all) {
+		if (db_set_envelope(lost) < 0) {
+			qprintf("Error setting the envelope cache");
+			TRACE(TRACE_INFO, "Error setting the envelope cache");
+			has_errors = 1;
+		}
+	}
+
+	g_list_destroy(lost);
+
+	time(&stop);
+	qverbosef("--- checking empty envelope cache took %g seconds\n",
+	       difftime(stop, start));
+
 	return 0;
 
 }
@@ -939,27 +1014,29 @@ int do_header_cache(void)
 	
 	if (no_to_all) 
 		qprintf("\nChecking DBMAIL for cached header values...\n");
-	if (yes_to_all) 
+		TRACE(TRACE_INFO, "Checking DBMAIL for cached header values...");
+	if (yes_to_all)
 		qprintf("\nRepairing DBMAIL for cached header values...\n");
-	
+		TRACE(TRACE_INFO, "Repairing DBMAIL for cached header values...");
+
 	time(&start);
 
 	if (db_icheck_headercache(&lost) < 0) {
-		qerrorf("Failed. An error occured. Please check log.\n");
+		qprintf("Failed. An error occured. Please check log.\n");
 		serious_errors = 1;
 		return -1;
 	}
 
+	TRACE(TRACE_INFO, "Ok. Found [%d] un-cached physmessages.", g_list_length(lost));
+	qprintf("Ok. Found [%d] un-cached physmessages.\n", g_list_length(lost));
 	if (g_list_length(lost) > 0) {
-		qerrorf("Ok. Found [%d] un-cached physmessages.\n", g_list_length(lost));
 		has_errors = 1;
-	} else {
-		qprintf("Ok. Found [%d] un-cached physmessages.\n", g_list_length(lost));
 	}
 
 	if (yes_to_all) {
 		if (db_set_headercache(lost) < 0) {
-			qerrorf("Error caching the header values ");
+			qprintf("Error caching the header values");
+			TRACE(TRACE_INFO, "Error caching the header values");
 			serious_errors = 1;
 		}
 	}
@@ -980,7 +1057,9 @@ int do_check_iplog(const char *timespec)
 	TimeString_T timestring;
 
 	if (find_time(timespec, &timestring) != 0) {
-		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
+		qprintf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
+		       timespec);
+		TRACE(TRACE_INFO, "Failed to find a timestring: [%s] is not <hours>h<minutes>m.",
 		       timespec);
 		serious_errors = 1;
 		return -1;
@@ -988,18 +1067,22 @@ int do_check_iplog(const char *timespec)
 
 	if (no_to_all) {
 		qprintf("\nCounting IP entries older than [%s]...\n", timestring);
+		TRACE(TRACE_INFO, "Counting IP entries older than [%s]...", timestring);
 		if (db_count_iplog(timestring, &log_count) < 0) {
-			qerrorf("Failed. An error occured. Check the log.\n");
+			qprintf("Failed. An error occured. Check the log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%" PRIu64 "] IP entries are older than [%s].\n",
 		    log_count, timestring);
+		TRACE(TRACE_INFO, "Ok. [%" PRIu64 "] IP entries are older than [%s].",
+		    log_count, timestring);
 	}
 	if (yes_to_all) {
 		qprintf("\nRemoving IP entries older than [%s]...\n", timestring);
+		TRACE(TRACE_INFO, "Removing IP entries older than [%s]...", timestring);
 		if (! db_cleanup_iplog(timestring)) {
-			qerrorf("Failed. Please check the log.\n");
+			qprintf("Failed. Please check the log.\n");
 			serious_errors = 1;
 			return -1;
 		}
@@ -1016,7 +1099,9 @@ int do_check_replycache(const char *timespec)
 	TimeString_T timestring;
 
 	if (find_time(timespec, &timestring) != 0) {
-		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
+		qprintf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
+		       timespec);
+		TRACE(TRACE_INFO, "Failed to find a timestring: [%s] is not <hours>h<minutes>m.",
 		       timespec);
 		serious_errors = 1;
 		return -1;
@@ -1024,8 +1109,9 @@ int do_check_replycache(const char *timespec)
 
 	if (no_to_all) {
 		qprintf("\nCounting RC entries older than [%s]...\n", timestring);
+		TRACE(TRACE_INFO, "Counting RC entries older than [%s]...", timestring);
 		if (db_count_replycache(timestring, &log_count) < 0) {
-			qerrorf("Failed. An error occured. Check the log.\n");
+			qprintf("Failed. An error occured. Check the log.\n");
 			serious_errors = 1;
 			return -1;
 		}
@@ -1034,8 +1120,9 @@ int do_check_replycache(const char *timespec)
 	}
 	if (yes_to_all) {
 		qprintf("\nRemoving RC entries older than [%s]...\n", timestring);
+		TRACE(TRACE_INFO, "Removing RC entries older than [%s]...", timestring);
 		if (! db_cleanup_replycache(timestring)) {
-			qerrorf("Failed. Please check the log.\n");
+			qprintf("Failed. Please check the log.\n");
 			serious_errors = 1;
 			return -1;
 		}
@@ -1049,17 +1136,20 @@ int do_vacuum_db(void)
 {
 	if (no_to_all) {
 		qprintf("\nVacuum and optimize not performed.\n");
+		TRACE(TRACE_INFO, "Vacuum and optimize not performed.");
 	}
 	if (yes_to_all) {
 		qprintf("\nVacuuming and optimizing database...\n");
+		TRACE(TRACE_INFO, "Vacuuming and optimizing database...");
 		fflush(stdout);
 		if (db_cleanup() < 0) {
-			qerrorf("Failed. Please check the log.\n");
+			qprintf("Failed. Please check the log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 
 		qprintf("Ok. Database cleaned up.\n");
+		TRACE(TRACE_INFO, "Ok. Database cleaned up.");
 	}
 	return 0;
 }
@@ -1068,12 +1158,14 @@ int do_rehash(void)
 {
 	if (yes_to_all) {
 		qprintf ("Rebuild hash keys for stored message chunks...\n");
+		TRACE(TRACE_INFO, "Rebuild hash keys for stored message chunks...");
 		if (db_rehash_store() == DM_EQUERY) {
-			qerrorf("Failed. Please check the log.\n");
+			qprintf("Failed. Please check the log.\n");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf ("Ok. Hash keys rebuild successfully.\n");
+		TRACE(TRACE_INFO, "Ok. Hash keys rebuild successfully.");
 	}
 
 	return 0;
@@ -1088,11 +1180,14 @@ int do_migrate(int migrate_limit)
 	DbmailMessage *m;
 	
 	qprintf ("Migrate legacy 2.2.x messageblks to mimeparts...\n");
+	TRACE(TRACE_INFO, "Migrate legacy 2.2.x messageblks to mimeparts...");
 	if (!yes_to_all) {
 		qprintf ("\tmigration skipped. Use -y option to perform migration.\n");
+		TRACE(TRACE_INFO, "  migration skipped. Use -y option to perform migration.");
 		return 0;
 	}
 	qprintf ("Preparing to migrate up to %d physmessages.\n", migrate_limit);
+	TRACE(TRACE_INFO, "Preparing to migrate up to %d physmessages.", migrate_limit);
 
 	c = db_con_get();
 	TRY
@@ -1120,6 +1215,7 @@ int do_migrate(int migrate_limit)
 	END_TRY;
 	
 	qprintf ("Migration complete. Migrated %d physmessages.\n", count);
+	TRACE(TRACE_INFO, "Migration complete. Migrated %d physmessages.", count);
 	return 0;
 }
 
@@ -1300,7 +1396,8 @@ int do_move_old (int days, char * mbinbox_name, char * mbtrash_name)
 				db_mailbox_seq_update(mailbox_from, 0);
 			}
 			else {
-				qprintf("User(%" PRIu64 ") doesn't has mailbox(%s)\n", user_id, mbtrash_name);
+				qprintf("User(%" PRIu64 ") doesn't have mailbox(%s)\n", user_id, mbtrash_name);
+				TRACE(TRACE_INFO, "User(%" PRIu64 ") doesn't have mailbox(%s)", user_id, mbtrash_name);
 			}
 		}
 
