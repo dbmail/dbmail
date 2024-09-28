@@ -87,12 +87,14 @@ size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf);
 GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field);
 
 
+
 /*
  * manipulate the actual message content
  */
 
 void dbmail_message_set_header(DbmailMessage *self, const char *header, const char *value);
 const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *header);
+const gchar * dbmail_message_get_headers(const DbmailMessage *self);
 
 /* Get all instances of a header. */
 GList * dbmail_message_get_header_repeated(const DbmailMessage *self, const char *header);

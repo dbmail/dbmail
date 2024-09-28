@@ -163,7 +163,7 @@ void config_free(void)
 /* This function also strips any... # Trailing comments. */
 /* value is not modified unless something is found. */
 static int config_get_value_once(const Field_T field_name,
-		const char * const service_name,
+		const char * service_name,
 		Field_T value)
 {
 	char *dict_value;
@@ -187,7 +187,7 @@ static int config_get_value_once(const Field_T field_name,
 }
 
 int config_get_value(const Field_T field_name,
-                     const char * const service_name,
+                     const char * service_name,
                      Field_T value)
 {
 	char *key;
@@ -248,7 +248,7 @@ config_get_value_done:
  */
 
 int config_get_value_default_int(const Field_T field_name,
-					const char * const service_name,
+					const char * service_name,
 					int default_value){
 	Field_T value;
 	int result_fetch = config_get_value(field_name, service_name, value);
@@ -262,7 +262,7 @@ int config_get_value_default_int(const Field_T field_name,
 
 
 Field_T* config_get_value_default_string(const Field_T field_name,
-					const char * const service_name,
+					const char * service_name,
 					Field_T value, Field_T default_value){
 	int result_fetch = config_get_value(field_name, service_name, value);
 
@@ -506,7 +506,7 @@ void GetDBParams(void)
 
 }
 
-void config_get_timeout(ServerConfig_T *config, const char * const service)
+void config_get_timeout(ServerConfig_T *config, const char * service)
 {
 	Field_T val;
 
@@ -533,7 +533,7 @@ void config_get_timeout(ServerConfig_T *config, const char * const service)
 }
 
 
-void config_get_logfiles(ServerConfig_T *config, const char * const service)
+void config_get_logfiles(ServerConfig_T *config, const char * service)
 {
 	Field_T val;
 

@@ -2152,7 +2152,6 @@ void _fetch_update(ImapSession *self, MessageInfo *msginfo, gboolean showmodseq,
 		dbmail_imap_session_buff_printf(self, "UID %" PRIu64 , msginfo->uid);
 		needspace = true;
 	}
-
 	if (showflags) {
 		GList *sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
 		char *s = dbmail_imap_plist_as_string(sublist);
@@ -2230,9 +2229,17 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 	// reporting callback
 	if ((! cmd->silent) || changed > 0) {
 		gboolean showmodseq = (changed && (cmd->unchangedsince || self->mailbox->condstore));
+		//if is changed then ignore silent part//some client are using silent part in strange ways.
 		gboolean showflags = (! cmd->silent);
+		int cmd_store_silent=config_get_value_default_int("command_store_flags_silent_ignore_silent","IMAP",0);
+		if (cmd_store_silent==1 && changed){
+			showflags = showflags || changed;
+		}
+		TRACE(TRACE_INFO,"requested FLAGS.SILENT but a change was detected into mailbox and command_store_flags_silent_ignore_silent=%d so ignore FLAGS.SILENT and return message information with flags",cmd_store_silent);
+
 		_fetch_update(self, msginfo, showmodseq, showflags);
 	}
+
 
 	return FALSE;
 }

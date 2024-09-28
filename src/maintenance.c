@@ -34,6 +34,44 @@
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 
+/** list of tables used in dbmail, it is a duplicate found in dm_db.c*/
+#define DB_NTABLES 24
+const char *DB_TABLENAMES[DB_NTABLES] = {
+	"acl",
+	"aliases",
+	"authlog",
+	"auto_notifications",
+	"auto_replies",
+	"envelope",
+	"filters",
+	"header",
+	"headername",
+	"headervalue",
+	"keywords",
+	"mailboxes",
+	"messages",
+	"mimeparts",
+	"partlists",
+	"pbsp",
+	"physmessage",
+	"referencesfield",
+	"replycache",
+	"sievescripts",
+	"subscription",
+	"upgrade_steps",
+	"usermap",
+	"users"
+};
+
+/* Loudness and assumptions. */
+int yes_to_all = 0;
+int no_to_all = 0;
+int verbose = 0;
+/* Don't be helpful. */
+int quiet = 0;
+/* Don't print errors. */
+int reallyquiet = 0;
+
 extern char configFile[PATH_MAX];
 
 int has_errors = 0;
@@ -44,6 +82,8 @@ static int do_move_old(int days, char * mbinbox_name, char * mbtrash_name);
 static int do_erase_old(int days, char * mbtrash_name);
 static int do_check_integrity(void);
 static int do_purge_deleted(void);
+static int do_enable_forward(void);
+static int do_upgrade_utf8mb4(void);
 static int do_set_deleted(void);
 static int do_dangling_aliases(void);
 static int do_header_cache(void);
@@ -81,6 +121,8 @@ int do_showhelp(void) {
 	"     --inbox name  Inbox folder to move from, used in conjunction with --move\n"
 	"     --trash name  Trash folder to move to, used in conjunction with --move\n"
 	"     -m limit  limit migration to [limit] number of physmessages. Default 10000 per run\n"
+	"     --enable-forward-control make the necessary changes to support control of forwards (has not effect on authldap module\n"
+	"     --upgrade-utf8mb4 upgrade mysql/mariadb to utf8mb4. WARNING: for larger databases it takes long time\n"
 	"\nCommon options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
 	"               Default: %s\n"
@@ -102,7 +144,7 @@ int main(int argc, char *argv[])
 	int check_iplog = 0, check_replycache = 0;
 	int check_empty_envelope = 0;
 	char *timespec_iplog = NULL, *timespec_replycache = NULL;
-	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0, rehash = 0, move_old = 0, erase_old = 0;
+	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0, dangling_aliases = 0, rehash = 0, move_old = 0, erase_old = 0, enable_forward=0, enable_utf8mb4=0;
 	int show_help = 0;
 	int do_nothing = 1;
 	int is_header = 0;
@@ -114,6 +156,8 @@ int main(int argc, char *argv[])
 		{ "trash", 1, 0, 0 },
 		{ "inbox", 1, 0, 0 },
 		{ "upgrade", 0, 0, 0 },
+		{ "enable-forward-control",0, 0, 0},
+		{ "upgrade-utf8mb4",0, 0, 0},
 		{ 0, 0, 0, 0 }
 	};
 	int opt_index = 0;
@@ -157,7 +201,10 @@ int main(int argc, char *argv[])
 			if (strcmp(long_options[opt_index].name,"inbox")==0) {
 				mbinbox_name = optarg;
 			}
-			
+			if (strcmp(long_options[opt_index].name,"enable-forward-control")==0)
+				enable_forward=1;
+			if (strcmp(long_options[opt_index].name,"upgrade-utf8mb4")==0)
+				enable_utf8mb4=1;
 			break;
 		case 'a':
 			/* This list should be kept up to date. */
@@ -325,6 +372,8 @@ int main(int argc, char *argv[])
 	if (check_replycache) do_check_replycache(timespec_replycache);
 	if (vacuum_db) do_vacuum_db();
 	if (rehash) do_rehash();
+	if (enable_forward) do_enable_forward();
+	if (enable_utf8mb4) do_upgrade_utf8mb4();
 	if (migrate) do_migrate(migrate_limit);
 	if (check_empty_envelope) do_check_empty_envelope();
 
@@ -453,6 +502,7 @@ static int db_deleted_purge(void)
 	return db_update("DELETE FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
 }
 
+
 static int db_deleted_count(uint64_t * rows)
 {
 	Connection_T c; ResultSet_T r; volatile int t = FALSE;
@@ -474,7 +524,32 @@ static int db_deleted_count(uint64_t * rows)
 	return t;
 }
 
+int do_enable_forward(void){
+	qprintf("\nChanging schema\n");
+	db_update("alter table %saliases add override_fw_sender smallint null default '0' ", DBPFX);
+	qprintf("\nDone\n");
+	return 0;
+}
 
+int do_upgrade_utf8mb4(void){
+	char query[DEF_FRAGSIZE];
+	Connection_T c;
+
+	c = db_con_get();
+	qprintf("\nUpgrade mysq/mariadb schema\n");
+	if (db_params.db_driver = DM_DRIVER_MYSQL){
+		printf("\nConvert Database");
+		snprintf(query, DEF_FRAGSIZE-1,"ALTER DATABASE `%s` CHARACTER SET 'utf8mb4' COLLATE utf8mb4_unicode_ci", db_get_db_name());
+		printf("\nConvert Tables");
+		printf("\n\tquery %s",query);
+		for(int i=0;i<DB_NTABLES;i++){
+			snprintf(query, DEF_FRAGSIZE-1,"ALTER TABLE `%s%s` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; ", DBPFX,DB_TABLENAMES[i]);
+			printf("\n\tquery %s",query);
+			db_update(query);
+		}
+	}
+	db_con_close(c);
+}
 int do_purge_deleted(void)
 {
 	uint64_t deleted_messages;

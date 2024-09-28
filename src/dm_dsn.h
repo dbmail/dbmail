@@ -39,6 +39,13 @@ typedef struct {
 	int detail;
 } delivery_status_t;
 
+//structure of the forward_ext
+typedef struct {
+	char *from;
+	char *to;
+	uint64_t override_fw_sender;
+} DeliveryItem_T;
+
 typedef struct {
 	uint64_t useridnr;		/* Specific user id recipient (from outside). */
 	char *address;	/* Envelope recipient (from outside). */
@@ -46,8 +53,10 @@ typedef struct {
 	mailbox_source source; /* Who specified the mailbox (e.g. trusted or untrusted source)? */
 	GList *userids;	/* List of uint64_t* -- internal useridnr's to deliver to (internal). */
 	GList *forwards;	/* List of char* -- external addresses to forward to (internal). */
+	GList *forwards_ext; /* Extended list of forwards of DeliveryItem_T*/
 	delivery_status_t dsn;	/* Return status of this "delivery basket" (to outside). */
 } Delivery_T;
+
 
 /**
  * \brief Turn a numerical delivery status
@@ -74,6 +83,12 @@ int dsn_tostring(delivery_status_t dsn, const char ** const class,
 void set_dsn(delivery_status_t *dsn,
 		int class, int subject, int detail);
 
+/**
+ * \brief Sets override forward sender flag on the dsn delivery_status_t
+ *        inside of a delivery Delivery_T.
+ * \param delivery is a pointer to a Delivery_T struct.
+ */
+void set_override_fw_sender(Delivery_T *delivery);
 /**
  * \brief Initialize a dsnuser structure and its lists.
  * \param dsnuser Pointer to a dsnuser structure in need of initialization.

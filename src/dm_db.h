@@ -58,6 +58,7 @@
  */
 int db_connect(void);
 
+const char *db_get_db_name(void);
 /*
  * make sure we're running against a current database layout 
  */
@@ -790,6 +791,10 @@ int db_replycache_unregister(const char *to, const char *from, const char *handl
 const char * db_get_sql(sql_fragment frag);
 char * db_returning(const char *s);
 
+/**
+ * get the current sequence of the mailbox
+ */
+uint64_t db_mailbox_seq_get(uint64_t mailbox_id);
 uint64_t db_mailbox_seq_update(uint64_t mailbox_id, uint64_t message_id);
 void db_message_set_seq(uint64_t message_id, uint64_t seq);
 int db_move_message(uint64_t message_id, uint64_t mailbox_id);

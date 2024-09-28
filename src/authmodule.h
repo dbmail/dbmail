@@ -20,8 +20,10 @@ typedef struct {
 	GList * (* get_known_users)(void);
 	GList * (* get_known_aliases)(void);
 	int (* getclientid)(uint64_t user_idnr, uint64_t * client_idnr);
+	int (* get_override_fw_sender)(const char *username_from, const char *username_to, uint64_t * override_fw_sender);
 	int (* getmaxmailsize)(uint64_t user_idnr, uint64_t * maxmail_size);
 	char * (* getencryption)(uint64_t user_idnr);
+	int (* check_user_ext_fw)(const char *username, GList **userids, GList **fwds, int checks);
 	int (* check_user_ext)(const char *username, GList **userids, GList **fwds, int checks);
 	int (* adduser)(const char *username, const char *password, const char *enctype,
 			uint64_t clientid, uint64_t maxmail, uint64_t * user_idnr);
