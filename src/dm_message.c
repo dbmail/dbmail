@@ -226,12 +226,8 @@ static uint64_t blob_insert(const char *buf, const char *hash)
 		s = db_stmt_prepare(c, "INSERT INTO %smimeparts (hash, data, %ssize%s) VALUES (?, ?, ?) %s",
 				DBPFX, db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN), frag);
 		db_stmt_set_str(s, 1, hash);
-		//in some instances if blob is has a size =0 then lzdb converts them into null, and bad thinks happen
-		if (buf && strlen(buf)==0){
-			db_stmt_set_str(s, 2, "");
-		}else{
-			db_stmt_set_blob(s, 2, buf, l);
-		}
+
+		db_stmt_set_blob(s, 2, buf, l);
 		db_stmt_set_int(s, 3, l);
 		if (db_params.db_driver == DM_DRIVER_ORACLE) {
 			db_stmt_exec(s);
@@ -557,6 +553,7 @@ static int store_body(GMimeObject *object, DbmailMessage *m)
 	int r;
 	char *text = g_mime_object_get_body(object);
 	if (! text) return 0;
+	if (strlen(text)==0) return 0;
 	r = store_blob(m, text, 0);
 	g_free(text);
 	return r;
