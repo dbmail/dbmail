@@ -122,7 +122,7 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 	int message_part_hash=config_get_value_default_int("message_part_hash","DBMAIL",0);
 	size_t l;
 	assert(buf);
-	TRACE(TRACE_ERR,"mimeparts hash evaluation message_part_hash = %d value",message_part_hash);
+	TRACE(TRACE_INFO,"mimeparts hash evaluation message_part_hash = %d value size [%d]",message_part_hash,strlen(buf));
 	//no hash
 	if (message_part_hash==2)
 		return id;
@@ -226,7 +226,12 @@ static uint64_t blob_insert(const char *buf, const char *hash)
 		s = db_stmt_prepare(c, "INSERT INTO %smimeparts (hash, data, %ssize%s) VALUES (?, ?, ?) %s",
 				DBPFX, db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN), frag);
 		db_stmt_set_str(s, 1, hash);
-		db_stmt_set_blob(s, 2, buf, l);
+		//in some instances if blob is has a size =0 then lzdb converts them into null, and bad thinks happen
+		if (buf && strlen(buf)==0){
+			db_stmt_set_str(s, 2, "");
+		}else{
+			db_stmt_set_blob(s, 2, buf, l);
+		}
 		db_stmt_set_int(s, 3, l);
 		if (db_params.db_driver == DM_DRIVER_ORACLE) {
 			db_stmt_exec(s);
@@ -2767,10 +2772,10 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 
 				// The forward is an email address.
 				if (pair->override_fw_sender==1){
-					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender=%d)", from_local,to,pair->override_fw_sender);
+					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender="PRIu64")", from_local,to,pair->override_fw_sender);
 					result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
 				}else{
-					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender=%d)", from,to,pair->override_fw_sender);
+					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender="PRIu64")", from,to,pair->override_fw_sender);
 					result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 				}
 			}
