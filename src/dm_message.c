@@ -838,6 +838,8 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 		}
 	}
 
+	TRACE(TRACE_DEBUG, "Init messsage size [%lu] ", buflen);
+
 	self->stream = g_mime_stream_mem_new();
 	g_mime_stream_write(self->stream, str, buflen);
 	g_mime_stream_reset(self->stream);
@@ -854,6 +856,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 			dbmail_message_set_internal_date(self, from);
 	}
 	if (!content) {
+		TRACE(TRACE_DEBUG, "Messsage parse failed, trying to construct part");
 		content = GMIME_OBJECT(g_mime_parser_construct_part(parser, NULL));
 		g_object_unref(parser);
 		if (content) {
@@ -863,8 +866,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 	}
 	if (!content) {
 		/* MIME part is invalid so add a simple text/plain mime header */
-		TRACE(TRACE_INFO, "Fixing message to text/plain [%s] [%ld] offset [%d]",
-			"internal_date",
+		TRACE(TRACE_INFO, "Messsage parse part failed, converting to text/plain [%ld] offset [%d]",
 			self->internal_date,
 			self->internal_date_gmtoff);
 
@@ -890,12 +892,10 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 						dbmail_message_set_internal_date(self, from);
 				}
 		} else {
-			qprintf("Unable to fix message to text/plain [%s] [%ld] offset [%d].\n",
-					"internal_date",
-					self->internal_date,
-					self->internal_date_gmtoff);
-			TRACE(TRACE_ERR, "Unable to fix message to text/plain [%s] [%ld] offset [%d]",
-				"internal_date",
+			qprintf("Unable to convert to text/plain [%ld] offset [%d].\n",
+				self->internal_date,
+				self->internal_date_gmtoff);
+			TRACE(TRACE_ERR, "Unable to convert to text/plain [%ld] offset [%d]",
 				self->internal_date,
 				self->internal_date_gmtoff);
 		}
