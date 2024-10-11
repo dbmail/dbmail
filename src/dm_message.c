@@ -2373,6 +2373,160 @@ static int parse_and_escape(const char *in, char **out)
 
 	return 0;
 }
+
+/* struct to manage cURL upload status */
+struct upload_status {
+  size_t bytes_read;
+};
+
+static char *payload_text;
+
+/* Used by send_smtpmail to upload email to cURL */
+static size_t payload_source(char *ptr, size_t size, size_t nmemb, void *userp)
+{
+  struct upload_status *upload_ctx = (struct upload_status *)userp;
+  const char *data;
+  size_t room = size * nmemb;
+
+  if((size == 0) || (nmemb == 0) || ((size*nmemb) < 1)) {
+    return 0;
+  }
+
+  data = &payload_text[upload_ctx->bytes_read];
+
+  if(data) {
+    size_t len = strlen(data);
+    if(room < len)
+      len = room;
+    memcpy(ptr, data, len);
+    upload_ctx->bytes_read += len;
+
+    return len;
+  }
+
+  return 0;
+}
+
+/* Send SMTP mail via cURL
+ * https://curl.se/libcurl/c/smtp-mail.html */
+int send_smtpmail(DbmailMessage *message,
+		const char *to,
+		const char *from)
+{
+	CURL *curl;
+	CURLcode res = CURLE_OK;
+	struct curl_slist *recipients = NULL;
+	char errbuf[CURL_ERROR_SIZE];
+	struct upload_status upload_ctx = { 0 };
+	Field_T smtp_host;
+	Field_T smtp_user;
+	Field_T smtp_password;
+
+	if (config_get_value("SMTP_HOST", "DBMAIL", smtp_host) < 0){
+		TRACE(TRACE_ERR, "no config value for smtp_host");
+		return -1;
+	}
+	TRACE(TRACE_DEBUG, "Using libcurl for smtp");
+
+	curl = curl_easy_init();
+	if(curl) {
+		res = curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_ERRORBUFFER");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		errbuf[0] = 0;
+		/* This is the URL for your mailserver */
+		res = curl_easy_setopt(curl, CURLOPT_URL, smtp_host);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_URL");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		config_get_value("SMTP_USER", "DBMAIL", smtp_user);
+		if (strlen(smtp_user) > 0 )  {
+			res = curl_easy_setopt(curl, CURLOPT_USERNAME, smtp_user);
+			if(res != CURLE_OK) {
+				TRACE(TRACE_ERR, "Unable to CURLOPT_USERNAME");
+				TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+					res, curl_easy_strerror(res), errbuf);
+			}
+		}
+		config_get_value("SMTP_PASSWORD", "DBMAIL", smtp_password);
+		if (strlen(smtp_password) >0 ) {
+			res = curl_easy_setopt(curl, CURLOPT_PASSWORD, smtp_password);
+			if(res != CURLE_OK) {
+				TRACE(TRACE_ERR, "Unable to CURLOPT_PASSWORD");
+				TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+					res, curl_easy_strerror(res), errbuf);
+			}
+		}
+		res = curl_easy_setopt(curl, CURLOPT_MAIL_FROM, from);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_MAIL_FROM");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		recipients = curl_slist_append(recipients, to);
+		res = curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_MAIL_RCPT");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		payload_text = dbmail_message_to_string(message);
+		res = curl_easy_setopt(curl, CURLOPT_READFUNCTION, payload_source);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_READFUNCTION");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		res = curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_READDATA");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		res = curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_UPLOAD");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+
+		/* Send the message */
+		res = curl_easy_perform(curl);
+
+		/* Check for errors */
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "cURL smtp send failed: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+
+		/* Free the list of recipients */
+		curl_slist_free_all(recipients);
+
+		/* curl does not send the QUIT command until you call cleanup, so you
+		* should be able to reuse this connection for additional messages
+		* (setting CURLOPT_MAIL_FROM and CURLOPT_MAIL_RCPT as required, and
+		* calling curl_easy_perform() again. It may not be a good idea to keep
+		* the connection open for a long time though (more than a few minutes may
+		* result in the server timing out the connection), and you do want to
+		* clean up in the end.
+		*/
+		curl_easy_cleanup(curl);
+		// Free the payload_text after it's been uploaded
+		g_free(payload_text);
+	} else {
+		TRACE(TRACE_ERR, "Unable to init cURL");
+		return false;
+	}
+
+	return (int)res;
+
+}
+
 /* Sends a message. */
 int send_mail(DbmailMessage *message,
 		const char *to, const char *from,
@@ -2384,6 +2538,7 @@ int send_mail(DbmailMessage *message,
 	char *escaped_from = NULL;
 	char *sendmail_command = NULL;
 	Field_T sendmail, postmaster;
+	Field_T smtp_host;
 	int result;
 	char *buf;
 
@@ -2397,6 +2552,22 @@ int send_mail(DbmailMessage *message,
 			from = DEFAULT_POSTMASTER;
 	}
 
+	if (config_get_value("SMTP_HOST", "DBMAIL", smtp_host) == 0){
+		TRACE(TRACE_DEBUG, "Sending mail via cURL, smtp_host [%s]", smtp_host);
+		if (parse_and_escape(to, &escaped_to) < 0) {
+			TRACE(TRACE_NOTICE, "could not prepare 'to' address.");
+			return 1;
+		}
+		if (parse_and_escape(from, &escaped_from) < 0) {
+			g_free(escaped_to);
+			TRACE(TRACE_NOTICE, "could not prepare 'from' address.");
+			return 1;
+		}
+		result = send_smtpmail(message, escaped_to, escaped_from);
+		g_free(escaped_to);
+		g_free(escaped_from);
+		return result;
+	}
 	if (config_get_value("SENDMAIL", "DBMAIL", sendmail) < 0) {
 		TRACE(TRACE_ERR, "error getting value for SENDMAIL in DBMAIL section of dbmail.conf.");
 		return -1;
@@ -2480,7 +2651,7 @@ int send_mail(DbmailMessage *message,
 	if (!sendmail_external)
 		g_free(sendmail_command);
 	return 0;
-} 
+}
 
 static int valid_sender(const char *addr) 
 {
@@ -2716,8 +2887,6 @@ static int execute_auto_ran(DbmailMessage *message, uint64_t useridnr)
 
 	return 0;
 }
-
-
 
 int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 {

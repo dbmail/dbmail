@@ -5548,6 +5548,30 @@ printf "%s\n" "#define USEJEMALLOC 1" >>confdefs.h
 	fi
 
 
+	       for ac_header in curl/curl.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "curl/curl.h" "ac_cv_header_curl_curl_h" "$ac_includes_default"
+if test "x$ac_cv_header_curl_curl_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_CURL_CURL_H 1" >>confdefs.h
+ CURLLIB=`pkg-config --libs libcurl 2>/dev/null`
+else case e in #(
+  e) CURLLIB="failed" ;;
+esac
+fi
+
+done
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking libcurl headers" >&5
+printf %s "checking libcurl headers... " >&6; }
+	if test  "x$CURLLIB" = "xfailed" ; then
+		as_fn_error $? "Could not find libcurl library." "$LINENO" 5
+	else
+		LDFLAGS="$LDFLAGS $CURLLIB"
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $CURLLIB" >&5
+printf "%s\n" "$CURLLIB" >&6; }
+	fi
+
+
 # Check whether --with-check was given.
 if test ${with_check+y}
 then :
