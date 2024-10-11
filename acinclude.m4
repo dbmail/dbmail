@@ -562,6 +562,19 @@ AC_DEFUN([CMU_SOCKETS], [
 	AC_SUBST(SOCKETLIB)
 ])
 
+# Test for and get libcurl flags
+AC_DEFUN([DM_CHECK_LIBCURL], [
+	AC_CHECK_HEADERS([curl/curl.h],
+	 [CURLLIB=`pkg-config --libs libcurl 2>/dev/null`],[CURLLIB="failed"])
+	AC_MSG_CHECKING([libcurl headers])
+	if test [ "x$CURLLIB" = "xfailed" ]; then
+		AC_MSG_ERROR([Could not find libcurl library.])
+	else
+		LDFLAGS="$LDFLAGS $CURLLIB"
+		AC_MSG_RESULT([$CURLLIB])
+	fi
+])
+
 AC_DEFUN([DM_SET_SQLITECREATE], [dnl
 	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/create_tables.sqlite`
 ])

@@ -147,6 +147,9 @@ int send_mail(DbmailMessage *message,
 		const char *preoutput,
 		enum sendwhat sendwhat, char *sendmail_external);
 
+/* Send SMTP mail via cURL */
+int send_smtpmail(DbmailMessage *message, const char *to, const char *from);
+
 int send_forward_list(DbmailMessage *message, GList *targets, const char *from);
 
 

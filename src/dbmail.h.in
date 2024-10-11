@@ -87,6 +87,8 @@
 #include <termios.h>
 #include <unistd.h>
 #include <mhash.h>
+#include <curl/curl.h>
+
 /*
  * check if queue.h can be included
  * in some systems the file cannot be found
