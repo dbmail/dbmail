@@ -3476,6 +3476,9 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	volatile int seen = 0, count = 0;
 	INIT_QUERY;
 
+	if (! msginfo)
+		return count;
+
 	memset(query,0,DEF_QUERYSIZE);
 	/*
 	* gather the curent seq of the mailbox in keeps it in sync with the message sequence 
