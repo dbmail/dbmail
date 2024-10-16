@@ -292,7 +292,27 @@ void SetTraceLevel(const char *service_name)
 	config_get_value("syslog_logging_levels", service_name, syslog_logging_levels);
 	config_get_value("file_logging_levels", service_name, file_logging_levels);
 
-	if (strlen(syslog_logging_levels)) {
+	if (strcmp(syslog_logging_levels, "database") == 0) {
+		trace_syslog_int = 511;
+	} else if (strcmp(syslog_logging_levels, "debug") == 0) {
+		trace_syslog_int = 255;
+	} else if (strcmp(syslog_logging_levels, "info") == 0) {
+		trace_syslog_int = 127;
+	} else if (strcmp(syslog_logging_levels, "notice") == 0) {
+		trace_syslog_int = 63;
+	} else if (strcmp(syslog_logging_levels, "warning") == 0) {
+		trace_syslog_int = 31;
+	} else if (strcmp(syslog_logging_levels, "error") == 0) {
+		trace_syslog_int = 15;
+	} else if (strcmp(syslog_logging_levels, "critical") == 0) {
+		trace_syslog_int = 7;
+	} else if (strcmp(syslog_logging_levels, "alert") == 0) {
+		trace_syslog_int = 3;
+	} else if (strcmp(syslog_logging_levels, "emergency") == 0) {
+		trace_syslog_int = 1;
+	} else if (strcmp(syslog_logging_levels, "nothing") == 0) {
+		trace_syslog_int = 0;
+	} else if (strlen(syslog_logging_levels)) {
 		trace_syslog_int = atoi(syslog_logging_levels);
 	} else {
 		config_get_value("trace_syslog", service_name, trace_syslog);
@@ -328,7 +348,27 @@ void SetTraceLevel(const char *service_name)
 		}
 	}
 
-	if (strlen(file_logging_levels)) {
+	if (strcmp(file_logging_levels, "database") == 0) {
+		trace_stderr_int = 511;
+	} else if (strcmp(file_logging_levels, "debug") == 0) {
+		trace_stderr_int = 255;
+	} else if (strcmp(file_logging_levels, "info") == 0) {
+		trace_stderr_int = 127;
+	} else if (strcmp(file_logging_levels, "notice") == 0) {
+		trace_stderr_int = 63;
+	} else if (strcmp(file_logging_levels, "warning") == 0) {
+		trace_stderr_int = 31;
+	} else if (strcmp(file_logging_levels, "error") == 0) {
+		trace_stderr_int = 15;
+	} else if (strcmp(file_logging_levels, "critical") == 0) {
+		trace_stderr_int = 7;
+	} else if (strcmp(file_logging_levels, "alert") == 0) {
+		trace_stderr_int = 3;
+	} else if (strcmp(file_logging_levels, "emergency") == 0) {
+		trace_stderr_int = 1;
+	} else if (strcmp(file_logging_levels, "nothing") == 0) {
+		trace_stderr_int = 0;
+	} else if (strlen(file_logging_levels)) {
 		trace_stderr_int = atoi(file_logging_levels);
 	} else {
 		config_get_value("trace_stderr", service_name, trace_stderr);
