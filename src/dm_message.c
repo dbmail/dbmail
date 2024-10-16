@@ -2428,6 +2428,8 @@ int send_smtpmail(DbmailMessage *message,
 	}
 	TRACE(TRACE_DEBUG, "Using libcurl for smtp");
 
+	// This must be the synchronous libcurl easy interface
+	// to ensure atomic delivery or non delivery.
 	curl = curl_easy_init();
 	if(curl) {
 		res = curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
