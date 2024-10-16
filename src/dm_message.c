@@ -122,7 +122,7 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 	int message_part_hash=config_get_value_default_int("message_part_hash","DBMAIL",0);
 	size_t l;
 	assert(buf);
-	TRACE(TRACE_INFO,"mimeparts hash evaluation message_part_hash = %d value size [%d]",message_part_hash,strlen(buf));
+	TRACE(TRACE_INFO,"mimeparts hash evaluation message_part_hash = %d value size [%lu]",message_part_hash,strlen(buf));
 	//no hash
 	if (message_part_hash==2)
 		return id;
@@ -215,7 +215,7 @@ static uint64_t blob_insert(const char *buf, const char *hash)
 	volatile uint64_t id = 0;
 	char *frag = db_returning("id");
 
-	TRACE(TRACE_DEBUG, "final blob store size [%d] hash %s", strlen(buf),hash);
+	TRACE(TRACE_DEBUG, "final blob store size [%lu] hash %s", strlen(buf),hash);
 
 	assert(buf);
 	l = strlen(buf);
@@ -304,7 +304,7 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 {
 	uint64_t id;
 	if (! buf) return 0;
-	TRACE(TRACE_DEBUG, "blob store size [%d]", strlen(buf));
+	TRACE(TRACE_DEBUG, "blob store size [%lu]", strlen(buf));
 	if (is_header) {
 		m->part_key++;
 		m->part_order=0;
@@ -2942,10 +2942,10 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 
 				// The forward is an email address.
 				if (pair->override_fw_sender==1){
-					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender="PRIu64")", from_local,to,pair->override_fw_sender);
+					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender=[%lu])", from_local,to,pair->override_fw_sender);
 					result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
 				}else{
-					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender="PRIu64")", from,to,pair->override_fw_sender);
+					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender=[%lu])", from,to,pair->override_fw_sender);
 					result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 				}
 			}

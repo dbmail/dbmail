@@ -342,7 +342,7 @@ int auth_check_user_ext_fw(const char *username, GList **userids, GList **fwds, 
 		item->to=g_strdup(pair->to);
 		int occurences_temp=auth_get_override_fw_sender(item->from, item->to, &item->override_fw_sender);
 
-		TRACE(TRACE_DEBUG, "[FW] adding from [%s] to [%s] using original message from [%d]", item->from, item->to, item->override_fw_sender);
+		TRACE(TRACE_DEBUG, "[FW] adding from [%s] to [%s] using original message from [%lu]", item->from, item->to, item->override_fw_sender);
 
 		occurences_temp = auth_check_user_ext_fw(pair->to, userids, fwds, checks+1);
 		if (occurences_temp==0){
