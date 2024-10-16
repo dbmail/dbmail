@@ -818,6 +818,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 #define FROMLINE 80
 	char from[FROMLINE];
 	size_t buflen = strlen(str);
+	Field_T allow_invalid_messages = "no";
 
 	assert(self->content == NULL);
 
@@ -864,7 +865,8 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 			self->content = content;
 		}
 	}
-	if (!content) {
+	config_get_value("allow_invalid_messages", "DBMAIL", allow_invalid_messages);
+	if (!content && strcmp(allow_invalid_messages, "yes") == 0) {
 		/* MIME part is invalid so add a simple text/plain mime header */
 		TRACE(TRACE_INFO, "Messsage parse part failed, converting to text/plain [%ld] offset [%d]",
 			self->internal_date,
