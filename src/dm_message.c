@@ -399,7 +399,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	GMimeContentType *mimetype = NULL;
 	volatile int prevdepth, depth = 0, row = 0;
 	volatile int t = FALSE;
-	volatile gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
+	volatile gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header;
 	volatile gboolean prev_is_message = FALSE, is_message = FALSE;
 	volatile String_T m = NULL, n = NULL;
 	const void *blob;
@@ -484,7 +484,6 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				p_string_append_printf(m, "\n--%s--\n", blist[prevdepth-1]);
 				memset(blist[prevdepth-1], 0, MAX_MIME_BLEN);
 				prevdepth--;
-				finalized=TRUE;
 			}
 
 			if ((depth > 0) && (blist[depth-1][0]))
@@ -2324,7 +2323,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	}
 
 	// Ok, we have the ACL right, time to deliver the message.
-	switch (db_copymsg(message->msg_idnr, mboxidnr, useridnr, &newmsgidnr, TRUE)) {
+	switch (db_copymsg(message->msg_idnr, mboxidnr, useridnr, &newmsgidnr)) {
 	case -2:
 		TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "],"
 				"maxmail exceeded", useridnr);

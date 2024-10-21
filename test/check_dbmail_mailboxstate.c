@@ -62,7 +62,7 @@ static void insert_message(void)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message,multipart_message);
 	dbmail_message_store(message);
-	db_copymsg(message->msg_idnr, testboxid, testuserid, &newmsgidnr, TRUE);
+	db_copymsg(message->msg_idnr, testboxid, testuserid, &newmsgidnr);
 }
 
 void setup(void)

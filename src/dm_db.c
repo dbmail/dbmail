@@ -3140,7 +3140,7 @@ static uint64_t message_get_size(uint64_t message_idnr)
 }
 
 int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
-	       uint64_t * newmsg_idnr, gboolean recent)
+	       uint64_t * newmsg_idnr)
 {
 	Connection_T c; ResultSet_T r;
 	PreparedStatement_T s;
@@ -4703,7 +4703,7 @@ int db_rehash_store(void)
 }
 
 int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr,
-		const char* internal_date, uint64_t * msg_idnr, gboolean recent)
+		const char* internal_date, uint64_t * msg_idnr)
 {
 	DbmailMessage *message;
 	int result;
@@ -4719,7 +4719,7 @@ int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr
 		return DM_EQUERY;
 	}
 
-	result = db_copymsg(message->msg_idnr, mailbox_idnr, user_idnr, msg_idnr, recent);
+	result = db_copymsg(message->msg_idnr, mailbox_idnr, user_idnr, msg_idnr);
 	db_delete_message(message->msg_idnr);
 	dbmail_message_free(message);
 
