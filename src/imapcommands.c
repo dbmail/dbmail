@@ -1599,7 +1599,7 @@ void _ic_append_enter(dm_thread_data *D)
 	MailboxState_T M;
 	SESSION_GET;
 	const char *message;
-	gboolean recent = TRUE;
+	// gboolean recent = TRUE;
 	MessageInfo *info;
 
 	memset(flaglist,0,sizeof(flaglist));
@@ -1700,13 +1700,9 @@ void _ic_append_enter(dm_thread_data *D)
 				self, internal_date, p_string_str(self->args[i]));
 	}
 
-	if (self->state == CLIENTSTATE_SELECTED && self->mailbox->id == mboxid) {
-		recent = FALSE;
-	}
-	
 	message = p_string_str(self->args[i]);
 
-	D->status = db_append_msg(message, mboxid, self->userid, internal_date, &message_id, recent);
+	D->status = db_append_msg(message, mboxid, self->userid, internal_date, &message_id);
 
 	switch (D->status) {
 	case -1:
@@ -2461,7 +2457,7 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 		//dbmail_imap_session_buff_printf(self, "%s NO security issue, trying to copy message that are not in this mailbox\r\n",self->tag);
 		return FALSE;
 	}
-	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid, TRUE);
+	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid);
 	db_message_set_seq(*id, cmd->seq);
 	if (result == -1) {
 		/* uid not found, according to RFC 3501 section 6.4.8, should continue  */
