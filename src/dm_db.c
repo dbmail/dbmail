@@ -4538,7 +4538,6 @@ uint64_t db_mailbox_seq_get(uint64_t mailbox_id)
 	TRY
 		st1 = db_stmt_prepare(c, "SELECT seq FROM %smailboxes WHERE mailbox_idnr = ?", DBPFX);
 		db_stmt_set_u64(st1, 1, mailbox_id);
-		db_stmt_exec(st1);
 		r = db_stmt_query(st1);
 		if (db_result_next(r))
 			seq = db_result_get_u64(r, 0);
