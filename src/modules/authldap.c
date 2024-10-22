@@ -773,7 +773,7 @@ int auth_get_override_fw_sender(const char *username_from,const char *username_t
 	assert(override_fw_sender != NULL);
 	//on LDAP is always 0, this feature is not implemented
 	*override_fw_sender = 0;
-	TRACE(TRACE_DEBUG, "found override_fw_sender [%" PRIu64 "]", *override_fw_sender);
+	TRACE(TRACE_DEBUG, "override_fw_sender not implemented [%" PRIu64 "] from [%s] to [%s]", *override_fw_sender, username_from, username_to);
 	return TRUE;
 }
 
