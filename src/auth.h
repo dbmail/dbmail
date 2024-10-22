@@ -167,6 +167,12 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
  *     - -1 on error
  *     -  1 on success
  */
+
+/**
+ * \brief Return extended user information, in fwds you can find extended information about delivered to/extend
+ */
+int auth_check_user_ext_fw(const char *username, GList **userids, GList **fwds, int checks);
+
 int auth_adduser(const char *username, const char *password, const char *enctype,
 		 uint64_t clientid, uint64_t maxmail, uint64_t * user_idnr);
 /**
