@@ -3469,6 +3469,9 @@ static long long int db_set_msgkeywords(Connection_T c, uint64_t msg_idnr, GList
 	return count;
 }
 
+/*
+ * Set message flags filtered by sequence if provided
+ */
 int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_type, uint64_t seq, MessageInfo *msginfo)
 {
 	Connection_T c;
@@ -3480,19 +3483,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		return count;
 
 	memset(query,0,DEF_QUERYSIZE);
-	/*
-	* gather the curent seq of the mailbox in keeps it in sync with the message sequence 
-	*/
-	if (!seq){
-		TRACE(TRACE_DEBUG,"seq not available, computing");
-		seq=db_mailbox_seq_get(msginfo->mailbox_id);
-		TRACE(TRACE_DEBUG,"seq for mailbox_id [%" PRIu64 "] computed as seq[%" PRIu64 "]",msginfo->mailbox_id, seq );
-	}
-	if (!seq){
-		pos += snprintf(query, DEF_QUERYSIZE-1, "UPDATE %smessages SET ", DBPFX);
-	}else{
-		pos += snprintf(query, DEF_QUERYSIZE-1, "UPDATE %smessages SET seq=%" PRIu64 ", ", DBPFX, seq);
-	}
+	pos += snprintf(query, DEF_QUERYSIZE-1, "UPDATE %smessages SET ", DBPFX);
 
 	for (i = 0; flags && i < IMAP_NFLAGS; i++) {
 		if (flags[i]){
@@ -3528,7 +3519,6 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		}
 	}
 
-	/*
 	if (seq) {
 		snprintf(query + pos, DEF_QUERYSIZE - pos - 1,
 				" WHERE message_idnr = %" PRIu64 " AND status < %d AND seq <= %" PRIu64,
@@ -3538,7 +3528,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 		snprintf(query + pos, DEF_QUERYSIZE - pos - 1,
 				" WHERE message_idnr = %" PRIu64 " AND status < %d",
 				msg_idnr, MESSAGE_STATUS_DELETE);
-	}*/
+	}
 	snprintf(query + pos, DEF_QUERYSIZE - pos - 1,
 					" WHERE message_idnr = %" PRIu64 " AND status < %d",
 					msg_idnr, MESSAGE_STATUS_DELETE);
@@ -4525,28 +4515,6 @@ int db_user_log_login(uint64_t user_idnr)
 	TimeString_T timestring;
 	create_current_timestring(&timestring);
 	return db_update("UPDATE %susers SET last_login = '%s' WHERE user_idnr = %" PRIu64 "",DBPFX, timestring, user_idnr);
-}
-/**
- * get the sequence number of the specified mailbox
- * @todo on some cases this code is repeated, should be changed with this method
- */
-uint64_t db_mailbox_seq_get(uint64_t mailbox_id)
-{
-	Connection_T c; ResultSet_T r; PreparedStatement_T st1;
-	uint64_t seq=0;
-	c = db_con_get();
-	TRY
-		st1 = db_stmt_prepare(c, "SELECT seq FROM %smailboxes WHERE mailbox_idnr = ?", DBPFX);
-		db_stmt_set_u64(st1, 1, mailbox_id);
-		r = db_stmt_query(st1);
-		if (db_result_next(r))
-			seq = db_result_get_u64(r, 0);
-	CATCH(SQLException)
-			LOG_SQLERROR;
-	FINALLY
-		db_con_close(c);
-	END_TRY;
-	return seq;
 }
 uint64_t db_mailbox_seq_update(uint64_t mailbox_id, uint64_t message_id)
 {
