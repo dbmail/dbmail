@@ -984,9 +984,6 @@ const gchar * dbmail_message_get_header(const DbmailMessage *self, const char *h
 	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
 
-const gchar* dbmail_message_get_headers(const DbmailMessage *self){
-	return g_mime_object_get_headers(GMIME_OBJECT(self->content),NULL);
-}
 struct payload {
 	const DbmailMessage *message;
 	const char *header;
