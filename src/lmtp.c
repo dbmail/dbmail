@@ -500,8 +500,8 @@ int lmtp(ClientSession_T * session)
 		msg = dbmail_message_new(NULL);
 		dbmail_message_init_with_string(msg, p_string_str(session->rbuff));
 		if (p_list_data(session->from))
-			dbmail_message_set_header(msg, "Return-Path", (char *)p_string_str(p_list_data(session->from)));
-		//todo: add date in case the message does not have one.
+			dbmail_message_set_header(msg, "Return-Path",
+				(char *)p_string_str(p_list_data(session->from)));
 
 		p_string_truncate(session->rbuff,0);
 

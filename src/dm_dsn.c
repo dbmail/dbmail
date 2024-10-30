@@ -190,9 +190,6 @@ int dsnuser_init(Delivery_T * dsnuser)
 
 	dsnuser->userids = NULL;
 	dsnuser->forwards = NULL;
-	//the structure of the forwards, internall it stores a structure of DeliveryItem_T
-	//the structure is from,to, override_fw_sender
-	dsnuser->forwards_ext = NULL;
 
 	TRACE(TRACE_DEBUG, "dsnuser initialized");
 	return 0;
@@ -226,15 +223,7 @@ void dsnuser_free(Delivery_T * dsnuser)
 		g_list_destroy(dsnuser->forwards);
 		dsnuser->forwards = NULL;
 	}
-	if (dsnuser->forwards_ext) {
-		dsnuser->forwards_ext = g_list_first(dsnuser->forwards_ext);
-		while(dsnuser->forwards_ext) {
-			g_free(dsnuser->forwards_ext->data);
-			dsnuser->forwards_ext = g_list_next(dsnuser->forwards_ext);
-		}
-		g_list_destroy(dsnuser->forwards_ext);
-		dsnuser->forwards_ext = NULL;
-	}
+
 	if (dsnuser->address) {
 		g_free(dsnuser->address);
 		dsnuser->address = NULL;
@@ -262,10 +251,8 @@ static int address_has_alias(Delivery_T *delivery)
 	if (!delivery->address)
 		return 0;
 	TRACE(TRACE_DEBUG, "address_has_alias [%s]", delivery->address);
-	alias_count = auth_check_user_ext_fw(delivery->address, &delivery->userids, &delivery->forwards_ext, 0);
-	TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases(ext)", delivery->address, alias_count);
-	//alias_count = auth_check_user_ext(delivery->address, &delivery->userids, &delivery->forwards, 0);
-	//TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases", delivery->address, alias_count);
+	alias_count = auth_check_user_ext(delivery->address, &delivery->userids, &delivery->forwards, 0);
+	TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases", delivery->address, alias_count);
 
 	if (alias_count > 0)
 		return 1;
@@ -291,8 +278,7 @@ static int address_has_alias_mailbox(Delivery_T *delivery)
 			&newaddress_len, &zapped_len) != 0)
 		return 0;
 
-	//alias_count = auth_check_user_ext(newaddress, &delivery->userids, &delivery->forwards, 0);
-	alias_count = auth_check_user_ext_fw(newaddress, &delivery->userids, &delivery->forwards_ext, 0);
+	alias_count = auth_check_user_ext(newaddress, &delivery->userids, &delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases", newaddress, alias_count);
 
 	g_free(newaddress);
@@ -378,8 +364,7 @@ static int address_is_domain_catchall(Delivery_T *delivery)
 		TRACE(TRACE_DEBUG, "domain [%s] checking for domain forwards", my_domain);
         
 		/* Checking for domain aliases */
-		//domain_count = auth_check_user_ext(my_domain, &delivery->userids, &delivery->forwards, 0);
-		domain_count = auth_check_user_ext_fw(my_domain, &delivery->userids, &delivery->forwards_ext, 0);
+		domain_count = auth_check_user_ext(my_domain, &delivery->userids, &delivery->forwards, 0);
 		if (domain_count > 0) {
 			/* This is the way to succeed out. */
 			break;
@@ -444,8 +429,7 @@ static int address_is_userpart_catchall(Delivery_T *delivery)
 	TRACE(TRACE_DEBUG, "userpart [%s] checking for userpart forwards", userpart);
 
 	/* Checking for userpart aliases */
-	//userpart_count = auth_check_user_ext(userpart, &delivery->userids, &delivery->forwards, 0);
-	userpart_count = auth_check_user_ext_fw(userpart, &delivery->userids, &delivery->forwards_ext, 0);
+	userpart_count = auth_check_user_ext(userpart, &delivery->userids, &delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "userpart [%s] found total of [%d] aliases", userpart, userpart_count);
 
 	g_free(userpart);
