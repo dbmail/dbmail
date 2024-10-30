@@ -303,8 +303,11 @@ static uint64_t blob_store(const char *buf)
 static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 {
 	uint64_t id;
+
 	if (! buf) return 0;
+
 	TRACE(TRACE_DEBUG, "blob store size [%lu]", strlen(buf));
+
 	if (is_header) {
 		m->part_key++;
 		m->part_order=0;
@@ -2902,12 +2905,9 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 			from = DEFAULT_POSTMASTER;
 	}
 	targets = g_list_first(targets);
-	TRACE(TRACE_INFO, "SENDING delivering to [%u] external addresses", g_list_length(targets));
+	TRACE(TRACE_INFO, "delivering to [%u] external addresses", g_list_length(targets));
 	while (targets) {
-		//char *to = (char *)targets->data;
-		DeliveryItem_T *pair = (DeliveryItem_T *)targets->data;
-		char *to=pair->to;
-		char *from_local=pair->from; //local from, it will be used if override_fw_sender=1
+		char *to = (char *)targets->data;
 
 		if (!to || strlen(to) < 1) {
 			TRACE(TRACE_ERR, "forwarding address is zero length, message not forwarded.");
@@ -2935,15 +2935,8 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 				// The forward is a command to execute.
 				result |= send_mail(message, "", "", NULL, SENDRAW, to+1);
 			} else {
-
 				// The forward is an email address.
-				if (pair->override_fw_sender==1){
-					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender=[%lu])", from_local,to,pair->override_fw_sender);
-					result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
-				}else{
-					TRACE(TRACE_DEBUG, "[SENDING] message from %s to %s (override_fw_sender=[%lu])", from,to,pair->override_fw_sender);
-					result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
-				}
+				result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 			}
 		}
 		if (! g_list_next(targets))
@@ -3099,16 +3092,14 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 			break;
 		}
 
-		TRACE(TRACE_DEBUG, "deliver [%u] messages to external addresses", g_list_length(delivery->forwards_ext));
+		TRACE(TRACE_DEBUG, "deliver [%u] messages to external addresses", g_list_length(delivery->forwards));
 
 		/* Each user may also have a list of external forwarding addresses. */
-		//if (g_list_length(delivery->forwards) > 0) {
-		if (g_list_length(delivery->forwards_ext) > 0) {
-
+		if (g_list_length(delivery->forwards) > 0) {
 			TRACE(TRACE_DEBUG, "delivering to external addresses");
-			const char *from = g_strdup(dbmail_message_get_header(message, "Return-Path"));
+			const char *from = dbmail_message_get_header(message, "Return-Path");
 			/* Forward using the temporary stored message. */
-			if (send_forward_list(message, delivery->forwards_ext, from)) {
+			if (send_forward_list(message, delivery->forwards, from)) {
 				/* If forward fails, tell the sender that we're
 				 * having a transient error. They'll resend. */
 				TRACE(TRACE_NOTICE, "forwaring failed, reporting transient error.");
@@ -3122,7 +3113,6 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 		if (! p_list_next(dsnusers))
 			break;
 		dsnusers = p_list_next(dsnusers);
-
 	}
 
 	/* Always delete the temporary message, even if the delivery failed.

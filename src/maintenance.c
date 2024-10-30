@@ -490,7 +490,6 @@ static int db_deleted_purge(void)
 	return db_update("DELETE FROM %smessages WHERE status=%d", DBPFX, MESSAGE_STATUS_PURGE);
 }
 
-
 static int db_deleted_count(uint64_t * rows)
 {
 	Connection_T c; ResultSet_T r; volatile int t = FALSE;

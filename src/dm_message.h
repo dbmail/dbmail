@@ -87,7 +87,6 @@ size_t dbmail_message_get_size(const DbmailMessage *self, gboolean crlf);
 GList * dbmail_message_get_header_addresses(DbmailMessage *message, const char *field);
 
 
-
 /*
  * manipulate the actual message content
  */
