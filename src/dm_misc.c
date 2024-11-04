@@ -1923,7 +1923,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 	i = internet_address_list_length(ialist);
 	for (j=0; j<i; j++) {
 		ia = internet_address_list_get_address(ialist,j);
-		
+
 		g_return_val_if_fail(ia!=NULL, list);
 
 		if (internet_address_group_get_members((InternetAddressGroup *)ia)) {
@@ -1966,18 +1966,12 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 			TRACE(TRACE_DEBUG, "handling a standard address [%s] [%s].", name, addr);
 
 			/* personal name */
-			if (name) {
-				char * encname = g_mime_utils_header_encode_phrase(NULL, name, NULL);
-				g_strdelimit(encname,"\"\\",' ');
-				g_strstrip(encname);
-				s = dbmail_imap_astring_as_string(encname);
-				t = g_list_append_printf(t, "%s", s);
-				g_free(encname);
-				g_free(s);
+			if (name && strlen(name) > 0) {
+				t = g_list_append_printf(t, "\"%s\"", name);
 			} else {
 				t = g_list_append_printf(t, "NIL");
 			}
-                        
+
 			/* source route */
 			t = g_list_append_printf(t, "NIL");
                         
@@ -2083,20 +2077,14 @@ static GList * envelope_address_part(GList *list, GMimeMessage *message, const c
 	const char *result;
 	char *t;
 	InternetAddressList *alist;
-	char *result_enc;
-	const char *charset;
-	
-	charset = message_get_charset(message);
 
 	result = g_mime_object_get_header(GMIME_OBJECT(message),header);
-	
+
 	if (result) {
-		result_enc = dbmail_iconv_str_to_utf8(result, charset);
-		t = imap_cleanup_address(result_enc);
-		g_free(result_enc);
+		t = imap_cleanup_address(result);
 		alist = internet_address_list_parse(NULL, t);
-		g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, alist);
+		g_free(t);
 		g_object_unref(alist);
 		alist = NULL;
 	} else {
@@ -2166,19 +2154,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	result = g_mime_object_get_header(GMIME_OBJECT(message),"Subject");
 
 	if (result) {
-		const char *charset = message_get_charset(message);
-		char * subj = dbmail_iconv_str_to_utf8(result, charset);
-		TRACE(TRACE_DEBUG, "[%s] [%s] -> [%s]", charset, result, subj);
-		if (g_mime_utils_text_is_8bit((unsigned char *)subj, strlen(subj))) {
-			s = g_mime_utils_header_encode_text(NULL, (const char *)subj, NULL);
-			TRACE(TRACE_DEBUG, "[%s] -> [%s]", subj, s);
-			g_free(subj);
-			subj = s;
-		}
-		t = dbmail_imap_astring_as_string(subj);
-		TRACE(TRACE_DEBUG, "[%s] -> [%s]", subj, t);
-		g_free(subj);
-		list = g_list_append_printf(list,"%s", t);
+		list = g_list_append_printf(list,"\"%s\"", result);
 		g_free(t);
 	} else {
 		list = g_list_append_printf(list,"NIL");
@@ -2212,7 +2188,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	/* message-id */
 	result = g_mime_message_get_message_id(message);
 	if (result && (! g_strrstr(result,"=")) && (! g_strrstr(result,"@(none)"))) {
-                t = g_strdup_printf("<%s>", result);
+		t = g_strdup_printf("<%s>", result);
 		s = dbmail_imap_astring_as_string(t);
 		list = g_list_append_printf(list,"%s", s);
 		g_free(s);
