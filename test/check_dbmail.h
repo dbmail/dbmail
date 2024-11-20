@@ -62,7 +62,7 @@ char *simple_groups = "From user@domain  Fri Feb 22 17:06:23 2008\n"
 	"body\n"
 	"\n";
 
-char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n" 
+char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n"
 	"Content-Type: text/plain; charset=\"us-ascii\"\n"
 	"MIME-Version: 1.0\n"
 	"Content-Transfer-Encoding: 7bit\n"
@@ -1276,20 +1276,20 @@ char * broken_message3 = "Message-ID: <002001ca32fe$dc7668b0$9600000a@ricardo>\n
 	"MIME-Version: 1.0\n\n"
 	"\ntest\n";
 	
-char * broken_message4 = "Return-Path: Alan Hicks <ahicks@p-o.co.uk>\n"
+char * broken_message4 = "Return-Path: Bombeiros Vol. Mortágua\n"
 	"Received: from alan by p-o.co.uk\n"
 	"	with local (Exim 4.95 (FreeBSD))	(envelope-from <alan@p-o.co.uk>)\n"
 	"	id 1no8eq-000Ie5-02	for alan@p-o.co.uk;	Tue, 31 May 202225 20:03:00 +0100\n"
-	"From: Alan Hicks <ahicks@p-o.co.uk>\n"
-	"To: ahicks@p-o.co.uk\n"
+	"From: =?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\n"
+	"To: Foo Bar <foo@bar.pt>\n"
 	"Subject: Broken test message 4 with invalid date\n"
 	"Message-Id: <broken-test-04@p-o.co.uk>\n"
 	"Date: Fri, 3 Jun 202225 20:03:00 +0100\n\n"
 	"Test line 1\n"
 	"Test line 2\n";
 
-char * broken_message5 = "From Alan Hicks <ahicks@p-o.co.uk>\n"
-	"From: Alan Hicks <ahicks@p-o.co.uk>\n"
+char * broken_message5 = "From Bombeiros Vol. Mortágua\n"
+	"From: =?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\n"
 	"To: ahicks@p-o.co.uk\n"
 	"Subject: Broken test message 5 without body\n"
 	"Message-Id: <broken-test-05@p-o.co.uk>\n"
