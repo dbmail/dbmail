@@ -69,13 +69,18 @@ static void insert_message(void)
 
 void setup(void)
 {
+	int result;
 	config_get_file();
 	config_read(configFile);
 	configure_debug(NULL,255,0);
 	GetDBParams();
 	db_connect();
 	auth_connect();
-	testboxid = get_mailbox_id("testuser1", TESTBOX);
+	result = do_add("mailboxstate1","secretmailboxstate","md5-hash",1024,0,NULL,NULL);
+	ck_assert_uint_ne (result, 0);
+	result = do_add("mailboxstate2","secretmailboxstate","md5-hash",0,0,NULL,NULL);
+	ck_assert_uint_ne (result, 0);
+	testboxid = get_mailbox_id("mailboxstate1", TESTBOX);
 }
 
 void teardown(void)
@@ -95,8 +100,7 @@ END_TEST
 START_TEST(test_metadata)
 {
 	// Test user who goes over quota
-	testuserid = 4;
-	testboxid = get_mailbox_id("testuser1", "metadata");
+	testboxid = get_mailbox_id("mailboxstate1", "metadata1");
 	MailboxState_T M = MailboxState_new(NULL, testboxid);
 	ck_assert_uint_eq (MailboxState_getUnseen(M), 0);
 	ck_assert_uint_eq (MailboxState_getRecent(M), 0);
@@ -106,14 +110,13 @@ START_TEST(test_metadata)
 
 	MailboxState_count(M);
 
-	ck_assert_uint_eq (MailboxState_getUnseen(M), 0);
-	ck_assert_uint_eq (MailboxState_getRecent(M), 0);
-	ck_assert_uint_eq (MailboxState_getExists(M), 0);
+	ck_assert_uint_eq (MailboxState_getUnseen(M), 1);
+	ck_assert_uint_eq (MailboxState_getRecent(M), 1);
+	ck_assert_uint_eq (MailboxState_getExists(M), 1);
 	MailboxState_free(&M);
 
 	// Test user below quota
-	testuserid = 5;
-	testboxid = get_mailbox_id("testuser2", "metadata");
+	testboxid = get_mailbox_id("mailboxstate2", "metadata2");
 	ck_assert_uint_gt (testboxid, 0);
 
 	M = MailboxState_new(NULL, testboxid);
@@ -130,10 +133,6 @@ START_TEST(test_metadata)
 	ck_assert_uint_eq (MailboxState_getRecent(M), 1);
 	ck_assert_uint_eq (MailboxState_getExists(M), 1);
 	MailboxState_free(&M);
-
-	// Revert user and mailbox
-	testuserid = 4;
-	testboxid = get_mailbox_id("testuser1", "INBOX");
 }
 END_TEST
 
