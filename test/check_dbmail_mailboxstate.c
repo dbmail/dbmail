@@ -47,11 +47,11 @@ uint64_t testuserid = 0;
  * the test fixtures
  *
  */
-static uint64_t get_mailbox_id(const char *name)
+static uint64_t get_mailbox_id(const char *username, const char *boxname)
 {
 	uint64_t id;
-	auth_user_exists("testuser1",&testuserid);
-	db_find_create_mailbox(name, BOX_COMMANDLINE, testuserid, &id);
+	auth_user_exists(username, &testuserid);
+	db_find_create_mailbox(boxname, BOX_COMMANDLINE, testuserid, &id);
 	return id;
 }
 
@@ -73,7 +73,7 @@ void setup(void)
 	GetDBParams();
 	db_connect();
 	auth_connect();
-	testboxid = get_mailbox_id(TESTBOX);
+	testboxid = get_mailbox_id("testuser1", TESTBOX);
 }
 
 void teardown(void)
@@ -84,7 +84,7 @@ void teardown(void)
 
 START_TEST(test_createdestroy)
 {
-	uint64_t id = get_mailbox_id("INBOX");
+	uint64_t id = get_mailbox_id("testuser1", "INBOX");
 	MailboxState_T M = MailboxState_new(NULL, id);
 	MailboxState_free(&M);
 }
@@ -92,19 +92,46 @@ END_TEST
 
 START_TEST(test_metadata)
 {
+	// Test user who goes over quota
+	testuserid = 4;
+	testboxid = get_mailbox_id("testuser1", TESTBOX);
 	MailboxState_T M = MailboxState_new(NULL, testboxid);
-	fail_unless(MailboxState_getUnseen(M) == 0);
-	fail_unless(MailboxState_getRecent(M) == 0);
-	fail_unless(MailboxState_getExists(M) == 0);
+	ck_assert_uint_eq (MailboxState_getUnseen(M), 0);
+	ck_assert_uint_eq (MailboxState_getRecent(M), 0);
+	ck_assert_uint_eq (MailboxState_getExists(M), 0);
 
 	insert_message();
 
 	MailboxState_count(M);
 
-	fail_unless(MailboxState_getUnseen(M) == 1);
-	fail_unless(MailboxState_getRecent(M) == 1);
-	fail_unless(MailboxState_getExists(M) == 1);
+	ck_assert_uint_eq (MailboxState_getUnseen(M), 0);
+	ck_assert_uint_eq (MailboxState_getRecent(M), 0);
+	ck_assert_uint_eq (MailboxState_getExists(M), 0);
 	MailboxState_free(&M);
+
+	// Test user below quota
+	testuserid = 5;
+	testboxid = get_mailbox_id("testuser2", TESTBOX);
+	ck_assert_uint_gt (testboxid, 0);
+
+	M = MailboxState_new(NULL, testboxid);
+	MailboxState_count(M);
+	ck_assert_uint_eq (MailboxState_getUnseen(M), 2);
+	ck_assert_uint_eq (MailboxState_getRecent(M), 2);
+	ck_assert_uint_eq (MailboxState_getExists(M), 2);
+
+	insert_message();
+
+	MailboxState_count(M);
+
+	ck_assert_uint_eq (MailboxState_getUnseen(M), 3);
+	ck_assert_uint_eq (MailboxState_getRecent(M), 3);
+	ck_assert_uint_eq (MailboxState_getExists(M), 3);
+	MailboxState_free(&M);
+
+	// Revert user and mailbox
+	testuserid = 4;
+	testboxid = get_mailbox_id("testuser1", "INBOX");
 }
 END_TEST
 
@@ -119,7 +146,7 @@ START_TEST(test_mbxinfo)
 	MailboxState_T N, M;
 	GTree *mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)g_free,(GDestroyNotify)mailboxstate_destroy);
 	uint64_t *k1, *k2;
-	uint64_t id = get_mailbox_id("INBOX");
+	uint64_t id = get_mailbox_id("testuser1", "INBOX");
 
 	k1 = g_new0(uint64_t,1);
 	k2 = g_new0(uint64_t,1);

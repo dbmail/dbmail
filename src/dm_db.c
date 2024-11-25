@@ -3169,7 +3169,7 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 
 	if (! valid) {
 		TRACE(TRACE_INFO, "user [%" PRIu64 "] would exceed quotum", user_idnr);
-		return -2;
+		return DM_OVERQUOTA;
 	}
 
 	/* Copy the message table entry of the message. */
