@@ -51,7 +51,9 @@ static uint64_t get_mailbox_id(const char *username, const char *boxname)
 {
 	uint64_t id;
 	auth_user_exists(username, &testuserid);
+	ck_assert_uint_gt (testuserid, 0);
 	db_find_create_mailbox(boxname, BOX_COMMANDLINE, testuserid, &id);
+	ck_assert_uint_gt (id, 0);
 	return id;
 }
 
@@ -94,7 +96,7 @@ START_TEST(test_metadata)
 {
 	// Test user who goes over quota
 	testuserid = 4;
-	testboxid = get_mailbox_id("testuser1", TESTBOX);
+	testboxid = get_mailbox_id("testuser1", "metadata");
 	MailboxState_T M = MailboxState_new(NULL, testboxid);
 	ck_assert_uint_eq (MailboxState_getUnseen(M), 0);
 	ck_assert_uint_eq (MailboxState_getRecent(M), 0);
@@ -111,22 +113,22 @@ START_TEST(test_metadata)
 
 	// Test user below quota
 	testuserid = 5;
-	testboxid = get_mailbox_id("testuser2", TESTBOX);
+	testboxid = get_mailbox_id("testuser2", "metadata");
 	ck_assert_uint_gt (testboxid, 0);
 
 	M = MailboxState_new(NULL, testboxid);
 	MailboxState_count(M);
-	ck_assert_uint_eq (MailboxState_getUnseen(M), 2);
-	ck_assert_uint_eq (MailboxState_getRecent(M), 2);
-	ck_assert_uint_eq (MailboxState_getExists(M), 2);
+	ck_assert_uint_eq (MailboxState_getUnseen(M), 0);
+	ck_assert_uint_eq (MailboxState_getRecent(M), 0);
+	ck_assert_uint_eq (MailboxState_getExists(M), 0);
 
 	insert_message();
 
 	MailboxState_count(M);
 
-	ck_assert_uint_eq (MailboxState_getUnseen(M), 3);
-	ck_assert_uint_eq (MailboxState_getRecent(M), 3);
-	ck_assert_uint_eq (MailboxState_getExists(M), 3);
+	ck_assert_uint_eq (MailboxState_getUnseen(M), 1);
+	ck_assert_uint_eq (MailboxState_getRecent(M), 1);
+	ck_assert_uint_eq (MailboxState_getExists(M), 1);
 	MailboxState_free(&M);
 
 	// Revert user and mailbox
