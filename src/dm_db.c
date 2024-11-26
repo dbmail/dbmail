@@ -21,8 +21,10 @@
 */
 
 /**
- * \file db.c
- * 
+ * RFC 9051
+ * Internet Message Access Protocol (IMAP) - Version 4rev2
+ * RFC 3501
+ * Internet Message Access Protocol (IMAP) - Version 4rev1
  */
 
 #include "dbmail.h"
@@ -99,6 +101,8 @@ struct mailbox_match * mailbox_match_new(const char *mailbox)
 
 		/**
 		 * RFC 3501 [Page 19]
+		 * RFC 9051 4.3.1
+		 * A.1. Mailbox International Naming Convention for Compatibility with IMAP4rev1
 		 *
 		 * "&" is used to shift to modified BASE64 and "-" to shift back to
 		 * US-ASCII.
