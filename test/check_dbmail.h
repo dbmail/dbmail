@@ -577,6 +577,8 @@ const char *multipart_message6 = "From: nobody@nowhere.org\n"
 	"[HTML content]\n"
 	"------=_Part_228805_1858578062.1329804655776-- \n"
 	"\n"
+	"------=_Part_228806_1971825612.1329804655776--\n"
+	"\n"
 	"------=_Part_228805_1858578061.1329804655776\n"
 	"Content-Type: image/png; name=logo.png\n"
 	"Content-Transfer-Encoding: base64\n"
@@ -625,7 +627,7 @@ const char *multipart_message6 = "From: nobody@nowhere.org\n"
 	"Content-Description: /icon3.png\n"
 	"\n"
 	"[PNG CONTENT]\n"
-	"------=_Part_228805_1858578061.1329804655776-- \n";
+	"------=_Part_228805_1858578061.1329804655776--\n";
 
 char *outlook_multipart = "From aprilbabies-bounces@lists.nfg.nl  Fri Nov 25 22: 34:35 2005\n"
 	"From: \"Foo Bar\" <foobar@foo.bar>\n"
@@ -815,7 +817,8 @@ char *encoded_message_utf8_2 = "X-Mozilla-Status: 0001\n"
 
 char *utf8_long_header =
 "Subject: =?UTF-8?B?0J/RgNC40LzQtdGAINC00L7RgdGC0LDRgtC+0YfQvdC+INC00Ls=?=\n"
-" =?UTF-8?B?0LjQvdC90L7Qs9C+INGC0LXQutGB0YLQsCDQsiDQv9C+0LvQtQ==?= Subject\n"
+" =?UTF-8?B?0LjQvdC90L7Qs9C+INGC0LXQutGB0YLQsCDQsiDQv9C+0LvQtQ==?=\n"
+" =?iso-8859-1?Q? Subject ?=\n"
 " =?UTF-8?B?0LIg0LzQvdC+0LPQvtCx0LDQudGC0L7QstGL0YUg0YHQuNC80LLQvtC70LA=?=\n"
 " =?UTF-8?B?0YUgKNC90LDQv9GA0LjQvNC10YAsINC90LDQv9C40YHQsNC90L3Ri9GFINC9?=\n"
 " =?UTF-8?B?0LAg0YDRg9GB0YHQutC+0Lwg0Y/Qt9GL0LrQtSkg0L/RgNC40LLQvtC00Lg=?=\n"

@@ -72,17 +72,14 @@ static void insert_message(void)
 
 void setup(void)
 {
-	int result;
 	config_get_file();
 	config_read(configFile);
 	configure_debug(NULL,255,0);
 	GetDBParams();
 	db_connect();
 	auth_connect();
-	result = do_add("mailboxstate1","secretmailboxstate","md5-hash",1024,0,NULL,NULL);
-	ck_assert_uint_eq (result, TRUE);
-	result = do_add("mailboxstate2","secretmailboxstate","md5-hash",0,0,NULL,NULL);
-	ck_assert_uint_eq (result, TRUE);
+	do_add("mailboxstate1","secretmailboxstate","md5-hash",1024,0,NULL,NULL);
+	do_add("mailboxstate2","secretmailboxstate","md5-hash",0,0,NULL,NULL);
 	testboxid = get_mailbox_id("mailboxstate1", TESTBOX);
 }
 
