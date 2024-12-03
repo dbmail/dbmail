@@ -21,8 +21,10 @@
 */
 
 /**
- * \file db.c
- * 
+ * RFC 9051
+ * Internet Message Access Protocol (IMAP) - Version 4rev2
+ * RFC 3501
+ * Internet Message Access Protocol (IMAP) - Version 4rev1
  */
 
 #include "dbmail.h"
@@ -99,6 +101,8 @@ struct mailbox_match * mailbox_match_new(const char *mailbox)
 
 		/**
 		 * RFC 3501 [Page 19]
+		 * RFC 9051 4.3.1
+		 * A.1. Mailbox International Naming Convention for Compatibility with IMAP4rev1
 		 *
 		 * "&" is used to shift to modified BASE64 and "-" to shift back to
 		 * US-ASCII.
@@ -3169,7 +3173,7 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 
 	if (! valid) {
 		TRACE(TRACE_INFO, "user [%" PRIu64 "] would exceed quotum", user_idnr);
-		return -2;
+		return DM_OVERQUOTA;
 	}
 
 	/* Copy the message table entry of the message. */

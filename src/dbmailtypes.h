@@ -68,6 +68,7 @@ typedef enum {
 } Driver_T;
 
 typedef enum {
+	DM_OVERQUOTA 	= -2, // over quota
 	DM_EQUERY 	= -1,
 	DM_SUCCESS 	= 0,
 	DM_EGENERAL 	= 1

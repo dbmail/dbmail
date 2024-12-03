@@ -1044,7 +1044,7 @@ static void db_getmailbox_count(T M, Connection_T c)
 	M->recent = result[2];
  
 	TRACE(TRACE_DEBUG, "exists [%d] unseen [%d] recent [%d]", M->exists, M->unseen, M->recent);
-	/* now determine the next message UID 
+	/* now determine the next message UID
 	 * NOTE:
 	 * - expunged messages are selected as well in order to be able to restore them 
 	 * - the next uit MUST NOT change unless messages are added to THIS mailbox

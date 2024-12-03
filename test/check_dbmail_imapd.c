@@ -191,10 +191,9 @@ START_TEST(test_imap_session_new)
 }
 END_TEST
 
-START_TEST(test_imap_get_structure)
+START_TEST(test_imap_get_structure_bare_bones)
 {
 	DbmailMessage *message;
-	char *body;
 	char *result;
 	char expect[4096];
 
@@ -207,16 +206,37 @@ START_TEST(test_imap_get_structure)
 	dbmail_message_free(message);
 	g_free(result);
 
+}
+END_TEST
+START_TEST(test_imap_get_structure_text_plain)
+{
+	DbmailMessage *message;
+	char *body;
+	char *result;
+	char expect[4096];
+
+	memset(&expect, 0, sizeof(expect));
+
 	/* text/plain */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 4 NIL NIL NIL NIL)",1024);
 	body = g_mime_object_get_body(message->content);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n[%s]\n", result, expect, body);
+	ck_assert_str_eq(result, expect);
 	g_free(body);
 	g_free(result);
 	dbmail_message_free(message);
+
+}
+END_TEST
+START_TEST(test_imap_get_structure_multipart)
+{
+	DbmailMessage *message;
+	char *result;
+	char expect[4096];
+
+	memset(&expect, 0, sizeof(expect));
 
 	/* multipart */
 	message = dbmail_message_new(NULL);
@@ -224,44 +244,83 @@ START_TEST(test_imap_get_structure)
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL \"7BIT\" 30 3 NIL (\"inline\" NIL) NIL NIL)"
 			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
-			" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s] !=\n[%s]\n", expect, result);
+			" \"multipart\" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL NIL)",1024);
+	ck_assert_str_eq(result, expect);
 	g_free(result);
 	dbmail_message_free(message);
+
+}
+END_TEST
+START_TEST(test_imap_get_structure_multipart_alternative)
+{
+	DbmailMessage *message;
+	char *result;
+	char expect[4096];
+
+	memset(&expect, 0, sizeof(expect));
 
 	/* multipart alternative */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_alternative);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect,"(((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 281 10 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 759 17 NIL NIL NIL NIL) \"alternative\" (\"boundary\" \"------------040302030903000400040101\") NIL NIL NIL)(\"image\" \"jpeg\" (\"name\" \"jesse_2.jpg\") NIL NIL \"base64\" 262 NIL (\"inline\" (\"filename\" \"jesse_2.jpg\")) NIL NIL) \"mixed\" (\"boundary\" \"------------050000030206040804030909\") NIL NIL NIL)",1024);
+	strncpy(expect,"(((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 281 10 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 759 17 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"------------040302030903000400040101\") NIL NIL NIL NIL)(\"image\" \"jpeg\" (\"name\" \"jesse_2.jpg\") NIL NIL \"base64\" 262 NIL (\"inline\" (\"filename\" \"jesse_2.jpg\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------050000030206040804030909\") NIL NIL NIL NIL)",1024);
 
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
+	ck_assert_str_eq(result, expect);
 	g_free(result);
 	dbmail_message_free(message);
+}
+END_TEST
+START_TEST(test_imap_get_structure_multipart_apple)
+{
+	DbmailMessage *message;
+	char *result;
+	char expect[4096];
+
+	memset(&expect, 0, sizeof(expect));
+
 	/* multipart apple */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_apple);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 2 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 1 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"=?windows-1252?Q?=84Tradition_hat_Potenzial=5C=22=2Edocx?=\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename*\" \"windows-1252''%84Tradition%20hat%20Potenzial%22.docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 4 NIL NIL NIL NIL) \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL) \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL)", 1024);
-
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
+	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 2 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 1 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"„Tradition hat Potenzial\".docx\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename\" \"„Tradition hat Potenzial\".docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 4 NIL NIL NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL NIL)", 4096);
+	ck_assert_str_eq(result, expect);
 	g_free(result);
 	dbmail_message_free(message);
+}
+END_TEST
+START_TEST(test_imap_get_structure_rfc2231)
+{
+	DbmailMessage *message;
+	char *result;
+	char expect[4096];
+
+	memset(&expect, 0, sizeof(expect));
+
 	/* rfc2231 encoded content-disposition */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_message7);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"7bit\" 9 2 NIL NIL NIL NIL)(\"image\" \"png\" (\"name\" \"=?UTF-8?B?cGjDtm5ueS5wbmc=?=\") NIL NIL \"base64\" 225 NIL (\"attachment\" (\"filename*\" \"UTF-8''%70%68%C3%B6%6E%6E%79%2E%70%6E%67\")) NIL NIL) \"mixed\" (\"boundary\" \"------------000706040608020005040505\") NIL NIL NIL)", 1024);
+	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"7bit\" 9 2 NIL NIL NIL NIL)(\"image\" \"png\" (\"name\" \"phönny.png\") NIL NIL \"base64\" 225 NIL (\"attachment\" (\"filename\" \"phönny.png\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------000706040608020005040505\") NIL NIL NIL NIL)", 1024);
 
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
+	ck_assert_str_eq(result, expect);
 	g_free(result);
 	dbmail_message_free(message);
+}
+END_TEST
+START_TEST(test_imap_get_structure_multipart_signed)
+{
+	DbmailMessage *message;
+	char *result;
+	char expect[4096];
+
+	memset(&expect, 0, sizeof(expect));
 
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_signed);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect, "(((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"image\" \"gif\" (\"name\" \"image.gif\") NIL NIL \"base64\" 142 NIL (\"attachment\" (\"filename\" \"image.gif\")) NIL NIL)(\"message\" \"rfc822\" NIL NIL NIL \"7bit\" 610 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg1\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL) 26 NIL (\"attachment\" (\"filename\" \"msg1.eml\")) NIL NIL)(\"message\" \"rfc822\" (\"name\" \"msg2.eml\") NIL NIL \"7bit\" 608 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg2\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL) 25 NIL (\"attachment\" (\"filename\" \"msg2.eml\")) NIL NIL)(\"application\" \"x-php\" (\"name\" \"script.php\") NIL NIL \"base64\" 122 NIL (\"attachment\" (\"filename\" \"script.php\")) NIL NIL) \"mixed\" (\"boundary\" \"------------090808030504030005030705\") NIL NIL NIL)(\"application\" \"pgp-signature\" (\"name\" \"signature.asc\") NIL \"OpenPGP digital signature\" \"7BIT\" 271 NIL (\"attachment\" (\"filename\" \"signature.asc\")) NIL NIL) \"signed\" (\"micalg\" \"pgp-sha1\" \"protocol\" \"application/pgp-signature\" \"boundary\" \"DQGSJUrIXg9lgq2GBFumjRDhuJtiugxAX\") NIL NIL NIL)", 4096);
-	fail_unless(strncasecmp(result,expect,4096)==0, "imap_get_structure failed\n[%s]!=\n[%s]\n", result, expect);
+	strncpy(expect, "(((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"image\" \"gif\" (\"name\" \"image.gif\") NIL NIL \"base64\" 142 NIL (\"attachment\" (\"filename\" \"image.gif\")) NIL NIL)(\"message\" \"rfc822\" NIL NIL NIL \"7bit\" 610 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg1\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL NIL) 26 NIL (\"attachment\" (\"filename\" \"msg1.eml\")) NIL NIL)(\"message\" \"rfc822\" (\"name\" \"msg2.eml\") NIL NIL \"7bit\" 608 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg2\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL NIL) 25 NIL (\"attachment\" (\"filename\" \"msg2.eml\")) NIL NIL)(\"application\" \"x-php\" (\"name\" \"script.php\") NIL NIL \"base64\" 122 NIL (\"attachment\" (\"filename\" \"script.php\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------090808030504030005030705\") NIL NIL NIL NIL)(\"application\" \"pgp-signature\" (\"name\" \"signature.asc\") NIL \"OpenPGP digital signature\" \"7BIT\" 271 NIL (\"attachment\" (\"filename\" \"signature.asc\")) NIL NIL) \"multipart\" \"signed\" (\"micalg\" \"pgp-sha1\" \"protocol\" \"application/pgp-signature\" \"boundary\" \"DQGSJUrIXg9lgq2GBFumjRDhuJtiugxAX\") NIL NIL NIL NIL)", 4096);
+
+	ck_assert_str_eq(result, expect);
 	g_free(result);
 	dbmail_message_free(message);
 	/* done */
@@ -351,67 +410,16 @@ START_TEST(test_imap_get_envelope)
 {
 	DbmailMessage *message;
 	char *result, *expect;
-	
+
 	expect = g_new0(char, 1024);
-	
+
 	/* text/plain */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
+	strncpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 
-	dbmail_message_free(message);
-	g_free(result);
-	result = NULL;
-
-	/* bare bones message */
-	message = dbmail_message_new(NULL);
-	message = dbmail_message_init_with_string(message, simple);
-	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" NIL NIL NIL NIL NIL NIL NIL NIL)", 1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
-
-	dbmail_message_free(message);
-	g_free(result);
-	result = NULL;
-
-	/* bare bones message with group addresses*/
-	message = dbmail_message_new(NULL);
-	message = dbmail_message_init_with_string(message, simple_groups);
-	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-
-	strncpy(expect,"(\"Thu, 15 feb 2007 01:02:03 +0200\" NIL ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((NIL NIL \"group\" NIL)(NIL NIL \"g1\" \"d1.org\")(NIL NIL \"g2\" \"d2.org\")(NIL NIL NIL NIL)(NIL NIL \"group2\" NIL)(NIL NIL \"g3\" \"d3.org\")(NIL NIL NIL NIL)) NIL NIL NIL NIL)", 1024);
-
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
-
-	dbmail_message_free(message);
-	g_free(result);
-	result = NULL;
-
-	/* bare message with broken From address*/
-	message = dbmail_message_new(NULL);
-	message = dbmail_message_init_with_string(message, broken_message3);
-	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-
-	strncpy(expect,"(\"Fri, 11 Sep 2009 17:42:32 +0100\" \"Re: Anexo II para RO\" ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<002001ca32fe$dc7668b0$9600000a@ricardo>\")",1024);
-
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
-
-	dbmail_message_free(message);
-	g_free(result);
-	result = NULL;
-
-	/* message with invalid date*/
-	message = dbmail_message_new(NULL);
-	message = dbmail_message_init_with_string(message, broken_message4);
-	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-
-	// This will intentionally fail until the correct message is evaluated
-	strncpy(expect,"(\"Fri, 11 Sep 2009 17:42:32 +0100\" \"Re: Anexo II para RO\" ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((NIL NIL \"=?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\" NIL)) ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<002001ca32fe$dc7668b0$9600000a@ricardo>\")",1024);
-
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed\n[%s] !=\n[%s]\n", result,expect);
+	ck_assert_str_eq(result, expect);
 
 	dbmail_message_free(message);
 	g_free(result);
@@ -422,6 +430,123 @@ START_TEST(test_imap_get_envelope)
 	expect = NULL;
 }
 END_TEST
+
+START_TEST(test_imap_get_envelope_baremessage)
+{
+	DbmailMessage *message;
+	char *result, *expect;
+
+	expect = g_new0(char, 1024);
+
+	/* bare bones message */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, simple);
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	strncpy(expect,"(NIL \"dbmail test message\" NIL NIL NIL NIL NIL NIL NIL NIL)", 1024);
+
+	ck_assert_str_eq(result, expect);
+
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
+	//
+	g_free(expect);
+	expect = NULL;
+}
+END_TEST
+
+START_TEST(test_imap_get_envelope_groupaddresses)
+{
+	DbmailMessage *message;
+	char *result, *expect;
+
+	expect = g_new0(char, 1024);
+
+	/* text/plain */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, rfc822);
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+	strncpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+
+	ck_assert_str_eq(result, expect);
+
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
+	/* bare bones message with group addresses*/
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, simple_groups);
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	strncpy(expect,"(\"Thu, 15 Feb 2007 01:02:03 +0200\" NIL ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((NIL NIL \"group\" NIL)(NIL NIL \"g1\" \"d1.org\")(NIL NIL \"g2\" \"d2.org\")(NIL NIL NIL NIL)(NIL NIL \"group2\" NIL)(NIL NIL \"g3\" \"d3.org\")(NIL NIL NIL NIL)) NIL NIL NIL NIL)", 1024);
+
+	ck_assert_str_eq(result, expect);
+
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
+	//
+	g_free(expect);
+	expect = NULL;
+}
+END_TEST
+
+START_TEST(test_imap_get_envelope_brokenfrom)
+{
+	DbmailMessage *message;
+	char *result, *expect;
+
+	expect = g_new0(char, 1024);
+
+	/* bare message with broken From address*/
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, broken_message3);
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	strncpy(expect,"(\"Fri, 11 Sep 2009 17:42:32 +0100\" \"Re: Anexo II para RO\" NIL NIL NIL ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<002001ca32fe$dc7668b0$9600000a@ricardo>\")",1024);
+
+	ck_assert_str_eq(result, expect);
+
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
+	//
+	g_free(expect);
+	expect = NULL;
+}
+END_TEST
+
+START_TEST(test_imap_get_envelope_invaliddate)
+{
+	DbmailMessage *message;
+	char *result, *expect;
+
+	expect = g_new0(char, 1024);
+
+	/* message with invalid date*/
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, broken_message4);
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	strncpy(expect,"(\"Fri, 3 Jun 202225 20:03:00 +0100\" \"Broken test message 4 with invalid date\" NIL NIL NIL ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<broken-test-04@p-o.co.uk>\")",1024);
+
+	ck_assert_str_eq(result, expect);
+
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
+	//
+	g_free(expect);
+	expect = NULL;
+}
+END_TEST
+
 
 START_TEST(test_imap_get_envelope_8bit_id)
 {
@@ -437,14 +562,14 @@ START_TEST(test_imap_get_envelope_8bit_id)
 	dbmail_message_set_header(message,"Message-ID",msgid);
 	
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
-	g_free(result);
+	strncpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	ck_assert_str_eq(result, expect);
 	
 	dbmail_message_set_header(message,"Message-ID","<123123123@foo.bar>");
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL \"<123123123@foo.bar>\")",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
+	strncpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL \"<123123123@foo.bar>\")",1024);
+
+	ck_assert_str_eq(result, expect);
 
 	dbmail_message_free(message);
 	g_free(result);
@@ -455,7 +580,7 @@ END_TEST
 START_TEST(test_imap_get_envelope_koi)
 {
 	char *t;
-	const char *exp = "(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"test\" ((\"=?iso-8859-5?b?sN3i3t0gvdXl3uDe6Njl?=\" NIL \"bad\" \"foo.ru\")) ((\"=?iso-8859-5?b?sN3i3t0gvdXl3uDe6Njl?=\" NIL \"bad\" \"foo.ru\")) ((\"=?iso-8859-5?b?sN3i3t0gvdXl3uDe6Njl?=\" NIL \"bad\" \"foo.ru\")) ((NIL NIL \"nobody\" \"foo.ru\")) NIL NIL NIL NIL)";
+	const char *exp = "(NIL \"test\" ((\"Антон Нехороших\" NIL \"bad\" \"foo.ru\")) ((\"Антон Нехороших\" NIL \"bad\" \"foo.ru\")) ((\"Антон Нехороших\" NIL \"bad\" \"foo.ru\")) ((NIL NIL \"nobody\" \"foo.ru\")) NIL NIL NIL NIL)";
 	DbmailMessage *m = dbmail_message_new(NULL);
 
 	m = dbmail_message_init_with_string(m, encoded_message_koi);
@@ -506,7 +631,7 @@ END_TEST
 
 START_TEST(test_imap_get_envelope_latin)
 {
-	char *t;
+	char *result;
 	char *expect = g_new0(char,1024);
 	DbmailMessage *m;
 
@@ -514,43 +639,40 @@ START_TEST(test_imap_get_envelope_latin)
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, encoded_message_latin_1);
 	
-	t = imap_get_envelope(GMIME_MESSAGE(m->content));
-	
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?iso-8859-1?Q?Re:_M=F3dulo_Extintores?=\" ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
-	
-//	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);
+	result = imap_get_envelope(GMIME_MESSAGE(m->content));
+	strncpy(expect,"(NIL \"Re: Módulo Extintores\" ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	ck_assert_str_eq(result, expect);
 
-	g_free(t);
+	g_free(result);
 	dbmail_message_free(m);
 
 	/*  */
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, encoded_message_latin_2);
 	
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?= =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\" ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav  =?iso-8859-2?b?qXVsYw==?=  (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
-	t = imap_get_envelope(GMIME_MESSAGE(m->content));
-	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);
+	strncpy(expect,"(NIL \"Re: [gentoo-dev] New developer:  Miroslav Šulc (fordfrog)\" ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
+	result = imap_get_envelope(GMIME_MESSAGE(m->content));
+	ck_assert_str_eq(result, expect);
 	
-	g_free(t);
+	g_free(result);
 	dbmail_message_free(m);
 
 	/*  */
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, encoded_message_utf8);
 
-	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?utf-8?b?w6nDqcOp?=\" ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	strncpy(expect,"(NIL \"ééé\" ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	result = imap_get_envelope(GMIME_MESSAGE(m->content));
+	ck_assert_str_eq(result, expect);
 
-	t = imap_get_envelope(GMIME_MESSAGE(m->content));
-	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);
-	
-	g_free(t);
+	g_free(result);
 	g_free(expect);
 	dbmail_message_free(m);
 }
 END_TEST
 
 
-START_TEST(test_imap_get_partspec)
+START_TEST(test_imap_get_partspec1)
 {
 	DbmailMessage *message;
 	GMimeObject *object;
@@ -562,14 +684,43 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = g_mime_object_to_string(object, NULL);
-	fail_unless(MATCH(rfc822,result),
-			"imap_get_partsec failed \n[%s] !=\n[%s]\n",
-		       	rfc822, result);
-	g_free(result);
+	expect = g_strdup(
+		"Content-Type: text/plain; charset=\"us-ascii\"\n"
+		"MIME-Version: 1.0\n"
+		"Content-Transfer-Encoding: 7bit\n"
+		"Message-Id: <1199706209l.3020l.1l@(none)>\n"
+		"To: testuser@foo.org\n"
+		"From: somewher@foo.org\n"
+		"Subject: dbmail test message\n"
+		"\n"
+		"\n"
+		"    this is a test message\n"
+		"\n"
+	);
 
+	ck_assert_str_eq(result, expect);
+
+	g_free(result);
+	g_free(expect);
+
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec2)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	/* text/plain */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, rfc822);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = imap_get_logical_part(object,"HEADER");
-	expect = g_strdup("From nobody Wed Sep 14 16:47:48 2005\r\n"
-			"Content-Type: text/plain; charset=\"us-ascii\"\r\n"
+	expect = g_strdup("Content-Type: text/plain; charset=\"us-ascii\"\r\n"
 			"MIME-Version: 1.0\r\n"
 			"Content-Transfer-Encoding: 7bit\r\n"
 			"Message-Id: <1199706209l.3020l.1l@(none)>\r\n"
@@ -578,23 +729,48 @@ START_TEST(test_imap_get_partspec)
 			"Subject: dbmail test message\r\n"
 			"\r\n");
 
-	fail_unless(MATCH(expect,result),"imap_get_partsec failed \n[%s] !=\n[%s]\n", expect, result);
-	g_free(expect);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
+	g_free(expect);
+
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec3)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	/* text/plain */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, rfc822);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
 	result = imap_get_logical_part(object,"TEXT");
 	expect = g_strdup("\r\n"
 			"    this is a test message\r\n"
 			"\r\n");
-	fail_unless(MATCH(expect,result),"imap_get_partsec failed \n[%s] !=\n[%s]\n", expect, result);
-	g_free(expect);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
+	g_free(expect);
 
 	dbmail_message_free(message);
 
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec4)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
 	/* multipart */
-	
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_message);
 
@@ -603,38 +779,95 @@ START_TEST(test_imap_get_partspec)
 	result = imap_get_logical_part(object,"MIME");
 	expect = g_strdup("Content-type: text/html\r\n"
 	        "Content-disposition: inline\r\n\r\n");
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec5)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	/* multipart */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_message);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1");
 	result = imap_get_logical_part(object,NULL);
 	expect = g_strdup("Test message one\r\n and more.\r\n");
-	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
-	/* object isn't a message/rfc822 so these are 
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec6)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	/* object isn't a message/rfc822 so these are
 	 * acually invalid. Let's try anyway */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_message);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1");
 	result = imap_get_logical_part(object,"HEADER");
 	expect = g_strdup("Content-type: text/html\r\n"
 			"Content-disposition: inline\r\n\r\n");
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec7)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_message);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1");
 	result = imap_get_logical_part(object,"TEXT");
 	expect = g_strdup("Test message one\r\n and more.\r\n");
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec8)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
 	/* moving on */
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_message);
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2");
 	result = imap_get_logical_part(object,"MIME");
 	expect = g_strdup(
@@ -642,14 +875,23 @@ START_TEST(test_imap_get_partspec)
 			"Content-transfer-encoding: base64\r\n"
 			"\r\n"
 			);
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
 	dbmail_message_free(message);
-	
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec9)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+	int result2;
+
 	/* multipart mixed */
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_mixed);
@@ -657,31 +899,74 @@ START_TEST(test_imap_get_partspec)
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2");
 	result = imap_get_logical_part(object,"HEADER");
 	expect = g_strdup("From: \"try\" <try@test.kisise>");
-	fail_unless((strncmp(expect,result,29)==0),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
-	g_free(expect);
-	g_free(result);
+	result2 = strncmp(expect, result, 29);
 
-	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.1.1");
-	result = imap_get_logical_part(object,NULL);
-	expect = g_strdup("Body of doc2\r\n\r\n");
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-			expect, result);
-	g_free(result);
-	g_free(expect);
-	result = imap_get_logical_part(object,"MIME");
-	expect = g_strdup("Content-Type: text/plain;\r\n"
-			"	charset=\"us-ascii\"\r\n"
-			"Content-Transfer-Encoding: 7bit\r\n\r\n");
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-			expect, result);
+	ck_assert_int_eq(result2, 0);
+	fail_unless((strncmp(expect,result,29)==0),
+			"imap_get_partspec9 failed:\n[%s] != \n[%s]\n",
+		       	expect, result);
+
 	g_free(result);
 	g_free(expect);
 
 	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec10)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_mixed);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.1.1");
+	result = imap_get_logical_part(object,NULL);
+
+	expect = g_strdup("Body of doc2\r\n\r\n");
+	ck_assert_str_eq(result, expect);
+
+	g_free(result);
+	g_free(expect);
+
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec11)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_mixed);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.1.1");
+	result = imap_get_logical_part(object,"MIME");
+
+	expect = g_strdup("Content-Type: text/plain;\r\n"
+			"	charset=\"us-ascii\"\r\n"
+			"Content-Transfer-Encoding: 7bit\r\n\r\n");
+	ck_assert_str_eq(result, expect);
+
+	g_free(result);
+	g_free(expect);
+
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec12)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
 
 	/* multipart signed */
 	message = dbmail_message_new(NULL);
@@ -690,9 +975,24 @@ START_TEST(test_imap_get_partspec)
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.1");
 	result = imap_get_logical_part(object,NULL);
 	expect = g_strdup("quo-pri text");
-	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
+
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec13)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_signed);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
 	result = g_mime_object_to_string(object, NULL);
@@ -727,25 +1027,52 @@ START_TEST(test_imap_get_partspec)
 			"\n"
 			"\n");
 
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec14)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_signed);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
 	result = imap_get_logical_part(object,"MIME");
 	expect = g_strdup("Content-Type: message/rfc822;\r\n"
 			"Content-Transfer-Encoding: 7bit\r\n"
 			"Content-Disposition: attachment;\r\n"
 			" filename=\"msg1.eml\"\r\n"
 			"\r\n");
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
-	
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec15)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_signed);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
 	result = imap_get_logical_part(object,NULL);
 	expect = g_strdup("Date: Mon, 19 Aug 2013 14:54:05 +0200\r\n"
 			"To: a@b\r\n"
@@ -773,26 +1100,52 @@ START_TEST(test_imap_get_partspec)
 			"\r\n"
 			"\r\n");
 
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
+	dbmail_message_free(message);
 
+}
+END_TEST
 
+START_TEST(test_imap_get_partspec16)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_signed);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
 	result = imap_get_logical_part(object,"MIME");
 	expect = g_strdup("Content-Type: message/rfc822;\r\n"
 			"Content-Transfer-Encoding: 7bit\r\n"
 			"Content-Disposition: attachment;\r\n"
 			" filename=\"msg1.eml\"\r\n"
 			"\r\n");
-	fail_unless(MATCH(expect,result),
-			"imap_get_partspec failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec17)
+{
+	DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, multipart_signed);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.3");
 	result = imap_get_logical_part(object,"HEADER");
 	expect = g_strdup("Date: Mon, 19 Aug 2013 14:54:05 +0200\r\n"
 			"To: a@b\r\n"
@@ -803,15 +1156,17 @@ START_TEST(test_imap_get_partspec)
 			"Content-Type: multipart/alternative;\r\n"
 			"\tboundary=b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\r\n"
 			"\r\n");
-				
-	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
+
+	ck_assert_str_eq(result, expect);
+
 	g_free(result);
 	g_free(expect);
 
 	dbmail_message_free(message);
-
 }
 END_TEST
+
+
 
 #if 0
 static uint64_t get_physid(void)
@@ -1063,14 +1418,40 @@ Suite *dbmail_suite(void)
 	
 	tcase_add_checked_fixture(tc_session, setup, teardown);
 	tcase_add_test(tc_session, test_imap_session_new);
-	tcase_add_test(tc_session, test_imap_get_structure);
+	tcase_add_test(tc_session, test_imap_get_structure_bare_bones);
+	tcase_add_test(tc_session, test_imap_get_structure_text_plain);
+	tcase_add_test(tc_session, test_imap_get_structure_multipart);
+	tcase_add_test(tc_session, test_imap_get_structure_multipart_alternative);
+	tcase_add_test(tc_session, test_imap_get_structure_multipart_apple);
+	tcase_add_test(tc_session, test_imap_get_structure_rfc2231);
+	tcase_add_test(tc_session, test_imap_get_structure_multipart_signed);
 	tcase_add_test(tc_session, test_imap_cleanup_address);
 	tcase_add_test(tc_session, test_internet_address_list_parse_string);
 	tcase_add_test(tc_session, test_imap_get_envelope);
+	tcase_add_test(tc_session, test_imap_get_envelope_baremessage);
+	tcase_add_test(tc_session, test_imap_get_envelope_groupaddresses);
+	tcase_add_test(tc_session, test_imap_get_envelope_brokenfrom);
+	tcase_add_test(tc_session, test_imap_get_envelope_invaliddate);
 	tcase_add_test(tc_session, test_imap_get_envelope_8bit_id);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_envelope_latin);
-	tcase_add_test(tc_session, test_imap_get_partspec);
+	tcase_add_test(tc_session, test_imap_get_partspec1);
+	tcase_add_test(tc_session, test_imap_get_partspec2);
+	tcase_add_test(tc_session, test_imap_get_partspec3);
+	tcase_add_test(tc_session, test_imap_get_partspec4);
+	tcase_add_test(tc_session, test_imap_get_partspec5);
+	tcase_add_test(tc_session, test_imap_get_partspec6);
+	tcase_add_test(tc_session, test_imap_get_partspec7);
+	tcase_add_test(tc_session, test_imap_get_partspec8);
+	tcase_add_test(tc_session, test_imap_get_partspec9);
+	tcase_add_test(tc_session, test_imap_get_partspec10);
+	tcase_add_test(tc_session, test_imap_get_partspec11);
+	tcase_add_test(tc_session, test_imap_get_partspec12);
+	tcase_add_test(tc_session, test_imap_get_partspec13);
+	tcase_add_test(tc_session, test_imap_get_partspec14);
+	tcase_add_test(tc_session, test_imap_get_partspec15);
+	tcase_add_test(tc_session, test_imap_get_partspec16);
+	tcase_add_test(tc_session, test_imap_get_partspec17);
 	tcase_add_checked_fixture(tc_util, setup, teardown);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_collapse);
@@ -1090,7 +1471,7 @@ int main(void)
 	g_mime_init();
 	Suite *s = dbmail_suite();
 	SRunner *sr = srunner_create(s);
-	srunner_run_all(sr, CK_NORMAL);
+	srunner_run_all(sr, CK_VERBOSE);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
 	g_mime_shutdown();

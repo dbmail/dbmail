@@ -62,7 +62,7 @@ char *simple_groups = "From user@domain  Fri Feb 22 17:06:23 2008\n"
 	"body\n"
 	"\n";
 
-char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n" 
+char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n"
 	"Content-Type: text/plain; charset=\"us-ascii\"\n"
 	"MIME-Version: 1.0\n"
 	"Content-Transfer-Encoding: 7bit\n"
@@ -577,6 +577,8 @@ const char *multipart_message6 = "From: nobody@nowhere.org\n"
 	"[HTML content]\n"
 	"------=_Part_228805_1858578062.1329804655776-- \n"
 	"\n"
+	"------=_Part_228806_1971825612.1329804655776--\n"
+	"\n"
 	"------=_Part_228805_1858578061.1329804655776\n"
 	"Content-Type: image/png; name=logo.png\n"
 	"Content-Transfer-Encoding: base64\n"
@@ -625,7 +627,7 @@ const char *multipart_message6 = "From: nobody@nowhere.org\n"
 	"Content-Description: /icon3.png\n"
 	"\n"
 	"[PNG CONTENT]\n"
-	"------=_Part_228805_1858578061.1329804655776-- \n";
+	"------=_Part_228805_1858578061.1329804655776--\n";
 
 char *outlook_multipart = "From aprilbabies-bounces@lists.nfg.nl  Fri Nov 25 22: 34:35 2005\n"
 	"From: \"Foo Bar\" <foobar@foo.bar>\n"
@@ -815,7 +817,8 @@ char *encoded_message_utf8_2 = "X-Mozilla-Status: 0001\n"
 
 char *utf8_long_header =
 "Subject: =?UTF-8?B?0J/RgNC40LzQtdGAINC00L7RgdGC0LDRgtC+0YfQvdC+INC00Ls=?=\n"
-" =?UTF-8?B?0LjQvdC90L7Qs9C+INGC0LXQutGB0YLQsCDQsiDQv9C+0LvQtQ==?= Subject\n"
+" =?UTF-8?B?0LjQvdC90L7Qs9C+INGC0LXQutGB0YLQsCDQsiDQv9C+0LvQtQ==?=\n"
+" =?iso-8859-1?Q? Subject ?=\n"
 " =?UTF-8?B?0LIg0LzQvdC+0LPQvtCx0LDQudGC0L7QstGL0YUg0YHQuNC80LLQvtC70LA=?=\n"
 " =?UTF-8?B?0YUgKNC90LDQv9GA0LjQvNC10YAsINC90LDQv9C40YHQsNC90L3Ri9GFINC9?=\n"
 " =?UTF-8?B?0LAg0YDRg9GB0YHQutC+0Lwg0Y/Qt9GL0LrQtSkg0L/RgNC40LLQvtC00Lg=?=\n"
@@ -1276,20 +1279,20 @@ char * broken_message3 = "Message-ID: <002001ca32fe$dc7668b0$9600000a@ricardo>\n
 	"MIME-Version: 1.0\n\n"
 	"\ntest\n";
 	
-char * broken_message4 = "Return-Path: Alan Hicks <ahicks@p-o.co.uk>\n"
+char * broken_message4 = "Return-Path: Bombeiros Vol. Mortágua\n"
 	"Received: from alan by p-o.co.uk\n"
 	"	with local (Exim 4.95 (FreeBSD))	(envelope-from <alan@p-o.co.uk>)\n"
 	"	id 1no8eq-000Ie5-02	for alan@p-o.co.uk;	Tue, 31 May 202225 20:03:00 +0100\n"
-	"From: Alan Hicks <ahicks@p-o.co.uk>\n"
-	"To: ahicks@p-o.co.uk\n"
+	"From: =?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\n"
+	"To: Foo Bar <foo@bar.pt>\n"
 	"Subject: Broken test message 4 with invalid date\n"
 	"Message-Id: <broken-test-04@p-o.co.uk>\n"
 	"Date: Fri, 3 Jun 202225 20:03:00 +0100\n\n"
 	"Test line 1\n"
 	"Test line 2\n";
 
-char * broken_message5 = "From Alan Hicks <ahicks@p-o.co.uk>\n"
-	"From: Alan Hicks <ahicks@p-o.co.uk>\n"
+char * broken_message5 = "From Bombeiros Vol. Mortágua\n"
+	"From: =?iso-8859-1?Q?Bombeiros_Vol._Mort=E1gua?=\n"
 	"To: ahicks@p-o.co.uk\n"
 	"Subject: Broken test message 5 without body\n"
 	"Message-Id: <broken-test-05@p-o.co.uk>\n"
