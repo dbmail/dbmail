@@ -620,7 +620,7 @@ START_TEST(test_dbmail_message_to_string)
 	dbmail_message_free(m);
 
 	// remove non message preamble
-	expect = malloc(sizeof(char) * 4096);
+	expect = malloc(sizeof(char) * (strlen(simple_with_from)-51));
 	strncpy(expect, simple_with_from+52, strlen(simple_with_from)-52);
 
 	m = message_init(simple_with_from);
