@@ -22,12 +22,17 @@ LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
       org.opencontainers.image.title="DBMail-build" \
       org.opencontainers.image.description="This image builds dbmail"
 
+RUN apt update && \
+    apt install -y libgmime-3.0-0 libzdb11 libldap-common \
+    libcurl4-openssl-dev check \
+    libmhash2 libevent-2.1-7 libevent-pthreads-2.1-7 libssl3 libsieve2-1
+
 RUN mkdir /build-dir && \
     cd /build-dir && \
-    git clone -b 3.4.x https://github.com/dbmail/dbmail.git && \
+    git clone https://github.com/dbmail/dbmail.git && \
     cd dbmail && \
-    ./configure --with-ldap=/usr --with-sieve=/usr/lib/x86_64-linux-gnu/ && \
-    make && make install
+    ./configure --with-ldap=/usr --with-sieve=/usr/lib/x86_64-linux-gnu/ --with-check && \
+    make && make check && make install
 
 FROM ubuntu:latest
 LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
@@ -38,10 +43,6 @@ LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
       org.opencontainers.image.description="This image runs dbmail-imapd"
 
 WORKDIR /
-
-RUN apt update && \
-    apt install -y libgmime-3.0-0 libzdb11 libldap-common \
-    libmhash2 libevent-2.1-7 libevent-pthreads-2.1-7 libssl3 libsieve2-1
 
 COPY --from=build /usr/local/sbin/* /usr/local/sbin/
 COPY --from=build /usr/local/lib/dbmail/* /usr/local/lib/dbmail/
