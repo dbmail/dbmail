@@ -595,7 +595,6 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
     gboolean store_mime_object_result;
 	for (i=0; i<c; i++) {
 		GMimeObject *part = g_mime_multipart_get_part((GMimeMultipart *)object, i);
-		// if (store_mime_object(object, part, m)) return TRUE;
 		store_mime_object_result = store_mime_object(object, part, m);
 		TRACE(TRACE_DEBUG,"store_mime_object: [%d] [%d]", i, store_mime_object_result);
 	}

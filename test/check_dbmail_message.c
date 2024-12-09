@@ -441,8 +441,9 @@ START_TEST(test_dbmail_message_store)
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
 	// TODO
-	//ck_assert_str_eq(e, t);
-	//ck_assert_str_eq(multipart_digest, t);
+	// https://github.com/dbmail/dbmail/issues/324
+	// ck_assert_str_eq(e, t);
+	// ck_assert_str_eq(multipart_digest, t);
 	g_free(e);
 	g_free(t);
 
