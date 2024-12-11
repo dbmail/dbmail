@@ -221,7 +221,7 @@ START_TEST(test_imap_get_structure_text_plain)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 4 NIL NIL NIL NIL)",1024);
+	strlcpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 4 NIL NIL NIL NIL)",1024);
 	body = g_mime_object_get_body(message->content);
 	ck_assert_str_eq(result, expect);
 	g_free(body);
@@ -242,7 +242,7 @@ START_TEST(test_imap_get_structure_multipart)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_message);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL \"7BIT\" 30 3 NIL (\"inline\" NIL) NIL NIL)"
+	strlcpy(expect,"((\"text\" \"html\" NIL NIL NIL \"7BIT\" 30 3 NIL (\"inline\" NIL) NIL NIL)"
 			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
 			" \"multipart\" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL NIL)",1024);
 	ck_assert_str_eq(result, expect);
@@ -263,7 +263,7 @@ START_TEST(test_imap_get_structure_multipart_alternative)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_alternative);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect,"(((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 281 10 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 759 17 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"------------040302030903000400040101\") NIL NIL NIL NIL)(\"image\" \"jpeg\" (\"name\" \"jesse_2.jpg\") NIL NIL \"base64\" 262 NIL (\"inline\" (\"filename\" \"jesse_2.jpg\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------050000030206040804030909\") NIL NIL NIL NIL)",1024);
+	strlcpy(expect,"(((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 281 10 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"7bit\" 759 17 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"------------040302030903000400040101\") NIL NIL NIL NIL)(\"image\" \"jpeg\" (\"name\" \"jesse_2.jpg\") NIL NIL \"base64\" 262 NIL (\"inline\" (\"filename\" \"jesse_2.jpg\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------050000030206040804030909\") NIL NIL NIL NIL)",1024);
 
 	ck_assert_str_eq(result, expect);
 	g_free(result);
@@ -282,7 +282,7 @@ START_TEST(test_imap_get_structure_multipart_apple)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_apple);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 2 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 1 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"„Tradition hat Potenzial\".docx\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename\" \"„Tradition hat Potenzial\".docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 4 NIL NIL NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL NIL)", 4096);
+	strlcpy(expect, "((\"text\" \"plain\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 6 2 NIL NIL NIL NIL)((\"text\" \"html\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 39 1 NIL NIL NIL NIL)(\"application\" \"vnd.openxmlformats-officedocument.wordprocessingml.document\" (\"name\" \"„Tradition hat Potenzial\".docx\") NIL NIL \"base64\" 256 NIL (\"attachment\" (\"filename\" \"„Tradition hat Potenzial\".docx\")) NIL NIL)(\"text\" \"html\" (\"charset\" \"windows-1252\") NIL NIL \"quoted-printable\" 147 4 NIL NIL NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"Apple-Mail=_3A2FC16D-D077-44C8-A239-A7B36A86540F\") NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"Apple-Mail=_E6A72268-1DAC-4E40-8270-C4CBE68157E0\") NIL NIL NIL NIL)", 4096);
 	ck_assert_str_eq(result, expect);
 	g_free(result);
 	dbmail_message_free(message);
@@ -300,7 +300,7 @@ START_TEST(test_imap_get_structure_rfc2231)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_message7);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect, "((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"7bit\" 9 2 NIL NIL NIL NIL)(\"image\" \"png\" (\"name\" \"phönny.png\") NIL NIL \"base64\" 225 NIL (\"attachment\" (\"filename\" \"phönny.png\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------000706040608020005040505\") NIL NIL NIL NIL)", 1024);
+	strlcpy(expect, "((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"7bit\" 9 2 NIL NIL NIL NIL)(\"image\" \"png\" (\"name\" \"phönny.png\") NIL NIL \"base64\" 225 NIL (\"attachment\" (\"filename\" \"phönny.png\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------000706040608020005040505\") NIL NIL NIL NIL)", 1024);
 
 	ck_assert_str_eq(result, expect);
 	g_free(result);
@@ -318,7 +318,7 @@ START_TEST(test_imap_get_structure_multipart_signed)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, multipart_signed);
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	strncpy(expect, "(((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"image\" \"gif\" (\"name\" \"image.gif\") NIL NIL \"base64\" 142 NIL (\"attachment\" (\"filename\" \"image.gif\")) NIL NIL)(\"message\" \"rfc822\" NIL NIL NIL \"7bit\" 610 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg1\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL NIL) 26 NIL (\"attachment\" (\"filename\" \"msg1.eml\")) NIL NIL)(\"message\" \"rfc822\" (\"name\" \"msg2.eml\") NIL NIL \"7bit\" 608 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg2\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL NIL) 25 NIL (\"attachment\" (\"filename\" \"msg2.eml\")) NIL NIL)(\"application\" \"x-php\" (\"name\" \"script.php\") NIL NIL \"base64\" 122 NIL (\"attachment\" (\"filename\" \"script.php\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------090808030504030005030705\") NIL NIL NIL NIL)(\"application\" \"pgp-signature\" (\"name\" \"signature.asc\") NIL \"OpenPGP digital signature\" \"7BIT\" 271 NIL (\"attachment\" (\"filename\" \"signature.asc\")) NIL NIL) \"multipart\" \"signed\" (\"micalg\" \"pgp-sha1\" \"protocol\" \"application/pgp-signature\" \"boundary\" \"DQGSJUrIXg9lgq2GBFumjRDhuJtiugxAX\") NIL NIL NIL NIL)", 4096);
+	strlcpy(expect, "(((\"text\" \"plain\" (\"charset\" \"UTF-8\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"image\" \"gif\" (\"name\" \"image.gif\") NIL NIL \"base64\" 142 NIL (\"attachment\" (\"filename\" \"image.gif\")) NIL NIL)(\"message\" \"rfc822\" NIL NIL NIL \"7bit\" 610 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg1\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL NIL) 26 NIL (\"attachment\" (\"filename\" \"msg1.eml\")) NIL NIL)(\"message\" \"rfc822\" (\"name\" \"msg2.eml\") NIL NIL \"7bit\" 608 (\"Mon, 19 Aug 2013 14:54:05 +0200\" \"msg2\" ((NIL NIL \"d\" \"b\"))((NIL NIL \"d\" \"b\"))((NIL NIL \"e\" \"b\"))((NIL NIL \"a\" \"b\")) NIL NIL NIL NIL)((\"text\" \"plain\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 12 1 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"ISO-8859-1\") NIL NIL \"quoted-printable\" 11 2 NIL NIL NIL NIL) \"multipart\" \"alternative\" (\"boundary\" \"b1_7ad0d7cccab59d27194f9ad69c14606001f05f531376916845\") NIL NIL NIL NIL) 25 NIL (\"attachment\" (\"filename\" \"msg2.eml\")) NIL NIL)(\"application\" \"x-php\" (\"name\" \"script.php\") NIL NIL \"base64\" 122 NIL (\"attachment\" (\"filename\" \"script.php\")) NIL NIL) \"multipart\" \"mixed\" (\"boundary\" \"------------090808030504030005030705\") NIL NIL NIL NIL)(\"application\" \"pgp-signature\" (\"name\" \"signature.asc\") NIL \"OpenPGP digital signature\" \"7BIT\" 271 NIL (\"attachment\" (\"filename\" \"signature.asc\")) NIL NIL) \"multipart\" \"signed\" (\"micalg\" \"pgp-sha1\" \"protocol\" \"application/pgp-signature\" \"boundary\" \"DQGSJUrIXg9lgq2GBFumjRDhuJtiugxAX\") NIL NIL NIL NIL)", 4096);
 
 	ck_assert_str_eq(result, expect);
 	g_free(result);
@@ -417,7 +417,7 @@ START_TEST(test_imap_get_envelope)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-	strncpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	strlcpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 
 	ck_assert_str_eq(result, expect);
 
@@ -443,7 +443,7 @@ START_TEST(test_imap_get_envelope_baremessage)
 	message = dbmail_message_init_with_string(message, simple);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
-	strncpy(expect,"(NIL \"dbmail test message\" NIL NIL NIL NIL NIL NIL NIL NIL)", 1024);
+	strlcpy(expect,"(NIL \"dbmail test message\" NIL NIL NIL NIL NIL NIL NIL NIL)", 1024);
 
 	ck_assert_str_eq(result, expect);
 
@@ -468,7 +468,7 @@ START_TEST(test_imap_get_envelope_groupaddresses)
 	message = dbmail_message_new(NULL);
 	message = dbmail_message_init_with_string(message, rfc822);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-	strncpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	strlcpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 
 	ck_assert_str_eq(result, expect);
 
@@ -481,7 +481,7 @@ START_TEST(test_imap_get_envelope_groupaddresses)
 	message = dbmail_message_init_with_string(message, simple_groups);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
-	strncpy(expect,"(\"Thu, 15 Feb 2007 01:02:03 +0200\" NIL ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((NIL NIL \"group\" NIL)(NIL NIL \"g1\" \"d1.org\")(NIL NIL \"g2\" \"d2.org\")(NIL NIL NIL NIL)(NIL NIL \"group2\" NIL)(NIL NIL \"g3\" \"d3.org\")(NIL NIL NIL NIL)) NIL NIL NIL NIL)", 1024);
+	strlcpy(expect,"(\"Thu, 15 Feb 2007 01:02:03 +0200\" NIL ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((\"Real Name\" NIL \"user\" \"domain\")) ((NIL NIL \"group\" NIL)(NIL NIL \"g1\" \"d1.org\")(NIL NIL \"g2\" \"d2.org\")(NIL NIL NIL NIL)(NIL NIL \"group2\" NIL)(NIL NIL \"g3\" \"d3.org\")(NIL NIL NIL NIL)) NIL NIL NIL NIL)", 1024);
 
 	ck_assert_str_eq(result, expect);
 
@@ -507,7 +507,7 @@ START_TEST(test_imap_get_envelope_brokenfrom)
 	message = dbmail_message_init_with_string(message, broken_message3);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
-	strncpy(expect,"(\"Fri, 11 Sep 2009 17:42:32 +0100\" \"Re: Anexo II para RO\" NIL NIL NIL ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<002001ca32fe$dc7668b0$9600000a@ricardo>\")",1024);
+	strlcpy(expect,"(\"Fri, 11 Sep 2009 17:42:32 +0100\" \"Re: Anexo II para RO\" NIL NIL NIL ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<002001ca32fe$dc7668b0$9600000a@ricardo>\")",1024);
 
 	ck_assert_str_eq(result, expect);
 
@@ -533,7 +533,7 @@ START_TEST(test_imap_get_envelope_invaliddate)
 	message = dbmail_message_init_with_string(message, broken_message4);
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
-	strncpy(expect,"(\"Fri, 3 Jun 202225 20:03:00 +0100\" \"Broken test message 4 with invalid date\" NIL NIL NIL ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<broken-test-04@p-o.co.uk>\")",1024);
+	strlcpy(expect,"(\"Fri, 3 Jun 202225 20:03:00 +0100\" \"Broken test message 4 with invalid date\" NIL NIL NIL ((\"Foo Bar\" NIL \"foo\" \"bar.pt\")) NIL NIL NIL \"<broken-test-04@p-o.co.uk>\")",1024);
 
 	ck_assert_str_eq(result, expect);
 
@@ -562,12 +562,12 @@ START_TEST(test_imap_get_envelope_8bit_id)
 	dbmail_message_set_header(message,"Message-ID",msgid);
 	
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-	strncpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	strlcpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 	ck_assert_str_eq(result, expect);
 	
 	dbmail_message_set_header(message,"Message-ID","<123123123@foo.bar>");
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
-	strncpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL \"<123123123@foo.bar>\")",1024);
+	strlcpy(expect,"(NIL \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL \"<123123123@foo.bar>\")",1024);
 
 	ck_assert_str_eq(result, expect);
 
@@ -640,7 +640,7 @@ START_TEST(test_imap_get_envelope_latin)
 	m = dbmail_message_init_with_string(m, encoded_message_latin_1);
 	
 	result = imap_get_envelope(GMIME_MESSAGE(m->content));
-	strncpy(expect,"(NIL \"Re: Módulo Extintores\" ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	strlcpy(expect,"(NIL \"Re: Módulo Extintores\" ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((\"Bº V. F. Zêzere\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 	ck_assert_str_eq(result, expect);
 
 	g_free(result);
@@ -650,7 +650,7 @@ START_TEST(test_imap_get_envelope_latin)
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, encoded_message_latin_2);
 	
-	strncpy(expect,"(NIL \"Re: [gentoo-dev] New developer:  Miroslav Šulc (fordfrog)\" ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
+	strlcpy(expect,"(NIL \"Re: [gentoo-dev] New developer:  Miroslav Šulc (fordfrog)\" ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((\"Miroslav Šulc (fordfrog)\" NIL \"fordfrog\" \"gentoo.org\")) ((NIL NIL \"gentoo-dev\" \"lists.gentoo.org\")) NIL NIL NIL NIL)",1024);
 	result = imap_get_envelope(GMIME_MESSAGE(m->content));
 	ck_assert_str_eq(result, expect);
 	
@@ -661,7 +661,7 @@ START_TEST(test_imap_get_envelope_latin)
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m, encoded_message_utf8);
 
-	strncpy(expect,"(NIL \"ééé\" ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	strlcpy(expect,"(NIL \"ééé\" ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 	result = imap_get_envelope(GMIME_MESSAGE(m->content));
 	ck_assert_str_eq(result, expect);
 
