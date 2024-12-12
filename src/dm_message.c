@@ -1980,9 +1980,9 @@ void dbmail_message_cache_envelope(const DbmailMessage *self)
 		db_stmt_exec(s);
 		db_commit_transaction(c);
 	CATCH(SQLException)
-		LOG_SQLERROR;
+		LOG_SQLWARNING;
 		db_rollback_transaction(c);
-		TRACE(TRACE_ERR, "insert envelope failed [%s]", envelope);
+		TRACE(TRACE_WARNING, "insert envelope failed [%s]", envelope);
 	FINALLY
 		db_con_close(c);
 	END_TRY;
