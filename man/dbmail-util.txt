@@ -13,27 +13,18 @@ dbmail-util [-actbpds] [-l time] [-yn] [-qvVh] [-f configFile]
 
 DESCRIPTION
 -----------
-The dbmail-util program does a global database cleanup and integrity check. All
-messages that are set for deletion (status 2) will be marked for final deletion
-(status 3). All message that are marked for final deletion will be cleared from
-the database. The integrity check will check for unconnected mimeparts,
+The dbmail-util program offers a database cleanup and integrity check.
+All messages set for deletion (status 2) will be marked for final deletion
+(status 3). All message marked for final deletion will be cleared from the
+database. The integrity check will check for unconnected mimeparts,
 headervalues, messages and mailboxes.
 
-By default, the checks run in a read-only mode, possibly prompting to make
-changes. Pass the -n option to respond no to any prompts. Pass the -y option
-to make read-write changes, responding yes to any prompts.
-
-As DBMail matures and new features are added, additional check modes will be
-added. In addition, more prompts may be added for different situations where
-changes need to be committed to the database. We recommend using the -a option
-to run all checks and using the -n and -y options if you expect no prompts.
+By default, checks are read-only. Pass the -n option to respond no to any
+prompts. Pass the -y option to make read-write changes, responding yes to any
+prompts.
 
 OPTIONS
 -------
-
--a::
- Perform all checks listed below. This option will be kept up-to-date
- with additional checks available in future versions.
 
 -c::
  Clean up unlinked message entries.
@@ -58,6 +49,9 @@ OPTIONS
 -s::
  Remove dangling/invalid aliases and forwards.
 
+-a::
+ Perform the above checks: -c -t -b -p -d -s
+
 -r time::
  Clear the reply cache used for autoreplies and Sieve vacations. The time is
  specified as <hours>h<minutes>m (don't include the angle brackets, though!).
@@ -66,11 +60,7 @@ OPTIONS
  Clear the IP log used for IMAP/POP-before-SMTP. The time is specified as
  <hours>h<minutes>m (don't include the angle brackets, though!).
 
--M::
- migrate legacy 2.2.x messageblks to mimeparts table.
-
--m limit::
- limit number of physmessages migrated. Default 10000 per run.
+*Common options*
 
 -n::
  Show the intended repairs without making any changes, i.e. no to all.
@@ -78,14 +68,22 @@ OPTIONS
 -y::
  Perform all repair actions , i.e. yes to all.
 
--i:: 
- Enter an interactive user management console in some future version
- where this feature is implemented. It is not currently available.
+*Maintenance options*
 
 --rehash::
- Rebuild the hash values for all the message parts in the database. You 
+ Rebuild the hash values for all the message parts in the database. You
  need to run this after modifying the hash_algorithm config option.
 
+-e::
+ Check for empty envelope cache.
+
+*Migration options*
+
+-M::
+ migrate legacy 2.2.x messageblks to mimeparts table.
+
+-m limit::
+ limit number of physmessages migrated. Default 10000 per run.
 
 include::commonopts.txt[]
 
@@ -100,11 +98,9 @@ are found and fixed successfully, 0 when no errors are found.
 EXAMPLES
 --------
 
-After upgrading from DBMail 2.0 or truncating the cache tables, run this command
-to populate the cache:
+Regular maintenance can be run as a regular cron job:
 
-`    dbmail-util -by`
-
+`    dbmail-util -ayv`
 
 To set all messages with the DELETE status to PURGE status, and permanently
 remove all messages previously set to PURGE status:
@@ -121,5 +117,10 @@ To remove all IP log entries more than three days old:
 
 `    dbmail-util -l 72h -y`
 
+
+After upgrading from DBMail 2.0 or truncating the cache tables, run this command
+to populate the cache:
+
+`    dbmail-util -by`
 
 include::footer.txt[]
