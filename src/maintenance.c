@@ -113,12 +113,12 @@ int do_showhelp(void) {
 	"               the time syntax is [<hours>h][<minutes>m]\n"
 	"               valid examples: 72h, 4h5m, 10m\n"
 	"     -M        migrate legacy 2.2.x messageblks to mimeparts table\n"
+	"     -m limit  limit migration to [limit] number of physmessages. Default 10000 per run\n"
 	"     --rehash  Rebuild hash keys for stored messages\n"
 	"     --erase days  Delete messages older than date in INBOX/Trash \n"
 	"     --move  days  Move messages from INBOX to INBOX/Trash\n"
 	"     --inbox name  Inbox folder to move from, used in conjunction with --move\n"
 	"     --trash name  Trash folder to move to, used in conjunction with --move\n"
-	"     -m limit  limit migration to [limit] number of physmessages. Default 10000 per run\n"
 	"\nCommon options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
 	"               Default: %s\n"
@@ -1143,8 +1143,29 @@ int do_migrate(int migrate_limit)
 	qprintf ("Migrate legacy 2.2.x messageblks to mimeparts...\n");
 	TRACE(TRACE_INFO, "Migrate legacy 2.2.x messageblks to mimeparts...");
 	if (!yes_to_all) {
+		c = db_con_get();
+		TRY
+			db_begin_transaction(c);
+			r = db_query(c, "SELECT count(physmessage_id) FROM %smessageblks", DBPFX);
+			while (db_result_next(r))
+			{
+				count = db_result_get_u64(r,0);
+			}
+			db_commit_transaction(c);
+		CATCH(SQLException)
+			LOG_SQLERROR;
+			db_rollback_transaction(c);
+			return -1;
+		FINALLY
+			db_con_close(c);
+		END_TRY;
+
+		qprintf ("There are %d messageblks available for migration.\n", count);
+		TRACE(TRACE_INFO, "There are %d messageblks available for migration.", count);
+
 		qprintf ("\tmigration skipped. Use -y option to perform migration.\n");
 		TRACE(TRACE_INFO, "  migration skipped. Use -y option to perform migration.");
+
 		return 0;
 	}
 	qprintf ("Preparing to migrate up to %d physmessages.\n", migrate_limit);
@@ -1177,6 +1198,26 @@ int do_migrate(int migrate_limit)
 	
 	qprintf ("Migration complete. Migrated %d physmessages.\n", count);
 	TRACE(TRACE_INFO, "Migration complete. Migrated %d physmessages.", count);
+
+	c = db_con_get();
+	TRY
+		db_begin_transaction(c);
+		r = db_query(c, "SELECT count(physmessage_id) FROM %smessageblks", DBPFX);
+		while (db_result_next(r))
+		{
+			count = db_result_get_u64(r,0);
+		}
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		db_rollback_transaction(c);
+		return -1;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	qprintf ("There are %d messageblks to be migrated.\n", count);
+	TRACE(TRACE_INFO, "There are %d messageblks to be migrated.", count);
 	return 0;
 }
 
