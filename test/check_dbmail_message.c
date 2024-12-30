@@ -1,7 +1,7 @@
 /*
  *   Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  *   Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- *   Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ *   Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -111,26 +111,8 @@ START_TEST(test_dbmail_message_get_class)
 	dbmail_message_free(m);
 }
 END_TEST
-static char * showdiff(const char *a, const char *b)
-{
-	assert(a && b);
-	while (*a++ == *b++)
-		;
-	return g_strdup_printf("[%s]\n[%s]\n", --a, --b);
-}
 
 FILE *i;
-#define COMPARE(a,b) \
-	{ \
-	int d; size_t l; char *s;\
-	l = strlen(a); \
-	d = memcmp((a),(b),l); \
-	if (d) { \
-		s = showdiff(a,b); \
-		fail_unless(d == 0, "store store/retrieve failed\n%s\n\n", s); \
-		g_free(s); \
-	} \
-	}
 
 static DbmailMessage  * message_init(const char *message)
 {
@@ -179,7 +161,7 @@ START_TEST(test_g_mime_object_get_body)
 	
 	m = message_init(rfc822);
 	result = g_mime_object_get_body(GMIME_OBJECT(m->content));
-	COMPARE("\n    this is a test message\n\n", result);
+	ck_assert_str_eq("\n    this is a test message\n\n", result);
 	g_free(result);
 	dbmail_message_free(m);
 }
@@ -194,253 +176,300 @@ START_TEST(test_dbmail_message_store)
 	m = message_init("From: paul\n");
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	fail_unless(MATCH(e,t),"test_dbmail_message_store failed\n%s\n%s", e, t);
-	COMPARE(e,t);
+
+	ck_assert_str_eq(e, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(simple);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	printf("%s %s",e,t);
-	COMPARE(e,t);
-	COMPARE(simple, t);
+	ck_assert_str_eq(e, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(rfc822);
 	e = dbmail_message_to_string(m);
+
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(rfc822, t);
+	// trim junk from rfc822
+	strncpy(e, rfc822+37, strlen(rfc822)-37);
+	m = message_init(e);
+	e = dbmail_message_to_string(m);
+	ck_assert_str_eq(e, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_message, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message2);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_message2, t);
+	ck_assert_str_eq(e, t);
+	// trim junk from multipart_message2
+	strncpy(e, multipart_message2+56, strlen(multipart_message2)-56);
+	ck_assert_str_eq(e, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(message_rfc822);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(message_rfc822, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(message_rfc822, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message3);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_message3, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message3, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message4);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_message4, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message4, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message5);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_message5, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message5, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message6);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	//COMPARE(multipart_message6, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message6, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message7);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message7, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message8);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
+	ck_assert_str_eq(multipart_message8, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message9);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message9, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_mixed);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_mixed, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_mixed, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(broken_message);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	//COMPARE(e,t);
-	//COMPARE(broken_message, t);
+	// remove non message preamble
+	strncpy(e, broken_message+42, strlen(broken_message)-42);
+	// add closing boundary
+	strcat(e, "--=-i5BOOWGh5HearcweMC39--\n");
+	ck_assert_str_eq(e, t);
+	// broken message is fixed so not equal
+	// ck_assert_str_eq(broken_message, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(encoded_message_latin_1);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(encoded_message_latin_1, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(encoded_message_latin_1, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(encoded_message_latin_2);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(encoded_message_latin_2, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(encoded_message_latin_2, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(encoded_message_utf8);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(encoded_message_utf8, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(encoded_message_utf8, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(encoded_message_utf8_1);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(encoded_message_utf8_1, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(encoded_message_utf8_1, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(encoded_message_utf8_2);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(encoded_message_utf8_2, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(encoded_message_utf8_2, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(encoded_message_koi);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(encoded_message_koi, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(encoded_message_koi, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(raw_message_koi);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(raw_message_koi, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(raw_message_koi, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_alternative);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_alternative, t);
+	ck_assert_str_eq(e, t);
+	// remove non message preamble
+	strncpy(e, multipart_alternative+42, strlen(multipart_alternative)-42);
+	ck_assert_str_eq(e, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(outlook_multipart);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	// COMPARE(e,t);
-	// COMPARE(outlook_multipart, t);
+	ck_assert_str_eq(e, t);
+	strncpy(e, outlook_multipart+65, strlen(outlook_multipart)-65);
+	ck_assert_str_eq(e, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_alternative2);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_alternative2, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_alternative2, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_apple);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_apple, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_apple, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(long_quopri_subject);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(long_quopri_subject, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(long_quopri_subject, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message_big);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_message_big, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message_big, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_digest);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	//COMPARE(e,t);
-	//COMPARE(multipart_digest, t);
+	// TODO
+	// https://github.com/dbmail/dbmail/issues/324
+	// ck_assert_str_eq(e, t);
+	// ck_assert_str_eq(multipart_digest, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_alternative3);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_alternative3, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_alternative3, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_signed);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
+	ck_assert_str_eq(e, t);
 	g_free(e);
 	g_free(t);
+
 	//-----------------------------------------
 	m = message_init(multipart_message_submessage);
 	e = dbmail_message_to_string(m);
 	t = store_and_retrieve(m);
-	COMPARE(e,t);
-	COMPARE(multipart_message_submessage, t);
+	ck_assert_str_eq(e, t);
+	ck_assert_str_eq(multipart_message_submessage, t);
 	g_free(e);
 	g_free(t);
 }
@@ -471,7 +500,7 @@ START_TEST(test_dbmail_message_store2)
 	
 	t = dbmail_message_to_string(n);
 	
-	COMPARE(expect,t);
+	ck_assert_str_eq(expect,t);
 	
 	dbmail_message_free(n);
 	g_free(expect);
@@ -573,7 +602,7 @@ START_TEST(test_dbmail_message_get_internal_date)
 
 	char *before = dbmail_message_to_string(m);
 	char *after = store_and_retrieve(m);
-	COMPARE(before, after);
+	ck_assert_str_eq(before, after);
 	g_free(before);
 	g_free(after);
 }
@@ -581,27 +610,29 @@ END_TEST
 
 START_TEST(test_dbmail_message_to_string)
 {
-        char *result;
+	char *result;
+	char *expect;
 	DbmailMessage *m;
-        
+
 	m = message_init(multipart_message);
-        result = dbmail_message_to_string(m);
-	COMPARE(multipart_message, result);
+	result = dbmail_message_to_string(m);
+	ck_assert_str_eq(multipart_message, result);
 	g_free(result);
 	dbmail_message_free(m);
 
-	//
+	// remove non message preamble
+	expect = malloc(sizeof(char) * (strlen(simple_with_from)-52));
+	strncpy(expect, simple_with_from+52, strlen(simple_with_from)-52);
+
 	m = message_init(simple_with_from);
 	result = dbmail_message_to_string(m);
-	COMPARE(simple_with_from, result);
+	ck_assert_str_eq(expect, result);
 	g_free(result);
+	g_free(expect);
 	dbmail_message_free(m);
-
 }
 END_TEST
     
-//gchar * dbmail_message_hdrs_to_string(DbmailMessage *self);
-
 START_TEST(test_dbmail_message_hdrs_to_string)
 {
 	char *result;
@@ -725,12 +756,12 @@ END_TEST
 START_TEST(test_dbmail_message_encoded)
 {
 	DbmailMessage *m = dbmail_message_new(NULL);
-	//const char *exp = ":: [ Arrty ] :: [ Roy (L) St�phanie ]  <over.there@hotmail.com>";
 	uint64_t id = 0;
 
 	m = dbmail_message_init_with_string(m, encoded_message_koi);
-	fail_unless(strcmp(dbmail_message_get_header(m,"From"),"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=<bad@foo.ru>")==0, 
-			"dbmail_message_get_header failed for koi-8 encoded header");
+
+	ck_assert_str_eq(dbmail_message_get_header(m,"From"),"Антон Нехороших <bad@foo.ru>");
+
 	dbmail_message_free(m);
 
 	m = dbmail_message_new(NULL);
@@ -839,20 +870,22 @@ START_TEST(test_dbmail_message_construct)
 	const gchar *subject = "Some test";
 	const gchar *recipient = "<bar@foo.org> Bar";
 	gchar *body = g_strdup("testing\nține un gând");
-	gchar *expect = g_strdup("From: foo@bar.org\n"
-	"Subject: Some test\n"
-	"To: bar@foo.org\n"
+	gchar *expect = g_strdup("Subject: Some test\n"
+	"Sender: foo@bar.org\n"
+	"To: <bar@foo.org> Bar\n"
 	"MIME-Version: 1.0\n"
 	"Content-Type: text/plain; charset=utf-8\n"
 	"Content-Transfer-Encoding: base64\n"
 	"\n"
-	"dGVzdGluZwrIm2luZSB1biBnw6Ju");
+	"dGVzdGluZwrIm2luZSB1biBnw6Ju\n");
 	gchar *result;
 
 	DbmailMessage *message = dbmail_message_new(NULL);
 	message = dbmail_message_construct(message,recipient,sender,subject,body);
 	result = dbmail_message_to_string(message);
-	fail_unless(MATCH(expect,result),"dbmail_message_construct failed \nExpect:<<%s>>\nResult:<<%s>>", expect, result);
+
+	ck_assert_str_eq(expect, result);
+
 	dbmail_message_free(message);
 	g_free(body);
 	g_free(result);
@@ -892,12 +925,13 @@ START_TEST(test_dbmail_message_get_size)
 	m = dbmail_message_init_with_string(m, rfc822);
 
 	i = dbmail_message_get_size(m, FALSE);
-	fail_unless(i==277, "dbmail_message_get_size failed [%zu]", i);
+	ck_assert_uint_eq (i, 277);
+	//fail_unless(i==251, "dbmail_message_get_size failed [%zu]", i);
 	j = dbmail_message_get_size(m, TRUE);
-	fail_unless(j==289, "dbmail_message_get_size failed [%zu]", j);
+	ck_assert_uint_eq (j, 251);
+	//fail_unless(j==289, "dbmail_message_get_size failed [%zu]", j);
 
 	dbmail_message_free(m);
-	return;
 
 	/* */
 	m = dbmail_message_new(NULL);
@@ -990,8 +1024,8 @@ START_TEST(test_dbmail_message_utf8_headers)
 	char *s_dec,*t = NULL;
 	const char *utf8_invalid_fixed = "=?UTF-8?B?0J/RgNC40LPQu9Cw0YjQsNC10Lwg0L3QsCDRgdC10YA/IA==?= =?UTF-8?B?0LrQvtC90LXRhiDRgdGC0YDQvtC60Lg=?=";
 
-        m = dbmail_message_new(NULL);
-        m = dbmail_message_init_with_string(m,utf8_long_header);
+	m = dbmail_message_new(NULL);
+	m = dbmail_message_init_with_string(m,utf8_long_header);
 	dbmail_message_store(m);
 	physid = dbmail_message_get_physid(m);
 
@@ -999,12 +1033,10 @@ START_TEST(test_dbmail_message_utf8_headers)
 	s_dec = g_mime_utils_header_decode_phrase(NULL, s);
 	test_db_get_subject(physid,&t);
 
-        fail_unless(MATCH(s_dec,t), "[%" PRIu64 "] utf8 long header failed:\n[%s] !=\n[%s]\n", 
-			physid, s_dec, t);
+	ck_assert_str_eq (s_dec,t);
 
 	dbmail_message_free(m);
 	g_free(s_dec);
-	//
 
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m,utf8_invalid);

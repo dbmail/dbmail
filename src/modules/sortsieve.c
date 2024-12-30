@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
  Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -543,8 +543,6 @@ int sort_getheader(sieve2_context_t *s, void *my)
 		/* queue the decoded value for freeing later on */
 		m->freelist = g_list_prepend(m->freelist, decoded);
 
-		if (! g_list_next(headers))
-			break;
 		headers = g_list_next(headers);
 	}
 	g_list_free(g_list_first(headers));
@@ -712,9 +710,14 @@ static int sort_teardown(sieve2_context_t **s2c,
 
 	struct sort_context *sort_context = *sc;
 
-	g_list_destroy(sort_context->freelist);
-
+	int res = sieve2_free(s2c);
+	if (res != SIEVE2_OK) {
+		TRACE(TRACE_ERR, "Error [%d] when calling sieve2_free: [%s]",
+			res, sieve2_errstr(res));
+		return 1;
+	}
 	if (sort_context) {
+		g_list_destroy(sort_context->freelist);
 		g_free(sort_context);
 	}
 

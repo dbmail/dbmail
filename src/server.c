@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -868,6 +868,7 @@ void server_showhelp(const char *name, const char *greeting) {
 
         printf("\nCommon options for all DBMail daemons:\n");
 	printf("     -f file   specify an alternative config file\n");
+	printf("               Default: %s\n", configFile);
 	printf("     -p file   specify an alternative runtime pidfile\n");
 	printf("     -n        stdin/stdout mode\n");
 	printf("     -D        foreground mode\n");

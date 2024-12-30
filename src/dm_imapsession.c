@@ -1,7 +1,7 @@
 /*
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -790,12 +790,6 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			g_string_append_printf(fieldorder, "WHEN n.headername='%s' THEN %d ",
 					name, fieldseq);
 			
-			if (! g_list_next(bodyfetch->names)){
-				g_free(name);
-				break;
-			}
-			bodyfetch->names = g_list_next(bodyfetch->names);
-			fieldseq++;
 			/* get the id of the header */
 			query = p_string_new(self->pool, "");
 			p_string_printf(query, "select id from %sheadername "
@@ -818,8 +812,9 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			END_TRY;
 			p_string_free(query, TRUE);		
 			g_free(name);
+			bodyfetch->names = g_list_next(bodyfetch->names);
+			fieldseq++;
 		}
-		fieldseq++;
 		//adding default value, useful in NOT conditions, Cosmin Cioranu
 		g_string_append_printf(fieldorder, "ELSE %d END AS seq",fieldseq);
 	}
@@ -1934,7 +1929,7 @@ void dbmail_imap_session_bodyfetch_free(ImapSession *self)
 int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 {
 	int inquote = 0, quotestart = 0;
-	int nnorm = 0, nsquare = 0, paridx = 0, argstart = 0;
+	int paridx = 0, argstart = 0;
 	unsigned int i = 0;
 	size_t max;
 	char parlist[MAX_LINESIZE];
@@ -2045,7 +2040,6 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 				if (paridx < 0 || parlist[paridx] != NORMPAR)
 					paridx = -1;
 				else {
-					nnorm--;
 					paridx--;
 				}
 
@@ -2057,7 +2051,6 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 					paridx = -1;
 				else {
 					paridx--;
-					nsquare--;
 				}
 
 				break;
@@ -2065,14 +2058,12 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 				case '(':
 				
 				parlist[++paridx] = NORMPAR;
-				nnorm++;
 				
 				break;
 
 				case '[':
 				
 				parlist[++paridx] = SQUAREPAR;
-				nsquare++;
 
 				break;
 			}

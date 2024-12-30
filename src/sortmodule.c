@@ -137,7 +137,8 @@ void sort_free_result(SortResult_T *result)
 {
 	if (!sort->free_result)
 		return;
-	return sort->free_result(result);
+	sort->free_result(result);
+	return;
 }
 
 int sort_get_cancelkeep(SortResult_T *result)

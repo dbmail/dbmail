@@ -2,7 +2,7 @@
  Copyright (C) 2004 IC & S dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 

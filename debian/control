@@ -1,8 +1,8 @@
 Source: dbmail
 Section: mail
 Priority: optional
-Maintainer: Paul J Stevens <paul@nfg.nl>
-Build-Depends: automake, debhelper (>= 5.0.7), libncurses5-dev, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-3.0-dev, libldap2-dev, libzdb-dev (>= 2.10), libmhash-dev, libevent-dev, pkg-config, libtool, asciidoc, xmlto, po-debconf, libssl-dev
+Maintainer: Alan Hicks <ahicks@p-o.co.uk>
+Build-Depends: automake, debhelper (>= 5.0.7), libncurses-dev, libcurl4-openssl-dev, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-3.0-dev, libldap2-dev, libzdb-dev (>= 2.10), libmhash-dev, libevent-dev, pkg-config, libtool, asciidoc, xmlto, po-debconf, libssl-dev
 Standards-Version: 3.9.1
 
 Package: dbmail

@@ -1,7 +1,7 @@
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 # Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
 # Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
-# Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+# Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 #
 # This program is free software; you can redistribute it and/or 
 # modify it under the terms of the GNU General Public License 
@@ -23,7 +23,7 @@ SUBDIRS = modules
 
 
 if SIEVE
-SIEVEPROGS = dbmail-sievecmd dbmail-timsieved dbmail-sieved
+SIEVEPROGS = dbmail-sievecmd dbmail-sieved
 endif
 
 if USE_DM_GETOPT
@@ -118,9 +118,6 @@ dbmail_sievecmd_LDADD = $(STATIC_MODULES) libdbmail.la
 
 dbmail_sieved_SOURCES = sieve.c sieved.c
 dbmail_sieved_LDADD = $(STATIC_MODULES) libdbmail.la
-
-dbmail_timsieved_SOURCES = timsieve.c timsieved.c
-dbmail_timsieved_LDADD = $(STATIC_MODULES) libdbmail.la
 endif
 
 if SHARED
@@ -133,5 +130,3 @@ libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(MODULES)
 libdbmail_la_LIBADD = $(STATIC_MODULES)
 libdbmail_la_LDFLAGS = $(AM_LDFLAGS) @SOCKETLIB@
 libdbmail_la_CFLAGS = $(AM_CFLAGS)
-
-

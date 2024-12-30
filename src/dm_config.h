@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -66,11 +66,11 @@ int config_get_value(const Field_T name, const char *service_name,
 
 
 int config_get_value_default_int(const Field_T field_name,
-                     const char * const service_name,
+                     const char * service_name,
                      int default_value);
 
 Field_T* config_get_value_default_string(const Field_T field_name,
-                     const char * const service_name,
+                     const char * service_name,
                      Field_T value, Field_T default_value);
 					 
 /* some common used functions reading config options */
@@ -89,8 +89,8 @@ void SetTraceLevel(const char *service_name);
 
 void pidfile_create(const char *pidFile, pid_t pid);
 
-void config_get_timeout(ServerConfig_T *config, const char * const service);
-void config_get_logfiles(ServerConfig_T *config, const char * const service);
+void config_get_timeout(ServerConfig_T *config, const char *  service);
+void config_get_logfiles(ServerConfig_T *config, const char * service);
 void config_get_security_actions(ServerConfig_T *config);
 
 char * config_get_pidfile(ServerConfig_T *config, const char *name);

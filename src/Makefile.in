@@ -17,7 +17,7 @@
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 # Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
 # Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
-# Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+# Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 #
 # This program is free software; you can redistribute it and/or 
 # modify it under the terms of the GNU General Public License 
@@ -127,7 +127,7 @@ CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES = dbmail.h
 CONFIG_CLEAN_VPATH_FILES =
 @SIEVE_TRUE@am__EXEEXT_1 = dbmail-sievecmd$(EXEEXT) \
-@SIEVE_TRUE@	dbmail-timsieved$(EXEEXT) dbmail-sieved$(EXEEXT)
+@SIEVE_TRUE@	dbmail-sieved$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(pkglibdir)"
 PROGRAMS = $(sbin_PROGRAMS)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
@@ -231,12 +231,6 @@ am__dbmail_sieved_SOURCES_DIST = sieve.c sieved.c
 dbmail_sieved_OBJECTS = $(am_dbmail_sieved_OBJECTS)
 @SIEVE_TRUE@dbmail_sieved_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 @SIEVE_TRUE@	libdbmail.la
-am__dbmail_timsieved_SOURCES_DIST = timsieve.c timsieved.c
-@SIEVE_TRUE@am_dbmail_timsieved_OBJECTS = timsieve.$(OBJEXT) \
-@SIEVE_TRUE@	timsieved.$(OBJEXT)
-dbmail_timsieved_OBJECTS = $(am_dbmail_timsieved_OBJECTS)
-@SIEVE_TRUE@dbmail_timsieved_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-@SIEVE_TRUE@	libdbmail.la
 am_dbmail_users_OBJECTS = user.$(OBJEXT)
 dbmail_users_OBJECTS = $(am_dbmail_users_OBJECTS)
 dbmail_users_DEPENDENCIES = $(am__DEPENDENCIES_1) libdbmail.la
@@ -299,7 +293,6 @@ am__depfiles_remade =  \
 	./$(DEPDIR)/maintenance.Po ./$(DEPDIR)/pop3.Po \
 	./$(DEPDIR)/pop3d.Po ./$(DEPDIR)/sieve.Po \
 	./$(DEPDIR)/sievecmd.Po ./$(DEPDIR)/sieved.Po \
-	./$(DEPDIR)/timsieve.Po ./$(DEPDIR)/timsieved.Po \
 	./$(DEPDIR)/user.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -324,15 +317,14 @@ SOURCES = $(libdbmail_la_SOURCES) $(dbmail_deliver_SOURCES) \
 	$(dbmail_export_SOURCES) $(dbmail_httpd_SOURCES) \
 	$(dbmail_imapd_SOURCES) $(dbmail_lmtpd_SOURCES) \
 	$(dbmail_pop3d_SOURCES) $(dbmail_sievecmd_SOURCES) \
-	$(dbmail_sieved_SOURCES) $(dbmail_timsieved_SOURCES) \
-	$(dbmail_users_SOURCES) $(dbmail_util_SOURCES)
+	$(dbmail_sieved_SOURCES) $(dbmail_users_SOURCES) \
+	$(dbmail_util_SOURCES)
 DIST_SOURCES = $(am__libdbmail_la_SOURCES_DIST) \
 	$(dbmail_deliver_SOURCES) $(dbmail_export_SOURCES) \
 	$(dbmail_httpd_SOURCES) $(dbmail_imapd_SOURCES) \
 	$(dbmail_lmtpd_SOURCES) $(dbmail_pop3d_SOURCES) \
 	$(am__dbmail_sievecmd_SOURCES_DIST) \
-	$(am__dbmail_sieved_SOURCES_DIST) \
-	$(am__dbmail_timsieved_SOURCES_DIST) $(dbmail_users_SOURCES) \
+	$(am__dbmail_sieved_SOURCES_DIST) $(dbmail_users_SOURCES) \
 	$(dbmail_util_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
@@ -465,7 +457,8 @@ MYSQL_32003 = @MYSQL_32003@
 MYSQL_32004 = @MYSQL_32004@
 MYSQL_32005 = @MYSQL_32005@
 MYSQL_32006 = @MYSQL_32006@
-MYSQL_UPGRADE = @MYSQL_UPGRADE@
+MYSQL_35001 = @MYSQL_35001@
+MYSQL_CREATE = @MYSQL_CREATE@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -486,7 +479,8 @@ PGSQL_32003 = @PGSQL_32003@
 PGSQL_32004 = @PGSQL_32004@
 PGSQL_32005 = @PGSQL_32005@
 PGSQL_32006 = @PGSQL_32006@
-PGSQL_UPGRADE = @PGSQL_UPGRADE@
+PGSQL_35001 = @PGSQL_35001@
+PGSQL_CREATE = @PGSQL_CREATE@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
@@ -506,7 +500,7 @@ SQLITE_32003 = @SQLITE_32003@
 SQLITE_32004 = @SQLITE_32004@
 SQLITE_32005 = @SQLITE_32005@
 SQLITE_32006 = @SQLITE_32006@
-SQLITE_UPGRADE = @SQLITE_UPGRADE@
+SQLITE_35001 = @SQLITE_35001@
 STRIP = @STRIP@
 SYSTEMD_CFLAGS = @SYSTEMD_CFLAGS@
 SYSTEMD_LIBS = @SYSTEMD_LIBS@
@@ -568,7 +562,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = modules
-@SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-timsieved dbmail-sieved
+@SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-sieved
 @USE_DM_GETOPT_TRUE@DM_GETOPT = dm_getopt.c
 COMMON = dm_user.c \
 	dm_message.c \
@@ -633,8 +627,6 @@ dbmail_httpd_LDADD = $(STATIC_MODULES) libdbmail.la
 @SIEVE_TRUE@dbmail_sievecmd_LDADD = $(STATIC_MODULES) libdbmail.la
 @SIEVE_TRUE@dbmail_sieved_SOURCES = sieve.c sieved.c
 @SIEVE_TRUE@dbmail_sieved_LDADD = $(STATIC_MODULES) libdbmail.la
-@SIEVE_TRUE@dbmail_timsieved_SOURCES = timsieve.c timsieved.c
-@SIEVE_TRUE@dbmail_timsieved_LDADD = $(STATIC_MODULES) libdbmail.la
 @SHARED_TRUE@pkglib_LTLIBRARIES = libdbmail.la
 @SHARED_FALSE@noinst_LTLIBRARIES = libdbmail.la
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(MODULES)
@@ -816,10 +808,6 @@ dbmail-sieved$(EXEEXT): $(dbmail_sieved_OBJECTS) $(dbmail_sieved_DEPENDENCIES) $
 	@rm -f dbmail-sieved$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(dbmail_sieved_OBJECTS) $(dbmail_sieved_LDADD) $(LIBS)
 
-dbmail-timsieved$(EXEEXT): $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_DEPENDENCIES) $(EXTRA_dbmail_timsieved_DEPENDENCIES) 
-	@rm -f dbmail-timsieved$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_LDADD) $(LIBS)
-
 dbmail-users$(EXEEXT): $(dbmail_users_OBJECTS) $(dbmail_users_DEPENDENCIES) $(EXTRA_dbmail_users_DEPENDENCIES) 
 	@rm -f dbmail-users$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(dbmail_users_OBJECTS) $(dbmail_users_LDADD) $(LIBS)
@@ -885,8 +873,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sieve.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sievecmd.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sieved.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/timsieve.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/timsieved.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/user.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -1401,8 +1387,6 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/sieve.Po
 	-rm -f ./$(DEPDIR)/sievecmd.Po
 	-rm -f ./$(DEPDIR)/sieved.Po
-	-rm -f ./$(DEPDIR)/timsieve.Po
-	-rm -f ./$(DEPDIR)/timsieved.Po
 	-rm -f ./$(DEPDIR)/user.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -1498,8 +1482,6 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/sieve.Po
 	-rm -f ./$(DEPDIR)/sievecmd.Po
 	-rm -f ./$(DEPDIR)/sieved.Po
-	-rm -f ./$(DEPDIR)/timsieve.Po
-	-rm -f ./$(DEPDIR)/timsieved.Po
 	-rm -f ./$(DEPDIR)/user.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

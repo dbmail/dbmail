@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -1493,176 +1493,163 @@ char *dbmail_imap_astring_as_string(const char *s)
 	g_free(t);
 
 	return r;
-
 }
+
 /* structure and envelope tools */
-static void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean extension);
-static void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension);
-static void _structure_part_message(GMimeObject *part, gpointer data, gboolean extension);
-static void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extension);
+static GList * _structure_part_handle_part(GMimeObject *part, GList *alist, gboolean extension);
+static GList * _structure_part_text(GMimeObject *part, GList *structure, gboolean extension);
+static GList * _structure_part_message(GMimeObject *part, GList *structure, gboolean extension);
+static GList * _structure_part_multipart(GMimeObject *part, GList *structure, gboolean extension);
+/* Get a header and any properties
+ * from a mime part then add as strings to the structure list
+ */
+static GList * imap_append_header_as_string(GList *structure, GMimeObject *mime_part, const char *header);
 
-
-static GList * imap_append_hash_as_string(GList *list, const char *type)
+/* Get a header and any properties
+ * from a mime part then add them as strings to the structure list
+ */
+static GList * imap_append_header_as_string(GList *structure, GMimeObject *mime_part, const char *header)
 {
-	size_t i = 0;
-	char curr = 0;
-	char name[512];
-	char value[1024];
-	char *head = (char *)type;
+	GMimeContentType *gm_type;
+	GMimeParam * gm_param;
+	GMimeParamList * gm_param_list = NULL;
+	GMimeParamEncodingMethod gm_param_encoding;
+
 	GList *l = NULL;
-	
-	if (! type){
-		//in case of tye null, it should return NIL, same process is applied at the end of this function
-		TRACE(TRACE_DEBUG, "hash_as_string: is null (missing): NIL");
-		list = g_list_append_printf(list, "NIL");
-		return list;
-	}
+	const char * gm_param_name;
+	const char * gm_param_value;
+	int i = 0;
+	int gm_param_len = 0;
 
-	TRACE(TRACE_DEBUG, "analyse [%s]", type);
-	while (type[i]) {
-		curr = type[i++];
-		if (curr == ';') {
-			break;
-		}
-	}
+	const char *gm_header = g_mime_object_get_header(mime_part, header);
 
-	while (type[i]) {
-		curr = type[i];
-		if (ISLF(curr) || ISCR(curr) || isblank(curr)) {
-			i++;
-			continue;
-		}
-		break;
-	}
-	
-	head += i;
-	//implementing a hard protection
-	int maxSize=strlen(head);
-	maxSize=strlen(head);
-	if (maxSize>1536)
-		maxSize=1536;//hard limit max len of name+len of value
-	int offset = 0;
-	int inname = 1;
-	TRACE(TRACE_DEBUG, "analyse [%s]", head);
-	while (head && maxSize>=0) {
-		//hard protection, preventing going maxsize, until the \0
-		maxSize--;
-		curr = head[offset];
-		if ((! curr) && (offset==0))
-			break;
-		if (curr == '=' && inname) {
-			memset(name, 0, sizeof(name));
-			if (offset>512) 
-				offset=512; //hard limit
-			strncpy(name, head, offset);
-			g_strstrip(name);
-			head += offset+1;
-			inname = 0;
-			offset = 0;
-			TRACE(TRACE_DEBUG, "name: %s", name);
-			l = g_list_append_printf(l, "\"%s\"", name);
-			continue;
-		} else if ((! curr) || (curr == ';')) {
-			size_t len;
-			char *clean1, *clean2, *clean3;
-			memset(value, 0, sizeof(value));
-			if (offset>1024) 
-				offset=1024; //hard limit
-			strncpy(value, head, offset);
-			head += offset+1;
-			inname = 1;
-			offset = 0;
-
-			clean1 = value;
-			if (clean1[0] == '"')
-				clean1++;
-
-			len = strlen(clean1);
-			if (clean1[len-1] == '"')
-				clean1[len-1] = '\0';
-
-			clean2 = g_strcompress(clean1);
-
-			if (g_mime_utils_text_is_8bit((const unsigned char *)clean2, strlen(clean2))) {
-				clean1 = g_mime_utils_header_encode_text(NULL, clean2, NULL);
-				g_free(clean2);
-				clean2 = clean1;
+	if(gm_header) {
+		gm_type = g_mime_object_get_content_type(mime_part);
+		if (gm_type) {
+			structure = g_list_append_printf(structure,"\"%s\"", gm_type->type);
+			structure = g_list_append_printf(structure,"\"%s\"", gm_type->subtype);
+			if (gm_type->params) {
+				gm_param_list = gm_type->params;
+				gm_param_len = g_mime_param_list_length(gm_param_list);
 			}
-			clean3 = g_strescape(clean2, NULL);
-			g_free(clean2);
-
-			TRACE(TRACE_DEBUG, "value: %s", value);
-			TRACE(TRACE_DEBUG, "clean: %s", clean3);
-			l = g_list_append_printf(l, "\"%s\"", clean3);
-
-			g_free(clean3);
-
-			if (! curr)
-				break;
+		} else {
+			TRACE(TRACE_DEBUG, "no type for mime part [%s]", header);
+			return structure;
 		}
-		offset ++;
+		if(gm_param_list) {
+			gm_param_len = g_mime_param_list_length(gm_param_list);
+		}
+		TRACE(TRACE_DEBUG,"parse [%s/%s]", gm_type->type, gm_type->subtype);
+
+		if (!gm_param_list) {
+			return structure;
+		}
+
+		for(i=0; i < gm_param_len; i++){
+			gm_param = g_mime_param_list_get_parameter_at(gm_param_list, i);
+			gm_param_name = g_mime_param_get_name(gm_param);
+			l = g_list_append_printf(l, "\"%s\"", gm_param_name);
+			gm_param_value = g_mime_param_get_value(gm_param);
+			gm_param_encoding = g_mime_param_get_encoding_method(gm_param);
+			if (gm_param_encoding == GMIME_PARAM_ENCODING_METHOD_DEFAULT){
+				TRACE(TRACE_DEBUG, "encoding=default [%s]", gm_param_value);
+			} else if (gm_param_encoding == GMIME_PARAM_ENCODING_METHOD_RFC2231){
+				TRACE(TRACE_DEBUG, "encoding=rfc2231 [%s]", gm_param_value);
+			} else if (gm_param_encoding == GMIME_PARAM_ENCODING_METHOD_RFC2047){
+				TRACE(TRACE_DEBUG, "encoding=rfc2047 [%s]", gm_param_value);
+			} else {
+				TRACE(TRACE_DEBUG, "encoding=unknown [%s]", gm_param_value);
+			}
+			l = g_list_append_printf(l, "\"%s\"", gm_param_value);
+		}
 	}
 
 	if (l) {
 		char *s = dbmail_imap_plist_as_string(l);
-		TRACE(TRACE_DEBUG, "hash_as_string: from %s => %s", type, s);
-		list = g_list_append_printf(list, "%s", s);
+		structure = g_list_append_printf(structure, "%s", s);
 		g_free(s);
-		
 		g_list_destroy(l);
 	} else {
-		TRACE(TRACE_DEBUG, "hash_as_string: from %s => NIL",type);
-		list = g_list_append_printf(list, "NIL");
+		structure = g_list_append_printf(structure, "NIL");
 	}
-	
-
-	return list;
+	return structure;
 }
 
-static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
+
+/* The returned disposition structure list is utf-8:
+ * (attachment ("filename" "name of file")) or NIL
+ */
+static GList * imap_append_disposition_as_string(GList *structure, GMimeObject *mime_part)
 {
-	GList *t = NULL;
-	GMimeContentDisposition *disposition;
-	char *result;
-	const char *disp = g_mime_object_get_header(part, "Content-Disposition");
-	
-	if(disp) {
-		disposition = g_mime_content_disposition_parse(NULL, disp);
-		t = g_list_append_printf(t,"\"%s\"",
-				g_mime_content_disposition_get_disposition(disposition));
-		
-		/* paramlist */
-		t = imap_append_hash_as_string(t, disp);
+	GMimeContentDisposition *gm_disposition;
+	GMimeParam * gm_param;
+	GMimeParamList * gm_param_list = NULL;
+	GMimeParamEncodingMethod gm_param_encoding;
+	GList *l = NULL;
+	int i = 0;
+	int gm_param_len = 0;
+	const char * gm_param_name;
+	const char * gm_param_value;
+	// const char * gm_param_charset;
+	const char *gm_header = g_mime_object_get_header(mime_part, "Content-Disposition");
 
-		g_object_unref(disposition);
-		
-		result = dbmail_imap_plist_as_string(t);
-		list = g_list_append_printf(list,"%s",result);
-		g_free(result);
-
-		g_list_destroy(t);
+	if (gm_header) {
+		gm_disposition = g_mime_content_disposition_parse(NULL, gm_header);
+		gm_param_list = g_mime_content_disposition_get_parameters(gm_disposition);
+		if(gm_param_list){
+			gm_param_len = g_mime_param_list_length(gm_param_list);
+		} else {
+			return structure;
+		}
+		// Add param values
+		for(i=0; i < gm_param_len; i++){
+			gm_param = g_mime_param_list_get_parameter_at(gm_param_list, i);
+			gm_param_name = g_mime_param_get_name(gm_param);
+			l = g_list_append_printf(l, "\"%s\"", gm_param_name);
+			gm_param_value = g_mime_param_get_value(gm_param);
+			gm_param_encoding = g_mime_param_get_encoding_method(gm_param);
+			if (gm_param_encoding == GMIME_PARAM_ENCODING_METHOD_DEFAULT){
+				TRACE(TRACE_DEBUG, "encoding=default [%s]", gm_param_value);
+			} else if (gm_param_encoding == GMIME_PARAM_ENCODING_METHOD_RFC2231){
+				TRACE(TRACE_DEBUG, "encoding=rfc2231 [%s]", gm_param_value);
+			} else if (gm_param_encoding == GMIME_PARAM_ENCODING_METHOD_RFC2047){
+				TRACE(TRACE_DEBUG, "encoding=rfc2047 [%s]", gm_param_value);
+			} else {
+				TRACE(TRACE_DEBUG, "encoding=unknown [%s]", gm_param_value);
+			}
+			// gm_param_charset = g_mime_param_get_charset(gm_param);
+			// if (gm_param_charset) {
+			// 	l = g_list_append_printf(l, "\"%s\"", gm_param_charset);
+			// }
+			l = g_list_append_printf(l, "\"%s\"", gm_param_value);
+		}
+		if (l) {
+			gm_param_value = g_mime_content_disposition_get_disposition(gm_disposition);
+			char *s = dbmail_imap_plist_as_string(l);
+			TRACE(TRACE_DEBUG, "content_disposition_as_string [%s]", s);
+			structure = g_list_append_printf(structure, "(\"%s\" %s)", gm_param_value, s);
+			g_free(s);
+			g_list_destroy(l);
+		} else {
+			structure = g_list_append_printf(structure, "(\"%s\" NIL)", gm_header);
+		}
+		g_object_unref(gm_disposition);
 	} else {
-		list = g_list_append_printf(list,"NIL");
+		structure = g_list_append_printf(structure,"NIL");
 	}
-	return list;
+	return structure;
 }
 
-#define imap_append_header_as_string(list, part, header) \
-	imap_append_header_as_string_default(list, part, header, "NIL")
-
-static GList * imap_append_header_as_string_default(GList *list,
+static GList * imap_append_header_value(GList *structure,
 		GMimeObject *part, const char *header, char *def)
 {
-	char *result;
-	char *s;
-	if((result = (char *)g_mime_object_get_header(part, header))) {
-		s = dbmail_imap_astring_as_string(result);
-		list = g_list_append_printf(list, "%s", s);
-		g_free(s);
+	const char *result;
+	if((result = g_mime_object_get_header(part, header))) {
+		structure = g_list_append_printf(structure, "\"%s\"", result);
 	} else {
-		list = g_list_append_printf(list, def);
+		structure = g_list_append_printf(structure, "%s", def);
 	}
-	return list;
+	return structure;
 }
 
 static void imap_part_get_sizes(GMimeObject *part, size_t *size, size_t *lines)
@@ -1693,39 +1680,38 @@ static void imap_part_get_sizes(GMimeObject *part, size_t *size, size_t *lines)
 }
 
 
-void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean extension)
+static GList * _structure_part_handle_part(GMimeObject *part, GList *structure, gboolean extension)
 {
 	GMimeContentType *type;
 	GMimeObject *object;
 
-//	if (GMIME_IS_MESSAGE(part))
-//		object = g_mime_message_get_mime_part(GMIME_MESSAGE(part));
-//	else
-//		object = part;
-	object = part;
+	if (GMIME_IS_MESSAGE(part))
+		object = g_mime_message_get_mime_part(GMIME_MESSAGE(part));
+	else
+		object = part;
 	
 	type = g_mime_object_get_content_type(object);
 	if (! type) {
 		TRACE(TRACE_DEBUG, "no type for object!");
-		return;
+		return structure;
 	}
 
 	TRACE(TRACE_DEBUG,"parse [%s/%s]", type->type, type->subtype);
 
 	/* multipart composite */
 	if (g_mime_content_type_is_type(type,"multipart","*"))
-		_structure_part_multipart(object,data, extension);
+		structure = _structure_part_multipart(object, structure, extension);
 	/* message included as mimepart */
 	else if (g_mime_content_type_is_type(type,"message","*"))
-		_structure_part_message(object,data, extension);
+		structure = _structure_part_message(object, structure, extension);
 	/* simple message */
 	else
-		_structure_part_text(object,data, extension);
+		structure = _structure_part_text(object, structure, extension);
 
-
+	return structure;
 }
 
-void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extension)
+static GList * _structure_part_multipart(GMimeObject *part, GList *structure, gboolean extension)
 {
 	GMimeMultipart *multipart;
 	GMimeObject *subpart, *object;
@@ -1735,37 +1721,37 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	int i,j;
 	GMimeContentType *type;
 	
+	if (GMIME_IS_MESSAGE(part))
+		object = g_mime_message_get_mime_part(GMIME_MESSAGE(part));
+	else
+		object = part;
 	object = part;
 	
 	type = g_mime_object_get_content_type(object);
 	if (! type) {
 		TRACE(TRACE_DEBUG, "no type information");
-		return;
+		return structure;
 	}
 	multipart = GMIME_MULTIPART(object);
 	i = g_mime_multipart_get_count(multipart);
 	
-	TRACE(TRACE_DEBUG,"parse [%d] parts for [%s/%s] with boundary [%s]", 
+	TRACE(TRACE_DEBUG,"parse [%d] parts for [%s/%s] with boundary [%s]",
 			i, type->type, type->subtype,
 		       	g_mime_multipart_get_boundary(multipart));
 
 	/* loop over parts for base info */
 	for (j=0; j<i; j++) {
 		subpart = g_mime_multipart_get_part(multipart,j);
-		_structure_part_handle_part(subpart,&alist,extension);
+		alist = _structure_part_handle_part(subpart, alist, extension);
 	}
-	
-	/* sub-type */
-	alist = g_list_append_printf(alist,"\"%s\"", type->subtype);
 
-	/* extension data (only for multipart, in case of BODYSTRUCTURE command argument) */
 	if (extension) {
 		/* paramlist */
-		list = imap_append_hash_as_string(list, 
-				g_mime_object_get_header(object, "Content-Type"));
-
+		list = imap_append_header_as_string(list,object,"Content-Type");
 		/* disposition */
 		list = imap_append_disposition_as_string(list, object);
+		/* description */
+		list = imap_append_header_value(list,object,"Content-Description", "NIL");
 		/* language */
 		list = imap_append_header_as_string(list,object,"Content-Language");
 		/* location */
@@ -1779,10 +1765,11 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	}
 
 	/* done*/
-	*(GList **)data = (gpointer)g_list_append(*(GList **)data,dbmail_imap_plist_as_string(alist));
+	structure = g_list_append(structure, dbmail_imap_plist_as_string(alist));
 	
 	g_list_destroy(alist);
 
+	return structure;
 }
 
 static GList * _structure_basic(GMimeObject *object)
@@ -1798,26 +1785,25 @@ static GList * _structure_basic(GMimeObject *object)
 	}
 	TRACE(TRACE_DEBUG, "parse [%s/%s]", type->type, type->subtype);
 
-	/* type/subtype */
-	list = g_list_append_printf(list,"\"%s\"", type->type);
-	list = g_list_append_printf(list,"\"%s\"", type->subtype);
 	/* paramlist */
-	list = imap_append_hash_as_string(list, 
-			g_mime_object_get_header(object, "Content-Type"));
+	list = imap_append_header_as_string(list, object, "Content-Type");
+
 	/* body id */
 	if ((result = (char *)g_mime_object_get_content_id(object)))
 		list = g_list_append_printf(list,"\"%s\"", result);
 	else
 		list = g_list_append_printf(list,"NIL");
+
 	/* body description */
-	list = imap_append_header_as_string(list,object,"Content-Description");
+	list = imap_append_header_value(list,object,"Content-Description", "NIL");
+
 	/* body encoding */
-	list = imap_append_header_as_string_default(list,object,"Content-Transfer-Encoding", "\"7BIT\"");
+	list = imap_append_header_value(list,object,"Content-Transfer-Encoding", "\"7BIT\"");
 
 	return list;
 
 }
-void _structure_part_message(GMimeObject *part, gpointer data, gboolean extension)
+static GList * _structure_part_message(GMimeObject *part, GList *structure, gboolean extension)
 {
 	char *b;
 	GList *list = NULL;
@@ -1826,6 +1812,7 @@ void _structure_part_message(GMimeObject *part, gpointer data, gboolean extensio
 	
 	object = part;
 	
+	list = g_list_append_printf(list,"_structure_part_message");
 	list = _structure_basic(object);
 
 	/* body size */
@@ -1859,13 +1846,14 @@ void _structure_part_message(GMimeObject *part, gpointer data, gboolean extensio
 	}
 	
 	/* done*/
-	*(GList **)data = (gpointer)g_list_append(*(GList **)data,dbmail_imap_plist_as_string(list));
+	structure = g_list_append(structure, dbmail_imap_plist_as_string(list));
 	
 	g_list_destroy(list);
 
+	return structure;
 }
 
-void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
+static GList * _structure_part_text(GMimeObject *part, GList *structure, gboolean extension)
 {
 	GList *list = NULL;
 	size_t s = 0, l = 0;
@@ -1900,13 +1888,12 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	}
 	
 	/* done*/
-	*(GList **)data = (gpointer)g_list_append(*(GList **)data, dbmail_imap_plist_as_string(list));
-	
+	structure = g_list_append(structure, dbmail_imap_plist_as_string(list));
+
 	g_list_destroy(list);
 
+	return structure;
 }
-
-
 
 GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialist)
 {
@@ -1923,7 +1910,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 	i = internet_address_list_length(ialist);
 	for (j=0; j<i; j++) {
 		ia = internet_address_list_get_address(ialist,j);
-		
+
 		g_return_val_if_fail(ia!=NULL, list);
 
 		if (internet_address_group_get_members((InternetAddressGroup *)ia)) {
@@ -1966,18 +1953,12 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 			TRACE(TRACE_DEBUG, "handling a standard address [%s] [%s].", name, addr);
 
 			/* personal name */
-			if (name) {
-				char * encname = g_mime_utils_header_encode_phrase(NULL, name, NULL);
-				g_strdelimit(encname,"\"\\",' ');
-				g_strstrip(encname);
-				s = dbmail_imap_astring_as_string(encname);
-				t = g_list_append_printf(t, "%s", s);
-				g_free(encname);
-				g_free(s);
+			if (name && strlen(name) > 0) {
+				t = g_list_append_printf(t, "\"%s\"", name);
 			} else {
 				t = g_list_append_printf(t, "NIL");
 			}
-                        
+
 			/* source route */
 			t = g_list_append_printf(t, "NIL");
                         
@@ -2010,7 +1991,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 			p = g_list_append_printf(p, "%s", s);
 			g_free(s);
 
-			// Dont free list data, it's free'd elsewhere
+			// Dont free list structure, it's free'd elsewhere
 			g_list_destroy(t);
 			t = NULL;
 		}
@@ -2061,42 +2042,35 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	
 	/* multipart composite */
 	if (g_mime_content_type_is_type(type,"multipart","*"))
-		_structure_part_multipart(part,(gpointer)&structure, extension);
+		structure = _structure_part_multipart(part, structure, extension);
 	/* message included as mimepart */
 	else if (g_mime_content_type_is_type(type,"message","*"))
-		_structure_part_message(part,(gpointer)&structure, extension);
+		structure = _structure_part_message(part, structure, extension);
 	/* as simple message */
 	else
-		_structure_part_text(part,(gpointer)&structure, extension);
+		structure = _structure_part_text(part, structure, extension);
 	
 	s = dbmail_imap_plist_as_string(structure);
 	t = dbmail_imap_plist_collapse(s);
 	g_free(s);
 
 	g_list_destroy(structure);
-	
+
 	return t;
 }
 
-static GList * envelope_address_part(GList *list, GMimeMessage *message, const char *header)
+GList * envelope_address_part(GList *list, GMimeMessage *message, const char *header)
 {
 	const char *result;
 	char *t;
 	InternetAddressList *alist;
-	char *result_enc;
-	const char *charset;
-	
-	charset = message_get_charset(message);
 
 	result = g_mime_object_get_header(GMIME_OBJECT(message),header);
-	
 	if (result) {
-		result_enc = dbmail_iconv_str_to_utf8(result, charset);
-		t = imap_cleanup_address(result_enc);
-		g_free(result_enc);
+		t = imap_cleanup_address(result);
 		alist = internet_address_list_parse(NULL, t);
-		g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, alist);
+		g_free(t);
 		g_object_unref(alist);
 		alist = NULL;
 	} else {
@@ -2150,42 +2124,18 @@ char * imap_get_envelope(GMimeMessage *message)
 
 	if (! GMIME_IS_MESSAGE(message))
 		return NULL;
-	
+
 	part = GMIME_OBJECT(message);
+
 	/* date */
-	result = g_mime_object_get_header(part, "Date");
-	if (result) {
-		t = dbmail_imap_astring_as_string(result);
-		list = g_list_append_printf(list,"%s", t);
-		g_free(t);
-	} else {
-		list = g_list_append_printf(list,"NIL");
-	}
+	list = imap_append_header_value(list, part, "Date", "NIL");
 	
 	/* subject */
-	result = g_mime_object_get_header(GMIME_OBJECT(message),"Subject");
-
-	if (result) {
-		const char *charset = message_get_charset(message);
-		char * subj = dbmail_iconv_str_to_utf8(result, charset);
-		TRACE(TRACE_DEBUG, "[%s] [%s] -> [%s]", charset, result, subj);
-		if (g_mime_utils_text_is_8bit((unsigned char *)subj, strlen(subj))) {
-			s = g_mime_utils_header_encode_text(NULL, (const char *)subj, NULL);
-			TRACE(TRACE_DEBUG, "[%s] -> [%s]", subj, s);
-			g_free(subj);
-			subj = s;
-		}
-		t = dbmail_imap_astring_as_string(subj);
-		TRACE(TRACE_DEBUG, "[%s] -> [%s]", subj, t);
-		g_free(subj);
-		list = g_list_append_printf(list,"%s", t);
-		g_free(t);
-	} else {
-		list = g_list_append_printf(list,"NIL");
-	}
+	list = imap_append_header_value(list, part, "Subject", "NIL");
 	
 	/* from */
 	list = envelope_address_part(list, message, "From");
+
 	/* sender */
 	h = g_mime_object_get_header(GMIME_OBJECT(message),"Sender");
 	if (h && (strlen(h) > 0))
@@ -2199,20 +2149,20 @@ char * imap_get_envelope(GMimeMessage *message)
 		list = envelope_address_part(list, message, "Reply-to");
 	else
 		list = envelope_address_part(list, message, "From");
-		
+
 	/* to */
 	list = envelope_address_part(list, message, "To");
 	/* cc */
 	list = envelope_address_part(list, message, "Cc");
 	/* bcc */
 	list = envelope_address_part(list, message, "Bcc");
-	
 	/* in-reply-to */
-	list = imap_append_header_as_string(list,part,"In-Reply-to");
+	list = imap_append_header_value(list, part, "In-Reply-to", "NIL");
+
 	/* message-id */
 	result = g_mime_message_get_message_id(message);
 	if (result && (! g_strrstr(result,"=")) && (! g_strrstr(result,"@(none)"))) {
-                t = g_strdup_printf("<%s>", result);
+		t = g_strdup_printf("<%s>", result);
 		s = dbmail_imap_astring_as_string(t);
 		list = g_list_append_printf(list,"%s", s);
 		g_free(s);
@@ -2223,7 +2173,7 @@ char * imap_get_envelope(GMimeMessage *message)
 
 	s = dbmail_imap_plist_as_string(list);
 
-	// Dont free list data, it's free'd elsewhere
+	// Dont free list structure, it's free'd elsewhere
 	g_list_destroy(list);
 
 	return s;
@@ -2612,5 +2562,3 @@ int diff_time(struct timeval before, struct timeval after)
 	int tdiff = tafter - tbefore;
 	return (int)rint((double)tdiff/1000000);
 }
-
-

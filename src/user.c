@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -33,13 +33,6 @@ extern char configFile[PATH_MAX];
 
 #define SHADOWFILE "/etc/shadow"
 #define PNAME "dbmail/user"
-
-/* UI policy */
-extern int yes_to_all;
-extern int no_to_all;
-extern int verbose;
-extern int quiet;          /* Don't be helpful. */
-extern int reallyquiet;    /* Don't print errors. */
 
 struct change_flags {
 	unsigned int newuser         : 1;
@@ -94,6 +87,7 @@ int do_showhelp(void)
 	"     --disable            disable authentication for user\n"
         "\nCommon options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
+	"               Default: %s\n"
 	"     -q        quietly skip interactive prompts\n"
 	"               use twice to suppress error messages\n"
 	"     -n        show the intended action but do not perform it, no to all\n"
@@ -101,7 +95,7 @@ int do_showhelp(void)
 	"     -v        verbose details\n"
 	"     -V        show the version\n"
 	"     -h        show this help message\n"
-	);
+	, configFile);
 
 	return 0;
 }

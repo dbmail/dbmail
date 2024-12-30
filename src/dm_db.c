@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -21,8 +21,10 @@
 */
 
 /**
- * \file db.c
- * 
+ * RFC 9051
+ * Internet Message Access Protocol (IMAP) - Version 4rev2
+ * RFC 3501
+ * Internet Message Access Protocol (IMAP) - Version 4rev1
  */
 
 #include "dbmail.h"
@@ -99,6 +101,8 @@ struct mailbox_match * mailbox_match_new(const char *mailbox)
 
 		/**
 		 * RFC 3501 [Page 19]
+		 * RFC 9051 4.3.1
+		 * A.1. Mailbox International Naming Convention for Compatibility with IMAP4rev1
 		 *
 		 * "&" is used to shift to modified BASE64 and "-" to shift back to
 		 * US-ASCII.
@@ -158,7 +162,7 @@ void mailbox_match_free(struct mailbox_match *m)
 
 
 /** list of tables used in dbmail */
-#define DB_NTABLES 20
+#define DB_NTABLES 19
 const char *DB_TABLENAMES[DB_NTABLES] = {
 	"acl",
 	"aliases",
@@ -309,6 +313,13 @@ int db_disconnect(void)
 	if(db_connected >= 1) URL_free(&dburi);
 	db_connected = 0;
 	return 0;
+}
+
+const char *db_get_db_name(void)
+{
+	const char * path=URL_getPath(dburi);
+	path=path+1;
+	return path;
 }
 
 Connection_T db_con_get(void)
@@ -979,6 +990,7 @@ static int check_upgrade_step(int from_version, int to_version)
 			if (to_version == 32004) query = DM_SQLITE_32004;
 			if (to_version == 32005) query = DM_SQLITE_32005;
 			if (to_version == 32006) query = DM_SQLITE_32006;
+			if (to_version == 35001) query = DM_SQLITE_35001;
 		break;
 		case DM_DRIVER_MYSQL:
 			if (to_version == 32001) query = DM_MYSQL_32001;
@@ -987,6 +999,7 @@ static int check_upgrade_step(int from_version, int to_version)
 			if (to_version == 32004) query = DM_MYSQL_32004;
 			if (to_version == 32005) query = DM_MYSQL_32005;
 			if (to_version == 32006) query = DM_MYSQL_32006;
+			if (to_version == 35001) query = DM_MYSQL_35001;
 		break;
 		case DM_DRIVER_POSTGRESQL:
 			if (to_version == 32001) query = DM_PGSQL_32001;
@@ -995,6 +1008,7 @@ static int check_upgrade_step(int from_version, int to_version)
 			if (to_version == 32004) query = DM_PGSQL_32004;
 			if (to_version == 32005) query = DM_PGSQL_32005;
 			if (to_version == 32006) query = DM_PGSQL_32006;
+			if (to_version == 35001) query = DM_PGSQL_35001;
 		break;
 		default:
 			TRACE(TRACE_WARNING, "Migrations not supported for database driver");
@@ -1021,12 +1035,88 @@ static int check_upgrade_step(int from_version, int to_version)
 	return result;
 }
 
+/**
+ * Check dbmail_headernames
+ * for core values used for caching
+ * inserting any that don't exist
+ */
+int db_check_headernames(void)
+{
+	ResultSet_T result = 0;
+	PreparedStatement_T s;
+	Connection_T c = db_con_get();
+	int headername_exists = 0;
+	int ret = 0;
+	GList *headernames = NULL;
+	headernames = g_list_append(headernames, "from");
+	headernames = g_list_append(headernames, "to");
+	headernames = g_list_append(headernames, "cc");
+	headernames = g_list_append(headernames, "bcc");
+	headernames = g_list_append(headernames, "date");
+	headernames = g_list_append(headernames, "subject");
+	headernames = g_list_append(headernames, "content-type");
+	headernames = g_list_append(headernames, "content-disposition");
+	headernames = g_list_append(headernames, "references");
+	headernames = g_list_append(headernames, "in-reply-to");
+	headernames = g_list_append(headernames, "reply-to");
+	headernames = g_list_append(headernames, "return-path");
+
+	headernames = g_list_first(headernames);
+
+	const char *sql_check =
+		"SELECT count(*) "
+		"FROM %sheadername "
+		"WHERE headername = '%s'"
+	;
+	const char *sql_insert =
+		"INSERT INTO %sheadername (headername) "
+		"VALUES (?)"
+	;
+
+	// check exists
+	while (headernames) {
+		TRY
+			result = db_query(c, sql_check, DBPFX, headernames->data);
+			while (db_result_next(result)) {
+				headername_exists = db_result_get_u64(result, 0);
+			}
+			TRACE(TRACE_DEBUG, "headername %s: %d", (char*)headernames->data, headername_exists);
+			if (headername_exists != 1) {
+				TRACE(TRACE_DEBUG, "Inserting missing headername %s", (char*)headernames->data);
+				s = db_stmt_prepare(c, sql_insert, DBPFX);
+				db_begin_transaction(c);
+				db_stmt_set_str(s, 1, headernames->data);
+				db_stmt_exec(s);
+				db_commit_transaction(c);
+			}
+			ret = 1;
+		CATCH(SQLException)
+			ret = 0;
+			LOG_SQLERROR;
+		END_TRY;
+
+		// Get the next header
+		headernames = g_list_next(headernames);
+		headername_exists = 0;
+	}
+
+	db_con_close(c);
+
+	// Go to the first headernames
+	headernames = g_list_first(headernames);
+
+	// free allocated memory
+	g_list_destroy(headernames);
+
+	return ret;
+}
+
 int db_check_version(void)
 {
 	Connection_T c = db_con_get();
 	volatile int ok = 0;
 	volatile int db = 0;
-	// volatile long version = config_get_app_version();
+	const char *query = NULL;
 	/* @todo: use version to run upgrades */
 	TRY
 		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
@@ -1037,7 +1127,6 @@ int db_check_version(void)
 
 	db_con_clear(c);
 
-
 	if ((! db) && (db_params.db_driver == DM_DRIVER_SQLITE)) {
 		TRY
 			db_exec(c, DM_SQLITECREATE);
@@ -1047,8 +1136,41 @@ int db_check_version(void)
 		END_TRY;
 	}
 
+	if ((! db) && (db_params.db_driver != DM_DRIVER_SQLITE)) {
+		TRACE(TRACE_INFO, "Creating database tables");
+		// Choose the creation script
+		switch(db_params.db_driver) {
+			case DM_DRIVER_MYSQL:
+				query = DM_MYSQL_CREATE;
+				break;
+			case DM_DRIVER_POSTGRESQL:
+				query = DM_PGSQL_CREATE;
+				break;
+			default:
+				TRACE(TRACE_WARNING, "Database creation not supported for database driver");
+				db_con_close(c);
+				return DM_EQUERY;
+				break;
+		}
+		// Create the database
+		TRY
+			TRACE(TRACE_INFO, "Creating the DBMail database tables");
+			db_begin_transaction(c);
+			if (db_exec(c, query)) {
+				db_commit_transaction(c);
+				db = 1;
+				TRACE(TRACE_INFO, "DBMail database tables successfully created");
+			}
+		CATCH(SQLException)
+			db_rollback_transaction(c);
+			LOG_SQLERROR;
+		END_TRY;
+
+		query = NULL;
+	}
+
 	if (! db) {
-		TRACE(TRACE_EMERG, "Try creating the database tables");
+		TRACE(TRACE_EMERG, "Unable to create or access the database");
 		_exit(1);
 	}
 
@@ -1083,16 +1205,23 @@ int db_check_version(void)
 			break;
 		if ((ok = check_upgrade_step(32001, 32006)) == DM_EQUERY)
 			break;
+		if ((ok = check_upgrade_step(32006, 35001)) == DM_EQUERY)
+			break;
 		break;
 	} while (true);
 
 	db_con_close(c);
 
-	if (ok == 32006) {
+	if (ok == 35001) {
 		TRACE(TRACE_DEBUG, "Schema check successful");
 	} else {
 		TRACE(TRACE_WARNING,"Schema version incompatible [%d]. Bailing out",
 				ok);
+		return DM_EQUERY;
+	}
+
+	if (! db_check_headernames()) {
+		TRACE(TRACE_DEBUG, "Headernames check failed");
 		return DM_EQUERY;
 	}
 
@@ -1307,7 +1436,7 @@ struct used_quota {
 	uint64_t curmail;
 };
 
-int dm_quota_rebuild()
+int dm_quota_rebuild(void)
 {
 	Connection_T c; ResultSet_T r;
 
@@ -1923,6 +2052,37 @@ int db_icheck_envelope(GList **lost)
 	return t;
 }
 
+/* Check for empty envelopes
+ * (NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL)
+ * ("Thu, 01 Jan 1970 00:00:00 +0000" NIL NIL NIL NIL NIL NIL NIL NIL NIL)
+ */
+int db_icheck_empty_envelope(GList **lost)
+{
+	Connection_T c; ResultSet_T r; volatile int t = DM_SUCCESS;
+	uint64_t *id;
+
+	c = db_con_get();
+	TRY
+		r = db_query(c,
+				"SELECT p.id "
+				"FROM %sphysmessage p "
+				"INNER JOIN %senvelope e "
+				"ON p.id = e.physmessage_id "
+				"WHERE length(e.envelope) < 100", DBPFX, DBPFX);
+		while (db_result_next(r)) {
+			id = g_new0(uint64_t,1);
+			*id = db_result_get_u64(r, 0);
+			*(GList **)lost = g_list_prepend(*(GList **)lost,id);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		t = DM_EQUERY;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return t;
+}
 
 int db_set_message_status(uint64_t message_idnr, MessageStatus_T status)
 {
@@ -2984,7 +3144,7 @@ static uint64_t message_get_size(uint64_t message_idnr)
 }
 
 int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
-	       uint64_t * newmsg_idnr, gboolean recent)
+	       uint64_t * newmsg_idnr)
 {
 	Connection_T c; ResultSet_T r;
 	PreparedStatement_T s;
@@ -3013,7 +3173,7 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 
 	if (! valid) {
 		TRACE(TRACE_INFO, "user [%" PRIu64 "] would exceed quotum", user_idnr);
-		return -2;
+		return DM_OVERQUOTA;
 	}
 
 	/* Copy the message table entry of the message. */
@@ -3313,12 +3473,18 @@ static long long int db_set_msgkeywords(Connection_T c, uint64_t msg_idnr, GList
 	return count;
 }
 
+/*
+ * Set message flags filtered by sequence if provided
+ */
 int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_type, uint64_t seq, MessageInfo *msginfo)
 {
 	Connection_T c;
 	size_t i, pos = 0;
 	volatile int seen = 0, count = 0;
 	INIT_QUERY;
+
+	if (! msginfo)
+		return count;
 
 	memset(query,0,DEF_QUERYSIZE);
 	pos += snprintf(query, DEF_QUERYSIZE-1, "UPDATE %smessages SET ", DBPFX);
@@ -3362,10 +3528,14 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 				" WHERE message_idnr = %" PRIu64 " AND status < %d AND seq <= %" PRIu64,
 				msg_idnr, MESSAGE_STATUS_DELETE, seq);
 	} else {
+
 		snprintf(query + pos, DEF_QUERYSIZE - pos - 1,
 				" WHERE message_idnr = %" PRIu64 " AND status < %d",
 				msg_idnr, MESSAGE_STATUS_DELETE);
 	}
+	snprintf(query + pos, DEF_QUERYSIZE - pos - 1,
+					" WHERE message_idnr = %" PRIu64 " AND status < %d",
+					msg_idnr, MESSAGE_STATUS_DELETE);
 	/*
 	int mailbox_sync_deleted = config_get_value_default_int("mailbox_sync_deleted", "IMAP", 1); 
 	if (mailbox_sync_deleted==2 && (action_type==IMAPFA_REPLACE || action_type==IMAPFA_ADD)){
@@ -4350,7 +4520,6 @@ int db_user_log_login(uint64_t user_idnr)
 	create_current_timestring(&timestring);
 	return db_update("UPDATE %susers SET last_login = '%s' WHERE user_idnr = %" PRIu64 "",DBPFX, timestring, user_idnr);
 }
-
 uint64_t db_mailbox_seq_update(uint64_t mailbox_id, uint64_t message_id)
 {
 	Connection_T c; ResultSet_T r; PreparedStatement_T st1, st2, st3;
@@ -4410,7 +4579,7 @@ uint64_t db_mailbox_seq_update(uint64_t mailbox_id, uint64_t message_id)
 	FINALLY
 		db_con_close(c);
 	END_TRY;
-	TRACE(TRACE_DEBUG, "mailbox_id [%" PRIu64 "] message_id [%" PRIu64 "] -> [%" PRIu64 "]",
+	TRACE(TRACE_DEBUG, "mailbox_id [%" PRIu64 "] message_id [%" PRIu64 "] -> seq [%" PRIu64 "]",
 			mailbox_id, message_id, seq);
 	return seq;
 }
@@ -4506,7 +4675,7 @@ int db_rehash_store(void)
 }
 
 int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr,
-		const char* internal_date, uint64_t * msg_idnr, gboolean recent)
+		const char* internal_date, uint64_t * msg_idnr)
 {
 	DbmailMessage *message;
 	int result;
@@ -4522,7 +4691,7 @@ int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr
 		return DM_EQUERY;
 	}
 
-	result = db_copymsg(message->msg_idnr, mailbox_idnr, user_idnr, msg_idnr, recent);
+	result = db_copymsg(message->msg_idnr, mailbox_idnr, user_idnr, msg_idnr);
 	db_delete_message(message->msg_idnr);
 	dbmail_message_free(message);
 

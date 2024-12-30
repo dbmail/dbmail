@@ -1,9 +1,9 @@
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 # Copyright (C) 2004-2013 NFG Net Facilities Group support@nfg.nl
 # Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
-# Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+# Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
-AC_INIT([dbmail],[3.4.1],[dbmail@dbmail.org])
+AC_INIT([dbmail],[3.5.0],[dbmail@dbmail.org])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS(config.h:config.in)
 AC_CONFIG_MACRO_DIR([m4])
@@ -35,6 +35,7 @@ DM_CHECK_EVENT
 DM_CHECK_SSL
 DM_CHECK_ZDB
 DM_CHECK_JEMALLOC
+DM_CHECK_LIBCURL
 DM_PATH_CHECK
 gl_GETOPT
 CMU_SOCKETS
@@ -66,6 +67,10 @@ AC_CHECK_LIB(crypt, crypt, [ CRYPTLIB="-lcrypt" ])
 
 DM_SET_SQLITECREATE
 AC_SUBST(SQLITECREATE)
+DM_SET_MYSQL_CREATE
+AC_SUBST(MYSQL_CREATE)
+DM_SET_PGSQL_CREATE
+AC_SUBST(PGSQL_CREATE)
 
 DM_UPGRADE_STEPS
 

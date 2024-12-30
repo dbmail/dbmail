@@ -9,7 +9,6 @@
 cd debian
 ./create-defaults.sh
 ./create-dbmail-conf.sh
-./create-sqlite-db.sh
 cd ..
 #
 dpkg-buildpackage -rfakeroot -us -uc

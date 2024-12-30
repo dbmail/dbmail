@@ -1,7 +1,7 @@
 /*
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -119,8 +119,13 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 {
 	volatile uint64_t id = 0;
 	volatile uint64_t id_old = 0;
+	int message_part_hash=config_get_value_default_int("message_part_hash","DBMAIL",0);
 	size_t l;
 	assert(buf);
+	TRACE(TRACE_INFO,"mimeparts hash evaluation message_part_hash = %d value size [%lu]",message_part_hash,strlen(buf));
+	//no hash
+	if (message_part_hash==2)
+		return id;
 	Connection_T c; PreparedStatement_T s; ResultSet_T r;
 	char blob_cmp[DEF_FRAGSIZE];
 	memset(blob_cmp, 0, sizeof(blob_cmp));
@@ -142,10 +147,20 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 			db_stmt_set_int(s, 3, l);
 			db_stmt_exec(s);
 			id = db_get_pk(c, "mimeparts");
-			s = db_stmt_prepare(c, "SELECT a.id, b.id FROM dbmail_mimeparts a INNER JOIN " 
-					"%smimeparts b ON a.hash=b.hash AND DBMS_LOB.COMPARE(a.data, b.data) = 0 " 
-					" AND a.id<>b.id AND b.id=?", DBPFX);
-			db_stmt_set_u64(s, 1, id);
+			//for oracle the optimization of message part hash are not implemented
+			switch(message_part_hash){
+			case 0:
+			case 1:
+				s = db_stmt_prepare(c, "SELECT a.id, b.id FROM dbmail_mimeparts a INNER JOIN "
+									"%smimeparts b ON a.hash=b.hash AND DBMS_LOB.COMPARE(a.data, b.data) = 0 "
+									" AND a.id<>b.id AND b.id=?", DBPFX);
+
+
+				db_stmt_set_u64(s, 1, id);
+				break;
+			default:
+				TRACE(TRACE_ERR,"unknown message_part_hash = %d value",message_part_hash);
+			}
 			r = db_stmt_query(s);
 			if (db_result_next(r))
 				id_old = db_result_get_u64(r,0);			
@@ -157,13 +172,27 @@ static uint64_t blob_exists(const char *buf, const char *hash)
 				db_commit_transaction(c);
 			}
 		} else {
-			snprintf(blob_cmp, DEF_FRAGSIZE-1, db_get_sql(SQL_COMPARE_BLOB), "data");
-			s = db_stmt_prepare(c,"SELECT id FROM %smimeparts WHERE hash=? AND %ssize%s=? AND %s", 
-					DBPFX,db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN),
-					blob_cmp);
-			db_stmt_set_str(s,1,hash);
-			db_stmt_set_u64(s,2,l);
-			db_stmt_set_blob(s,3,buf,l);
+			switch(message_part_hash){
+			case 0:
+				snprintf(blob_cmp, DEF_FRAGSIZE-1, db_get_sql(SQL_COMPARE_BLOB), "data");
+				s = db_stmt_prepare(c,"SELECT id FROM %smimeparts WHERE hash=? AND %ssize%s=? AND %s limit 1",
+						DBPFX,db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN),
+						blob_cmp);
+				db_stmt_set_str(s,1,hash);
+				db_stmt_set_u64(s,2,l);
+				db_stmt_set_blob(s,3,buf,l);
+				break;
+			case 1:
+				s = db_stmt_prepare(c,"SELECT id FROM %smimeparts WHERE hash=? AND %ssize%s=? limit 1",
+						DBPFX,db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN)
+					);
+				db_stmt_set_str(s,1,hash);
+				db_stmt_set_u64(s,2,l);
+				break;
+			default:
+				TRACE(TRACE_ERR,"unknown message_part_hash = %d value",message_part_hash);
+			}
+
 			r = db_stmt_query(s);
 			if (db_result_next(r))
 				id = db_result_get_u64(r,0);
@@ -186,15 +215,18 @@ static uint64_t blob_insert(const char *buf, const char *hash)
 	volatile uint64_t id = 0;
 	char *frag = db_returning("id");
 
+	TRACE(TRACE_DEBUG, "final blob store size [%lu] hash %s", strlen(buf),hash);
+
 	assert(buf);
 	l = strlen(buf);
 
 	c = db_con_get();
 	TRY
 		db_begin_transaction(c);
-		s = db_stmt_prepare(c, "INSERT INTO %smimeparts (hash, data, %ssize%s) VALUES (?, ?, ?) %s", 
+		s = db_stmt_prepare(c, "INSERT INTO %smimeparts (hash, data, %ssize%s) VALUES (?, ?, ?) %s",
 				DBPFX, db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN), frag);
 		db_stmt_set_str(s, 1, hash);
+
 		db_stmt_set_blob(s, 2, buf, l);
 		db_stmt_set_int(s, 3, l);
 		if (db_params.db_driver == DM_DRIVER_ORACLE) {
@@ -273,6 +305,8 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 	uint64_t id;
 
 	if (! buf) return 0;
+
+	TRACE(TRACE_DEBUG, "blob store size [%lu]", strlen(buf));
 
 	if (is_header) {
 		m->part_key++;
@@ -368,7 +402,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 	GMimeContentType *mimetype = NULL;
 	volatile int prevdepth, depth = 0, row = 0;
 	volatile int t = FALSE;
-	volatile gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header, finalized=FALSE;
+	volatile gboolean got_boundary = FALSE, prev_boundary = FALSE, is_header = TRUE, prev_header;
 	volatile gboolean prev_is_message = FALSE, is_message = FALSE;
 	volatile String_T m = NULL, n = NULL;
 	const void *blob;
@@ -453,7 +487,6 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				p_string_append_printf(m, "\n--%s--\n", blist[prevdepth-1]);
 				memset(blist[prevdepth-1], 0, MAX_MIME_BLEN);
 				prevdepth--;
-				finalized=TRUE;
 			}
 
 			if ((depth > 0) && (blist[depth-1][0]))
@@ -480,12 +513,11 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 			row++;
 		}
 
-		if (row > 2 && boundary[0] && !finalized) {
-			dprint("\n--%s-- final\n", boundary);
-			p_string_append_printf(m, "\n--%s--\n", boundary);
-			finalized=1;
+		// Add final boundary delimiter line if required
+		if (row > 2 && blist[0][0]) {
+			dprint("\n--%s-- final\n", blist[0]);
+			p_string_append_printf(m, "\n--%s--\n", blist[0]);
 		}
-
 
 	CATCH(SQLException)
 		LOG_SQLERROR;
@@ -523,6 +555,7 @@ static int store_body(GMimeObject *object, DbmailMessage *m)
 	int r;
 	char *text = g_mime_object_get_body(object);
 	if (! text) return 0;
+	if (strlen(text)==0) return 0;
 	r = store_blob(m, text, 0);
 	g_free(text);
 	return r;
@@ -540,7 +573,7 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 {
 	const char *boundary;
 	const char *preface = NULL, *postface = NULL;
-	int n = 0, i, c;
+	int i, c;
 
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
@@ -555,7 +588,6 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
 
 	if (boundary) {
 		m->part_depth++;
-		n = m->part_order;
 		m->part_order=0;
 	}
 
@@ -563,13 +595,11 @@ static gboolean store_mime_multipart(GMimeObject *object, DbmailMessage *m, cons
     gboolean store_mime_object_result;
 	for (i=0; i<c; i++) {
 		GMimeObject *part = g_mime_multipart_get_part((GMimeMultipart *)object, i);
-		// if (store_mime_object(object, part, m)) return TRUE;
 		store_mime_object_result = store_mime_object(object, part, m);
 		TRACE(TRACE_DEBUG,"store_mime_object: [%d] [%d]", i, store_mime_object_result);
 	}
 
 	if (boundary) {
-		n++;
 		m->part_depth--;
 		m->part_order++;
 	}
@@ -789,6 +819,7 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 #define FROMLINE 80
 	char from[FROMLINE];
 	size_t buflen = strlen(str);
+	Field_T allow_invalid_messages = "no";
 
 	assert(self->content == NULL);
 
@@ -809,6 +840,8 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 		}
 	}
 
+	TRACE(TRACE_DEBUG, "Init messsage size [%lu] ", buflen);
+
 	self->stream = g_mime_stream_mem_new();
 	g_mime_stream_write(self->stream, str, buflen);
 	g_mime_stream_reset(self->stream);
@@ -823,13 +856,54 @@ DbmailMessage * dbmail_message_init_with_string(DbmailMessage *self, const char 
 		self->content = content;
 		if (from[0])
 			dbmail_message_set_internal_date(self, from);
-	} else {
+	}
+	if (!content) {
+		TRACE(TRACE_DEBUG, "Messsage parse failed, trying to construct part");
 		content = GMIME_OBJECT(g_mime_parser_construct_part(parser, NULL));
 		g_object_unref(parser);
 		if (content) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 			self->content = content;
 		}
+	}
+	config_get_value("allow_invalid_messages", "DBMAIL", allow_invalid_messages);
+	if (!content && strcmp(allow_invalid_messages, "yes") == 0) {
+		/* MIME part is invalid so add a simple text/plain mime header */
+		TRACE(TRACE_INFO, "Messsage parse part failed, converting to text/plain [%ld] offset [%d]",
+			self->internal_date,
+			self->internal_date_gmtoff);
+
+		GString *fixdata = NULL;
+		fixdata = g_string_new("MIME-Version: 1.0\r\nContent-Type: text/plain\r\n\r\n");
+		g_string_append(fixdata, str);
+
+		// Re-create the message part
+		g_object_unref(self->stream);
+		self->stream = g_mime_stream_mem_new();
+		g_mime_stream_write(self->stream, fixdata->str, fixdata->len);
+		g_mime_stream_reset(self->stream);
+
+		parser = g_mime_parser_new_with_stream(self->stream);
+
+		content = GMIME_OBJECT(g_mime_parser_construct_message(parser, NULL));
+		g_object_unref(parser);
+
+		if (content) {
+				dbmail_message_set_class(self, DBMAIL_MESSAGE);
+				self->content = content;
+				if (from[0]) {
+						dbmail_message_set_internal_date(self, from);
+				}
+		} else {
+			qprintf("Unable to convert to text/plain [%ld] offset [%d].\n",
+				self->internal_date,
+				self->internal_date_gmtoff);
+			TRACE(TRACE_ERR, "Unable to convert to text/plain [%ld] offset [%d]",
+				self->internal_date,
+				self->internal_date_gmtoff);
+		}
+
+		g_free(fixdata);
 	}
 
 	buf = dbmail_message_to_string(self);
@@ -1906,9 +1980,9 @@ void dbmail_message_cache_envelope(const DbmailMessage *self)
 		db_stmt_exec(s);
 		db_commit_transaction(c);
 	CATCH(SQLException)
-		LOG_SQLERROR;
+		LOG_SQLWARNING;
 		db_rollback_transaction(c);
-		TRACE(TRACE_ERR, "insert envelope failed [%s]", envelope);
+		TRACE(TRACE_WARNING, "insert envelope failed [%s]", envelope);
 	FINALLY
 		db_con_close(c);
 	END_TRY;
@@ -2248,7 +2322,7 @@ dsn_class_t sort_deliver_to_mailbox(DbmailMessage *message,
 	}
 
 	// Ok, we have the ACL right, time to deliver the message.
-	switch (db_copymsg(message->msg_idnr, mboxidnr, useridnr, &newmsgidnr, TRUE)) {
+	switch (db_copymsg(message->msg_idnr, mboxidnr, useridnr, &newmsgidnr)) {
 	case -2:
 		TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "],"
 				"maxmail exceeded", useridnr);
@@ -2299,6 +2373,162 @@ static int parse_and_escape(const char *in, char **out)
 
 	return 0;
 }
+
+/* struct to manage cURL upload status */
+struct upload_status {
+  size_t bytes_read;
+};
+
+static char *payload_text;
+
+/* Used by send_smtpmail to upload email to cURL */
+static size_t payload_source(char *ptr, size_t size, size_t nmemb, void *userp)
+{
+  struct upload_status *upload_ctx = (struct upload_status *)userp;
+  const char *data;
+  size_t room = size * nmemb;
+
+  if((size == 0) || (nmemb == 0) || ((size*nmemb) < 1)) {
+    return 0;
+  }
+
+  data = &payload_text[upload_ctx->bytes_read];
+
+  if(data) {
+    size_t len = strlen(data);
+    if(room < len)
+      len = room;
+    memcpy(ptr, data, len);
+    upload_ctx->bytes_read += len;
+
+    return len;
+  }
+
+  return 0;
+}
+
+/* Send SMTP mail via cURL
+ * https://curl.se/libcurl/c/smtp-mail.html */
+int send_smtpmail(DbmailMessage *message,
+		const char *to,
+		const char *from)
+{
+	CURL *curl;
+	CURLcode res = CURLE_OK;
+	struct curl_slist *recipients = NULL;
+	char errbuf[CURL_ERROR_SIZE];
+	struct upload_status upload_ctx = { 0 };
+	Field_T smtp_host;
+	Field_T smtp_user;
+	Field_T smtp_password;
+
+	if (config_get_value("SMTP_HOST", "DBMAIL", smtp_host) < 0){
+		TRACE(TRACE_ERR, "no config value for smtp_host");
+		return -1;
+	}
+	TRACE(TRACE_DEBUG, "Using libcurl for smtp");
+
+	// This must be the synchronous libcurl easy interface
+	// to ensure atomic delivery or non delivery.
+	curl = curl_easy_init();
+	if(curl) {
+		res = curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_ERRORBUFFER");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		errbuf[0] = 0;
+		/* This is the URL for your mailserver */
+		res = curl_easy_setopt(curl, CURLOPT_URL, smtp_host);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_URL");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		config_get_value("SMTP_USER", "DBMAIL", smtp_user);
+		if (strlen(smtp_user) > 0 )  {
+			res = curl_easy_setopt(curl, CURLOPT_USERNAME, smtp_user);
+			if(res != CURLE_OK) {
+				TRACE(TRACE_ERR, "Unable to CURLOPT_USERNAME");
+				TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+					res, curl_easy_strerror(res), errbuf);
+			}
+		}
+		config_get_value("SMTP_PASSWORD", "DBMAIL", smtp_password);
+		if (strlen(smtp_password) >0 ) {
+			res = curl_easy_setopt(curl, CURLOPT_PASSWORD, smtp_password);
+			if(res != CURLE_OK) {
+				TRACE(TRACE_ERR, "Unable to CURLOPT_PASSWORD");
+				TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+					res, curl_easy_strerror(res), errbuf);
+			}
+		}
+		res = curl_easy_setopt(curl, CURLOPT_MAIL_FROM, from);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_MAIL_FROM");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		recipients = curl_slist_append(recipients, to);
+		res = curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_MAIL_RCPT");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		payload_text = dbmail_message_to_string(message);
+		res = curl_easy_setopt(curl, CURLOPT_READFUNCTION, payload_source);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_READFUNCTION");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		res = curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_READDATA");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+		res = curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "Unable to CURLOPT_UPLOAD");
+			TRACE(TRACE_ERR, "curl_easy_setopt: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+
+		/* Send the message */
+		res = curl_easy_perform(curl);
+
+		/* Check for errors */
+		if(res != CURLE_OK) {
+			TRACE(TRACE_ERR, "cURL smtp send failed: [%d] [%s] [%s]",
+				res, curl_easy_strerror(res), errbuf);
+		}
+
+		/* Free the list of recipients */
+		curl_slist_free_all(recipients);
+
+		/* curl does not send the QUIT command until you call cleanup, so you
+		* should be able to reuse this connection for additional messages
+		* (setting CURLOPT_MAIL_FROM and CURLOPT_MAIL_RCPT as required, and
+		* calling curl_easy_perform() again. It may not be a good idea to keep
+		* the connection open for a long time though (more than a few minutes may
+		* result in the server timing out the connection), and you do want to
+		* clean up in the end.
+		*/
+		curl_easy_cleanup(curl);
+		// Free the payload_text after it's been uploaded
+		g_free(payload_text);
+	} else {
+		TRACE(TRACE_ERR, "Unable to init cURL");
+		return false;
+	}
+
+	return (int)res;
+
+}
+
 /* Sends a message. */
 int send_mail(DbmailMessage *message,
 		const char *to, const char *from,
@@ -2310,6 +2540,7 @@ int send_mail(DbmailMessage *message,
 	char *escaped_from = NULL;
 	char *sendmail_command = NULL;
 	Field_T sendmail, postmaster;
+	Field_T smtp_host;
 	int result;
 	char *buf;
 
@@ -2323,6 +2554,22 @@ int send_mail(DbmailMessage *message,
 			from = DEFAULT_POSTMASTER;
 	}
 
+	if (config_get_value("SMTP_HOST", "DBMAIL", smtp_host) == 0){
+		TRACE(TRACE_DEBUG, "Sending mail via cURL, smtp_host [%s]", smtp_host);
+		if (parse_and_escape(to, &escaped_to) < 0) {
+			TRACE(TRACE_NOTICE, "could not prepare 'to' address.");
+			return 1;
+		}
+		if (parse_and_escape(from, &escaped_from) < 0) {
+			g_free(escaped_to);
+			TRACE(TRACE_NOTICE, "could not prepare 'from' address.");
+			return 1;
+		}
+		result = send_smtpmail(message, escaped_to, escaped_from);
+		g_free(escaped_to);
+		g_free(escaped_from);
+		return result;
+	}
 	if (config_get_value("SENDMAIL", "DBMAIL", sendmail) < 0) {
 		TRACE(TRACE_ERR, "error getting value for SENDMAIL in DBMAIL section of dbmail.conf.");
 		return -1;
@@ -2406,7 +2653,7 @@ int send_mail(DbmailMessage *message,
 	if (!sendmail_external)
 		g_free(sendmail_command);
 	return 0;
-} 
+}
 
 static int valid_sender(const char *addr) 
 {
@@ -2643,8 +2890,6 @@ static int execute_auto_ran(DbmailMessage *message, uint64_t useridnr)
 	return 0;
 }
 
-
-
 int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 {
 	int result = 0;
@@ -2688,7 +2933,6 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 			} else if (to[0] == '|') {
 				// The forward is a command to execute.
 				result |= send_mail(message, "", "", NULL, SENDRAW, to+1);
-
 			} else {
 				// The forward is an email address.
 				result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
@@ -2851,10 +3095,8 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 
 		/* Each user may also have a list of external forwarding addresses. */
 		if (g_list_length(delivery->forwards) > 0) {
-
 			TRACE(TRACE_DEBUG, "delivering to external addresses");
 			const char *from = dbmail_message_get_header(message, "Return-Path");
-
 			/* Forward using the temporary stored message. */
 			if (send_forward_list(message, delivery->forwards, from)) {
 				/* If forward fails, tell the sender that we're
@@ -2866,10 +3108,10 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 				g_free((char *)from);
 			}
 		}
+
 		if (! p_list_next(dsnusers))
 			break;
 		dsnusers = p_list_next(dsnusers);
-
 	}
 
 	/* Always delete the temporary message, even if the delivery failed.

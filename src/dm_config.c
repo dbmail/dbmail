@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -163,7 +163,7 @@ void config_free(void)
 /* This function also strips any... # Trailing comments. */
 /* value is not modified unless something is found. */
 static int config_get_value_once(const Field_T field_name,
-		const char * const service_name,
+		const char * service_name,
 		Field_T value)
 {
 	char *dict_value;
@@ -187,7 +187,7 @@ static int config_get_value_once(const Field_T field_name,
 }
 
 int config_get_value(const Field_T field_name,
-                     const char * const service_name,
+                     const char * service_name,
                      Field_T value)
 {
 	char *key;
@@ -248,7 +248,7 @@ config_get_value_done:
  */
 
 int config_get_value_default_int(const Field_T field_name,
-					const char * const service_name,
+					const char * service_name,
 					int default_value){
 	Field_T value;
 	int result_fetch = config_get_value(field_name, service_name, value);
@@ -262,7 +262,7 @@ int config_get_value_default_int(const Field_T field_name,
 
 
 Field_T* config_get_value_default_string(const Field_T field_name,
-					const char * const service_name,
+					const char * service_name,
 					Field_T value, Field_T default_value){
 	int result_fetch = config_get_value(field_name, service_name, value);
 
@@ -292,7 +292,27 @@ void SetTraceLevel(const char *service_name)
 	config_get_value("syslog_logging_levels", service_name, syslog_logging_levels);
 	config_get_value("file_logging_levels", service_name, file_logging_levels);
 
-	if (strlen(syslog_logging_levels)) {
+	if (strcmp(syslog_logging_levels, "database") == 0) {
+		trace_syslog_int = 511;
+	} else if (strcmp(syslog_logging_levels, "debug") == 0) {
+		trace_syslog_int = 255;
+	} else if (strcmp(syslog_logging_levels, "info") == 0) {
+		trace_syslog_int = 127;
+	} else if (strcmp(syslog_logging_levels, "notice") == 0) {
+		trace_syslog_int = 63;
+	} else if (strcmp(syslog_logging_levels, "warning") == 0) {
+		trace_syslog_int = 31;
+	} else if (strcmp(syslog_logging_levels, "error") == 0) {
+		trace_syslog_int = 15;
+	} else if (strcmp(syslog_logging_levels, "critical") == 0) {
+		trace_syslog_int = 7;
+	} else if (strcmp(syslog_logging_levels, "alert") == 0) {
+		trace_syslog_int = 3;
+	} else if (strcmp(syslog_logging_levels, "emergency") == 0) {
+		trace_syslog_int = 1;
+	} else if (strcmp(syslog_logging_levels, "nothing") == 0) {
+		trace_syslog_int = 0;
+	} else if (strlen(syslog_logging_levels)) {
 		trace_syslog_int = atoi(syslog_logging_levels);
 	} else {
 		config_get_value("trace_syslog", service_name, trace_syslog);
@@ -328,7 +348,27 @@ void SetTraceLevel(const char *service_name)
 		}
 	}
 
-	if (strlen(file_logging_levels)) {
+	if (strcmp(file_logging_levels, "database") == 0) {
+		trace_stderr_int = 511;
+	} else if (strcmp(file_logging_levels, "debug") == 0) {
+		trace_stderr_int = 255;
+	} else if (strcmp(file_logging_levels, "info") == 0) {
+		trace_stderr_int = 127;
+	} else if (strcmp(file_logging_levels, "notice") == 0) {
+		trace_stderr_int = 63;
+	} else if (strcmp(file_logging_levels, "warning") == 0) {
+		trace_stderr_int = 31;
+	} else if (strcmp(file_logging_levels, "error") == 0) {
+		trace_stderr_int = 15;
+	} else if (strcmp(file_logging_levels, "critical") == 0) {
+		trace_stderr_int = 7;
+	} else if (strcmp(file_logging_levels, "alert") == 0) {
+		trace_stderr_int = 3;
+	} else if (strcmp(file_logging_levels, "emergency") == 0) {
+		trace_stderr_int = 1;
+	} else if (strcmp(file_logging_levels, "nothing") == 0) {
+		trace_stderr_int = 0;
+	} else if (strlen(file_logging_levels)) {
 		trace_stderr_int = atoi(file_logging_levels);
 	} else {
 		config_get_value("trace_stderr", service_name, trace_stderr);
@@ -506,7 +546,7 @@ void GetDBParams(void)
 
 }
 
-void config_get_timeout(ServerConfig_T *config, const char * const service)
+void config_get_timeout(ServerConfig_T *config, const char * service)
 {
 	Field_T val;
 
@@ -533,7 +573,7 @@ void config_get_timeout(ServerConfig_T *config, const char * const service)
 }
 
 
-void config_get_logfiles(ServerConfig_T *config, const char * const service)
+void config_get_logfiles(ServerConfig_T *config, const char * service)
 {
 	Field_T val;
 

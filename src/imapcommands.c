@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -1599,7 +1599,7 @@ void _ic_append_enter(dm_thread_data *D)
 	MailboxState_T M;
 	SESSION_GET;
 	const char *message;
-	gboolean recent = TRUE;
+	// gboolean recent = TRUE;
 	MessageInfo *info;
 
 	memset(flaglist,0,sizeof(flaglist));
@@ -1700,13 +1700,9 @@ void _ic_append_enter(dm_thread_data *D)
 				self, internal_date, p_string_str(self->args[i]));
 	}
 
-	if (self->state == CLIENTSTATE_SELECTED && self->mailbox->id == mboxid) {
-		recent = FALSE;
-	}
-	
 	message = p_string_str(self->args[i]);
 
-	D->status = db_append_msg(message, mboxid, self->userid, internal_date, &message_id, recent);
+	D->status = db_append_msg(message, mboxid, self->userid, internal_date, &message_id);
 
 	switch (D->status) {
 	case -1:
@@ -2152,7 +2148,6 @@ void _fetch_update(ImapSession *self, MessageInfo *msginfo, gboolean showmodseq,
 		dbmail_imap_session_buff_printf(self, "UID %" PRIu64 , msginfo->uid);
 		needspace = true;
 	}
-
 	if (showflags) {
 		GList *sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
 		char *s = dbmail_imap_plist_as_string(sublist);
@@ -2230,9 +2225,17 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 	// reporting callback
 	if ((! cmd->silent) || changed > 0) {
 		gboolean showmodseq = (changed && (cmd->unchangedsince || self->mailbox->condstore));
+		//if is changed then ignore silent part//some client are using silent part in strange ways.
 		gboolean showflags = (! cmd->silent);
+		int cmd_store_silent=config_get_value_default_int("command_store_flags_silent_ignore_silent","IMAP",0);
+		if (cmd_store_silent==1 && changed){
+			showflags = showflags || changed;
+		}
+		TRACE(TRACE_INFO,"requested FLAGS.SILENT but a change was detected into mailbox and command_store_flags_silent_ignore_silent=%d so ignore FLAGS.SILENT and return message information with flags",cmd_store_silent);
+
 		_fetch_update(self, msginfo, showmodseq, showflags);
 	}
+
 
 	return FALSE;
 }
@@ -2454,7 +2457,7 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 		//dbmail_imap_session_buff_printf(self, "%s NO security issue, trying to copy message that are not in this mailbox\r\n",self->tag);
 		return FALSE;
 	}
-	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid, TRUE);
+	result = db_copymsg(*id, cmd->mailbox_id, self->userid, &newid);
 	db_message_set_seq(*id, cmd->seq);
 	if (result == -1) {
 		/* uid not found, according to RFC 3501 section 6.4.8, should continue  */

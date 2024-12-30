@@ -101,6 +101,7 @@ host_triplet = @host@
 @WITHCHECK_TRUE@	check_dbmail_mempool$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_util_empty_envelope$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_dsn$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_capa$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_sset$(EXEEXT) \
@@ -133,6 +134,7 @@ CONFIG_CLEAN_VPATH_FILES =
 @WITHCHECK_TRUE@	check_dbmail_mempool$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_user$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_util$(EXEEXT) \
+@WITHCHECK_TRUE@	check_dbmail_util_empty_envelope$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_dsn$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_capa$(EXEEXT) \
 @WITHCHECK_TRUE@	check_dbmail_sset$(EXEEXT) \
@@ -266,6 +268,14 @@ am__check_dbmail_util_SOURCES_DIST = check_dbmail_util.c
 check_dbmail_util_OBJECTS = $(am_check_dbmail_util_OBJECTS)
 @WITHCHECK_TRUE@check_dbmail_util_DEPENDENCIES =  \
 @WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
+am__check_dbmail_util_empty_envelope_SOURCES_DIST =  \
+	check_dbmail_util_empty_envelope.c
+@WITHCHECK_TRUE@am_check_dbmail_util_empty_envelope_OBJECTS =  \
+@WITHCHECK_TRUE@	check_dbmail_util_empty_envelope.$(OBJEXT)
+check_dbmail_util_empty_envelope_OBJECTS =  \
+	$(am_check_dbmail_util_empty_envelope_OBJECTS)
+@WITHCHECK_TRUE@check_dbmail_util_empty_envelope_DEPENDENCIES =  \
+@WITHCHECK_TRUE@	$(am__DEPENDENCIES_2)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -303,7 +313,8 @@ am__depfiles_remade = $(top_builddir)/src/$(DEPDIR)/dm_imapsession.Po \
 	./$(DEPDIR)/check_dbmail_sset.Po \
 	./$(DEPDIR)/check_dbmail_string.Po \
 	./$(DEPDIR)/check_dbmail_user.Po \
-	./$(DEPDIR)/check_dbmail_util.Po
+	./$(DEPDIR)/check_dbmail_util.Po \
+	./$(DEPDIR)/check_dbmail_util_empty_envelope.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -333,7 +344,8 @@ SOURCES = $(check_dbmail_auth_SOURCES) $(check_dbmail_capa_SOURCES) \
 	$(check_dbmail_message_SOURCES) $(check_dbmail_misc_SOURCES) \
 	$(check_dbmail_server_SOURCES) $(check_dbmail_sset_SOURCES) \
 	$(check_dbmail_string_SOURCES) $(check_dbmail_user_SOURCES) \
-	$(check_dbmail_util_SOURCES)
+	$(check_dbmail_util_SOURCES) \
+	$(check_dbmail_util_empty_envelope_SOURCES)
 DIST_SOURCES = $(am__check_dbmail_auth_SOURCES_DIST) \
 	$(am__check_dbmail_capa_SOURCES_DIST) \
 	$(am__check_dbmail_common_SOURCES_DIST) \
@@ -351,7 +363,8 @@ DIST_SOURCES = $(am__check_dbmail_auth_SOURCES_DIST) \
 	$(am__check_dbmail_sset_SOURCES_DIST) \
 	$(am__check_dbmail_string_SOURCES_DIST) \
 	$(am__check_dbmail_user_SOURCES_DIST) \
-	$(am__check_dbmail_util_SOURCES_DIST)
+	$(am__check_dbmail_util_SOURCES_DIST) \
+	$(am__check_dbmail_util_empty_envelope_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -646,7 +659,8 @@ MYSQL_32003 = @MYSQL_32003@
 MYSQL_32004 = @MYSQL_32004@
 MYSQL_32005 = @MYSQL_32005@
 MYSQL_32006 = @MYSQL_32006@
-MYSQL_UPGRADE = @MYSQL_UPGRADE@
+MYSQL_35001 = @MYSQL_35001@
+MYSQL_CREATE = @MYSQL_CREATE@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -667,7 +681,8 @@ PGSQL_32003 = @PGSQL_32003@
 PGSQL_32004 = @PGSQL_32004@
 PGSQL_32005 = @PGSQL_32005@
 PGSQL_32006 = @PGSQL_32006@
-PGSQL_UPGRADE = @PGSQL_UPGRADE@
+PGSQL_35001 = @PGSQL_35001@
+PGSQL_CREATE = @PGSQL_CREATE@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
@@ -687,7 +702,7 @@ SQLITE_32003 = @SQLITE_32003@
 SQLITE_32004 = @SQLITE_32004@
 SQLITE_32005 = @SQLITE_32005@
 SQLITE_32006 = @SQLITE_32006@
-SQLITE_UPGRADE = @SQLITE_UPGRADE@
+SQLITE_35001 = @SQLITE_35001@
 STRIP = @STRIP@
 SYSTEMD_CFLAGS = @SYSTEMD_CFLAGS@
 SYSTEMD_LIBS = @SYSTEMD_LIBS@
@@ -777,6 +792,9 @@ top_srcdir = @top_srcdir@
 @WITHCHECK_TRUE@check_dbmail_util_SOURCES = check_dbmail_util.c
 @WITHCHECK_TRUE@check_dbmail_util_LDADD = $(CHECK_LDADD)
 @WITHCHECK_TRUE@check_dbmail_util_INCLUDES = @CHECK_CFLAGS@
+@WITHCHECK_TRUE@check_dbmail_util_empty_envelope_SOURCES = check_dbmail_util_empty_envelope.c
+@WITHCHECK_TRUE@check_dbmail_util_empty_envelope_LDADD = $(CHECK_LDADD)
+@WITHCHECK_TRUE@check_dbmail_util_empty_envelope_INCLUDES = @CHECK_CFLAGS@
 @WITHCHECK_TRUE@check_dbmail_dsn_SOURCES = check_dbmail_dsn.c
 @WITHCHECK_TRUE@check_dbmail_dsn_LDADD = $(CHECK_LDADD)
 @WITHCHECK_TRUE@check_dbmail_dsn_INCLUDES = @CHECK_CFLAGS@
@@ -949,6 +967,10 @@ check_dbmail_util$(EXEEXT): $(check_dbmail_util_OBJECTS) $(check_dbmail_util_DEP
 	@rm -f check_dbmail_util$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_dbmail_util_OBJECTS) $(check_dbmail_util_LDADD) $(LIBS)
 
+check_dbmail_util_empty_envelope$(EXEEXT): $(check_dbmail_util_empty_envelope_OBJECTS) $(check_dbmail_util_empty_envelope_DEPENDENCIES) $(EXTRA_check_dbmail_util_empty_envelope_DEPENDENCIES) 
+	@rm -f check_dbmail_util_empty_envelope$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_dbmail_util_empty_envelope_OBJECTS) $(check_dbmail_util_empty_envelope_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f $(top_builddir)/src/*.$(OBJEXT)
@@ -979,6 +1001,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_string.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_user.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_util.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbmail_util_empty_envelope.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -1300,6 +1323,13 @@ check_dbmail_util.log: check_dbmail_util$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_dbmail_util_empty_envelope.log: check_dbmail_util_empty_envelope$(EXEEXT)
+	@p='check_dbmail_util_empty_envelope$(EXEEXT)'; \
+	b='check_dbmail_util_empty_envelope'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 check_dbmail_dsn.log: check_dbmail_dsn$(EXEEXT)
 	@p='check_dbmail_dsn$(EXEEXT)'; \
 	b='check_dbmail_dsn'; \
@@ -1451,6 +1481,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/check_dbmail_string.Po
 	-rm -f ./$(DEPDIR)/check_dbmail_user.Po
 	-rm -f ./$(DEPDIR)/check_dbmail_util.Po
+	-rm -f ./$(DEPDIR)/check_dbmail_util_empty_envelope.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1519,6 +1550,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/check_dbmail_string.Po
 	-rm -f ./$(DEPDIR)/check_dbmail_user.Po
 	-rm -f ./$(DEPDIR)/check_dbmail_util.Po
+	-rm -f ./$(DEPDIR)/check_dbmail_util_empty_envelope.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

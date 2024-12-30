@@ -562,8 +562,27 @@ AC_DEFUN([CMU_SOCKETS], [
 	AC_SUBST(SOCKETLIB)
 ])
 
+# Test for and get libcurl flags
+AC_DEFUN([DM_CHECK_LIBCURL], [
+	AC_CHECK_HEADERS([curl/curl.h],
+	 [CURLLIB=`pkg-config --libs libcurl 2>/dev/null`],[CURLLIB="failed"])
+	AC_MSG_CHECKING([libcurl headers])
+	if test [ "x$CURLLIB" = "xfailed" ]; then
+		AC_MSG_ERROR([Could not find libcurl library.])
+	else
+		LDFLAGS="$LDFLAGS $CURLLIB"
+		AC_MSG_RESULT([$CURLLIB])
+	fi
+])
+
 AC_DEFUN([DM_SET_SQLITECREATE], [dnl
 	SQLITECREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/create_tables.sqlite`
+])
+AC_DEFUN([DM_SET_MYSQL_CREATE], [dnl
+	MYSQL_CREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/create_tables.mysql`
+])
+AC_DEFUN([DM_SET_PGSQL_CREATE], [dnl
+	PGSQL_CREATE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/create_tables.psql`
 ])
 
 # register upgrades
@@ -613,12 +632,13 @@ AC_DEFUN([DM_UPGRADE_STEPS], [dnl
 	AC_SUBST(MYSQL_32006)
 	AC_SUBST(SQLITE_32006)
 
-	PGSQL_UPGRADE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/upgrade.psql`
-	MYSQL_UPGRADE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/upgrade.mysql`
-	SQLITE_UPGRADE=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/upgrade.sqlite`
+	PGSQL_35001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/postgresql/upgrades/35001.psql`
+	MYSQL_35001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/mysql/upgrades/35001.mysql`
+	SQLITE_35001=`sed -e 's/\"/\\\"/g' -e 's/^/\"/' -e 's/$/\\\n\"/' -e '$!s/$/ \\\\/'  sql/sqlite/upgrades/35001.sqlite`
 
-	AC_SUBST(PGSQL_UPGRADE)
-	AC_SUBST(MYSQL_UPGRADE)
-	AC_SUBST(SQLITE_UPGRADE)
+	AC_SUBST(PGSQL_35001)
+	AC_SUBST(MYSQL_35001)
+	AC_SUBST(SQLITE_35001)
+
 
 ])

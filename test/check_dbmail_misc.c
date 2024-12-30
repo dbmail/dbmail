@@ -2,7 +2,7 @@
  *   Copyright (C) 2006  Aaron Stone  <aaron@serendipity.cx>
  *   Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  *   Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- *   Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ *   Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -201,12 +201,12 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	val2 = g_mime_utils_header_encode_text(NULL, u8, NULL);
 	u82 = g_mime_utils_header_decode_text(NULL, val2);
 
-	fail_unless(strcmp(u8,u82)==0,"decode/encode failed in test_dbmail_iconv_str_to_db");
+	ck_assert_str_eq(u8, u82);
 
 	val3 = dbmail_iconv_db_to_utf7(u8);
 	u83 = g_mime_utils_header_decode_text(NULL, val3);
 
-	fail_unless(strcmp(u8,u83)==0,"decode/encode failed in test_dbmail_iconv_str_to_db\n[%s]\n[%s]\n", u8, u83);
+	ck_assert_str_eq(u8, u83);
 	g_free(u8);
 	g_free(u82);
 	g_free(u83);
@@ -216,31 +216,31 @@ START_TEST(test_dbmail_iconv_str_to_db)
 	// 
 	//
 	u8 = dbmail_iconv_decode_text(u71);
-	fail_unless(strcmp(u8,exp1)==0, "decode failed [%s] != [%s]", u8, exp1);
+	ck_assert_str_eq(u8, exp1);
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_text(u72);
-	fail_unless(strcmp(u8,exp2)==0,"decode failed [%s] != [%s]", u8, exp2);
+	fail_unless(strcmp(u8, exp2)==0,"decode failed [%s] != [%s]", u8, exp2);
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_text(u73);
-	fail_unless(strcmp(u8,exp3)==0,"decode failed [%s] != [%s]", u8, exp3);
+	ck_assert_str_eq(u8, exp3);
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_text(u74);
-	fail_unless(strcmp(u8,exp4)==0, "decode failed [%s] != [%s]", u8, exp4);
+	ck_assert_str_eq(u8, exp4);
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_text(u75);
-	fail_unless(strcmp(u8,exp5)==0, "decode failed [%s] != [%s]", u8, exp5);
+	ck_assert_str_eq(u8, exp5);
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_text(u76);
-	fail_unless(strcmp(u8,exp6)==0, "decode failed [%s] != [%s]", u8, exp6);
+	ck_assert_str_eq(u8, exp6);
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_text(u77);
-	fail_unless(strcmp(u8,exp7)==0,"decode failed [%s] != [%s]", u8, exp7);
+	ck_assert_str_eq(u8, exp7);
 	g_free(u8);
 
 }
@@ -262,7 +262,7 @@ START_TEST(test_dbmail_iconv_decode_address)
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_address(u72);
-	fail_unless(strcmp(u8,ex2)==0,"decode failed\n[%s] != \n[%s]\n", u8, ex2);
+	ck_assert_str_eq(u8, ex2);
 	g_free(u8);
 
 	u8 = dbmail_iconv_decode_address(u73);
@@ -302,24 +302,24 @@ START_TEST(test_g_list_merge)
 
 	g_list_merge(&a, b, IMAPFA_ADD, (GCompareFunc)g_ascii_strcasecmp);
 	s = dbmail_imap_plist_as_string(a);
-	fail_unless(MATCH(s,"(A B C D)"), "g_list_merge ADD failed 1");
+	ck_assert_str_eq(s, "(A B C D)");
 	g_free(s);
 
 	b = g_list_append(b, g_strdup("A"));
 
 	g_list_merge(&a, b, IMAPFA_ADD, (GCompareFunc)g_ascii_strcasecmp);
 	s = dbmail_imap_plist_as_string(a);
-	fail_unless(MATCH(s,"(A B C D)"), "g_list_merge ADD failed 2");
+	ck_assert_str_eq(s, "(A B C D)");
 	g_free(s);
 
 	g_list_merge(&a, b, IMAPFA_REMOVE, (GCompareFunc)g_ascii_strcasecmp);
 	s = dbmail_imap_plist_as_string(a);
-	fail_unless(MATCH(s,"(B C)"), "g_list_merge REMOVE failed");
+	ck_assert_str_eq(s, "(B C)");
 	g_free(s);
 
 	g_list_merge(&a, b, IMAPFA_REPLACE, (GCompareFunc)g_ascii_strcasecmp);
 	s = dbmail_imap_plist_as_string(a);
-	fail_unless(MATCH(s,"(D A)"), "g_list_merge REPLACE failed");
+	ck_assert_str_eq(s, "(D A)");
 	g_free(s);
 }
 END_TEST
@@ -364,9 +364,9 @@ START_TEST(test_base64_decodev)
 		;
 
 	fail_unless(i==4,"base64_decodev failed");
-	fail_unless(MATCH(result[0],"proxy"), "base64_decodev failed");
-	fail_unless(MATCH(result[1],"user"), "base64_decodev failed");
-	fail_unless(MATCH(result[2],"pass"), "base64_decodev failed");
+	ck_assert_str_eq(result[0], "proxy");
+	ck_assert_str_eq(result[1], "user");
+	ck_assert_str_eq(result[2], "pass");
 
 	g_strfreev(result);
 	g_free(out);
@@ -471,7 +471,7 @@ START_TEST(test_get_crlf_encoded_opt1)
 	int i=0;
 	while (in[i]) {
 		char *r = get_crlf_encoded_opt(in[i],0);
-		fail_unless(MATCH(r,out[i]), "get_crlf_encoded failed [%s]!=[%s]", r, out[i]);
+		ck_assert_str_eq(r, out[i]);
 		g_free(r);
 		i++;
 	}
@@ -497,7 +497,7 @@ START_TEST(test_get_crlf_encoded_opt2)
 	int i=0;
 	while (in[i]) {
 		char *r = get_crlf_encoded_opt(in[i],1);
-		fail_unless(MATCH(r,out[i]), "get_crlf_encoded failed [%s]!=[%s]", r, out[i]);
+		ck_assert_str_eq(r, out[i]);
 		g_free(r);
 		i++;
 	}
@@ -548,7 +548,7 @@ START_TEST(test_date_sql2imap)
 
 	while (in[i]) {
 		r = date_sql2imap(in[i]);
-		fail_unless(MATCH(out[i], r), "[%s] != [%s]", r, out[i]);
+		ck_assert_str_eq(out[i], r);
 		g_free(r);
 		i++;
 	}

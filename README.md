@@ -1,6 +1,6 @@
 # DBMail
 
-> Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+> Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 >
 > Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
 >
@@ -10,8 +10,8 @@
 
 ## What is it?
 
-DBMail is a collection of programs that enables email to be managed, stored in and
-retrieved from a database. 
+DBMail is a collection of programs that enables email to be managed, stored in
+and retrieved from a database.
 
 ## Why is it useful?
 
@@ -26,6 +26,11 @@ retrieved from a database.
   to the same database;
 
 - Email filtering is integrated into DBMail and managed using SIEVE;
+
+- Schema upgrades are automatic with SQL provided for DBAs who wish to upgrade
+  manually;
+
+- Easy to use and flexible logging for each service;
 
 - An experimental Docker image is available;
 
@@ -45,13 +50,14 @@ retrieved from a database.
 
 DBMail was originally created by IC&S in the Netherlands.
 
-Around 2003, Paul Stevens at NFG also joined the development team, initially to provide debian
-packaging, later to take over development of the 2.1 release. Aaron Stone also deserves special
-thanks for initiating the LDAP driver, maintaining the delivery chain and of course sieve support.
+Around 2003, Paul Stevens at NFG also joined the development team, initially to
+provide debian packaging, later to take over development of the 2.1 release.
+Aaron Stone also deserves special thanks for initiating the LDAP driver,
+maintaining the delivery chain and of course sieve support.
 
-DBMail is now a community effort to create a fast, effecient and scalable database driven
-mailingsystem. Both IC&S and NFG are fully behind opensource and the GPL. Therefore DBMail has the
-GPL licence.
+DBMail is now a community effort to create a fast, effecient and scalable
+database driven mailingsystem. Both IC&S and NFG are fully behind opensource
+and the GPL. Therefore DBMail has the GPL licence.
 
 ## Support
 

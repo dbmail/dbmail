@@ -1,7 +1,7 @@
 /*
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -643,7 +643,7 @@ gboolean MailboxState_isPublic(T M)
 
 gboolean MailboxState_hasKeyword(T M, const char *keyword)
 {
-	if (g_list_find_custom(M->keywords, (gpointer)keyword, dm_strcmpdata))
+	if (g_list_find_custom(M->keywords, (gpointer)keyword, (GCompareFunc) dm_strcmpdata))
 		return TRUE;
 	return FALSE;
 }
@@ -1044,7 +1044,7 @@ static void db_getmailbox_count(T M, Connection_T c)
 	M->recent = result[2];
  
 	TRACE(TRACE_DEBUG, "exists [%d] unseen [%d] recent [%d]", M->exists, M->unseen, M->recent);
-	/* now determine the next message UID 
+	/* now determine the next message UID
 	 * NOTE:
 	 * - expunged messages are selected as well in order to be able to restore them 
 	 * - the next uit MUST NOT change unless messages are added to THIS mailbox

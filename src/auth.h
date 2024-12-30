@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -167,6 +167,12 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
  *     - -1 on error
  *     -  1 on success
  */
+
+/**
+ * \brief Return extended user information, in fwds you can find extended information about delivered to/extend
+ */
+int auth_check_user_ext_fw(const char *username, GList **userids, GList **fwds, int checks);
+
 int auth_adduser(const char *username, const char *password, const char *enctype,
 		 uint64_t clientid, uint64_t maxmail, uint64_t * user_idnr);
 /**

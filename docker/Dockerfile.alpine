@@ -18,7 +18,7 @@ RUN mkdir -p /var/cache/distfiles
 RUN chmod a+w /var/cache/distfiles
 RUN chgrp abuild /var/cache/distfiles
 RUN adduser abuild -G abuild; \
-    abuild-keygen -ai
+    abuild-keygen -ain
 
 	
 env \
@@ -43,7 +43,7 @@ RUN abuild -F package
 
 ####
 FROM build-base AS build-gmime
-ARG gmime_APKBUILD=https://gitlab.alpinelinux.org/alpine/aports/-/raw/3.6-stable/main/gmime/APKBUILD
+ARG gmime_APKBUILD=https://gitlab.alpinelinux.org/alpine/aports/-/raw/3.20-stable/community/gmime/APKBUILD 
 ADD ${gmime_APKBUILD} /build/APKBUILD
 WORKDIR /build
 RUN abuild -F deps
@@ -74,12 +74,13 @@ RUN abuild -F rootbld
 RUN abuild -F package
 
 ####
-FROM alpine:latest AS base-image
+FROM alpine:3.20 AS base-image
 
 ADD . /app
 COPY docker/etc/ /etc/
 WORKDIR /app
-RUN apk add --no-cache libc-dev libmhash libevent file
+RUN apk add --no-cache libc-dev libevent file
+RUN apk add libmhash-dev --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
 # libzdb
 # libsieve
 # gmime=3.2
@@ -91,7 +92,8 @@ ARG LIBSIEVE_VERSION=2.2.7-r1
 COPY --from=build-libsieve /root/packages/x86_64/libsieve-${LIBSIEVE_VERSION}.apk /root/packages/x86_64/libsieve-${LIBSIEVE_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libsieve-${LIBSIEVE_VERSION}.apk
 
-ARG GMIME_VERSION=3.2.7-r2
+ARG GMIME_VERSION=3.2.14-r1
+ARG gmime_APKBUILD=https://gitlab.alpinelinux.org/alpine/aports/-/raw/3.20-stable/community/gmime/APKBUILD 
 COPY --from=build-gmime /root/packages/x86_64/gmime-${GMIME_VERSION}.apk /root/packages/x86_64/gmime-${GMIME_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/gmime-${GMIME_VERSION}.apk
 
@@ -102,13 +104,14 @@ RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libzdb-${LIBZDB_V
 ####
 FROM base-image AS build-image
 WORKDIR /app
-RUN apk add --no-cache libc-dev gcc curl make libmhash-dev libevent-dev bsd-compat-headers check-dev pkgconf libtool m4 automake autoconf build-base
+RUN apk add --no-cache libc-dev gcc curl-dev make libmhash-dev libevent-dev bsd-compat-headers \
+    check-dev pkgconf libtool m4 automake autoconf build-base
 
 ARG LIBSIEVE_VERSION=2.2.7-r1
 COPY --from=build-libsieve /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/libsieve-dev-${LIBSIEVE_VERSION}.apk
 
-ARG GMIME_VERSION=3.2.7-r2
+ARG GMIME_VERSION=3.2.14-r1
 COPY --from=build-gmime /root/packages/x86_64/gmime-dev-${GMIME_VERSION}.apk /root/packages/x86_64/gmime-dev-${GMIME_VERSION}.apk
 RUN apk add --allow-untrusted --no-cache /root/packages/x86_64/gmime-dev-${GMIME_VERSION}.apk
 

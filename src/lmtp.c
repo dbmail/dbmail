@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -500,8 +500,9 @@ int lmtp(ClientSession_T * session)
 		msg = dbmail_message_new(NULL);
 		dbmail_message_init_with_string(msg, p_string_str(session->rbuff));
 		if (p_list_data(session->from))
-			dbmail_message_set_header(msg, "Return-Path", 
-					(char *)p_string_str(p_list_data(session->from)));
+			dbmail_message_set_header(msg, "Return-Path",
+				(char *)p_string_str(p_list_data(session->from)));
+
 		p_string_truncate(session->rbuff,0);
 
 		if (insert_messages(msg, session->rcpt) == -1) {

@@ -1,7 +1,7 @@
 /*
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -25,6 +25,13 @@
 
 #include "dbmail.h"
 
+/* Loudness and assumptions. */
+int verbose = 0;
+int no_to_all = 0;
+int yes_to_all = 0;
+int reallyquiet = 0;
+int quiet = 0;
+
 extern char configFile[PATH_MAX];
 
 #define SHADOWFILE "/etc/shadow"
@@ -34,12 +41,6 @@ static char *getToken(char **str, const char *delims);
 static char csalt[] = "........";
 static char *bgetpwent(const char *filename, const char *name);
 static char *cget_salt(void);
-
-int verbose = 0;
-int no_to_all = 0;
-int yes_to_all = 0;
-int reallyquiet = 0;
-int quiet = 0;
 
 int do_add(const char * const user,
            const char * const password, const char * const enctype,
@@ -849,7 +850,7 @@ char *bgetpwent(const char *filename, const char *name)
 	return "";
 }
 
-char *cget_salt()
+char *cget_salt(void)
 {
 	unsigned long seed[2];
 	const char *const seedchars =

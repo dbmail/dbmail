@@ -1,7 +1,7 @@
 /*
  *   Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  *   Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- *   Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ *   Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -308,7 +308,6 @@ START_TEST(test_dbmail_mailbox_search)
 	size_t size;
 	uint64_t idx = 0;
 	gboolean sorted = 1;
-	int all, found, notfound;
 	DbmailMailbox *mb;
 	Mempool_T pool = mempool_open();
 	
@@ -324,6 +323,19 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	dbmail_mailbox_free(mb);
 	mempool_push(pool, search_keys, size);
+	mempool_close(&pool);
+}
+END_TEST
+
+START_TEST(test_dbmail_mailbox_search2)
+{
+	String_T *search_keys;
+	size_t size;
+	uint64_t idx = 0;
+	int all, found, notfound;
+	gboolean sorted = 1;
+	DbmailMailbox *mb;
+	Mempool_T pool = mempool_open();
 
 	// second case
 	//
@@ -337,8 +349,7 @@ START_TEST(test_dbmail_mailbox_search)
 	all = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
-	mempool_push(pool, search_keys, size);
-	
+
 	//
 	idx=0;
 	sorted = 0;
@@ -350,8 +361,7 @@ START_TEST(test_dbmail_mailbox_search)
 	found = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
-	mempool_push(pool, search_keys, size);
-	
+
 	//
 	idx=0;
 	sorted = 0;
@@ -363,10 +373,24 @@ START_TEST(test_dbmail_mailbox_search)
 	notfound = g_tree_nnodes(mb->found);
 	
 	dbmail_mailbox_free(mb);
-	mempool_push(pool, search_keys, size);
 
 	fail_unless((all - found) == notfound, "dbmail_mailbox_search failed: SEARCH NOT (all: %d, found: %d, notfound: %d)", all, found, notfound);
-	
+
+	mempool_push(pool, search_keys, size);
+	mempool_close(&pool);
+}
+END_TEST
+
+START_TEST(test_dbmail_mailbox_search3)
+{
+	String_T *search_keys;
+	size_t size;
+	uint64_t idx = 0;
+	gboolean sorted = 1;
+	int found;
+	DbmailMailbox *mb;
+	Mempool_T pool = mempool_open();
+
 	// third case
 	idx=0;
 	sorted = 0;
@@ -393,7 +417,20 @@ START_TEST(test_dbmail_mailbox_search)
 	dbmail_mailbox_free(mb);
 	mempool_push(pool, search_keys, size);
 
-	// 
+	mempool_close(&pool);
+}
+END_TEST
+
+START_TEST(test_dbmail_mailbox_search4)
+{
+	String_T *search_keys;
+	size_t size;
+	uint64_t idx = 0;
+	gboolean sorted = 1;
+	DbmailMailbox *mb;
+	Mempool_T pool = mempool_open();
+
+	//
 	idx=0;
 	sorted = 0;
 	mb = dbmail_mailbox_new(pool, get_mailbox_id("INBOX"));
@@ -619,6 +656,9 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search2);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search3);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search4);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);

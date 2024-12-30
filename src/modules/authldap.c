@@ -1,8 +1,9 @@
+
 /*
  Copyright (c) 2002 Aaron Stone, aaron@serendipity.cx
  Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -763,7 +764,6 @@ int auth_getclientid(uint64_t user_idnr, uint64_t * client_idnr)
 	return TRUE;
 }
 
-
 int auth_getmaxmailsize(uint64_t user_idnr, uint64_t * maxmail_size)
 {
 	char *max_char;
@@ -866,9 +866,6 @@ GList * auth_get_known_aliases(void)
  * 
  * returns the number of occurences. 
  */
-
-
-	
 int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int checks)
 {
 	int occurences = 0;
@@ -965,19 +962,13 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 		while(fldlist) {
 			attlist = g_list_first(fldlist->data);
 			while(attlist) {
-				attrvalue = (char *)attlist->data;
+				attrvalue = attlist->data;
 				occurences += auth_check_user_ext(attrvalue, userids, fwds, checks+1);
-				
-				if (! g_list_next(attlist))
-					break;
+
 				attlist = g_list_next(attlist);
 			}
-			if (! g_list_next(fldlist))
-				break;
 			fldlist = g_list_next(fldlist);
 		}
-		if (! g_list_next(entlist))
-			break;
 		entlist = g_list_next(entlist);
 	}
 	dm_ldap_freeresult(entlist);

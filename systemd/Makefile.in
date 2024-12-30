@@ -17,7 +17,7 @@
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 # Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
 # Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
-# Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+# Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 #
 # This program is free software; you can redistribute it and/or 
 # modify it under the terms of the GNU General Public License 
@@ -206,7 +206,8 @@ MYSQL_32003 = @MYSQL_32003@
 MYSQL_32004 = @MYSQL_32004@
 MYSQL_32005 = @MYSQL_32005@
 MYSQL_32006 = @MYSQL_32006@
-MYSQL_UPGRADE = @MYSQL_UPGRADE@
+MYSQL_35001 = @MYSQL_35001@
+MYSQL_CREATE = @MYSQL_CREATE@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -227,7 +228,8 @@ PGSQL_32003 = @PGSQL_32003@
 PGSQL_32004 = @PGSQL_32004@
 PGSQL_32005 = @PGSQL_32005@
 PGSQL_32006 = @PGSQL_32006@
-PGSQL_UPGRADE = @PGSQL_UPGRADE@
+PGSQL_35001 = @PGSQL_35001@
+PGSQL_CREATE = @PGSQL_CREATE@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
@@ -247,7 +249,7 @@ SQLITE_32003 = @SQLITE_32003@
 SQLITE_32004 = @SQLITE_32004@
 SQLITE_32005 = @SQLITE_32005@
 SQLITE_32006 = @SQLITE_32006@
-SQLITE_UPGRADE = @SQLITE_UPGRADE@
+SQLITE_35001 = @SQLITE_35001@
 STRIP = @STRIP@
 SYSTEMD_CFLAGS = @SYSTEMD_CFLAGS@
 SYSTEMD_LIBS = @SYSTEMD_LIBS@

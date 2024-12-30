@@ -3,7 +3,7 @@
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (C) 2007 Aaron Stone aaron@serendity.cx
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -36,11 +36,6 @@ extern Mempool_T small_pool;
 
 #define DBPFX db_params.pfx
 
-/* UI policy */
-int quiet = 0;
-int reallyquiet = 0;
-int verbose = 0;
-
 void do_showhelp(void)
 {
 	printf(
@@ -68,12 +63,13 @@ void do_showhelp(void)
 	"\n"
         "Common options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
+	"               Default: %s\n"
 	"     -q        quietly skip interactive prompts\n"
 	"               use twice to suppress error messages\n"
 	"     -v        verbose details\n"
 	"     -V        show the version\n"
 	"     -h        show this help message\n"
-	);
+	, configFile);
 }
 
 static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,

@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License 
@@ -46,14 +46,6 @@ int brute_force = 0;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
 
-/* Loudness and assumptions. */
-int verbose = 0;
-/* Not used, but required to link with libdbmail.so */
-int no_to_all = 0;
-int yes_to_all = 0;
-int reallyquiet = 0;
-int quiet = 0;
-
 void do_showhelp(void) {
 	printf(
 	"*** dbmail-deliver ***\n"
@@ -70,6 +62,7 @@ void do_showhelp(void) {
 
 	"\nCommon options for all DBMail utilities:\n"
 	"     -f file   specify an alternative config file\n"
+	"               Default: %s\n"
 	"     -q        quietly skip interactive prompts\n"
 	"               use twice to suppress error messages\n"
 	"     -n        show the intended action but do not perform it, no to all\n"
@@ -77,7 +70,7 @@ void do_showhelp(void) {
 	"     -v        verbose details\n"
 	"     -V        show the version\n"
 	"     -h        show this help message\n"
-	);
+	, configFile);
 }
 
 int main(int argc, char *argv[])
@@ -200,6 +193,10 @@ int main(int argc, char *argv[])
 			 * into the mail server config and thus may lose mail. */
 			PRINTF_THIS_IS_DBMAIL;
 			return 1;
+
+		case 'h':
+			do_showhelp();
+			return 0;
 
 		default:
 			usage_error = 1;

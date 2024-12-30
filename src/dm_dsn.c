@@ -4,7 +4,7 @@
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -250,7 +250,7 @@ static int address_has_alias(Delivery_T *delivery)
 
 	if (!delivery->address)
 		return 0;
-
+	TRACE(TRACE_DEBUG, "address_has_alias [%s]", delivery->address);
 	alias_count = auth_check_user_ext(delivery->address, &delivery->userids, &delivery->forwards, 0);
 	TRACE(TRACE_DEBUG, "user [%s] found total of [%d] aliases", delivery->address, alias_count);
 
@@ -259,6 +259,8 @@ static int address_has_alias(Delivery_T *delivery)
 
 	return 0;
 }
+
+
 
 // address is in format username+mailbox@domain
 // and we want to cut out the mailbox and produce
@@ -363,7 +365,6 @@ static int address_is_domain_catchall(Delivery_T *delivery)
         
 		/* Checking for domain aliases */
 		domain_count = auth_check_user_ext(my_domain, &delivery->userids, &delivery->forwards, 0);
-        
 		if (domain_count > 0) {
 			/* This is the way to succeed out. */
 			break;

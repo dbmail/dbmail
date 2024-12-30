@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -227,7 +227,6 @@ char *acl_get_acl(uint64_t mboxid)
 	char rightsstring[NR_ACL_FLAGS + 1];
 	int result;
 	GList *identifier_list = NULL;
-	unsigned nr_identifiers = 0;
 
 	result = db_acl_get_identifier(mboxid, &identifier_list);
 
@@ -258,7 +257,6 @@ char *acl_get_acl(uint64_t mboxid)
 	
 	identifier_list = g_list_first(identifier_list);
 	while (identifier_list) {
-		nr_identifiers++;
 		identifier_astring = dbmail_imap_astring_as_string((const char *)identifier_list->data);
 		acl_string_size += strlen(identifier_astring) + NR_ACL_FLAGS + 2;
 		g_free(identifier_astring);

@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -38,7 +38,7 @@ extern DBParam_T db_params;
 #define U URL_T
 
 
-int auth_connect()
+int auth_connect(void)
 {
 	/* this function is only called after a connection has been made
 	 * if, in the future this is not the case, db.h should export a 
@@ -47,7 +47,7 @@ int auth_connect()
 	return 0;
 }
 
-int auth_disconnect()
+int auth_disconnect(void)
 {
 	return 0;
 }
@@ -187,7 +187,6 @@ static GList *user_get_deliver_to(const char *username)
 
 	return d;
 }
-
 
 int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int checks)
 {

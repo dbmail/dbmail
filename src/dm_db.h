@@ -2,7 +2,7 @@
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -58,10 +58,18 @@
  */
 int db_connect(void);
 
+const char *db_get_db_name(void);
 /*
  * make sure we're running against a current database layout 
  */
 int db_check_version(void);
+
+/**
+ * Check dbmail_headernames
+ * for core values used for caching
+ * inserting any that don't exist
+ */
+int db_check_headernames(void);
 
 /* get a connection from the pool */
 C db_con_get(void);
@@ -393,6 +401,12 @@ int db_icheck_envelope(GList **lost);
 int db_set_envelope(GList *lost);
 
 /**
+ * \brief check for empty envelopes
+ *
+ */
+int db_icheck_empty_envelope(GList **lost);
+
+/**
  * \brief set status of a message
  * \param message_idnr
  * \param status new status of message
@@ -590,7 +604,7 @@ int db_noinferiors(uint64_t mailbox_idnr);
  */
 
 int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr, 
-		const char * internal_date, uint64_t * msg_idnr, gboolean recent);
+		const char * internal_date, uint64_t * msg_idnr);
 
 /**
  * \brief move all messages from one mailbox to another.
@@ -612,7 +626,7 @@ int db_movemsg(uint64_t mailbox_to, uint64_t mailbox_from);
  * 		- 0 on success
  */
 int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to,
-	       uint64_t user_idnr, uint64_t * newmsg_idnr, gboolean recent);
+	       uint64_t user_idnr, uint64_t * newmsg_idnr);
 
 /**
  * \brief check if mailbox already holds message with message-id

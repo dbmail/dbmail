@@ -1,7 +1,7 @@
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 # Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
 # Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
-# Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+# Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 #
 # This program is free software; you can redistribute it and/or 
 # modify it under the terms of the GNU General Public License 
@@ -30,8 +30,7 @@ man8_MANS = dbmail-util.8 \
 	dbmail-imapd.8 \
 	dbmail-lmtpd.8 \
 	dbmail-pop3d.8 \
-	dbmail-httpd.8 \
-	dbmail-timsieved.8
+	dbmail-httpd.8
 
 EXTRA_DIST = $(man1_MANS) $(man5_MANS) $(man8_MANS)
 
