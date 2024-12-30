@@ -25,6 +25,8 @@ ALTER TABLE `dbmail_upgrade_steps` CONVERT TO CHARACTER SET utf8mb4;
 ALTER TABLE `dbmail_usermap` CONVERT TO CHARACTER SET utf8mb4;
 ALTER TABLE `dbmail_users` CONVERT TO CHARACTER SET utf8mb4;
 
+ALTER TABLE `dbmail_physmessage` ADD COLUMN `messagetype` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0';
+
 INSERT INTO dbmail_upgrade_steps (from_version, to_version, applied) values (32006, 35001, now());
 
 COMMIT;
