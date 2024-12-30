@@ -720,13 +720,15 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	uint64_t *mid;
 	uint64_t id;
 	GList *last;
-	GString *fieldorder = NULL;
-	GString *headerIDs = NULL;
+	GString *fieldorder;
+	GString *headerIDs;
 	int k;
-	int fieldseq=0;
+	int fieldseq;
 	String_T query = NULL;
 	String_T range = NULL;
 
+	fieldorder = g_string_new("");
+	fieldseq = 0;
 	if (! bodyfetch->headers) {
 		TRACE(TRACE_DEBUG, "[%p] init bodyfetch->headers", self);
 		bodyfetch->headers = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)uint64_free,(GDestroyNotify)g_free);
@@ -779,12 +781,14 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	
 	headerIDs = g_string_new("0");
 	if (! not) {
+		int found_names = 0;
 		fieldorder = g_string_new(", CASE ");
 		
 		fieldseq = 0;
 		bodyfetch->names = g_list_first(bodyfetch->names);
 
 		while (bodyfetch->names) {
+			found_names = 1;
 			char *raw = (char *)bodyfetch->names->data;
 			char *name = g_ascii_strdown(raw, strlen(raw));
 			g_string_append_printf(fieldorder, "WHEN n.headername='%s' THEN %d ",
@@ -815,10 +819,14 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			bodyfetch->names = g_list_next(bodyfetch->names);
 			fieldseq++;
 		}
+		if (found_names == 0){
+			//not items found, adding default value
+			g_string_append_printf(fieldorder, "WHEN TRUE THEN 1 ");
+		}
 		//adding default value, useful in NOT conditions, Cosmin Cioranu
 		g_string_append_printf(fieldorder, "ELSE %d END AS seq",fieldseq);
 	}
-	TRACE(TRACE_DEBUG, "[headername ids %s] ", headerIDs->str);
+	TRACE(TRACE_DEBUG, "[headername ids %s] ", (headerIDs)->str);
 	query = p_string_new(self->pool, "");
 	p_string_printf(query, "SELECT m.message_idnr, n.headername, v.headervalue%s "
 			"FROM %sheader h "
@@ -837,7 +845,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			"ORDER BY m.message_idnr, seq",
 			not?"":fieldorder->str,
 			DBPFX, DBPFX, DBPFX, DBPFX,
-			not?"NOT":"", headerIDs->str,
+			not?"NOT":"", (headerIDs)->str,
 			self->mailbox->id, p_string_str(range),
 			//not?"NOT":"", bodyfetch->hdrnames	//old 
 			MESSAGE_STATUS_DELETE			//return information only related to valid messages
