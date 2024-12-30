@@ -1,4 +1,2 @@
 BEGIN;
-ALTER TABLE `dbmail_physmessage` ADD COLUMN `messagetype` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0';
-INSERT INTO dbmail_upgrade_steps (from_version, to_version) values (32006, 35001); 
 COMMIT;

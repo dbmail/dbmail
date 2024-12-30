@@ -114,31 +114,7 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 
 	return s;
 }
-static void _analyze_mime(GMimeObject *mime_part, DbmailMessage *m)
-{
-	GMimeContentType *content_type;
 
-	content_type = g_mime_object_get_content_type(mime_part);
-	TRACE(TRACE_DEBUG, "StoreObject Analysis:  content type %s",g_mime_content_type_get_media_type(content_type));
-	TRACE(TRACE_DEBUG, "StoreObject Analysis:  content sub type %s",g_mime_content_type_get_media_subtype(content_type));
-
-	if (g_mime_content_type_is_type(content_type, "text", "html")) {
-		const gchar *param = g_mime_content_type_get_parameter(content_type, "report-type");
-		TRACE(TRACE_DEBUG, "StoreObject Analysis:  param %s",param);
-		if (strcmp(param, "delivery-status")==0){
-			TRACE(TRACE_DEBUG, "StoreObject Analysis:  is delivery report text/html report-type=delivery-status");
-			m->message_type = 1;
-		}
-	}
-	if (g_mime_content_type_is_type(content_type, "message", "delivery-status")) {
-		TRACE(TRACE_DEBUG, "StoreObject Analysis: delivery report message/delivery-status");
-		m->message_type = 1;
-	}
-	if (g_mime_content_type_is_type(content_type, "multipart", "report")) {
-		TRACE(TRACE_DEBUG, "StoreObject Analysis:  is delivery report multipart/report");
-		m->message_type = 1;
-	}
-}
 static uint64_t blob_exists(const char *buf, const char *hash)
 {
 	volatile uint64_t id = 0;
@@ -585,13 +561,9 @@ static int store_body(GMimeObject *object, DbmailMessage *m)
 	return r;
 }
 
-
 static gboolean store_mime_text(GMimeObject *object, DbmailMessage *m, gboolean skiphead)
 {
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
-
-	_analyze_mime(object,m);
-
 	if (! skiphead && store_head(object, m) < 0) return TRUE;
 	if(store_body(object, m) < 0) return TRUE;
 	return FALSE;
@@ -657,7 +629,6 @@ static gboolean store_mime_message(GMimeObject * object, DbmailMessage *m, gbool
 	
 }
 
-
 gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessage *m)
 {
 	GMimeContentType *content_type;
@@ -681,9 +652,8 @@ gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessa
 		mime_part = g_mime_message_get_mime_part((GMimeMessage *)object);
 	} else
 		mime_part = object;
-	content_type = g_mime_object_get_content_type(mime_part);
 
-	_analyze_mime(mime_part,m);
+	content_type = g_mime_object_get_content_type(mime_part);
 
 	if (g_mime_content_type_is_type(content_type, "multipart", "*")) {
 		r = store_mime_multipart((GMimeObject *)mime_part, m, content_type, skiphead);
@@ -766,9 +736,6 @@ DbmailMessage * dbmail_message_new(Mempool_T pool)
 	
 	/* set the charset */
 	self->charset = "utf-8";
-
-	/* set type of message 0=normal message, 1=delivery report/status*/
-	self->message_type = 0;
 
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
 	
@@ -1259,13 +1226,6 @@ static int _update_message(DbmailMessage *self)
 	return DM_SUCCESS;
 }
 
-static int _update_message_type(DbmailMessage *self)
-{
-	if (! db_update("UPDATE %sphysmessage SET messagetype = %" PRIu64 " WHERE id = %" PRIu64 "",
-				DBPFX, self->message_type, self->id))
-			return DM_EQUERY;
-	return DM_SUCCESS;
-}
 
 int dbmail_message_store(DbmailMessage *self)
 {
@@ -1308,17 +1268,8 @@ int dbmail_message_store(DbmailMessage *self)
 			}
 			step++;
 		}
-		//other meta informations which are computed in dm_message_store
-		if (step == 3) {
-			/* update message type */
-			if ((res = _update_message_type(self) < 0)) {
-				usleep(delay*i);
-				continue;
-			}
-			step++;
-		}
 
-		if (step == 4) {
+		if (step == 3) {
 			/* store message headers */
 			if ((res = dbmail_message_cache_headers(self)) < 0) {
 				usleep(delay*i);
