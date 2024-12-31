@@ -227,8 +227,9 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 				TRACE(TRACE_DEBUG, "user [%s] is not active", username);
 			}
 		} else {
-			*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(username));
-			TRACE(TRACE_DEBUG, "adding [%s] to deliver_to address occurences [%d]", username, occurences);
+			//do not do anything
+			//*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(username));
+			//TRACE(TRACE_DEBUG, "adding [%s] to deliver_to address occurences [%d]", username, occurences);
 		}
 		return occurences;
 	} 
@@ -237,9 +238,18 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 		/* do a recursive search for deliver_to */
 		char *deliver_to = (char *)d->data;
 		TRACE(TRACE_DEBUG, "checking user %s to %s", username, deliver_to);
-		
 		occurences += auth_check_user_ext(deliver_to, userids, fwds, checks+1);
-
+		TRACE(TRACE_DEBUG, "checking(2) user %s to %s", username, deliver_to);
+		id = strtoull(deliver_to, &endptr, 10);
+		if (id == 0) {
+			//add only is not an integer (which is actually a mailbox)
+			DeliveryItem_T *item = g_new0(DeliveryItem_T,1);
+			TRACE(TRACE_DEBUG, "adding [%s] to deliver_to %s, occurences [%d]", username, deliver_to, occurences);
+			//should add to fwds
+			item->from = g_strdup(username);
+			item->to = g_strdup(deliver_to);
+			*(GList **)fwds = g_list_prepend(*(GList **)fwds, item);
+		}
 		if (! g_list_next(d)) break;
 		d = g_list_next(d);
 	}

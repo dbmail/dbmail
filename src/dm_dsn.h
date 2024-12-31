@@ -39,13 +39,20 @@ typedef struct {
 	int detail;
 } delivery_status_t;
 
+//structure of the forward override sender
+typedef struct {
+	char *from;
+	char *to;
+	uint64_t override_fw_sender;
+} DeliveryItem_T;
+
 typedef struct {
 	uint64_t useridnr;		/* Specific user id recipient (from outside). */
 	char *address;	/* Envelope recipient (from outside). */
 	char *mailbox;	/* Default mailbox to use for userid deliveries (from outside). */
 	mailbox_source source; /* Who specified the mailbox (e.g. trusted or untrusted source)? */
 	GList *userids;	/* List of uint64_t* -- internal useridnr's to deliver to (internal). */
-	GList *forwards;	/* List of char* -- external addresses to forward to (internal). */
+	GList *forwards;	/* List of DeliveryItem_T -- external addresses to forward to (internal). */
 	delivery_status_t dsn;	/* Return status of this "delivery basket" (to outside). */
 } Delivery_T;
 

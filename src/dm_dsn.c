@@ -217,6 +217,11 @@ void dsnuser_free(Delivery_T * dsnuser)
 	if (dsnuser->forwards) {
 		dsnuser->forwards = g_list_first(dsnuser->forwards);
 		while(dsnuser->forwards) {
+			DeliveryItem_T *pair = (DeliveryItem_T *)(dsnuser->forwards->data);
+			g_free(pair->from);
+			pair->from = NULL;
+			g_free(pair->to);
+			pair->to = NULL;
 			g_free(dsnuser->forwards->data);
 			dsnuser->forwards = g_list_next(dsnuser->forwards);
 		}

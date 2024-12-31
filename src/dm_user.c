@@ -680,16 +680,40 @@ static int show_alias(const char * const name, int concise)
 	}
 
 	if (forwards) {
+		GList *fwd=NULL;
+		while (forwards) {
+			DeliveryItem_T *pair = (DeliveryItem_T *)forwards->data;
+			//char *from_local=pair->from;
+			char *to=g_strdup(pair->to);
+			fwd = g_list_prepend(fwd, to);
+			if (! g_list_next(forwards))
+				break;
+			forwards = g_list_next(forwards);
+		}
+		GString *fwdlist = g_list_join(fwd,",");
 		if (concise) {
-			GString *fwdlist = g_list_join(forwards,",");
+			//GString *fwdlist = g_list_join(forwards,",");
 			printf("%s: %s\n", name, fwdlist->str);
-			g_string_free(fwdlist, TRUE);
+			//g_string_free(fwdlist, TRUE);
 		} else {
-			GString *fwdlist = g_list_join(forwards,", ");
+			//GString *fwdlist = g_list_join(forwards,", ");
 			printf("forward [%s] to [%s]\n", name, fwdlist->str);
-			g_string_free(fwdlist, TRUE);
+			//g_string_free(fwdlist, TRUE);
+		}
+		g_string_free(fwdlist, TRUE);
+
+		while(forwards) {
+			DeliveryItem_T *pair = (DeliveryItem_T *)(forwards)->data;
+			g_free(pair->from);
+			pair->from = NULL;
+			g_free(pair->to);
+			pair->to = NULL;
+			if (! g_list_next(forwards)) break;
+			forwards = g_list_next(forwards);
 		}
 		g_list_destroy(g_list_first(forwards));
+		//g_list_destroy(g_list_first(forwards));
+		g_list_destroy(fwd);
 	}
 	
 	userids = g_list_first(userids);

@@ -2906,7 +2906,12 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 	targets = g_list_first(targets);
 	TRACE(TRACE_INFO, "delivering to [%u] external addresses", g_list_length(targets));
 	while (targets) {
-		char *to = (char *)targets->data;
+
+		//char *to = (char *)targets->data;
+		DeliveryItem_T *pair = (DeliveryItem_T *)targets->data;
+		char *from_local=g_strdup(pair->from);
+		char *to=g_strdup(pair->to);
+
 
 		if (!to || strlen(to) < 1) {
 			TRACE(TRACE_ERR, "forwarding address is zero length, message not forwarded.");
@@ -2934,8 +2939,25 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 				// The forward is a command to execute.
 				result |= send_mail(message, "", "", NULL, SENDRAW, to+1);
 			} else {
-				// The forward is an email address.
-				result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+				if (message->message_type == 0){
+					//this is a normal message(not a bounce), evaluate the need to change from source
+					if (dm_check_forward_override(from_local,to)>0){
+						if (from_local){
+							TRACE(TRACE_ERR, "forwarding normal message by changing %s to %s", from, from_local);
+							result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
+						}else{
+							TRACE(TRACE_ERR, "forwarding normal message to default from %s due to null from", from);
+							result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
+						}
+					}else{
+						TRACE(TRACE_ERR, "forwarding normal message to %s, not changing to %s", from, from_local);
+						result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+					}
+				}else{
+					// The forward is an email address.
+					TRACE(TRACE_ERR, "forwarding bounce message to %s,  not changing to %s", from, from_local);
+					result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+				}
 			}
 		}
 		if (! g_list_next(targets))
@@ -3096,7 +3118,7 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 		/* Each user may also have a list of external forwarding addresses. */
 		if (g_list_length(delivery->forwards) > 0) {
 			TRACE(TRACE_DEBUG, "delivering to external addresses");
-			const char *from = dbmail_message_get_header(message, "Return-Path");
+			const char *from = g_strdup(dbmail_message_get_header(message, "Return-Path"));
 			/* Forward using the temporary stored message. */
 			if (send_forward_list(message, delivery->forwards, from)) {
 				/* If forward fails, tell the sender that we're

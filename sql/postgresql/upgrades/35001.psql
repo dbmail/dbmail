@@ -1,6 +1,9 @@
 BEGIN;
 
+ALTER TABLE `dbmail_aliases` ADD COLUMN `override_fw_sender` int UNSIGNED NOT NULL DEFAULT '0';
+
 -- noop as mysql upgrade only
+
 INSERT INTO dbmail_upgrade_steps (from_version, to_version, applied) values (32006, 35001, now());
 
 COMMIT;

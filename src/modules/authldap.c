@@ -943,11 +943,14 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 				uid = g_new0(uint64_t,1);
 				*uid = id;
 				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
+				occurences = 1;
 			} else {
-				TRACE(TRACE_DEBUG, "adding [%s] to forwards", address);
-				*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(address));
+				//do not do anything
+				//TRACE(TRACE_DEBUG, "adding [%s] to forwards", address);
+				//*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(address));
 			}
-			return 1;
+
+			return occurences;
 		} else {
 			TRACE(TRACE_DEBUG, "user [%s] not in aliases table", address);
 			dm_ldap_freeresult(entlist);
@@ -965,6 +968,14 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 				attrvalue = attlist->data;
 				occurences += auth_check_user_ext(attrvalue, userids, fwds, checks+1);
 
+				id = strtoull(attrvalue, &endptr, 10);
+				if (id == 0) {
+					//add only is not an integer (which is actually a mailbox)
+					DeliveryItem_T *item = g_new0(DeliveryItem_T,1);
+					item->from = g_strdup(username);
+					item->to = g_strdup(attrvalue);
+					*(GList **)fwds = g_list_prepend(*(GList **)fwds, item);
+				}
 				attlist = g_list_next(attlist);
 			}
 			fldlist = g_list_next(fldlist);

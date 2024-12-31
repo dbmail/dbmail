@@ -1323,7 +1323,7 @@ int dm_quota_user_get(uint64_t user_idnr, uint64_t *size)
 {
 	PreparedStatement_T stmt;
 	Connection_T c;
-       	ResultSet_T r;
+   	ResultSet_T r;
 	assert(size != NULL);
 
 	c = db_con_get();
@@ -1343,6 +1343,50 @@ int dm_quota_user_get(uint64_t user_idnr, uint64_t *size)
 	END_TRY;
 
 	return DM_EGENERAL;
+}
+/**
+ * Check if we can perform forward sender override
+ */
+int dm_check_forward_override(const char *from, const char *to)
+{
+	int override_fw_sender = 0;
+	int forward_override=config_get_value_default_int("forward_sender_override","DBMAIL",0);
+	if (!forward_override){
+		//if is not enabled, do not check further
+		return override_fw_sender;
+	}
+	
+	if (forward_override == 1){
+		//always on, all senders are overriden based on the alias information
+		override_fw_sender = 1;
+		return override_fw_sender;
+	}
+	Connection_T c;
+	ResultSet_T r;
+	PreparedStatement_T s;
+	volatile int t = TRUE;
+	c = db_con_get();
+	TRY
+		s = db_stmt_prepare(c,
+			"SELECT override_fw_sender FROM %saliases "
+			 "WHERE lower(alias) = lower(?) "
+			 "AND lower(deliver_to) = lower(?)"
+			 "",
+			DBPFX);
+		db_stmt_set_str(s, 1, from);
+		db_stmt_set_str(s, 2, to);
+
+		r = db_stmt_query(s);
+		if (db_result_next(r))
+				override_fw_sender = db_result_get_int(r,0);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	return override_fw_sender;
+
 }
 
 int dm_quota_user_set(uint64_t user_idnr, uint64_t size)

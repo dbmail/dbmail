@@ -252,8 +252,8 @@ int config_get_value_default_int(const Field_T field_name,
 					int default_value){
 	Field_T value;
 	int result_fetch = config_get_value(field_name, service_name, value);
-	int result=default_value;
-	if (result_fetch==0){
+	int result = default_value;
+	if (result_fetch == 0){
 		/* no error */
 		result=atoi(value);
 	}

@@ -228,7 +228,10 @@ void mailbox_match_free(struct mailbox_match *m);
  * -  1 on table found
  */
 int db_use_usermap(void);
-
+/**
+ * Check if we can perform forward sender override
+ */
+int dm_check_forward_override(const char *from, const char *to);
 /**
  * \brief check if username exists in the usermap table
  * \param int tx filehandle of connected client
