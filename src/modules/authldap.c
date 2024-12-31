@@ -972,7 +972,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 				if (id == 0) {
 					//add only is not an integer (which is actually a mailbox)
 					DeliveryItem_T *item = g_new0(DeliveryItem_T,1);
-					item->from = g_strdup(username);
+					item->from = g_strdup(address);
 					item->to = g_strdup(attrvalue);
 					*(GList **)fwds = g_list_prepend(*(GList **)fwds, item);
 				}
