@@ -163,7 +163,6 @@ typedef struct {
 	int part_key;
 	int part_depth;
 	int part_order;
-
 } DbmailMessage;
 
 /**********************************************************************
