@@ -1,6 +1,6 @@
 %define         services dbmail-imapd dbmail-pop3d dbmail-lmtpd dbmail-timsieved
 
-%define		SRCBASE	%{_builddir}/%{name}-%{version}
+%define		SRCBASE	%{_builddir}/%{name}-main
 %define		TMPLIB	%{buildroot}/usr/lib/tmpfiles.d
 %define		SOURCE1	%{SRCBASE}/systemd/dbmail-imapd.service
 %define		SOURCE2 %{SRCBASE}/systemd/dbmail-pop3d.service
@@ -9,11 +9,11 @@
 %define		SOURCE5	%{SRCBASE}/dbmail.cron
 %define		SOURCE6	%{SRCBASE}/dbmail.logrotate
 %define		SOURCE7	%{SRCBASE}/dbmail.sysconfig
-%define         SOURCE8 %{SRCBASE}/README
+%define   SOURCE8 %{SRCBASE}/README
 %define		SOURCE9	%{SRCBASE}/dbmail.conf
 
 Name:           dbmail
-Version:        3.2.5
+Version:        3.5.0
 Release:        2%{?dist}
 Summary:        A database backed mail storage system
 
@@ -21,7 +21,7 @@ Group:          System Environment/Daemons
 # db_getopot.c is licensed MIT
 License:        GPLv2+ and MIT
 URL:            http://www.dbmail.org
-Source0:        dbmail-3.2.5.tar.gz
+Source0:        https://github.com/dbmail/dbmail/archive/refs/heads/main.zip
 
 #Patch0:         dbmail-3.0.2-gthread.patch
 
@@ -71,7 +71,7 @@ Please see /usr/share/doc/dbmail-*/README.fedora for specific information on
 installation and configuration in Fedora.
 
 %prep
-%setup -q
+%setup -q -n %{name}-main
 
 %if 0%{?rhel} && 0%{?rhel} > 5
 # Temporary patch - gmime is not adding flags for gthread; add to
@@ -95,7 +95,7 @@ sed -i -e 's,\(^db\W*=\)\(.*$\),\1 %{_localstatedir}/lib/dbmail/dbmail.db,'   \
        -e 's/\(^EFFECTIVE_GROUP\W*=\)\(.*$\)/\1 dbmail/' dbmail.conf
 
 %if 0%{?fedora} && 0%{?fedora} > 13
-sed -i 's/gmime-2.4/gmime-2.6/g' configure
+#sed -i 's/gmime-2.4/gmime-2.6/g' configure
 %endif
 
 %build
