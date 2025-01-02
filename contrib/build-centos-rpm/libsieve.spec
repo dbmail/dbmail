@@ -20,7 +20,7 @@ Group:          Development/Libraries/Other
 # more restrictive GPL tag for the license
 License:        GPL
 URL:            https://github.com/sodabrew/libsieve
-Source0:        https://github.com/sodabrew/libsieve/archive/libsieve-2.2.zip
+Source0:        https://github.com/sodabrew/libsieve/archive/%{name}-%{version}.zip
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  flex bison pkgconfig libtool
 
