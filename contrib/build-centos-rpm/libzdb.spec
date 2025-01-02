@@ -11,7 +11,7 @@
 # published by the Open Source Initiative.
 
 Name:           libzdb
-Version:        3.1
+Version:        3.4.0
 Release:        2%{?dist}
 Summary:        The Zild C Database Library implements a small, fast, and easy to  use database API
 
@@ -20,9 +20,9 @@ Group:          Development/Libraries/Database
 # more restrictive GPL tag for the license
 License:        GPL
 URL:            https://github.com/mverbert/libzdb
-Source0:        https://github.com/downloads/libzdb/%{name}/%{name}-%{version}.tar.gz
+Source0:        https://www.tildeslash.com/libzdb/dist/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-BuildRequires:  flex bison mariadb-devel openssl-devel postgresql-devel pkgconfig libtool
+BuildRequires:  flex bison mariadb-devel openssl-devel postgresql-devel pkgconfig libtool autoconf-archive
 
 %description
     The Zild C Database Library implements a small, fast, and easy to
@@ -36,8 +36,6 @@ BuildRequires:  flex bison mariadb-devel openssl-devel postgresql-devel pkgconfi
 %setup -q
 
 %build 
-libtoolize --copy --force
-autoreconf --force --install --symlink
 %configure 
 make %{?_smp_mflags}
 
