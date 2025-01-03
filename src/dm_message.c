@@ -2943,20 +2943,20 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 					//this is a normal message(not a bounce), evaluate the need to change from source
 					if (dm_check_forward_override(from_local,to)>0){
 						if (from_local){
-							TRACE(TRACE_ERR, "forwarding normal message by changing %s to %s", from, from_local);
+							TRACE(TRACE_NOTICE, "forwarding normal message to %s, from %s (changed from %s)", to, from_local, from);
 							result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
 						}else{
-							TRACE(TRACE_ERR, "forwarding normal message to default from %s due to null from", from);
-							result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
+							TRACE(TRACE_NOTICE, "forwarding normal message to %s from %s (due to null)", to, from);
+							result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 						}
 					}else{
-						TRACE(TRACE_ERR, "forwarding normal message to %s, not changing to %s", from, from_local);
+						TRACE(TRACE_NOTICE, "forwarding normal message to %s, from %s (not changing due to policy) ", to, from);
 						result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 					}
 				}else{
 					// The forward is an email address.
-					TRACE(TRACE_ERR, "forwarding bounce message to %s,  not changing to %s", from, from_local);
-					result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+					TRACE(TRACE_NOTICE, "forwarding bounce message to %s, stopped (due to policy) ",to);
+					//result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 				}
 			}
 		}
