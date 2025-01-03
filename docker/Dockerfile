@@ -1,5 +1,5 @@
 # DBMail Dockerfile
-# Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+# Copyright (c) 2020-2025 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 # LICENSE GPL2+
 
 FROM ubuntu:latest AS build_base
