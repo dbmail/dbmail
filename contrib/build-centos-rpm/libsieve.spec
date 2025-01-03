@@ -1,5 +1,5 @@
 #
-# spec file for package libsieve (Version 2.2.7)
+# spec file for package libsieve (Version 2.2)
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -11,7 +11,7 @@
 # published by the Open Source Initiative.
 
 Name:           libsieve
-Version:        2.2.7
+Version:        2.2
 Release:        2%{?dist}
 Summary:        A Library for Parsing, Sorting and Filtering Your Mail
 
@@ -20,7 +20,7 @@ Group:          Development/Libraries/Other
 # more restrictive GPL tag for the license
 License:        GPL
 URL:            https://github.com/sodabrew/libsieve
-Source0:        https://github.com/downloads/sodabrew/%{name}/%{name}-%{version}.tar.gz
+Source0:        https://github.com/sodabrew/libsieve/archive/%{name}-%{version}.zip
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  flex bison pkgconfig libtool
 
@@ -47,11 +47,10 @@ emails. The rest is up to you!
 
 
 %prep 
-%setup -q
+%setup -q -n %{name}-%{name}-%{version}/src
 
 %build 
-libtoolize --copy --force
-autoreconf --force --install --symlink
+./bootstrap
 %configure 
 make %{?_smp_mflags}
 
@@ -70,7 +69,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-) 
 %{_libdir}/*.so.*
-%doc AUTHORS COPYING NEWS README
+%doc ../AUTHORS ../COPYING ../NEWS ../README
 
 %package devel
 Summary: A Library for Parsing, Sorting and Filtering Your Mail
