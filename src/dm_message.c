@@ -2619,6 +2619,7 @@ int send_mail(DbmailMessage *message,
 		// fall-through
 	case SENDMESSAGE:
 		buf = dbmail_message_to_string(message);
+		TRACE(TRACE_DEBUG, "Sending message:\n%s\n",buf);
 		fprintf(mailpipe, "%s", buf);
 		g_free(buf);
 		break;
@@ -2760,7 +2761,7 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 	}
 
 	usubject = dbmail_iconv_decode_text(subject);
-       	unewsubject = g_strconcat("Re: ", usubject, NULL);
+    unewsubject = g_strconcat("Re: ", usubject, NULL);
 	newsubject = g_mime_utils_header_encode_text(NULL, unewsubject, message->charset);
 	g_free(usubject);
 	g_free(unewsubject);
@@ -2820,6 +2821,33 @@ static int send_notification(DbmailMessage *message, const char *to)
 	return result;
 }           
 
+static int send_forward(DbmailMessage *message, const char *from, const char *old_from, const char *to)
+{
+	int result;
+	const char *subject;
+	char *usubject;
+	char *newsubject;
+	char *unewsubject;
+	subject=dbmail_message_get_header(message, "Subject");
+	usubject = dbmail_iconv_decode_text(subject);
+    unewsubject = g_strconcat(usubject, NULL);
+	newsubject = g_mime_utils_header_encode_text(NULL, unewsubject, message->charset);
+	g_free(usubject);
+	g_free(unewsubject);
+
+	DbmailMessage *new_message = dbmail_message_new(message->pool);
+	new_message = dbmail_message_construct(new_message, to, from, newsubject, "");
+	dbmail_message_set_header(new_message, "From", from);
+	dbmail_message_set_header(new_message, "X-DBMail-Original-Sender", old_from);
+	dbmail_message_set_header(new_message, "Reply-To", old_from);
+
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
+
+	dbmail_message_free(new_message);
+	g_free(newsubject);
+
+	return result;
+}
 
 /* Yeah, RAN. That's Reply And Notify ;-) */
 static int execute_auto_ran(DbmailMessage *message, uint64_t useridnr)
@@ -2944,7 +2972,8 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 					if (dm_check_forward_override(from_local,to)>0){
 						if (from_local){
 							TRACE(TRACE_NOTICE, "forwarding normal message to %s, from %s (changed from %s)", to, from_local, from);
-							result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
+							//result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
+							result != send_forward(message, from_local, from, to);
 						}else{
 							TRACE(TRACE_NOTICE, "forwarding normal message to %s from %s (due to null)", to, from);
 							result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
