@@ -2824,19 +2824,12 @@ static int send_notification(DbmailMessage *message, const char *to)
 static int send_forward(DbmailMessage *message, const char *from, const char *old_from, const char *to)
 {
 	int result;
-	const char *subject;
-	char *usubject;
-	char *newsubject;
-	char *unewsubject;
-	subject=dbmail_message_get_header(message, "Subject");
-	usubject = dbmail_iconv_decode_text(subject);
-    unewsubject = g_strconcat(usubject, NULL);
-	newsubject = g_mime_utils_header_encode_text(NULL, unewsubject, message->charset);
-	g_free(usubject);
-	g_free(unewsubject);
+	gchar *message_content;
 
 	DbmailMessage *new_message = dbmail_message_new(message->pool);
-	new_message = dbmail_message_construct(new_message, to, from, newsubject, "");
+	message_content = dbmail_message_to_string(message);
+	dbmail_message_init_with_string(new_message,g_strdup(message_content));
+
 	dbmail_message_set_header(new_message, "From", from);
 	dbmail_message_set_header(new_message, "X-DBMail-Original-Sender", old_from);
 	dbmail_message_set_header(new_message, "Reply-To", old_from);
@@ -2844,7 +2837,7 @@ static int send_forward(DbmailMessage *message, const char *from, const char *ol
 	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
 
 	dbmail_message_free(new_message);
-	g_free(newsubject);
+	g_free(message_content);
 
 	return result;
 }
@@ -2973,7 +2966,7 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 						if (from_local){
 							TRACE(TRACE_NOTICE, "forwarding normal message to %s, from %s (changed from %s)", to, from_local, from);
 							//result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
-							result != send_forward(message, from_local, from, to);
+							result |= send_forward(message, from_local, from, to);
 						}else{
 							TRACE(TRACE_NOTICE, "forwarding normal message to %s from %s (due to null)", to, from);
 							result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
