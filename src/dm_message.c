@@ -978,6 +978,8 @@ const char * dbmail_message_get_envelope_recipient(const DbmailMessage *self)
 
 void dbmail_message_set_header(DbmailMessage *self, const char *header, const char *value)
 {
+	//remove first and then add
+	g_mime_object_remove_header(GMIME_OBJECT(self->content), header);
 	g_mime_object_prepend_header(GMIME_OBJECT(self->content), header, value, self->charset);
 }
 
@@ -2619,7 +2621,7 @@ int send_mail(DbmailMessage *message,
 		// fall-through
 	case SENDMESSAGE:
 		buf = dbmail_message_to_string(message);
-		TRACE(TRACE_DEBUG, "Sending message:\n%s\n",buf);
+		TRACE(TRACE_INFO, "Sending message:\n%s\n",buf);
 		fprintf(mailpipe, "%s", buf);
 		g_free(buf);
 		break;
