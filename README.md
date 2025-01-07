@@ -11,7 +11,7 @@
 ## What is it?
 
 DBMail is a collection of programs that enables email to be managed, stored in
-and retrieved from a database.
+and retrieved from a database using industry standard IMAP.
 
 ## Why is it useful?
 
@@ -62,6 +62,12 @@ and the GPL. Therefore DBMail has the GPL licence.
 ## Support
 
 Support is available by raising an issue at https://github.com/dbmail/dbmail
+
+For the latest announcements, please subscribe to the following
+https://dbmail.org/wws/info/dbmail-announce
+
+General questions may be answered on the mailing list
+https://dbmail.org/wws/info/dbmail-general
 
 ### Architecture
 
