@@ -2,7 +2,7 @@
 # Copyright (c) 2020-2025 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 # LICENSE GPL2+
 
-FROM ubuntu:latest AS build_base
+FROM ubuntu:24.04 AS build_base
 LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
       org.opencontainers.image.url="https://dbmail.org/docs/docker-images/" \
       org.opencontainers.image.source="https://github.com/dbmail/dbmail/tree/master/docker" \
@@ -27,25 +27,15 @@ RUN apt update && \
     libcurl4-openssl-dev check \
     libmhash2 libevent-2.1-7 libevent-pthreads-2.1-7 libssl3 libsieve2-1
 
-RUN mkdir /build-dir && \
-    cd /build-dir && \
-    git clone https://github.com/dbmail/dbmail.git && \
-    cd dbmail && \
+RUN mkdir -p /app/dbmail
+
+RUN cd /app && \
+    git clone --branch 3.4.x https://github.com/dbmail/dbmail.git && \
+    cd /app/dbmail && \
     ./configure --with-ldap=/usr --with-sieve=/usr/lib/x86_64-linux-gnu/ --with-check && \
     make && make check && make install
 
-FROM ubuntu:latest
-LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
-      org.opencontainers.image.url="https://dbmail.org/docs/docker-images/" \
-      org.opencontainers.image.source="https://github.com/dbmail/dbmail/tree/main/docker" \
-      org.opencontainers.image.licenses="GPL-2.0+" \
-      org.opencontainers.image.title="DBMail" \
-      org.opencontainers.image.description="This image runs dbmail-imapd"
-
 WORKDIR /
-
-COPY --from=build /usr/local/sbin/* /usr/local/sbin/
-COPY --from=build /usr/local/lib/dbmail/* /usr/local/lib/dbmail/
 
 COPY --chown=nobody:nogroup dbmail-imapd.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup dbmail-lmtpd.pid /var/run/dbmail/

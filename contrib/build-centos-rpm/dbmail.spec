@@ -9,7 +9,7 @@
 %define		SOURCE5	%{SRCBASE}/dbmail.cron
 %define		SOURCE6	%{SRCBASE}/dbmail.logrotate
 %define		SOURCE7	%{SRCBASE}/dbmail.sysconfig
-%define   SOURCE8 %{SRCBASE}/README
+%define		SOURCE8 %{SRCBASE}/README
 %define		SOURCE9	%{SRCBASE}/dbmail.conf
 
 Name:           dbmail
@@ -21,7 +21,7 @@ Group:          System Environment/Daemons
 # db_getopot.c is licensed MIT
 License:        GPLv2+ and MIT
 URL:            http://www.dbmail.org
-Source0:        https://github.com/dbmail/dbmail/archive/refs/heads/main.zip
+Source0:        dbmail-3.5.tar.gz
 
 #Patch0:         dbmail-3.0.2-gthread.patch
 
