@@ -30,7 +30,7 @@ RUN apt update && \
 RUN mkdir -p /app/dbmail
 
 RUN cd /app && \
-    git clone --branch 3.4.x https://github.com/dbmail/dbmail.git && \
+    git clone --branch 3.5.x https://github.com/dbmail/dbmail.git && \
     cd /app/dbmail && \
     ./configure --with-ldap=/usr --with-sieve=/usr/lib/x86_64-linux-gnu/ --with-check && \
     make && make check && make install
