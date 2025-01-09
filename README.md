@@ -137,4 +137,5 @@ via dbmail-sieved.
   some (libzdb and/or libsieve) need to be compiled
 * ./configure
 * make 
+* make check
 * make install
