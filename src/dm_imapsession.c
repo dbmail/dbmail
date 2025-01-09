@@ -720,8 +720,8 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 	uint64_t *mid;
 	uint64_t id;
 	GList *last;
-	GString **fieldorder = NULL;
-	GString **headerIDs = NULL;
+	GString *fieldorder = NULL;
+	GString *headerIDs = NULL;
 	int k;
 	int fieldseq=0;
 	String_T query = NULL;
@@ -777,19 +777,17 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 	TRACE(TRACE_DEBUG,"[%p] prefetch %" PRIu64 ":%" PRIu64 " ceiling %" PRIu64 " [%s]", self, self->msg_idnr, self->hi, self->ceiling, bodyfetch->hdrplist);
 	
-	*headerIDs = g_string_new("0");
+	headerIDs = g_string_new("0");
 	if (! not) {
-		int found_names = 0;
-		*fieldorder = g_string_new(", CASE ");
+		fieldorder = g_string_new(", CASE ");
 		
 		fieldseq = 0;
 		bodyfetch->names = g_list_first(bodyfetch->names);
 
 		while (bodyfetch->names) {
-			found_names = 1;
 			char *raw = (char *)bodyfetch->names->data;
 			char *name = g_ascii_strdown(raw, strlen(raw));
-			g_string_append_printf(*fieldorder, "WHEN n.headername='%s' THEN %d ",
+			g_string_append_printf(fieldorder, "WHEN n.headername='%s' THEN %d ",
 					name, fieldseq);
 			
 			/* get the id of the header */
@@ -804,7 +802,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 				r = db_query(c, p_string_str(query));	
 				while (db_result_next(r)) { 
 					id = db_result_get_u64(r, 0);
-					g_string_append_printf(*headerIDs, ",%ld",id);
+					g_string_append_printf(headerIDs, ",%ld",id);
 				}
 			CATCH(SQLException) 
 				LOG_SQLERROR;
@@ -817,14 +815,14 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			bodyfetch->names = g_list_next(bodyfetch->names);
 			fieldseq++;
 		}
-		if (found_names == 0){
-			//not items found, adding default value
-			g_string_append_printf(*fieldorder, "WHEN TRUE THEN 1 ");
+		if (g_list_length(bodyfetch->names)==0) {
+			// Avoid empty case error when there are no names
+			g_string_append_printf(fieldorder, "WHEN TRUE THEN 1 ");
 		}
 		//adding default value, useful in NOT conditions, Cosmin Cioranu
-		g_string_append_printf(*fieldorder, "ELSE %d END AS seq",fieldseq);
+		g_string_append_printf(fieldorder, "ELSE %d END AS seq",fieldseq);
 	}
-	TRACE(TRACE_DEBUG, "[headername ids %s] ", (*headerIDs)->str);
+	TRACE(TRACE_DEBUG, "[headername ids %s] ", headerIDs->str);
 	query = p_string_new(self->pool, "");
 	p_string_printf(query, "SELECT m.message_idnr, n.headername, v.headervalue%s "
 			"FROM %sheader h "
@@ -841,19 +839,19 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			"GROUP By m.message_idnr, n.headername, v.headervalue "
 			// "having seq %s %d "
 			"ORDER BY m.message_idnr, seq",
-			not?"":(*fieldorder)->str,
+			not?"":fieldorder->str,
 			DBPFX, DBPFX, DBPFX, DBPFX,
-			not?"NOT":"", (*headerIDs)->str,
+			not?"NOT":"", headerIDs->str,
 			self->mailbox->id, p_string_str(range),
 			//not?"NOT":"", bodyfetch->hdrnames	//old 
 			MESSAGE_STATUS_DELETE			//return information only related to valid messages
 			//not?"=":"<",fieldseq			//patch Cosmin Cioranu, added the having conditions and also the 'not' handler
 		    );
 
-	if (*fieldorder)
-		g_string_free(*fieldorder, TRUE);
-	if (*headerIDs)
-		g_string_free(*headerIDs, TRUE);
+	if (fieldorder)
+		g_string_free(fieldorder, TRUE);
+	if (headerIDs)
+		g_string_free(headerIDs, TRUE);
 	c = db_con_get();	
 	TRY
 		r = db_query(c, p_string_str(query));
