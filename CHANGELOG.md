@@ -1,6 +1,35 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.5.0] - 2025-01-09
+- Fresh installs automatically create database
+- Required headername automatically added
+- curl added to enable forwarding emails via SMTP
+- Logging config simplified
+- Deprecated dbmail-timsieved removed in favour of dbmail-sieved
+- Upgrade to gmime 3 reflected in checks
+- Checks refactored
+- Check added before install to Docerfile
+- Fix a SQL syntax error when no header fields specified
+- Reverted a memory leak
+- Created DBMail announce newsletter
+- mack-erel updated ‎contrib/build-centos-rpm
+- Re-organised dbmail-util man page
+- messageblks upgrade info added
+- Docker alpine updates from BobRam
+- Debian build updated
+- Duplicate envelope inserts treated as warnings instead of errors
+- Redundant code removed
+- Unused variables removed
+- Fix for sig11 null reference
+- Inserting null data avoid if invalid parts are received
+- Upgrading V2 schema to V3 invalid entries no longer error
+- Message part insertion refactored
+- flags.silent refactored for outlook clients
+- Missing final mime boundary added
+- Default config file listed when calling dbmail-* -h
+- Experimental Sender Rewriting Scheme removed
+
 ## [3.5.0] - 2024-10-22
 - cURL library added for SMTP
 - Logging simplified to use keywords
