@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - Deprecated dbmail-timsieved removed in favour of dbmail-sieved
 - Upgrade to gmime 3 reflected in checks
 - Checks refactored
-- Check added before install to Docerfile
+- Check added before install to Dockerfile
 - Fix a SQL syntax error when no header fields specified
 - Reverted a memory leak
 - Created DBMail announce newsletter
