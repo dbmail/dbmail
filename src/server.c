@@ -410,7 +410,9 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
 		err = errno;
-		TRACE(TRACE_EMERG, "bind::error [%s]", strerror(err));
+		TRACE(TRACE_ERR, "Do you have permission to bind to address [%s:%s]?", hbuf, sbuf);
+		TRACE(TRACE_ERR, "bind::error [%s]", strerror(err));
+		TRACE(TRACE_EMERG, "Error creating %s socket [%d] on [%s:%s]", ssl?"ssl":"plain", sock, hbuf, sbuf);
 	}
 
 	if ((listen(sock, backlog)) == -1) {
