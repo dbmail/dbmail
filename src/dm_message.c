@@ -1653,6 +1653,7 @@ static int _header_value_get_id(const char *value, const char *sortfield, const 
 		return FALSE;
 
 	c = db_con_get();
+	// Test if header already inserted
 	TRY
 		db_begin_transaction(c);
 		if ((tmp = _header_value_exists(c, value, (const char *)hash)) != 0)
@@ -1675,10 +1676,42 @@ static gboolean _header_insert(uint64_t physmessage_id, uint64_t headername_id, 
 {
 
 	Connection_T c; PreparedStatement_T s; volatile gboolean t = TRUE;
+	ResultSet_T r;
+	volatile uint64_t header_found = 0;
 
 	TRACE(TRACE_DEBUG, "Inserting header: [%lu] [%lu] [%lu]", physmessage_id, headername_id, headervalue_id);
 	c = db_con_get();
 	db_con_clear(c);
+
+	// Check if the header exists
+	TRY
+		db_begin_transaction(c);
+		s = db_stmt_prepare(c, "SELECT count(*) "
+			"FROM %sheader "
+			"WHERE physmessage_id = ? "
+			"AND headername_id = ? "
+			"AND headervalue_id = ?", DBPFX);
+		db_stmt_set_u64(s, 1, physmessage_id);
+		db_stmt_set_u64(s, 2, headername_id);
+		db_stmt_set_u64(s, 3, headervalue_id);
+		r = db_stmt_query(s);
+		while (ResultSet_next(r)) {
+			header_found = db_result_get_u64(r, 0);
+		}
+		db_commit_transaction(c);
+	CATCH(SQLException)
+		LOG_SQLWARNING;
+		db_rollback_transaction(c);
+	FINALLY
+		db_con_close(c);
+	END_TRY;
+
+	// Return if the header exists
+	if (header_found == 1) {
+		TRACE(TRACE_INFO, "Header already inserted: [%lu] [%lu] [%lu]", physmessage_id, headername_id, headervalue_id);
+		return t;
+	}
+
 	TRY
 		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "INSERT INTO %sheader (physmessage_id, headername_id, headervalue_id) VALUES (?,?,?)", DBPFX);
