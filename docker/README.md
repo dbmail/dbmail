@@ -1,17 +1,76 @@
 # DBMail Docker
 
+DBMail can be built and run in a container using Docker for virtualization
+making managing DBMail instances easier. Both Jails on BSD and Docker on
+Linux work well. This readme is for Linux containers using Docker.
+
+DBMail aims to be platform agnostic though currently only amd64 is supported,
+it is developed on and in production using FreeBSD and runs successfully in
+FreeBSD Jails though they are outside the scope of this readme.
+
+## Building DBMail with Docker
+
+There are two uses for Docker containers, building an image for use in
+production and for testing and development.
+
+All the images are broadly the same except production images are for a stated
+version and include tests to ensure a successful build, and development
+versions where tests are not run automatically ensuring a successful build
+even when tests might fail.
+
+The Docerfile naming format is as follows
+Production: Dockerfile-<architecture>-<distro>-<version>
+Example: Dockerfile-amd64-ubuntu-3.5
+Development: Dockerfile-<architecture>-<distro>-devel
+Example: Dockerfile-amd64-alpine-devel
+
+Named versions are downloaded from GitHub, development versions use the current
+source.
+
+Although builds try to be similar there are differences and some dependencies
+may be built from source.
+
+### Dockerfile naming convention
+
+Dockerfile-<architecture>-<distro>-<version>
+
+### Named version for production
+To build an ubuntu production image for version 3.5, git checks out the latest
+version of a version branch, tagging the image with v3.5. The image is checked
+(make check) to ensure all tests pass before committing the image.
+
+    docker image build --file ./Dockerfile-amd64-ubuntu-350 --tag dbmail:v3.5 .
+
+### Development version from source
+Source files are used to build the image. Tests should be run manually and are
+omitted from the Dockerfile to ensure the image is built.
+
+To make debugging a build easier there is no caching and progress is plain to
+facilitate logging. Note the target is the repo source ..
+
+    docker image build --file ./Dockerfile-amd64-ubuntu-devel --tag dbmail:devel --no-cache --progress=plain .. 2> build.txt
+
+After the image has been built, run the image starting with with a bash shell
+prompt. Change to the dbmail build directory /app/dbmail then run make check
+to run the automatic tests. You can find the results in test/test-suite.log
+
+    docker run --rm -it dbmail:devel bash
+
+Then inside the container:
+
+    cd /app/dbmail
+    make check
+    less test/test-suite.log
+
+## Using a docker image
 An experimental [docker image](https://hub.docker.com/r/alanhicks/dbmail)
-is available, this article documents how to use it with docker-compose.
+is available, the following shows how to use it with docker-compose.
 
 The aim is for this to become an official dbmail image.
 
 Using the Docker philosophy, there is a single dbmail image that is used for
 imap, lmtp and sieve. This image is intended to be configured and run using
 compose.yaml.
-
-Default values for auto_notify and auto_reply are no, and are not currently supported in this docker image.
-
-SIEVE notify, redirect and vacation are not currently supported in this docker image.
 
 All the files can be found on GitHub.
 
@@ -21,15 +80,10 @@ DBMail is a collection of apps that work together to deliver an IMAP service.
 dbmail-deliver and dbmail-lmtp for delivery, dbmail-sieve for managing SIEVE
 automation and dbmail-imapd for the IMAP service.
 
-As good Docker practice is to build a container per service, there is a docker compose.yaml for managing the three services.
+As good Docker practice is to build a container per service, there is a docker
+compose.yaml for managing the three services.
 
 These services are generated from the dbmail:latest image using compose.yaml.
-
-## Build
-
-The dbmail image is created with the Dockerfile:
-
-    docker image build --file docker/Dockerfile --tag dbmail:latest .
 
 ## Configuration
 
@@ -62,7 +116,7 @@ If you use Lightweight Directory Access Protocol for authentication
 
 ## Logging
 
-DBMail doesn't output logs via docker log.
+DBMail doesn't yet output logs via docker log.
 
 The following can be used to view the log and manage its size. DBMail is a
 non-interactive process, workarounds from Apache and Nginx are unsuitable.
@@ -101,4 +155,3 @@ The four sensitive files configured using docker compose secrets are:
 * ca.crt - the certificate authority;
 * cert.pem - your public certificate;
 * key.pem - your private key.
-
