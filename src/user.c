@@ -21,11 +21,9 @@
 */
 
 /* 
- * This is the dbmail-user program
- * It makes adding users easier 
- *
- *
- * - moving most code to dbmail-users.c. Just a thin wrapper left */
+ * This is the dbmail-users command line utility
+ * It makes managing users easier
+ * */
 
 #include "dbmail.h"
 

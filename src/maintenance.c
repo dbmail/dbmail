@@ -618,12 +618,14 @@ int do_dangling_aliases(void)
 	int result = 0;
 	GList *aliases = NULL;
 
-	if (no_to_all)
+	if (no_to_all) {
 		qprintf("\nCounting aliases with nonexistent delivery userid's...\n");
 		TRACE(TRACE_INFO, "nCounting aliases with nonexistent delivery userid's...");
-	if (yes_to_all)
+	}
+	if (yes_to_all) {
 		qprintf("\nRemoving aliases with nonexistent delivery userid's...\n");
 		TRACE(TRACE_INFO, "Removing aliases with nonexistent delivery userid's...");
+	}
 
 	aliases = auth_get_known_aliases();
 	aliases = g_list_dedup(aliases, (GCompareFunc)strcmp, TRUE);
@@ -973,12 +975,14 @@ int do_header_cache(void)
 		return -1;
 	}
 	
-	if (no_to_all) 
+	if (no_to_all) {
 		qprintf("\nChecking DBMAIL for cached header values...\n");
 		TRACE(TRACE_INFO, "Checking DBMAIL for cached header values...");
-	if (yes_to_all)
+	}
+	if (yes_to_all) {
 		qprintf("\nRepairing DBMAIL for cached header values...\n");
 		TRACE(TRACE_INFO, "Repairing DBMAIL for cached header values...");
+	}
 
 	time(&start);
 
