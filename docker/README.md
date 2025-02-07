@@ -18,21 +18,21 @@ version and include tests to ensure a successful build, and development
 versions where tests are not run automatically ensuring a successful build
 even when tests might fail.
 
-The Docerfile naming format is as follows
-Production: Dockerfile-<architecture>-<distro>-<version>
-Example: Dockerfile-amd64-ubuntu-3.5
-Development: Dockerfile-<architecture>-<distro>-devel
-Example: Dockerfile-amd64-alpine-devel
-
-Named versions are downloaded from GitHub, development versions use the current
-source.
-
 Although builds try to be similar there are differences and some dependencies
 may be built from source.
 
 ### Dockerfile naming convention
 
-Dockerfile-<architecture>-<distro>-<version>
+The Docerfile naming format is as follows
+Production: Dockerfile-\<architecture\>-\<distro\>-\<version\>
+Example: Dockerfile-amd64-ubuntu-3.5
+Development: Dockerfile-\<architecture\>-\<distro\>-devel
+Example: Dockerfile-amd64-alpine-devel
+
+Named versions are downloaded from GitHub, development versions use the current
+source.
+
+Dockerfile-\<architecture\>-\<distro\>-\<version\>
 
 ### Named version for production
 To build an ubuntu production image for version 3.5, git checks out the latest
