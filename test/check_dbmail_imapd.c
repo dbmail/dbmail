@@ -1333,8 +1333,9 @@ START_TEST(test_dm_base_subject)
 	BS("Re:", "");
 	BS("Re: Re: ", "");
 	BS("Re: Fwd: ", "");
-	BS("=?UTF-8?B?0J/RgNC40LLQtdGCINC40Lcg0KDQvtGB0YHQuNC4IChIZWxsbyBmcm8=?= =?UTF-8?B?bSBSdXNzaWEp?=",
-			"привет из россии (hello from russia)");
+	BS("=?UTF-8?B?0J/RgNC40LLQtdGCINC40Lcg0KDQvtGB0YHQuNC4IChIZWxsbyBmcm8=?=\n"
+		"=?UTF-8?B?bSBSdXNzaWEp?=",
+		"привет из россии (hello from russia)");
 	BS("=?UTF-8?B?16nXnNeV150g15HXoteR16jXmdeqIChIZWxsbyBpbiBIZWJyZXcpIA==?=",
 			"שלום בעברית (hello in hebrew)");
 	BS("=?UTF-8?B?2YXYsdit2KjYpyDYqNin2YTZhNi62Kkg2KfZhNi52LHYqNmK2KkgKEg=?= =?UTF-8?B?ZWxsb3cgaW4gQXJhYmljKQ==?=",
