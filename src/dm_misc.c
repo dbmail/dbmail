@@ -564,8 +564,8 @@ static void _strip_sub_leader(char *subject)
 char * dm_base_subject(const char *subject)
 {
 	unsigned offset, len, olen;
-	char *tmp, *saved;
-	
+	char *tmp;
+
 	// we expect utf-8 or 7-bit data
 	if (subject == NULL) return NULL;
 
@@ -573,12 +573,11 @@ char * dm_base_subject(const char *subject)
 	//    as described in "Internationalization Considerations".
 	//    Convert all tabs and continuations to space.  Convert all
 	//    multiple spaces to a single space.
-	if (g_mime_utils_text_is_8bit((unsigned char *)subject, strlen(subject))) 
+	if (g_mime_utils_text_is_8bit((unsigned char *)subject, strlen(subject)))
 		tmp = g_strdup(subject);
 	else 
 		tmp = dbmail_iconv_decode_text(subject);
-	saved = tmp;
-	
+
 	dm_pack_spaces(tmp);
 	while (1) {
 		g_strstrip(tmp);
@@ -621,8 +620,6 @@ char * dm_base_subject(const char *subject)
 		
 	tmp = g_utf8_strdown(tmp, strlen(tmp));
 
-	g_free(saved);
-	
 	return tmp;
 }
 

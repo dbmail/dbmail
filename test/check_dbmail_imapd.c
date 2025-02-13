@@ -94,7 +94,7 @@ START_TEST(test_dbmail_imap_plist_as_string)
 	l = g_list_append(l, "NIL");
 	l = g_list_append(l, "NIL");
 	result = dbmail_imap_plist_as_string(l);
-	fail_unless(strcmp(result,"(NIL NIL)")==0,"plist construction failed");
+	ck_assert_str_eq(result,"(NIL NIL)");
 	
 	//g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);
@@ -102,7 +102,7 @@ START_TEST(test_dbmail_imap_plist_as_string)
 	l = NULL;
 	l = g_list_append(l, "(NIL NIL)");
 	result = dbmail_imap_plist_as_string(l);
-	fail_unless(strcmp(result,"(NIL NIL)")==0,"plist construction failed");
+	ck_assert_str_eq(result,"(NIL NIL)");
 	
 	//g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);
@@ -112,7 +112,7 @@ START_TEST(test_dbmail_imap_plist_as_string)
 	l = g_list_append(l, "(NIL NIL)");
 	l = g_list_append(l, "(NIL NIL)");
 	result = dbmail_imap_plist_as_string(l);
-	fail_unless(strcmp(result,"(NIL NIL (NIL NIL) (NIL NIL))")==0,"plist construction failed");
+	ck_assert_str_eq(result,"(NIL NIL (NIL NIL) (NIL NIL))");
 	
 	//g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);
@@ -124,15 +124,16 @@ START_TEST(test_dbmail_imap_plist_collapse)
 	char *result;
 	char *in = "(NIL) (NIL) (NIL)";
 	result = dbmail_imap_plist_collapse(in);
-	fail_unless(strcmp(result,"(NIL)(NIL)(NIL)")==0,"plist collapse failed");
+	ck_assert_str_eq(result,"(NIL)(NIL)(NIL)");
 	g_free(result);
 }
 END_TEST
 
 
 #define A(x,y) s=dbmail_imap_astring_as_string(x); \
-	fail_unless(strcmp(y,s)==0,"dbmail_imap_astring_as_string failed [%s] != [%s]", s, y); \
+	ck_assert_str_eq(y,s); \
 	g_free(s)
+
 START_TEST(test_dbmail_imap_astring_as_string)
 {
 	char *s;
@@ -186,7 +187,7 @@ START_TEST(test_imap_session_new)
 	ImapSession *s;
 	Mempool_T pool = mempool_open();
 	s = dbmail_imap_session_new(pool);
-	fail_unless(s!=NULL, "Failed to initialize imapsession");
+	ck_assert_ptr_nonnull(s);
 	dbmail_imap_session_delete(&s);
 }
 END_TEST
@@ -357,8 +358,7 @@ START_TEST(test_internet_address_list_parse_string)
 
 		result = dbmail_imap_plist_as_string(list);
 
-		fail_unless(strcmp(result,expect)==0, "internet_address_list_parse failed to generate correct undisclosed-recipients plist "
-			"for [%s], expected\n[%s] got\n[%s]", input, expect, result);
+		ck_assert_str_eq(result, expect);
 
 		g_list_destroy(list);
 		g_free(result);
@@ -387,15 +387,12 @@ START_TEST(test_internet_address_list_parse_string)
 		InternetAddressList *alist;
 		GList *list = NULL;
 		char *result;
-		int res;
 		char *t;
 		t = imap_cleanup_address(input);
 		alist = internet_address_list_parse(NULL, t);
 		list = dbmail_imap_append_alist_as_plist(list, alist);
 		result = dbmail_imap_plist_as_string(list);
-		res = strcmp(result, expect);
-
-		fail_unless(res == 0, "dbmail_imap_append_alist_as_plist failed, expected:\n[%s]\ngot:\n[%s]\n", expect, result);
+		ck_assert_str_eq(result, expect);
 
 		g_object_unref(alist);
 		alist = NULL;
@@ -585,7 +582,7 @@ START_TEST(test_imap_get_envelope_koi)
 
 	m = dbmail_message_init_with_string(m, encoded_message_koi);
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
- 	fail_unless(strcmp(t,exp)==0,"encode/decode/encode loop failed\n[%s] !=\n[%s]", t,exp);
+ 	ck_assert_str_eq(t, exp);
 
 	g_free(t);
 	dbmail_message_free(m);
@@ -595,9 +592,15 @@ END_TEST
 
 
 			
-#define F(a,b) c = imap_cleanup_address(a); fail_unless((c) && (strcmp(c, b)==0), "\n[%s] should have yielded \n[%s] but got \n[%s]", a,b,c); free(c)
-#define Fnull(a,b) c = imap_cleanup_address(a); fail_unless((c) && (strcmp(c, b)==0), "\n[] should have yielded \n[" b "] but got \n[%s]", c); free(c)
-	
+#define F(a,b) c = imap_cleanup_address(a);\
+	ck_assert_ptr_nonnull(c);\
+	ck_assert_str_eq(c, b);\
+	free(c);
+#define Fnull(a,b) c = imap_cleanup_address(a);\
+	ck_assert_ptr_nonnull(c); \
+	ck_assert_str_eq(c, b);\
+	free(c);
+
 START_TEST(test_imap_cleanup_address)
 {
 	char *c = NULL;
@@ -899,12 +902,10 @@ START_TEST(test_imap_get_partspec9)
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2");
 	result = imap_get_logical_part(object,"HEADER");
 	expect = g_strdup("From: \"try\" <try@test.kisise>");
-	result2 = strncmp(expect, result, 29);
-
-	ck_assert_int_eq(result2, 0);
-	fail_unless((strncmp(expect,result,29)==0),
-			"imap_get_partspec9 failed:\n[%s] != \n[%s]\n",
-		       	expect, result);
+	ck_assert_str_eq(
+		g_utf8_substring(expect, 0, g_utf8_strlen(expect, 29)),
+		g_utf8_substring(result, 0, g_utf8_strlen(expect, 29))
+	);
 
 	g_free(result);
 	g_free(expect);
@@ -1166,31 +1167,6 @@ START_TEST(test_imap_get_partspec17)
 }
 END_TEST
 
-
-
-#if 0
-static uint64_t get_physid(void)
-{
-	uint64_t id = 0;
-	GString *q = g_string_new("");
-	g_string_printf(q,"select id from %sphysmessage order by id desc limit 1", DBPFX);
-	Connection_executeQuery(q->str);
-	g_string_free(q,TRUE);
-	id = db_get_result_u64(0,0);
-	return id;
-}
-static uint64_t get_msgsid(void)
-{
-	uint64_t id = 0;
-	GString *q = g_string_new("");
-	g_string_printf(q,"select message_idnr from %smessages order by message_idnr desc limit 1", DBPFX);
-	Connection_executeQuery(q->str);
-	g_string_free(q,TRUE);
-	id = db_get_result_u64(0,0);
-	return id;
-}
-#endif
-
 START_TEST(test_g_list_slices)
 {
 	unsigned i=0;
@@ -1202,9 +1178,9 @@ START_TEST(test_g_list_slices)
 		list = g_list_append_printf(list, "ELEM_%d", i);
 	list = g_list_slices(list, s);
 	list = g_list_first(list);
-	fail_unless(g_list_length(list)==9, "number of slices incorrect");
+	ck_assert_int_eq(g_list_length(list), 9);
 	sub = g_string_split(g_string_new((gchar *)list->data), ",");
-	fail_unless(g_list_length(sub)==s,"Slice length incorrect");
+	ck_assert_uint_eq(g_list_length(sub), s);
 
 	g_list_foreach(list,(GFunc)g_free,NULL);
 	g_list_foreach(sub,(GFunc)g_free,NULL);
@@ -1218,9 +1194,9 @@ START_TEST(test_g_list_slices)
 		list = g_list_append_printf(list, "ELEM_%d", i);
 	list = g_list_slices(list, s);
 	list = g_list_first(list);
-	fail_unless(g_list_length(list)==1, "number of slices incorrect [%d]", g_list_length(list));
+	ck_assert_int_eq(g_list_length(list), 1);
 	sub = g_string_split(g_string_new((gchar *)list->data), ",");
-	fail_unless(g_list_length(sub)==j,"Slice length incorrect");
+	ck_assert_int_eq(g_list_length(sub), j);
 
 }
 END_TEST
@@ -1241,10 +1217,10 @@ START_TEST(test_g_list_slices_u64)
 		
 	list = g_list_slices_u64(list, s);
 	list = g_list_first(list);
-	fail_unless(g_list_length(list)==9, "number of slices incorrect");
+	ck_assert_int_eq(g_list_length(list), 9);
 	
 	sub = g_string_split(g_string_new((gchar *)list->data), ",");
-	fail_unless(g_list_length(sub)==s,"Slice length incorrect");
+	ck_assert_int_eq(g_list_length(sub), s);
 
 	g_list_foreach(list,(GFunc)g_free,NULL);
 	g_list_foreach(sub,(GFunc)g_free,NULL);
@@ -1258,9 +1234,9 @@ START_TEST(test_g_list_slices_u64)
 		list = g_list_append_printf(list, "ELEM_%d", i);
 	list = g_list_slices(list, s);
 	list = g_list_first(list);
-	fail_unless(g_list_length(list)==1, "number of slices incorrect [%d]", g_list_length(list));
+	ck_assert_int_eq(g_list_length(list), 1);
 	sub = g_string_split(g_string_new((gchar *)list->data), ",");
-	fail_unless(g_list_length(sub)==j,"Slice length incorrect");
+	ck_assert_int_eq(g_list_length(sub), j);
 
 }
 END_TEST
@@ -1285,66 +1261,102 @@ unsigned int get_count_on(unsigned int * set, unsigned int setlen) {
 	return count;
 }
 
-static int wrap_base_subject(const char *in, const char *expect) 
-{
-	char *out = dm_base_subject(in);
-	int res;
-	res = strcmp(out, expect);
-	g_free(out);
-	return res;
-}	
-
-#define BS(x,y) { \
-       char *res = dm_base_subject((x));\
-		   fail_unless(wrap_base_subject((x),(y))==0, "dm_base_subject failed\n%s !=\n%s", res, y); \
-		   free(res); \
+#define BS(x, y) { \
+	char *res = dm_base_subject(x);\
+	ck_assert_str_eq(res, y);\
+	free(res); \
 }
-#define BSF(x,y) fail_unless(wrap_base_subject((x),(y))!=0, "dm_base_subject failed (negative)")
 
-START_TEST(test_dm_base_subject)
+START_TEST(test_dm_base_subject_re)
 {
 	BS("Re: foo","foo");
-	BS("Fwd: foo","foo");
-	BS("Fw: foo","foo");
-	BS("[issue123] foo","foo");
 	BS("Re [issue123]: foo","foo");
 	BS("Re: [issue123] foo","foo");
 	BS("Re: [issue123] [Fwd: foo]","foo");
+}
+END_TEST
+START_TEST(test_dm_base_subject_square)
+{
+	BS("[issue123] foo","foo");
 	BS("[Dbmail-dev] [DBMail 0000240]: some bug report","some bug report");
-
+}
+END_TEST
+START_TEST(test_dm_base_subject_fwd)
+{
+	BS("Fwd: foo","foo");
+	BS("Fw: foo","foo");
+}
+END_TEST
+START_TEST(test_dm_base_subject_test)
+{
 	BS("test\t\tspaces  here","test spaces here");
 	BS("test strip trailer here (fwd) (fwd)","test strip trailer here");
+}
+END_TEST
+START_TEST(test_dm_base_subject_silly)
+{
 	BS("Re: Fwd: [fwd: some silly test subject] (fwd)","some silly test subject");
 	
-	BSF("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=",
-            "=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=");
+}
+END_TEST
+START_TEST(test_dm_base_subject_koi8)
+{
+	BS("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=",
+	   "билеты в день спектакля всегда для вас со скидкой! с");
+//            "=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=");
+}
+END_TEST
+START_TEST(test_dm_base_subject_misc1)
+{
 	BS("[foo] Fwd: [bar] Re: fw: b (fWd)  (fwd)", "b");
 	BS("b (a)", "b (a)");
 	BS("Re: [FWD: c]", "c");
+}
+END_TEST
+START_TEST(test_dm_base_subject_misc2)
+{
 	BS("[xyz]", "[xyz]");
 	BS("=?iso-8859-1?q?_?=", "");
 	BS("Re: =?utf-8?q?b?=", "b");
 	BS("=?iso-8859-1?q?RE:_C?=", "c");
 	BS("=?us-ascii?b?UmU6IGM=?=", "c");
+}
+END_TEST
+START_TEST(test_dm_base_subject_misc3)
+{
 	BS("Ad: Re: Ad: Re: Ad: x", "ad: re: ad: re: ad: x");
 	BS("re: [fwd: [fwd: re: [fwd: babylon]]]", "babylon");
 	BS("C", "c");
 	BS(" ", "");
+}
+END_TEST
+START_TEST(test_dm_base_subject_misc4)
+{
+	BS("=?ISO-8859-1?B?SWYgeW91IGNhbiByZWFkIHRoaXMgeW8=?=\n"
+		" =?ISO-8859-2?B?dSB1bmRlcnN0YW5kIHRoZSBleGFtcGxlLg==?=",
+		"if you can read this you understand the example.")
+	BS("=?UTF-8?B?SGVsbG8gV29ybGQK?=", "hello world");
+	BS("=?UTF-8?B?0J/RgNC40LLQtdGCINC40Lcg0KDQvtGB0YHQuNC4IChIZWxsbyBmcm8=?="
+		" =?UTF-8?B?bSBSdXNzaWEp?=", "привет из россии (hello from russia)");
+}
+END_TEST
+START_TEST(test_dm_base_subject_re_blank)
+{
 	BS("Re:", "");
 	BS("Re: Re: ", "");
 	BS("Re: Fwd: ", "");
-	BS("=?UTF-8?B?0J/RgNC40LLQtdGCINC40Lcg0KDQvtGB0YHQuNC4IChIZWxsbyBmcm8=?=\n"
-		" =?UTF-8?B?bSBSdXNzaWEp?=",
-		"привет из россии (hello from russia)");
+}
+END_TEST
+START_TEST(test_dm_base_subject_utf8)
+{
 	BS("=?UTF-8?B?16nXnNeV150g15HXoteR16jXmdeqIChIZWxsbyBpbiBIZWJyZXcpIA==?=",
 			"שלום בעברית (hello in hebrew)");
 	BS("=?UTF-8?B?2YXYsdit2KjYpyDYqNin2YTZhNi62Kkg2KfZhNi52LHYqNmK2KkgKEg=?= =?UTF-8?B?ZWxsb3cgaW4gQXJhYmljKQ==?=",
 			"مرحبا باللغة العربية (hellow in arabic)");
-
 }
 END_TEST
 
-#define Y(z,q) fail_unless(z==(q), "listex_match failed")
+#define Y(z,q) ck_assert_int_eq(z, q)
 #define X(z,a,b) Y(z,listex_match(a,b,".",0))
 #define N(z,a,b) Y(z,listex_match(a,b,"¿",0))
 START_TEST(test_listex_match)
@@ -1397,7 +1409,7 @@ START_TEST(test_listex_match)
 }
 END_TEST
 
-#define D(x,y) c = date_sql2imap(x); fail_unless(strncasecmp(c,y,IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed \n[%s] !=\n[%s]\n", y, c); free(c)
+#define D(x,y) c = date_sql2imap(x); ck_assert_str_eq(c, y); free(c)
 START_TEST(test_date_sql2imap)
 {
 	char *c = NULL;
@@ -1462,7 +1474,18 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_listex_match);
 	tcase_add_test(tc_util, test_date_sql2imap);
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
-	tcase_add_test(tc_misc, test_dm_base_subject);
+	tcase_add_test(tc_misc, test_dm_base_subject_re);
+	tcase_add_test(tc_misc, test_dm_base_subject_square);
+	tcase_add_test(tc_misc, test_dm_base_subject_fwd);
+	tcase_add_test(tc_misc, test_dm_base_subject_test);
+	tcase_add_test(tc_misc, test_dm_base_subject_silly);
+	tcase_add_test(tc_misc, test_dm_base_subject_koi8);
+	tcase_add_test(tc_misc, test_dm_base_subject_misc1);
+	tcase_add_test(tc_misc, test_dm_base_subject_misc2);
+	tcase_add_test(tc_misc, test_dm_base_subject_misc3);
+	tcase_add_test(tc_misc, test_dm_base_subject_misc4);
+	tcase_add_test(tc_misc, test_dm_base_subject_re_blank);
+	tcase_add_test(tc_misc, test_dm_base_subject_utf8);
 	return s;
 }
 
