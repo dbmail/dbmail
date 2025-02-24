@@ -215,11 +215,19 @@ char * dbmail_iconv_db_to_utf7(const char* str_in)
 
 char * dbmail_iconv_decode_text(const char *in)
 {
-	return g_mime_utils_header_decode_text(NULL, in);
+	char * ret;
+	GMimeParserOptions *options = g_mime_parser_options_new ();
+	ret = g_mime_utils_header_decode_text(options, in);
+	g_mime_parser_options_free(options);
+	return ret;
 }
 char * dbmail_iconv_decode_address(char *address)
 {
-	return g_mime_utils_header_decode_phrase(NULL, address);
+	char * ret;
+	GMimeParserOptions *options = g_mime_parser_options_new ();
+	ret = g_mime_utils_header_decode_phrase(options, address);
+	g_mime_parser_options_free(options);
+	return ret;
 }
 
 char * dbmail_iconv_decode_field(const char *in, const char *charset, gboolean isaddr)

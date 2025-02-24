@@ -1336,8 +1336,8 @@ START_TEST(test_dm_base_subject_misc4)
 		" =?ISO-8859-2?B?dSB1bmRlcnN0YW5kIHRoZSBleGFtcGxlLg==?=",
 		"if you can read this you understand the example.")
 	BS("=?UTF-8?B?SGVsbG8gV29ybGQK?=", "hello world");
-	BS("=?UTF-8?B?0J/RgNC40LLQtdGCINC40Lcg0KDQvtGB0YHQuNC4IChIZWxsbyBmcm8=?="
-		" =?UTF-8?B?bSBSdXNzaWEp?=", "привет из россии (hello from russia)");
+	BS("=?UTF-8?B?0L/RgNC40LLQtdGCINC40Lcg0YDQvtGB0YHQuNC4?="
+		" =?UTF-8?B?IChIZWxsbyBmcm9tIFJ1c3NpYSk=?=", "привет из россии (hello from russia)");
 }
 END_TEST
 START_TEST(test_dm_base_subject_re_blank)
@@ -1349,10 +1349,10 @@ START_TEST(test_dm_base_subject_re_blank)
 END_TEST
 START_TEST(test_dm_base_subject_utf8)
 {
-	BS("=?UTF-8?B?16nXnNeV150g15HXoteR16jXmdeqIChIZWxsbyBpbiBIZWJyZXcpIA==?=",
+	BS("=?UTF-8?B?16nXnNeV150g15HXoteR16jXmdeqIChIZWxsbyBpbiBIZWJyZXcp?=",
 			"שלום בעברית (hello in hebrew)");
-	BS("=?UTF-8?B?2YXYsdit2KjYpyDYqNin2YTZhNi62Kkg2KfZhNi52LHYqNmK2KkgKEg=?= =?UTF-8?B?ZWxsb3cgaW4gQXJhYmljKQ==?=",
-			"مرحبا باللغة العربية (hellow in arabic)");
+	BS("=?UTF-8?B?2YXYsdit2KjYpyDYqNin2YTZhNi62Kkg2KfZhNi52LHYqNmK2KkgKEhlbGxvIGluIEFyYWJpYyk=?=",
+			"مرحبا باللغة العربية (hello in arabic)");
 }
 END_TEST
 
