@@ -893,7 +893,6 @@ START_TEST(test_imap_get_partspec9)
 	DbmailMessage *message;
 	GMimeObject *object;
 	char *result, *expect;
-	int result2;
 
 	/* multipart mixed */
 	message = dbmail_message_new(NULL);

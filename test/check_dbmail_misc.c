@@ -197,9 +197,15 @@ START_TEST(test_dbmail_iconv_str_to_db)
 
 	char *u8, *val2, *u82, *u83, *val3;
 
-	u8 = g_mime_utils_header_decode_text(NULL, val);
-	val2 = g_mime_utils_header_encode_text(NULL, u8, NULL);
-	u82 = g_mime_utils_header_decode_text(NULL, val2);
+	GMimeFormatOptions *format_options = g_mime_format_options_get_default();
+	GMimeParserOptions *parser_options = g_mime_parser_options_new();
+
+	u8 = g_mime_utils_header_decode_text(parser_options, val);
+	val2 = g_mime_utils_header_encode_text(format_options, u8, "utf-8");
+	u82 = g_mime_utils_header_decode_text(parser_options, val2);
+
+	g_mime_format_options_free(format_options);
+	g_mime_parser_options_free(parser_options);
 
 	ck_assert_str_eq(u8, u82);
 

@@ -2794,7 +2794,10 @@ static int send_reply(DbmailMessage *message, const char *body, GList *aliases)
 
 	usubject = dbmail_iconv_decode_text(subject);
        	unewsubject = g_strconcat("Re: ", usubject, NULL);
-	newsubject = g_mime_utils_header_encode_text(NULL, unewsubject, message->charset);
+
+	GMimeFormatOptions * format_options = g_mime_format_options_new ();
+	newsubject = g_mime_utils_header_encode_text(format_options, unewsubject, message->charset);
+	g_mime_format_options_free(format_options);
 	g_free(usubject);
 	g_free(unewsubject);
 
