@@ -611,7 +611,7 @@ END_TEST
 START_TEST(test_dbmail_message_to_string)
 {
 	char *result;
-	char *expect;
+	GString *expect;
 	DbmailMessage *m;
 
 	m = message_init(multipart_message);
@@ -621,14 +621,14 @@ START_TEST(test_dbmail_message_to_string)
 	dbmail_message_free(m);
 
 	// remove non message preamble
-	expect = malloc(sizeof(char) * (strlen(simple_with_from)-52));
-	strncpy(expect, simple_with_from+52, strlen(simple_with_from)-52);
+	expect = g_string_new(simple_with_from+52);
 
 	m = message_init(simple_with_from);
 	result = dbmail_message_to_string(m);
-	ck_assert_str_eq(expect, result);
+	ck_assert_int_eq(expect->len, strlen(result));
+	ck_assert_str_eq(expect->str, result);
 	g_free(result);
-	g_free(expect);
+	g_string_free(expect, true);
 	dbmail_message_free(m);
 }
 END_TEST
@@ -1022,7 +1022,9 @@ START_TEST(test_dbmail_message_utf8_headers)
 	uint64_t physid = 0;
 	const char *s;
 	char *s_dec,*t = NULL;
-	const char *utf8_invalid_fixed = "=?UTF-8?B?0J/RgNC40LPQu9Cw0YjQsNC10Lwg0L3QsCDRgdC10YA/IA==?= =?UTF-8?B?0LrQvtC90LXRhiDRgdGC0YDQvtC60Lg=?=";
+	const char *utf8_invalid_fixed =
+		"=?UTF-8?B?0J/RgNC40LPQu9Cw0YjQsNC10Lwg0L3QsCDRgdC10YA/INC60L7QvdC1?=\n"
+		" =?UTF-8?B?0YYg0YHRgtGA0L7QutC4?=";
 
 	m = dbmail_message_new(NULL);
 	m = dbmail_message_init_with_string(m,utf8_long_header);
@@ -1045,8 +1047,10 @@ START_TEST(test_dbmail_message_utf8_headers)
 
 	s_dec = g_mime_utils_header_decode_phrase(NULL, utf8_invalid_fixed);
 	test_db_get_subject(physid,&t);
-        fail_unless(MATCH(s_dec,t), "utf8 invalid failed:\n[%s] !=\n[%s]\n", s_dec, t);
+	ck_assert_str_eq (s_dec, t);
 
+	g_free(s_dec);
+	g_free(t);
 	dbmail_message_free(m);
 }
 END_TEST
