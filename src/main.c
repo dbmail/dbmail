@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
 		goto freeall;
 
 	}
-	SetTraceLevel("SMTP");
+	SetTraceLevel("DELIVERY");
 	GetDBParams();
 
 	if (db_connect() != 0) {
