@@ -45,24 +45,22 @@ RUN apt update && \
         libssl3 \
         libzdb11
 
-RUN mkdir -p /app/dbmail
-
 WORKDIR /app
 
-COPY . dbmail/
+RUN git clone --branch 3.5.x https://github.com/dbmail/dbmail.git
 
 RUN cd /app/dbmail && \
     ./configure \
         --with-check \
         --with-ldap=/usr \
         --with-sieve=/usr/lib/x86_64-linux-gnu/ && \
-    make && make install
+    make && make check && make install
 
-COPY --chown=nobody:nogroup docker/dbmail.err /var/log/dbmail/
-COPY --chown=nobody:nogroup docker/dbmail-imapd.pid /var/run/dbmail/
-COPY --chown=nobody:nogroup docker/dbmail-lmtpd.pid /var/run/dbmail/
-COPY --chown=nobody:nogroup docker/dbmail-sieved.pid /var/run/dbmail/
-COPY --chown=nobody:nogroup docker/dbmail.log /var/log/dbmail/
+COPY --chown=nobody:nogroup dbmail-imapd.pid /var/run/dbmail/
+COPY --chown=nobody:nogroup dbmail-lmtpd.pid /var/run/dbmail/
+COPY --chown=nobody:nogroup dbmail-sieved.pid /var/run/dbmail/
+COPY --chown=nobody:nogroup dbmail.err /var/log/dbmail/
+COPY --chown=nobody:nogroup dbmail.log /var/log/dbmail/
 
 EXPOSE 143/tcp
 EXPOSE 993/tcp
