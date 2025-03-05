@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.5.0] - 2025-03-05
+- Successfully builds on ubuntu 24.4
+- Docerfiles for ubuntu development, 22.4 and 24.4
+- Tests refactored and now pass with gmime 213
+
 ## [3.5.0] - 2025-01-09
 - Fresh installs automatically create database
 - Required headername automatically added
@@ -40,7 +45,7 @@ All notable changes to this project will be documented in this file.
 ## [3.5.0] - 2024-05-20
 - Version bump to 3.5.0
 - Create tables automated
-- dbmail-timsieve removed
+- dbmail-timsieve without tls removed
 - MySQL utf8mb4 moved to upgrade 35001
 
 ## [3.4.1] - 2023-10-21
@@ -50,7 +55,7 @@ All notable changes to this project will be documented in this file.
 - Version bump to 3.4.1
 
 ## [3.4.0] - 2023-08-26
-- dbmail-sieved added
+- dbmail-sieved with tls support added
 - dbmail-timsieved deprecated and will be removed in 3.5
 - configure scripts updated with autoconf 2.71 automake 1.6.5
 
