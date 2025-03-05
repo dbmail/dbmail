@@ -476,24 +476,26 @@ void GetDBParams(void)
 	}
 
 	if (config_get_value("authdriver", "DBMAIL", db_params.authdriver) < 0)
-		TRACE(TRACE_DEBUG, "missing config! [authdriver]");
+		TRACE(TRACE_EMERG, "Missing config! [authdriver], please choose sql or ldap");
 	if (config_get_value("sortdriver", "DBMAIL", db_params.sortdriver) < 0)
-		TRACE(TRACE_DEBUG, "error getting config! [sortdriver]");
+		TRACE(TRACE_DEBUG, "No config for [sortdriver], using default");
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
-		TRACE(TRACE_DEBUG, "error getting config! [serverid]");
+		TRACE(TRACE_DEBUG, "No config for [serverid], using default");
 	if (config_get_value("encoding", "DBMAIL", db_params.encoding) < 0)
 		TRACE(TRACE_DEBUG, "error getting config! [encoding]");
 	if (config_get_value("table_prefix", "DBMAIL", db_params.pfx) < 0)
 		TRACE(TRACE_DEBUG, "error getting config! [table_prefix]");
 	if (config_get_value("max_db_connections", "DBMAIL", max_db_connections) < 0)
-		TRACE(TRACE_DEBUG, "error getting config! [max_db_connections]");
+		TRACE(TRACE_DEBUG, "No config for [max_db_connections], using default");
 
 	if (config_get_value("query_time_info", "DBMAIL", query_time) < 0) {
-		TRACE(TRACE_DEBUG, "error getting config! [query_time_info]");
 		if (strlen(query_time) != 0)
 			db_params.query_time_info = (unsigned int) strtoul(query_time, NULL, 10);
 		else
 			db_params.query_time_info = 10;
+		TRACE(TRACE_DEBUG,
+			  "No config for [query_time_info], using [%i]",
+			  db_params.query_time_info);
 	}
 
 	if (config_get_value("query_time_notice", "DBMAIL", query_time) < 0)
