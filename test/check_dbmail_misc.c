@@ -179,7 +179,10 @@ END_TEST
 
 START_TEST(test_dbmail_iconv_str_to_db) 
 {
-	const char *val = "=?windows-1251?B?0+/w4OLr5e335fHq6Okg8/fl8iDiIPHu4vDl7OXt7e7pIOru7O/g7ejo?=";
+	const char *val = "=?windows-1251?b?0KPQv9GA0LDQstC70LXQvdGH0LXRgdC60LjQuQ==?= "
+		"=?windows-1251?b?INGD0YfQtdGCINCy?= "
+		"=?windows-1251?b?INGB0L7QstGA0LXQvNC10L3QvdC+0Lk=?= "
+		"=?windows-1251?b?INC60L7QvNC/0LDQvdC40LgK?=";
 	const char *u71 = "Neue =?ISO-8859-1?Q?L=F6sung?= =?ISO-8859-1?Q?f=FCr?= unsere Kunden";
 	const char *u72 = "=?ISO-8859-1?Q?L=F6sung?=";
 	const char *u73 = "=?ISO-8859-1?Q?f=FCr?=";
