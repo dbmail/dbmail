@@ -1117,7 +1117,7 @@ int db_check_version(void)
 	volatile int ok = 0;
 	volatile int db = 0;
 	const char *query = NULL;
-	/* @todo: use version to run upgrades */
+
 	TRY
 		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
 			db = 1;
