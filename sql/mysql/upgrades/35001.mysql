@@ -1,5 +1,5 @@
 BEGIN;
-SET GLOBAL sql_mode = '';
+SET SESSION sql_mode = '';
 ALTER DATABASE CHARACTER SET 'utf8mb4';
 ALTER TABLE `dbmail_acl` CONVERT TO CHARACTER SET utf8mb4;
 ALTER TABLE `dbmail_aliases` CONVERT TO CHARACTER SET utf8mb4;
