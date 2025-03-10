@@ -35,30 +35,30 @@
 // Flag order defined in dbmailtypes.h
 static const char *db_flag_desc[] = {
 	"seen_flag",
-       	"answered_flag",
-       	"deleted_flag",
-       	"flagged_flag",
-       	"draft_flag",
-       	"recent_flag",
+	"answered_flag",
+	"deleted_flag",
+	"flagged_flag",
+	"draft_flag",
+	"recent_flag",
 	NULL
 };
 const char *imap_flag_desc[] = {
 	"Seen",
-       	"Answered",
-       	"Deleted",
-       	"Flagged",
-       	"Draft",
-       	"Recent",
-       	NULL
+	"Answered",
+	"Deleted",
+	"Flagged",
+	"Draft",
+	"Recent",
+	NULL
 };
 const char *imap_flag_desc_escaped[] = {
 	"\\Seen",
-       	"\\Answered",
-       	"\\Deleted",
-       	"\\Flagged",
-       	"\\Draft",
-       	"\\Recent",
-       	NULL
+	"\\Answered",
+	"\\Deleted",
+	"\\Flagged",
+	"\\Draft",
+	"\\Recent",
+	NULL
 };
 
 extern ServerConfig_T *server_conf;
@@ -1117,6 +1117,54 @@ int db_check_version(void)
 	volatile int ok = 0;
 	volatile int db = 0;
 	const char *query = NULL;
+
+	ResultSet_T r;
+	const char *info_name = NULL;
+	const char *info_value = NULL;
+	// Log connection information
+	switch (db_params.db_driver) {
+		case DM_DRIVER_SQLITE:
+			r = db_query(c,"pragma encoding");
+			break;
+		case DM_DRIVER_MYSQL:
+			r = db_query(c,
+				"SHOW VARIABLES"
+				" WHERE"
+				"    Variable_name LIKE 'character_set%%'"
+				" OR Variable_name LIKE 'collation%%'"
+				" OR Variable_name LIKE 'sql_mode%%'"
+				" OR Variable_name LIKE 'version%%'"
+			);
+			break;
+		case DM_DRIVER_POSTGRESQL:
+			r = db_query(c, "SHOW client_encoding");
+			break;
+		default:
+			break;
+	}
+
+	TRY
+		while (db_result_next(r)) {
+			switch (db_params.db_driver) {
+				case DM_DRIVER_SQLITE:
+					info_name = "Encoding";
+					info_value = db_result_get(r, 0);
+					break;
+				case DM_DRIVER_MYSQL:
+				case DM_DRIVER_POSTGRESQL:
+					info_name = db_result_get(r, 0);
+					info_value = db_result_get(r, 1);
+					break;
+				default:
+					break;
+			}
+			TRACE(TRACE_INFO, "Database connection: [%s] [%s]", info_name, info_value);
+		}
+	CATCH(SQLException)
+		LOG_SQLERROR;
+	FINALLY
+		db_con_close(c);
+	END_TRY;
 
 	TRY
 		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
