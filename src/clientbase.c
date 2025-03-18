@@ -336,7 +336,7 @@ int ci_write(ClientBase_T *client, char * msg, ...)
 				while (t < 0 && count++ < count_tries) {
 					t = (int64_t)SSL_write(client->sock->ssl, (gconstpointer)client->tls_wbuf, client->tls_wbuf_n);
 					TRACE(TRACE_DEBUG, "SSL Retry [%d/%d] t[%ld]", count, count_tries, t);
-					usleep(10);
+					usleep(10000);
 				}
 			} else if (ssl_ret == SSL_ERROR_WANT_WRITE) {
 				TRACE(TRACE_DEBUG, "ssl write error SSL_ERROR_WANT_WRITE");
