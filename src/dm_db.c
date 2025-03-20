@@ -1151,9 +1151,12 @@ int db_check_version(void)
 					info_value = db_result_get(r, 0);
 					break;
 				case DM_DRIVER_MYSQL:
-				case DM_DRIVER_POSTGRESQL:
 					info_name = db_result_get(r, 0);
 					info_value = db_result_get(r, 1);
+					break;
+				case DM_DRIVER_POSTGRESQL:
+					info_name = "Client encoding";
+					info_value = db_result_get(r, 0);
 					break;
 				default:
 					break;
