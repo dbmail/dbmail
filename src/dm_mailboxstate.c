@@ -1102,7 +1102,7 @@ void db_getmailbox_seq(T M, Connection_T c)
 		M->seq = db_result_get_u64(r,1);
 		TRACE(TRACE_DEBUG,"id: [%" PRIu64 "] name: [%s] seq [%" PRIu64 "]", M->id, p_string_str(M->name), M->seq);
 	} else {
-		TRACE(TRACE_ERR,"Aii. No such mailbox mailbox_idnr: [%" PRIu64 "]", M->id);
+		TRACE(TRACE_ERR,"No such mailbox mailbox_idnr: [%" PRIu64 "]", M->id);
 	}
 }
 
