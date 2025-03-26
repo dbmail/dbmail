@@ -196,19 +196,19 @@ msgstr "Avviare il server pop3 al riavvio?"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
-msgid "Start the timsieve server after reboot?"
+msgid "Start the sieve server after reboot?"
 msgstr "Avviare il server imap al riavvio?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
 msgid ""
-"Please choose whether the timsieve server should be started after rebooting. "
+"Please choose whether the sieve server should be started after rebooting. "
 "This is only needed if you want to allow users to manage their sieve scripts "
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
 msgstr ""
-"Scegliere se il server timsieve debba essere avviato dopo il riavvio. Questo "
+"Scegliere se il server sieve debba essere avviato dopo il riavvio. Questo "
 "è necessario solo solo se si vuole permettere agli utenti di gestire  i loro "
 "script sieve usando un client compatibile come kmail, hode/ingo o "
 "squirrelmail/avelsieve."
@@ -408,5 +408,5 @@ msgstr "Inserire la password che verrà usare per connettersi al server LDAP."
 #~ msgid "Do you want to start the pop3 service after a reboot?"
 #~ msgstr "Faccio partire il server pop3 al boot?"
 
-#~ msgid "Do you want to start the timsieved service after a reboot?"
+#~ msgid "Do you want to start the sieved service after a reboot?"
 #~ msgstr "faccio partire il server imap al boot?"

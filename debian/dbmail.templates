@@ -67,8 +67,8 @@ _Description: Start the POP3 server after reboot?
 
 Template: dbmail/start_sieve
 Type: boolean
-_Description: Start the timsieve server after reboot?
- Please choose whether the timsieve server should be started after
+_Description: Start the sieve server after reboot?
+ Please choose whether the sieve server should be started after
  rebooting. This is only needed if you want to allow users to manage
  their sieve scripts using a compatible client such as kmail,
  horde/ingo or squirrelmail/avelsieve.

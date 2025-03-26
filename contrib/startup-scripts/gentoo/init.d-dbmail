@@ -8,11 +8,11 @@
 LMTPD=0
 IMAPD=1
 POP3D=2
-TIMSIEVED=3
+SIEVED=3
 DAEMON[$LMTPD]=dbmail-lmtpd
 DAEMON[$IMAPD]=dbmail-imapd
 DAEMON[$POP3D]=dbmail-pop3d
-DAEMON[$TIMSIEVED]=dbmail-timsieved
+DAEMON[$SIEVED]=dbmail-sieved
 
 BIN_DIR=/usr/sbin
 PID_DIR=/var/run

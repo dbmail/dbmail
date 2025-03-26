@@ -183,19 +183,19 @@ msgstr "Spustit po restartu server POP3?"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
-msgid "Start the timsieve server after reboot?"
-msgstr "Spustit po restartu server timsieve?"
+msgid "Start the sieve server after reboot?"
+msgstr "Spustit po restartu server sieve?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
 msgid ""
-"Please choose whether the timsieve server should be started after rebooting. "
+"Please choose whether the sieve server should be started after rebooting. "
 "This is only needed if you want to allow users to manage their sieve scripts "
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
 msgstr ""
-"Server timsieve je také možné spustit hned po restartu počítače. To je "
+"Server sieve je také možné spustit hned po restartu počítače. To je "
 "potřeba spustit pouze v případě, kdy uživatelé chtějí spravovat své skripty "
 "pomocí kompatibilního klienta jako je kmail, horde/ingo nebo squirrelmail/"
 "avelsieve."
@@ -379,7 +379,7 @@ msgstr ""
 #~ "Jak vytvořit tento soubor se dočtete v /usr/share/doc/stunnel/README."
 #~ "Debian."
 
-#~ msgid "start the timesieved after reboot?"
+#~ msgid "start the esieved after reboot?"
 #~ msgstr "Spustit po restartu server POP3?"
 
 #~ msgid "Do you want to start the imap service after a reboot?"
@@ -388,5 +388,5 @@ msgstr ""
 #~ msgid "Do you want to start the pop3 service after a reboot?"
 #~ msgstr "Chcete spustit po restartu službu POP3?"
 
-#~ msgid "Do you want to start the timsieved service after a reboot?"
+#~ msgid "Do you want to start the sieved service after a reboot?"
 #~ msgstr "Přejete si po restartu spustit službu IMAP?"

@@ -1,4 +1,4 @@
 
 # List of daemons to start.
-DAEMONS="lmtpd imapd pop3d timsieved"
+DAEMONS="lmtpd imapd pop3d sieved"
 

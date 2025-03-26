@@ -4,7 +4,7 @@ After=network.target network-online.target mysqld.service postgresql.service
 
 [Service]
 Type=notify
-ExecStart=@sbindir@/dbmail-timsieved -D
+ExecStart=@sbindir@/dbmail-sieved -D
 Restart=always
 RestartSec=3s
 

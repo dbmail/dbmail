@@ -30,7 +30,7 @@ src/dbmail-imapd
 src/dbmail-lmtpd
 src/dbmail-pop3d
 src/dbmail-sievecmd
-src/dbmail-timsieved
+src/dbmail-sieved
 src/dbmail-users
 src/dbmail-util
 src/dbmail.h
@@ -43,7 +43,7 @@ src/modules/libsort_sieve.la
 systemd/dbmail-imapd.service
 systemd/dbmail-lmtpd.service
 systemd/dbmail-pop3d.service
-systemd/dbmail-timsieved.service
+systemd/dbmail-sieved.service
 systemd/dbmail.tmpfiles
 
 config.h

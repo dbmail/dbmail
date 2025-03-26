@@ -193,19 +193,19 @@ msgstr "Iniciar o servidor POP3 após o reinicio?"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
-msgid "Start the timsieve server after reboot?"
-msgstr "Iniciar o servidor timsieve após o reinicio?"
+msgid "Start the sieve server after reboot?"
+msgstr "Iniciar o servidor sieve após o reinicio?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
 msgid ""
-"Please choose whether the timsieve server should be started after rebooting. "
+"Please choose whether the sieve server should be started after rebooting. "
 "This is only needed if you want to allow users to manage their sieve scripts "
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
 msgstr ""
-"Por favor escolha se o servidor timsieve deverá ser iniciado após o reinicio."
+"Por favor escolha se o servidor sieve deverá ser iniciado após o reinicio."
 "Isto é apenas necessário se desejar permitir aos utilizadores a gestão dos "
 "seus scripts sieve utilizando um cliente compatível como o kmail, horde/ingo "
 "ou squirrelmail/avelsieve."
