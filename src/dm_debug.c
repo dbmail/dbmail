@@ -54,11 +54,17 @@ FILE *fstderr = NULL;
 
 static void configure_stderr(const char *service_name)
 {
-	Field_T error_log;
-	config_get_value("errorlog", service_name, error_log);
-	if (! (fstderr = freopen(error_log, "a", stderr))) {
+	Field_T val;
+	config_get_value("errorlog", service_name, val);
+	if (strlen(val)) {
+		// Send to stdout as log files haven't been created
+		qprintf("Config item errorlog has been removed. "
+			"Please use logfile instead.\n");
+	}
+	config_get_value("logfile", service_name, val);
+	if (! (fstderr = freopen(val, "a", stderr))) {
 		int serr = errno;
-		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", error_log, strerror(serr));
+		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", val, strerror(serr));
 	}
 }
 
@@ -159,7 +165,7 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 		localtime_r(&now, &tmp);
 		strftime(date,32,"%b %d %H:%M:%S", &tmp);
 
- 		fprintf(stderr, STDERRFORMAT, date, hostname, __progname?__progname:"", getpid(), 
+ 		fprintf(stderr, STDERRFORMAT, date, hostname, __progname?__progname:"", getpid(),
 			g_thread_self(), Trace_To_text(level), module, function, line, message);
  
 		if (message[l - 1] != '\n')

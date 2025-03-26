@@ -28,8 +28,8 @@
  */
 
 #include "dbmail.h"
-#define THIS_MODULE "maintenance"
-#define PNAME "dbmail/maintenance"
+#define THIS_MODULE "util"
+#define PNAME "dbmail/util"
 
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
@@ -334,22 +334,25 @@ int main(int argc, char *argv[])
  	}
 
 	config_read(configFile);
-	SetTraceLevel("DBMAIL");
+	SetTraceLevel("UTIL");
 	GetDBParams();
 
 	qverbosef("Opening connection to database... \n");
 	if (db_connect() != 0) {
 		qprintf("Failed. An error occured. Please check log.\n");
+		TRACE(TRACE_INFO, "Failed. An error occured. Please check log.");
 		return -1;
 	}
 
 	qverbosef("Opening connection to authentication... \n");
 	if (auth_connect() != 0) {
 		qprintf("Failed. An error occured. Please check log.\n");
+		TRACE(TRACE_INFO, "Failed. An error occured. Please check log.");
 		return -1;
 	}
 
 	qverbosef("Ok. Connected.\n");
+	TRACE(TRACE_INFO, "Ok. Connected.");
 
 	if (erase_old) do_erase_old(days_erase, mbtrash_name);
 	if (move_old) do_move_old(days_move, mbinbox_name, mbtrash_name);
@@ -367,24 +370,34 @@ int main(int argc, char *argv[])
 
 	if (!has_errors && !serious_errors) {
 		qprintf("\nMaintenance done. No errors found.\n");
+		TRACE(TRACE_INFO, "Maintenance done. No errors found.");
 	} else {
 		qprintf("\nMaintenance done. Errors were found");
+		TRACE(TRACE_INFO, "Maintenance done. Errors were found");
 		if (serious_errors) {
 			qprintf(" but not fixed due to failures.\n");
 			qprintf("Please check the logs for further details, "
 				"turning up the trace level as needed.\n");
+			TRACE(TRACE_INFO, "Errors not fixed due to failures.");
 			// Indicate that something went really wrong
 			has_errors = 3;
 		} else if (no_to_all) {
 			qprintf(" but not fixed.\n");
 			qprintf("Run again with the '-y' option to "
 				"repair the errors.\n");
+			TRACE(TRACE_INFO, "Errors found but not fixed");
+			TRACE(TRACE_INFO,
+				"Run again with the '-y' option to repair the errors."
+			);
 			// Indicate that the program should be run with -y
 			has_errors = 2;
 		} else if (yes_to_all) {
 			qprintf(" and fixed.\n");
-			qprintf("We suggest running dbmail-util again to "
+			qprintf("Recommend running dbmail-util again to "
 				"confirm that all errors were repaired.\n");
+			TRACE(TRACE_INFO, "Errors found and fixed");
+			TRACE(TRACE_INFO, "Recommend running dbmail-util again to "
+				"confirm that all errors were repaired.");
 			// Indicate that the program should be run again
 			has_errors = 1;
 		}
@@ -517,8 +530,10 @@ int do_purge_deleted(void)
 
 	if (no_to_all) {
 		qprintf("\nCounting messages with DELETE status...\n");
+		TRACE(TRACE_INFO, "Counting messages with DELETE status...");
 		if (! db_deleted_count(&deleted_messages)) {
 			qprintf ("Failed. An error occured. Please check log.\n");
+			TRACE(TRACE_INFO, "Failed. An error occured. Please check log.");
 			serious_errors = 1;
 			return -1;
 		}
@@ -527,8 +542,10 @@ int do_purge_deleted(void)
 	}
 	if (yes_to_all) {
 		qprintf("\nDeleting messages with DELETE status...\n");
+		TRACE(TRACE_INFO, "Deleting messages with DELETE status...");
 		if (! db_deleted_purge()) {
 			qprintf ("Failed. An error occured. Please check log.\n");
+			TRACE(TRACE_INFO, "Failed. An error occured. Please check log");
 			serious_errors = 1;
 			return -1;
 		}
@@ -559,15 +576,17 @@ int do_set_deleted(void)
 		TRACE(TRACE_INFO, "Setting DELETE status for deleted messages...");
 		if (! db_set_deleted()) {
 			qprintf ("Failed. An error occured. Please check log.\n");
+			TRACE(TRACE_INFO, "Failed. An error occured. Please check log.");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. Messages set for deletion.\n");
 		TRACE(TRACE_INFO, "Ok. Messages set for deletion.");
-		qprintf("Re-calculating used quota for all users...\n");
+		qprintf("\nRe-calculating used quota for all users...\n");
 		TRACE(TRACE_INFO, "Re-calculating used quota for all users...");
 		if (dm_quota_rebuild() < 0) {
 			qprintf ("Failed. An error occured. Please check log.\n");
+			TRACE(TRACE_INFO, "Failed. An error occured. Please check log");
 			serious_errors = 1;
 			return -1;
 		}
@@ -725,8 +744,10 @@ int do_check_integrity(void)
 	/* part 4 */
 	start = stop;
 	qprintf("\n%s DBMAIL partlists integrity...\n", action);
+	TRACE(TRACE_INFO, "%s DBMAIL partlists integrity...", action);
 	if ((count = db_icheck_partlists(cleanup)) < 0) {
 		qprintf("Failed. An error occurred. Please check log.\n");
+		TRACE(TRACE_INFO, "Failed. An error occurred. Please check log.");
 		serious_errors = 1;
 		return -1;
 	}
@@ -735,11 +756,14 @@ int do_check_integrity(void)
 	if (count > 0) {
 		if (cleanup) {
 			qprintf("Ok. Orphaned partlists deleted.\n");
+			TRACE(TRACE_INFO, "Ok. Orphaned partlists deleted.");
 		}
 	}
 
 	time(&stop);
 	qverbosef("--- %s unconnected partlists took %g seconds\n",
+		action, difftime(stop, start));
+	TRACE(TRACE_INFO, "--- %s unconnected partlists took %g seconds",
 		action, difftime(stop, start));
 	/* end part 4 */
 
@@ -757,11 +781,14 @@ int do_check_integrity(void)
 	if (count > 0) {
 		if (cleanup) {
 			qprintf("Ok. Orphaned mimeparts deleted.\n");
+			TRACE(TRACE_INFO, "Ok. Orphaned mimeparts deleted.");
 		}
 	}
 
 	time(&stop);
 	qverbosef("--- %s unconnected mimeparts took %g seconds\n",
+		action, difftime(stop, start));
+	TRACE(TRACE_INFO, "--- %s unconnected mimeparts took %g seconds\n",
 		action, difftime(stop, start));
 	/* end part 5 */
 
@@ -781,6 +808,7 @@ int do_check_integrity(void)
 		TRACE(TRACE_INFO, "%s DBMAIL headernames integrity...", action);
 		if ((count = db_icheck_headernames(cleanup)) < 0) {
 			qprintf("Failed. An error occurred. Please check log.\n");
+			TRACE(TRACE_INFO, "Failed. An error occurred. Please check log.");
 			serious_errors = 1;
 			return -1;
 		}
@@ -794,6 +822,8 @@ int do_check_integrity(void)
 		time(&stop);
 		qverbosef("--- %s unconnected headernames took %g seconds\n",
 			action, difftime(stop, start));
+		TRACE(TRACE_INFO, "--- %s unconnected headernames took %g seconds\n",
+			action, difftime(stop, start));
 	}
 	/* end part 6 */
 
@@ -803,17 +833,22 @@ int do_check_integrity(void)
 	TRACE(TRACE_INFO, "%s DBMAIL headervalues integrity...", action);
 	if ((count = db_icheck_headervalues(cleanup)) < 0) {
 		qprintf("Failed. An error occurred. Please check log.\n");
+		TRACE(TRACE_INFO, "Failed. An error occurred. Please check log.");
 		serious_errors = 1;
 		return -1;
 	}
 
 	qprintf("Ok. Found [%ld] unconnected headervalues.\n", count);
+	TRACE(TRACE_INFO, "Ok. Found [%ld] unconnected headervalues.\n", count);
 	if (count > 0 && cleanup) {
 		qprintf("Ok. Orphaned headervalues deleted.\n");
+		TRACE(TRACE_INFO, "Ok. Orphaned headervalues deleted.");
 	}
 
 	time(&stop);
 	qverbosef("--- %s unconnected headervalues took %g seconds\n",
+		action, difftime(stop, start));
+		TRACE(TRACE_INFO, "--- %s unconnected headervalues took %g seconds\n",
 		action, difftime(stop, start));
 	/* end part 7 */
 
@@ -822,6 +857,7 @@ int do_check_integrity(void)
 
 	time(&stop);
 	qverbosef("--- %s block integrity took %g seconds\n", action, difftime(stop, start));
+	TRACE(TRACE_INFO, "--- %s block integrity took %g seconds\n", action, difftime(stop, start));
 
 	return 0;
 }
@@ -843,12 +879,14 @@ static int do_rfc_size(void)
 
 	if (db_icheck_rfcsize(&lost) < 0) {
 		qprintf("Failed. An error occured. Please check log.\n");
+		TRACE(TRACE_INFO, "Failed. An error occured. Please check log.");
 		serious_errors = 1;
 		return -1;
 	}
 
 	TRACE(TRACE_INFO, "Ok. Found [%d] missing rfcsize values.", g_list_length(lost));
 	qprintf("Ok. Found [%d] missing rfcsize values.\n", g_list_length(lost));
+	TRACE(TRACE_INFO, "Ok. Found [%d] missing rfcsize values.\n", g_list_length(lost));
 	if (g_list_length(lost) > 0) {
 		has_errors = 1;
 	}
@@ -866,7 +904,9 @@ static int do_rfc_size(void)
 	time(&stop);
 	qverbosef("--- checking rfcsize field took %g seconds\n",
 	       difftime(stop, start));
-	
+	TRACE(TRACE_INFO, "--- checking rfcsize field took %g seconds\n",
+	       difftime(stop, start));
+
 	return 0;
 
 }
@@ -888,6 +928,7 @@ static int do_envelope(void)
 
 	if (db_icheck_envelope(&lost) < 0) {
 		qprintf("Failed. An error occured. Please check log.\n");
+		TRACE(TRACE_INFO, "Failed. An error occured. Please check log.");
 		serious_errors = 1;
 		return -1;
 	}
@@ -901,6 +942,7 @@ static int do_envelope(void)
 	if (yes_to_all) {
 		if (db_set_envelope(lost) < 0) {
 			qprintf("Error setting the envelope cache");
+			TRACE(TRACE_INFO, "Error setting the envelope cache");
 			has_errors = 1;
 		}
 	}
@@ -910,7 +952,9 @@ static int do_envelope(void)
 	time(&stop);
 	qverbosef("--- checking envelope cache took %g seconds\n",
 	       difftime(stop, start));
-	
+	TRACE(TRACE_INFO, "--- checking envelope cache took %g seconds\n",
+	       difftime(stop, start));
+
 	return 0;
 
 }
@@ -932,6 +976,7 @@ static int do_check_empty_envelope(void)
 
 	if (db_icheck_empty_envelope(&lost) < 0) {
 		qprintf("Failed. An error occured. Please check log.\n");
+		TRACE(TRACE_INFO, "Failed. An error occured. Please check log.");
 		serious_errors = 1;
 		return -1;
 	}
@@ -954,6 +999,8 @@ static int do_check_empty_envelope(void)
 
 	time(&stop);
 	qverbosef("--- checking empty envelope cache took %g seconds\n",
+	       difftime(stop, start));
+	TRACE(TRACE_INFO, "--- checking empty envelope cache took %g seconds\n",
 	       difftime(stop, start));
 
 	return 0;
@@ -988,12 +1035,14 @@ int do_header_cache(void)
 
 	if (db_icheck_headercache(&lost) < 0) {
 		qprintf("Failed. An error occured. Please check log.\n");
+		TRACE(TRACE_INFO, "Failed. An error occured. Please check log.");
 		serious_errors = 1;
 		return -1;
 	}
 
 	TRACE(TRACE_INFO, "Ok. Found [%d] un-cached physmessages.", g_list_length(lost));
 	qprintf("Ok. Found [%d] un-cached physmessages.\n", g_list_length(lost));
+	TRACE(TRACE_INFO, "Ok. Found [%d] un-cached physmessages.\n", g_list_length(lost));
 	if (g_list_length(lost) > 0) {
 		has_errors = 1;
 	}
@@ -1010,6 +1059,8 @@ int do_header_cache(void)
 
 	time(&stop);
 	qverbosef("--- checking cached headervalues took %g seconds\n",
+	       difftime(stop, start));
+	TRACE(TRACE_INFO, "--- checking cached headervalues took %g seconds\n",
 	       difftime(stop, start));
 
 	return 0;
@@ -1048,11 +1099,14 @@ int do_check_iplog(const char *timespec)
 		TRACE(TRACE_INFO, "Removing IP entries older than [%s]...", timestring);
 		if (! db_cleanup_iplog(timestring)) {
 			qprintf("Failed. Please check the log.\n");
+			TRACE(TRACE_INFO, "Failed. Please check the log.");
 			serious_errors = 1;
 			return -1;
 		}
 
 		qprintf("Ok. IP entries older than [%s] removed.\n",
+		       timestring);
+		TRACE(TRACE_INFO, "Ok. IP entries older than [%s] removed.\n",
 		       timestring);
 	}
 	return 0;
@@ -1077,10 +1131,13 @@ int do_check_replycache(const char *timespec)
 		TRACE(TRACE_INFO, "Counting RC entries older than [%s]...", timestring);
 		if (db_count_replycache(timestring, &log_count) < 0) {
 			qprintf("Failed. An error occured. Check the log.\n");
+			TRACE(TRACE_INFO, "Failed. An error occured. Check the log.");
 			serious_errors = 1;
 			return -1;
 		}
 		qprintf("Ok. [%" PRIu64 "] RC entries are older than [%s].\n",
+		    log_count, timestring);
+		TRACE(TRACE_INFO, "Ok. [%" PRIu64 "] RC entries are older than [%s].\n",
 		    log_count, timestring);
 	}
 	if (yes_to_all) {
@@ -1088,11 +1145,13 @@ int do_check_replycache(const char *timespec)
 		TRACE(TRACE_INFO, "Removing RC entries older than [%s]...", timestring);
 		if (! db_cleanup_replycache(timestring)) {
 			qprintf("Failed. Please check the log.\n");
+			TRACE(TRACE_INFO, "Failed. Please check the log.");
 			serious_errors = 1;
 			return -1;
 		}
 
 		qprintf("Ok. RC entries were older than [%s] cleaned.\n", timestring);
+		TRACE(TRACE_INFO, "Ok. RC entries were older than [%s] cleaned.\n", timestring);
 	}
 	return 0;
 }
@@ -1109,6 +1168,7 @@ int do_vacuum_db(void)
 		fflush(stdout);
 		if (db_cleanup() < 0) {
 			qprintf("Failed. Please check the log.\n");
+			TRACE(TRACE_INFO, "Failed. Please check the log.");
 			serious_errors = 1;
 			return -1;
 		}

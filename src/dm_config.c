@@ -589,11 +589,12 @@ void config_get_logfiles(ServerConfig_T *config, const char * service)
 
 	/* errorlog */
 	config_get_value("errorlog", service, val);
-	if (! strlen(val))
-		g_strlcpy(config->error_log,DEFAULT_ERROR_LOG, FIELDSIZE);
-	else
-		g_strlcpy(config->error_log, val, FIELDSIZE);
-	assert(config->error_log);
+	/* Warn about the removal of "errorlog" config item. */
+	if (strlen(val)) {
+		// Send to stdout as log files haven't been created
+		qerrorf("Config item errorlog has been removed. "
+			"Please use logfile instead.\n");
+	}
 
 	/* pid directory */
 	config_get_value("pid_directory", service, val);
