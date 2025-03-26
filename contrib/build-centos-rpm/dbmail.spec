@@ -1,11 +1,11 @@
-%define         services dbmail-imapd dbmail-pop3d dbmail-lmtpd dbmail-timsieved
+%define         services dbmail-imapd dbmail-pop3d dbmail-lmtpd dbmail-sieved
 
 %define		SRCBASE	%{_builddir}/%{name}-main
 %define		TMPLIB	%{buildroot}/usr/lib/tmpfiles.d
 %define		SOURCE1	%{SRCBASE}/systemd/dbmail-imapd.service
 %define		SOURCE2 %{SRCBASE}/systemd/dbmail-pop3d.service
 %define		SOURCE3	%{SRCBASE}/systemd/dbmail-lmtpd.service
-%define		SOURCE4	%{SRCBASE}/systemd/dbmail-timsieved.service
+%define		SOURCE4	%{SRCBASE}/systemd/dbmail-sieved.service
 %define		SOURCE5	%{SRCBASE}/dbmail.cron
 %define		SOURCE6	%{SRCBASE}/dbmail.logrotate
 %define		SOURCE7	%{SRCBASE}/dbmail.sysconfig
@@ -177,7 +177,7 @@ fi
 # User must manually run systemd-sysv-convert --apply dbmail-imapd
 # and system-sysv-convert --apply dmail-lmtpd
 # and system-sysv-convert --apply dmail-pop3d
-# and system-sysv-convert --apply dmail-timsieved
+# and system-sysv-convert --apply dmail-sieved
 # to migrate them to systemd targets
 for s in %services; do
   /usr/bin/systemd-sysv-convert --save $s >/dev/null 2>&1 ||:

@@ -17,7 +17,7 @@ DESCRIPTION
 DBMail stores Sieve scripts in a table in the DBMail database. These 
 scripts are used to sort incoming mail for the email users. Each user
 has their own script space and may upload scripts to the
-dbmail-timsieved(8) daemon. The dbmail-sievecmd(8) utility provides
+dbmail-sieved(8) daemon. The dbmail-sievecmd(8) utility provides
 a convenient method for the system administrator to work with
 Sieve scripts from the command line.
 

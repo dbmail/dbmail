@@ -192,19 +192,19 @@ msgstr "Запустить сервер POP3 после перезагрузки
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
-msgid "Start the timsieve server after reboot?"
-msgstr "Запустить сервер timsieve после перезагрузки?"
+msgid "Start the sieve server after reboot?"
+msgstr "Запустить сервер sieve после перезагрузки?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
 msgid ""
-"Please choose whether the timsieve server should be started after rebooting. "
+"Please choose whether the sieve server should be started after rebooting. "
 "This is only needed if you want to allow users to manage their sieve scripts "
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
 msgstr ""
-"Укажите, нужно ли запускать сервер timsieve после перезагрузки. Это нужно, "
+"Укажите, нужно ли запускать сервер sieve после перезагрузки. Это нужно, "
 "если вы хотите позволить пользователям управлять собственными сценариями-"
 "фильтрами через совместимые клиенты типа kmail, horde/ingo или squirrelmail/"
 "avelsieve."

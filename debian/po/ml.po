@@ -191,19 +191,19 @@ msgstr "റീബൂട്ടിന് ശേഷം POP3 സേവകന്‍ �
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
-msgid "Start the timsieve server after reboot?"
-msgstr "റീബൂട്ടിന് ശേഷം timsieve സേവകന്‍ തുടങ്ങണോ?"
+msgid "Start the sieve server after reboot?"
+msgstr "റീബൂട്ടിന് ശേഷം sieve സേവകന്‍ തുടങ്ങണോ?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
 msgid ""
-"Please choose whether the timsieve server should be started after rebooting. "
+"Please choose whether the sieve server should be started after rebooting. "
 "This is only needed if you want to allow users to manage their sieve scripts "
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
 msgstr ""
-"ദയവായി റീബൂട്ടിന് ശേഷം timsieve സേവകന്‍ തുടങ്ങണോ എന്ന് തിരഞ്ഞെടുക്കുക. kmail, horde/ingo "
+"ദയവായി റീബൂട്ടിന് ശേഷം sieve സേവകന്‍ തുടങ്ങണോ എന്ന് തിരഞ്ഞെടുക്കുക. kmail, horde/ingo "
 "അല്ലെങ്കില്‍ squirrelmail/avelsieve തുടങ്ങിയ പൊരുത്തമുള്ളൊരു ക്ലയന്റ് ഉപയോഗിച്ച് സ്വന്തം sieve "
 "സ്ക്രിപ്റ്റുകള്‍ കൈകാര്യം ചെയ്യാന്‍ ഉപയോക്താക്കളെ അനുവദിക്കണമെന്ന് നിങ്ങളാഗ്രഹിക്കുന്നെങ്കില്‍ മാത്രമേ "
 "ഇത് ആവശ്യമുള്ളൂ."

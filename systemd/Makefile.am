@@ -19,13 +19,13 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
-EXTRA_DIST = dbmail-imapd.service.in  dbmail-lmtpd.service.in  dbmail-pop3d.service.in  dbmail-timsieved.service.in
+EXTRA_DIST = dbmail-imapd.service.in  dbmail-lmtpd.service.in  dbmail-pop3d.service.in  dbmail-sieved.service.in
 SYSTEMD_UNIT_DIR = /usr/lib/systemd/system
 SYSTEMD_TMPFILES_DIR = /usr/lib/tmpfiles.d
 PID_DIR=/run/dbmail
 
 if SYSTEMD
-install-systemd: dbmail-imapd.service dbmail-lmtpd.service dbmail-pop3d.service dbmail-timsieved.service dbmail.tmpfiles
+install-systemd: dbmail-imapd.service dbmail-lmtpd.service dbmail-pop3d.service dbmail-sieved.service dbmail.tmpfiles
 	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_UNIT_DIR)
 	$(INSTALL_DATA) dbmail-imapd.service \
 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-imapd.service
@@ -33,8 +33,8 @@ install-systemd: dbmail-imapd.service dbmail-lmtpd.service dbmail-pop3d.service 
 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-lmtpd.service
 	$(INSTALL_DATA) dbmail-pop3d.service \
 	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-pop3d.service
-	$(INSTALL_DATA) dbmail-timsieved.service \
-	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-timsieved.service
+	$(INSTALL_DATA) dbmail-sieved.service \
+	  $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-sieved.service
 	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)
 	$(INSTALL_DATA) dbmail.tmpfiles \
 	  $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)/dbmail.conf
@@ -43,7 +43,7 @@ uninstall-systemd:
 	rm -f $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-imapd.service
 	rm -f $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-lmtpd.service
 	rm -f $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-pop3d.service
-	rm -f $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-timsieved.service
+	rm -f $(DESTDIR)$(SYSTEMD_UNIT_DIR)/dbmail-sieved.service
 	rm -f $(DESTDIR)$(SYSTEMD_TMPFILES_DIR)/dbmail.tmpfiles
 	rmdir $(DESTDIR)$(SYSTEMD_UNIT_DIR) ||:
 
