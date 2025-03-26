@@ -30,6 +30,7 @@
 extern char configFile[PATH_MAX];
 
 #define PNAME "dbmail/export"
+#define THIS_MODULE "export"
 
 extern DBParam_T db_params;
 extern Mempool_T small_pool;
@@ -99,14 +100,16 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 	c->pool = s->pool;
 	s->ci = client_init(c);
 	if (! (imap4_tokenizer_main(s, search))) {
-		qerrorf("error parsing search string\n");
+		qprintf("error parsing search string\n");
+		TRACE(TRACE_ERR, "Error parsing search string");
 		dbmail_mailbox_free(mb);
 		dbmail_imap_session_delete(&s);
 		return 1;
 	}
 
 	if (dbmail_mailbox_build_imap_search(mb, s->args, &(s->args_idx), SEARCH_UNORDERED) < 0) {
-		qerrorf("invalid search string\n");
+		qprintf("Invalid search string\n");
+		TRACE(TRACE_INFO, "Invalid search string");
 		dbmail_mailbox_free(mb);
 		dbmail_imap_session_delete(&s);
 		return 1;
@@ -117,13 +120,15 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 		ostream = stdout;
 	} else if (! (ostream = fopen(dumpfile, "a"))) {
 		int err = errno;
-		qerrorf("opening [%s] failed [%s]\n", dumpfile, strerror(err));
+		qprintf("Opening [%s] failed [%s]\n", dumpfile, strerror(err));
+		TRACE(TRACE_ERR, "Opening [%s] failed [%s]", dumpfile, strerror(err));
 		result = -1;
 		goto cleanup;
 	}
 
 	if (dbmail_mailbox_dump(mb, ostream) < 0) {
-		qerrorf("Export failed\n");
+		qprintf("Export failed\n");
+		TRACE(TRACE_ERR, "Export failed");
 		result = -1;
 		goto cleanup;
 	}
@@ -143,7 +148,8 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 			// Following this, dbmail-util -d sets deleted status
 			if (delete_after_dump & 1) {
 				if (db_set_msgflag(*(uint64_t *)ids->data, deleted_flag, NULL, IMAPFA_ADD, 0, NULL) < 0) {
-					qerrorf("Error setting flags for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
+					qprintf("Error setting flags for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
+					TRACE(TRACE_ERR, "Error setting flags for message [%" PRIu64 "]", *(uint64_t *)ids->data);
 					result = -1;
 				} else {
 					affected = 1;
@@ -154,7 +160,8 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 			// Following this, dbmail-util -p sets purge status
 			if (delete_after_dump & 2) {
 				if (! db_set_message_status(*(uint64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
-					qerrorf("Error setting status for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
+					qprintf("Error setting status for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
+					TRACE(TRACE_ERR, "Error setting status for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
 					result = -1;
 				} else {
 					affected = 1;
@@ -192,7 +199,8 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 
 	/* Verify the existence of this user */
 	if (! auth_user_exists(user, &user_idnr)) {
-		qerrorf("Error: user [%s] does not exist.\n", user);
+		qprintf("Error: user [%s] does not exist.\n", user);
+		TRACE(TRACE_INFO, "User [%s] does not exist.\n", user);
 		result = -1;
 		goto cleanup;
 	}
@@ -229,13 +237,14 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 
 	children = g_list_first(children);
 
-	qerrorf("Exporting [%u] mailboxes for [%s]\n", g_list_length(children), user);
+	qprintf("Exporting [%u] mailboxes for [%s]\n", g_list_length(children), user);
 
 	while (children) {
 		mailbox_idnr = *(uint64_t *)children->data;
 		db_getmailboxname(mailbox_idnr, user_idnr, mailbox);			
 		if (! db_get_mailbox_owner(mailbox_idnr, &owner_idnr)) {
-			qerrorf("Error checking mailbox ownership");
+			qprintf("Error checking mailbox ownership");
+			TRACE(TRACE_ERR, "Error checking mailbox ownership");
 			goto cleanup;
 		}
 		if (owner_idnr == user_idnr) {
@@ -245,15 +254,18 @@ static int do_export(char *user, char *base_mailbox, char *basedir, char *outfil
 
 				dir = g_path_get_dirname(dumpfile);
 				if (g_mkdir_with_parents(dir, 0700)) {
-					qerrorf("can't create directory [%s]\n", dir);
+					qprintf("Unable to create directory [%s]\n", dir);
+					TRACE(TRACE_ERR, "Unable to create directory [%s]", dir);
 					result = -1;
 					goto cleanup;
 				}
 			}
 
-			qerrorf(" export mailbox %s -> %s\n", mailbox, dumpfile);
+			qprintf("Export mailbox %s -> %s\n", mailbox, dumpfile);
+			TRACE(TRACE_INFO, "Export mailbox %s -> %s\n", mailbox, dumpfile);
 			if ((result = mailbox_dump(mailbox_idnr, dumpfile, search, delete_after_dump)) != 0) {
-				qerrorf("error exporting mailbox %s -> %s\n", mailbox, dumpfile);
+				qprintf("Error exporting mailbox %s -> %s\n", mailbox, dumpfile);
+				TRACE(TRACE_ERR, "Exporting mailbox %s -> %s\n", mailbox, dumpfile);
 				goto cleanup;
 			}
 
@@ -333,7 +345,7 @@ int main(int argc, char *argv[])
 			if (optarg && strlen(optarg))
 				search = optarg;
 			else {
-				qerrorf("dbmail-mailbox: -s requires a value\n\n");
+				qprintf("dbmail-mailbox: -s requires a value\n\n");
 				result = 1;
 			}
 			break;
@@ -344,7 +356,7 @@ int main(int argc, char *argv[])
 				memset(configFile, 0, sizeof(configFile));
 				strncpy(configFile, optarg, sizeof(configFile)-1);
 			} else {
-				qerrorf("dbmail-mailbox: -f requires a filename\n\n");
+				qprintf("dbmail-mailbox: -f requires a filename\n\n");
 				result = 1;
 			}
 			break;
@@ -391,24 +403,26 @@ int main(int argc, char *argv[])
  
 	/* read the config file */
         if (config_read(configFile) == -1) {
-                qerrorf("Failed. Unable to read config file %s\n", configFile);
+                qprintf("Failed. Unable to read config file %s\n", configFile);
                 result = -1;
                 goto freeall;
         }
                 
-	SetTraceLevel("DBMAIL");
+	SetTraceLevel("EXPORT");
 	GetDBParams();
 
 	/* open database connection */
 	if (db_connect() != 0) {
-		qerrorf ("Failed. Could not connect to database (check log)\n");
+		qprintf ("Failed. Could not connect to database (check log)\n");
+		TRACE(TRACE_ERR, "Could not connect to database");
 		result = -1;
 		goto freeall;
 	}
 
 	/* open authentication connection */
 	if (auth_connect() != 0) {
-		qerrorf("Failed. Could not connect to authentication (check log)\n");
+		qprintf("Failed. Could not connect to authentication (check log)\n");
+		TRACE(TRACE_ERR, "Could not connect to authentication");
 		result = -1;
 		goto freeall;
 	}
@@ -420,7 +434,8 @@ int main(int argc, char *argv[])
 		GList *users = g_list_first(matching_users);
 
 		if (!users) {
-			qerrorf("Error: no users matching [%s] were found.\n", user);
+			qprintf("Error: no users matching [%s] were found.\n", user);
+			TRACE(TRACE_ERR, "No users matching [%s]", user);
 			g_list_destroy(all_users);
 			result = -1;
 			goto freeall;
@@ -455,8 +470,13 @@ freeall:
 	g_mime_shutdown();
 	mempool_close(&small_pool);
 
-	if (result < 0)
-		qerrorf("Command failed.\n");
+	if (result) {
+		qprintf("Export failed, see logfile for details.\n");
+		TRACE(TRACE_INFO, "Export failed, see logfile for details.");
+	} else {
+		qprintf("Export succeeded.\n");
+		TRACE(TRACE_INFO, "Export succeeded.");
+	}
 	return result;
 }
 

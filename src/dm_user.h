@@ -32,8 +32,8 @@ extern int reallyquiet;
 extern int quiet;
 
 #define qverbosef(fmt, args...) if (verbose) printf(fmt, ##args)
-#define qprintf(fmt, args...) if (! (quiet||reallyquiet)) printf(fmt, ##args) 
-#define qerrorf(fmt, args...) if (! reallyquiet) fprintf(stderr, fmt, ##args) 
+#define qprintf(fmt, args...) if (! (quiet||reallyquiet)) printf(fmt, ##args)
+#define qerrorf(fmt, args...) if (! reallyquiet) fprintf(stderr, fmt, ##args)
 
 #define null_strncpy(dst, src, len) if (src) strncpy(dst, src, len)
 #define null_crypt(src, dst) (src ? crypt(src, dst) : "" )

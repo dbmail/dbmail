@@ -25,31 +25,11 @@
  */
 
 #include "dbmail.h"
-//#include "gmime/gmime-header.h"
-//#include "gmime/gmime-message.h"
-//#include "gmime/gmime-object.h"
-//#include "gmime/gmime-stream.h"
-//#include "gmime/gmime-stream-mem.h"
 
 extern DBParam_T db_params;
 #define DBPFX db_params.pfx
 #define DBMAIL_TEMPMBOX "INBOX"
 #define THIS_MODULE "message"
-
-
-/*
- * used for debugging message de/re-construction
- */
-#ifdef DEBUG_MESSAGE
-#define dprint(fmt, args...) TRACE(TRACE_DEBUG, fmt, ##args); printf(fmt, ##args)
-#endif
-
-#ifndef dprint
-#define DPRINT 0
-#define dprint(fmt, args...) 
-#else
-#define DPRINT 1
-#endif
 
 static void _header_cache(const char *, const char *, gpointer);
 
@@ -313,7 +293,7 @@ static int store_blob(DbmailMessage *m, const char *buf, gboolean is_header)
 		m->part_order=0;
 	}
 
-	dprint("<blob is_header=\"%d\" part_depth=\"%d\" part_key=\"%d\" part_order=\"%d\">\n%s\n</blob>\n", 
+	TRACE(TRACE_DEBUG, "<blob is_header=\"%d\" part_depth=\"%d\" part_key=\"%d\" part_order=\"%d\">\n%s\n</blob>\n",
 			is_header, m->part_depth, m->part_key, m->part_order, buf);
 
 	if (! (id = blob_store(buf)))
@@ -436,16 +416,12 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 		row = 0;
 		while (db_result_next(r)) {
 			int l;
-#if DPRINT
 			int order;
 			int key;
-#endif
 
 			prevdepth	= depth;
 			prev_header	= is_header;
-#if DPRINT
 			key		= db_result_get_int(r,0);
-#endif
 			depth		= db_result_get_int(r,1);
 			if (depth > MAX_MIME_DEPTH) {
 				TRACE(TRACE_WARNING, "MIME part depth exceeds allowed maximum [%d]",
@@ -453,9 +429,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 				continue;
 			}
 
-#if DPRINT
 			order		= db_result_get_int(r,2);
-#endif
 			is_header	= db_result_get_bool(r,3);
 			if (row == 0) {
 				memset(internal_date, 0, sizeof(internal_date));
@@ -478,12 +452,12 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 			if (is_header && find_boundary(str, &boundary[0])) {
 				got_boundary = TRUE;
-				dprint("<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
+				TRACE(TRACE_DEBUG, "<boundary depth=\"%d\">%s</boundary>\n", depth, boundary);
 				strncpy(blist[depth], boundary, MAX_MIME_BLEN-1);
 			}
 
 			while ((prevdepth > 0) && (prevdepth-1 >= depth) && blist[prevdepth-1][0]) {
-				dprint("\n--%s at %d -> %d--\n", blist[prevdepth-1], prevdepth, prevdepth-1);
+				TRACE(TRACE_DEBUG, "\n--%s at %d -> %d--\n", blist[prevdepth-1], prevdepth, prevdepth-1);
 				p_string_append_printf(m, "\n--%s--\n", blist[prevdepth-1]);
 				memset(blist[prevdepth-1], 0, MAX_MIME_BLEN);
 				prevdepth--;
@@ -494,16 +468,16 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 			if (is_header){
 				if (prev_header && depth>0 && !prev_is_message) {
-					dprint("--%s\n", boundary);
+					TRACE(TRACE_DEBUG, "--%s\n", boundary);
 					p_string_append_printf(m, "--%s\n", boundary);
 				}else if (!prev_header || prev_boundary) {
-					dprint("\n--%s\n", boundary);
+					TRACE(TRACE_DEBUG, "\n--%s\n", boundary);
 					p_string_append_printf(m, "\n--%s\n", boundary);
 				}
 			}
 
 			p_string_append_printf(m, "%s", str);
-			dprint("<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n", 
+			TRACE(TRACE_DEBUG, "<part is_header=\"%d\" depth=\"%d\" key=\"%d\" order=\"%d\">\n%s\n</part>\n",
 				is_header, depth, key, order, str);
 
 			if (is_header)
@@ -515,7 +489,7 @@ static DbmailMessage * _mime_retrieve(DbmailMessage *self)
 
 		// Add final boundary delimiter line if required
 		if (row > 2 && blist[0][0]) {
-			dprint("\n--%s-- final\n", blist[0]);
+			TRACE(TRACE_DEBUG, "\n--%s-- final\n", blist[0]);
 			p_string_append_printf(m, "\n--%s--\n", blist[0]);
 		}
 
@@ -640,7 +614,7 @@ gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessa
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
 
 	if (GMIME_IS_MESSAGE(object)) {
-		dprint("\n<message>\n");
+		TRACE(TRACE_DEBUG, "\n<message>\n");
 
 		if(store_head(object,m) < 0) return TRUE;
 
@@ -673,7 +647,7 @@ gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessa
 	}
 
 	if (GMIME_IS_MESSAGE(object)) {
-		dprint("\n</message>\n");
+		TRACE(TRACE_DEBUG, "\n</message>\n");
 	}
 
 	return r;

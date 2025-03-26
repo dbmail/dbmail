@@ -30,7 +30,8 @@
 extern char configFile[PATH_MAX];
 
 #define SHADOWFILE "/etc/shadow"
-#define PNAME "dbmail/user"
+#define THIS_MODULE "users"
+#define PNAME "dbmail/users"
 
 struct change_flags {
 	unsigned int newuser         : 1;
@@ -343,6 +344,8 @@ int main(int argc, char *argv[])
 	if (passwdtype && change_flags.newspasswd && (! passwd)) {
 		qerrorf("\nError:\nYou cannot set the security-password and encryption-type "
 				"at the same time,\nwithout setting the main password as well.\n\n");
+		TRACE(TRACE_ERR, "You cannot set the security-password and encryption-type "
+				"at the same time,\nwithout setting the main password as well.");
 		result = -1;
 		goto freeall;
 	}
@@ -365,7 +368,7 @@ int main(int argc, char *argv[])
                 goto freeall;
         }
                 
-	SetTraceLevel("DBMAIL");
+	SetTraceLevel("USERS");
 	GetDBParams();
 
 	/* open database connection */
@@ -392,6 +395,7 @@ int main(int argc, char *argv[])
 		if (! auth_user_exists(user, &useridnr)) {
 			qerrorf("Error: user [%s] does not exist.\n",
 				     user);
+TRACE(TRACE_INFO, "");
 			result = -1;
 			goto freeall;
 		}
@@ -436,29 +440,35 @@ int main(int argc, char *argv[])
 		 * fully coded format, ready for the database. */
 		if (mkpassword(user, passwd, passwdtype, passwdfile, &password, &enctype)) {
 			qerrorf("Error: unable to create a password.\n");
+			TRACE(TRACE_ERR, "Unable to create a password");
 			result = -1;
 			goto freeall;
 		}
 		if (spasswd) {
 			if (mkpassword(user, spasswd, passwdtype, passwdfile, &spasswd_enc, &enctype)) {
 				qerrorf("Error: unable to create a security password.\n");
+				TRACE(TRACE_ERR, "Unable to create a security password");
 				result = -1;
 				goto freeall;
 			}
 		}
 	}
 
-
 	switch (mode) {
 	case 'a':
+		qprintf("Adding user [%s]...\n", user);
+		TRACE(TRACE_INFO, "Adding user [%s]", user);
 		result = do_add(user, password, enctype, maxmail, clientid,
 				alias_add, alias_del);
 		break;
 	case 'd':
+		qprintf("Deleting user [%s]...\n", user);
+		TRACE(TRACE_INFO, "Deleting user [%s]", user);
 		result = do_delete(useridnr, user);
 		break;
 	case 'c':
-		qprintf("Performing changes for user [%s]...\n", user);
+		qprintf("Changing user [%s]...\n", user);
+		TRACE(TRACE_INFO, "Changing user [%s]...", user);
 		if (change_flags.newuser) {
 			result |= do_username(useridnr, newuser);
 		}
@@ -486,12 +496,18 @@ int main(int argc, char *argv[])
 		result |= do_aliases(useridnr, alias_add, alias_del);
 		break;
 	case 'e':
+		qprintf("Empty all mailboxes for user [%s]...\n", user);
+		TRACE(TRACE_INFO, "Empty all mailboxes for user [%s]...", user);
 		result = do_empty(useridnr);
 		break;
 	case 'l':
+		qprintf("Listing information for user [%s]...\n", user);
+		TRACE(TRACE_INFO, "Changing user [%s]...", user);
 		result = do_show(userspec);
 		break;
 	case 'x':
+		qprintf("Creating an external forwarding address for user [%s]...\n", user);
+		TRACE(TRACE_INFO, "Creating an external forwarding address for user  [%s]...", user);
 		result = do_forwards(alias, clientid, fwds_add, fwds_del);
 		break;
 	default:
@@ -515,8 +531,12 @@ freeall:
 	auth_disconnect();
 	config_free();
 
-	if (result < 0)
-		qerrorf("Command failed.\n");
+	if (result) {
+		qprintf("Command failed, see logfile for details.\n");
+		TRACE(TRACE_INFO, "Command failed, see logfile for details.");
+	} else {
+		qprintf("Command succeeded.\n");
+		TRACE(TRACE_INFO, "Command succeeded.");
+	}
 	return result;
 }
-
