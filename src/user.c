@@ -342,16 +342,16 @@ int main(int argc, char *argv[])
 	}	
 
 	if (passwdtype && change_flags.newspasswd && (! passwd)) {
-		qerrorf("\nError:\nYou cannot set the security-password and encryption-type "
+		printf("\nError:\nYou cannot set the security-password and encryption-type "
 				"at the same time,\nwithout setting the main password as well.\n\n");
-		TRACE(TRACE_ERR, "You cannot set the security-password and encryption-type "
-				"at the same time,\nwithout setting the main password as well.");
 		result = -1;
 		goto freeall;
 	}
 
-	if (change_flags.enable && change_flags.disable)
+	if (change_flags.enable && change_flags.disable) {
+		printf("\nError:\nYou cannot enable and disable an account at the same time.\n\n");
 		mode_toomany = 1;
+	}
 
 	/* If nothing is happening, show the help text. */
 	if (!mode || mode_toomany || show_help || (no_to_all && yes_to_all)) {
@@ -361,28 +361,25 @@ int main(int argc, char *argv[])
 	}
 
 	/* read the config file */
-        if (config_read(configFile) == -1) {
-                qerrorf("Failed. Unable to read config file %s\n",
-                        configFile);
-                result = -1;
-                goto freeall;
-        }
+	if (config_read(configFile) == -1) {
+		printf("Failed. Unable to read config file %s\n", configFile);
+		result = -1;
+		goto freeall;
+	}
                 
 	SetTraceLevel("USERS");
 	GetDBParams();
 
 	/* open database connection */
 	if (db_connect() != 0) {
-		qerrorf
-		    ("Failed. Could not connect to database (check log)\n");
+		qprintf("Failed. Could not connect to database (check log)\n");
 		result = -1;
 		goto freeall;
 	}
 
 	/* open authentication connection */
 	if (auth_connect() != 0) {
-		qerrorf
-		    ("Failed. Could not connect to authentication (check log)\n");
+		qprintf ("Failed. Could not connect to authentication (check log)\n");
 		result = -1;
 		goto freeall;
 	}
@@ -393,9 +390,7 @@ int main(int argc, char *argv[])
 	case 'e':
 		/* Verify the existence of this user */
 		if (! auth_user_exists(user, &useridnr)) {
-			qerrorf("Error: user [%s] does not exist.\n",
-				     user);
-TRACE(TRACE_INFO, "");
+			qprintf("Error: user [%s] does not exist.\n", user);
 			result = -1;
 			goto freeall;
 		}
@@ -439,14 +434,14 @@ TRACE(TRACE_INFO, "");
 		/* Convert the password and password type into a 
 		 * fully coded format, ready for the database. */
 		if (mkpassword(user, passwd, passwdtype, passwdfile, &password, &enctype)) {
-			qerrorf("Error: unable to create a password.\n");
+			qprintf("Error: unable to create a password.\n");
 			TRACE(TRACE_ERR, "Unable to create a password");
 			result = -1;
 			goto freeall;
 		}
 		if (spasswd) {
 			if (mkpassword(user, spasswd, passwdtype, passwdfile, &spasswd_enc, &enctype)) {
-				qerrorf("Error: unable to create a security password.\n");
+				qprintf("Error: unable to create a security password.\n");
 				TRACE(TRACE_ERR, "Unable to create a security password");
 				result = -1;
 				goto freeall;
