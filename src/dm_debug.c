@@ -22,7 +22,10 @@
 
 /* 
  *
- * Debugging and memory checking functions */
+ * Debugging and memory checking functions
+ *
+ * Adds Database to the levels in RFC 5424
+ */
 
 #include "dbmail.h"
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(BSD4_4)
