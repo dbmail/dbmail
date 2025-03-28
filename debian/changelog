@@ -1,3 +1,61 @@
+dbmail (3.5.1) unstable; urgency=medium
+ * Version bump to 3.5.1
+ * Logging refactored - errorlog removed in favour of logfile
+ * dbmail.conf reorganised
+-- Alan Hicks <ahicks@p-o.co.uk>  Fri, 28 Mar 2025 00:00:00 +0000
+
+dbmail (3.5.0) unstable; urgency=medium
+ * Successfully builds on ubuntu 24.4
+ * Dockerfiles for ubuntu development, 22.4 and 24.4
+ * Tests refactored and now pass with gmime 213
+-- Alan Hicks <ahicks@p-o.co.uk>  Wed, 05 Mar 2025 00:00:00 +0000
+
+dbmail (3.5.0) unstable; urgency=medium
+ * Fresh installs automatically create database
+ * Required headername automatically added
+ * curl added to enable forwarding emails via SMTP
+ * Logging config simplified
+ * Deprecated dbmail-timsieved removed in favour of dbmail-sieved
+ * Upgrade to gmime 3 reflected in checks
+ * Checks refactored
+ * Check added before install to Dockerfile
+ * Fix a SQL syntax error when no header fields specified
+ * Reverted a memory leak
+ * Created DBMail announce newsletter
+ * mack-erel updated ‎contrib/build-centos-rpm
+ * Re-organised dbmail-util man page
+ * messageblks upgrade info added
+ * Docker alpine updates from BobRam
+ * Debian build updated
+ * Duplicate envelope inserts treated as warnings instead of errors
+ * Redundant code removed
+ * Unused variables removed
+ * Fix for sig11 null reference
+ * Inserting null data avoid if invalid parts are received
+ * Upgrading V2 schema to V3 invalid entries no longer error
+ * Message part insertion refactored
+ * flags.silent refactored for outlook clients
+ * Missing final mime boundary added
+ * Default config file listed when calling dbmail-* -h
+ * Experimental Sender Rewriting Scheme removed
+-- Alan Hicks <ahicks@p-o.co.uk>  Thu, 09 Jan 2025 00:00:00 +0000
+
+dbmail (3.5.0) unstable; urgency=medium
+ * cURL library added for SMTP
+ * Logging simplified to use keywords
+-- Alan Hicks <ahicks@p-o.co.uk>  Tue, 22 Oct 2024 00:00:00 +0100
+
+dbmail (3.5.0) unstable; urgency=medium
+ * Experimental Sender Rewriting Scheme added
+-- Alan Hicks <ahicks@p-o.co.uk>  Fri, 16 Aug 2024 00:00:00 +0100
+
+dbmail (3.5.0) unstable; urgency=medium
+  * Version bump to 3.5.0
+  * Create tables automated
+  * dbmail-timsieve without tls removed
+  * MySQL utf8mb4 moved to upgrade 35001
+ -- Alan Hicks <ahicks@p-o.co.uk>  Sat, 21 Oct 2023 13:49:37 +0100
+2024-05-20
 dbmail (3.4.1) unstable; urgency=medium
 
   * new package from dbmail main (3.4.1)

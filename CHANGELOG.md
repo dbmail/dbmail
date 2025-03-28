@@ -4,11 +4,11 @@ All notable changes to this project will be documented in this file.
 ## [3.5.1] - 2025-03-25
 - Version bump to 3.5.1
 - Logging refactored - errorlog removed in favour of logfile
-- dbmail.con reorganised
+- dbmail.conf reorganised
 
 ## [3.5.0] - 2025-03-05
 - Successfully builds on ubuntu 24.4
-- Docerfiles for ubuntu development, 22.4 and 24.4
+- Dockerfiles for ubuntu development, 22.4 and 24.4
 - Tests refactored and now pass with gmime 213
 
 ## [3.5.0] - 2025-01-09
