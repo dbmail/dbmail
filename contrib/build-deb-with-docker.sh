@@ -8,7 +8,7 @@ docker run --name dbmail-build-deb debian:stable /bin/sh -c '
           libncurses5-dev libldap2-dev libtool asciidoc xmlto po-debconf\
           default-libmysqlclient-dev libpq-dev libsqlite3-dev libsieve2-dev\
           libglib2.0-dev libzdb-dev libmhash-dev libevent-dev\
-          pkg-config libssl-dev cdbs libgmime-3.0-dev &&\
+          pkg-config libssl-dev cdbs libgmime-3.0-dev libjemalloc-dev libcurl4-openssl-dev &&\
   mkdir /build-dir &&\
   cd /build-dir &&\
   git clone -b 3.5.x https://github.com/dbmail/dbmail.git &&\
