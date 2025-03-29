@@ -11,7 +11,7 @@ docker run --name dbmail-build-deb debian:stable /bin/sh -c '
           pkg-config libssl-dev cdbs libgmime-3.0-dev &&\
   mkdir /build-dir &&\
   cd /build-dir &&\
-  git clone -b 3.4.x https://github.com/dbmail/dbmail.git &&\
+  git clone -b 3.5.x https://github.com/dbmail/dbmail.git &&\
   cd dbmail &&\
   dpkg-buildpackage -us -uc -d &&\
   cd /build-dir &&
