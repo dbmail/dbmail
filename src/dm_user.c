@@ -53,36 +53,48 @@ int do_add(const char * const user,
 	int result;
 
 	if (no_to_all) {
+		TRACE(TRACE_INFO,"Pretending to add user %s with password type %s, %" PRIu64 " bytes mailbox limit and clientid %" PRIu64 "\n",
+			user, enctype, maxmail, clientid);
 		qprintf("Pretending to add user %s with password type %s, %" PRIu64 " bytes mailbox limit and clientid %" PRIu64 "\n",
 			user, enctype, maxmail, clientid);
 		return 1;
 	}
 
+	qprintf("Adding user %s with password type %s,%" PRIu64 " "
+		"bytes mailbox limit and clientid %" PRIu64 "...\n",
+		user, enctype, maxmail, clientid);
 	TRACE(TRACE_DEBUG, "Adding user %s with password type %s,%" PRIu64 " "
-		"bytes mailbox limit and clientid %" PRIu64 "... ", 
+		"bytes mailbox limit and clientid %" PRIu64 "... ",
 		user, enctype, maxmail, clientid);
 
 	if ((result = auth_user_exists(user, &useridnr))) {
-		qerrorf("Failed: user name already exists\n");
+		qprintf("Failed: user name already exists\n");
+		TRACE(TRACE_ERR,"Failed: user name already exists");
 		return result;
 	}
 
 	if (auth_adduser(user, password, enctype, clientid, maxmail, &useridnr) < 0) {
-		qerrorf("Failed: unable to create user\n");
+		qprintf("Failed: unable to create user\n");
+		TRACE(TRACE_ERR,"Failed: unable to create user");
 		return -1;
 	}
 
-	TRACE(TRACE_DEBUG, "Ok, user added id [%" PRIu64 "]\n", useridnr);
+	qprintf("Ok, user added id [%" PRIu64 "]\n", useridnr);
+	TRACE(TRACE_DEBUG, "Ok, user added id [%" PRIu64 "]", useridnr);
 
 	/* Add an INBOX for the user. */
+	TRACE(TRACE_DEBUG, "Adding INBOX for new user... ");
 	qprintf("Adding INBOX for new user... ");
 
 	if (db_createmailbox("INBOX", useridnr, &mailbox_idnr) < 0) {
+		TRACE(TRACE_ERR, "failed... removing user... ");
 		qprintf("failed... removing user... ");
 		if (auth_delete_user(user)) {
-			qprintf("failed also.\n");
+			qprintf("also failed.\n");
+			TRACE(TRACE_ERR, "removing user also failed");
 		} else {
 			qprintf("done.\n");
+			TRACE(TRACE_ERR, "removing user done");
 		}
 		return -1;
 	}
@@ -621,6 +633,7 @@ int do_show(const char * const name)
 
 		/* show all users and their aliases */
 		users = auth_get_known_users();
+		TRACE(TRACE_INFO, "Number of users [%d]", g_list_length(users));
 		if (g_list_length(users) > 0) {
 			users = g_list_first(users);
 			while (users) {
@@ -634,16 +647,16 @@ int do_show(const char * const name)
 		g_list_free(g_list_first(users));
 
 		qprintf("\n-- forwards --\n");
+		TRACE(TRACE_INFO, "-- forwards --");
 
 		/* show all aliases with forwarding addresses */
 		aliases = auth_get_known_aliases();
 		aliases = g_list_dedup(aliases, (GCompareFunc)strcmp, TRUE);
+		TRACE(TRACE_INFO, "Number of aliases [%d]", g_list_length(aliases));
 		if (g_list_length(aliases) > 0) {
 			aliases = g_list_first(aliases);
 			while (aliases) {
 				show_alias(aliases->data, 1);
-				if (! g_list_next(aliases))
-					break;
 				aliases = g_list_next(aliases);
 			}
 			g_list_foreach(aliases,(GFunc)g_free,NULL);
@@ -675,20 +688,19 @@ static int show_alias(const char * const name, int concise)
 	result = auth_check_user_ext(name,&userids,&forwards,0);
 	
 	if (!result) {
-		qerrorf("Nothing found searching for [%s].\n", name);
+		TRACE(TRACE_INFO, "Nothing found searching for [%s]", name);
 		return 1;
 	}
 
 	if (forwards) {
+		GString *fwdlist = g_list_join(forwards,",");
+		TRACE(TRACE_DEBUG, "Forward [%s] to [%s]", name, fwdlist->str);
 		if (concise) {
-			GString *fwdlist = g_list_join(forwards,",");
 			printf("%s: %s\n", name, fwdlist->str);
-			g_string_free(fwdlist, TRUE);
 		} else {
-			GString *fwdlist = g_list_join(forwards,", ");
 			printf("forward [%s] to [%s]\n", name, fwdlist->str);
-			g_string_free(fwdlist, TRUE);
 		}
+		g_string_free(fwdlist, TRUE);
 		g_list_destroy(g_list_first(forwards));
 	}
 	
@@ -696,10 +708,12 @@ static int show_alias(const char * const name, int concise)
 	if (userids) {
 		while (userids) {
 			username = auth_get_userid(*(uint64_t *)userids->data);
+			TRACE(TRACE_DEBUG, "Deliver [%s] to [%s]", name, username);
 			if (!username) {
 				// FIXME: This is a dangling entry. These should be removed
 				// by dbmail-util. This method of identifying dangling aliases
 				// should go into maintenance.c at some point.
+				TRACE(TRACE_WARNING, "Dangling entry [%s]", username);
 			} else {
 				if (!concise) // Don't print for concise
 				printf("deliver [%s] to [%s]\n", name, username);
