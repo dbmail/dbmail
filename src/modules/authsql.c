@@ -158,8 +158,10 @@ char *auth_getencryption(uint64_t user_idnr)
 	return res;
 }
 
-
-static GList *user_get_deliver_to(const char *username)
+/**
+ * Given an email address, return the deliver_to
+ */
+static GList *user_get_deliver_to(const char *address)
 {
 	INIT_QUERY;
 	C c; R r; S s;
@@ -174,7 +176,7 @@ static GList *user_get_deliver_to(const char *username)
 	c = db_con_get();
 	TRY
 		s = db_stmt_prepare(c, query);
-		db_stmt_set_str(s, 1, username);
+		db_stmt_set_str(s, 1, address);
 
 		r = db_stmt_query(s);
 		while (db_result_next(r))
@@ -206,7 +208,7 @@ int auth_check_user_ext(const char *username, GList **userids, GList **fwds, int
 
 	if (! d) {
 		if (checks == 0) {
-			TRACE(TRACE_DEBUG, "user %s not in aliases table", username);
+			TRACE(TRACE_DEBUG, "user [%s] not in aliases table", username);
 			return 0;
 		}
 		/* found the last one, this is the deliver to

@@ -56,44 +56,45 @@ int do_showhelp(void)
 	"*** dbmail-users ***\n"
 	"Use this program to manage your DBMail users.\n"
 	"See the man page for more info. Modes of operation:\n\n"
-	"     -a user   add a user\n"
-	"     -d user   delete a user\n"
-	"     -c user   change details for a user\n"
-	"     -e user   empty all mailboxes for a user\n"
-	"     -l uspec  list information for matching users\n"
-	"     -x alias  create an external forwarding address\n"
+	"     -a --add-user=user      add a user\n"
+	"     -d --delete-user user   delete a user\n"
+	"     -c --change-user user   change details for a user\n"
+	"     -e --empty-user-mailboxes user   empty all mailboxes for a user\n"
+	"     -l --list-user user     list information for matching users\n"
+	"     -l --list-users         list information for all users\n"
+	"     -x --alias alias        create an external forwarding address\n"
 	"\nSummary of options for all modes:\n"
-	"     -w passwd specify user's password on the command line\n"
-	"     -W [file] read from a file or prompt for a user's password\n"
-	"     -p pwtype password type may be one of the following:\n"
+	"     -w --password passwd    specify user's password on the command line\n"
+	"     -W --pw-file [file]     read from a file or prompt for a user's password\n"
+	"     -p --pw-type pwtype     password type may be one of the following:\n"
 	"               plaintext, crypt, md5-hash, md5-digest, md5-base64,\n"
 	"               whirlpool, sha512, sha256, sha1, tiger\n"
 	"               each type may be given a '-raw' suffix to indicate\n"
 	"               that the password argument has already been encoded.\n"
-	"     -P [file] pull encrypted password from the shadow file\n"
-	"     -u user   new username (only useful for -c, change)\n"
-	"     -g client assign the user to a client\n"
-	"     -m max    set the maximum mail quota in <bytes>B,\n"
+	"     -P --pw-shadow [file]   pull encrypted password from the shadow file\n"
+	"     -u --user user          new username (only useful for -c, change)\n"
+	"     -g --client client      assign the user to a client\n"
+	"     -m --max-quota max      set the maximum mail quota in <bytes>B,\n"
 	"               <kbytes>K, or <mbytes>M, default in bytes\n"
 	"               specify 0 to remove any mail quota limits\n"
-	"     -s alia.. adds a list of recipient aliases\n"
-	"     -S alia.. removes a list of recipient aliases (wildcards supported)\n"
-	"     -t fwds.. adds a list of deliver-to forwards\n"
-	"     -T fwds.. removes a list of deliver-to forwards (wildcards supported)\n"
-	"     --security-password  specify a separate security fall-back password\n"
-	"     --security-action    select the security action value (default 0)\n"
-	"     --enable             enable authentication for user\n"
-	"     --disable            disable authentication for user\n"
+	"     -s --alias-add alias    adds a list of recipient aliases\n"
+	"     -S --alias-del alias    removes a list of recipient aliases (wildcards supported)\n"
+	"     -t --forwards fwds..    adds a list of deliver-to forwards\n"
+	"     -T --Forwards fwds..    removes a list of deliver-to forwards (wildcards supported)\n"
+	"     --security-password     specify a separate security fall-back password\n"
+	"     --security-action       select the security action value (default 0)\n"
+	"     --enable                enable authentication for user\n"
+	"     --disable               disable authentication for user\n"
         "\nCommon options for all DBMail utilities:\n"
-	"     -f file   specify an alternative config file\n"
-	"               Default: %s\n"
-	"     -q        quietly skip interactive prompts\n"
-	"               use twice to suppress error messages\n"
-	"     -n        show the intended action but do not perform it, no to all\n"
-	"     -y        perform all proposed actions, as though yes to all\n"
-	"     -v        verbose details\n"
-	"     -V        show the version\n"
-	"     -h        show this help message\n"
+	"     -f --config file        specify an alternative config file\n"
+	"                             Default: %s\n"
+	"     -q --quiet      quietly skip interactive prompts\n"
+	"                     use twice to suppress error messages\n"
+	"     -n --no         show the intended action but do not perform it, no to all\n"
+	"     -y --yes        perform all proposed actions, as though yes to all\n"
+	"     -v --verbose    verbose details\n"
+	"     -V --version    show the version\n"
+	"     -h --help       show this help message\n"
 	, configFile);
 
 	return 0;
@@ -101,7 +102,7 @@ int do_showhelp(void)
 
 int main(int argc, char *argv[])
 {
-	int opt = 0, opt_prev = 0;
+	int opt = 0;
 	int show_help = 0;
 	int result = 0, mode = 0, mode_toomany = 0;
 	char *user = NULL, *newuser = NULL, *userspec = NULL, *alias = NULL;
@@ -123,31 +124,48 @@ int main(int argc, char *argv[])
 	memset(&change_flags, 0, sizeof(change_flags));
 
 	/* get options */
-	opterr = 0;		/* suppress error message from getopt() */
-	while (1) {
-		static struct option long_options[] = {
-			{"security-password", required_argument, 0, 0},
-			{"security-action", required_argument, 0, 0},
-			{"enable", no_argument, 0, 0},
-			{"disable", no_argument, 0, 0},
-			{0, 0, 0, 0}
-		};
-		int option_index = 0;
+	//opterr = 0;		/* suppress error message from getopt() */
+	static struct option long_options[] = {
+		{"add-user",    required_argument, NULL, 'a'},
+		{"delete-user", required_argument, NULL, 'd'},
+		{"change-user", required_argument, NULL, 'c'},
+		{"empty-user-mailboxes", required_argument, NULL, 'e'},
+		{"list-user",   required_argument, NULL, 'l'},
+		{"list-users",  no_argument, NULL, 'l'},
+		{"alias",       required_argument, NULL, 'x'},
 
-		opt = getopt_long(argc, argv,
-				"-a:d:c:e:l::x:" /* Major modes */
+		{"password",  required_argument, NULL, 'w'},
+		{"pw-file",   required_argument, NULL, 'W'},
+		{"pw-type",   required_argument, NULL, 'p'},
+		{"pw-shadow", required_argument, NULL, 'P'},
+		{"user",      required_argument, NULL, 'u'},
+		{"client",    required_argument, NULL, 'g'},
+		{"max-quota", required_argument, NULL, 'm'},
+		{"alias-add", required_argument, NULL, 's'},
+		{"alias-del", required_argument, NULL, 'S'},
+		{"forwards",  required_argument, NULL, 't'},
+		{"Forwards",  required_argument, NULL, 'T'},
+
+		{"security-password", required_argument, 0, 0},
+		{"security-action",   required_argument, 0, 0},
+		{"enable",            no_argument, 0, 0},
+		{"disable",           no_argument, 0, 0},
+
+		{"config",    required_argument, NULL, 'f'},
+		{"quiet",     no_argument, NULL, 'q'},
+		{"no",        no_argument, NULL, 'n'},
+		{"yes",       no_argument, NULL, 'y'},
+		{"help",      no_argument, NULL, 'h'},
+		{"verbose",   no_argument, NULL, 'v'},
+		{"version",   no_argument, NULL, 'V'},
+		{NULL,        0,           NULL, 0}
+	};
+	int option_index = 0;
+	while ((opt = getopt_long(argc, argv,
+				"a:d:c:e:l::x:" /* Major modes */
 				"W::w:P::p:u:g:m:t:s:S:T:" /* Minor options */
 				"i" "f:qnyvVh" /* Common options */,
-				long_options, &option_index);
-		if (opt == -1)
-			break;
-
-		/* The initial "-" of optstring allows unaccompanied
-		 * options and reports them as the optarg to opt 1 (not '1') */
-		if (opt == 1)
-			opt = opt_prev;
-		opt_prev = opt;
-
+				long_options, &option_index)) != -1) {
 		switch (opt) {
 		/* Major modes of operation
 		 * (exactly one of these is required) */
@@ -293,7 +311,7 @@ int main(int argc, char *argv[])
 				memset(configFile, 0, sizeof(configFile));
 				strncpy(configFile, optarg, sizeof(configFile)-1);
 			} else {
-				qerrorf("dbmail-users: -f requires a filename\n\n");
+				qprintf("dbmail-users: --config requires a filename\n\n");
 				result = 1;
 			}
 			break;
@@ -330,7 +348,7 @@ int main(int argc, char *argv[])
 			break;
 
 		default:
-			printf("unrecognized option [%c]\n", optopt); 
+			printf("unrecognized option [%c]\n", opt);
 			show_help = 1;
 			break;
 		}
@@ -339,7 +357,16 @@ int main(int argc, char *argv[])
 		 * it's time to free memory and bail out. */
 		if (result)
 			goto freeall;
-	}	
+    }
+
+    if (optind < argc) {
+		qprintf("unrecognized option(s): ");
+        while (optind < argc) {
+            qprintf ("[%s] ", argv[optind++]);
+        }
+        qprintf ("\n");
+		show_help = 1;
+    }
 
 	if (passwdtype && change_flags.newspasswd && (! passwd)) {
 		printf("\nError:\nYou cannot set the security-password and encryption-type "
@@ -356,7 +383,6 @@ int main(int argc, char *argv[])
 	/* If nothing is happening, show the help text. */
 	if (!mode || mode_toomany || show_help || (no_to_all && yes_to_all)) {
 		do_showhelp();
-		result = 1;
 		goto freeall;
 	}
 
@@ -366,7 +392,7 @@ int main(int argc, char *argv[])
 		result = -1;
 		goto freeall;
 	}
-                
+
 	SetTraceLevel("USERS");
 	GetDBParams();
 
@@ -431,7 +457,7 @@ int main(int argc, char *argv[])
 		 * the user already exists, get their password type. */
 		if (!passwdtype && useridnr)
 			passwdtype = auth_getencryption(useridnr);
-		/* Convert the password and password type into a 
+		/* Convert the password and password type into a
 		 * fully coded format, ready for the database. */
 		if (mkpassword(user, passwd, passwdtype, passwdfile, &password, &enctype)) {
 			qprintf("Error: unable to create a password.\n");
@@ -496,8 +522,13 @@ int main(int argc, char *argv[])
 		result = do_empty(useridnr);
 		break;
 	case 'l':
-		qprintf("Listing information for user [%s]...\n", user);
-		TRACE(TRACE_INFO, "Changing user [%s]...", user);
+		if (userspec) {
+			qprintf("Listing information for user [%s]...\n", userspec);
+			TRACE(TRACE_INFO, "Listing information for user [%s]...", userspec);
+		} else {
+			qprintf("Listing information for all users\n");
+			TRACE(TRACE_INFO, "Listing information for all users");
+		}
 		result = do_show(userspec);
 		break;
 	case 'x':
@@ -528,10 +559,8 @@ freeall:
 
 	if (result) {
 		qprintf("Command failed, see logfile for details.\n");
-		TRACE(TRACE_INFO, "Command failed, see logfile for details.");
 	} else {
 		qprintf("Command succeeded.\n");
-		TRACE(TRACE_INFO, "Command succeeded.");
 	}
 	return result;
 }

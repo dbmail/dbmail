@@ -223,14 +223,15 @@ static int authldap_connect(void)
 			version = LDAP_VERSION3;
 			if (strlen(_ldap_cfg.uri)) {
 				TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] version [%d]", _ldap_cfg.uri, _ldap_cfg.version_int);
-				if ((ret = ldap_initialize(&_ldap_conn, _ldap_cfg.uri) != LDAP_SUCCESS)) 
-					TRACE(TRACE_WARNING, "ldap_initialize() failed %d", ret);
+				if ((ret = ldap_initialize(&_ldap_conn, _ldap_cfg.uri) != LDAP_SUCCESS)) {
+					TRACE(TRACE_EMERG, "ldap_initialize() failed %s", strerror(ret));
+				}
 			} else {
 				char *uri = g_strdup_printf("ldap://%s:%d", _ldap_cfg.hostname, _ldap_cfg.port_int);
 				TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] version [%d]", uri, _ldap_cfg.version_int);
-				if ((ret = ldap_initialize(&_ldap_conn, uri)) != LDAP_SUCCESS) 
-					TRACE(TRACE_EMERG, "ldap_initialize() failed [%d]", ret);
-
+				if ((ret = ldap_initialize(&_ldap_conn, uri)) != LDAP_SUCCESS) {
+					TRACE(TRACE_EMERG, "ldap_initialize() failed [%s]", strerror(ret));
+				}
 				g_free(uri);
 			}
 			break;
@@ -866,7 +867,7 @@ GList * auth_get_known_aliases(void)
  * 
  * returns the number of occurences. 
  */
-int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int checks)
+int auth_check_user_ext(const char *userid, GList **userids, GList **fwds, int checks)
 {
 	int occurences = 0;
 	uint64_t id, *uid;
@@ -885,7 +886,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 		return 0;
 	}
 
-	TRACE(TRACE_DEBUG, "checking user [%s] in alias table", address);
+	TRACE(TRACE_DEBUG, "checking user [%s] in ldap", userid);
  	if (strlen(_ldap_cfg.query_string)==0) {
  		/* build a mail filter, with multiple attributes, if needed */
  		GString *f = g_string_new(_ldap_cfg.field_mail);
@@ -897,7 +898,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
  		GList *l = NULL;
  		searchlist = g_list_first(searchlist);
  		while(searchlist) {
- 			g_string_printf(t,"%s=%s",(char *)searchlist->data,address);
+ 			g_string_printf(t,"%s=%s",(char *)searchlist->data,userid);
  			l = g_list_append(l,g_strdup(t->str));
  			if(!g_list_next(searchlist))
  				break;
@@ -916,7 +917,7 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
  		GString *q = g_string_new("");
  		for (i = 0; _ldap_cfg.query_string[i] != '\0'; i++) {
  			if (_ldap_cfg.query_string[i]=='%' && _ldap_cfg.query_string[i+1] && _ldap_cfg.query_string[i+1]=='s') {
- 				g_string_append(q,address);
+ 				g_string_append(q,userid);
  				i++;
  			} else {
  				g_string_append_c(q,_ldap_cfg.query_string[i]);
@@ -937,19 +938,19 @@ int auth_check_user_ext(const char *address, GList **userids, GList **fwds, int 
 			 * but checks needs to be bigger then 0 because
 			 * else it could be the first query failure */
 
-			id = strtoull(address, &endptr, 10);
+			id = strtoull(userid, &endptr, 10);
 			if (*endptr == 0) { /* numeric deliver-to --> this is a userid */
 				TRACE(TRACE_DEBUG, "adding [%" PRIu64 "] to userids", id);
 				uid = g_new0(uint64_t,1);
 				*uid = id;
 				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
 			} else {
-				TRACE(TRACE_DEBUG, "adding [%s] to forwards", address);
-				*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(address));
+				TRACE(TRACE_DEBUG, "adding [%s] to forwards", userid);
+				*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(userid));
 			}
 			return 1;
 		} else {
-			TRACE(TRACE_DEBUG, "user [%s] not in aliases table", address);
+			TRACE(TRACE_DEBUG, "user [%s] not in ldap aliases", userid);
 			dm_ldap_freeresult(entlist);
 			return 0;
 		}
