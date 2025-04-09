@@ -100,35 +100,39 @@ int do_showhelp(void) {
 //	0........10........20........30........40........50........60........70........80
 	"Use this program to maintain your DBMail database.\n"
 	"See the man page for more info. Summary:\n\n"
-	"     -a        perform all checks (in this release: -ctubpds)\n"
-	"     -c        clean up database (optimize/vacuum)\n"
-	"     -t        test for message integrity\n"
-	"     -b        body/header/envelope cache check\n"
-	"     -e        empty envelope cache check\n"
-	"     -p        purge messages have the DELETE status set\n"
-	"     -d        set DELETE status for deleted messages\n"
-	"     -s        remove dangling/invalid aliases and forwards\n"
-	"     -r time   clear the replycache used for autoreply/vacation\n"
-	"     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
-	"               the time syntax is [<hours>h][<minutes>m]\n"
-	"               valid examples: 72h, 4h5m, 10m\n"
-	"     -M        migrate legacy 2.2.x messageblks to mimeparts table\n"
-	"     -m limit  limit migration to [limit] number of physmessages. Default 10000 per run\n"
-	"     --rehash  Rebuild hash keys for stored messages\n"
-	"     --erase days  Delete messages older than date in INBOX/Trash \n"
-	"     --move  days  Move messages from INBOX to INBOX/Trash\n"
-	"     --inbox name  Inbox folder to move from, used in conjunction with --move\n"
-	"     --trash name  Trash folder to move to, used in conjunction with --move\n"
+	"     -a, --all-checks         perform all checks (in this release: -ctubpds)\n"
+	"     -c, --clean-database     clean up database (optimize/vacuum)\n"
+	"     -t, --test-integrity     test for message integrity\n"
+	"     -b, --check-body         body/header/envelope cache check\n"
+	"     -e, --check-empty-cache  empty envelope cache check\n"
+	"     -p, --purge-deleted      purge messages have the DELETE status set\n"
+	"     -d, --set-deleted        set DELETE status for deleted messages\n"
+	"     -s, --remove-invalid-aliases"
+	"                              remove dangling/invalid aliases and forwards\n"
+	"     -r, --clear-replycache time   clear the replycache used for autoreply/vacation\n"
+	"     -l, --clear-iplog time   clear the IP log used for IMAP/POP-before-SMTP\n"
+	"                              the time syntax is [<hours>h][<minutes>m]\n"
+	"                              valid examples: 72h, 4h5m, 10m\n"
+	"     -M, --migrate-legacy     migrate legacy 2.2.x messageblks to mimeparts table\n"
+	"     -m, --migrate-limit limit\n"
+	"                              limit migration to [limit] number of\n"
+	"                              physmessages. Default 10000 per run\n"
+	"     --rehash                 Rebuild hash keys for stored messages\n"
+	"     --erase days             Delete messages older than date in INBOX/Trash \n"
+	"     --move  days             Move messages from INBOX to INBOX/Trash\n"
+	"     --inbox name             Inbox folder to move from, used in conjunction with --move\n"
+	"     --trash name             Trash folder to move to, used in conjunction with --move\n"
 	"\nCommon options for all DBMail utilities:\n"
-	"     -f file   specify an alternative config file\n"
+	"     -f, --config file  specify an alternative config file\n"
 	"               Default: %s\n"
-	"     -q        quietly skip interactive prompts\n"
-	"               use twice to suppress error messages\n"
-	"     -n        show the intended action but do not perform it, no to all\n"
-	"     -y        perform all proposed actions, as though yes to all\n"
-	"     -v        verbose details\n"
-	"     -V        show the version\n"
-	"     -h        show this help message\n"
+	"     -q, --quiet        quietly skip interactive prompts\n"
+	"                        use twice to suppress error messages\n"
+	"     -n, --no           show the intended action but do not perform it,\n"
+	"                        no to all\n"
+	"     -y, --yes          perform all proposed actions, yes to all\n"
+	"     -v, --verbose      verbose details\n"
+	"     -V, --version      show the version\n"
+	"     -h, --help         show this help message\n"
 	, configFile);
 
 	return 0;
@@ -146,13 +150,31 @@ int main(int argc, char *argv[])
 	int is_header = 0;
 	int migrate = 0, migrate_limit = 10000;
 	static struct option long_options[] = {
-		{ "rehash", 0, 0, 0 },
-		{ "move", 1, 0, 0 },
-		{ "erase", 1, 0, 0 },
-		{ "trash", 1, 0, 0 },
-		{ "inbox", 1, 0, 0 },
-		{ "upgrade", 0, 0, 0 },
-		{ 0, 0, 0, 0 }
+		{"all-checks", no_argument, NULL, 'a'},
+		{"clean-database", no_argument, NULL, 'c'},
+		{"test-integrity", no_argument, NULL, 't'},
+		{"check-body", no_argument, NULL, 'b'},
+		{"check-empty-cache", no_argument, NULL, 'e'},
+		{"purge-deleted", no_argument, NULL, 'p'},
+		{"set-deleted", no_argument, NULL, 'd'},
+		{"remove-invalid-aliases", no_argument, NULL, 's'},
+		{"clear-replycache", required_argument, NULL, 'r'},
+		{"clear-iplog", required_argument, NULL, 't'},
+		{"migrate-legacy", no_argument, NULL, 'M'},
+		{"migrate-limit", required_argument, 0, 'm'},
+		{"rehash", no_argument, NULL, 0},
+		{"move", required_argument, NULL, 0},
+		{"erase", required_argument, NULL, 0},
+		{"trash", required_argument, NULL, 0},
+		{"inbox", required_argument, NULL, 0},
+		{"config",    required_argument, NULL, 'f'},
+		{"quiet",     no_argument, NULL, 'q'},
+		{"no",        no_argument, NULL, 'n'},
+		{"yes",       no_argument, NULL, 'y'},
+		{"help",      no_argument, NULL, 'h'},
+		{"verbose",   no_argument, NULL, 'v'},
+		{"version",   no_argument, NULL, 'V'},
+		{0, 0, 0, 0}
 	};
 	int opt_index = 0;
 	int opt;

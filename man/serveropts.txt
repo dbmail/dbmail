@@ -2,7 +2,7 @@
 OPTIONS
 -------
 
--p pidfile::
+-p, --pidfile pidfile::
   Specify an alternate pid file. By default the daemons use dbmail-<daemon>.pid
   for their pid files, saving them in the directory specified by the
   pid_directory entry in dbmail.conf or if that does not exist the value set by
@@ -10,13 +10,13 @@ OPTIONS
   cannot be written. Use the -p pidfile option to place the pid file in
   your system's preferred location.
 
--n::
+-n, --no-daemon::
   No daemonize: inetd mode. The program remains attached to the console from
-  which it was started and will read and write on stdin/stdout. This is quite
-  useful for debugging when combined with the -v option. It is also used for
-  running from (x)inetd.
+  which it was started and will read and write on stdin/stdout. This is useful
+  for debugging when combined with the -v option. It is also used for running
+  from (x)inetd.
 
--D::
-  No daemonize: init mode. The program remains attached to the console and will
-  listen on the network sockets defined in dbmail.conf. This is mostly used 
-  when running from inittab or under the control of daemontools.
+-D, --inetd::
+  No daemonize: The program remains attached to the console and will listen on
+  the network sockets defined in dbmail.conf.
+  This is mostly used for xinetd (Extended Internet Service Daemon)

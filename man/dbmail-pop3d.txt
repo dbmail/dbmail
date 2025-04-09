@@ -4,12 +4,16 @@ DBMAIL-POP3D(8)
 
 NAME
 ----
-dbmail-pop3d - provides access to the DBMail system to client support-
-ing Post Office Protocol, POP3, as specified in RFC 1939.
+dbmail-pop3d - POP3 daemon providing Post Office Protocol, POP3, as specified
+in RFC 1939.
 
 SYNOPSIS
 --------
-dbmail-pop3d [-f configfile] [-p pidfile] [-nvVh]
+....
+dbmail-pop3d [--config configfile] [--pidfile pidfile]
+dbmail-pop3d [--config configfile] [--pidfile pidfile] --no-daemon
+dbmail-pop3d [--config configfile] [--pidfile pidfile] --inetd
+....
 
 DESCRIPTION
 -----------

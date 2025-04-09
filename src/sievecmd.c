@@ -39,9 +39,51 @@ static int do_edit(uint64_t user_idnr, char *name);
 static int do_insert(uint64_t user_idnr, char *name, char *source);
 static int do_cat(uint64_t user_idnr, char *name, FILE *out);
 
+int do_showhelp(void)
+{
+	printf(
+	"*** dbmail-sievecmd ***\n"
+//	Try to stay under the standard 80 column width
+//	0........10........20........30........40........50........60........70........80
+	"Use this program to manage your users' Sieve scripts.\n"
+	"See the man page for more info. Summary:\n\n"
+	"  -u, --user username        Username of script user \n"
+	"  -l, --list                 List scripts belonging to user \n"
+	"  -a, --activate scriptname  Activate the named script \n"
+	"                             (only one script can be active; \n"
+	"                             deactivates any others) \n"
+	"  -d, --deactivate scriptname Deactivate the named script \n"
+	"  -c, --show scriptname      Show the contents of the named script\n"
+	"  -e, --edit scriptname      Edit the contents of the named script\n"
+	"                             (if no script is given, the active \n"
+	"                             script is shown) \n"
+	"  -i, --insert file          Insert the named script from file \n"
+	"                             (a single dash, -, indicates input \n"
+	"                             from STDIN) \n"
+	"  -r, --remove scriptname    Remove the named script \n"
+	"                             (if script was active, no script is \n"
+	"                             active after deletion) \n"
+
+	"\nCommon options for all DBMail utilities:\n"
+	"  -f, --config file  specify an alternative config file\n"
+	"                     Default: %s\n"
+	"  -q, --quiet        quietly skip interactive prompts\n"
+	"                     use twice to suppress error messages\n"
+	"  -n, --no           show the intended action but do not perform it, no to all\n"
+	"  -y, --yes          perform all proposed actions, as though yes to all\n"
+	"  -v, --verbose      verbose details\n"
+	"  -V, --version      show the version\n"
+	"  -h, --help         show this help message\n"
+	, configFile);
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
-	int res = 0, opt = 0, opt_prev = 0;
+	int opt = 0;
+	int option_index = 0;
+	int res = 0;
 	uint64_t user_idnr = 0;
 	char *user_name = NULL;
 	char *script_name = NULL;
@@ -57,15 +99,31 @@ int main(int argc, char *argv[])
 	setvbuf(stdout, 0, _IONBF, 0);
 
 	/* get options */
-	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv,
-		"-a::d::i:c::r:u:le::" /* Major modes */
-		/*"i"*/ "f:qnyvVh" /* Common options */ )) != -1) {
-		/* The initial "-" of optstring allows unaccompanied
-		 * options and reports them as the optarg to opt 1 (not '1') */
-		if (opt == 1)
-			opt = opt_prev;
-		opt_prev = opt;
+	static struct option long_options[] = {
+		{"user", required_argument, NULL, 'u'},
+		{"list", no_argument, NULL, 'l'},
+		{"activate", required_argument, NULL, 'a'},
+		{"deactivate", required_argument, NULL, 'd'},
+		{"show", required_argument, NULL, 'c'},
+		{"edit", required_argument, NULL, 'e'},
+		{"insert", required_argument, NULL, 'i'},
+		{"remove", required_argument, NULL, 'r'},
+
+		{"config",    required_argument, NULL, 'f'},
+		{"quiet",     no_argument, NULL, 'q'},
+		{"no",        no_argument, NULL, 'n'},
+		{"yes",       no_argument, NULL, 'y'},
+		{"help",      no_argument, NULL, 'h'},
+		{"verbose",   no_argument, NULL, 'v'},
+		{"version",   no_argument, NULL, 'V'},
+		{NULL,        0,           NULL, 0}
+	};
+	/* Check for commandline options. */
+	opterr = 0; /* suppress error message from getopt_log() */
+	while ((opt = getopt_long(argc, argv,
+		"a::d::i:c::r:u:le::" /* Major modes */
+		"f:qvVh", /* Common options */
+		long_options, &option_index)) != -1) {
 
 		switch (opt) {
 		case -1:
@@ -128,7 +186,7 @@ int main(int argc, char *argv[])
 				memset(configFile, 0, sizeof(configFile));
 				strncpy(configFile, optarg, sizeof(configFile)-1);
 			} else {
-				qerrorf("dbmail-users: -f requires a filename\n\n");
+				qprintf("dbmail-users: -f requires a filename\n\n");
 				return 1;
 			}
 			break;
@@ -191,33 +249,35 @@ int main(int argc, char *argv[])
 	}
 
 	/* read the config file */
-        if (config_read(configFile) == -1) {
-                qerrorf("Failed. Unable to read config file %s\n",
-                        configFile);
-                res = -1;
-                goto mainend;
-        }
+	if (config_read(configFile) == -1) {
+		qprintf("Failed. Unable to read config file %s\n",
+				configFile);
+		res = -1;
+		goto mainend;
+	}
                 
 	SetTraceLevel("DBMAIL");
 	GetDBParams();
 
+	TRACE(TRACE_DEBUG,"Hello [%s]", configFile);
+
 	/* Open database connection */
 	if (db_connect() != 0) {
-		qerrorf("Failed. Could not connect to database (check log)\n");
+		qprintf("Failed. Could not connect to database (check log)\n");
 		g_free(user_name);
 		return -1;
 	}
 
 	/* Open authentication connection */
 	if (auth_connect() != 0) {
-		qerrorf("Failed. Could not connect to authentication (check log)\n");
+		qprintf("Failed. Could not connect to authentication (check log)\n");
 		g_free(user_name);
 		return -1;
 	}
 
 	/* Retrieve the user ID number */
 	if (! auth_user_exists(user_name, &user_idnr)) {
-		qerrorf("User [%s] does not exist!\n", user_name);
+		qprintf("User [%s] does not exist!\n", user_name);
 		res = -1;
 		goto mainend;
 	}
@@ -255,12 +315,12 @@ int main(int argc, char *argv[])
 int do_activate(uint64_t user_idnr, char *name)
 {
 	if (!name) {
-		qerrorf("Must give the name of a script to activate.\n");
+		qprintf("Must give the name of a script to activate.\n");
 		return -1;
 	}
 
 	if (! dm_sievescript_activate(user_idnr, name)) {
-		qerrorf("Error activating script [%s].\n"
+		qprintf("Error activating script [%s].\n"
 		       "It is possible that no script is currently active!\n",
 		       name);
 		return -1;
@@ -278,12 +338,12 @@ int do_deactivate(uint64_t user_idnr, char *name)
 
 	if (!name) {
 		if (dm_sievescript_get(user_idnr, &scriptname)) {
-			qerrorf("Database error when fetching active script.\n");
+			qprintf("Database error when fetching active script.\n");
 			return -1;
 		}
 		
 		if (scriptname == NULL) {
-			qerrorf("No active script found.\n");
+			qprintf("No active script found.\n");
 			return -1;
 		}
 
@@ -291,7 +351,7 @@ int do_deactivate(uint64_t user_idnr, char *name)
 	}
 
 	if (! dm_sievescript_deactivate(user_idnr, name)) {
-		qerrorf("Error deactivating script [%s].\n", name);
+		qprintf("Error deactivating script [%s].\n", name);
 		return -1;
 	}
 	qprintf("Script [%s] is now deactivated."
@@ -313,47 +373,52 @@ int do_edit(uint64_t user_idnr, char *name)
 	char *scriptname = NULL;
 	struct stat stat_before, stat_after;
 
+	TRACE(TRACE_DEBUG,"User [%lu] Script [%s]", user_idnr, name);
+
 	if (!name) {
 		if (dm_sievescript_get(user_idnr, &scriptname)) {
-			qerrorf("Database error when fetching active script!\n");
+			qprintf("Database error when fetching active script!\n");
 			ret = 1;
 			goto cleanup;
 		}
 		
 		if (scriptname == NULL) {
-			qerrorf("No active script found!\n");
+			qprintf("No active script found!\n");
 			ret = 1;
 			goto cleanup;
 		}
 
 		name = scriptname;
 	}
+	TRACE(TRACE_DEBUG,"Using script [%s]", scriptname);
 
 	/* Check for the EDITOR environment variable. */
 	editor = getenv("EDITOR");
 
 	if (!editor) {
-		qerrorf("No EDITOR environment variable.\n");
+		qprintf("No EDITOR environment variable.\n");
 		ret = 1;
 		goto cleanup;
 	}
 
 	/* Open a temp file. */
 	if (!(tmp = tempnam(NULL, "dbmail"))) {
-		qerrorf("Could not make temporary file name: %s\n", strerror(errno));
+		qprintf("Could not make temporary file name: %s\n", strerror(errno));
 		ret = 1;
 		goto cleanup;
 	}
+	TRACE(TRACE_DEBUG,"Using temp filename [%s]", tmp);
 
 	if (!(ftmp = fopen(tmp, "w+"))) {
-		qerrorf("Could not open temporary file [%s]: %s\n", tmp, strerror(errno));
+		qprintf("Could not open temporary file [%s]: %s\n", tmp, strerror(errno));
+		TRACE(TRACE_DEBUG,"Unable to open [%s]: %s", tmp, strerror(errno));
 		ret = 1;
 		goto cleanup;
 	}
 
 	/* do_cat the script. */
 	if (do_cat(user_idnr, name, ftmp)) {
-		qerrorf("Could not dump script [%s] to temporary file.\n", name);
+		qprintf("Could not dump script [%s] to temporary file.\n", name);
 		ret = 1;
 		goto cleanup;
 	}
@@ -365,14 +430,15 @@ int do_edit(uint64_t user_idnr, char *name)
 	/* Call the editor. */
 	editor_cmd = g_strdup_printf("%s %s", editor, tmp);
 	if ((editor_val = system(editor_cmd))) {
-		qerrorf("Execution of EDITOR [%s] returned non-zero [%d].\n", editor, editor_val);
+		qprintf("Execution of EDITOR [%s] returned non-zero [%d].\n", editor, editor_val);
+		TRACE(TRACE_DEBUG,"Execution of EDITOR [%s] returned non-zero [%d]", editor, editor_val);
 		ret = 1;
 		goto cleanup;
 	}
 
 	if (fstat(fileno(ftmp), &stat_after) == -1) {
 		int serr = errno;
-		qerrorf("Stat failed: [%s]", strerror(serr));
+		qprintf("Stat failed: [%s]", strerror(serr));
 		ret = 1;
 		goto cleanup;
 	}
@@ -381,6 +447,7 @@ int do_edit(uint64_t user_idnr, char *name)
 	if ((stat_before.st_mtime == stat_after.st_mtime)
 	 && (stat_before.st_size == stat_after.st_size)) {
 		qprintf("File not modified, canceling.\n");
+		TRACE(TRACE_DEBUG,"File not modified, canceling");
 		ret = 0;
 		goto cleanup;
 	}
@@ -396,13 +463,16 @@ int do_edit(uint64_t user_idnr, char *name)
 			sprintf(dbmail_invalid_file, "dbmail-invalid.%d.sieve", i);
 			if (stat(dbmail_invalid_file, &stat_inv)) {
 				/* Try to rename the tmp file to this unused name. */
-				if (rename(tmp, dbmail_invalid_file) == 0)
+				if (rename(tmp, dbmail_invalid_file) == 0) {
 					break;
-				else
-					qerrorf("Could not save script to [%s]: %s\n", dbmail_invalid_file, strerror(errno));
+				} else {
+					TRACE(TRACE_DEBUG,"Could not save script to [%s]: %s", dbmail_invalid_file, strerror(errno));
+					qprintf("Could not save script to [%s]: %s\n", dbmail_invalid_file, strerror(errno));
+				}
 			}
 		}
-		qerrorf("Saved script to [%s]\n", dbmail_invalid_file);
+		TRACE(TRACE_DEBUG,"Saved script to [%s]\n", dbmail_invalid_file);
+		qprintf("Saved script to [%s]\n", dbmail_invalid_file);
 	}
 
 	/* Ok, all done. */
@@ -429,24 +499,24 @@ int do_cat(uint64_t user_idnr, char *name, FILE *out)
 		res = dm_sievescript_get(user_idnr, &scriptname);
 
 	if (res != 0) {
-		qerrorf("Database error when fetching active script!\n");
+		qprintf("Database error when fetching active script!\n");
 		return -1;
 	}
 	
 	if (scriptname == NULL) {
-		qerrorf("No active script found!\n");
+		qprintf("No active script found!\n");
 		return -1;
 	}
 
 	res = dm_sievescript_getbyname(user_idnr, scriptname, &buf);
 
 	if (res != 0) {
-		qerrorf("Database error when fetching script!\n");
+		qprintf("Database error when fetching script!\n");
 		return -1;
 	}
 	
 	if (buf == NULL) {
-		qerrorf("Script not found!\n");
+		qprintf("Script not found!\n");
 		return -1;
 	}
 
@@ -518,11 +588,11 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 		was_found = 1;
 	}
 	if (res != 0) {
-		qerrorf("Could not determine if a script by that name already exists.\n");
+		qprintf("Could not determine if a script by that name already exists.\n");
 		return -1;
 	}
 	if (was_found && !yes_to_all) {
-		qerrorf("A script by that name already exists. Use -y option to overwrite it.\n");
+		qprintf("A script by that name already exists. Use -y option to overwrite it.\n");
 		return -1;
 	}
 
@@ -534,7 +604,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 		file = fopen(source, "r");
 
 	if (!file) {
-		qerrorf("Could not open file [%s]: %s\n",
+		qprintf("Could not open file [%s]: %s\n",
 			optarg, strerror(errno));
 		return -1;
 	}
@@ -543,7 +613,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 	res = read_from_stream(file, &buf, -1);
 	fclose(file);
 	if (res != 0) {
-		qerrorf("Error reading in your script!\n");
+		qprintf("Error reading in your script!\n");
 		return -1;
 	}
 
@@ -551,7 +621,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 	res = dm_sievescript_add(user_idnr, "@!temp-script!@", buf);
 	g_free(buf);
 	if (res != 0) {
-		qerrorf("Error inserting temporary script into the database!\n");
+		qprintf("Error inserting temporary script into the database!\n");
 		return -1;
 	}
 
@@ -576,7 +646,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 		dm_sievescript_delete(user_idnr, "@!temp-script!@");
 		return -1;
 	} else if (res != 0) {
-		qerrorf("Error inserting script [%s] into the database!\n",
+		qprintf("Error inserting script [%s] into the database!\n",
 		       name);
 		dm_sievescript_delete(user_idnr, "@!temp-script!@");
 		return -1;
@@ -598,7 +668,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 int do_remove(uint64_t user_idnr, char *name)
 {
 	if (! dm_sievescript_delete(user_idnr, name)) {
-		qerrorf("Error deleting script [%s].\n", name);
+		qprintf("Error deleting script [%s].\n", name);
 		return -1;
 	}
 
@@ -613,7 +683,7 @@ int do_list(uint64_t user_idnr)
 	GList *scriptlist = NULL;
 
 	if (dm_sievescript_list(user_idnr, &scriptlist) < 0) {
-		qerrorf("Error retrieving Sieve script list.\n");
+		qprintf("Error retrieving Sieve script list.\n");
 		return -1;
 	}
 
@@ -640,46 +710,3 @@ int do_list(uint64_t user_idnr)
 
 	return 0;
 }
-
-
-int do_showhelp(void)
-{
-	printf(
-	"*** dbmail-sievecmd ***\n"
-//	Try to stay under the standard 80 column width
-//	0........10........20........30........40........50........60........70........80
-	"Use this program to manage your users' Sieve scripts.\n"
-	"See the man page for more info. Summary:\n\n"
-	"     -u username            Username of script user \n"
-	"     -l                     List scripts belonging to user \n"
-	"     -a scriptname          Activate the named script \n"
-	"                            (only one script can be active; \n"
-	"                             deactivates any others) \n"
-	"     -d [scriptname]        Deactivate the named script \n"
-	"     -c [scriptname]        Print the contents of the named script\n"
-	"     -e [scriptname]        Edit the contents of the named script\n"
-	"                            (if no script is given, the active \n"
-	"                             script is printed) \n"
-	"     -i scriptname file     Insert the named script from file \n"
-	"                            (a single dash, -, indicates input \n"
-	"                             from STDIN) \n"
-	"     -r scriptname          Remove the named script \n"
-	"                            (if script was active, no script is \n"
-	"                             active after deletion) \n"
-
-        "\nCommon options for all DBMail utilities:\n"
-	"     -f file   specify an alternative config file\n"
-	"               Default: %s\n"
-	"     -q        quietly skip interactive prompts\n"
-	"               use twice to suppress error messages\n"
-	"     -n        show the intended action but do not perform it, no to all\n"
-	"     -y        perform all proposed actions, as though yes to all\n"
-	"     -v        verbose details\n"
-	"     -V        show the version\n"
-	"     -h        show this help message\n"
-	, configFile);
-
-	return 0;
-}
-
-

@@ -4,12 +4,16 @@ DBMAIL-LMTPD(8)
 
 NAME
 ----
-dbmail-lmtpd - receive messages from an MTA supporting the Lightweight
-Mail Transport Protocol, as specified in RFC 2033.
+dbmail-lmtpd - The LMTP daemon receive messages from an MTA supporting the
+Lightweight Mail Transport Protocol, as specified in RFC 2033.
 
 SYNOPSIS
 --------
-dbmail-lmtpd [-f configfile] [-p pidfile] [-nvVh]
+....
+dbmail-lmtpd [--config configfile] [--pidfile pidfile]
+dbmail-lmtpd [--config configfile] [--pidfile pidfile] --no-daemon
+dbmail-lmtpd [--config configfile] [--pidfile pidfile] --inetd
+....
 
 DESCRIPTION
 -----------

@@ -8,7 +8,12 @@ dbmail-httpd - speaks the HTTP-1.1 protocol
 
 SYNOPSIS
 --------
-dbmail-httpd [-f configfile] [-p pidfile] [-nvVh]
+....
+dbmail-httpd [--config configfile] [--pidfile pidfile]
+dbmail-httpd [--config configfile] [--pidfile pidfile] --no-daemon
+dbmail-httpd [--config configfile] [--pidfile pidfile] --inetd
+....
+
 
 DESCRIPTION
 -----------

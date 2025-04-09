@@ -3,13 +3,16 @@ DBMAIL-DELIVER(1)
 
 NAME
 ----
-dbmail-deliver - inserts messages into the DBMail mailsystem.
+dbmail-deliver - inserts messages into DBMail.
 
 
 SYNOPSIS
 --------
-dbmail-deliver [-t headerfield] [-d addresses] [-u usernames] [-m|-M mailboxname]
-   [-r return path] [-f configFile]
+....
+dbmail-deliver [common options] --to-address address [options]
+dbmail-deliver [common options] --to-header headerfield [options]
+dbmail-deliver [common options] --to-user usernames [options]
+....
 
 DESCRIPTION
 -----------
@@ -19,34 +22,33 @@ any MTA into the DBMail mailsystem. The program reads from standard input.
 
 OPTIONS
 -------
--t headerfield::
-  Deliver messages to the recipient MIME header specified in
-  headerfield. The default header to use is the "Delivered-To:"
-  header.
-
--d addresses...::
+-d, --to-address addresses...::
   Deliver messages to the recipients specified by addresses. This
   option is mostly used for delivery from an MTA. Separate multiple
   addresses by spaces.
 
--u usernames...::
+-t, --to-header headerfield::
+  Deliver messages to the recipient MIME header specified in
+  headerfield. The default header to use is the "Delivered-To:"
+  header. The headerfield should be lower case e.g. delivered-to
+
+-u, --to-user usernames...::
   Deliver messages straight to the given username.
   Separate multiple usernames with spaces.
 
--m mailboxname::
+-m, --mailbox mailboxname::
   Deliver messages to mailbox mailboxname of the recipient. If
   this mailbox does not exist yet, it is created. Sieve scripts
   will be run normally, possibly altering the destination mailbox.
 
--M mailboxname::
+-M, --mailbox-force mailboxname::
   Deliver messages to mailbox mailboxname of the recipient. If
   this mailbox does not exist yet, it is created. Sieve scripts
   are not run. Permission checks are not performed for mailbox creation
   or message delivery.
 
--r returnpath::
+-r, return-path returnpath::
   Set return path for bounces and other error reports to return path.
-
 
 include::commonopts.txt[]
 

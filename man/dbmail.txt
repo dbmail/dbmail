@@ -4,26 +4,28 @@ Author
 
 NAME
 ----
-dbmail - the Database Mailer, is a suite of mail storage and
-retrieval programs centered around a database backend.
+dbmail - DBMail is a highly available Message Delivery Agent speaking IMAP,
+POP, ManageSieve and LMTP using industry standard PostgreSQL, MySQL and
+Oracle for secure scaleable storage.
 
 SYNOPSIS
 --------
-See one of the following man pages for more information about the components
-of a DBMail system:
+The following man pages offer information about the components of DBMail:
 
 |==========================================================================
-| Configuration file      | link:dbmail.conf.html[dbmail.conf(5)]
-| Deliver mail            | link:dbmail-deliver.html[dbmail-deliver(1)]
-| Manage user accounts    | link:dbmail-users.html[dbmail-users(8)]
-| Export mailbox contents | link:dbmail-export.html[dbmail-export(8)]
-| Manage Sieve scripts    | link:dbmail-sievecmd.html[dbmail-sievecmd(8)]
-| Maintain health         | link:dbmail-util.html[dbmail-util(8)]
-| IMAP daemon             | link:dbmail-imapd.html[dbmail-imapd(8)]
-| POP3 daemon             | link:dbmail-pop3d.html[dbmail-pop3d(8)]
-| LMTP daemon             | link:dbmail-lmtpd.html[dbmail-lmtpd(8)]
-| HTTP daemon             | link:dbmail-httpd.html[dbmail-httpd(8)]
-| ManageSieve daemon      | link:dbmail-sieved.html[dbmail-sieved(8)]
+| Configuration file      | dbmail.conf(5)
+| Daemons                 |
+| HTTP daemon             | dbmail-httpd(8)
+| IMAP daemon             | dbmail-imapd(8)
+| LMTP daemon             | dbmail-lmtpd(8)
+| POP3 daemon             | dbmail-pop3d(8)
+| ManageSieve daemon      | dbmail-sieved(8)
+| Command line tools      |
+| Deliver mail            | dbmail-deliver(1)
+| Manage Sieve scripts    | dbmail-sievecmd(8)
+| Export mailbox contents | dbmail-export(8)
+| Manage user accounts    | dbmail-users(8)
+| Maintain health         | dbmail-util(8)
 |==========================================================================
 
 include::footer.txt[]

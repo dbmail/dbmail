@@ -52,6 +52,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fnmatch.h>
+#include <getopt.h>
 #include <gmime/gmime.h>
 #include <glib.h>
 #include <gmodule.h>
@@ -155,7 +156,6 @@
 #include "dm_digest.h"
 #include "dm_cidr.h"
 #include "dm_iconv.h"
-#include "dm_getopt.h"
 #include "dm_match.h"
 #include "dm_sset.h"
 

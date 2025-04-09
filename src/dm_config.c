@@ -592,7 +592,7 @@ void config_get_logfiles(ServerConfig_T *config, const char * service)
 	/* Warn about the removal of "errorlog" config item. */
 	if (strlen(val)) {
 		// Send to stdout as log files haven't been created
-		qerrorf("Config item errorlog has been removed. "
+		qprintf("Config item errorlog has been removed. "
 			"Please use logfile instead.\n");
 	}
 

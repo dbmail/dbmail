@@ -1,8 +1,21 @@
 
+SEE ALSO
+--------
+dbmail(1), dbmail.conf(5), dbmail-deliver(1), dbmail-export(8),
+dbmail-httpd(8), dbmail-imapd(8), dbmail-lmtpd(8), dbmail-pop3d(8),
+dbmail-sieved(8), dbmail-sievecmd(8), dbmail-users(8), dbmail-util(8)
+
 BUGS
 ----
-If you experience inexplicable problems with DBMail, please report the issue
-to the https://github.com/dbmail/dbmail/issues[DBMail Bug Tracker].
+For the latest announcements, please subscribe to the
+https://dbmail.org/wws/info/dbmail-announce/[DBMail announce mailing list]
+
+For general discussion, please subscribe to the
+https://dbmail.org/wws/info/dbmail-general/[DBMail general mailing list]
+
+If you experience an issue with DBMail, please report it on the
+https://github.com/dbmail/dbmail/issues[DBMail Bug Tracker]. It may be
+helpful to have a debug log available.
 
 LICENSE
 -------
@@ -19,6 +32,5 @@ AUTHORS and THANKS files found in the DBMail source distribution.
   Eelco van Beek      Aaron Stone            Paul J Stevens
   Roel Rozendaal      Open Source Engineer   NFG Net Facilities Group BV
   Ilja Booij          Palo Alto, CA USA      http://www.nfg.nl
-  IC&S                http://hydricacid.com
-  http://www.ic-s.nl
+  IC&S                                       http://www.ic-s.nl
 
