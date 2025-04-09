@@ -8,15 +8,25 @@ dbmail-users - manages the DBMail user database.
 
 SYNOPSIS
 --------
-dbmail-users { -a username | -c username } [ -g clientid ] [ -m maxmail]
-	[ -p passwordtype ] [ -P shadowfile ] [ -w password ] [ -W passwordfile]
-	[ -u username ] [ -s aliases ] [ -S aliases ]
+....
+dbmail-users [MODE] [MODE OPTIONS]
 
-dbmail-users { -d username | -e username }
+dbmail-users --add-user user [options]
+dbmail-users --change-user user [options]
+dbmail-users --delete-user user
+dbmail-users --empty-user-mailboxes user [options]
 
-dbmail-users -l userspec
+dbmail-users --list-users
+dbmail-users --list-user user
 
-dbmail-users -x alias [ -t forwards ] [ -T forwards ]
+dbmail-users --change-user user --password password --pw-type pwtype
+
+dbmail-users --change-user user --add-alias address
+dbmail-users --change-user user --delete-alias address
+
+dbmail-users --forward address --add-forward address
+dbmail-users --forward address --delete-forward address
+....
 
 
 DESCRIPTION
@@ -26,158 +36,191 @@ lets you add, delete and change users as well as show information about
 a specific user or display a list of existing users. It also has the
 capability of adding/removing separate aliases.
 
-
-MODE OPTIONS
-------------
--a  user::
+MODE
+----
+-a, --add-user user::
   Add a user
 
--d  user::
-  Delete a user
-
--c  user::
+-c, --change-user user::
   Change details for a user
 
--e  user::
+-d, --delete-user user::
+  Delete a user
+
+-e, --empty-user-mailboxes user::
   Empty all mailboxes for a user
 
--l  uspec::
+-l, --list-users::
+  List information for all users
+
+-l, --list-user userspec::
   List information for matching users
 
--x  alias::
+-x, --forward alias::
   Create an external forwarding address
 
 
-MINOR OPTIONS
+MODE OPTIONS
 -------------
--w  passwd::
-  Specify user's password on the command line
+--enable::
+  enable authentication for user
 
--W  [file]::
-  Read from a file or prompt for a user's password
+--disable::
+  disable authentication for user
 
--p  pwtype::
+-w  --password::
+  Specify user's password on the command line. +
+  Use with --change-user
+
+-W, --pw-file file::
+  Read from a file or prompt for a user's password.+
+  Use with --add-user and --change-user
+
+-p, --pw-type type::
   Password type may be one of the following: plaintext, crypt,
   md5-hash, md5-digest, crypt-raw, md5-hash-raw, md5-digest-raw,
   md5-base64, md5-base64-raw, whirlpool, sha512, sha256, sha1,
-  tiger.
+  tiger. +
+  Use with --add-user and --change-user
 
--P  [file]::
-  Pull encrypted password from the shadow file
+-P, --pw-shadow file::
+  Pull encrypted password from the shadow file. +
+  Use with --add-user and --change-user
 
--u  user::
-  New username (only useful for -c, change)
+-u, --user user::
+  New username +
+  Use with --change-user to change the username
 
--g  cid::
-  Assign the user to a client group.
+-g, --client cid::
+  Assign the user to a client. +
+  Use with --add-user and --change-user
 
--m  max::
+-m, --max-quota max::
   Set the maximum mail quota in <bytes>B, <kbytes>K, or <mbytes>M,
-  default in bytes If set to 0, there will be no limit.
+  default in bytes If set to 0, there will be no limit. +
+  Use with --add-user and --change-user
 
--s  alias[,alias...]::
+-s, --add-alias alias[,alias...]::
   Adds a list of recipient aliases. An alias is an e-mail address
   that is being delivered to the DBMail mailsystem and should be
-  delivered to this user.
+  delivered to this user. +
+  Use with --add-user and --change-user
 
--S  alias[,alias...]::
+-S, --delete-alias alias[,alias...]::
   Removes a list of recipient aliases. Use wildcards ? and * to match any
-  single character and any number of characters, respectively.
+  single character and any number of characters, respectively. +
+  Use with --add-user and --change-user
 
--t  forward[,forward...]::
-  Adds a list of deliver-to forwards.
+-t, --add-forward forward[,forward...]::
+  Adds a list of deliver-to forwards. +
+  Use with --forward
 
--T  forward[,forward...]::
+-T, --delete-forward forward[,forward...]::
   Removes a list of deliver-to forwards. Use wildcards ? and * to match any
-  single character and any number of characters, respectively.
+  single character and any number of characters, respectively. +
+  Use with --forward
 
+--security-password::
+  specify a separate security fall-back password
+
+--security-action::
+  select the security action value (default 0)
 
 include::commonopts.txt[]
 
-ALIASES VS. FORWARDS
+ALIASES AND FORWARDS
 --------------------
 
-One question we often see on the dbmail@dbmail.org mailing list is what the
-difference is between aliases and forwards.
-When using dbmail-users, the different command line options are there
-because an alias attaches some arbitrary address to a particular user's
-account, while a forward attaches some arbitrary address another
-arbitrary address or pipe out.
+What are aliases and forwards and what is the difference between them?
 
+Users are known to the outside world by their email address, to avoid
+confusion DBMail uses aliases for incoming email addresses and forwards
+for outgoing addresses where a user has moved to another organisation and
+their email is forwarded on to their new address.
 
-When using dbmail-users with major option -c, you must use minor option -s/-S
-for modifying aliases. When using dbmail-users with major option -x, you must
-use -t/-T for modifying forwards.
+DBMail users receive email using one or more alias addresses.
+
+When a user moves to another organisation or domain, they can have their
+email forwarded onwards.
+
 
 ALIASES
 -------
 
-When creating a new user account, you must either add an initial alias that
+When creating a new user account, you should add an initial alias that
 delivers to the account name, or make the account in the form
 of a fully qualified email address. For example, the user named 'Baz' created
 like this:
 
-  dbmail-users -a baz -p crypt -w psword
+  dbmail-users --add-user baz --pw-type crypt --password secret
 
-will *not* actually receive any mail yet! You must be sure to add an alias:
+After creating the account you add an alias:
 
-  dbmail-users -c baz -s baz@foodomain
+  dbmail-users --change-user baz --add-alias baz@example.com
 
-You may add multiple aliases by repeatedly calling the dbmail-users(8)
-utility, or by calling it with a comma-separated list of aliases:
+You may add multiple aliases by repeatedly calling dbmail-users, or by
+calling it with a comma-separated list of aliases:
 
-  dbmail-users -c baz -s baz@foodomain,baz@bardomain
+  dbmail-users --change-user baz --add-alias baz@example.com,baz@example.org
 
 Three catch-all modes are also supported, for domains, sub-domains, and local parts:
 
-  dbmail-users -a baz -s @bazdomain
+  dbmail-users --add-user baz --add-aliass @example.com
 
-  dbmail-users -a baz -s @.allsubs.bazdomain
+  dbmail-users --add-user baz --add-alias @.allsubs.example.com
  
-  dbmail-users -a baz -s baz@
+  dbmail-users --add-user baz --add-alias baz@
 
-The first example catches email addressed to any user @bazdomain and delivers it
-to Baz's INBOX. The second example catch email address to any user at any
-subdomain below .allsubs.bazdomain (*not* including allsubs.bazdomain
+The first example catches email addressed to any user @example.com and delivers
+it to Baz's INBOX. The second example catch email address to any user at any
+subdomain below .allsubs.example.com (*not* including allsubs.example.com
 itself!) The third example catches email addressed to baz@ at any domain.
 
 There is no support for delivering to a particular mailbox other than INBOX
 via the aliases system. Please use a Sieve script to sort mail like this.
 
-
 FORWARDS
 --------
 
-Incoming messages addressed to particular email addresses can be forwarded out
-to outside email addresses, piped out to a command (when prepended with |
+Incoming messages addressed to particular email addresses can be forwarded to an
+outside email addresses, piped out to a command (when prepended with |
 'pipe') or piped out with an mbox-style From line to a command (when prepended
 with ! 'bang'). For example:
 
-  dbmail-users -x bar@domain -t bar@another.domain
+  dbmail-users --forward bar@example.com --add-alias bar@another.example.net
  
-  dbmail-users -x bar@domain -t "|/usr/sbin/superspamtrapper"
+  dbmail-users --forward bar@example.com --add-alias "|/usr/sbin/superspamtrapper"
  
-  dbmail-users -x bar@domain -t "!cat > /var/spool/mail/bar/whatever.mbox"
+  dbmail-users --forward bar@example.com --add-alias "!cat > /var/spool/mail/bar/whatever.mbox"
 
-Forwards can be listed using the same -l command as for users. For example,
-to see where the local address bar@domain might be forwarded to, use this:
+Forwards can be listed using the same --list command as for users. For example,
+to see where the local address +bar@example.com+ might be forwarded to, use
+the following:
 
-  dbmail-users -l bar@domain
-    forward [bar@domain] to [bar@another.domain]
-    forward [bar@domain] to [|/usr/sbin/superspamtrapper]
-    forward [bar@domain] to [!cat > /var/spool/mail/bar/whatever.mbox]
-
+  dbmail-users --list-user bar@example.com
+    forward [bar@example.com] to [bar@example.net]
+    forward [bar@example.com] to [|/usr/sbin/superspamtrapper]
+    forward [bar@example.com] to [!cat > /var/spool/mail/bar/whatever.mbox]
 
 Forwards can be removed using basic glob style pattern matching.  A ?
 'question' means "match zero or one of any character" and * 'asterisk' means
 "match zero or more of any character." For example:
 
-  dbmail-users -x bar@domain -T "*"
+  dbmail-users --forward bar@example.com --delete-forward "*"
 
-will complete and totally remove the 'bar@domain' external alias and all of
+will complete and totally remove the 'bar@example.com' external alias and all of
 its forwarding addresses and commands.
 
+For example Gollum used to work at example.com but now works at example.org
+so any email addressed to +gollum@example.com+ is sent to +gollum@example.org+
 
+  dbmail-users --forward gollum@example.com --add-forward gollum@example.org
+
+When Gollum moves to example.net you delete the old forward and add the new one
+
+  dbmail-users --forward gollum@example.com \
+    --delete-forward gollum@example.org \
+    --add-forward gollum@example.net
 
 
 include::footer.txt[]

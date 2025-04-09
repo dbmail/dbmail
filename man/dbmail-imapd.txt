@@ -10,7 +10,11 @@ Internet Message Access Protocol, IMAP4r1, as specified in RFC
 
 SYNOPSIS
 --------
-dbmail-imapd [-f configfile] [-p pidfile] [-nvVh]
+....
+dbmail-imapd [--config configfile] [--pidfile pidfile]
+dbmail-imapd [--config configfile] [--pidfile pidfile] --no-daemon
+dbmail-imapd [--config configfile] [--pidfile pidfile] --inetd
+....
 
 DESCRIPTION
 -----------

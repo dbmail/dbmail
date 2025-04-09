@@ -57,22 +57,23 @@ int do_showhelp(void)
 	"Use this program to manage your DBMail users.\n"
 	"You are highly recommended to review the dbmail-users man page\n"
 	"\nModes of operation:\n"
-	"     -a, --add-user=user      add a user\n"
+	"     -a, --add-user user      add a user\n"
 	"     -d, --delete-user user   delete a user\n"
 	"     -c, --change-user user   change details for a user\n"
 	"     -e, --empty-user-mailboxes user   empty all mailboxes for a user\n"
 	"     -l, --list-user user     list information for matching users\n"
 	"     -l, --list-users         list information for all users\n"
 	"     -x, --forward address    create an external forwarding address\n"
+	"                              use with --add-forward and --delete-forward\n"
 	"\nSummary of options for all modes:\n"
 	"     -w, --password passwd    specify user's password on the command line\n"
-	"     -W, --pw-file [file]     read from a file or prompt for a user's password\n"
+	"     -W, --pw-file file       read from a file or prompt for a user's password\n"
 	"     -p, --pw-type pwtype     password type may be one of the following:\n"
 	"               plaintext, crypt, md5-hash, md5-digest, md5-base64,\n"
 	"               whirlpool, sha512, sha256, sha1, tiger\n"
 	"               each type may be given a '-raw' suffix to indicate\n"
 	"               that the password argument has already been encoded.\n"
-	"     -P, --pw-shadow [file]   pull encrypted password from the shadow file\n"
+	"     -P, --pw-shadow file     pull encrypted password from the shadow file\n"
 	"     -u, --user user          new username (only useful for -c, change)\n"
 	"     -g, --client client      assign the user to a client\n"
 	"     -m, --max-quota max      set the maximum mail quota in <bytes>B,\n"
@@ -81,10 +82,10 @@ int do_showhelp(void)
 	"     -s, --add-alias alias    adds a list of recipient aliases\n"
 	"     -S, --delete-alias alias removes a list of recipient aliases\n"
 	"                              (wildcards supported)\n"
-	"     -t, --add-forwards fwds..\n"
-	"                              adds a list of deliver-to forwards\n"
-	"     -T, --delete-forwards fwds..\n"
-	"                              removes a list of deliver-to forwards\n"
+	"     -t, --add-forward fwds..\n"
+	"                              adds a list of deliver-to forward\n"
+	"     -T, --delete-forward fwds..\n"
+	"                              removes a list of deliver-to forward\n"
 	"                              (wildcards supported)\n"
 	"     --security-password      specify a separate security fall-back password\n"
 	"     --security-action        select the security action value (default 0)\n"
@@ -95,7 +96,7 @@ int do_showhelp(void)
 	"                              Default: %s\n"
 	"     -q, --quiet              quietly skip interactive prompts\n"
 	"                              use twice to suppress error messages\n"
-	"     -n, --no                 show the intended action but do not perform it,"
+	"     -n, --no                 show the intended action but do not perform it,\n"
 	"                              no to all\n"
 	"     -y, --yes                perform all proposed actions, yes to all\n"
 	"     -v, --verbose            verbose details\n"
@@ -132,25 +133,25 @@ int main(int argc, char *argv[])
 	/* get options */
 	//opterr = 0;		/* suppress error message from getopt() */
 	static struct option long_options[] = {
-		{"add-user",    required_argument, NULL, 'a'},
-		{"delete-user", required_argument, NULL, 'd'},
+		{"add-user", required_argument, NULL, 'a'},
 		{"change-user", required_argument, NULL, 'c'},
+		{"delete-user", required_argument, NULL, 'd'},
 		{"empty-user-mailboxes", required_argument, NULL, 'e'},
-		{"list-user",   required_argument, NULL, 'l'},
-		{"list-users",  no_argument, NULL, 'l'},
-		{"alias",       required_argument, NULL, 'x'},
+		{"list-user", required_argument, NULL, 'l'},
+		{"list-users", no_argument, NULL, 'l'},
+		{"forward", required_argument, NULL, 'x'},
 
-		{"password",  required_argument, NULL, 'w'},
-		{"pw-file",   optional_argument, NULL, 'W'},
-		{"pw-type",   required_argument, NULL, 'p'},
+		{"password", required_argument, NULL, 'w'},
+		{"pw-file", optional_argument, NULL, 'W'},
+		{"pw-type", required_argument, NULL, 'p'},
 		{"pw-shadow", required_argument, NULL, 'P'},
-		{"user",      required_argument, NULL, 'u'},
-		{"client",    required_argument, NULL, 'g'},
+		{"user", required_argument, NULL, 'u'},
+		{"client", required_argument, NULL, 'g'},
 		{"max-quota", required_argument, NULL, 'm'},
-		{"alias-add", required_argument, NULL, 's'},
-		{"alias-del", required_argument, NULL, 'S'},
-		{"forwards",  required_argument, NULL, 't'},
-		{"Forwards",  required_argument, NULL, 'T'},
+		{"add-alias", required_argument, NULL, 's'},
+		{"delete-alias", required_argument, NULL, 'S'},
+		{"add-forward", required_argument, NULL, 't'},
+		{"delete-forward", required_argument, NULL, 'T'},
 
 		{"security-password", required_argument, 0, 0},
 		{"security-action",   required_argument, 0, 0},
@@ -168,7 +169,7 @@ int main(int argc, char *argv[])
 	};
 	int option_index = 0;
 	while ((opt = getopt_long(argc, argv,
-				"a:d:c:e:l::x:" /* Major modes */
+				"a:d:c:e:l:x:" /* Major modes */
 				"W::w:P::p:u:g:m:t:s:S:T:" /* Minor options */
 				"i" "f:qnyvVh" /* Common options */,
 				long_options, &option_index)) != -1) {
@@ -176,8 +177,8 @@ int main(int argc, char *argv[])
 		/* Major modes of operation
 		 * (exactly one of these is required) */
 		case 'a':
-		case 'd':
 		case 'c':
+		case 'd':
 		case 'e':
 			if (mode)
 				mode_toomany = 1;
@@ -354,7 +355,6 @@ int main(int argc, char *argv[])
 			break;
 
 		default:
-			printf("unrecognized option [%c]\n", opt);
 			show_help = 1;
 			break;
 		}
@@ -538,9 +538,13 @@ int main(int argc, char *argv[])
 		result = do_show(userspec);
 		break;
 	case 'x':
-		qprintf("Creating an external forwarding address for user [%s]...\n", user);
-		TRACE(TRACE_INFO, "Creating an external forwarding address for user  [%s]...", user);
-		result = do_forwards(alias, clientid, fwds_add, fwds_del);
+		if (g_list_length(fwds_add) == 0 && g_list_length(fwds_del) == 0) {
+			qprintf("Please add at least one of --forwards-add or --forwards-delete\n");
+		} else {
+			qprintf("Creating an external forwarding address for [%s]...\n", alias);
+			TRACE(TRACE_INFO, "Creating an external forwarding address for [%s]...", alias);
+			result = do_forwards(alias, clientid, fwds_add, fwds_del);
+		}
 		break;
 	default:
 		result = 1;
@@ -565,8 +569,6 @@ freeall:
 
 	if (result) {
 		qprintf("Command failed, see logfile for details.\n");
-	} else {
-		qprintf("Command succeeded.\n");
 	}
 	return result;
 }

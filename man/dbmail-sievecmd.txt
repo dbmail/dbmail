@@ -8,45 +8,53 @@ dbmail-sievecmd - manipulates Sieve scripts in the DBMail database.
 
 SYNOPSIS
 --------
-dbmail-sievecmd -u username [-l] [-a scriptname] [-d scriptname]
-   [-i scriptname file] [-c [scriptname]] [-r scriptname]
-   [-f configfile] [-nvVh]
+....
+dbmail-sievecmd [common options] -u username --list
+dbmail-sievecmd [common options] -u username --activate scriptname
+dbmail-sievecmd [common options] -u username --deactivate scriptname
+dbmail-sievecmd [common options] -u username --show scriptname
+dbmail-sievecmd [common options] -u username --insert file
+dbmail-sievecmd [common options] -u username --edit scriptname
+dbmail-sievecmd [common options] -u username --remove scriptname
+....
 
 DESCRIPTION
 -----------
-DBMail stores Sieve scripts in a table in the DBMail database. These 
-scripts are used to sort incoming mail for the email users. Each user
-has their own script space and may upload scripts to the
-dbmail-sieved(8) daemon. The dbmail-sievecmd(8) utility provides
-a convenient method for the system administrator to work with
+DBMail stores Sieve scripts in the DBMail database. These scripts are used to
+sort incoming mail for the email users. Each user has their own script space
+and may upload scripts to the dbmail-sieved(8) daemon. The dbmail-sievecmd(8)
+utility provides a convenient method for the system administrator to work with
 Sieve scripts from the command line.
 
 OPTIONS
 -------
 
--u username::
+-u, --user username::
 Specify the user whose scripts we will be modifying.
 
--l::
+-l, --list::
 List scripts belonging to user
 
--a scriptname::
+-a, --activate scriptname::
 Activates `scriptname`, deactivating all other scripts.
 
--d scriptname::
+-d, --deactivate scriptname::
 Deactivates `scriptname` if it was active.
 
--i scriptname file::
+-c, --show scriptname::
+Show the named script.
+
+-i, --insert file::
 Creates a script called `scriptname` by importing `file`. If `file`
 is - (dash) or unspecified, 'stdin' will be read.
 
--c [scriptname]::
-Print out the named script. If no script is given, the active
-script is printed.
+-e, --edit scriptname::
+Edit the contents of the named script +
+(if no script is given, the active script is displayed)
 
--r scriptname::
+-r, --remove scriptname::
 Remove the named script. If the script was active, no script will
-be active after it is deletion.
+be active after it is deleted.
 
 
 include::commonopts.txt[]

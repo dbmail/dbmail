@@ -869,15 +869,15 @@ void server_showhelp(const char *name, const char *greeting) {
 	printf("%s\n", greeting);
 	printf("See the man page for more info.\n");
 
-        printf("\nCommon options for all DBMail daemons:\n");
-	printf("     -f file   specify an alternative config file\n");
-	printf("               Default: %s\n", configFile);
-	printf("     -p file   specify an alternative runtime pidfile\n");
-	printf("     -n        stdin/stdout mode\n");
-	printf("     -D        foreground mode\n");
-	printf("     -v        verbose logging to syslog and stderr\n");
-	printf("     -V        show the version\n");
-	printf("     -h        show this help message\n");
+	printf("\nCommon options for all DBMail daemons:\n");
+	printf("  -f, --config file  specify an alternative config file\n");
+	printf("                     Default: %s\n", configFile);
+	printf("  -p, --pidfile file specify an alternative runtime pidfile\n");
+	printf("  -n, --inetd        stdin/stdout mode\n");
+	printf("  -D, --no-daemon    foreground mode\n");
+	printf("  -v, --verbose      verbose logging to syslog and stderr\n");
+	printf("  -V, --version      show the version\n");
+	printf("  -h, --help         show this help message\n");
 }
 
 /* Return values:
@@ -907,15 +907,28 @@ static void server_config_free(ServerConfig_T * config)
 int server_getopt(ServerConfig_T *config, const char *service, int argc, char *argv[])
 {
 	int opt;
+	int opt_index = 0;
 	memset(configFile, 0, sizeof(configFile));
 
 	g_strlcpy(configFile,DEFAULT_CONFIG_FILE, FIELDSIZE-1);
 
 	TRACE(TRACE_DEBUG, "checking command line options");
+	static struct option long_options[] = {
+		{"config", required_argument, NULL, 'f'},
+		{"pidfile", required_argument, NULL, 'p'},
+		{"inetd", no_argument, NULL, 'n'},
+		{"no-daemon", no_argument, NULL, 'D'},
+		{"version", no_argument, NULL, 'V'},
+		{"verbose", no_argument, NULL, 'v'},
+		{"help", no_argument, NULL, 'h'},
+		{0, 0, 0, 0}
+	};
 
 	/* get command-line options */
-	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "vVhqnDf:p:s:")) != -1) {
+	opterr = 0; /* suppress error message from getopt() */
+	while ((opt = getopt_long(argc, argv,
+			"vVhqnDf:p:s:",
+			long_options, &opt_index)) != -1) {
 		switch (opt) {
 		case 'v':
 			config->log_verbose = 1;
@@ -935,7 +948,7 @@ int server_getopt(ServerConfig_T *config, const char *service, int argc, char *a
 			if (optarg && strlen(optarg) > 0)
 				config->pidFile = g_strdup(optarg);
 			else {
-				fprintf(stderr, "%s: -p requires a filename argument\n\n", argv[0]);
+				fprintf(stderr, "%s: --pidfile requires a filename argument\n\n", argv[0]);
 				return 1;
 			}
 			break;
@@ -943,7 +956,7 @@ int server_getopt(ServerConfig_T *config, const char *service, int argc, char *a
 			if (optarg && strlen(optarg) > 0) {
 				g_strlcpy(configFile, optarg, FIELDSIZE-1);
 			} else {
-				fprintf(stderr, "%s: -f requires a filename argument\n\n", argv[0]);
+				fprintf(stderr, "%s: --config requires a filename argument\n\n", argv[0]);
 				return 1;
 			}
 			break;

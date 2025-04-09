@@ -166,12 +166,10 @@ am__libdbmail_la_SOURCES_DIST = dm_user.c dm_message.c dm_mailbox.c \
 	dm_list.c dm_db.c dm_sievescript.c dm_acl.c dm_misc.c \
 	dm_pidfile.c dm_digest.c dm_match.c dm_iconv.c dm_dsn.c \
 	dm_sset.c dm_string.c $(top_srcdir)/src/mpool/mpool.c \
-	dm_mempool.c dm_getopt.c server.c clientsession.c clientbase.c \
-	dm_tls.c dm_http.c dm_request.c dm_cidr.c authmodule.c \
-	sortmodule.c
+	dm_mempool.c server.c clientsession.c clientbase.c dm_tls.c \
+	dm_http.c dm_request.c dm_cidr.c authmodule.c sortmodule.c
 am__dirstamp = $(am__leading_dot)dirstamp
-@USE_DM_GETOPT_TRUE@am__objects_1 = libdbmail_la-dm_getopt.lo
-am__objects_2 = libdbmail_la-dm_user.lo libdbmail_la-dm_message.lo \
+am__objects_1 = libdbmail_la-dm_user.lo libdbmail_la-dm_message.lo \
 	libdbmail_la-dm_mailbox.lo libdbmail_la-dm_mailboxstate.lo \
 	libdbmail_la-dm_cram.lo libdbmail_la-dm_capa.lo \
 	libdbmail_la-dm_config.lo libdbmail_la-dm_debug.lo \
@@ -182,15 +180,15 @@ am__objects_2 = libdbmail_la-dm_user.lo libdbmail_la-dm_message.lo \
 	libdbmail_la-dm_iconv.lo libdbmail_la-dm_dsn.lo \
 	libdbmail_la-dm_sset.lo libdbmail_la-dm_string.lo \
 	$(top_builddir)/src/mpool/libdbmail_la-mpool.lo \
-	libdbmail_la-dm_mempool.lo $(am__objects_1)
-am__objects_3 = libdbmail_la-server.lo libdbmail_la-clientsession.lo \
+	libdbmail_la-dm_mempool.lo
+am__objects_2 = libdbmail_la-server.lo libdbmail_la-clientsession.lo \
 	libdbmail_la-clientbase.lo libdbmail_la-dm_tls.lo \
 	libdbmail_la-dm_http.lo libdbmail_la-dm_request.lo \
 	libdbmail_la-dm_cidr.lo
-@SHARED_TRUE@am__objects_4 = libdbmail_la-authmodule.lo \
+@SHARED_TRUE@am__objects_3 = libdbmail_la-authmodule.lo \
 @SHARED_TRUE@	libdbmail_la-sortmodule.lo
-am_libdbmail_la_OBJECTS = $(am__objects_2) $(am__objects_3) \
-	$(am__objects_4)
+am_libdbmail_la_OBJECTS = $(am__objects_1) $(am__objects_2) \
+	$(am__objects_3)
 libdbmail_la_OBJECTS = $(am_libdbmail_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -204,15 +202,15 @@ libdbmail_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 am_dbmail_deliver_OBJECTS = main.$(OBJEXT)
 dbmail_deliver_OBJECTS = $(am_dbmail_deliver_OBJECTS)
 dbmail_deliver_DEPENDENCIES = $(am__DEPENDENCIES_1) libdbmail.la
-am__objects_5 = dm_quota.$(OBJEXT) imap4.$(OBJEXT) \
+am__objects_4 = dm_quota.$(OBJEXT) imap4.$(OBJEXT) \
 	imapcommands.$(OBJEXT) dm_imapsession.$(OBJEXT)
-am_dbmail_export_OBJECTS = $(am__objects_5) export.$(OBJEXT)
+am_dbmail_export_OBJECTS = $(am__objects_4) export.$(OBJEXT)
 dbmail_export_OBJECTS = $(am_dbmail_export_OBJECTS)
 dbmail_export_DEPENDENCIES = $(am__DEPENDENCIES_1) libdbmail.la
 am_dbmail_httpd_OBJECTS = dm_http.$(OBJEXT) httpd.$(OBJEXT)
 dbmail_httpd_OBJECTS = $(am_dbmail_httpd_OBJECTS)
 dbmail_httpd_DEPENDENCIES = $(am__DEPENDENCIES_1) libdbmail.la
-am_dbmail_imapd_OBJECTS = $(am__objects_5) imapd.$(OBJEXT)
+am_dbmail_imapd_OBJECTS = $(am__objects_4) imapd.$(OBJEXT)
 dbmail_imapd_OBJECTS = $(am_dbmail_imapd_OBJECTS)
 dbmail_imapd_DEPENDENCIES = $(am__DEPENDENCIES_1) libdbmail.la
 am_dbmail_lmtpd_OBJECTS = lmtp.$(OBJEXT) lmtpd.$(OBJEXT)
@@ -271,7 +269,6 @@ am__depfiles_remade =  \
 	./$(DEPDIR)/libdbmail_la-dm_debug.Plo \
 	./$(DEPDIR)/libdbmail_la-dm_digest.Plo \
 	./$(DEPDIR)/libdbmail_la-dm_dsn.Plo \
-	./$(DEPDIR)/libdbmail_la-dm_getopt.Plo \
 	./$(DEPDIR)/libdbmail_la-dm_http.Plo \
 	./$(DEPDIR)/libdbmail_la-dm_iconv.Plo \
 	./$(DEPDIR)/libdbmail_la-dm_list.Plo \
@@ -566,7 +563,6 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = modules
 @SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-sieved
-@USE_DM_GETOPT_TRUE@DM_GETOPT = dm_getopt.c
 COMMON = dm_user.c \
 	dm_message.c \
 	dm_mailbox.c \
@@ -588,7 +584,7 @@ COMMON = dm_user.c \
 	dm_sset.c \
 	dm_string.c \
 	$(top_srcdir)/src/mpool/mpool.c \
-	dm_mempool.c $(DM_GETOPT)
+	dm_mempool.c
 
 SERVER = server.c \
 	clientsession.c \
@@ -839,7 +835,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_debug.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_digest.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_dsn.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_getopt.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_http.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_iconv.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libdbmail_la-dm_list.Plo@am__quote@ # am--include-marker
@@ -1052,13 +1047,6 @@ libdbmail_la-dm_mempool.lo: dm_mempool.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dm_mempool.c' object='libdbmail_la-dm_mempool.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -c -o libdbmail_la-dm_mempool.lo `test -f 'dm_mempool.c' || echo '$(srcdir)/'`dm_mempool.c
-
-libdbmail_la-dm_getopt.lo: dm_getopt.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -MT libdbmail_la-dm_getopt.lo -MD -MP -MF $(DEPDIR)/libdbmail_la-dm_getopt.Tpo -c -o libdbmail_la-dm_getopt.lo `test -f 'dm_getopt.c' || echo '$(srcdir)/'`dm_getopt.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libdbmail_la-dm_getopt.Tpo $(DEPDIR)/libdbmail_la-dm_getopt.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dm_getopt.c' object='libdbmail_la-dm_getopt.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -c -o libdbmail_la-dm_getopt.lo `test -f 'dm_getopt.c' || echo '$(srcdir)/'`dm_getopt.c
 
 libdbmail_la-server.lo: server.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libdbmail_la_CFLAGS) $(CFLAGS) -MT libdbmail_la-server.lo -MD -MP -MF $(DEPDIR)/libdbmail_la-server.Tpo -c -o libdbmail_la-server.lo `test -f 'server.c' || echo '$(srcdir)/'`server.c
@@ -1353,7 +1341,6 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_debug.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_digest.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_dsn.Plo
-	-rm -f ./$(DEPDIR)/libdbmail_la-dm_getopt.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_http.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_iconv.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_list.Plo
@@ -1448,7 +1435,6 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_debug.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_digest.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_dsn.Plo
-	-rm -f ./$(DEPDIR)/libdbmail_la-dm_getopt.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_http.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_iconv.Plo
 	-rm -f ./$(DEPDIR)/libdbmail_la-dm_list.Plo

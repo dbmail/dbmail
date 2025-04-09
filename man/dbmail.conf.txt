@@ -1,15 +1,14 @@
 DBMAIL.CONF(5)
 ==============
-Author
 
 NAME
 ----
-dbmail.conf - configuration file for DBMail, the Database Mailer.
+dbmail.conf - configuration file for DBMail Message Delivery Agent.
 
 SYNOPSIS
 --------
 There are 8 sections: DBMAIL, SMTP, LMTP, POP, IMAP, SIEVE, LDAP, DELIVERY.
-The default config file already has documentation for all of the settings.
+The default config file has documentation for all settings.
 
 DESCRIPTION
 -----------

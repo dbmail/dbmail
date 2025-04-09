@@ -3,12 +3,16 @@ DBMAIL-SIEVED(8)
 
 NAME
 ----
-dbmail-sieved - speaks the Manage Sieve draft protocol, used for managing
-Sieve scripts for a user's email account.
+dbmail-sieved - The Manage Sieve daemon, used for managing Sieve scripts for
+a user's email account.
 
 SYNOPSIS
 --------
-dbmail-sieved [-f configfile] [-p pidfile] [-nvVh]
+....
+dbmail-sieved [common options]
+dbmail-sieved [common options] --no-daemon
+dbmail-sieved [common options] --inetd
+....
 
 DESCRIPTION
 -----------

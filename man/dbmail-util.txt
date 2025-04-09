@@ -1,7 +1,6 @@
 DBMAIL-UTIL(8)
 ==============
 
-
 NAME
 ----
 dbmail-util - maintains the integrity and cleanliness of the DBMail
@@ -9,7 +8,16 @@ datatables.
 
 SYNOPSIS
 --------
-dbmail-util [-actbpds] [-l time] [-yn] [-qvVh] [-f configFile]
+....
+dbmail-util [options] --all-checks
+dbmail-util [options] --test-integrity
+dbmail-util [options] --check-body
+dbmail-util [options] --purge-deleted
+dbmail-util [options] --set-deleted
+dbmail-util [options] --clear-replycache time
+dbmail-util [options] --clear-iplog time
+dbmail-util [options] --rehash
+....
 
 DESCRIPTION
 -----------
@@ -19,53 +27,66 @@ All messages set for deletion (status 2) will be marked for final deletion
 database. The integrity check will check for unconnected mimeparts,
 headervalues, messages and mailboxes.
 
-By default, checks are read-only. Pass the -n option to respond no to any
-prompts. Pass the -y option to make read-write changes, responding yes to any
-prompts.
+By default, checks are read-only. Pass the --no option to respond no to any
+prompts. Pass the --yes option to make read-write changes, responding yes to
+any prompts.
 
 OPTIONS
 -------
 
--c::
- Clean up unlinked message entries.
-
--t::
- Test for message integrity.
-
--b::
+-b, --check-body::
  Check and rebuild the body/header/envelope cache tables.
 
--p::
+-d, --set-deleted::
+ Queue all messages marked with the DELETE (2) status for final purging, by 
+ setting the status value to PURGE (3). The status field is set to DELETE by
+ either the IMAP-EXPUNGE or POP3-DELE commands.
+
+-p, --purge-deleted::
  Remove all messages with a PURGE (3) value on status field. To purge messages
  currently marked with the DELETE (2) status, run with the -pd options twice.
  This is not recommended; it is better to leave a grace period for old messages
  before permanently wiping them from the database.
 
--d::
- Queue all messages marked with the DELETE (2) status for final purging, by 
- setting the status value to PURGE (3). The status field is set to DELETE by
- either the IMAP-EXPUNGE or POP3-DELE commands.
-
--s::
+-s, --remove-invalid-aliases::
  Remove dangling/invalid aliases and forwards.
 
--a::
- Perform the above checks: -c -t -b -p -d -s
+-t, --test-integrity::
+ Test for message integrity.
 
--r time::
+-a, --all-checks::
+ Perform the above checks: --check-body --set-deleted --purge-deleted
+ --remove-invalid-aliases --test-integrity
+
+-r, --clear-replycache time::
  Clear the reply cache used for autoreplies and Sieve vacations. The time is
  specified as <hours>h<minutes>m (don't include the angle brackets, though!).
 
--l time::
+-l, --clear-iplog time::
  Clear the IP log used for IMAP/POP-before-SMTP. The time is specified as
  <hours>h<minutes>m (don't include the angle brackets, though!).
 
+--rehash::
+ Rebuild hash keys for stored messages
+
+--erase days::
+ Delete messages older than date in INBOX/Trash
+
+--move days::
+ Move messages from INBOX to INBOX/Trash
+
+--inbox name::
+ Inbox folder to move from, used in conjunction with --move
+
+--trash name::
+ Trash folder to move to, used in conjunction with --move
+
 *Common options*
 
--n::
+-n, --no::
  Show the intended repairs without making any changes, i.e. no to all.
 
--y::
+-y, --yes::
  Perform all repair actions , i.e. yes to all.
 
 *Maintenance options*
@@ -74,16 +95,16 @@ OPTIONS
  Rebuild the hash values for all the message parts in the database. You
  need to run this after modifying the hash_algorithm config option.
 
--e::
+-e, --check-empty-cache::
  Check for empty envelope cache.
 
 *Migration options*
 
--M::
+-M, --migrate-legacy limit::
  migrate legacy 2.2.x messageblks to mimeparts table.
 
--m limit::
- limit number of physmessages migrated. Default 10000 per run.
+-m, --migrate-limit limit::
+ limit migration to [limit] number of physmessages. Default 10000 per run.
 
 include::commonopts.txt[]
 
@@ -100,27 +121,27 @@ EXAMPLES
 
 Regular maintenance can be run as a regular cron job:
 
-`    dbmail-util -ayv`
+`    dbmail-util --all --yes --verbose`
 
 To set all messages with the DELETE status to PURGE status, and permanently
 remove all messages previously set to PURGE status:
 
-`    dbmail-util -dpy`
+`    dbmail-util --set-deleted --purge-deleted -yes`
 
 
 To get a listing of the changes that would be performed for all actions:
 
-`    dbmail-util -an`
+`    dbmail-util --all --no`
 
 
 To remove all IP log entries more than three days old:
 
-`    dbmail-util -l 72h -y`
+`    dbmail-util --clear-iplog 72h --yes`
 
 
 After upgrading from DBMail 2.0 or truncating the cache tables, run this command
 to populate the cache:
 
-`    dbmail-util -by`
+`    dbmail-util --check-body --yes`
 
 include::footer.txt[]

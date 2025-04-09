@@ -45,31 +45,33 @@ void do_showhelp(void)
 	"*** dbmail-export ***\n"
 	"Use this program to export your DBMail mailboxes.\n"
 	"See the man page for more info. Summary:\n"
-	"     -u username   specify a user, wildcards ? and * accepted, but please be\n"
-	"                   careful that you may need to escape these from your shell\n"
-	"     -m mailbox    specify a mailbox (default: export all mailboxes recursively)\n"
-	"     -b basedir    specify the destination base dir (default: current directory)\n"
-	"                   note that files are always opened in append mode\n"
-	"     -o outfile    specify the output file (default: stdout)\n"
-	"                   note that files are always opened in append mode\n"
-	"     -s search     use an IMAP SEARCH string to select messages (default: 1:*)\n"
-	"                   for example, to export all messages received in May:\n"
-	"                   \"1:* SINCE 1-May-2007 BEFORE 1-Jun-2007\"\n"
-	"     -d            set \\Deleted flag on exported messages\n"
-	"     -D            set delete status on exported messages\n"
-	"                   note that dbmail-util can be used to set deleted status for\n"
-	"                   \\Deleted messages, and to purge messages with deleted status\n"
-	"     -r            export mailboxes recursively (default: true unless -m option\n"
-	"                   is specified)\n"
-	"\n"
-        "Common options for all DBMail utilities:\n"
-	"     -f file   specify an alternative config file\n"
-	"               Default: %s\n"
-	"     -q        quietly skip interactive prompts\n"
-	"               use twice to suppress error messages\n"
-	"     -v        verbose details\n"
-	"     -V        show the version\n"
-	"     -h        show this help message\n"
+	"     -u, --user username   specify a user, wildcards ? and * accepted, but please be\n"
+	"                           careful that you may need to escape these from your shell\n"
+	"     -m, --mailbox mailbox specify a mailbox (default: export all mailboxes recursively)\n"
+	"     -b, --basedir basedir specify the destination base dir (default: current directory)\n"
+	"                           note that files are always opened in append mode\n"
+	"     -o, --out outfile     specify the output file (default: stdout)\n"
+	"                           note that files are always opened in append mode\n"
+	"     -s, --search search   use an IMAP SEARCH string to select messages (default: 1:*)\n"
+	"                           for example, to export all messages received in May:\n"
+	"                           \"1:* SINCE 1-May-2007 BEFORE 1-Jun-2007\"\n"
+	"     -d, --set-del-flag    set \\Deleted flag on exported messages\n"
+	"     -D, --set-del-status  set delete status on exported messages\n"
+	"                           note that dbmail-util can be used to set deleted status for\n"
+	"                           \\Deleted messages, and to purge messages with deleted status\n"
+	"     -r, --recursive       export mailboxes recursively\n"
+	"                           (default: true unless -m option is specified)\n"
+	"\nCommon options for all DBMail utilities:\n"
+	"     -f, --config file     specify an alternative config file\n"
+	"                           Default: %s\n"
+	"     -q, --quiet           quietly skip interactive prompts\n"
+	"                           use twice to suppress error messages\n"
+	"     -n, --no              show the intended action but do not perform it,\n"
+	"                           no to all\n"
+	"     -y, --yes             perform all proposed actions, yes to all\n"
+	"     -v, --verbose         verbose details\n"
+	"     -V, --version         show the version\n"
+	"     -h, --help            show this help message\n"
 	, configFile);
 }
 
@@ -290,7 +292,8 @@ cleanup:
 
 int main(int argc, char *argv[])
 {
-	int opt = 0, opt_prev = 0;
+	int opt = 0;
+	int option_index = 0;
 	int show_help = 0;
 	int result = 0, delete_after_dump = 0, recursive = 0;
 	char *user=NULL, *mailbox=NULL, *outfile=NULL, *basedir=NULL, *search=NULL;
@@ -303,15 +306,31 @@ int main(int argc, char *argv[])
 
 	config_get_file();
 	/* get options */
-	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv,
+	static struct option long_options[] = {
+		{"user", required_argument, NULL, 'u'},
+		{"mailbox", required_argument, NULL, 'm'},
+		{"basedir", required_argument, NULL, 'b'},
+		{"out", required_argument, NULL, 'o'},
+		{"search", required_argument, NULL, 's'},
+		{"set-del-flag", no_argument, NULL, 'd'},
+		{"set-del-status", no_argument, NULL, 'D'},
+		{"recursive", no_argument, NULL, 'r'},
+
+		{"config",    required_argument, NULL, 'f'},
+		{"quiet",     no_argument, NULL, 'q'},
+		{"no",        no_argument, NULL, 'n'},
+		{"yes",       no_argument, NULL, 'y'},
+		{"help",      no_argument, NULL, 'h'},
+		{"verbose",   no_argument, NULL, 'v'},
+		{"version",   no_argument, NULL, 'V'},
+		{NULL,        0,           NULL, 0}
+	};
+	// Alan TODO
+	//opterr = 0;		/* suppress error message from getopt() */
+	while ((opt = getopt_long(argc, argv,
 		"-u:m:o:b:s:dDr" /* Major modes */
-		"f:qvVh" /* Common options */ )) != -1) {
-		/* The initial "-" of optstring allows unaccompanied
-		 * options and reports them as the optarg to opt 1 (not '1') */
-		if (opt == 1)
-			opt = opt_prev;
-		opt_prev = opt;
+		"f:qvVh", /* Common options */
+		long_options, &option_index)) != -1) {
 
 		switch (opt) {
 		/* export specific options */
@@ -345,7 +364,7 @@ int main(int argc, char *argv[])
 			if (optarg && strlen(optarg))
 				search = optarg;
 			else {
-				qprintf("dbmail-mailbox: -s requires a value\n\n");
+				qprintf("dbmail-mailbox: --search requires a value\n\n");
 				result = 1;
 			}
 			break;
@@ -479,4 +498,3 @@ freeall:
 	}
 	return result;
 }
-

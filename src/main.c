@@ -53,31 +53,34 @@ void do_showhelp(void) {
 //	0........10........20........30........40........50........60........70........80
 	"Use this program to deliver mail from your MTA or on the command line.\n"
 	"See the man page for more info. Summary:\n\n"
-	"     -t [headerfield]   for normal deliveries (default is \"delivered-to\")\n"
-	"     -d [addresses]     for delivery without using scanner\n"
-	"     -u [usernames]     for direct delivery to users\n"
-	"     -m \"mailbox\"     for delivery to a specific mailbox\n"
-	"     -M \"mailbox\"     as -m, but skip permissions checks and Sieve scripts\n"
-	"     -r return path     for address of bounces and other error reports\n"
+	"  -t, --to-header headerfield  for normal deliveries (default is \"delivered-to\")\n"
+	"  -d, --to-address addresses   for delivery without using scanner\n"
+	"  -u, --to-user usernames      for direct delivery to users\n"
+	"  -m, --mailbox mailbox        for delivery to a specific mailbox\n"
+	"  -M, --mailbox-force mailbox  as --mailbox, but skip permissions checks\n"
+	"                               and Sieve scripts\n"
+	"  -r return-path path          for address of bounces and other error reports\n"
 
 	"\nCommon options for all DBMail utilities:\n"
-	"     -f file   specify an alternative config file\n"
+	"  -f, --config file   specify an alternative config file\n"
 	"               Default: %s\n"
-	"     -q        quietly skip interactive prompts\n"
+	"  -q, --quiet        quietly skip interactive prompts\n"
 	"               use twice to suppress error messages\n"
-	"     -n        show the intended action but do not perform it, no to all\n"
-	"     -y        perform all proposed actions, as though yes to all\n"
-	"     -v        verbose details\n"
-	"     -V        show the version\n"
-	"     -h        show this help message\n"
+	"  -n, --no        show the intended action but do not perform it, no to all\n"
+	"  -y, --yes        perform all proposed actions, as though yes to all\n"
+	"  -v, --verbose        verbose details\n"
+	"  -V, --version        show the version\n"
+	"  -h, --help        show this help message\n"
 	, configFile);
 }
 
 int main(int argc, char *argv[])
 {
 #define READ_SIZE 1024
+	int opt = 0;
+	int option_index = 0;
 	int exitcode = 0;
-	int c, c_prev = 0, usage_error = 0;
+	int usage_error = 0;
 	ssize_t n = 0;
 	GString *raw = NULL;
 	DbmailMessage *msg = NULL;
@@ -86,26 +89,37 @@ int main(int argc, char *argv[])
 	Mempool_T pool = mempool_open();
 	List_T dsnusers = p_list_new(pool);
 	Delivery_T *dsnuser;
-	
+
 	g_mime_init();
-	
+
 	config_get_file();
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-	/* Check for commandline options.
-	 * The initial '-' means that arguments which are not associated
-	 * with an immediately preceding option are return with option 
-	 * value '1'. We will use this to allow for multiple values to
-	 * follow after each of the supported options. */
-	while ((c = getopt(argc, argv, "-t::m:M:u:d:r: f:qnyvVh")) != EOF) {
-		/* Received an n-th value following the last option,
-		 * so recall the last known option to be used in the switch. */
-		if (c == 1)
-			c = c_prev;
-		c_prev = c;
+	static struct option long_options[] = {
+		{"to-header", optional_argument, NULL, 't'},
+		{"to-address", required_argument, NULL, 'd'},
+		{"to-user", required_argument, NULL, 'u'},
+		{"mailbox", required_argument, NULL, 'm'},
+		{"mailbox-force", required_argument, NULL, 'M'},
+		{"return-path", required_argument, NULL, 'r'},
+
+		{"config",    required_argument, NULL, 'f'},
+		{"quiet",     no_argument, NULL, 'q'},
+		{"no",        no_argument, NULL, 'n'},
+		{"yes",       no_argument, NULL, 'y'},
+		{"help",      no_argument, NULL, 'h'},
+		{"verbose",   no_argument, NULL, 'v'},
+		{"version",   no_argument, NULL, 'V'},
+		{NULL,        0,           NULL, 0}
+	};
+	/* Check for commandline options. */
+	while ((opt = getopt_long(argc, argv,
+		"t::m:M:u:d:r:" /* Major modes */
+		"f:qvVh", /* Common options */
+		long_options, &option_index)) != -1) {
 		/* Do something with this option. */
-		switch (c) {
+		switch (opt) {
 		case 't':
 			TRACE(TRACE_INFO, "using NORMAL_DELIVERY");
 
@@ -116,8 +130,9 @@ int main(int argc, char *argv[])
 				} else {
 					deliver_to_header = optarg;
 				}
-			} else
+			} else {
 				deliver_to_header = "delivered-to";
+			}
 			
 
 			break;
@@ -382,6 +397,8 @@ int main(int argc, char *argv[])
 			exitcode,
 			final_dsn.class, final_dsn.subject, final_dsn.detail,
 			class, subject, detail);
+	} else if (exitcode == EX_USAGE) {
+		// Ingore
 	} else {
 		/* Something went wrong earlier on, get louder about it. */
 		TRACE(TRACE_WARNING, "exit code [%d] because something went wrong;"

@@ -1,27 +1,24 @@
 
 COMMON OPTIONS
 --------------
--f configfile::
- Specify an alternate config file. The utilities are currently
- hardcoded to use /etc/dbmail.conf for their configs, and will
- halt if the config file cannot be found. Use the -f configfile
- option to specify your system's preferred config file location.
- Debian is patched to have /etc/dbmail/dbmail.conf as the default.
+-f, --config configfile::
+ Specify an alternate config file. +
+ Use dbmail-<utility> --help to show the default location.
 
--q::
+-q, --quiet::
  Quietly skip interactive prompts and helpful status messages
  which would otherwise be printed to stdout. Use two -q's to
  silence errors which would otherwise be printed to stderr.
 
--v::
+-v, --verbose::
  Operate verbosely. Some of the utilities in the DBMail suite
  can take two -v's for extra verbosity. Those which don't understand
  this convention won't complain about having the extra -v
  and will simply operate at their normal verbosity.
 
--V::
+-V, --version::
  Show the version and copyright, then exit.
 
--h::
+-h, --help::
  Show a brief summary of options, then exit.
 

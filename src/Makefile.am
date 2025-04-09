@@ -26,10 +26,6 @@ if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-sieved
 endif
 
-if USE_DM_GETOPT
-DM_GETOPT = dm_getopt.c
-endif
-
 sbin_PROGRAMS = dbmail-deliver \
 	dbmail-pop3d \
 	dbmail-imapd \
@@ -60,7 +56,7 @@ COMMON = dm_user.c \
 	dm_sset.c \
 	dm_string.c \
 	$(top_srcdir)/src/mpool/mpool.c \
-	dm_mempool.c $(DM_GETOPT)
+	dm_mempool.c
 	
 
 SERVER = server.c \
