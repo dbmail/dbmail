@@ -1,10 +1,10 @@
 DBMAIL-SIEVECMD(8)
 ===================
-
+Alan Hicks <ahicks@p-o.co.uk>
 
 NAME
 ----
-dbmail-sievecmd - manipulates Sieve scripts in the DBMail database.
+dbmail-sievecmd - manipulates Sieve scripts in DBMail.
 
 SYNOPSIS
 --------
@@ -13,18 +13,18 @@ dbmail-sievecmd [common options] -u username --list
 dbmail-sievecmd [common options] -u username --activate scriptname
 dbmail-sievecmd [common options] -u username --deactivate scriptname
 dbmail-sievecmd [common options] -u username --show scriptname
-dbmail-sievecmd [common options] -u username --insert file
+dbmail-sievecmd [common options] -u username --import file
 dbmail-sievecmd [common options] -u username --edit scriptname
 dbmail-sievecmd [common options] -u username --remove scriptname
 ....
 
 DESCRIPTION
 -----------
-DBMail stores Sieve scripts in the DBMail database. These scripts are used to
-sort incoming mail for the email users. Each user has their own script space
-and may upload scripts to the dbmail-sieved(8) daemon. The dbmail-sievecmd(8)
-utility provides a convenient method for the system administrator to work with
-Sieve scripts from the command line.
+DBMail stores Sieve scripts in DBMail. These scripts are used to sort incoming
+mail for the email users. Each user has their own script space and may upload
+scripts to the dbmail-sieved(8) daemon. The dbmail-sievecmd(8) utility
+provides a convenient method for the system administrator to work with Sieve
+scripts from the command line.
 
 OPTIONS
 -------
@@ -36,17 +36,16 @@ Specify the user whose scripts we will be modifying.
 List scripts belonging to user
 
 -a, --activate scriptname::
-Activates `scriptname`, deactivating all other scripts.
+Activates scriptname, deactivating all other scripts.
 
 -d, --deactivate scriptname::
-Deactivates `scriptname` if it was active.
+Deactivates scriptname if it was active.
 
 -c, --show scriptname::
 Show the named script.
 
--i, --insert file::
-Creates a script called `scriptname` by importing `file`. If `file`
-is - (dash) or unspecified, 'stdin' will be read.
+-i, --import scriptname < file::
+Creates a script called scriptname by importing file.
 
 -e, --edit scriptname::
 Edit the contents of the named script +

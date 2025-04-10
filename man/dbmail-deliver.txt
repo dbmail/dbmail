@@ -1,5 +1,6 @@
 DBMAIL-DELIVER(1)
 =================
+Alan Hicks <ahicks@p-o.co.uk>
 
 NAME
 ----
@@ -17,8 +18,7 @@ dbmail-deliver [common options] --to-user usernames [options]
 DESCRIPTION
 -----------
 The dbmail-deliver program inserts messages from the commandline or from
-any MTA into the DBMail mailsystem. The program reads from standard input.
-
+any MTA into DBMail. The program reads from standard input.
 
 OPTIONS
 -------

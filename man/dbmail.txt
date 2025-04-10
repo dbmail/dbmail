@@ -1,6 +1,6 @@
 DBMAIL(1)
 =========
-Author
+Alan Hicks <ahicks@p-o.co.uk>
 
 NAME
 ----

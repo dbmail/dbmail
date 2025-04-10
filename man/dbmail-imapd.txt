@@ -1,12 +1,11 @@
 DBMAIL-IMAPD(8)
 ===============
-
+Alan Hicks <ahicks@p-o.co.uk>
 
 NAME
 ----
 dbmail-imapd - provides access to the DBMail system to clients supporting
-Internet Message Access Protocol, IMAP4r1, as specified in RFC
-3501.
+Internet Message Access Protocol, IMAP4r1, as specified in RFC 3501.
 
 SYNOPSIS
 --------
@@ -27,59 +26,63 @@ include::commonopts.txt[]
 EXAMPLE
 -------
 
-For xinetd:::
-  -----------------------------------------------------------
-  # /etc/xinet.d/dbmail-imap
-  #
-  service imap
-  {
-          socket_type     = stream
-          wait            = no
-          user            = root
-          server          = /usr/local/sbin/dbmail-imapd
-          protocol        = tcp
-          server_args     = -n
-          log_on_failure  += USERID
-          disable         = no
-  }
-  -----------------------------------------------------------
+For xinetd:
+....
+-----------------------------------------------------------
+# /etc/xinet.d/dbmail-imap
+#
+service imap
+{
+        socket_type     = stream
+        wait            = no
+        user            = root
+        server          = /usr/local/sbin/dbmail-imapd
+        protocol        = tcp
+        server_args     = -n
+        log_on_failure  += USERID
+        disable         = no
+}
+-----------------------------------------------------------
+....
 
-For stunnel:::
-  -----------------------------------------------------------
-  pid = /var/run/stunnel.pid
-  cert = /etc/stunnel/yourkeys.pem
+For stunnel:
+....
+-----------------------------------------------------------
+pid = /var/run/stunnel.pid
+cert = /etc/stunnel/yourkeys.pem
 
-  # The next two sections will turn stunnel
-  # into a 'secure inetd'. This is mutually
-  # exclusive with the proxy sections below.
-  [dbmail-pop3d]
-  accept = 995
-  exec = /usr/local/sbin/dbmail-pop3d
-  execargs = dbmail-pop3d -n
+# The next two sections will turn stunnel
+# into a 'secure inetd'. This is mutually
+# exclusive with the proxy sections below.
+[dbmail-pop3d]
+accept = 995
+exec = /usr/local/sbin/dbmail-pop3d
+execargs = dbmail-pop3d -n
 
-  [dbmail-imapd]
-  accept = 993
-  exec = /usr/local/sbin/dbmail-imapd
-  execargs = dbmail-imapd -n
+[dbmail-imapd]
+accept = 993
+exec = /usr/local/sbin/dbmail-imapd
+execargs = dbmail-imapd -n
 
-  # The next two sections will proxy
-  # from the secure protocol over to
-  # the insecure protocol. In this case,
-  # use BINDIP=localhost in dbmail.conf!
-  [pop3s]
-  accept  = 995
-  connect = 110
+# The next two sections will proxy
+# from the secure protocol over to
+# the insecure protocol. In this case,
+# use BINDIP=localhost in dbmail.conf!
+[pop3s]
+accept  = 995
+connect = 110
 
-  [imaps]
-  accept  = 993
-  connect = 143
+[imaps]
+accept  = 993
+connect = 143
 
-  # Useful if your preferred SMTP server doesn't do SSL/TLS.
-  # This is with your MTA configuration, not DBMail, per se.
-  [ssmtp]
-  accept  = 465
-  connect = 25
-  -----------------------------------------------------------
+# Useful if your preferred SMTP server doesn't do SSL/TLS.
+# This is with your MTA configuration, not DBMail, per se.
+[ssmtp]
+accept  = 465
+connect = 25
+-----------------------------------------------------------
+....
 
 
 include::footer.txt[]

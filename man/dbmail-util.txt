@@ -1,5 +1,6 @@
 DBMAIL-UTIL(8)
 ==============
+Alan Hicks <ahicks@p-o.co.uk>
 
 NAME
 ----
@@ -121,27 +122,27 @@ EXAMPLES
 
 Regular maintenance can be run as a regular cron job:
 
-`    dbmail-util --all --yes --verbose`
+  dbmail-util --all --yes --verbose
 
 To set all messages with the DELETE status to PURGE status, and permanently
 remove all messages previously set to PURGE status:
 
-`    dbmail-util --set-deleted --purge-deleted -yes`
+  dbmail-util --set-deleted --purge-deleted -yes
 
 
 To get a listing of the changes that would be performed for all actions:
 
-`    dbmail-util --all --no`
+  dbmail-util --all --no
 
 
 To remove all IP log entries more than three days old:
 
-`    dbmail-util --clear-iplog 72h --yes`
+  dbmail-util --clear-iplog 72h --yes
 
 
 After upgrading from DBMail 2.0 or truncating the cache tables, run this command
 to populate the cache:
 
-`    dbmail-util --check-body --yes`
+  dbmail-util --check-body --yes
 
 include::footer.txt[]

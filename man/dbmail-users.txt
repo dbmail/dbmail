@@ -1,6 +1,6 @@
 DBMAIL-USERS(8)
 ===============
-
+Alan Hicks <ahicks@p-o.co.uk>
 
 NAME
 ----
@@ -212,7 +212,8 @@ will complete and totally remove the 'bar@example.com' external alias and all of
 its forwarding addresses and commands.
 
 For example Gollum used to work at example.com but now works at example.org
-so any email addressed to +gollum@example.com+ is sent to +gollum@example.org+
+so any email addressed to +gollum@example.com+ is forwarded to
++gollum@example.org+
 
   dbmail-users --forward gollum@example.com --add-forward gollum@example.org
 
