@@ -36,7 +36,7 @@ static int do_activate(uint64_t user_idnr, char *name);
 static int do_deactivate(uint64_t user_idnr, char *name);
 static int do_remove(uint64_t user_idnr, char *name);
 static int do_edit(uint64_t user_idnr, char *name);
-static int do_insert(uint64_t user_idnr, char *name, char *source);
+static int do_import(uint64_t user_idnr, char *name, char *source);
 static int do_cat(uint64_t user_idnr, char *name, FILE *out);
 
 int do_showhelp(void)
@@ -57,8 +57,8 @@ int do_showhelp(void)
 	"  -e, --edit scriptname      Edit the contents of the named script\n"
 	"                             (if no script is given, the active \n"
 	"                             script is shown) \n"
-	"  -i, --insert file          Insert the named script from file \n"
-	"                             (a single dash, -, indicates input \n"
+	"  -i, --import file          Insert the named script from file \n"
+	"                             (a single dash, -, reads input \n"
 	"                             from STDIN) \n"
 	"  -r, --remove scriptname    Remove the named script \n"
 	"                             (if script was active, no script is \n"
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 	extern char *optarg;
 	extern int opterr;
 
-	int activate = 0, deactivate = 0, insert = 0;
+	int activate = 0, deactivate = 0, import = 0;
 	int remove = 0, list = 0, cat = 0, help = 0, edit = 0;
 
 	config_get_file();
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 		{"deactivate", required_argument, NULL, 'd'},
 		{"show", required_argument, NULL, 'c'},
 		{"edit", required_argument, NULL, 'e'},
-		{"insert", required_argument, NULL, 'i'},
+		{"import", required_argument, NULL, 'i'},
 		{"remove", required_argument, NULL, 'r'},
 
 		{"config",    required_argument, NULL, 'f'},
@@ -135,8 +135,8 @@ int main(int argc, char *argv[])
 		case 'd': /* deactivate */
 			deactivate = 1;
 			goto major_script;
-		case 'i': /* insert */
-			insert = 1;
+		case 'i': /* import */
+			import = 1;
 			goto major_script;
 		case 'r': /* remove */
 			remove = 1;
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 			break;
 
 		/* Common options */
-		/*case 'i': FIXME: this is from user.c, but we're using -i for insertion.
+		/*case 'i': FIXME: this is from user.c, but we're using -i for importing.
 			printf("Interactive console is not supported in this release.\n");
 			return 1;*/
 
@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
 	}
 
 /*
-	if (insert) printf("got insert\n");
+	if (import) printf("got import\n");
 	if (remove) printf("got remove\n");
 	if (list) printf("got list\n");
 	if (cat) printf("got cat\n");
@@ -238,11 +238,11 @@ int main(int argc, char *argv[])
 */
 
 	/* Only one major mode is allowed */
-	if ((edit + insert + remove + list + cat > 1)
-	/* Only insert/edit are allowed together with activate or deactivate */
+	if ((edit + import + remove + list + cat > 1)
+	/* Only import/edit are allowed together with activate or deactivate */
 	 || ((remove + list + cat == 1) && (activate + deactivate > 0))
 	/* You may either activate or deactivate as a mode on its own*/
-	 || (((edit + insert + remove + list + cat == 0) && (activate + deactivate != 1)))
+	 || (((edit + import + remove + list + cat == 0) && (activate + deactivate != 1)))
 	 || (help || !user_name || (no_to_all && yes_to_all))) {
 		do_showhelp();
 		goto mainend;
@@ -282,15 +282,15 @@ int main(int argc, char *argv[])
 		goto mainend;
 	}
 
-	if (insert)
-		res = do_insert(user_idnr, script_name, script_source);
+	if (import)
+		res = do_import(user_idnr, script_name, script_source);
 	if (remove)
 		res = do_remove(user_idnr, script_name);
 	if (edit)
 		res = do_edit(user_idnr, script_name);
 	if (activate)
-		/* Don't activate the script if it wasn't inserted/edited */
-		if (!(insert && res) && !(edit && res))
+		/* Don't activate the script if it wasn't imported/edited */
+		if (!(import && res) && !(edit && res))
 			res = do_activate(user_idnr, script_name);
 	if (deactivate)
 		res = do_deactivate(user_idnr, script_name);
@@ -443,7 +443,7 @@ int do_edit(uint64_t user_idnr, char *name)
 		goto cleanup;
 	}
 
-	/* If the file does not appear to have changed, cancel insertion. */
+	/* If the file does not appear to have changed, cancel importing. */
 	if ((stat_before.st_mtime == stat_after.st_mtime)
 	 && (stat_before.st_size == stat_after.st_size)) {
 		qprintf("File not modified, canceling.\n");
@@ -452,9 +452,9 @@ int do_edit(uint64_t user_idnr, char *name)
 		goto cleanup;
 	}
 
-	/* do_insert the script (set yes_to_all as we will overwrite). */
+	/* do_import the script (set yes_to_all as we will overwrite). */
 	yes_to_all = 1;
-	if (do_insert(user_idnr, name, tmp)) {
+	if (do_import(user_idnr, name, tmp)) {
 		char dbmail_invalid_file[] = "dbmail-invalid.xxx.sieve";
 		struct stat stat_inv;
 		int i;
@@ -575,7 +575,7 @@ static int read_from_stream(FILE * instream, char **m_buf, int maxlen)
         return 0;
 }
 
-int do_insert(uint64_t user_idnr, char *name, char *source)
+int do_import(uint64_t user_idnr, char *name, char *source)
 {
 	int res = 0, was_found = 0;
 	char *buf = NULL;
@@ -592,7 +592,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 		return -1;
 	}
 	if (was_found && !yes_to_all) {
-		qprintf("A script by that name already exists. Use -y option to overwrite it.\n");
+		qprintf("A script by that name already exists. Use --yes option to overwrite it.\n");
 		return -1;
 	}
 
@@ -621,7 +621,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 	res = dm_sievescript_add(user_idnr, "@!temp-script!@", buf);
 	g_free(buf);
 	if (res != 0) {
-		qprintf("Error inserting temporary script into the database!\n");
+		qprintf("Error importing temporary script into the database!\n");
 		return -1;
 	}
 
@@ -646,7 +646,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 		dm_sievescript_delete(user_idnr, "@!temp-script!@");
 		return -1;
 	} else if (res != 0) {
-		qprintf("Error inserting script [%s] into the database!\n",
+		qprintf("Error importing script [%s] into the database!\n",
 		       name);
 		dm_sievescript_delete(user_idnr, "@!temp-script!@");
 		return -1;
@@ -659,7 +659,7 @@ int do_insert(uint64_t user_idnr, char *name, char *source)
 			qprintf("Script [%s] successfully updated and remains inactive!\n", name);
 		}
 	} else {
-		qprintf("Script [%s] successfully inserted and marked inactive!\n", name);
+		qprintf("Script [%s] successfully imported and marked inactive!\n", name);
 	}
 	return 0;
 }

@@ -20,7 +20,8 @@ helpful to have a debug log available.
 LICENSE
 -------
 DBMail and its components are distributed under the terms of the GNU General
-Public License. Copyrights are held variously by the authors listed below.
+Public License Version 2. Copyrights are held variously by the authors listed
+below.
 
 AUTHOR(S)
 ---------

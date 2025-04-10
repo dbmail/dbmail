@@ -1,6 +1,6 @@
 DBMAIL-EXPORT(8)
 ================
-
+Alan Hicks <ahicks@p-o.co.uk>
 
 NAME
 ----
@@ -55,7 +55,7 @@ EXAMPLES
 --------
 
 To export and delete all messages belonging to user 'Joe' in mailbox 'Inbox'
-more than 30 days old, try this command:
+more than 30 days old, try this command on Linux:
 
     dbmail-export --user joe \
         --mailbox inbox \
@@ -63,10 +63,17 @@ more than 30 days old, try this command:
         --set-del-flag \
         --search "1:* BEFORE `date '+%e-%b-%Y' -d '30 days ago'`"
 
-Note the careful bash quoting and backticks calling the GNU date(1) command.
-GNU date(1) has excellent features for retrieving relative dates. If you are
-using a different shell, you may need different quotes. Descriptions of
-relative dates are not supported by BSD date(1).
+A BSD version:
+
+    dbmail-export --user joe \
+        --mailbox inbox \
+        --out joesinbox.mbox \
+        --set-del-flag \
+        --search "1:* BEFORE `date -v-30d '+%e-%b-%Y'`"
+
+Note the careful bash quoting and backticks calling the date(1) command.
+date(1) has excellent features for retrieving relative dates. If you are
+using a different shell, you may need different quotes.
 
 To export all mailboxes named Spam for all users into individual directories
 following the pattern SpamDump/<username>/Spam, try this command:
