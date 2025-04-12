@@ -3581,9 +3581,7 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 				" WHERE message_idnr = %" PRIu64 " AND status < %d",
 				msg_idnr, MESSAGE_STATUS_DELETE);
 	}
-	snprintf(query + pos, DEF_QUERYSIZE - pos - 1,
-					" WHERE message_idnr = %" PRIu64 " AND status < %d",
-					msg_idnr, MESSAGE_STATUS_DELETE);
+
 	/*
 	int mailbox_sync_deleted = config_get_value_default_int("mailbox_sync_deleted", "IMAP", 1); 
 	if (mailbox_sync_deleted==2 && (action_type==IMAPFA_REPLACE || action_type==IMAPFA_ADD)){
