@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.5.2] - 2025-04-14
+- Version bump to 3.5.2
+- Man pages updated
+- Help refactored
+- Long options added
+
+
 ## [3.5.1] - 2025-03-25
 - Version bump to 3.5.1
 - Logging refactored - errorlog removed in favour of logfile
