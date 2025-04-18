@@ -328,14 +328,21 @@ void dm_ldap_freeresult(GList *entlist)
 			attlist = g_list_first(attlist);
 			while(attlist) {
 				g_free(attlist->data);
+				if(!g_list_next(attlist))
+					break;
 				attlist = g_list_next(attlist);
 			}
+			attlist = g_list_first(attlist);
 			g_list_destroy(attlist);
-			g_free(fldlist->data);
+			if(!g_list_next(fldlist))
+				break;
 			fldlist = g_list_next(fldlist);
 		}
 		fldlist = g_list_first(fldlist);
 		g_list_free(fldlist);
+
+		if(!g_list_next(entlist))
+			break;
 		entlist = g_list_next(entlist);
 	}
 	entlist = g_list_first(entlist);
@@ -352,17 +359,14 @@ static GList * dm_ldap_ent_get_values(GList *entlist)
 		while (fldlist) {
 			attlist = g_list_first(fldlist->data);
 			while (attlist) {
-				char *t = (gchar *)attlist->data;
+				gchar *t = (gchar *)attlist->data;
 				TRACE(TRACE_DEBUG,"value [%s]", t);
 				values = g_list_append_printf(values,"%s", t);
 
-				if (! g_list_next(attlist)) break;
 				attlist = g_list_next(attlist);
 			}
-			if (! g_list_next(fldlist)) break;
 			fldlist = g_list_next(fldlist);
 		}
-		if (! g_list_next(entlist)) break;
 		entlist = g_list_next(entlist);
 	}
 	return values;
@@ -372,14 +376,16 @@ static char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GLi
 {
 	/* build user filter from objectclasses */
 	gchar *s;
-	GString *t = g_string_new("");
+	GString *t = NULL;
 	GString *q = g_string_new("");
 	GList *l = NULL;
 
 	values = g_list_first(values);
 	while (values) {
+		t = g_string_new("");
 		g_string_printf(t,"%s=%s", attribute, (char *)values->data);
 		l = g_list_append(l,g_strdup(t->str));
+		g_string_free(t, TRUE);
 		if (! g_list_next(values)) break;
 		values = g_list_next(values);
 	}
@@ -389,7 +395,7 @@ static char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GLi
 
 	g_string_free(t,TRUE);
 	g_string_free(q,FALSE);
-	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_list_free_full(g_steal_pointer (&l), g_free);
 
 	return s;
 }
@@ -824,6 +830,7 @@ GList * auth_get_known_users(void)
 	
 	query =  dm_ldap_get_filter('&',"objectClass",l);
 	entlist = __auth_get_every_match(query, fields);
+	g_list_free_full(g_steal_pointer (&l), g_free);
 	g_free(query);
 	
 	TRACE(TRACE_INFO, "found %d users", g_list_length(entlist));
@@ -849,6 +856,7 @@ GList * auth_get_known_aliases(void)
 	
 	query =  dm_ldap_get_filter('&',"objectClass",l);
 	entlist = __auth_get_every_match(query, fields);
+	g_list_free_full(g_steal_pointer (&l), g_free);
 	g_free(query);
 	
 	TRACE(TRACE_INFO, "found %d aliases", g_list_length(entlist));
@@ -887,46 +895,52 @@ int auth_check_user_ext(const char *userid, GList **userids, GList **fwds, int c
 	}
 
 	TRACE(TRACE_DEBUG, "checking user [%s] in ldap", userid);
- 	if (strlen(_ldap_cfg.query_string)==0) {
- 		/* build a mail filter, with multiple attributes, if needed */
- 		GString *f = g_string_new(_ldap_cfg.field_mail);
- 		searchlist = g_string_split(f,",");
- 		g_string_free(f,TRUE);
- 	
- 		GString *t = g_string_new("");
- 		GString *q = g_string_new("");
- 		GList *l = NULL;
- 		searchlist = g_list_first(searchlist);
- 		while(searchlist) {
- 			g_string_printf(t,"%s=%s",(char *)searchlist->data,userid);
- 			l = g_list_append(l,g_strdup(t->str));
- 			if(!g_list_next(searchlist))
- 				break;
- 			searchlist = g_list_next(searchlist);	
- 		}
-  
- 		t = g_list_join(l,")(");
- 		g_string_printf(q,"(|(%s))", t->str);
- 		query = q->str;
- 		g_string_free(t,TRUE);
- 		g_string_free(q,FALSE);
+	if (strlen(_ldap_cfg.query_string)==0) {
+		/* build a mail filter, with multiple attributes, if needed */
+		GString *f = g_string_new(_ldap_cfg.field_mail);
+		searchlist = g_string_split(f,",");
+		g_string_free(f,TRUE);
+
+		GString *t = NULL;
+		GString *q = g_string_new("");
+		GList *l = NULL;
+		searchlist = g_list_first(searchlist);
+		while(searchlist) {
+			t = g_string_new("");
+			g_string_printf(t,"%s=%s",(char *)searchlist->data,userid);
+			l = g_list_append(l,g_strdup(t->str));
+			g_string_free(t, TRUE);
+			if (!g_list_next(searchlist))
+				break;
+			searchlist = g_list_next(searchlist);
+		}
+		searchlist = g_list_first(searchlist);
+		g_list_foreach(searchlist, (GFunc)g_string_free, NULL);
+		searchlist = g_list_first(searchlist);
+		g_list_free(searchlist);
+
+		t = g_list_join(l,")(");
+		g_string_printf(q,"(|(%s))", t->str);
+		query = q->str;
+		g_string_free(t,TRUE);
+		g_string_free(q,FALSE);
 		g_list_foreach(l,(GFunc)g_free,NULL);
 		g_list_free(l);
- 	} else {
- 		int i;
- 		GString *q = g_string_new("");
- 		for (i = 0; _ldap_cfg.query_string[i] != '\0'; i++) {
- 			if (_ldap_cfg.query_string[i]=='%' && _ldap_cfg.query_string[i+1] && _ldap_cfg.query_string[i+1]=='s') {
- 				g_string_append(q,userid);
- 				i++;
- 			} else {
- 				g_string_append_c(q,_ldap_cfg.query_string[i]);
- 			}
- 		}	
- 		query = q->str;
- 		g_string_free(q,FALSE);
- 	}
- 
+	} else {
+		int i;
+		GString *q = g_string_new("");
+		for (i = 0; _ldap_cfg.query_string[i] != '\0'; i++) {
+			if (_ldap_cfg.query_string[i]=='%' && _ldap_cfg.query_string[i+1] && _ldap_cfg.query_string[i+1]=='s') {
+				g_string_append(q,userid);
+				i++;
+			} else {
+				g_string_append_c(q,_ldap_cfg.query_string[i]);
+			}
+		}
+		query = q->str;
+		g_string_free(q,FALSE);
+	}
+
 	TRACE(TRACE_DEBUG, "searching with query [%s], checks [%d]", query, checks);
 
 	entlist = __auth_get_every_match(query, fields);
