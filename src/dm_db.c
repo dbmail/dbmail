@@ -1048,18 +1048,18 @@ int db_check_headernames(void)
 	int headername_exists = 0;
 	int ret = 0;
 	GList *headernames = NULL;
-	headernames = g_list_append(headernames, "from");
-	headernames = g_list_append(headernames, "to");
-	headernames = g_list_append(headernames, "cc");
-	headernames = g_list_append(headernames, "bcc");
-	headernames = g_list_append(headernames, "date");
-	headernames = g_list_append(headernames, "subject");
-	headernames = g_list_append(headernames, "content-type");
-	headernames = g_list_append(headernames, "content-disposition");
-	headernames = g_list_append(headernames, "references");
-	headernames = g_list_append(headernames, "in-reply-to");
-	headernames = g_list_append(headernames, "reply-to");
-	headernames = g_list_append(headernames, "return-path");
+	headernames = g_list_prepend(headernames, "from");
+	headernames = g_list_prepend(headernames, "to");
+	headernames = g_list_prepend(headernames, "cc");
+	headernames = g_list_prepend(headernames, "bcc");
+	headernames = g_list_prepend(headernames, "date");
+	headernames = g_list_prepend(headernames, "subject");
+	headernames = g_list_prepend(headernames, "content-type");
+	headernames = g_list_prepend(headernames, "content-disposition");
+	headernames = g_list_prepend(headernames, "references");
+	headernames = g_list_prepend(headernames, "in-reply-to");
+	headernames = g_list_prepend(headernames, "reply-to");
+	headernames = g_list_prepend(headernames, "return-path");
 
 	headernames = g_list_first(headernames);
 
@@ -1096,6 +1096,8 @@ int db_check_headernames(void)
 		END_TRY;
 
 		// Get the next header
+		if (!g_list_next(headernames))
+			break;
 		headernames = g_list_next(headernames);
 		headername_exists = 0;
 	}

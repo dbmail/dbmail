@@ -705,33 +705,32 @@ static int show_alias(const char * const name, int concise)
 	}
 	
 	userids = g_list_first(userids);
-	if (userids) {
-		while (userids) {
-			username = auth_get_userid(*(uint64_t *)userids->data);
-			TRACE(TRACE_DEBUG, "Deliver [%s] to [%s]", name, username);
-			if (!username) {
-				// FIXME: This is a dangling entry. These should be removed
-				// by dbmail-util. This method of identifying dangling aliases
-				// should go into maintenance.c at some point.
-				TRACE(TRACE_WARNING, "Dangling entry [%s]", username);
-			} else {
-				if (!concise) // Don't print for concise
-				printf("deliver [%s] to [%s]\n", name, username);
-			}
-			g_free(username);
-			if (! g_list_next(userids))
-				break;
-			userids = g_list_next(userids);
+	while (userids) {
+		username = auth_get_userid(*(uint64_t *)userids->data);
+		TRACE(TRACE_DEBUG, "Deliver [%s] to [%s]", name, username);
+		if (!username) {
+			// FIXME: This is a dangling entry. These should be removed
+			// by dbmail-util. This method of identifying dangling aliases
+			// should go into maintenance.c at some point.
+			TRACE(TRACE_WARNING, "Dangling entry [%s]", username);
+		} else {
+			if (!concise) // Don't print for concise
+			printf("deliver [%s] to [%s]\n", name, username);
 		}
-		g_list_free(g_list_first(userids));
+		g_free(username);
+		if (! g_list_next(userids))
+			break;
+		userids = g_list_next(userids);
 	}
+	userids = g_list_first(userids);
+	g_list_free_full(g_steal_pointer (&userids), g_free);
 	return 0;
 }
 
 /* TODO: Non-concise output, like the old dbmail-users used to have. */
 static int show_user(uint64_t useridnr, int concise UNUSED)
 {
-	uint64_t cid, quotum, quotumused;
+	uint64_t cid=0, quotum=0, quotumused=0;
 	GList *userlist = NULL;
 	char *username;
 
@@ -740,7 +739,7 @@ static int show_user(uint64_t useridnr, int concise UNUSED)
 	dm_quota_user_get(useridnr, &quotumused);
         
 	GList *out = NULL;
-	GString *s = g_string_new("");
+	GString *s = NULL;
 	
 	username = auth_get_userid(useridnr);
 	out = g_list_append_printf(out,"%s", username);
@@ -759,6 +758,7 @@ static int show_user(uint64_t useridnr, int concise UNUSED)
 		userlist = g_list_first(userlist);
 		s = g_list_join(userlist,",");
 		g_list_append_printf(out,"%s", s->str);
+		g_string_free(s,TRUE);
 		g_list_foreach(userlist,(GFunc)g_free, NULL);
 	} else {
 		g_list_append_printf(out,"");
@@ -767,6 +767,7 @@ static int show_user(uint64_t useridnr, int concise UNUSED)
 	s = g_list_join(out,":");
 	printf("%s\n", s->str);
 	g_string_free(s,TRUE);
+	g_list_free(g_list_first(out));
 	return 0;
 }
 
