@@ -922,10 +922,16 @@ gchar * dbmail_message_get_internal_date(const DbmailMessage *self, int thisyear
 {
 	char *res;
 	struct tm gmt;
-	assert(self->internal_date);
+	time_t dt;
+
 	
 	memset(&gmt,'\0', sizeof(struct tm));
-	gmtime_r(&self->internal_date, &gmt);
+	if (! self->internal_date) {
+		dt = g_date_time_to_unix(NULL);
+		gmtime_r(&dt, &gmt);
+	} else {
+		gmtime_r(&self->internal_date, &gmt);
+	}
 
 	/* override if the date is not sane */
 	if (thisyear && ((gmt.tm_year + 1900) > (thisyear + 1)))
