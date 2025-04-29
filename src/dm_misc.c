@@ -2170,8 +2170,7 @@ char * imap_get_envelope(GMimeMessage *message)
 
 	s = dbmail_imap_plist_as_string(list);
 
-	// Dont free list structure, it's free'd elsewhere
-	g_list_destroy(list);
+	g_list_free_full(g_steal_pointer (&list), g_free);
 
 	return s;
 }
