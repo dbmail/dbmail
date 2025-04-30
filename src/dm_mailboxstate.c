@@ -340,7 +340,6 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 
 T MailboxState_update(Mempool_T pool, T OldM)
 {
-	
 	T M; Connection_T c;
 	volatile int t = DM_SUCCESS;
 	gboolean freepool = FALSE;
@@ -382,9 +381,7 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	
 	//g_tree_merge(M->recent, OldM->recent, IST_SUBSEARCH_OR);
 	
-	
-	//g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
-	g_tree_copy_MessageInfo(M->msginfo,OldM->msginfo);
+	g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
 	
 	//no need, those keywords will be populated at metadata
 	//@todo change this behaviour in state_load_metadata

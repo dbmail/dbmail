@@ -1132,21 +1132,6 @@ static gboolean traverse_tree_copy_String(gpointer key, gpointer value UNUSED, t
 }
 
 /**
- * duplicate a GTree containing MessageInfo structures and keys as uint64_t
- * @param a
- * @param b
- * @return 
- */
-int g_tree_copy_MessageInfo(GTree *a, GTree *b){
-	g_return_val_if_fail(a && b,1);
-	tree_copy_t *copier = g_new0(tree_copy_t,1);
-	copier->treeDestination=a;
-	copier->treeSource=b;
-	g_tree_foreach(b,(GTraverseFunc)traverse_tree_copy_MessageInfo, &copier);
-	return 0;
-}
-
-/**
  * duplicate a GRee containing char * as structures and keys as uint64_t
  * @param a
  * @param b

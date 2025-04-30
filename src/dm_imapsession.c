@@ -1728,7 +1728,7 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			g_tree_replace(self->mbxinfo, id, M);
 		} else {
 			unsigned newseq = 0, oldseq = 0;
-			unsigned newexists = 0, oldexists = 0;
+			unsigned oldexists = 0;
 			MailboxState_T N = NULL;
 			N = MailboxState_new(self->pool, 0);
 			MailboxState_setId(N, mailbox_id);
@@ -1737,16 +1737,11 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			oldexists = MailboxState_getExists(M);
 			MailboxState_free(&N);
 			if (oldseq < newseq) {
-				id = mempool_pop(small_pool, sizeof(uint64_t));
-				*id = mailbox_id;
-				M = MailboxState_new(self->pool, mailbox_id);
-				newexists = MailboxState_getExists(M);
-				MailboxState_setExists(M, max(oldexists, newexists));
-				g_tree_replace(self->mbxinfo, id, M);
+				MailboxState_update(self->pool, M);
+				newseq = MailboxState_getSeq(M);
+				TRACE(TRACE_DEBUG,"newseq [%d]", newseq);
 			}
 		}
-
-
 	}
 
 	assert(M);
