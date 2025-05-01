@@ -744,7 +744,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			tlist = g_list_append(tlist, (void *)p_string_str(self->args[k + bodyfetch->argstart]));
 
 		bodyfetch->hdrplist = dbmail_imap_plist_as_string(tlist);
-		h = g_list_join((GList *)tlist,"','");
+		h = g_list_join(tlist,"','");
 		bodyfetch->names = tlist;
 
 		h = g_string_ascii_down(h);
@@ -1862,7 +1862,7 @@ static void _body_fetch_free(body_fetch *bodyfetch, gpointer data)
 	ImapSession *self = (ImapSession *)data;
 	if (! bodyfetch) return;
 	if (bodyfetch->names) {
-		g_list_free(g_list_first(bodyfetch->names));
+		g_list_free_full(g_steal_pointer (&bodyfetch->names), g_free);
 		bodyfetch->names = NULL;
 	}
 
