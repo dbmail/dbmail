@@ -1973,16 +1973,14 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 			p = g_list_append_printf(p, "%s", s);
 			g_free(s);
 
-			// Dont free list structure, it's free'd elsewhere
-			g_list_destroy(t);
-			t = NULL;
+			g_list_free_full(g_steal_pointer (&t), g_free);
 		}
-	
+
 		/* Bottom of the while loop.
 		 * Advance the address list.
 		 */
 	}
-	
+
 	/* Tack it onto the outer list. */
 	if (p) {
 		s = dbmail_imap_plist_as_string(p);
@@ -1990,8 +1988,8 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 		list = g_list_append_printf(list, "(%s)", st);
 		g_free(s);
 		g_free(st);
-        
-		g_list_destroy(p);
+
+		g_list_free_full(g_steal_pointer (&p), g_free);
 	} else {
 		list = g_list_append_printf(list, "NIL");
 	}
