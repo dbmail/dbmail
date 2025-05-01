@@ -1728,13 +1728,11 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			g_tree_replace(self->mbxinfo, id, M);
 		} else {
 			unsigned newseq = 0, oldseq = 0;
-			unsigned oldexists = 0;
 			MailboxState_T N = NULL;
 			N = MailboxState_new(self->pool, 0);
 			MailboxState_setId(N, mailbox_id);
 			oldseq = MailboxState_getSeq(M);
 			newseq = MailboxState_getSeq(N);
-			oldexists = MailboxState_getExists(M);
 			MailboxState_free(&N);
 			if (oldseq < newseq) {
 				MailboxState_update(self->pool, M);
