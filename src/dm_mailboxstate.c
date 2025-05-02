@@ -378,11 +378,9 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	TRACE(TRACE_DEBUG, "Strategy SEQ UPDATE, iterations %d", M->differential_iterations);
 	//M->ids     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	//M->msn     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
-	
-	//g_tree_merge(M->recent, OldM->recent, IST_SUBSEARCH_OR);
-	
+
 	g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
-	
+
 	//no need, those keywords will be populated at metadata
 	//@todo change this behaviour in state_load_metadata
 	//g_tree_copy_String(M->keywords,OldM->keywords);
