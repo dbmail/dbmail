@@ -1716,6 +1716,7 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 {
 	MailboxState_T M = NULL;
 	uint64_t *id;
+	uint64_t oldexists = 0, newexists = 0;
 	if (self->mailbox && self->mailbox->mbstate && (MailboxState_getId(self->mailbox->mbstate) == mailbox_id)) {
 		// selected state
 		M = self->mailbox->mbstate;
@@ -1733,11 +1734,16 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			MailboxState_setId(N, mailbox_id);
 			oldseq = MailboxState_getSeq(M);
 			newseq = MailboxState_getSeq(N);
+			oldexists = MailboxState_getExists(M);
 			MailboxState_free(&N);
 			if (oldseq < newseq) {
-				MailboxState_update(self->pool, M);
-				newseq = MailboxState_getSeq(M);
-				TRACE(TRACE_DEBUG,"newseq [%d]", newseq);
+				TRACE(TRACE_DEBUG,"oldseq/newseq [%d]/[%d]", oldseq, newseq);
+				id = mempool_pop(small_pool, sizeof(uint64_t));
+				*id = mailbox_id;
+				M = MailboxState_new(self->pool, mailbox_id);
+				newexists = MailboxState_getExists(M);
+				MailboxState_setExists(M, max(oldexists, newexists));
+				g_tree_replace(self->mbxinfo, id, M);
 			}
 		}
 	}
@@ -1794,7 +1800,9 @@ int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 static gboolean _do_expunge(uint64_t *id, ImapSession *self)
 {
 	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), id);
-	assert(msginfo);
+	if (! msginfo) {
+		return FALSE;
+	}
 
 	if (! msginfo->flags[IMAP_FLAG_DELETED]) return FALSE;
 
