@@ -744,7 +744,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			tlist = g_list_append(tlist, (void *)p_string_str(self->args[k + bodyfetch->argstart]));
 
 		bodyfetch->hdrplist = dbmail_imap_plist_as_string(tlist);
-		h = g_list_join((GList *)tlist,"','");
+		h = g_list_join(tlist,"','");
 		bodyfetch->names = tlist;
 
 		h = g_string_ascii_down(h);
@@ -1716,6 +1716,7 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 {
 	MailboxState_T M = NULL;
 	uint64_t *id;
+	uint64_t oldexists = 0, newexists = 0;
 	if (self->mailbox && self->mailbox->mbstate && (MailboxState_getId(self->mailbox->mbstate) == mailbox_id)) {
 		// selected state
 		M = self->mailbox->mbstate;
@@ -1728,7 +1729,6 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			g_tree_replace(self->mbxinfo, id, M);
 		} else {
 			unsigned newseq = 0, oldseq = 0;
-			unsigned newexists = 0, oldexists = 0;
 			MailboxState_T N = NULL;
 			N = MailboxState_new(self->pool, 0);
 			MailboxState_setId(N, mailbox_id);
@@ -1737,6 +1737,7 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 			oldexists = MailboxState_getExists(M);
 			MailboxState_free(&N);
 			if (oldseq < newseq) {
+				TRACE(TRACE_DEBUG,"oldseq/newseq [%d]/[%d]", oldseq, newseq);
 				id = mempool_pop(small_pool, sizeof(uint64_t));
 				*id = mailbox_id;
 				M = MailboxState_new(self->pool, mailbox_id);
@@ -1745,8 +1746,6 @@ MailboxState_T dbmail_imap_session_mbxinfo_lookup(ImapSession *self, uint64_t ma
 				g_tree_replace(self->mbxinfo, id, M);
 			}
 		}
-
-
 	}
 
 	assert(M);
@@ -1801,7 +1800,9 @@ int dbmail_imap_session_set_state(ImapSession *self, ClientState_T state)
 static gboolean _do_expunge(uint64_t *id, ImapSession *self)
 {
 	MessageInfo *msginfo = g_tree_lookup(MailboxState_getMsginfo(self->mailbox->mbstate), id);
-	assert(msginfo);
+	if (! msginfo) {
+		return FALSE;
+	}
 
 	if (! msginfo->flags[IMAP_FLAG_DELETED]) return FALSE;
 
@@ -1869,7 +1870,7 @@ static void _body_fetch_free(body_fetch *bodyfetch, gpointer data)
 	ImapSession *self = (ImapSession *)data;
 	if (! bodyfetch) return;
 	if (bodyfetch->names) {
-		g_list_free(g_list_first(bodyfetch->names));
+		g_list_free_full(g_steal_pointer (&bodyfetch->names), g_free);
 		bodyfetch->names = NULL;
 	}
 

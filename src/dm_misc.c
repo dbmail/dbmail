@@ -1059,51 +1059,6 @@ static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_m
 	return FALSE;
 }
 
-
-static gboolean traverse_tree_copy_MessageInfo(gpointer key, gpointer value, tree_copy_t **copy)
-{
-	int i;
-	tree_copy_t *t = *(tree_copy_t **)copy;
-	//GTree *source = t->treeSource;
-	GTree *destination = t->treeDestination;
-	uint64_t *uid;
-	uid = g_new0(uint64_t,1); 	
-	*uid = *(uint64_t *) key;
-	
-	MessageInfo *src=(MessageInfo *) value;
-	//MessageInfo * src = g_tree_lookup(source, key);
-	MessageInfo *dst = g_new0(MessageInfo, 1);
-	//TRACE(TRACE_INFO, "TR MI [%s]", key);
-	dst->expunge=	src->expunge;
-	dst->expunged=	src->expunged;
-	for(i=0;i<IMAP_NFLAGS;i++){
-		dst->flags[i]=src->flags[i];
-	}
-	dst->mailbox_id=src->mailbox_id;
-	dst->msn=		src->msn;
-	dst->phys_id=	src->phys_id;
-	dst->rfcsize=	src->rfcsize;
-	dst->seq=		src->seq;
-	dst->status=	src->status; 
-	dst->uid=		src->uid;
-	
-	strcpy(dst->internaldate,src->internaldate);
-	//dst->keywords=	g_list_copy(src->keywords);
-	// copy keywords 
-	GList *tk = g_list_first(src->keywords);
-	while (tk) { 
-		dst->keywords = g_list_append(dst->keywords, g_strdup((gchar *)tk->data));
-		if (! g_list_next(tk)) break;
-		tk = g_list_next(tk);
-	} 
-	*uid = src->uid;
-	//TRACE(TRACE_DEBUG,"TRAVERSE MessageInfo add %ld %ld=%d %ld=%d",*uid, source,g_tree_nnodes(source), destination,g_tree_nnodes(destination));
-
-	
-	g_tree_insert(destination, uid, dst);
-	return FALSE;
-}
-
 static gboolean traverse_tree_copy_String(gpointer key, gpointer value UNUSED, tree_copy_t **copy)
 {
 	
@@ -1129,21 +1084,6 @@ static gboolean traverse_tree_copy_String(gpointer key, gpointer value UNUSED, t
 	*/
 	g_tree_insert(destination, uid,g_strdup(src));
 	return FALSE;
-}
-
-/**
- * duplicate a GTree containing MessageInfo structures and keys as uint64_t
- * @param a
- * @param b
- * @return 
- */
-int g_tree_copy_MessageInfo(GTree *a, GTree *b){
-	g_return_val_if_fail(a && b,1);
-	tree_copy_t *copier = g_new0(tree_copy_t,1);
-	copier->treeDestination=a;
-	copier->treeSource=b;
-	g_tree_foreach(b,(GTraverseFunc)traverse_tree_copy_MessageInfo, &copier);
-	return 0;
 }
 
 /**
@@ -1988,16 +1928,14 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 			p = g_list_append_printf(p, "%s", s);
 			g_free(s);
 
-			// Dont free list structure, it's free'd elsewhere
-			g_list_destroy(t);
-			t = NULL;
+			g_list_free_full(g_steal_pointer (&t), g_free);
 		}
-	
+
 		/* Bottom of the while loop.
 		 * Advance the address list.
 		 */
 	}
-	
+
 	/* Tack it onto the outer list. */
 	if (p) {
 		s = dbmail_imap_plist_as_string(p);
@@ -2005,8 +1943,8 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, InternetAddressList *ialis
 		list = g_list_append_printf(list, "(%s)", st);
 		g_free(s);
 		g_free(st);
-        
-		g_list_destroy(p);
+
+		g_list_free_full(g_steal_pointer (&p), g_free);
 	} else {
 		list = g_list_append_printf(list, "NIL");
 	}
@@ -2170,8 +2108,7 @@ char * imap_get_envelope(GMimeMessage *message)
 
 	s = dbmail_imap_plist_as_string(list);
 
-	// Dont free list structure, it's free'd elsewhere
-	g_list_destroy(list);
+	g_list_free_full(g_steal_pointer (&list), g_free);
 
 	return s;
 }

@@ -340,7 +340,6 @@ T MailboxState_new(Mempool_T pool, uint64_t id)
 
 T MailboxState_update(Mempool_T pool, T OldM)
 {
-	
 	T M; Connection_T c;
 	volatile int t = DM_SUCCESS;
 	gboolean freepool = FALSE;
@@ -368,7 +367,13 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	M->id = id;
 	M->recent_queue = g_tree_new((GCompareFunc)ucmp);
 
-	M->keywords    = NULL;
+	if (M->keywords) {
+		g_list_free_full(g_steal_pointer (&M->keywords), g_free);
+		M->keywords    = NULL;
+		//no need, those keywords will be populated at metadata
+		//@todo change this behaviour in state_load_metadata
+		//g_tree_copy_String(M->keywords,OldM->keywords);
+	}
 	M->msginfo     = g_tree_new_full((GCompareDataFunc)ucmpdata, NULL,(GDestroyNotify)g_free, (GDestroyNotify)MessageInfo_free);
 	// increase differential iterations in order to apply mailbox_update_strategy_2_max_iterations
 	M->differential_iterations = OldM->differential_iterations + 1;
@@ -379,18 +384,9 @@ T MailboxState_update(Mempool_T pool, T OldM)
 	TRACE(TRACE_DEBUG, "Strategy SEQ UPDATE, iterations %d", M->differential_iterations);
 	//M->ids     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
 	//M->msn     = g_tree_new_full((GCompareDataFunc)_compare_data,NULL,g_free,NULL);
-	
-	//g_tree_merge(M->recent, OldM->recent, IST_SUBSEARCH_OR);
-	
-	
-	//g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
-	g_tree_copy_MessageInfo(M->msginfo,OldM->msginfo);
-	
-	//no need, those keywords will be populated at metadata
-	//@todo change this behaviour in state_load_metadata
-	//g_tree_copy_String(M->keywords,OldM->keywords);
-	
-	
+
+	g_tree_merge(M->msginfo, OldM->msginfo, IST_SUBSEARCH_OR);
+
 	//MailboxState_remap(M);
 	/* reset the sequence */ 
 	MailboxState_resetSeq(OldM);
@@ -842,15 +838,12 @@ GTree * MailboxState_get_set(MailboxState_T M, const char *set, gboolean uid)
 			}
 		}
 
-		sets = sets->next;
+		if (! g_list_next(sets)) break;
+		sets = g_list_next(sets);
 	}
 
-	GList * element;
 	sets = g_list_first(sets);
-	while ((element = g_list_next(sets))) {
-		g_free(element->data);
-	}
-	g_list_destroy(sets);
+	g_list_free_full(g_steal_pointer (&sets), g_free);
 
 	if (a) g_tree_destroy(a);
 

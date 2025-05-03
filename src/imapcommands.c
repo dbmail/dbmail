@@ -1751,7 +1751,6 @@ void _ic_append_enter(dm_thread_data *D)
 	info->rfcsize = strlen(message);
 	info->keywords = keywords;
 
-	M = dbmail_imap_session_mbxinfo_lookup(self, mboxid);
 	MailboxState_addMsginfo(M, message_id, info);
 
 	char buffer[1024];
