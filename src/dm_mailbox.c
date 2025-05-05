@@ -1191,7 +1191,8 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self) {
 		self->sorted = NULL;
 	}
 
-	z = g_tree_new((GCompareFunc) ucmp);
+	z = g_tree_new_full((GCompareDataFunc)ucmp, NULL,
+						(GDestroyNotify)uint64_free, (GDestroyNotify)g_free);
 	c = db_con_get();
 	TRY
 	r = db_query(c, q->str);
