@@ -179,6 +179,7 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 			/* previous behavior, a query will be performed in db */
 			if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
 				TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
+				mempool_push(self->pool, id, sizeof(uint64_t));
 				g_free(id);
 				return 0;
 			}

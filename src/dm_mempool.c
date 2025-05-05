@@ -69,6 +69,7 @@ M mempool_open(void)
 void * mempool_pop(M MP, size_t blocksize)
 {
 	int error;
+	TRACE(TRACE_DEBUG, "%zu", blocksize);
 	PLOCK(MP->lock);
 	void *block = mpool_calloc(MP->pool, 1, blocksize, &error);
 	PUNLOCK(MP->lock);
@@ -80,6 +81,7 @@ void * mempool_pop(M MP, size_t blocksize)
 void * mempool_resize(M MP, void *block, size_t oldsize, size_t newsize)
 {
 	int error;
+	TRACE(TRACE_DEBUG, "Resizing pool from [%zu] to [%zu]", oldsize, newsize);
 	PLOCK(MP->lock);
 	void *newblock = mpool_resize(MP->pool, block, oldsize, newsize, &error);
 	PUNLOCK(MP->lock);
@@ -92,6 +94,7 @@ void * mempool_resize(M MP, void *block, size_t oldsize, size_t newsize)
 void mempool_push(M MP, void *block, size_t blocksize)
 {
 	int error;
+	TRACE(TRACE_DEBUG, "%zu", blocksize);
 	PLOCK(MP->lock);
 	if ((error = mpool_free(MP->pool, block, blocksize)) != MPOOL_ERROR_NONE)
 		TRACE(TRACE_ERR, "%s", mpool_strerror(error));

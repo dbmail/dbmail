@@ -54,7 +54,7 @@ static void MailboxState_uid_msn_new(T M)
 
 static void MessageInfo_free(MessageInfo *m)
 {
-	g_list_destroy(m->keywords);
+	g_list_free_full(g_steal_pointer (&m->keywords), g_free);
 	g_free(m);
 }
 
