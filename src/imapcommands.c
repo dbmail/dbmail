@@ -1406,7 +1406,10 @@ void _ic_list_enter(dm_thread_data *D)
 
 	if (found_hierarchy) g_tree_destroy(found_hierarchy);
 	if (found_folders) g_tree_destroy(found_folders);
-	if (children) g_list_destroy(children);
+	if (children) {
+		children = g_list_first(children);
+		g_list_free_full(g_steal_pointer (&children), g_free);
+	}
 
 	if (! D->status) dbmail_imap_session_buff_printf(self, "%s OK %s completed\r\n", self->tag, self->command);
 

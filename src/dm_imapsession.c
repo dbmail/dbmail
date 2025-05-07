@@ -179,6 +179,7 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 			/* previous behavior, a query will be performed in db */
 			if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
 				TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
+				mempool_push(self->pool, id, sizeof(uint64_t));
 				g_free(id);
 				return 0;
 			}
@@ -1151,7 +1152,7 @@ static int _fetch_get_items(ImapSession *self, uint64_t *uid)
 
 		GList *sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
 		s = dbmail_imap_plist_as_string(sublist);
-		g_list_destroy(sublist);
+		g_list_free_full(g_steal_pointer (&sublist), g_free);
 		dbmail_imap_session_buff_printf(self,"FLAGS %s",s);
 		g_free(s);
 	}
@@ -1461,8 +1462,8 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 	nl = MailboxState_message_flags(N, new);
 	newflags = dbmail_imap_plist_as_string(nl);
 
-	g_list_destroy(ol);
-	g_list_destroy(nl);
+	g_list_free_full(g_steal_pointer (&ol), g_free);
+	g_list_free_full(g_steal_pointer (&nl), g_free);
 
 	if ((!old) || (old->seq < new->seq))
 		modseqchanged = true;

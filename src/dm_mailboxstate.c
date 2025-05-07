@@ -54,7 +54,7 @@ static void MailboxState_uid_msn_new(T M)
 
 static void MessageInfo_free(MessageInfo *m)
 {
-	g_list_destroy(m->keywords);
+	g_list_free_full(g_steal_pointer (&m->keywords), g_free);
 	g_free(m);
 }
 
@@ -1334,13 +1334,13 @@ int MailboxState_build_recent(T M)
 	return 0;
 }
 
-static long long int _update_recent(volatile GList *slices, uint64_t seq)
+static long long int _update_recent(GList *slices, uint64_t seq)
 {
 	INIT_QUERY;
 	Connection_T c;
 	volatile long long int count = 0;
 	
-	if (! (slices = g_list_first((GList*)slices)))
+	if (! (slices = g_list_first(slices)))
 		return count;
 
 	c = db_con_get();
@@ -1362,7 +1362,7 @@ static long long int _update_recent(volatile GList *slices, uint64_t seq)
 		db_rollback_transaction(c);
 	FINALLY
 		db_con_close(c);
-		g_list_destroy((GList*)slices);
+		g_list_free_full(g_steal_pointer (&slices), g_free);
 	END_TRY;
 
 	return count;
@@ -1391,6 +1391,8 @@ int MailboxState_flush_recent(T M)
 	}
 
 	g_list_free(g_list_first(recent));
+	// the following causes an invalid free
+	// g_list_free_full(g_steal_pointer (&recent), g_free);
 
 	g_tree_foreach(M->recent_queue, (GTraverseFunc)_free_recent_queue, M);
 	g_tree_destroy(M->recent_queue);
