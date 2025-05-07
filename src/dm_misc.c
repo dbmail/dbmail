@@ -461,16 +461,14 @@ char * g_strcasestr(const char *haystack, const char *needle)
  */
 void pack_char(char *in, char c)
 {
-	char *saved;
+	// TODO This function needs to be re-worked to remove a memory leak
 	char *tmp = g_strdup(in);
-	saved = tmp;
 	while(*tmp) {
 		if ((*tmp == c) && (*(tmp+1) == c))
 			tmp++;
 		else
 			*in++=*tmp++;
 	}
-	g_free(saved);
 	*in='\0';
 }
 
@@ -1827,7 +1825,7 @@ static GList * _structure_part_text(GMimeObject *part, GList *structure, gboolea
 	/* done*/
 	structure = g_list_append(structure, dbmail_imap_plist_as_string(list));
 
-	g_list_destroy(list);
+	g_list_free_full(g_steal_pointer (&list), g_free);
 
 	return structure;
 }
@@ -1989,7 +1987,7 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	t = dbmail_imap_plist_collapse(s);
 	g_free(s);
 
-	g_list_destroy(structure);
+	g_list_free_full(g_steal_pointer (&structure), g_free);
 
 	return t;
 }

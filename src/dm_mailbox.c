@@ -59,8 +59,9 @@ DbmailMailbox * dbmail_mailbox_new(Mempool_T pool, uint64_t id) {
 static gboolean _node_free(GNode *node, gpointer data) {
 	DbmailMailbox *self = (DbmailMailbox *) data;
 	search_key *s = (search_key *) node->data;
-	if (s->found)
+	if (s->found) {
 		g_tree_destroy(s->found);
+	}
 	mempool_push(self->pool, s, sizeof (search_key));
 	return FALSE;
 }
@@ -68,8 +69,12 @@ static gboolean _node_free(GNode *node, gpointer data) {
 void dbmail_mailbox_free(DbmailMailbox *self) {
 	Mempool_T pool = self->pool;
 	gboolean freepool = self->freepool;
-	if (self->found) g_tree_destroy(self->found);
-	if (self->sorted) g_list_destroy(self->sorted);
+	if (self->found) {
+		g_tree_destroy(self->found);
+	}
+	if (self->sorted) {
+		g_list_free_full(g_steal_pointer (&self->sorted), g_free);
+	}
 	if (self->search) {
 		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, (GNodeTraverseFunc) _node_free, self);
 		g_node_destroy(self->search);
@@ -1191,8 +1196,8 @@ static gboolean _do_sort(GNode *node, DbmailMailbox *self) {
 		self->sorted = NULL;
 	}
 
-	z = g_tree_new_full((GCompareDataFunc)ucmp, NULL,
-						(GDestroyNotify)uint64_free, (GDestroyNotify)g_free);
+	z = g_tree_new((GCompareFunc) ucmp);
+
 	c = db_con_get();
 	TRY
 	r = db_query(c, q->str);

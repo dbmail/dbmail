@@ -2551,6 +2551,7 @@ static int mailboxes_by_regex(uint64_t user_idnr, int only_subscribed, const cha
 
 int db_findmailbox_by_regex(uint64_t owner_idnr, const char *pattern, GList ** children, int only_subscribed)
 {
+	g_list_free_full(g_steal_pointer (children), g_free);
 	*children = NULL;
 
 	/* list normal mailboxes */
