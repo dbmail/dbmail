@@ -461,15 +461,14 @@ char * g_strcasestr(const char *haystack, const char *needle)
  */
 void pack_char(char *in, char c)
 {
-	// TODO This function needs to be re-worked to remove a memory leak
-	char *tmp = g_strdup(in);
-	while(*tmp) {
-		if ((*tmp == c) && (*(tmp+1) == c))
-			tmp++;
-		else
-			*in++=*tmp++;
+	int i, x;
+	for(i=x=0; in[i]; ++i) {
+		if ((in[i] == c) && (in[i+1]) == c) {
+		} else {
+			in[x++] = in[i];
+		}
 	}
-	*in='\0';
+	in[x] = '\0';
 }
 
 /* 
