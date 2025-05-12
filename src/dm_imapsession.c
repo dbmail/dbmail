@@ -813,9 +813,12 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			END_TRY;
 			p_string_free(query, TRUE);		
 			g_free(name);
+			if (! g_list_next(bodyfetch->names))
+				break;
 			bodyfetch->names = g_list_next(bodyfetch->names);
 			fieldseq++;
 		}
+		bodyfetch->names = g_list_first(bodyfetch->names);
 		if (g_list_length(bodyfetch->names)==0) {
 			// Avoid empty case error when there are no names
 			g_string_append_printf(fieldorder, "WHEN TRUE THEN 1 ");
@@ -1495,7 +1498,7 @@ static void notify_fetch(ImapSession *self, MailboxState_T N, uint64_t *uid)
 		dbmail_imap_session_buff_printf(self, "* %" PRIu64 " FETCH %s\r\n", 
 				*msn, response);
 		g_free(response);
-		g_list_destroy(plist);
+		g_list_free_full(g_steal_pointer (&plist), g_free);
 	}
 
 	if (oldflags) g_free(oldflags);
@@ -1871,7 +1874,7 @@ static void _body_fetch_free(body_fetch *bodyfetch, gpointer data)
 	ImapSession *self = (ImapSession *)data;
 	if (! bodyfetch) return;
 	if (bodyfetch->names) {
-		g_list_free_full(g_steal_pointer (&bodyfetch->names), g_free);
+		g_list_destroy(bodyfetch->names);
 		bodyfetch->names = NULL;
 	}
 
@@ -1891,6 +1894,8 @@ void dbmail_imap_session_bodyfetch_free(ImapSession *self)
 	while (head) {
 		body_fetch *bodyfetch = p_list_data(head);
 		_body_fetch_free(bodyfetch, self);
+		if (!p_list_next(head))
+			break;
 		head = p_list_next(head);
 	}
 	p_list_free(&first);
