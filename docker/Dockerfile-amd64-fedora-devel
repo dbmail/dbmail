@@ -1,0 +1,52 @@
+# DBMail Dockerfile
+# Copyright (c) 2020-2025 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+# LICENSE GPL2+
+
+FROM fedora:latest AS build_base
+LABEL org.opencontainers.image.authors="ahicks@p-o.co.uk" \
+      org.opencontainers.image.url="https://dbmail.org/architecture/docker/" \
+      org.opencontainers.image.source="https://github.com/dbmail/dbmail/tree/main/docker" \
+      org.opencontainers.image.licenses="GPL-2.0+" \
+      org.opencontainers.image.title="DBMail-build-environment" \
+      org.opencontainers.image.description="This image contains everything to build dbmail"
+
+RUN dnf update -y
+RUN dnf update && \
+    dnf install -y \
+        make \
+        clang-18 \
+        awk \
+        check-devel \
+        git \
+        libcurl-devel \
+        libevent-devel \
+        libzdb-devel \
+        gmime30-devel \
+        mhash-devel \
+        openldap-devel \
+        openssl-devel
+
+RUN mkdir -p /app/dbmail
+
+WORKDIR /app
+
+COPY . dbmail/
+
+RUN cd /app/dbmail && \
+    ./configure \
+        --with-check \
+        --with-ldap
+RUN cd /app/dbmail && make && make install
+
+COPY --chown=nobody:nogroup docker/dbmail.err /var/log/dbmail/
+COPY --chown=nobody:nogroup docker/dbmail-imapd.pid /var/run/dbmail/
+COPY --chown=nobody:nogroup docker/dbmail-lmtpd.pid /var/run/dbmail/
+COPY --chown=nobody:nogroup docker/dbmail-sieved.pid /var/run/dbmail/
+COPY --chown=nobody:nogroup docker/dbmail.log /var/log/dbmail/
+
+EXPOSE 143/tcp
+EXPOSE 993/tcp
+EXPOSE 24/tcp
+EXPOSE 4190/tcp
+
+CMD ["/usr/local/sbin/dbmail-imapd", "-D", "-v"]
