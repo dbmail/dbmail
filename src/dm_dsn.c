@@ -206,21 +206,13 @@ void dsnuser_free(Delivery_T * dsnuser)
 
 	if (dsnuser->userids) {
 		dsnuser->userids = g_list_first(dsnuser->userids);
-		while(dsnuser->userids) {
-			g_free(dsnuser->userids->data);
-			dsnuser->userids = g_list_next(dsnuser->userids);
-		}
-		g_list_destroy(dsnuser->userids);
+		g_list_free_full(g_steal_pointer (&dsnuser->userids), g_free);
 		dsnuser->userids = NULL;
 	}
 
 	if (dsnuser->forwards) {
 		dsnuser->forwards = g_list_first(dsnuser->forwards);
-		while(dsnuser->forwards) {
-			g_free(dsnuser->forwards->data);
-			dsnuser->forwards = g_list_next(dsnuser->forwards);
-		}
-		g_list_destroy(dsnuser->forwards);
+		g_list_free_full(g_steal_pointer (&dsnuser->forwards), g_free);
 		dsnuser->forwards = NULL;
 	}
 
@@ -232,7 +224,7 @@ void dsnuser_free(Delivery_T * dsnuser)
 		g_free(dsnuser->mailbox);
 		dsnuser->mailbox = NULL;
 	}
-	
+
 	TRACE(TRACE_DEBUG, "dsnuser freed");
 }
 

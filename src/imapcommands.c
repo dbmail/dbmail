@@ -2153,7 +2153,7 @@ void _fetch_update(ImapSession *self, MessageInfo *msginfo, gboolean showmodseq,
 	if (showflags) {
 		GList *sublist = MailboxState_message_flags(self->mailbox->mbstate, msginfo);
 		char *s = dbmail_imap_plist_as_string(sublist);
-		g_list_destroy(sublist);
+		g_list_free_full(g_steal_pointer (&sublist), g_free);
 		if (needspace) dbmail_imap_session_buff_printf(self, " ");
 		dbmail_imap_session_buff_printf(self, "FLAGS %s", s);
 		g_free(s);

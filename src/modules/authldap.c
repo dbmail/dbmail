@@ -984,6 +984,8 @@ int auth_check_user_ext(const char *userid, GList **userids, GList **fwds, int c
 			}
 			fldlist = g_list_next(fldlist);
 		}
+		if (!g_list_next(entlist))
+			break;
 		entlist = g_list_next(entlist);
 	}
 	dm_ldap_freeresult(entlist);
