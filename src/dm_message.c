@@ -1939,7 +1939,7 @@ static void insert_field_cache(uint64_t physid, const char *field, const char *v
 
 void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 {
-	GMimeReferences *refs, *head;
+	GMimeReferences *refs;
 	GTree *tree;
 	const char *referencesfield, *inreplytofield;
 	char *field;
@@ -1957,7 +1957,6 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 		return;
 	}
 
-	head = refs;
 	tree = g_tree_new_full((GCompareDataFunc)dm_strcmpdata, NULL, NULL, NULL);
 
 	int refs_len = g_mime_references_length(refs);
@@ -1974,7 +1973,7 @@ void dbmail_message_cache_referencesfield(const DbmailMessage *self)
 	}
 
 	g_tree_destroy(tree);
-	g_mime_references_clear(head);
+	g_mime_references_free(refs);
 }
 
 void dbmail_message_cache_envelope(const DbmailMessage *self)

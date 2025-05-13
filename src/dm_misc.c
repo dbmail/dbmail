@@ -562,6 +562,7 @@ char * dm_base_subject(const char *subject)
 {
 	unsigned offset, len, olen;
 	char *tmp;
+	char *ret;
 
 	// we expect utf-8 or 7-bit data
 	if (subject == NULL) return NULL;
@@ -608,16 +609,18 @@ char * dm_base_subject(const char *subject)
 			continue;
 		}
 		
-		while (g_str_has_prefix(tmp,":") && (strlen(tmp) > 1)) 
-			g_strstrip(++tmp);
+		while (g_str_has_prefix(tmp,":") && (strlen(tmp) > 1)) {
+			memmove(tmp, tmp+1, strlen(tmp) + 1);
+		}
 
 		if (strlen(tmp)==olen)
 			break;
 	}
-		
-	tmp = g_utf8_strdown(tmp, strlen(tmp));
 
-	return tmp;
+	ret = g_utf8_strdown(tmp, strlen(tmp));
+	g_free(tmp);
+
+	return ret;
 }
 
 /* 
