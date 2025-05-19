@@ -418,7 +418,6 @@ char * dbmail_mailbox_imap_modseq_as_string(DbmailMailbox *self, gboolean uid) {
 		return s;
 	}
 
-	t = g_string_new("");
 	if (uid || dbmail_mailbox_get_uid(self)) {
 		l = g_tree_keys(self->found);
 	} else {
@@ -446,8 +445,10 @@ char * dbmail_mailbox_imap_modseq_as_string(DbmailMailbox *self, gboolean uid) {
 		l = g_list_next(l);
 	}
 
+	l = g_list_first(l);
 	g_list_free(l);
 
+	t = g_string_new("");
 	if (self->modseq)
 		g_string_append_printf(t, " (MODSEQ %" PRIu64 ")", maxseq);
 

@@ -1505,7 +1505,7 @@ static GList * imap_append_header_as_string(GList *structure, GMimeObject *mime_
 		char *s = dbmail_imap_plist_as_string(l);
 		structure = g_list_append_printf(structure, "%s", s);
 		g_free(s);
-		g_list_destroy(l);
+		g_list_free_full(g_steal_pointer (&l), g_free);
 	} else {
 		structure = g_list_append_printf(structure, "NIL");
 	}
@@ -1654,7 +1654,7 @@ static GList * _structure_part_multipart(GMimeObject *part, GList *structure, gb
 	GMimeObject *subpart, *object;
 	GList *list = NULL;
 	GList *alist = NULL;
-	GString *s;
+	GString *s = NULL;
 	int i,j;
 	GMimeContentType *type;
 	
@@ -1697,14 +1697,15 @@ static GList * _structure_part_multipart(GMimeObject *part, GList *structure, gb
 		
 		alist = g_list_append(alist,s->str);
 
-		g_list_destroy(list);
-		g_string_free(s,FALSE);
+		g_list_free_full(g_steal_pointer (&list), g_free);
 	}
 
 	/* done*/
 	structure = g_list_append(structure, dbmail_imap_plist_as_string(alist));
 	
 	g_list_destroy(alist);
+	if (s)
+		g_string_free(s,TRUE);
 
 	return structure;
 }
