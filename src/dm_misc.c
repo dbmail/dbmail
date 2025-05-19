@@ -1363,6 +1363,7 @@ char *dbmail_imap_plist_as_string(GList * list)
 	GString * tmp1 = g_string_new("");
 	GString * tmp2 = g_list_join(list, " ");
 	g_string_printf(tmp1,"(%s)", tmp2->str);
+	g_string_free(tmp2,TRUE);
 
 	/*
 	 * strip empty outer parenthesis
@@ -1376,8 +1377,7 @@ char *dbmail_imap_plist_as_string(GList * list)
 		p=tmp1->str;
 	}
 	
-	g_string_free(tmp1,FALSE);
-	g_string_free(tmp2,TRUE);
+	p = g_string_free(tmp1, FALSE);
 	return p;
 }
 

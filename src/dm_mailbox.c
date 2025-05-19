@@ -512,6 +512,7 @@ char * dbmail_mailbox_ids_as_string(
 		l = g_list_next(l);
 	}
 
+	l = g_list_first(l);
 	g_list_free(l);
 
 	s = g_string_free(t, FALSE);
