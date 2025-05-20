@@ -1539,7 +1539,7 @@ static void _ic_status_enter(dm_thread_data *D)
 	}
 	astring = dbmail_imap_astring_as_string(p_string_str(self->args[0]));
 	pstring = dbmail_imap_plist_as_string(plst); 
-	g_list_destroy(plst);
+	g_list_free_full(g_steal_pointer (&plst), g_free);
 
 	dbmail_imap_session_buff_printf(self, "* STATUS %s %s\r\n", astring, pstring);	
 	g_free(astring); g_free(pstring);
