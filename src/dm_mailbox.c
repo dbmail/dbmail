@@ -418,7 +418,6 @@ char * dbmail_mailbox_imap_modseq_as_string(DbmailMailbox *self, gboolean uid) {
 		return s;
 	}
 
-	t = g_string_new("");
 	if (uid || dbmail_mailbox_get_uid(self)) {
 		l = g_tree_keys(self->found);
 	} else {
@@ -446,8 +445,10 @@ char * dbmail_mailbox_imap_modseq_as_string(DbmailMailbox *self, gboolean uid) {
 		l = g_list_next(l);
 	}
 
+	l = g_list_first(l);
 	g_list_free(l);
 
+	t = g_string_new("");
 	if (self->modseq)
 		g_string_append_printf(t, " (MODSEQ %" PRIu64 ")", maxseq);
 
@@ -471,7 +472,7 @@ char * dbmail_mailbox_ids_as_string(
 	TRACE(TRACE_DEBUG, "Call: dbmail_mailbox_ids_as_string");
 	GString *t;
 	gchar *s = NULL;
-	GList *l = NULL, *h = NULL;
+	GList *l = NULL;
 	GTree *msginfo;
 	GTree *msn;
 	uint64_t maxseq = 0;
@@ -487,8 +488,6 @@ char * dbmail_mailbox_ids_as_string(
 	} else {
 		l = g_tree_values(self->found);
 	}
-
-	h = l;
 
 	msginfo = MailboxState_getMsginfo(self->mbstate);
 	msn = MailboxState_getMsn(self->mbstate);
@@ -513,13 +512,12 @@ char * dbmail_mailbox_ids_as_string(
 		l = g_list_next(l);
 	}
 
-	g_list_free(h);
+	l = g_list_first(l);
+	g_list_free(l);
 
-	s = t->str;
-	g_string_free(t, FALSE);
+	s = g_string_free(t, FALSE);
 
 	return g_strchomp(s);
-
 }
 
 char * dbmail_mailbox_sorted_as_string(DbmailMailbox *self) {

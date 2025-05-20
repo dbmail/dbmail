@@ -291,7 +291,7 @@ char *acl_get_acl(uint64_t mboxid)
 			break;
 		identifier_list = g_list_next(identifier_list);
 	}
-	g_list_destroy(identifier_list);
+	g_list_free_full(g_steal_pointer (&identifier_list), g_free);
 	
 	return g_strstrip(acl_string);
 }
