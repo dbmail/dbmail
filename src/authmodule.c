@@ -44,7 +44,7 @@ int auth_load_driver(void)
 	Field_T library_dir;
 	config_get_value("library_directory", "DBMAIL", library_dir);
 	if (strlen(library_dir) == 0) {
-		TRACE(TRACE_DEBUG, "no value for library_directory, using default [%s]", DEFAULT_LIBRARY_DIR);
+		TRACE(TRACE_DEBUG, "using default library_directory [%s]", DEFAULT_LIBRARY_DIR);
 		snprintf(library_dir, sizeof(Field_T), "%s", DEFAULT_LIBRARY_DIR);
 	} else {
 		TRACE(TRACE_DEBUG, "library_directory is [%s]", library_dir);
@@ -68,14 +68,11 @@ int auth_load_driver(void)
 	for (i = 0; lib_path[i] != NULL; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
-
-		TRACE(TRACE_DEBUG, "looking for %s as %s", driver, lib);
-		g_free(lib);
-
-		if (!module)
-			TRACE(TRACE_DEBUG, "cannot load %s", g_module_error());
-		if (module)
+		if (module) {
+			TRACE(TRACE_DEBUG, "%s loaded from %s", driver, lib);
 			break;
+		}
+		g_free(lib);
 	}
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
