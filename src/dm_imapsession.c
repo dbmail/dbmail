@@ -717,7 +717,8 @@ void _send_headers(ImapSession *self, const body_fetch *bodyfetch, gboolean not)
 static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean not)
 {
 	Connection_T c; ResultSet_T r; volatile int t = FALSE;
-	gchar *fld, *val, *old, *new = NULL;
+	const gchar *fld;
+	gchar *fld2, *val, *old, *new = NULL;
 	uint64_t *mid;
 	uint64_t id;
 	GList *last;
@@ -864,11 +865,11 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 			const void *blob;
 
 			id = db_result_get_u64(r, 0);
-			
+
 			if (! g_tree_lookup(self->ids,&id))
 				continue;
-			
-			fld = (char *)db_result_get(r, 1);
+
+			fld = db_result_get(r, 1);
 			blob = db_result_get_blob(r, 2, &l);
 			char *str = g_new0(char, l + 1);
 			str = strncpy(str, blob, l);
@@ -881,13 +882,15 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 				*mid = id;
 
 				old = g_tree_lookup(bodyfetch->headers, (gconstpointer)mid);
-				fld[0] = toupper(fld[0]);
+
 				/* Build content as Header: value \n */
-				new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
+				fld2 = g_strdup_printf("%s", fld);
+				fld2[0] = toupper(fld[0]);
+				new = g_strdup_printf("%s%s: %s\n", old?old:"", fld2, val);
 				g_free(val);
+				g_free(fld2);
 				g_tree_insert(bodyfetch->headers,mid,new);
 			}
-			
 		}
 	CATCH(SQLException)
 		LOG_SQLERROR;
