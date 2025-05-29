@@ -1712,7 +1712,7 @@ static GList * _structure_part_multipart(GMimeObject *part, GList *structure, gb
 static GList * _structure_basic(GMimeObject *object)
 {
 	GList *list = NULL;
-	char *result;
+	const char *result;
 	const GMimeContentType *type;
 
 	type = g_mime_object_get_content_type(object);
@@ -1726,9 +1726,8 @@ static GList * _structure_basic(GMimeObject *object)
 	list = imap_append_header_as_string(list, object, "Content-Type");
 
 	/* body id */
-	if ((result = (char *)g_mime_object_get_content_id(object))) {
+	if ((result = g_mime_object_get_content_id(object))) {
 		list = g_list_append_printf(list,"\"%s\"", result);
-		g_free(result);
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
