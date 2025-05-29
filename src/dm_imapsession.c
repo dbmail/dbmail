@@ -192,6 +192,7 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 		
 	if (self->message) {
 		if (*id != self->message->id) {
+			TRACE(TRACE_DEBUG,"id != message->id [%" PRIu64 "] [%" PRIu64 "]", *id, self->message->id);
 			dbmail_message_free(self->message);
 			self->message = NULL;
 		}
