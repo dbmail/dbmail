@@ -1,3 +1,10 @@
+dbmail (3.5.3) unstable; urgency=medium
+* Version bump to 3.5.3
+* Various memoey leaks fixed
+* Fix invalid free and invalid read
+* sieve port changed to 4190 as per rfc5804
+-- Alan Hicks <ahicks@p-o.co.uk>  Sat, 31 May 2025 16:20:00 +0100
+
 dbmail (3.5.2) unstable; urgency=medium
  * Version bump to 3.5.2
  * Man pages updated
