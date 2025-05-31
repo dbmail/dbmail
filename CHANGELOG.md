@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.5.3] - 2025-05-31
+- Version bump to 3.5.3
+- Various memoey leaks fixed
+- Fix invalid free and invalid read
+- sieve port changed to 4190 as per rfc5804
+
 ## [3.5.2] - 2025-04-14
 - Version bump to 3.5.2
 - Man pages updated
