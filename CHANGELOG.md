@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [3.5.3] - 2025-05-31
 - Version bump to 3.5.3
-- Various memoey leaks fixed
+- Various memory leaks fixed
 - Fix invalid free and invalid read
 - sieve port changed to 4190 as per rfc5804
 
