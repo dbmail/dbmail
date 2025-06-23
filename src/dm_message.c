@@ -1692,6 +1692,9 @@ static gboolean _header_insert(uint64_t physmessage_id, uint64_t headername_id, 
 		return t;
 	}
 
+	c = db_con_get();
+	db_con_clear(c);
+
 	TRY
 		db_begin_transaction(c);
 		s = db_stmt_prepare(c, "INSERT INTO %sheader (physmessage_id, headername_id, headervalue_id) VALUES (?,?,?)", DBPFX);
