@@ -295,6 +295,14 @@ static LDAPMessage * authldap_search(const gchar *query)
 			case LDAP_SUCCESS:
 				return ldap_res;
 				break;
+			case LDAP_NO_SUCH_OBJECT:
+				ldap_get_option(_ldap_conn, LDAP_OPT_DIAGNOSTIC_MESSAGE, &err_msg);
+				TRACE(TRACE_ERR,
+					  "LDAP error message (%d): %s. Please check LDAP config.",
+					  err, ldap_err2string(err)
+				);
+				return ldap_res;
+				break;
 			case LDAP_SERVER_DOWN:
 				ldap_get_option(_ldap_conn, LDAP_OPT_DIAGNOSTIC_MESSAGE, &err_msg);
 				TRACE(TRACE_WARNING, "LDAP gone away(%d): %s. Trying again(%d/%d). Error message: %s", err, ldap_err2string(err), c, c_tries, err_msg);
