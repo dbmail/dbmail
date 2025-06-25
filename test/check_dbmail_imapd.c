@@ -1263,7 +1263,7 @@ unsigned int get_count_on(unsigned int * set, unsigned int setlen) {
 #define BS(x, y) { \
 	char *res = dm_base_subject(x);\
 	ck_assert_str_eq(res, y);\
-	free(res); \
+	g_free(res); \
 }
 
 START_TEST(test_dm_base_subject_re)
@@ -1408,7 +1408,7 @@ START_TEST(test_listex_match)
 }
 END_TEST
 
-#define D(x,y) c = date_sql2imap(x); ck_assert_str_eq(c, y); free(c)
+#define D(x,y) c = date_sql2imap(x); ck_assert_str_eq(c, y); g_free(c)
 START_TEST(test_date_sql2imap)
 {
 	char *c = NULL;
