@@ -604,7 +604,7 @@ char * dm_base_subject(const char *subject)
 		if (g_str_has_suffix(tmp,"]") && strncasecmp(tmp,"[fwd:",5)==0 ) {
 			offset=strlen(tmp)-1;
 			tmp[offset]='\0';
-			tmp+=5;
+			memmove(tmp, tmp+5, strlen(tmp) - 4);
 			g_strstrip(tmp);
 			continue;
 		}
