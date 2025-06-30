@@ -335,14 +335,20 @@ int StartCliServer(ServerConfig_T * conf)
 static void reopen_logs_level(ServerConfig_T *conf, Trace_T level)
 {
 	int serr;
+	Field_T val;
 
 	if (mainReload) {
 		mainReload = 0;
 		TRACE(TRACE_INFO, "reopening log files");
 	}
 
-	if (fstdout) fclose(fstdout);
-	if (fstderr) fclose(fstderr);
+	config_get_value("logfile", "DBMAIL", val);
+	if (strncmp(val, "stderr", 6) == 0) {
+		TRACE(TRACE_INFO, "Keeping stdout and stderr open");
+	} else {
+		if (fstdout) fclose(fstdout);
+		if (fstderr) fclose(fstderr);
+	}
 	if (fnull) fclose(fnull);
 
 	SetTraceLevel(conf->service_name);
@@ -354,6 +360,10 @@ static void reopen_logs_level(ServerConfig_T *conf, Trace_T level)
 	//}
 
 	//if (! (fstderr = freopen(conf->error_log, "a", stderr))) {
+	if (strncmp(val, "stderr", 6) == 0) {
+		TRACE(TRACE_INFO, "Keeping stdout and stderr open");
+		return;
+	}
 	if (! (fstderr = freopen(conf->log, "a", stderr))) {
 		serr = errno;
 		TRACE(level, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
