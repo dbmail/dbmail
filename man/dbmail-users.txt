@@ -50,7 +50,7 @@ MODE
 -e, --empty-user-mailboxes user::
   Empty all mailboxes for a user
 
--l, --list-users::
+-L, --list-users::
   List information for all users
 
 -l, --list-user userspec::
