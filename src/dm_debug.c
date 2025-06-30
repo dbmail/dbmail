@@ -135,7 +135,6 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 {
 	Trace_T syslog_level;
 	va_list ap, cp;
-	Field_T val;
 
 	char message[MESSAGESIZE];
 
@@ -167,9 +166,7 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
  			configured=1;
  		}
  
-		config_get_value("logfile", "DBMAIL", val);
-
-		if (strncmp(val, "stderr", 6) == 0) {
+		if (!fstderr) {
 			fprintf(stderr, SYSLOGFORMAT, Trace_To_text(level), module, function, line, message);
 		} else {
 			memset(date,0,sizeof(date));
