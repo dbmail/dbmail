@@ -65,7 +65,9 @@ static void configure_stderr(const char *service_name)
 			"Please use logfile instead.\n");
 	}
 	config_get_value("logfile", service_name, val);
-	if (! (fstderr = freopen(val, "a", stderr))) {
+	if (strncmp(val, "stderr", 6) == 0) {
+		TRACE(TRACE_INFO, "Logging to stderr");
+	} else if (! (fstderr = freopen(val, "a", stderr))) {
 		int serr = errno;
 		TRACE(TRACE_ERR, "freopen failed on [%s] [%s]", val, strerror(serr));
 	}
@@ -133,6 +135,7 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 {
 	Trace_T syslog_level;
 	va_list ap, cp;
+	Field_T val;
 
 	char message[MESSAGESIZE];
 
@@ -164,13 +167,19 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
  			configured=1;
  		}
  
-		memset(date,0,sizeof(date));
-		localtime_r(&now, &tmp);
-		strftime(date,32,"%b %d %H:%M:%S", &tmp);
+		config_get_value("logfile", "DBMAIL", val);
 
- 		fprintf(stderr, STDERRFORMAT, date, hostname, __progname?__progname:"", getpid(),
-			g_thread_self(), Trace_To_text(level), module, function, line, message);
- 
+		if (strncmp(val, "stderr", 6) == 0) {
+			fprintf(stderr, SYSLOGFORMAT, Trace_To_text(level), module, function, line, message);
+		} else {
+			memset(date,0,sizeof(date));
+			localtime_r(&now, &tmp);
+			strftime(date,32,"%b %d %H:%M:%S", &tmp);
+
+			fprintf(stderr, STDERRFORMAT, date, hostname, __progname?__progname:"", getpid(),
+				g_thread_self(), Trace_To_text(level), module, function, line, message);
+		}
+
 		if (message[l - 1] != '\n')
 			fprintf(stderr, "\n");
 		fflush(stderr);
