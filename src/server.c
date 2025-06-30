@@ -771,6 +771,8 @@ int server_run(ServerConfig_T *conf)
 	assert(conf);
 	reopen_logs(conf);
 
+ 	TRACE(TRACE_NOTICE, "starting [%s] server_run", conf->service_name);
+
 	server_conf = conf;
 	if (db_connect()) {
 		TRACE(TRACE_ERR, "could not connect to database");
