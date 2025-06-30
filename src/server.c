@@ -771,8 +771,6 @@ int server_run(ServerConfig_T *conf)
 	assert(conf);
 	reopen_logs(conf);
 
- 	TRACE(TRACE_NOTICE, "starting main service loop for [%s]", conf->service_name);
-
 	server_conf = conf;
 	if (db_connect()) {
 		TRACE(TRACE_ERR, "could not connect to database");
@@ -784,8 +782,6 @@ int server_run(ServerConfig_T *conf)
 		return -1;
 	}
 	srand((int) ((int) time(NULL) + (int) getpid()));
-
- 	TRACE(TRACE_NOTICE, "starting main service loop for [%s]", conf->service_name);
 
 	server_conf = conf;
 
@@ -850,6 +846,8 @@ int server_run(ServerConfig_T *conf)
 		TRACE(TRACE_WARNING, "unable to drop privileges");
 	
 	server_pidfile(conf);
+
+	TRACE(TRACE_NOTICE, "starting main service loop for [%s]", conf->service_name);
 
 	if (MATCH(conf->service_name, "IMAP"))
 		dm_queue_heartbeat();
