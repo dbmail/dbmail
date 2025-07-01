@@ -1,0 +1,3 @@
+BEGIN;
+INSERT INTO dbmail_upgrade_steps (from_version, to_version) values (35001, 35002);
+COMMIT;

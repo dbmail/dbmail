@@ -308,6 +308,8 @@ int db_connect(void)
  * error but without a matching db_connect before it. */
 int db_disconnect(void)
 {
+	TRACE(TRACE_DEBUG,"Disconnecting debug");
+	TRACE(TRACE_WARNING,"Disconnecting warning");
 	if(db_connected >= 3) ConnectionPool_stop(pool);
 	if(db_connected >= 2) ConnectionPool_free(&pool);
 	if(db_connected >= 1) URL_free(&dburi);
@@ -991,7 +993,8 @@ static int check_upgrade_step(int from_version, int to_version)
 			if (to_version == 32005) query = DM_SQLITE_32005;
 			if (to_version == 32006) query = DM_SQLITE_32006;
 			if (to_version == 35001) query = DM_SQLITE_35001;
-		break;
+			if (to_version == 35002) query = DM_SQLITE_35002;
+			break;
 		case DM_DRIVER_MYSQL:
 			if (to_version == 32001) query = DM_MYSQL_32001;
 			if (to_version == 32002) query = DM_MYSQL_32002;
@@ -1000,7 +1003,8 @@ static int check_upgrade_step(int from_version, int to_version)
 			if (to_version == 32005) query = DM_MYSQL_32005;
 			if (to_version == 32006) query = DM_MYSQL_32006;
 			if (to_version == 35001) query = DM_MYSQL_35001;
-		break;
+			if (to_version == 35002) query = DM_MYSQL_35002;
+			break;
 		case DM_DRIVER_POSTGRESQL:
 			if (to_version == 32001) query = DM_PGSQL_32001;
 			if (to_version == 32002) query = DM_PGSQL_32002;
@@ -1009,7 +1013,8 @@ static int check_upgrade_step(int from_version, int to_version)
 			if (to_version == 32005) query = DM_PGSQL_32005;
 			if (to_version == 32006) query = DM_PGSQL_32006;
 			if (to_version == 35001) query = DM_PGSQL_35001;
-		break;
+			if (to_version == 35002) query = DM_PGSQL_35002;
+			break;
 		default:
 			TRACE(TRACE_WARNING, "Migrations not supported for database driver");
 			db_con_close(c);
@@ -1123,6 +1128,7 @@ int db_check_version(void)
 	ResultSet_T r;
 	const char *info_name = NULL;
 	const char *info_value = NULL;
+	TRACE(TRACE_DEBUG, "Checking database version: driver [%d]", db_params.db_driver);
 	// Log connection information
 	switch (db_params.db_driver) {
 		case DM_DRIVER_SQLITE:
@@ -1181,6 +1187,7 @@ int db_check_version(void)
 	db_con_clear(c);
 
 	if ((! db) && (db_params.db_driver == DM_DRIVER_SQLITE)) {
+		TRACE(TRACE_INFO, "Creating database tables");
 		TRY
 			db_exec(c, DM_SQLITECREATE);
 			db = 1;
@@ -1230,16 +1237,20 @@ int db_check_version(void)
 	db_con_clear(c);
 
 	do {
-		if (! check_table_exists(c, "mimeparts"))
+		if (! check_table_exists(c, "mimeparts")) {
+			TRACE(TRACE_ERR,"Missing table mimeparts");
 			break;
-		if (! check_table_exists(c, "header"))
+		}
+		if (! check_table_exists(c, "header")) {
+			TRACE(TRACE_ERR,"Missing table header");
 			break;
+		}
 		ok = 1;
 		break;
 	} while (true);
 	
 	if (! ok) {
-		TRACE(TRACE_WARNING,"Schema version incompatible. Bailing out");
+		TRACE(TRACE_ERR,"Schema version incompatible. Bailing out");
 		return DM_EQUERY;
 	}
 
@@ -1260,15 +1271,17 @@ int db_check_version(void)
 			break;
 		if ((ok = check_upgrade_step(32006, 35001)) == DM_EQUERY)
 			break;
+		if ((ok = check_upgrade_step(35001, 35002)) == DM_EQUERY)
+			break;
 		break;
 	} while (true);
 
 	db_con_close(c);
 
-	if (ok == 35001) {
+	if (ok == 35002) {
 		TRACE(TRACE_DEBUG, "Schema check successful");
 	} else {
-		TRACE(TRACE_WARNING,"Schema version incompatible [%d]. Bailing out",
+		TRACE(TRACE_ERR,"Schema version [%d] incompatible. Bailing out",
 				ok);
 		return DM_EQUERY;
 	}
