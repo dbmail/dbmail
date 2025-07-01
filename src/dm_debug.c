@@ -127,7 +127,8 @@ static const char * Trace_To_text(Trace_T level)
  *
  */
 
-#define SYSLOGFORMAT "%s:[%s] %s(+%d): %s"
+#define SYSLOGFORMAT "%s: %s"
+#define SYSLOGDETAIL "%s:[%s] %s(+%d): %s"
 #define STDERRFORMAT "%s %s %s[%d]: [%p] %s:[%s] %s(+%d): %s"
 #define MESSAGESIZE 4096
 
@@ -165,9 +166,12 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
  			gethostname(hostname,sizeof(hostname)-1);
  			configured=1;
  		}
- 
+
 		if (!fstderr) {
-			fprintf(stderr, SYSLOGFORMAT, Trace_To_text(level), module, function, line, message);
+			if (level > TRACE_NOTICE)
+				fprintf(stderr, SYSLOGDETAIL, Trace_To_text(level), module, function, line, message);
+			else
+				fprintf(stderr, SYSLOGFORMAT, Trace_To_text(level), message);
 		} else {
 			memset(date,0,sizeof(date));
 			localtime_r(&now, &tmp);
@@ -221,7 +225,10 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 			l = MESSAGESIZE;
 			message[l - 1] = 0;
 		}
-		syslog(syslog_level, SYSLOGFORMAT, Trace_To_text(level), module, function, line, message);
+		if (level > TRACE_NOTICE)
+			syslog(syslog_level, SYSLOGDETAIL, Trace_To_text(level), module, function, line, message);
+		else
+			syslog(syslog_level, SYSLOGFORMAT, Trace_To_text(level), message);
 	}
 
 	/* Bail out on fatal errors. */
