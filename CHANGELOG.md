@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.5.4] - 2025-07-01
+- Version bump to 3.5.4
+- Docker and systemd logs supported, thanks to Tom Ivar Helbekkmo
+- dbmail-users option -L added, thanks to tih
+- Config option sieve_notify switched off as it does not work, thanks tih
+- dbmail-users option -L added thanks to Tom Ivar Helbekkmo
+- MySQL compression added to dbmail_mimeparts, thanks to Sasha Gomanuke
+- MySQL longblob now allows null in dbmail_mimeparts
+
 ## [3.5.3] - 2025-05-31
 - Version bump to 3.5.3
 - Various memory leaks fixed

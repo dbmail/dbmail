@@ -1,3 +1,12 @@
+dbmail (3.5.4) unstable; urgency=medium
+* Version bump to 3.5.4
+* Docker and systemd logs supported, thanks to Tom Ivar Helbekkmo
+* dbmail-users option -L added, thanks to tih
+* Config option sieve_notify switched off as it does not work, thanks tih
+* MySQL compression added to dbmail_mimeparts, thanks to Sasha Gomanuke
+* MySQL longblob now allows null in dbmail_mimeparts
+-- Alan Hicks <ahicks@p-o.co.uk>  Tue, 01 Jul 2025 00:00:00 +0100
+
 dbmail (3.5.3) unstable; urgency=medium
 * Version bump to 3.5.3
 * Various memoey leaks fixed

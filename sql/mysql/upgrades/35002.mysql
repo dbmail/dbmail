@@ -1,0 +1,7 @@
+BEGIN;
+ALTER TABLE dbmail_mimeparts MODIFY COLUMN `data` longblob NULL;
+ALTER TABLE dbmail_mimeparts ROW_FORMAT=COMPRESSED;
+
+INSERT INTO dbmail_upgrade_steps (from_version, to_version, applied) values (35001, 35002, now());
+
+COMMIT;

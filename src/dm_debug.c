@@ -168,7 +168,7 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
  		}
 
 		if (!fstderr) {
-			if (level > TRACE_NOTICE)
+			if (TRACE_STDERR > TRACE_NOTICE)
 				fprintf(stderr, SYSLOGDETAIL, Trace_To_text(level), module, function, line, message);
 			else
 				fprintf(stderr, SYSLOGFORMAT, Trace_To_text(level), message);
@@ -225,7 +225,7 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 			l = MESSAGESIZE;
 			message[l - 1] = 0;
 		}
-		if (level > TRACE_NOTICE)
+		if (TRACE_SYSLOG > LOG_NOTICE)
 			syslog(syslog_level, SYSLOGDETAIL, Trace_To_text(level), module, function, line, message);
 		else
 			syslog(syslog_level, SYSLOGFORMAT, Trace_To_text(level), message);
