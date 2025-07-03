@@ -721,15 +721,15 @@ static int server_set_sighandler(void)
 void disconnect_all(void)
 {
 	TRACE(TRACE_INFO, "disconnecting all");
-	db_disconnect();
-	auth_disconnect();
-	g_mime_shutdown();
-	config_free();
 
 	if (tpool) { 
 		g_thread_pool_free(tpool, TRUE, TRUE);
 		tpool = NULL;
 	}
+	db_disconnect();
+	auth_disconnect();
+	g_mime_shutdown();
+	config_free();
 	if (sig_int) {
 		event_free(sig_int);
 		sig_int = NULL;
