@@ -178,7 +178,7 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 		}else{
 			/* previous behavior, a query will be performed in db */
 			if ((db_get_physmessage_id(self->msg_idnr, id)) != DM_SUCCESS) {
-				TRACE(TRACE_ERR,"can't find physmessage_id for message_idnr [%" PRIu64 "]", self->msg_idnr);
+				TRACE(TRACE_ERR,"[%p] can't find physmessage_id for message_idnr [%" PRIu64 "]", self, self->msg_idnr);
 				mempool_push(self->pool, id, sizeof(uint64_t));
 				g_free(id);
 				return 0;
@@ -207,7 +207,7 @@ static uint64_t dbmail_imap_session_message_load(ImapSession *self)
 	}
 
 	if (! self->message) {
-		TRACE(TRACE_ERR,"message retrieval failed");
+		TRACE(TRACE_ERR,"[%p] message retrieval failed", self);
 		return 0;
 	}
 

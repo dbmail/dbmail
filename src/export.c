@@ -103,7 +103,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 	s->ci = client_init(c);
 	if (! (imap4_tokenizer_main(s, search))) {
 		qprintf("error parsing search string\n");
-		TRACE(TRACE_ERR, "Error parsing search string");
+		TRACE(TRACE_ERR, "[%p] Error parsing search string", s);
 		dbmail_mailbox_free(mb);
 		dbmail_imap_session_delete(&s);
 		return 1;
@@ -111,7 +111,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 
 	if (dbmail_mailbox_build_imap_search(mb, s->args, &(s->args_idx), SEARCH_UNORDERED) < 0) {
 		qprintf("Invalid search string\n");
-		TRACE(TRACE_INFO, "Invalid search string");
+		TRACE(TRACE_INFO, "[%p] Invalid search string", s);
 		dbmail_mailbox_free(mb);
 		dbmail_imap_session_delete(&s);
 		return 1;
@@ -123,14 +123,14 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 	} else if (! (ostream = fopen(dumpfile, "a"))) {
 		int err = errno;
 		qprintf("Opening [%s] failed [%s]\n", dumpfile, strerror(err));
-		TRACE(TRACE_ERR, "Opening [%s] failed [%s]", dumpfile, strerror(err));
+		TRACE(TRACE_ERR, "[%p] Opening [%s] failed [%s]", s, dumpfile, strerror(err));
 		result = -1;
 		goto cleanup;
 	}
 
 	if (dbmail_mailbox_dump(mb, ostream) < 0) {
 		qprintf("Export failed\n");
-		TRACE(TRACE_ERR, "Export failed");
+		TRACE(TRACE_ERR, "[%p] Export failed", s);
 		result = -1;
 		goto cleanup;
 	}
@@ -151,7 +151,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 			if (delete_after_dump & 1) {
 				if (db_set_msgflag(*(uint64_t *)ids->data, deleted_flag, NULL, IMAPFA_ADD, 0, NULL) < 0) {
 					qprintf("Error setting flags for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
-					TRACE(TRACE_ERR, "Error setting flags for message [%" PRIu64 "]", *(uint64_t *)ids->data);
+					TRACE(TRACE_ERR, "[%] Error setting flags for message [%" PRIu64 "]", s, *(uint64_t *)ids->data);
 					result = -1;
 				} else {
 					affected = 1;
@@ -163,7 +163,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 			if (delete_after_dump & 2) {
 				if (! db_set_message_status(*(uint64_t *)ids->data, MESSAGE_STATUS_DELETE)) {
 					qprintf("Error setting status for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
-					TRACE(TRACE_ERR, "Error setting status for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
+					TRACE(TRACE_ERR, "[%p] Error setting status for message [%" PRIu64 "]\n", s, *(uint64_t *)ids->data);
 					result = -1;
 				} else {
 					affected = 1;
