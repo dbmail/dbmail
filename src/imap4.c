@@ -616,7 +616,7 @@ int imap_handle_connection(client_sock *c)
 
 	session = dbmail_imap_session_new(c->pool);
 
-	TRACE(TRACE_NOTICE, "[%p] session established for [%s:%s (%s)]", session, ci->src_ip, ci->src_port, ci->clientname[0] ? ci->clientname : "Lookup failed");
+	TRACE(TRACE_NOTICE, "[%p] session established for [%s:%s]", session, ci->src_ip, ci->src_port);
 
 	assert(evbase);
 	ci->rev = event_new(evbase, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
