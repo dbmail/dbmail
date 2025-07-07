@@ -324,6 +324,9 @@ const char *db_get_db_name(void)
 	return path;
 }
 
+/* db_con_get() is guaranteed to return a connection and will wait until one
+ * is available.
+ */
 Connection_T db_con_get(void)
 {
 	int i=0, k=0; Connection_T c = NULL;
