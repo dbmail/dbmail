@@ -616,6 +616,8 @@ int imap_handle_connection(client_sock *c)
 
 	session = dbmail_imap_session_new(c->pool);
 
+	TRACE(TRACE_NOTICE, "[%p] session established for [%s:%s]", session, ci->src_ip, ci->src_port);
+
 	assert(evbase);
 	ci->rev = event_new(evbase, ci->rx, EV_READ|EV_PERSIST, socket_read_cb, (void *)session);
 	ci->wev = event_new(evbase, ci->tx, EV_WRITE, socket_write_cb, (void *)session);
@@ -785,7 +787,7 @@ int imap4(ImapSession *session)
 
 	session->command_state=TRUE; // set command-is-done-state while doing some checks
 	if (! (session->tag[0] && session->command[0])) {
-		TRACE(TRACE_ERR,"no tag or command");
+		TRACE(TRACE_ERR,"[%p] no tag or command", session);
 		return 1;
 	}
 	if (! session->args) {
@@ -807,6 +809,6 @@ int imap4(ImapSession *session)
 
 	imap_unescape_args(session);
 
-	TRACE(TRACE_INFO, "dispatch [%s]...\n", IMAP_COMMANDS[session->command_type]);
+	TRACE(TRACE_INFO, "[%p] dispatch [%s]...\n", session, IMAP_COMMANDS[session->command_type]);
 	return (*imap_handler_functions[session->command_type]) (session);
 }

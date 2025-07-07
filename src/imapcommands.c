@@ -2235,7 +2235,7 @@ static gboolean _do_store(uint64_t *id, gpointer UNUSED value, dm_thread_data *D
 		if (cmd_store_silent==1 && changed){
 			showflags = showflags || changed;
 		}
-		TRACE(TRACE_INFO,"requested FLAGS.SILENT but a change was detected into mailbox and command_store_flags_silent_ignore_silent=%d so ignore FLAGS.SILENT and return message information with flags",cmd_store_silent);
+		TRACE(TRACE_INFO,"[%p] requested FLAGS.SILENT but a change was detected into mailbox and command_store_flags_silent_ignore_silent=%d so ignore FLAGS.SILENT and return message information with flags", self, cmd_store_silent);
 
 		_fetch_update(self, msginfo, showmodseq, showflags);
 	}
@@ -2457,7 +2457,7 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 	int result;
 	uint64_t *new_ids_element = NULL;
 	if (!g_tree_lookup(self->mailbox->mbstate->msginfo, id)){
-		TRACE(TRACE_WARNING,"Copy message [%ld] failed security issue, trying to copy message that are not in this mailbox",*id);
+		TRACE(TRACE_WARNING,"[%p] Copy message [%ld] failed security issue, trying to copy message that are not in this mailbox", self, *id);
 		//dbmail_imap_session_buff_printf(self, "%s NO security issue, trying to copy message that are not in this mailbox\r\n",self->tag);
 		return FALSE;
 	}
@@ -2465,15 +2465,15 @@ static gboolean _do_copy(uint64_t *id, gpointer UNUSED value, ImapSession *self)
 	db_message_set_seq(*id, cmd->seq);
 	if (result == -1) {
 		/* uid not found, according to RFC 3501 section 6.4.8, should continue  */
-		TRACE(TRACE_WARNING,"Copy message [%ld] failed due to missing in database. continue.",*id);
+		TRACE(TRACE_WARNING,"[%p] Copy message [%ld] failed due to missing in database. continue.", self, *id);
 		/* continue operation, do not close or send various info on connection */
 		//dbmail_imap_session_buff_printf(self, "* BYE internal dbase error\r\n");
 		//return TRUE;
 		return FALSE;
 	}
 	if (result == -2) {
-		TRACE(TRACE_WARNING,"Copy message [%ld] failed due to `%s NO quotum would exceed`",*id,self->tag);
-		dbmail_imap_session_buff_printf(self, "%s NO quotum would exceed\r\n", self->tag);
+		TRACE(TRACE_WARNING,"[%p] Copy message [%ld] failed due to `%s NO quota would be exceeded`", self, *id, self->tag);
+		dbmail_imap_session_buff_printf(self, "%s NO quota would be exceeded\r\n", self->tag);
 		return TRUE;
 	}
 	// insert the new uid to the new_ids collection
