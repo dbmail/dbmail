@@ -366,7 +366,7 @@ static void reopen_logs_level(ServerConfig_T *conf, Trace_T level)
 	}
 	if (! (fstderr = freopen(conf->log, "a", stderr))) {
 		serr = errno;
-		TRACE(level, "freopen failed on [%s] [%s]", conf->error_log, strerror(serr));
+		TRACE(level, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
 	}
 
 	if (! (fnull = freopen("/dev/null", "r", stdin))) {
