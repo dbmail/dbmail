@@ -354,12 +354,6 @@ static void reopen_logs_level(ServerConfig_T *conf, Trace_T level)
 	SetTraceLevel(conf->service_name);
 	config_get_timeout(conf, conf->service_name);
 
-	//if (! (fstdout = freopen(conf->log, "a", stdout))) {
-	//	serr = errno;
-	//	TRACE(level, "freopen failed on [%s] [%s]", conf->log, strerror(serr));
-	//}
-
-	//if (! (fstderr = freopen(conf->error_log, "a", stderr))) {
 	if (strncmp(val, "stderr", 6) == 0) {
 		TRACE(TRACE_INFO, "Keeping stdout and stderr open");
 		return;
