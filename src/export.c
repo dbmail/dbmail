@@ -151,7 +151,7 @@ static int mailbox_dump(uint64_t mailbox_idnr, const char *dumpfile,
 			if (delete_after_dump & 1) {
 				if (db_set_msgflag(*(uint64_t *)ids->data, deleted_flag, NULL, IMAPFA_ADD, 0, NULL) < 0) {
 					qprintf("Error setting flags for message [%" PRIu64 "]\n", *(uint64_t *)ids->data);
-					TRACE(TRACE_ERR, "[%] Error setting flags for message [%" PRIu64 "]", s, *(uint64_t *)ids->data);
+					TRACE(TRACE_ERR, "[%p] Error setting flags for message [%" PRIu64 "]", s, *(uint64_t *)ids->data);
 					result = -1;
 				} else {
 					affected = 1;
