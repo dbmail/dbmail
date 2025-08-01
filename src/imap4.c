@@ -30,6 +30,9 @@
 
 #define THIS_MODULE "imap"
 
+extern DBParam_T db_params;
+#define DBPFX db_params.pfx
+
 /* max number of BAD/NO responses */
 #define MAX_FAULTY_RESPONSES 5
 
@@ -611,6 +614,8 @@ int imap_handle_connection(client_sock *c)
 	ClientBase_T *ci;
 	struct rlimit fd_limit;
 	int fd_count;
+	gboolean login_disabled = TRUE;
+	Field_T val;
 
 	ci = client_init(c);
 
@@ -624,9 +629,29 @@ int imap_handle_connection(client_sock *c)
 	ci_cork(ci);
 
 	session->ci = ci;
+
+	GETCONFIGVALUE("login_disabled", "IMAP", val);
+	if (SMATCH(val, "no"))
+		login_disabled = FALSE;
+
 	if ((! server_conf->ssl) || (ci->sock->ssl_state == TRUE)) {
 		Capa_remove(session->capa, "STARTTLS");
-		Capa_remove(session->capa, "LOGINDISABLED");
+		Capa_remove(session->preauth_capa, "STARTTLS");
+		login_disabled = FALSE;
+	}
+
+	if (login_disabled) {
+		if (! Capa_match(session->preauth_capa, "LOGINDISABLED"))
+			Capa_add(session->preauth_capa, "LOGINDISABLED");
+		Capa_remove(session->preauth_capa, "AUTH=LOGIN");
+		Capa_remove(session->preauth_capa, "AUTH=CRAM-MD5");
+	} else {
+		Capa_remove(session->preauth_capa, "LOGINDISABLED");
+	}
+
+	if (MATCH(db_params.authdriver, "LDAP")) {
+		Capa_remove(session->capa, "AUTH=CRAM-MD5");
+		Capa_remove(session->preauth_capa, "AUTH=CRAM-MD5");
 	}
 
 	fd_count = get_opened_fd_count();

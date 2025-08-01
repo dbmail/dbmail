@@ -91,8 +91,6 @@ static void mailboxstate_destroy(MailboxState_T M)
 ImapSession * dbmail_imap_session_new(Mempool_T pool)
 {
 	ImapSession * self;
-	Field_T val;
-	gboolean login_disabled = TRUE;
 
 	self = mempool_pop(pool, sizeof(ImapSession));
 
@@ -105,15 +103,12 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 
 	pthread_mutex_init(&self->lock, NULL);
 
-	GETCONFIGVALUE("login_disabled", "IMAP", val);
-	if (SMATCH(val, "no"))
-		login_disabled = FALSE;
-
 	self->state = CLIENTSTATE_NON_AUTHENTICATED;
 	self->args = mempool_pop(self->pool, sizeof(String_T) * MAX_ARGS);
 	self->fi = mempool_pop(self->pool, sizeof(fetch_items));
 	self->capa = Capa_new(self->pool);
 	self->preauth_capa = Capa_new(self->pool);
+
 	Capa_remove(self->preauth_capa, "ACL");
 	Capa_remove(self->preauth_capa, "RIGHTS=texk");
 	Capa_remove(self->preauth_capa, "NAMESPACE");
@@ -129,34 +124,11 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	Capa_remove(self->preauth_capa, "ENABLE");
 	Capa_remove(self->preauth_capa, "QRESYNC");
 
-	if (! (server_conf && server_conf->ssl))
-		Capa_remove(self->preauth_capa, "STARTTLS");
-
-	if (! Capa_match(self->preauth_capa, "STARTTLS"))
-		login_disabled = FALSE;
-
-	if (login_disabled) {
-		if (! Capa_match(self->preauth_capa, "LOGINDISABLED"))
-			Capa_add(self->preauth_capa, "LOGINDISABLED");
-		Capa_remove(self->preauth_capa, "AUTH=LOGIN");
-		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
-	} else {
-		Capa_remove(self->preauth_capa, "LOGINDISABLED");
-	}
-	if (MATCH(db_params.authdriver, "LDAP")) {
-		Capa_remove(self->capa, "AUTH=CRAM-MD5");
-		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
-	}
-
-	if (! (server_conf && server_conf->ssl)) {
-		Capa_remove(self->capa, "STARTTLS");
-		Capa_remove(self->preauth_capa, "STARTTLS");
-	}
-
 	self->physids = g_tree_new((GCompareFunc)ucmp);
 	self->mbxinfo = g_tree_new_full((GCompareDataFunc)ucmpdata,NULL,(GDestroyNotify)uint64_free,(GDestroyNotify)mailboxstate_destroy);
 
 	TRACE(TRACE_DEBUG,"imap session [%p] created", self);
+
 	return self;
 }
 
