@@ -38,7 +38,7 @@
 
 #define _XOPEN_SOURCE
 
-#else
+#elif !defined(__NetBSD__)
 
 #define _XOPEN_SOURCE	500
 #include <features.h>

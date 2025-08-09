@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# PROVIDE: dbmail_lmtpd
+# REQUIRE: DAEMON
+
+$_rc_subr_loaded . /etc/rc.subr
+
+name="dbmail_lmtpd"
+rcvar=$name
+
+command="/usr/local/sbin/dbmail-lmtpd"
+command_args=""
+pidfile=/var/run/dbmail/dbmail-lmtpd.pid
+
+load_rc_config $name
+run_rc_command "$1"
