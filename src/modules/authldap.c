@@ -370,11 +370,16 @@ static GList * dm_ldap_ent_get_values(GList *entlist)
 				gchar *t = (gchar *)attlist->data;
 				TRACE(TRACE_DEBUG,"value [%s]", t);
 				values = g_list_append_printf(values,"%s", t);
-
+				if (!g_list_next(attlist))
+					break;
 				attlist = g_list_next(attlist);
 			}
+			if (!g_list_next(fldlist))
+					break;
 			fldlist = g_list_next(fldlist);
 		}
+		if (!g_list_next(entlist))
+			break;
 		entlist = g_list_next(entlist);
 	}
 	return values;
@@ -854,7 +859,11 @@ GList * auth_get_known_users(void)
 GList * auth_get_known_aliases(void)
 {
 	char *query;
-	const char *fields[] = { _ldap_cfg.field_uid, NULL };
+	const char *fields[] = {
+		_ldap_cfg.field_uid,
+		_ldap_cfg.field_fwdtarget,
+		NULL
+	};
 	GList *aliases;
 	GList *entlist;
 	
@@ -863,6 +872,11 @@ GList * auth_get_known_aliases(void)
 	g_string_free(t,TRUE);
 	
 	query =  dm_ldap_get_filter('&',"objectClass",l);
+	TRACE(TRACE_DEBUG,
+			"Searching for aliases [%s], "
+			"field_uid [%s], "
+			"field_fwdtarget [%s]", query,
+			_ldap_cfg.field_uid, _ldap_cfg.field_fwdtarget);
 	entlist = __auth_get_every_match(query, fields);
 	g_list_free_full(g_steal_pointer (&l), g_free);
 	g_free(query);
@@ -889,13 +903,22 @@ int auth_check_user_ext(const char *userid, GList **userids, GList **fwds, int c
 	uint64_t id, *uid;
 	char *endptr = NULL;
 	char *query;
-	const char *fields[] = { 
-		_ldap_cfg.field_nid, 
-		_ldap_cfg.field_fwdtarget[0] ? _ldap_cfg.field_fwdtarget : NULL, 
-		NULL 
+	GString *f_nid = g_string_new(_ldap_cfg.field_nid);
+	GString *f_uid = g_string_new(_ldap_cfg.field_uid);
+	GString *f_mail = g_string_new(_ldap_cfg.field_mail);
+	GString *f_fwd = g_string_new(_ldap_cfg.field_fwdtarget);
+	TRACE(TRACE_DEBUG, "nid field [%s]", f_nid->str);
+	TRACE(TRACE_DEBUG, "uid field [%s]", f_uid->str);
+	TRACE(TRACE_DEBUG, "mail field [%s]", f_mail->str);
+	TRACE(TRACE_DEBUG, "fwd field [%s]", f_fwd->str);
+	const char *fields[] = {
+		f_fwd->str ? f_fwd->str : NULL,
+		NULL
 	};
+	fields[0] = f_fwd->str ? f_fwd->str : NULL;
 	char *attrvalue;
 	GList *entlist, *fldlist, *attlist, *searchlist;
+	searchlist = NULL;
 
 	if (checks > 20) {
 		TRACE(TRACE_ERR, "too many checks. Possible loop detected.");
@@ -903,99 +926,104 @@ int auth_check_user_ext(const char *userid, GList **userids, GList **fwds, int c
 	}
 
 	TRACE(TRACE_DEBUG, "checking user [%s] in ldap", userid);
-	if (strlen(_ldap_cfg.query_string)==0) {
-		/* build a mail filter, with multiple attributes, if needed */
-		GString *f = g_string_new(_ldap_cfg.field_mail);
-		searchlist = g_string_split(f,",");
-		g_string_free(f,TRUE);
 
-		GString *t = NULL;
-		GString *q = g_string_new("");
-		GList *l = NULL;
-		searchlist = g_list_first(searchlist);
-		while(searchlist) {
-			t = g_string_new("");
-			g_string_printf(t,"%s=%s",(char *)searchlist->data,userid);
-			l = g_list_append(l,g_strdup(t->str));
-			g_string_free(t, TRUE);
-			if (!g_list_next(searchlist))
-				break;
-			searchlist = g_list_next(searchlist);
-		}
-		searchlist = g_list_first(searchlist);
-		g_list_foreach(searchlist, (GFunc)g_string_free, NULL);
-		searchlist = g_list_first(searchlist);
-		g_list_free(searchlist);
+	/* build a mail filter, with multiple attributes, if needed */
 
-		t = g_list_join(l,")(");
-		g_string_printf(q,"(|(%s))", t->str);
-		query = q->str;
-		g_string_free(t,TRUE);
-		g_string_free(q,FALSE);
-		g_list_foreach(l,(GFunc)g_free,NULL);
-		g_list_free(l);
-	} else {
-		int i;
-		GString *q = g_string_new("");
-		for (i = 0; _ldap_cfg.query_string[i] != '\0'; i++) {
-			if (_ldap_cfg.query_string[i]=='%' && _ldap_cfg.query_string[i+1] && _ldap_cfg.query_string[i+1]=='s') {
-				g_string_append(q,userid);
-				i++;
-			} else {
-				g_string_append_c(q,_ldap_cfg.query_string[i]);
-			}
-		}
-		query = q->str;
-		g_string_free(q,FALSE);
-	}
+	GString *t = NULL;
+	GString *q = g_string_new("");
+	GList *l = NULL;
 
-	TRACE(TRACE_DEBUG, "searching with query [%s], checks [%d]", query, checks);
+	t = g_string_new("");
+	g_string_printf(t, "%s=%s", f_uid->str, userid);
+	l = g_list_append(l, g_strdup(t->str));
+	g_string_free(t, TRUE);
 
+	t = g_string_new("");
+	g_string_printf(t, "%s=%s", f_mail->str, userid);
+	l = g_list_append(l, g_strdup(t->str));
+	g_string_free(t, TRUE);
+
+	t = g_list_join(l,")(");
+	g_string_printf(q,"(|(%s))", t->str);
+	query = q->str;
+	g_string_free(t,TRUE);
+	g_string_free(q,FALSE);
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_list_free(l);
+
+	TRACE(TRACE_DEBUG, "searching with query [%s], field_nid [%s], checks [%d]", query, f_nid->str, checks);
+
+	// Get forwards
+	TRACE(TRACE_DEBUG, "Getting forwards");
 	entlist = __auth_get_every_match(query, fields);
-	g_free(query);
+	TRACE(TRACE_DEBUG, "field_nid [%s], length [%d]", f_nid->str, g_list_length(entlist));
 
-	if (g_list_length(entlist) < 1) {
-		if (checks > 0) {
-			/* found the last one, this is the deliver to
-			 * but checks needs to be bigger then 0 because
-			 * else it could be the first query failure */
-
-			id = strtoull(userid, &endptr, 10);
-			if (*endptr == 0) { /* numeric deliver-to --> this is a userid */
-				TRACE(TRACE_DEBUG, "adding [%" PRIu64 "] to userids", id);
-				uid = g_new0(uint64_t,1);
-				*uid = id;
-				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
-			} else {
-				TRACE(TRACE_DEBUG, "adding [%s] to forwards", userid);
-				*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(userid));
-			}
-			return 1;
-		} else {
-			TRACE(TRACE_DEBUG, "user [%s] not in ldap aliases", userid);
-			dm_ldap_freeresult(entlist);
-			return 0;
-		}
-	}
-
-	TRACE(TRACE_DEBUG, "into checking loop");
 	entlist = g_list_first(entlist);
 	while (entlist) {
+		TRACE(TRACE_DEBUG, "Forwards [%d] ", g_list_length(entlist));
 		fldlist = g_list_first(entlist->data);
 		while(fldlist) {
 			attlist = g_list_first(fldlist->data);
+			TRACE(TRACE_DEBUG, "attlist [%d] ", g_list_length(attlist));
 			while(attlist) {
 				attrvalue = attlist->data;
-				occurences += auth_check_user_ext(attrvalue, userids, fwds, checks+1);
-
+				TRACE(TRACE_DEBUG, "adding [%s] to forwards", attrvalue);
+				*(GList **)fwds = g_list_prepend(*(GList **)fwds, g_strdup(attrvalue));
+				if (!g_list_next(attlist))
+					break;
 				attlist = g_list_next(attlist);
 			}
+			if (!g_list_next(attlist))
+				break;
 			fldlist = g_list_next(fldlist);
 		}
 		if (!g_list_next(entlist))
 			break;
 		entlist = g_list_next(entlist);
 	}
+	dm_ldap_freeresult(entlist);
+
+	// Get userids
+	TRACE(TRACE_DEBUG, "Getting userids");
+	fields[0] = f_nid->str;
+
+	entlist = __auth_get_every_match(query, fields);
+	entlist = g_list_first(entlist);
+	TRACE(TRACE_DEBUG, "Get userids: field_nid [%s], qty [%d]", f_nid->str, g_list_length(entlist));
+
+	while (entlist) {
+		fldlist = g_list_first(entlist->data);
+		while(fldlist) {
+			attlist = g_list_first(fldlist->data);
+			TRACE(TRACE_DEBUG, "attlist [%d] ", g_list_length(attlist));
+			while(attlist) {
+				attrvalue = attlist->data;
+				uid = g_new0(uint64_t,1);
+				id = strtoull(attrvalue, &endptr, 10);
+				*uid = id;
+				TRACE(TRACE_DEBUG, "adding [%" PRIu64 "] to userids", *uid);
+				*(GList **)userids = g_list_prepend(*(GList **)userids, uid);
+				++occurences;
+
+				if (!g_list_next(attlist))
+					break;
+				attlist = g_list_next(attlist);
+			}
+			if (!g_list_next(attlist))
+				break;
+			fldlist = g_list_next(fldlist);
+		}
+		if (!g_list_next(entlist))
+			break;
+		entlist = g_list_next(entlist);
+	}
+
+	g_free(query);
+
+	g_string_free(f_nid, TRUE);
+	g_string_free(f_uid, TRUE);
+	g_string_free(f_mail, TRUE);
+	g_string_free(f_fwd, TRUE);
 	dm_ldap_freeresult(entlist);
 	return occurences;
 }
@@ -1089,7 +1117,7 @@ int auth_adduser(const char *username, const char *password,
 
 	mods[i++] = NULL;
 
-	err = ldap_add_s(_ldap_conn, dn, mods);
+	err = ldap_add_ext_s(_ldap_conn, dn, mods, NULL, NULL);
 
 	g_strfreev(obj_values);
 	ldap_memfree(dn);
@@ -1590,7 +1618,7 @@ static int forward_create(const char *alias, const char *deliver_to)
 	mods[4] = NULL;
 	
 	TRACE(TRACE_DEBUG, "creating new forward [%s] -> [%s]", alias, deliver_to);
-	err = ldap_add_s(_ldap_conn, dn, mods);
+	err = ldap_add_ext_s(_ldap_conn, dn, mods, NULL, NULL);
 
 	g_strfreev(obj_values);
 	ldap_memfree(dn);

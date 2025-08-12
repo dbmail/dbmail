@@ -412,7 +412,7 @@ int do_forwards(const char * const alias, const uint64_t clientid,
 			forward = (char *)fwds_add->data;
 			qprintf("[%s]\n", forward);
 
-			if (auth_addalias_ext(alias, forward, clientid) < 0) {
+			if (! auth_addalias_ext(alias, forward, clientid)) {
 				qerrorf("Error: could not add forward [%s]\n",
 				     alias);
 				result = -1;
@@ -633,18 +633,17 @@ int do_show(const char * const name)
 
 		/* show all users and their aliases */
 		users = auth_get_known_users();
+		users = g_list_first(users);
 		TRACE(TRACE_INFO, "Number of users [%d]", g_list_length(users));
 		if (g_list_length(users) > 0) {
-			users = g_list_first(users);
 			while (users) {
 				do_show(users->data);
 				if (! g_list_next(users))
 					break;
 				users = g_list_next(users);
 			}
-			g_list_foreach(users,(GFunc)g_free,NULL);
 		}
-		g_list_free(g_list_first(users));
+		g_list_free_full(g_steal_pointer (&users), g_free);
 
 		qprintf("\n-- forwards --\n");
 		TRACE(TRACE_INFO, "-- forwards --");
@@ -657,19 +656,24 @@ int do_show(const char * const name)
 			aliases = g_list_first(aliases);
 			while (aliases) {
 				show_alias(aliases->data, 1);
+				if (! g_list_next(aliases))
+					break;
 				aliases = g_list_next(aliases);
 			}
-			g_list_foreach(aliases,(GFunc)g_free,NULL);
 		}
-		g_list_free(g_list_first(aliases));
+		aliases = g_list_first(aliases);
+		g_list_free_full(g_steal_pointer (&aliases), g_free);
 	} else {
 		if (auth_user_exists(name, &useridnr)) {
 			; // ignore
 		}
 
 		if (useridnr == 0) {
+			TRACE(TRACE_DEBUG, "Showing alias [%s]", name);
 			return show_alias(name, 0);
 		} else {
+			TRACE(TRACE_DEBUG, "Showing user [%s]", name);
+			show_alias(name, 0);
 			return show_user(useridnr, 0);
 		}
 	}
@@ -701,7 +705,6 @@ static int show_alias(const char * const name, int concise)
 			printf("forward [%s] to [%s]\n", name, fwdlist->str);
 		}
 		g_string_free(fwdlist, TRUE);
-		g_list_destroy(g_list_first(forwards));
 	}
 	
 	userids = g_list_first(userids);
@@ -714,8 +717,13 @@ static int show_alias(const char * const name, int concise)
 			// should go into maintenance.c at some point.
 			TRACE(TRACE_WARNING, "Dangling entry [%s]", username);
 		} else {
-			if (!concise) // Don't print for concise
-			printf("deliver [%s] to [%s]\n", name, username);
+			if (!concise) {
+				// Don't print for concise
+				if (strcmp(name, username)) {
+					// Only print if different
+					printf("deliver [%s] to [%s]\n", name, username);
+				}
+			}
 		}
 		g_free(username);
 		if (! g_list_next(userids))
@@ -723,7 +731,9 @@ static int show_alias(const char * const name, int concise)
 		userids = g_list_next(userids);
 	}
 	userids = g_list_first(userids);
+	forwards = g_list_first(forwards);
 	g_list_free_full(g_steal_pointer (&userids), g_free);
+	g_list_free_full(g_steal_pointer (&forwards), g_free);
 	return 0;
 }
 
@@ -744,7 +754,7 @@ static int show_user(uint64_t useridnr, int concise UNUSED)
 	username = auth_get_userid(useridnr);
 	out = g_list_append_printf(out,"%s", username);
 	g_free(username);
-	
+
 	out = g_list_append_printf(out,"x");
 	out = g_list_append_printf(out,"%" PRIu64 "", useridnr);
 	out = g_list_append_printf(out,"%" PRIu64 "", cid);
@@ -753,7 +763,7 @@ static int show_user(uint64_t useridnr, int concise UNUSED)
 	out = g_list_append_printf(out,"%.02f", 
 			(double) quotumused / (1024.0 * 1024.0));
 	userlist = auth_get_user_aliases(useridnr);
-        
+
 	if (g_list_length(userlist)) {
 		userlist = g_list_first(userlist);
 		s = g_list_join(userlist,",");
@@ -767,7 +777,8 @@ static int show_user(uint64_t useridnr, int concise UNUSED)
 	s = g_list_join(out,":");
 	printf("%s\n", s->str);
 	g_string_free(s,TRUE);
-	g_list_free(g_list_first(out));
+	out = g_list_first(out);
+	g_list_free_full(g_steal_pointer (&out), g_free);
 	return 0;
 }
 
