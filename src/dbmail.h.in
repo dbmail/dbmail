@@ -38,6 +38,12 @@
 
 #define _XOPEN_SOURCE
 
+#elif defined(__NetBSD__)
+
+/* On NetBSD, no definition of an _XOPEN_SOURCE level is needed. The
+ * features required by dbmail are enabled by default.  See the file
+ * /usr/include/sys/featuretest.h for details. */
+
 #else
 
 #define _XOPEN_SOURCE	500
