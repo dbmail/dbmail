@@ -2021,17 +2021,17 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			uint64_t len;
 			char *lnul, *rnul, *tmp;
 
-			tmp = g_base64_decode(s, &len);
+			tmp = (char *) g_base64_decode(s, &len);
 			if (! tmp) {
 				return -1;
 			}
-			tmp = g_realloc(tmp, len+1);
+			tmp = (char *) g_realloc(tmp, len+1);
 			tmp[len] = '\0';
 
 			lnul = (char *) memchr(tmp, 0, len);
 			rnul = (char *) memrchr(tmp, 0, len);
 
-			if (lnul && rnul && (lnul == tmp) && (lnul != rnul) && (rnul-lnul > 1) && (rnul-tmp < len)) {
+			if (lnul && rnul && (lnul == tmp) && (lnul != rnul) && (rnul-lnul > 1) && (rnul-tmp < (long int) len)) {
 				self->args[self->args_idx++] = p_string_new(self->pool, lnul+1);
 				self->args[self->args_idx++] = p_string_new(self->pool, rnul+1);
 				g_free(tmp);
