@@ -154,7 +154,8 @@ static int check_state_and_args(ImapSession * self, int minargs, int maxargs, Cl
 void _ic_capability_enter(dm_thread_data *D)
 {
 	SESSION_GET;
-	dbmail_imap_session_buff_printf(self, "* %s %s\r\n", self->command, Capa_as_string(self->capa));
+	dbmail_imap_session_buff_printf(self, "* %s %s\r\n", self->command,
+		Capa_as_string(self->state == CLIENTSTATE_NON_AUTHENTICATED ? self->preauth_capa : self->capa));
 	SESSION_OK;
 	SESSION_RETURN;
 }
@@ -180,13 +181,13 @@ int _ic_starttls(ImapSession *self)
 	}
 	ci_write(self->ci, "%s OK Begin TLS now\r\n", self->tag);
 	i = ci_starttls(self->ci);
-	
-	Capa_remove(self->capa, "STARTTLS");
-	Capa_remove(self->capa, "LOGINDISABLED");
-	
+
 	if (i < 0) i = 0;
 
-	if (i == 0) return 3; /* done */
+	if (i == 0) {
+		dbmail_imap_session_encrypted(self);
+		return 3; /* done */
+	}
 
 	return i;
 }
