@@ -111,5 +111,8 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer);
 
 void _ic_cb_leave(gpointer data);
 
+const char * token_first(ImapSession * self);
+const char * token_next(ImapSession * self);
+
 #endif
 

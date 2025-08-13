@@ -524,16 +524,32 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 	return 0;	/* DONE */
 }
 
-
-#define TOKENAT(a) (self->args[self->args_idx+a]?p_string_str(self->args[self->args_idx+a]):NULL)
-#define NEXTTOKEN TOKENAT(1)
-#define TOKEN TOKENAT(0)
+/**
+ * Tokens are stored in a c array accessed via a pointer
+ * that doesn't know about the array.
+ * Testing for the existence of an element causes an Invalid read
+ * TODO convert ImapSession->args into a gtk GArray
+ */
+const char * token_first(ImapSession * self) {
+	if (self->args[self->args_idx]) {
+		return p_string_str(self->args[self->args_idx]);
+	} else {
+		return NULL;
+	}
+}
+const char * token_next(ImapSession * self) {
+	if (self->args[self->args_idx+1]) {
+		return p_string_str(self->args[self->args_idx+1]);
+	} else {
+		return NULL;
+	}
+}
 
 int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 {
 	int ispeek = 0;
-	const char *token = TOKEN;
-	const char *nexttoken = NEXTTOKEN;
+	const char *token = token_first(self);
+	const char *nexttoken = token_next(self);
 
 	if (!token) return -1; // done
 	if ((token[0] == ')') && (! nexttoken)) return -1; // done
@@ -576,8 +592,8 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 
 		if (MATCH(token,"body.peek")) ispeek=1;
 		
-		nexttoken = NEXTTOKEN;
-		
+		nexttoken = token_next(self);
+
 		if (! nexttoken || ! MATCH(nexttoken,"[")) {
 			if (ispeek) return -2;	/* error DONE */
 			self->fi->msgparse_needed = 1;
@@ -588,8 +604,8 @@ int dbmail_imap_session_fetch_parse_args(ImapSession * self)
 			self->args_idx++;	/* now pointing at '[' (not the last arg, parentheses are matched) */
 			self->args_idx++;	/* now pointing at what should be the item type */
 
-			token = TOKEN;
-			nexttoken = NEXTTOKEN;
+			token = token_first(self);
+			nexttoken = token_next(self);
 
 			TRACE(TRACE_DEBUG,"[%p] token [%s], nexttoken [%s]", self, token, nexttoken);
 
