@@ -917,8 +917,7 @@ int auth_check_user_ext(const char *userid, GList **userids, GList **fwds, int c
 	};
 	fields[0] = f_fwd->str ? f_fwd->str : NULL;
 	char *attrvalue;
-	GList *entlist, *fldlist, *attlist, *searchlist;
-	searchlist = NULL;
+	GList *entlist, *fldlist, *attlist;
 
 	if (checks > 20) {
 		TRACE(TRACE_ERR, "too many checks. Possible loop detected.");
