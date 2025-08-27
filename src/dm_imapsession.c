@@ -93,6 +93,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	ImapSession * self;
 	Field_T val;
 	gboolean login_disabled = TRUE;
+	gboolean enable_cram_md5 = TRUE;
 
 	self = mempool_pop(pool, sizeof(ImapSession));
 
@@ -108,6 +109,10 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	GETCONFIGVALUE("login_disabled", "IMAP", val);
 	if (SMATCH(val, "no"))
 		login_disabled = FALSE;
+
+	GETCONFIGVALUE("enable_cram-md5_enabled", "IMAP", val);
+	if (SMATCH(val, "no"))
+		enable_cram_md5 = FALSE;
 
 	self->state = CLIENTSTATE_NON_AUTHENTICATED;
 	self->args = mempool_pop(self->pool, sizeof(String_T) * MAX_ARGS);
@@ -141,7 +146,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 		login_disabled = FALSE;
 	}
 
-	if (MATCH(db_params.authdriver, "LDAP")) {
+	if ((! enable_cram_md5) || MATCH(db_params.authdriver, "LDAP")) {
 		Capa_remove(self->preauth_capa, "AUTH=CRAM-MD5");
 	}
 
@@ -162,6 +167,13 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 
 void dbmail_imap_session_encrypted(ImapSession *self)
 {
+	Field_T val;
+	gboolean enable_cram_md5 = TRUE;
+
+	GETCONFIGVALUE("enable_cram_md5", "IMAP", val);
+	if (SMATCH(val, "no"))
+		enable_cram_md5 = FALSE;
+
 	Capa_remove(self->preauth_capa, "STARTTLS");
 	Capa_remove(self->preauth_capa, "LOGINDISABLED");
 
@@ -170,7 +182,7 @@ void dbmail_imap_session_encrypted(ImapSession *self)
 	if (! Capa_match(self->preauth_capa, "AUTH=PLAIN"))
 		Capa_add(self->preauth_capa, "AUTH=PLAIN");
 
-	if (! MATCH(db_params.authdriver, "LDAP")) {
+	if (enable_cram_md5 && (! MATCH(db_params.authdriver, "LDAP"))) {
 		if (! Capa_match(self->preauth_capa, "AUTH=CRAM-MD5"))
 			Capa_add(self->preauth_capa, "AUTH=CRAM-MD5");
 	}
