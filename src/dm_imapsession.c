@@ -2047,15 +2047,16 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			lnul = (char *) memchr(tmp, 0, len);
 			rnul = (char *) memrchr(tmp, 0, len);
 
-			if (lnul && rnul && (lnul == tmp) && (lnul != rnul) && (rnul-lnul > 1) && (rnul-tmp < (long int) len)) {
-				self->args[self->args_idx++] = p_string_new(self->pool, lnul+1);
-				self->args[self->args_idx++] = p_string_new(self->pool, rnul+1);
-				g_free(tmp);
-				goto finalize;
-			} else {
-				g_free(tmp);
-				return -1;
+			if (lnul && rnul && (lnul != rnul) && (rnul-lnul > 1) && (rnul-tmp < (long int) len)) {
+				if ((lnul == tmp) || (strcmp(tmp, lnul+1) == 0)) {
+					self->args[self->args_idx++] = p_string_new(self->pool, lnul+1);
+					self->args[self->args_idx++] = p_string_new(self->pool, rnul+1);
+					g_free(tmp);
+					goto finalize;
+				}
 			}
+			g_free(tmp);
+			return -1;
 
 		} else if (MATCH(p_string_str(self->args[0]),"CRAM-MD5")) {
 			if (self->args_idx == 1) {
