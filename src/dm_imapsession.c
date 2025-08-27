@@ -110,7 +110,7 @@ ImapSession * dbmail_imap_session_new(Mempool_T pool)
 	if (SMATCH(val, "no"))
 		login_disabled = FALSE;
 
-	GETCONFIGVALUE("enable_cram-md5_enabled", "IMAP", val);
+	GETCONFIGVALUE("enable_cram_md5", "IMAP", val);
 	if (SMATCH(val, "no"))
 		enable_cram_md5 = FALSE;
 
