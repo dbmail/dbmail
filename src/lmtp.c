@@ -314,8 +314,12 @@ int lmtp(ClientSession_T * session)
 		 * The RFC requires a couple of SMTP extensions
 		 * with a MUST statement, so just hardcode them.
 		 * */
-		ci_write(ci, "250-%s\r\n250-PIPELINING\r\n"
-			"250-ENHANCEDSTATUSCODES\r\n250 SIZE\r\n", 
+		ci_write(ci, "250-%s\r\n"
+			"250-PIPELINING\r\n"
+			"250-ENHANCEDSTATUSCODES\r\n"
+			"250-8BITMIME\r\n"
+			"250-SMTPUTF8\r\n"
+			"250 SIZE\r\n",
 			session->hostname);
 				/* This is a SHOULD implement:
 				 * "250-8BITMIME\r\n"
@@ -422,12 +426,14 @@ int lmtp(ClientSession_T * session)
 
 		/* This is all a bit nested now... */
 		if (tmpbody) {
+			if (MATCH(tmpbody, "SMTPUTF8")) {   // RFC 6531
+				// noop
+			}
 			if (MATCH(tmpbody, "8BITMIME")) {   // RFC1652
-				ci_write(ci, "500 Please use 7BIT MIME only.\r\n");
-				return 1;
+				// noop
 			}
 			if (MATCH(tmpbody, "BINARYMIME")) { // RFC3030
-				ci_write(ci, "500 Please use 7BIT MIME only.\r\n");
+				ci_write(ci, "500 Please use 7BIT MIME, 8BITMIME or SMTPUTF8.\r\n");
 				return 1;
 			}
 		}
