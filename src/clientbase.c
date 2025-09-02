@@ -26,6 +26,7 @@
 #include <openssl/err.h>
 #include "dbmail.h"
 #include "dm_mempool.h"
+#include <locale.h>
 
 #define THIS_MODULE "clientbase"
 
@@ -419,12 +420,13 @@ void ci_read_cb(ClientBase_T *client)
 
 	while (TRUE) {
 		memset(ibuf, 0, sizeof(ibuf));
+		char *locale = setlocale(LC_ALL, "C.UTF-8");
 		if (client->sock->ssl) {
 			t = (int64_t)SSL_read(client->sock->ssl, ibuf, sizeof(ibuf)-1);
 		} else {
 			t = (int64_t)read(client->rx, ibuf, sizeof(ibuf)-1);
 		}
-		TRACE(TRACE_DEBUG, "[%p] [%" PRId64 "]", client, t);
+		TRACE(TRACE_DEBUG, "[%p] [%" PRId64 "] [%s]", client, t, ibuf);
 
 		if (t < 0) {
 			int e = errno;
