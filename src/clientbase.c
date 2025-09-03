@@ -426,7 +426,7 @@ void ci_read_cb(ClientBase_T *client)
 		} else {
 			t = (int64_t)read(client->rx, ibuf, sizeof(ibuf)-1);
 		}
-		TRACE(TRACE_DEBUG, "[%p] [%" PRId64 "] [%s]", client, t, ibuf);
+		TRACE(TRACE_DEBUG, "[%p] [%" PRId64 "]", client, t);
 
 		if (t < 0) {
 			int e = errno;
