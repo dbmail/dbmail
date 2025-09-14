@@ -502,7 +502,7 @@ static void _strip_blob_prefix(char *subject)
 	if (*tmp != ']')
 		return;
 
-	while (isspace(*++tmp))
+	while (isspace((unsigned char) *++tmp))
 		;
 	len = strlen(tmp);
 
@@ -687,7 +687,7 @@ int listex_match(const char *p, const char *s,
 		}
 
 		if ( (*p == *s)||
-		((flags & LISTEX_NOCASE) && (tolower(*p) == tolower(*s)))) {
+		((flags & LISTEX_NOCASE) && (tolower((unsigned char) *p) == tolower((unsigned char) *s)))) {
 			p8=(((unsigned char)*p) > 0xC0);
 			p++; s++;
 		} else {
@@ -870,7 +870,7 @@ int check_date(const char *date)
 	if (i >= 12 || days > month_len[i]) return 0;
 
 	for (i = 7; i < 11; i++)
-		if (!isdigit(date[i - j])) return 0;
+		if (!isdigit((unsigned char) date[i - j])) return 0;
 
 	return 1;
 }
@@ -884,10 +884,10 @@ int check_msg_set(const char *s)
 {
 	int i, indigit=0, result = 1;
 	
-	if (!s || (!isdigit(s[0]) && s[0]!= '*') ) return 0;
+	if (!s || (!isdigit((unsigned char) s[0]) && s[0]!= '*') ) return 0;
 
 	for (i = 0; s[i]; i++) {
-		if (isdigit(s[i]) || s[i]=='*') indigit = 1;
+		if (isdigit((unsigned char) s[i]) || s[i]=='*') indigit = 1;
 		else if (s[i] == ',') {
 			if (!indigit) {
 				result = 0;

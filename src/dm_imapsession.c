@@ -419,7 +419,7 @@ static int _imap_session_fetch_parse_partspec(ImapSession *self)
 	TRACE(TRACE_DEBUG,"token [%s], nexttoken [%s]", token, nexttoken);
 
 	for (j = 0; token[j]; j++) {
-		if (isdigit(token[j])) {
+		if (isdigit((unsigned char) token[j])) {
 			indigit = 1;
 			continue;
 		} else if (token[j] == '.') {
@@ -523,7 +523,7 @@ static int _imap_session_fetch_parse_octet_range(ImapSession *self)
 				if (delimpos != -1) 
 					return -2;
 				delimpos = j;
-			} else if (!isdigit (token[j]))
+			} else if (!isdigit ((unsigned char) token[j]))
 				return -2;
 		}
 		if (delimpos == -1 || delimpos == 1 || delimpos == (int) (strlen(token) - 2))
@@ -930,7 +930,7 @@ static void _fetch_headers(ImapSession *self, body_fetch *bodyfetch, gboolean no
 
 				/* Build content as Header: value \n */
 				fld2 = g_strdup_printf("%s", fld);
-				fld2[0] = toupper(fld[0]);
+				fld2[0] = toupper((unsigned char) fld[0]);
 				new = g_strdup_printf("%s%s: %s\n", old?old:"", fld2, val);
 				g_free(val);
 				g_free(fld2);
