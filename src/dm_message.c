@@ -332,7 +332,7 @@ static char *find_type_header(const char *s)
 	i++;
 
 	while (rest[i]) {
-		if (((ISLF(rest[i])) || (ISCR(rest[i]))) && (!isspace(rest[i+1]))) {
+		if (((ISLF(rest[i])) || (ISCR(rest[i]))) && (!isspace((unsigned char) rest[i+1]))) {
 			break;
 		}
 		g_string_append_c(header,rest[i++]);
