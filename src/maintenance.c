@@ -1183,12 +1183,12 @@ int do_check_replycache(const char *timespec)
 int do_vacuum_db(void)
 {
 	if (no_to_all) {
-		qprintf("\nVacuum and optimize not performed.\n");
+		qprintf("\nCleaning the database not performed.\n");
 		TRACE(TRACE_INFO, "Vacuum and optimize not performed.");
 	}
 	if (yes_to_all) {
-		qprintf("\nVacuuming and optimizing database...\n");
-		TRACE(TRACE_INFO, "Vacuuming and optimizing database...");
+		qprintf("\nCleaning the database...\n");
+		TRACE(TRACE_INFO, "Cleaning the database...");
 		fflush(stdout);
 		if (db_cleanup() < 0) {
 			qprintf("Failed. Please check the log.\n");
@@ -1199,6 +1199,8 @@ int do_vacuum_db(void)
 
 		qprintf("Ok. Database cleaned up.\n");
 		TRACE(TRACE_INFO, "Ok. Database cleaned up.");
+		qprintf("\nPlease see https://dbmail.org/en/manage/database-tips/\n");
+		qprintf("for more information.\n");
 	}
 	return 0;
 }
