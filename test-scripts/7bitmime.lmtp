@@ -1,0 +1,15 @@
+LHLO alan
+MAIL FROM:Alan Hicks <alan@dbmail.org>
+RCPT TO:<testuser1>
+DATA
+X-Foo: bar
+Message-Id: <20250915l.1434l.0l@(none)>
+Subject: dbmail test message no Pizza
+MIME-Version: 1.0
+
+
+this is a test message
+
+.
+
+QUIT
