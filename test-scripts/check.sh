@@ -135,7 +135,7 @@ do_release_info () {
 }
 
 do_debian_date () {
-  date -j -R ${2}0000
+  date -j -R "${2}0000"
 }
 
 service_configure () {
@@ -189,7 +189,7 @@ service_test () {
   for SERVICE_TEST in "${BASEDIR}/"*".${SERVICE}"
   do
     echo "Testing $SERVICE_TEST"
-    nc -w 10 "${HOST}" "${PORT}" < "$SERVICE_TEST"
+    nc -w 10 -i 1 "${HOST}" "${PORT}" < "$SERVICE_TEST"
   done
 }
 
@@ -240,7 +240,7 @@ run_tests () {
     service_report "$SERVICE"
   done
 
-  if [ "$ERRORS" -ge 0 ]
+  if [ $ERRORS -gt 0 ]
   then
     echo "Errors were found"
     exit 1
