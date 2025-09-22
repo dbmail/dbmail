@@ -1,17 +1,17 @@
-1 login testuser1 test
-2 select INBOX
-3 store 1,2 +flags.silent (\Deleted)
-4 noop
-5 expunge
-6 fetch 1:* (uid)
-7 store 1 +flags (\Deleted)
-8 store 2 +flags (\Deleted)
-9 expunge
-10 fetch 1:* (uid)
-11 store 1 +flags (\Deleted)
-12 uid store * +flags (\Deleted)
-13 uid expunge
-13 uid expunge 1
-13 uid expunge *
-14 close
-15 logout
+expunge1 login testuser1 test
+expunge2 select INBOX
+expunge3 store 1,2 +flags.silent (\Deleted)
+expunge4 noop
+expunge5 expunge
+expunge6 fetch 1:* (uid)
+expunge7 store 1 +flags (\Deleted)
+expunge8 store 2 +flags (\Deleted)
+expunge9 expunge
+expunge10 fetch 1:* (uid)
+expunge11 store 1 +flags (\Deleted)
+expunge12 uid store * +flags (\Deleted)
+expunge13 noop uid expunge
+expunge14 uid expunge 1
+expunge15 uid expunge *
+expunge16 close
+expunge17 logout

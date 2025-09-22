@@ -1,9 +1,9 @@
-1 login testuser1 test
-2 select "INBOX"
-3 getquotaroot "INBOX"
-4 uid fetch 1:* (flags)
-5 idle
+idle1 login testuser1 test
+idle2 select "INBOX"
+idle3 getquotaroot "INBOX"
+idle4 uid fetch 1:* (flags)
+idle5 idle
 done
-6 fetch 1 (UID RFC822.SIZE BODY[])
-7 logout
+idle6 fetch 2 (UID RFC822.SIZE BODY[])
+idle7 logout
 

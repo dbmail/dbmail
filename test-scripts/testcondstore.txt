@@ -1,21 +1,21 @@
-x login testuser1 test
-x examine inbox (condstore)
-x select inbox (condstore)
-x store 1 +flags \Flagged
-x store 1 -flags \Flagged (UNCHANGEDSINCE 1)
-x uid store * +flags ($test) (UNCHANGEDSINCE 1)
-x uid store * +flags.silent ($test) (UNCHANGEDSINCE 1)
-x uid store * +flags.silent ($test) (UNCHANGEDSINCE 0)
-x noop
-x fetch * flags modseq
-x uid fetch * flags modseq
-x fetch * flags (changedsince 1)
-x uid fetch * flags (changedsince 1)
-x UID fetch * (FLAGS) (CHANGEDSINCE 0)
-x fetch * flags (changedsince 99999999999)
-x uid search modseq "/flags/\\draft" all 1
-x uid search modseq "/flags/\\draft" all 1
-x uid search modseq "/flags/\\draft" all 9999999999
-x uid search modseq 1
-x uid search modseq 9999999999
-x logout
+condstore1 login testuser1 test
+condstore2 examine inbox (condstore)
+condstore3 select inbox (condstore)
+condstore4 store 1 +flags \Flagged
+condstore5 store 1 -flags \Flagged (UNCHANGEDSINCE 1)
+condstore6 uid store * +flags ($test) (UNCHANGEDSINCE 1)
+condstore7 uid store * +flags.silent ($test) (UNCHANGEDSINCE 1)
+condstore8 uid store * +flags.silent ($test) (UNCHANGEDSINCE 0)
+condstore9 noop
+condstore10 fetch * flags modseq
+condstore11 uid fetch * flags modseq
+condstore12 fetch * flags (changedsince 1)
+condstore13 uid fetch * flags (changedsince 1)
+condstore14 UID fetch * (FLAGS) (CHANGEDSINCE 0)
+condstore15 fetch * flags (changedsince 99999999999)
+condstore16 uid search modseq "/flags/\\draft" all 1
+condstore17 uid search modseq "/flags/\\draft" all 1
+condstore18 uid search modseq "/flags/\\draft" all 9999999999
+condstore19 uid search modseq 1
+condstore20 uid search modseq 9999999999
+condstore21 logout

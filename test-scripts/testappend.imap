@@ -1,16 +1,16 @@
-X login testuser1 test
-X list "" *
-X create newbox
-X append newbox {10}
+append1 login testuser1 test
+append2 list "" *
+append3 create newbox
+append4 append newbox {10}
 From: test
-X status newbox (messages unseen recent)
-X examine newbox
-X select newbox
-X append newbox {10}
+append5 status newbox (messages unseen recent)
+append6 examine newbox
+append7 select newbox
+append8 append newbox {10}
 From: test
-X fetch 1:* flags
-X unselect
-X status newbox (messages unseen recent)
-X delete newbox
-X logout
+append9 fetch 1:* flags
+append10 unselect
+append11 status newbox (messages unseen recent)
+append12 delete newbox
+append13 logout
 

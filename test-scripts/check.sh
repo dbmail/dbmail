@@ -19,6 +19,8 @@ ERRORS=0
 help () {
   cat << EOF
   Usage is
+  $BASENAME start-server
+  $BASENAME stop-server
   $BASENAME run-tests
   $BASENAME clean
   $BASENAME help
@@ -189,7 +191,8 @@ service_test () {
   for SERVICE_TEST in "${BASEDIR}/"*".${SERVICE}"
   do
     echo "Testing $SERVICE_TEST"
-    nc -w 10 -i 1 "${HOST}" "${PORT}" < "$SERVICE_TEST"
+    nc -w 10 "${HOST}" "${PORT}" < "$SERVICE_TEST"
+    echo "Finished testing $SERVICE_TEST"
   done
 }
 
@@ -267,6 +270,15 @@ case $1 in
   ;;
   release-info)
     do_release_info
+  ;;
+  start-server)
+    shift
+    service_configure "$@"
+    service_start "$@"
+  ;;
+  stop-server)
+    shift
+    service_stop "$@"
   ;;
   debian-date)
     do_debian_date "$@"
