@@ -1,11 +1,11 @@
-1 capability
-2 authenticate login
+auth1 capability
+auth2 authenticate login
 dGVzdHVzZXIx
 dGVzdA==
-3 select INBOX
-4 idle
+auth3 select INBOX
+auth4 idle
 done
-5 list "" *
-6 append INBOX {10}
+auth5 list "" *
+auth6 append INBOX {10}
 From: test
-7 logout
+auth7 logout

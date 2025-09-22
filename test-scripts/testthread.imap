@@ -1,7 +1,7 @@
-1 login testuser1 test
-2 select inbox
-3 thread orderedsubject utf-8 header from foo.org (since 1-jan-2005)
-4 thread orderedsubject utf-8 since 1-jan-2005
-5 thread orderedsubject since 1-jan-2005
-6 uid thread orderedsubject utf-8 1:*
-6 logout
+thread1 login testuser1 test
+thread2 select inbox
+thread3 thread orderedsubject utf-8 header from foo.org (since 1-jan-2005)
+thread4 thread orderedsubject utf-8 since 1-jan-2005
+thread5 thread orderedsubject utf-8 since 1-jan-1995
+thread6 uid thread orderedsubject utf-8 1:*
+thread6 logout
