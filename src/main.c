@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
 	static struct option long_options[] = {
-		{"to-header", optional_argument, NULL, 't'},
+		{"to-header", required_argument, NULL, 't'},
 		{"to-address", required_argument, NULL, 'd'},
 		{"to-user", required_argument, NULL, 'u'},
 		{"mailbox", required_argument, NULL, 'm'},
