@@ -63,7 +63,6 @@ RUN cd /app/dbmail && \
 COPY --chown=nobody:nogroup dbmail-imapd.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup dbmail-lmtpd.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup dbmail-sieved.pid /var/run/dbmail/
-COPY --chown=nobody:nogroup dbmail.err /var/log/dbmail/
 COPY --chown=nobody:nogroup dbmail.log /var/log/dbmail/
 
 EXPOSE 143/tcp
