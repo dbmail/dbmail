@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.5.5] - 2025-10-01
+- Version bump to 3.5.5
+- AUTH=PLAIN added
+- AUTH=CRAM-MD5 configurable
+- Integration test-script/check.sh added
+- test-script/*.imap tests renumbered and fixed
+- dbmail-deliver --to-header works as expected
+- 8BITMIME and SMTPUTF8 added for Postfix
+- Forwards listed with dbmail-users --list-user(s)
+- Builds on NetBSD with sample startup scripts
+- Improved logging
+
 ## [3.5.4] - 2025-07-01
 - Version bump to 3.5.4
 - Docker and systemd logs supported, thanks to Tom Ivar Helbekkmo
