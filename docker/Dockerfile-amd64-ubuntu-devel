@@ -58,7 +58,6 @@ RUN cd /app/dbmail && \
         --with-sieve=/usr/lib/x86_64-linux-gnu/ && \
     make && make install
 
-COPY --chown=nobody:nogroup docker/dbmail.err /var/log/dbmail/
 COPY --chown=nobody:nogroup docker/dbmail-imapd.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup docker/dbmail-lmtpd.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup docker/dbmail-sieved.pid /var/run/dbmail/

@@ -38,7 +38,6 @@ RUN cd /app/dbmail && \
         --with-ldap
 RUN cd /app/dbmail && make && make install
 
-COPY --chown=nobody:nogroup docker/dbmail.err /var/log/dbmail/
 COPY --chown=nobody:nogroup docker/dbmail-imapd.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup docker/dbmail-lmtpd.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup docker/dbmail-sieved.pid /var/run/dbmail/
