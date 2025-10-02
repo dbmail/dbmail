@@ -1,3 +1,16 @@
+dbmail (3.5.5) unstable; urgency=medium
+* Version bump to 3.5.5
+* AUTH=PLAIN added
+* AUTH=CRAM-MD5 configurable
+* Integration test-script/check.sh added
+* test-script/*.imap tests renumbered and fixed
+* dbmail-deliver --to-header works as expected
+* 8BITMIME and SMTPUTF8 added for Postfix
+* Forwards listed with dbmail-users --list-user(s)
+* Builds on NetBSD with sample startup scripts
+* Improved logging
+-- Alan Hicks <ahicks@p-o.co.uk>  Wed, 01 Oct 2025 00:00:00 +0100
+
 dbmail (3.5.4) unstable; urgency=medium
 * Version bump to 3.5.4
 * Docker and systemd logs supported, thanks to Tom Ivar Helbekkmo

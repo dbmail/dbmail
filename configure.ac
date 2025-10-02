@@ -3,7 +3,7 @@
 # Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
 # Copyright (c) 2020-2025 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
-AC_INIT([dbmail],[3.5.4],[dbmail@dbmail.org])
+AC_INIT([dbmail],[3.5.5],[dbmail@dbmail.org])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS(config.h:config.in)
 AC_CONFIG_MACRO_DIR([m4])
