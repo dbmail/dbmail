@@ -111,13 +111,13 @@ static gboolean Request_basic_auth(T R)
 	if (strncmp(auth,"Basic ", 6) == 0) {
 		Field_T userpw;
 		gsize len;
-		guchar *s;
+		gchar *s;
 		gchar *safe;
 		memset(userpw,0,sizeof(Field_T));
 		config_get_value("admin", "HTTP", userpw);
 		auth+=6;
 		TRACE(TRACE_DEBUG, "auth [%s]", auth);
-		s = g_base64_decode(auth, &len);
+		s = dm_base64_decode(auth, &len);
 		safe = g_strndup((char *)s, (gsize)len);
 		g_free(s);
 		TRACE(TRACE_DEBUG,"Authorization [%" PRIu64 "][%s] <-> [%s]", (uint64_t)len, safe, userpw);
