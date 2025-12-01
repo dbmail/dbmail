@@ -1318,7 +1318,7 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 		return 0;
 	}
 	if (strlen(password) == 0) {
-		TRACE(TRACE_WARNING, "User \"%s\" try to use anonimous LDAP bind!", username);
+		TRACE(TRACE_WARNING, "User \"%s\" try to use anonymous LDAP bind!", username);
 		return 0;
 	}
 
