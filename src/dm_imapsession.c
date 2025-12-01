@@ -2060,7 +2060,7 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			uint64_t len;
 			char *lnul, *rnul, *tmp;
 
-			tmp = (char *) g_base64_decode(s, &len);
+			tmp = dm_base64_decode(s, &len);
 			if (! tmp) {
 				return -1;
 			}
