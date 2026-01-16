@@ -402,6 +402,7 @@ typedef struct {
 	int service_before_smtp;
 	gboolean authlog;
 	gboolean ssl;
+	gboolean reuseport;
 	int backlog;
 	int resolveIP;
 	struct evhttp **evhs;           // http server sockets list

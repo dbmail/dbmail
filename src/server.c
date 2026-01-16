@@ -394,7 +394,7 @@ pid_t server_daemonize(ServerConfig_T *conf)
 	return getsid(0);
 }
 
-static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, int backlog, gboolean ssl)
+static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, int backlog, gboolean ssl, gboolean reuseport)
 {
 	int err, so_reuseaddress = 1;
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
@@ -411,6 +411,16 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress)) == -1) {
 		err = errno;
 		TRACE(TRACE_EMERG, "setsockopt::error [%s]", strerror(err));
+	}
+	// Add SO_REUSEPORT if enabled
+	if (reuseport) {
+		int so_reuseport = 1;
+		if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &so_reuseport, sizeof(so_reuseport)) == -1) {
+			err = errno;
+			TRACE(TRACE_EMERG, "setsockopt::error [%s]", strerror(err));
+		} else {
+			TRACE(TRACE_DEBUG, "SO_REUSEPORT enabled for socket");
+		}
 	}
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
@@ -450,7 +460,7 @@ static int create_unix_socket(ServerConfig_T * conf)
 	TRACE(TRACE_DEBUG, "create socket [%s] backlog [%d]", conf->socket, conf->backlog);
 
 	// any error in dm_bind_and_listen is fatal
-	dm_bind_and_listen(sock, (struct sockaddr *)&un, sizeof(un), conf->backlog, FALSE);
+	dm_bind_and_listen(sock, (struct sockaddr *)&un, sizeof(un), conf->backlog, FALSE, FALSE);
 	
 	if (chmod(conf->socket, 02777)) {
 		int serr = errno;
@@ -491,7 +501,7 @@ static void create_inet_socket(ServerConfig_T *conf, int i, gboolean ssl)
 		}
 		UNBLOCK(s);
 
-		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog, ssl);
+		dm_bind_and_listen(s, res->ai_addr, res->ai_addrlen, conf->backlog, ssl, conf->reuseport);
 		if (ssl)
 			conf->ssl_listenSockets[conf->ssl_socketcount++] = s;
 		else
@@ -1182,6 +1192,15 @@ void server_config_load(ServerConfig_T * config, const char * const service)
 
 	strncpy(config->service_name, service, FIELDSIZE-1);
 
+	/* read items:  REUSEPORT */
+	config_get_value("REUSEPORT", service, val);
+	if (strlen(val) == 0) {
+		TRACE(TRACE_DEBUG, "no value for REUSEPORT in config file, using default");
+	  config->reuseport = FALSE; 
+	} else {
+		config->reuseport = (strcasecmp(val, "yes") == 0);
+	}
+	TRACE(TRACE_DEBUG, "%s reuseport", config->reuseport ? "Enabling" : "Disabling");
 }
 
 
