@@ -2,7 +2,7 @@
  Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (c) 2008 John T. Guthrie III guthrie@counterexample.org
  Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2025 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+ Copyright (c) 2020-2026 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
