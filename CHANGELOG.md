@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [tba]
 - Config option reuseport added thanks to benibr
+- Database pool debug info added for size and active
 
 ## [3.5.5] - 2025-10-01
 - Version bump to 3.5.5
