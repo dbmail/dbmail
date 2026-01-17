@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [tba]
+- Config option reuseport added thanks to benibr
+
 ## [3.5.5] - 2025-10-01
 - Version bump to 3.5.5
 - AUTH=PLAIN added
