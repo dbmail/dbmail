@@ -144,10 +144,4 @@ FROM base-image
 COPY --from=build-image /root/sbin/dbmail* /usr/sbin/
 COPY --from=build-image /root/lib/dbmail/ /usr/lib/dbmail/
 
-EXPOSE 24
-EXPOSE 143
-EXPOSE 110
-EXPOSE 2000
-
-
 CMD ["sh"]
