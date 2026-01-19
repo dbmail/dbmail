@@ -65,9 +65,4 @@ COPY --chown=nobody:nogroup dbmail-lmtpd.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup dbmail-sieved.pid /var/run/dbmail/
 COPY --chown=nobody:nogroup dbmail.log /var/log/dbmail/
 
-EXPOSE 143/tcp
-EXPOSE 993/tcp
-EXPOSE 24/tcp
-EXPOSE 4190/tcp
-
 CMD ["/usr/local/sbin/dbmail-imapd", "-D", "-v"]
