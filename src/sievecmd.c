@@ -57,7 +57,7 @@ int do_showhelp(void)
 	"  -e, --edit scriptname      Edit the contents of the named script\n"
 	"                             (if no script is given, the active \n"
 	"                             script is shown) \n"
-	"  -i, --import file          Insert the named script from file \n"
+	"  -i, --import scriptname < file Import the named script from file \n"
 	"                             (a single dash, -, reads input \n"
 	"                             from STDIN) \n"
 	"  -r, --remove scriptname    Remove the named script \n"
