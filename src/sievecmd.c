@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 	opterr = 0; /* suppress error message from getopt_log() */
 	while ((opt = getopt_long(argc, argv,
 		"a::d::i:c::r:u:le::" /* Major modes */
-		"f:qvVh", /* Common options */
+		"f:qyvVh", /* Common options */
 		long_options, &option_index)) != -1) {
 
 		switch (opt) {
