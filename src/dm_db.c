@@ -309,7 +309,6 @@ int db_connect(void)
 int db_disconnect(void)
 {
 	TRACE(TRACE_DEBUG,"Disconnecting debug");
-	TRACE(TRACE_WARNING,"Disconnecting warning");
 	if(db_connected >= 3) ConnectionPool_stop(pool);
 	if(db_connected >= 2) ConnectionPool_free(&pool);
 	if(db_connected >= 1) URL_free(&dburi);
