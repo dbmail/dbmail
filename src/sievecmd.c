@@ -89,7 +89,6 @@ int main(int argc, char *argv[])
 	char *script_name = NULL;
 	char *script_source = NULL;
 	extern char *optarg;
-	extern int opterr;
 
 	int activate = 0, deactivate = 0, import = 0;
 	int remove = 0, list = 0, cat = 0, help = 0, edit = 0;
@@ -116,10 +115,9 @@ int main(int argc, char *argv[])
 		{"help",      no_argument, NULL, 'h'},
 		{"verbose",   no_argument, NULL, 'v'},
 		{"version",   no_argument, NULL, 'V'},
-		{NULL,        0,           NULL, 0}
+		{0, 0, 0, 0}
 	};
 	/* Check for commandline options. */
-	opterr = 0; /* suppress error message from getopt_log() */
 	while ((opt = getopt_long(argc, argv,
 		"a::d::i:c::r:u:le::" /* Major modes */
 		"f:qyvVh", /* Common options */
@@ -145,24 +143,31 @@ int main(int argc, char *argv[])
 		major_script:
 			if (!optarg) {
 				/* Need optarg */
+				qprintf("Please supply a script name\n");
 			} else if (!script_name) {
+				qprintf("Using script: [%s]\n", optarg);
 				script_name = g_strdup(optarg);
 			} else if (!script_source) {
+				qprintf("Using script: [%s]\n", optarg);
 				script_source = g_strdup(optarg);
 			}
 			break;
 		case 'e':
 			edit = 1;
 
-			if (optarg)
+			if (optarg) {
+				qprintf("Using script: [%s]\n", optarg);
 				script_name = g_strdup(optarg);
+			}
 
 			break;
 		case 'c':
 			cat = 1;
 
-			if (optarg)
+			if (optarg) {
+				qprintf("Using script: [%s]\n", optarg);
 				script_name = g_strdup(optarg);
+			}
 
 			/* Don't print anything but the script. */
 			quiet = 1;
@@ -170,6 +175,7 @@ int main(int argc, char *argv[])
 
 			break;
 		case 'u':
+			qprintf("User: [%s]\n", optarg);
 			user_name = g_strdup(optarg);
 			break;
 		case 'l':
@@ -186,7 +192,7 @@ int main(int argc, char *argv[])
 				memset(configFile, 0, sizeof(configFile));
 				strncpy(configFile, optarg, sizeof(configFile)-1);
 			} else {
-				qprintf("dbmail-users: -f requires a filename\n\n");
+				qprintf("Option -f --config requires a filename\n\n");
 				return 1;
 			}
 			break;
@@ -196,7 +202,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'n':
-			printf("-n switch is not supported in this "
+			printf("-n --no is not supported in this "
 			       "version.\n");
 			return 1;
 
@@ -237,17 +243,11 @@ int main(int argc, char *argv[])
 	if (deactivate) printf("got deactivate\n");
 */
 
-	/* Only one major mode is allowed */
-	if ((edit + import + remove + list + cat > 1)
-	/* Only import/edit are allowed together with activate or deactivate */
-	 || ((remove + list + cat == 1) && (activate + deactivate > 0))
-	/* You may either activate or deactivate as a mode on its own*/
-	 || (((edit + import + remove + list + cat == 0) && (activate + deactivate != 1)))
-	 || (help || !user_name || (no_to_all && yes_to_all))) {
+	if (!user_name) {
+		qprintf("The user must be specicified\n");
 		do_showhelp();
 		goto mainend;
 	}
-
 	/* read the config file */
 	if (config_read(configFile) == -1) {
 		qprintf("Failed. Unable to read config file %s\n",
@@ -255,7 +255,31 @@ int main(int argc, char *argv[])
 		res = -1;
 		goto mainend;
 	}
-                
+	/* Only one major mode is allowed */
+	if (edit + import + remove + list + cat > 1) {
+		qprintf("Only one major mode is allowed\n");
+		do_showhelp();
+		goto mainend;
+	}
+	/* Only import/edit are allowed together with activate or deactivate */
+	if ((remove + list + cat == 1) && (activate + deactivate > 0)) {
+		qprintf("Only import/edit are allowed together with activate or deactivate\n");
+		do_showhelp();
+		goto mainend;
+	}
+
+	/* You may either activate or deactivate as a mode on its own */
+	if (((edit + import + remove + list + cat == 0) && (activate + deactivate != 1))) {
+		qprintf("You may either activate or deactivate as a mode on its own\n");
+		do_showhelp();
+		goto mainend;
+	}
+
+	if ((help || (no_to_all && yes_to_all))) {
+		do_showhelp();
+		goto mainend;
+	}
+
 	SetTraceLevel("DBMAIL");
 	GetDBParams();
 
