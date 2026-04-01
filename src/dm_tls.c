@@ -65,7 +65,7 @@ void tls_load_certs(ServerConfig_T *conf)
 	}
 
 	/* load certificate */
-	if (SSL_CTX_use_certificate_file(tls_context, conf->tls_cert, SSL_FILETYPE_PEM) != 1) {
+	if (SSL_CTX_use_certificate_chain_file(tls_context, conf->tls_cert) != 1) {
 		TRACE(TRACE_WARNING, "Error loading certificate file [%s]: %s",
 				conf->tls_cert,
 				tls_get_error());
