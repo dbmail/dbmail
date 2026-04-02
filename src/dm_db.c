@@ -194,6 +194,7 @@ GTree * global_cache = NULL;
 ConnectionPool_T pool = NULL;
 URL_T dburi = NULL;
 int db_connected = 0; // 0 = not called, 1 = new dburi but not pool, 2 = new dburi and pool, but not tested, 3 = tested and ok
+volatile int connection_pool_stopped = 0; // Indicates whether the connection pool has been stopped (1 = stopped, 0 = active).
 
 /* This is the first db_* call anybody should make. */
 int db_connect(void)
@@ -279,6 +280,7 @@ int db_connect(void)
 
 	ConnectionPool_setAbortHandler(pool, TabortHandler);
 	ConnectionPool_start(pool);
+	connection_pool_stopped = 0;
 	TRACE(TRACE_DATABASE, "database connection pool started with [%d] connections, max [%d]", 
 		ConnectionPool_getInitialConnections(pool), ConnectionPool_getMaxConnections(pool));
 
@@ -309,6 +311,7 @@ int db_connect(void)
 int db_disconnect(void)
 {
 	TRACE(TRACE_DEBUG,"Disconnecting debug");
+	connection_pool_stopped = 1;
 	if(db_connected >= 3) ConnectionPool_stop(pool);
 	if(db_connected >= 2) ConnectionPool_free(&pool);
 	if(db_connected >= 1) URL_free(&dburi);
@@ -328,8 +331,18 @@ const char *db_get_db_name(void)
  */
 Connection_T db_con_get(void)
 {
-	int i=0, k=0; Connection_T c = NULL;
+	unsigned int i=0; int k=0; Connection_T c = NULL;
 	while (! c) {
+		if (connection_pool_stopped) {
+			if (i % 5 == 0 || i >= db_params.connection_pool_timeout)
+				TRACE(i >= db_params.connection_pool_timeout ? TRACE_EMERG : TRACE_ALERT,
+				      "Connection pool stopped for [%u] sec%s", i,
+				      i >= db_params.connection_pool_timeout ? ", timed out, exiting" : "");
+			sleep(1);
+			i++;
+			continue;
+		}
+
 		TRY
 			c = ConnectionPool_getConnectionOrException(pool);
 		CATCH(SQLException)
