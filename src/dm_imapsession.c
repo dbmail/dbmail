@@ -2058,26 +2058,33 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 
 		} else if (MATCH(p_string_str(self->args[0]),"PLAIN")) {
 			uint64_t len;
-			char *lnul, *rnul, *tmp;
+			char *tmp, *authzid, *authcid, *pass;
 
-			tmp = dm_base64_decode(s, &len);
+			tmp = (char *) g_base64_decode(s, &len);
 			if (! tmp) {
 				return -1;
 			}
 			tmp = (char *) g_realloc(tmp, len+1);
 			tmp[len] = '\0';
 
-			lnul = (char *) memchr(tmp, 0, len);
-			rnul = (char *) memrchr(tmp, 0, len);
+			// SASL PLAIN format:
+			// authorization + NUL + authentication + NUL + password.
+			authzid = tmp;
+			authcid =  tmp+strlen(authzid)+1;
+			pass = tmp+strlen(authzid)+strlen(authcid)+2;
 
-			if (lnul && rnul && (lnul != rnul) && (rnul-lnul > 1) && (rnul-tmp < (long int) len)) {
-				if ((lnul == tmp) || (strcmp(tmp, lnul+1) == 0)) {
-					self->args[self->args_idx++] = p_string_new(self->pool, lnul+1);
-					self->args[self->args_idx++] = p_string_new(self->pool, rnul+1);
-					g_free(tmp);
-					goto finalize;
-				}
+			if (authcid && pass) {
+				self->args[self->args_idx++] = p_string_new(self->pool, authcid);
+				self->args[self->args_idx++] = p_string_new(self->pool, pass);
+				g_free(pass);
+				g_free(authcid);
+				g_free(authzid);
+				g_free(tmp);
+				goto finalize;
 			}
+			g_free(pass);
+			g_free(authcid);
+			g_free(authzid);
 			g_free(tmp);
 			return -1;
 
