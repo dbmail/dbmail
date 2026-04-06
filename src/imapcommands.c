@@ -264,7 +264,7 @@ int _ic_login(ImapSession *self)
 
 /* _ic_authenticate()
  * 
- * performs authentication using LOGIN mechanism:
+ * performs authentication using LOGIN or PLAIN mechanism:
  */
 void _ic_authenticate_enter(dm_thread_data *D)
 {

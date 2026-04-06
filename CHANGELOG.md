@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 - Config option reuseport added thanks to benibr
 - Database pool debug info added for size and active
 - Docker EXPOSE ports removed thanks to svalcken
+- dbmail-sievecmd -a fixed thanks to cjmayo
+- Full certificate chain to support Let's Encrypt intermediate certs
+- Fix #522 re PLAIN authentication reported by u1sge
 
 ## [3.5.5] - 2025-10-01
 - Version bump to 3.5.5
