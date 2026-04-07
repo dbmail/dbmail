@@ -2076,15 +2076,9 @@ int imap4_tokenizer_main(ImapSession *self, const char *buffer)
 			if (authcid && pass) {
 				self->args[self->args_idx++] = p_string_new(self->pool, authcid);
 				self->args[self->args_idx++] = p_string_new(self->pool, pass);
-				g_free(pass);
-				g_free(authcid);
-				g_free(authzid);
 				g_free(tmp);
 				goto finalize;
 			}
-			g_free(pass);
-			g_free(authcid);
-			g_free(authzid);
 			g_free(tmp);
 			return -1;
 
