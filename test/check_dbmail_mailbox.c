@@ -642,6 +642,58 @@ START_TEST(test_dbmail_mailbox_get_set)
 }
 END_TEST
 
+/* A UID less than the minimum existing UID must return an empty set,
+ * not clamp to the minimum existing UID.
+ * Per RFC 3501 §6.4, non-existent UIDs must be silently ignored. */
+START_TEST(test_dbmail_mailbox_get_set_nonexistent_uid)
+{
+	GTree *all, *set;
+	GList *keys;
+	uint64_t min_uid;
+	char set_str[32];
+	guint c;
+	int r;
+
+	DbmailMailbox *mb = dbmail_mailbox_new(NULL, get_mailbox_id("INBOX"));
+	dbmail_mailbox_set_uid(mb, TRUE);
+	r = dbmail_mailbox_open(mb);
+	fail_unless(r == DM_SUCCESS, "dbmail_mailbox_open failed");
+
+	/* Collect all UIDs; require at least 2 so one can be removed
+	 * while a non-empty mailbox remains for the assertion. */
+	all = dbmail_mailbox_get_set(mb, "1:*", 1);
+	fail_unless(all != NULL && g_tree_nnodes(all) >= 2,
+		"precondition: INBOX must have at least 2 messages");
+	keys = g_tree_keys(all);
+	min_uid = *(uint64_t *)g_list_first(keys)->data;
+	g_list_free(keys);
+	g_tree_destroy(all);
+	dbmail_mailbox_free(mb);
+
+	/* Remove the message with the minimum UID to open a gap below
+	 * the new minimum. Works on a fresh database regardless of UID values. */
+	db_delete_message(min_uid);
+
+	/* Re-open to pick up the deletion. */
+	mb = dbmail_mailbox_new(NULL, get_mailbox_id("INBOX"));
+	dbmail_mailbox_set_uid(mb, TRUE);
+	r = dbmail_mailbox_open(mb);
+	fail_unless(r == DM_SUCCESS, "dbmail_mailbox_open failed after deletion");
+
+	/* Request the now-absent UID: RFC 3501 §6.4 requires an empty result. */
+	snprintf(set_str, sizeof(set_str), "%" PRIu64, min_uid);
+	set = dbmail_mailbox_get_set(mb, set_str, 1);
+	fail_unless(set != NULL, "dbmail_mailbox_get_set failed");
+	c = g_tree_nnodes(set);
+	fail_unless(c == 0,
+		"deleted UID %" PRIu64 " should match 0 messages, got %d",
+		min_uid, c);
+	g_tree_destroy(set);
+
+	dbmail_mailbox_free(mb);
+}
+END_TEST
+
 Suite *dbmail_mailbox_suite(void)
 {
 	Suite *s = suite_create("Dbmail Mailbox");
@@ -650,6 +702,7 @@ Suite *dbmail_mailbox_suite(void)
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set_nonexistent_uid);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
