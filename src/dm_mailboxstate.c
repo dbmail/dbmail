@@ -808,7 +808,7 @@ GTree * MailboxState_get_set(MailboxState_T M, const char *set, gboolean uid)
 
 				if (l == 0xffffffff) l = hi; // outlook
 
-				l = max(l,lo);
+				if (!uid) l = max(l,lo);
 				r = l;
 			}
 			
