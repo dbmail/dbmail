@@ -120,6 +120,7 @@ typedef struct {
 	unsigned int query_time_notice;
 	unsigned int query_time_warning;
 	unsigned int query_timeout;
+	unsigned int connection_pool_timeout; /**< seconds to wait for stopped connection pool before exiting */
 } DBParam_T;
 
 enum DBMAIL_MESSAGE_CLASS {
