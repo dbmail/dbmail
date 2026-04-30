@@ -310,6 +310,13 @@ int auth_change_mailboxsize(uint64_t user_idnr, uint64_t new_size)
 
 #define CONSTNULL(a) ((! a) || (a && (! a[0])))
 
+/*
+ * auth_validate()
+ *
+ * tries to validate user 'user'
+ *
+ * returns useridnr on OK, 0 on validation failed, -1 on error
+ */
 int auth_validate(ClientBase_T *ci, const char *username, const char *password, uint64_t * user_idnr)
 {
 	char real_username[DM_USERNAME_LEN];

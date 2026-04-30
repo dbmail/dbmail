@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 - dbmail-sievecmd -a fixed thanks to cjmayo
 - Full certificate chain to support Let's Encrypt intermediate certs
 - Fix #522 re PLAIN authentication
+- Fix deletion by non-existent UID
+- auth ldap now checks for dbmail_users = active
 
 ## [3.5.5] - 2025-10-01
 - Version bump to 3.5.5

@@ -1347,6 +1347,9 @@ int auth_validate(ClientBase_T *ci, const char *username, const char *password, 
 		return 0;
 	}
 
+	if (! db_user_active(*user_idnr))
+		return 0;
+
 	/* now, try to rebind as the given DN using the supplied password */
 	TRACE(TRACE_DEBUG, "rebinding as [%s] to validate password", ldap_dn);
 
