@@ -409,7 +409,7 @@ void SetTraceLevel(const char *service_name)
 
 void GetDBParams(void)
 {
-	Field_T port_string, sock_string, serverid_string, query_time;
+	Field_T port_string, sock_string, serverid_string, query_time, timeout_string;
 	Field_T max_db_connections;
 
 	if (config_get_value("dburi", "DBMAIL", db_params.dburi) < 0) {
@@ -519,6 +519,15 @@ void GetDBParams(void)
 	else
 		db_params.query_timeout = 300000;
 
+	if (config_get_value("connection_pool_timeout", "DBMAIL",
+	                     timeout_string) < 0)
+		TRACE(TRACE_DEBUG,
+		      "error getting config! [connection_pool_timeout]");
+		if (strlen(timeout_string) != 0)
+			db_params.connection_pool_timeout =
+				(unsigned int) strtoul(timeout_string, NULL, 10);
+		else
+			db_params.connection_pool_timeout = 30;
 
 	if (strcmp(db_params.pfx, "\"\"") == 0) {
 		/* FIXME: It appears that when the empty string is quoted
