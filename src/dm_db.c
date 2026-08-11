@@ -346,7 +346,7 @@ Connection_T db_con_get(void)
 		}
 		if ((unsigned int)i >= db_params.connection_pool_timeout) {
 			TRACE(TRACE_ALERT, "Connection pool stopped for [%d] sec, timed out, exiting", i);
-			exit(EX_TEMPFAIL);
+			dm_ensure_exit(EX_TEMPFAIL);
 		}
 		sleep(1);
 		i++;

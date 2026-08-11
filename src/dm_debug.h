@@ -49,15 +49,21 @@ typedef enum {
 #ifdef __GNUC__
 #define UNUSED __attribute__((__unused__))
 #define PRINTF_ARGS(X, Y) __attribute__((format(printf, X, Y)))
+#define CONSTRUCTOR __attribute__((constructor))
+#define NORETURN __attribute__((noreturn))
 #else
 #define UNUSED
 #define PRINTF_ARGS(X, Y)
+#define CONSTRUCTOR
+#define NORETURN
 #endif
 
 
 #define TRACE(level, fmt...) trace(level, THIS_MODULE, __func__, __LINE__, fmt)
 void TabortHandler(const char *error);
 void trace(Trace_T level, const char * module, const char * function, int line, const char *formatstring, ...) PRINTF_ARGS(5, 6);
+
+void dm_ensure_exit(int status) NORETURN;
 
 void configure_debug(const char *service_name, Trace_T trace_syslog, Trace_T trace_stderr);
 
