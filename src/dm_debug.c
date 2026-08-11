@@ -42,6 +42,35 @@ char		hostname[16];
 static Trace_T TRACE_SYSLOG = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
 static Trace_T TRACE_STDERR = TRACE_EMERG | TRACE_ALERT | TRACE_CRIT | TRACE_ERR | TRACE_WARNING;  /* default: emerg, alert, crit, err, warning */
 
+/* The thread the process started in, recorded before main() runs. */
+static GThread *main_thread = NULL;
+
+static void CONSTRUCTOR record_main_thread(void)
+{
+	main_thread = g_thread_self();
+}
+
+/*
+ * Ensure that the process exits from any thread.
+ *
+ * exit() runs the atexit handlers. One of them joins the server's
+ * thread pool, which deadlocks if exit() is called from a worker
+ * thread. Threads other than the main thread therefore use _exit(),
+ * while the main thread uses exit().
+ *
+ * Without CONSTRUCTOR support main_thread stays unset and exit() is used
+ * everywhere, i.e. the behaviour dbmail had before this change.
+ */
+void dm_ensure_exit(int status)
+{
+	if (main_thread && g_thread_self() != main_thread) {
+		fflush(NULL);
+		_exit(status);
+	}
+
+	exit(status);
+}
+
 /*
  * libzdb abort handler to handle logs correctly
  */
@@ -233,7 +262,7 @@ void trace(Trace_T level, const char * module, const char * function, int line, 
 
 	/* Bail out on fatal errors. */
 	if (level == TRACE_EMERG)
-		exit(EX_TEMPFAIL);
+		dm_ensure_exit(EX_TEMPFAIL);
 }
 
 
