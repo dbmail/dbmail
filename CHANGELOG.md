@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 
 ## [tba] - 0000-00-00
 - Changing passwords completes with errors reported by nauftre, now fixed
+- Checks added for connection_pool and ensure_exit
+- Exit deadlock in the thread pool fixed thanks to mviazovskyi
 
 ## [3.5.6] - 2026-07-15
 - Config option reuseport added thanks to benibr

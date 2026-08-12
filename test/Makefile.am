@@ -31,7 +31,10 @@ TESTS=check_dbmail_common \
 	check_dbmail_capa \
 	check_dbmail_sset \
 	check_dbmail_string \
-	check_dbmail_db
+	check_dbmail_db \
+	check_dbmail_ensure_exit \
+	check_dbmail_connection_pool \
+  check_dbmail_disconnect_all
 
 IMAPD = $(top_srcdir)/src/dm_quota.c \
         $(top_srcdir)/src/imap4.c \
@@ -115,4 +118,17 @@ check_dbmail_sset_INCLUDES=@CHECK_CFLAGS@
 check_dbmail_string_SOURCES=check_dbmail_string.c 
 check_dbmail_string_LDADD=$(CHECK_LDADD)
 check_dbmail_string_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_ensure_exit_SOURCES=check_dbmail_ensure_exit.c
+check_dbmail_ensure_exit_LDADD=$(CHECK_LDADD)
+check_dbmail_ensure_exit_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_connection_pool_SOURCES=check_dbmail_connection_pool.c
+check_dbmail_connection_pool_LDADD=$(CHECK_LDADD)
+check_dbmail_connection_pool_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_disconnect_all_SOURCES=check_dbmail_disconnect_all.c
+check_dbmail_disconnect_all_LDADD=$(CHECK_LDADD)
+check_dbmail_disconnect_all_INCLUDES=@CHECK_CFLAGS@
+
 endif
