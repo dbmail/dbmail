@@ -140,6 +140,52 @@ START_TEST(test_db_stmt_set_str)
 }
 END_TEST
 
+START_TEST(test_db_stmt_set_blob)
+{
+	Connection_T c; PreparedStatement_T s; ResultSet_T r;
+	const char *test_hash = "dbmail_empty_blob_test";
+	int found = 0;
+
+	/* Storing a zero-length blob must succeed. libzdb >= 3.5.0 binds it
+	 * as SQL NULL, which the data column accepts since the 35002 upgrade
+	 * (ALTER TABLE dbmail_mimeparts MODIFY COLUMN data longblob NULL). */
+	c = db_con_get();
+	/* Leading DELETE guarantees a clean slate even if a previous run aborted. */
+	db_exec(c, "DELETE FROM dbmail_mimeparts WHERE hash = '%s'", test_hash);
+	s = db_stmt_prepare(c, "INSERT INTO dbmail_mimeparts (hash, data, %ssize%s) VALUES (?, ?, ?)",
+			db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN));
+	fail_unless(s != NULL, "db_stmt_prepare failed");
+	db_stmt_set_str(s, 1, test_hash);
+	db_stmt_set_blob(s, 2, "", 0);
+	db_stmt_set_int(s, 3, 0);
+	TRY
+		db_stmt_exec(s);
+	CATCH(SQLException)
+		LOG_SQLERROR;
+		fail("INSERT of a zero-length blob failed (bound as SQL NULL into a NOT NULL column)");
+	END_TRY;
+	db_con_close(c);
+
+	/* The row must be there with size 0; the stored data may be NULL or empty. */
+	c = db_con_get();
+	s = db_stmt_prepare(c, "SELECT %ssize%s FROM dbmail_mimeparts WHERE hash = ?",
+			db_get_sql(SQL_ESCAPE_COLUMN), db_get_sql(SQL_ESCAPE_COLUMN));
+	fail_unless(s != NULL, "db_stmt_prepare failed");
+	db_stmt_set_str(s, 1, test_hash);
+	r = db_stmt_query(s);
+	if (db_result_next(r)) {
+		found = 1;
+		fail_unless(db_result_get_int(r, 0) == 0, "stored size should be 0");
+	}
+	fail_unless(found, "zero-length blob row missing");
+	db_con_close(c);
+
+	c = db_con_get();
+	db_exec(c, "DELETE FROM dbmail_mimeparts WHERE hash = '%s'", test_hash);
+	db_con_close(c);
+}
+END_TEST
+
 START_TEST(test_Connection_executeQuery)
 {
 	Connection_T c; ResultSet_T r = NULL;
@@ -453,6 +499,7 @@ Suite *dbmail_db_suite(void)
 
 	tcase_add_test(tc_db, test_db_stmt_prepare);
 	tcase_add_test(tc_db, test_db_stmt_set_str);
+	tcase_add_test(tc_db, test_db_stmt_set_blob);
 
 	tcase_add_test(tc_db, test_Connection_executeQuery);
 	tcase_add_test(tc_db, test_db_createmailbox);
