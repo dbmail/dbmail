@@ -282,12 +282,26 @@ int db_connect(void)
 	TRACE(TRACE_DATABASE, "database connection pool started with [%d] connections, max [%d]",
 		ConnectionPool_getInitialConnections(pool), ConnectionPool_getMaxConnections(pool));
 
-	if (! (c = ConnectionPool_getConnection(pool))) {
-		TRACE(TRACE_ALERT, "error getting a database connection from the pool");
-		return -1;
+	TRY
+	{
+		c = ConnectionPool_getConnectionOrException(pool);
+		db_connected = 3;
 	}
-	db_connected = 3;
-	db_con_close(c);
+	ELSE
+	{
+		// The error message in Exception_frame.message specify the error that occured
+		TRACE(
+			TRACE_DATABASE, "error getting a database connection from the pool (%d): %s",
+			Exception_frame.errorCode, Exception_frame.message
+		);
+	}
+	FINALLY
+	{
+		db_con_close(c);
+	}
+	END_TRY;
+
+	if (!c) return -1;
 
 	if (! db_params.db_driver) {
 		const char *protocol = URL_getProtocol(dburi);
