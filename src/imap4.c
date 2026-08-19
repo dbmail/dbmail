@@ -609,7 +609,7 @@ int imap_handle_connection(client_sock *c)
 {
 	ImapSession *session;
 	ClientBase_T *ci;
-	struct rlimit fd_limit;
+	unsigned long fd_limit;
 	int fd_count;
 
 	ci = client_init(c);
@@ -629,18 +629,20 @@ int imap_handle_connection(client_sock *c)
 		dbmail_imap_session_encrypted(session);
 	}
 
-	fd_count = get_opened_fd_count();
-	if (fd_count < 0 || getrlimit(RLIMIT_NPROC, &fd_limit) < 0) {
+	switch (check_fd_headroom(FREE_DF_THRESHOLD, &fd_count, &fd_limit)) {
+	case -1:
 		TRACE(TRACE_ERR,
 			"[%p] failed to retrieve fd limits, dropping client connection",
 			session);
 		disconnect_user(session);
-	} else if (fd_limit.rlim_cur - fd_count < FREE_DF_THRESHOLD) {
+		break;
+	case 0:
 		TRACE(TRACE_WARNING,
-			"[%p] fd count [%d], fd limit [%ld], fd threshold [%d]: dropping client connection",
-			session, fd_count, fd_limit.rlim_cur, FREE_DF_THRESHOLD);
+			"[%p] fd count [%d], fd limit [%lu], fd threshold [%d]: dropping client connection",
+			session, fd_count, fd_limit, FREE_DF_THRESHOLD);
 		disconnect_user(session);
-	} else {
+		break;
+	default:
 		send_greeting(session);
 	}
 
