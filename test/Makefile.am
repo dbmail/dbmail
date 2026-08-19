@@ -24,6 +24,7 @@ TESTS=check_dbmail_init \
 	check_dbmail_disconnect_all \
 	check_dbmail_dsn \
 	check_dbmail_ensure_exit \
+	check_dbmail_fd_headroom \
 	check_dbmail_imapd \
 	check_dbmail_list \
 	check_dbmail_mailbox \
@@ -88,6 +89,10 @@ check_dbmail_dsn_INCLUDES=@CHECK_CFLAGS@
 check_dbmail_ensure_exit_SOURCES=check_dbmail_ensure_exit.c
 check_dbmail_ensure_exit_LDADD=$(CHECK_LDADD)
 check_dbmail_ensure_exit_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_fd_headroom_SOURCES=$(IMAPD) check_dbmail_imapd.c
+check_dbmail_fd_headroom_LDADD=$(CHECK_LDADD)
+check_dbmail_fd_headroom_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_imapd_SOURCES=$(IMAPD) check_dbmail_imapd.c
 check_dbmail_imapd_LDADD=$(CHECK_LDADD)
