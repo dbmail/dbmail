@@ -264,15 +264,66 @@ static int server_setup(ServerConfig_T *conf)
 	return 0;
 }
 
-#ifdef DEBUG
-static void _cb_log_event(int UNUSED severity, const char *msg)
+static void _cb_log_event(int severity, const char *msg)
 {
-	TRACE(TRACE_WARNING, "%s", msg);
+	Trace_T trace_level;
+
+	switch (severity) {
+	case EVENT_LOG_DEBUG:
+		trace_level = TRACE_DEBUG;
+		break;
+	case EVENT_LOG_MSG:
+		trace_level = TRACE_INFO;
+		break;
+	case EVENT_LOG_WARN:
+		trace_level = TRACE_WARNING;
+		break;
+	default:
+		trace_level = TRACE_ERR;
+		break;
+	}
+
+	TRACE(trace_level, "%s", msg);
 }
+
+static void server_event_init(void)
+{
+	evthread_use_pthreads();
+	/* Route libevent diagnostics into our own log. Without this they go to
+	 * stderr, so the reason the event loop exited never shows up next to
+	 * the rest of the trace. */
+	event_set_log_callback(_cb_log_event);
+#ifdef DEBUG
+	event_enable_debug_mode();
 #endif
+	evbase = event_base_new();
+}
+
+static int server_dispatch(void)
+{
+	int result;
+
+	TRACE(TRACE_DEBUG, "dispatching event loop...");
+
+	result = event_base_dispatch(evbase);
+
+	/* A normal shutdown never gets here: server_sig_cb() exits from the
+	 * signal callback and nothing calls event_base_loopexit(), so zero
+	 * can only mean a deliberate stop added in the future - keep it
+	 * clean. Anything else means the loop failed. */
+	if (result == 0)
+		return 0;
+
+	TRACE(TRACE_ALERT, "event loop terminated unexpectedly: %s",
+		result < 0 ? "backend error" : "no more pending events");
+
+	return -1;
+}
 
 static int server_start_cli(ServerConfig_T *conf)
 {
+	int result = 0;
+
 	server_conf = conf;
 	if (db_connect() != 0) {
 		TRACE(TRACE_ERR, "could not connect to database");
@@ -296,37 +347,32 @@ static int server_start_cli(ServerConfig_T *conf)
 		Mempool_T pool = mempool_open();
 		client_sock *c = mempool_pop(pool, sizeof(client_sock));
 		c->pool = pool;
-		evthread_use_pthreads();
-#ifdef DEBUG
-		event_enable_debug_mode();
-		event_set_log_callback(_cb_log_event);
-#endif
-
-		evbase = event_base_new();
+		server_event_init();
 		if (server_setup(conf)) return -1;
 		conf->ClientHandler(c);
 
 		if (MATCH(conf->service_name, "IMAP"))
 			dm_queue_heartbeat();
 
-		event_base_dispatch(evbase);
+		result = server_dispatch();
 	}
 
 	disconnect_all();
 
-	TRACE(TRACE_INFO, "connections closed"); 
-	return 0;
+	TRACE(TRACE_INFO, "connections closed");
+	return result;
 }
 
 // PUBLIC
 int StartCliServer(ServerConfig_T * conf)
 {
+	int result;
 	assert(conf);
-	server_start_cli(conf);
+	result = server_start_cli(conf);
 #ifdef HAVE_SYSTEMD
 	sd_notify(0, "STOPPING=1");
 #endif
-	return 0;
+	return result;
 }
 
 /* Should be called after a HUP to allow for log rotation,
@@ -804,12 +850,7 @@ int server_run(ServerConfig_T *conf)
 
 	server_conf = conf;
 
-	evthread_use_pthreads();
-#ifdef DEBUG
-	event_enable_debug_mode();
-	event_set_log_callback(_cb_log_event);
-#endif
-	evbase = event_base_new();
+	server_event_init();
 
 	if (server_setup(conf))
 		return -1;
@@ -873,11 +914,7 @@ int server_run(ServerConfig_T *conf)
 #ifdef HAVE_SYSTEMD
 	sd_notify(0, "READY=1");
 #endif
-	TRACE(TRACE_DEBUG,"dispatching event loop...");
-
-	event_base_dispatch(evbase);
-
-	return 0;
+	return server_dispatch();
 }
 
 void server_showhelp(const char *name, const char *greeting) {
@@ -999,6 +1036,8 @@ int server_getopt(ServerConfig_T *config, const char *service, int argc, char *a
 
 int server_mainloop(ServerConfig_T *config, const char *servicename)
 {
+	int result;
+
 	strncpy(config->process_name, servicename, FIELDSIZE-1);
 
 	g_mime_init();
@@ -1012,20 +1051,20 @@ int server_mainloop(ServerConfig_T *config, const char *servicename)
 	tls_context = tls_init();
 
 	if (config->no_daemonize == 1) {
-		StartCliServer(config);
+		result = StartCliServer(config);
 		TRACE(TRACE_INFO, "exiting cli server");
-		return 0;
+		return result;
 	}
-	
+
 	if (! config->no_daemonize)
 		server_daemonize(config);
 
 	/* This is the actual main loop. */
-	server_run(config);
+	result = server_run(config);
 
 	server_config_free(config);
-	TRACE(TRACE_INFO, "leaving main loop");
-	return 0;
+	TRACE(TRACE_INFO, "leaving main loop with [%d]", result);
+	return result;
 }
 
 
