@@ -600,18 +600,28 @@ void ci_close(ClientBase_T *client)
 	       	client->wev = NULL;
 	}
 
+	if (client->sock->ssl) {
+		SSL_shutdown(client->sock->ssl);
+		SSL_free(client->sock->ssl);
+		client->sock->ssl = NULL;
+	}
+
 	if ((client->sock->sock > 1) && (shutdown(client->sock->sock, SHUT_RDWR)))
 		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
 
-	if (client->tx >= 0) {
-		close(client->tx);
-		client->tx = -1;
-	}
+	int tx = client->tx;
+	int rx = client->rx;
 
-	if (client->rx >= 0) {
-	       	close(client->rx);
-		client->rx = -1;
-	}
+	client->tx = -1;
+	client->rx = -1;
+
+	/* rx and tx are the same descriptor for network clients - close
+	 * each number exactly once, or the second close() destroys a
+	 * descriptor the kernel may already have handed to another thread */
+	if (tx >= 0 && (close(tx)))
+		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
+	if (rx >= 0 && rx != tx && (close(rx)))
+		TRACE(TRACE_DEBUG, "[%s]", strerror(errno));
 
 	ci_authlog_close(client);
 
@@ -619,11 +629,6 @@ void ci_close(ClientBase_T *client)
 		Cram_T c = client->auth;
 		Cram_free(&c);
 		client->auth = NULL;
-	}
-
-	if (client->sock->ssl) {
-		SSL_shutdown(client->sock->ssl);
-		SSL_free(client->sock->ssl);
 	}
 
 	p_string_free(client->read_buffer, TRUE);
