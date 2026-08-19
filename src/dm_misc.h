@@ -55,6 +55,19 @@ int drop_privileges(char *newuser, char *newgroup);
 int get_opened_fd_count(void);
 
 /**
+   \brief check that at least threshold file descriptors stay free
+          below the RLIMIT_NOFILE soft limit
+   \param threshold minimal number of free descriptors required
+   \param fd_count set to the current number of opened files
+   \param fd_limit set to the RLIMIT_NOFILE soft limit
+   \return
+        - -1 on error
+        -  0 when fewer than threshold descriptors are free
+        -  1 when at least threshold descriptors are free
+*/
+int check_fd_headroom(int threshold, int *fd_count, unsigned long *fd_limit);
+
+/**
  * \brief create a unique id for a message (used for pop, stored per message)
  * \param target target string. Length should be UID_SIZE 
  * \param message_idnr message_idnr of message

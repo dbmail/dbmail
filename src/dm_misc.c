@@ -162,6 +162,21 @@ int get_opened_fd_count(void)
 	#endif
 }
 
+int check_fd_headroom(int threshold, int *fd_count, unsigned long *fd_limit)
+{
+	struct rlimit rl;
+
+	*fd_count = get_opened_fd_count();
+	if (*fd_count < 0 || getrlimit(RLIMIT_NOFILE, &rl) < 0)
+		return -1;
+
+	*fd_limit = (unsigned long) rl.rlim_cur;
+	if (rl.rlim_cur < (rlim_t) *fd_count + threshold)
+		return 0;
+
+	return 1;
+}
+
 void create_unique_id(char *target, uint64_t message_idnr)
 {
 	char md5_str[FIELDSIZE];
