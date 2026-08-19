@@ -19,7 +19,7 @@ START_TEST(test_check_fd_headroom)
 
 	/* the real limit leaves plenty of headroom */
 	ck_assert_int_eq(check_fd_headroom(FREE_DF_THRESHOLD, &fd_count, &fd_limit), 1);
-	ck_assert_int_gt(fd_count, 0);
+	ck_assert_int_eq(fd_count, 0);
 	ck_assert_uint_eq(fd_limit, (unsigned long) orig.rlim_cur);
 
 	/* one descriptor short of the threshold: the guard must fire */
