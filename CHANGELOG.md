@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 - Exit deadlock in the thread pool fixed thanks to mviazovskyi
 - Check added for zero-length blob storage thanks to mviazovskyi
 - Close the client socket only once in ci_close thanks to mviazovskyi
+- Log the event loop failure and exit non-zero thanks to mviazovskyi
 
 ## [3.5.6] - 2026-07-15
 - Config option reuseport added thanks to benibr
