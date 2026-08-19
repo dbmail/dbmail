@@ -13,28 +13,30 @@ endif
 
 CHECK_LDADD= $(STATIC_MODULES) $(top_srcdir)/src/libdbmail.la @CHECK_LIBS@
 
-TESTS=check_dbmail_common \
-	check_dbmail_server \
+TESTS=check_dbmail_init \
+	check_dbmail_auth \
+	check_dbmail_capa \
+	check_dbmail_clientbase \
+	check_dbmail_common \
+	check_dbmail_connection_pool \
+	check_dbmail_db \
 	check_dbmail_deliver \
+	check_dbmail_disconnect_all \
+	check_dbmail_dsn \
+	check_dbmail_ensure_exit \
 	check_dbmail_imapd \
-	check_dbmail_message \
+	check_dbmail_list \
 	check_dbmail_mailbox \
 	check_dbmail_mailboxstate \
-	check_dbmail_auth \
+	check_dbmail_message \
 	check_dbmail_misc \
-	check_dbmail_list \
 	check_dbmail_mempool \
-	check_dbmail_user \
-	check_dbmail_util \
-	check_dbmail_util_empty_envelope \
-	check_dbmail_dsn \
-	check_dbmail_capa \
+	check_dbmail_server \
 	check_dbmail_sset \
 	check_dbmail_string \
-	check_dbmail_db \
-	check_dbmail_ensure_exit \
-	check_dbmail_connection_pool \
-  check_dbmail_disconnect_all
+	check_dbmail_user \
+	check_dbmail_util \
+	check_dbmail_util_empty_envelope
 
 IMAPD = $(top_srcdir)/src/dm_quota.c \
         $(top_srcdir)/src/imap4.c \
@@ -43,57 +45,57 @@ IMAPD = $(top_srcdir)/src/dm_quota.c \
 	
 noinst_PROGRAMS=$(TESTS)
 
-check_dbmail_user_SOURCES=check_dbmail_user.c
-check_dbmail_user_LDADD=$(CHECK_LDADD)
-check_dbmail_user_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_init_SOURCES=check_dbmail_init.c
+check_dbmail_init_LDADD=$(CHECK_LDADD)
+check_dbmail_init_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_auth_SOURCES=check_dbmail_auth.c
 check_dbmail_auth_LDADD=$(CHECK_LDADD)
 check_dbmail_auth_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_misc_SOURCES=check_dbmail_misc.c
-check_dbmail_misc_LDADD=$(CHECK_LDADD)
-check_dbmail_misc_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_capa_SOURCES=check_dbmail_capa.c
+check_dbmail_capa_LDADD=$(CHECK_LDADD)
+check_dbmail_capa_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_list_SOURCES=check_dbmail_list.c
-check_dbmail_list_LDADD=$(CHECK_LDADD)
-check_dbmail_list_INCLUDES=@CHECK_CFLAGS@
-
-check_dbmail_mempool_SOURCES=check_dbmail_mempool.c
-check_dbmail_mempool_LDADD=$(CHECK_LDADD)
-check_dbmail_mempool_INCLUDES=@CHECK_CFLAGS@
-
-check_dbmail_util_SOURCES=check_dbmail_util.c
-check_dbmail_util_LDADD=$(CHECK_LDADD)
-check_dbmail_util_INCLUDES=@CHECK_CFLAGS@
-
-check_dbmail_util_empty_envelope_SOURCES=check_dbmail_util_empty_envelope.c
-check_dbmail_util_empty_envelope_LDADD=$(CHECK_LDADD)
-check_dbmail_util_empty_envelope_INCLUDES=@CHECK_CFLAGS@
-
-check_dbmail_dsn_SOURCES=check_dbmail_dsn.c
-check_dbmail_dsn_LDADD=$(CHECK_LDADD)
-check_dbmail_dsn_INCLUDES=@CHECK_CFLAGS@
-
-check_dbmail_db_SOURCES=check_dbmail_db.c
-check_dbmail_db_LDADD=$(CHECK_LDADD)
-check_dbmail_db_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_clientbase_SOURCES=check_dbmail_clientbase.c
+check_dbmail_clientbase_LDADD=$(CHECK_LDADD)
+check_dbmail_clientbase_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_common_SOURCES=check_dbmail_common.c
 check_dbmail_common_LDADD=$(CHECK_LDADD)
 check_dbmail_common_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_server_SOURCES=check_dbmail_server.c
-check_dbmail_server_LDADD=$(CHECK_LDADD)
-check_dbmail_server_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_connection_pool_SOURCES=check_dbmail_connection_pool.c
+check_dbmail_connection_pool_LDADD=$(CHECK_LDADD)
+check_dbmail_connection_pool_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_db_SOURCES=check_dbmail_db.c
+check_dbmail_db_LDADD=$(CHECK_LDADD)
+check_dbmail_db_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_deliver_SOURCES=check_dbmail_deliver.c
 check_dbmail_deliver_LDADD=$(CHECK_LDADD)
 check_dbmail_deliver_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_message_SOURCES=check_dbmail_message.c
-check_dbmail_message_LDADD=$(CHECK_LDADD)
-check_dbmail_message_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_disconnect_all_SOURCES=check_dbmail_disconnect_all.c
+check_dbmail_disconnect_all_LDADD=$(CHECK_LDADD)
+check_dbmail_disconnect_all_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_dsn_SOURCES=check_dbmail_dsn.c
+check_dbmail_dsn_LDADD=$(CHECK_LDADD)
+check_dbmail_dsn_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_ensure_exit_SOURCES=check_dbmail_ensure_exit.c
+check_dbmail_ensure_exit_LDADD=$(CHECK_LDADD)
+check_dbmail_ensure_exit_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_imapd_SOURCES=$(IMAPD) check_dbmail_imapd.c
+check_dbmail_imapd_LDADD=$(CHECK_LDADD)
+check_dbmail_imapd_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_list_SOURCES=check_dbmail_list.c
+check_dbmail_list_LDADD=$(CHECK_LDADD)
+check_dbmail_list_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_mailbox_SOURCES=check_dbmail_mailbox.c
 check_dbmail_mailbox_LDADD=$(CHECK_LDADD)
@@ -103,32 +105,40 @@ check_dbmail_mailboxstate_SOURCES=check_dbmail_mailboxstate.c
 check_dbmail_mailboxstate_LDADD=$(CHECK_LDADD)
 check_dbmail_mailboxstate_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_imapd_SOURCES=$(IMAPD) check_dbmail_imapd.c
-check_dbmail_imapd_LDADD=$(CHECK_LDADD)
-check_dbmail_imapd_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_message_SOURCES=check_dbmail_message.c
+check_dbmail_message_LDADD=$(CHECK_LDADD)
+check_dbmail_message_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_capa_SOURCES=check_dbmail_capa.c
-check_dbmail_capa_LDADD=$(CHECK_LDADD)
-check_dbmail_capa_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_misc_SOURCES=check_dbmail_misc.c
+check_dbmail_misc_LDADD=$(CHECK_LDADD)
+check_dbmail_misc_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_mempool_SOURCES=check_dbmail_mempool.c
+check_dbmail_mempool_LDADD=$(CHECK_LDADD)
+check_dbmail_mempool_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_server_SOURCES=check_dbmail_server.c
+check_dbmail_server_LDADD=$(CHECK_LDADD)
+check_dbmail_server_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_sset_SOURCES=check_dbmail_sset.c $(top_srcdir)/src/dm_sset.c
 check_dbmail_sset_LDADD=$(CHECK_LDADD)
 check_dbmail_sset_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_string_SOURCES=check_dbmail_string.c 
+check_dbmail_string_SOURCES=check_dbmail_string.c
 check_dbmail_string_LDADD=$(CHECK_LDADD)
 check_dbmail_string_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_ensure_exit_SOURCES=check_dbmail_ensure_exit.c
-check_dbmail_ensure_exit_LDADD=$(CHECK_LDADD)
-check_dbmail_ensure_exit_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_user_SOURCES=check_dbmail_user.c
+check_dbmail_user_LDADD=$(CHECK_LDADD)
+check_dbmail_user_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_connection_pool_SOURCES=check_dbmail_connection_pool.c
-check_dbmail_connection_pool_LDADD=$(CHECK_LDADD)
-check_dbmail_connection_pool_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_util_SOURCES=check_dbmail_util.c
+check_dbmail_util_LDADD=$(CHECK_LDADD)
+check_dbmail_util_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_disconnect_all_SOURCES=check_dbmail_disconnect_all.c
-check_dbmail_disconnect_all_LDADD=$(CHECK_LDADD)
-check_dbmail_disconnect_all_INCLUDES=@CHECK_CFLAGS@
+check_dbmail_util_empty_envelope_SOURCES=check_dbmail_util_empty_envelope.c
+check_dbmail_util_empty_envelope_LDADD=$(CHECK_LDADD)
+check_dbmail_util_empty_envelope_INCLUDES=@CHECK_CFLAGS@
 
 endif
