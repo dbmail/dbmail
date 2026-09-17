@@ -3122,9 +3122,6 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 				TRACE(TRACE_NOTICE, "forwaring failed, reporting transient error.");
 				set_dsn(&delivery->dsn, DSN_CLASS_TEMP, 1, 1);
 			}
-			if (from) {
-				g_free((char *)from);
-			}
 		}
 
 		if (! p_list_next(dsnusers))

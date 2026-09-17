@@ -101,6 +101,51 @@ START_TEST(test_insert_messages)
 }
 END_TEST
 
+/**
+ * Inserts a message with a forward
+ */
+START_TEST(test_insert_message_forward)
+{
+	/*************
+	 * Test forwarding an email for a user
+	 * Domain to be forwarded is forward.example.com
+	 * User is forwarduser@forward.example.com
+	 * Forward destination forwarded@new.example.com
+	 */
+	int result;
+	uint64_t useridnr = 0;
+	GList * alias_forward = NULL;
+
+	DbmailMessage *message;
+	Mempool_T pool = mempool_open();
+	List_T dsnusers = p_list_new(pool);
+	Delivery_T *dsnuser = g_new0(Delivery_T,1);
+	dsnuser_init(dsnuser);
+	dsnuser->forwards = g_list_append(dsnuser->forwards, g_strdup("forwarduser@forward.example.com"));
+	dsnusers = p_list_prepend(dsnusers, dsnuser);
+
+	result = do_add("forwarduser", "testpassf", "md5-hash", 0, 0, NULL, NULL);
+	ck_assert_int_eq(result, 0);
+	result = auth_user_exists("forwarduser", &useridnr);
+	ck_assert_int_eq(result, 1);
+	alias_forward = g_string_split(g_string_new("forwarduser@forward.example.com"), ",");
+	result = do_forwards("forwarduser", 0, alias_forward, NULL);
+	ck_assert_int_eq(result, 0);
+
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message,multipart_message);
+
+
+	result = insert_messages(message, dsnusers);
+
+	ck_assert_int_eq(result, 0);
+
+	dsnuser_free_list(dsnusers);
+	dbmail_message_free(message);
+	mempool_close(&pool);
+}
+END_TEST
+
 /****************************************************************************************
  *
  *
@@ -867,6 +912,7 @@ Suite *dbmail_deliver_suite(void)
 	suite_add_tcase(s, tc_pipe);
 	tcase_add_checked_fixture(tc_pipe, setup, teardown);
 	tcase_add_test(tc_pipe, test_insert_messages);
+	tcase_add_test(tc_pipe, test_insert_message_forward);
 
 	TCase *tc_misc = tcase_create("Misc");
 	suite_add_tcase(s, tc_misc);
