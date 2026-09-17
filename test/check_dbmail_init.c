@@ -132,17 +132,6 @@ void teardown(void)
  *
  */
 
-static uint64_t get_first_user_idnr(void);
-
-uint64_t get_first_user_idnr(void)
-{
-	uint64_t user_idnr;
-	GList *users = auth_get_known_users();
-	users = g_list_first(users);
-	auth_user_exists((char *)users->data,&user_idnr);
-	return user_idnr;
-}
-
 Suite *dbmail_init_suite(void)
 {
 	Suite *s = suite_create("Dbmail Init");
@@ -151,51 +140,7 @@ Suite *dbmail_init_suite(void)
 	suite_add_tcase(s, tc_init);
 	tcase_add_checked_fixture(tc_init, setup, teardown);
 
-	// tcase_add_test(tc_auth, test_auth_connect);
-	// tcase_add_test(tc_auth, test_auth_disconnect);
-	// tcase_add_test(tc_auth, test_auth_user_exists);
-	// tcase_add_test(tc_auth, test_auth_get_known_users);
-	// tcase_add_test(tc_auth, test_auth_getclientid);
-	// tcase_add_test(tc_auth, test_auth_getmaxmailsize);
-	// tcase_add_test(tc_auth, test_auth_getencryption);
-	// tcase_add_test(tc_auth, test_auth_check_user_ext);
-	// tcase_add_test(tc_auth, test_auth_adduser);
-	// tcase_add_test(tc_auth, test_auth_delete_user);
-	// tcase_add_test(tc_auth, test_auth_change_username);
-	// tcase_add_test(tc_auth, test_auth_change_password);
-	// tcase_add_test(tc_auth, test_auth_change_clientid);
-	// tcase_add_test(tc_auth, test_auth_change_mailboxsize);
-	// tcase_add_test(tc_auth, test_auth_validate);
-//	tcase_add_test(tc_auth, test_auth_md5_validate);
-	// tcase_add_test(tc_auth, test_auth_get_userid);
-//	tcase_add_test(tc_auth, test_auth_get_users_from_clientid);
-	// tcase_add_test(tc_auth, test_auth_get_user_aliases);
-	// tcase_add_test(tc_auth, test_auth_addalias);
-	// tcase_add_test(tc_auth, test_auth_addalias_ext);
-	// tcase_add_test(tc_auth, test_auth_removealias);
-	// tcase_add_test(tc_auth, test_auth_removealias_ext);
-
-	// TCase *tc_pipe = tcase_create("Pipe");
-	// suite_add_tcase(s, tc_pipe);
-	// tcase_add_checked_fixture(tc_pipe, setup, teardown);
-	// tcase_add_test(tc_pipe, test_insert_messages);
-
-	// // TCase *tc_misc = tcase_create("Misc");
-	// // suite_add_tcase(s, tc_misc);
-	// tcase_add_checked_fixture(tc_misc, setup, teardown);
-	// tcase_add_test(tc_misc, test_dm_valid_format);
-	// tcase_add_test(tc_misc, test_g_list_join);
-	// tcase_add_test(tc_misc, test_g_string_split);
-	// tcase_add_test(tc_misc, test_g_tree_keys);
-	// tcase_add_test(tc_misc, test_g_tree_merge_or);
-	// tcase_add_test(tc_misc, test_g_tree_merge_and);
-	// tcase_add_test(tc_misc, test_g_tree_merge_not);
-	// tcase_add_test(tc_misc, test_zap_between_both);
-	// tcase_add_test(tc_misc, test_zap_between_left);
-	// tcase_add_test(tc_misc, test_zap_between_right);
-	// tcase_add_test(tc_misc, test_find_bounded);
-	// tcase_add_test(tc_misc, test_zap_between_center);
-  tcase_add_test(tc_init, test_auth_validate);
+	tcase_add_test(tc_init, test_auth_validate);
 	return s;
 }
 

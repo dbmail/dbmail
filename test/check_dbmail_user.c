@@ -101,6 +101,83 @@ START_TEST(test_do_add)
 }
 END_TEST
 
+START_TEST(test_do_add_alias)
+{
+	/**********
+	 * Test an email alias for a user
+	 * Domain is example.com
+	 * User is happyalias
+	 * Alias is happyalias@example.com
+	 */
+	int result;
+	uint64_t useridnr = 0;
+	char *username;
+	GList * alias_add = NULL;
+	GList *userlist = NULL;
+	GList *out = NULL;
+	GString *s = NULL;
+	GString *s2 = NULL;
+
+	result = do_add("happyalias", "testpassa", "md5-hash", 0, 0, NULL, NULL);
+	ck_assert_int_eq(result, 0);
+	result = auth_user_exists("happyalias", &useridnr);
+	ck_assert_int_eq(result, 1);
+	ck_assert_int_gt(useridnr, 0);
+	username = auth_get_userid(useridnr);
+	ck_assert_str_eq(username, "happyalias");
+	g_free(username);
+	alias_add = g_string_split(g_string_new("happyalias@example.com"), ",");
+	result = do_aliases(useridnr, alias_add, NULL);
+	ck_assert_int_eq(result, 0);
+	userlist = auth_get_user_aliases(useridnr);
+
+	ck_assert_int_eq(g_list_length(userlist), 1);
+	userlist = g_list_first(userlist);
+	s = g_list_join(userlist,",");
+	ck_assert_str_eq(s->str, "happyalias@example.com");
+
+	out = g_list_append_printf(out,"%s", s->str);
+	ck_assert_int_eq(g_list_length(out), 1);
+
+	g_string_free(s,TRUE);
+	userlist = g_list_first(userlist);
+	g_list_free_full(g_steal_pointer(&userlist), g_free);
+	s = g_list_join(out,":");
+	ck_assert_str_eq(s->str, "happyalias@example.com");
+	g_string_free(s,TRUE);
+	out = g_list_first(out);
+	g_list_free_full(g_steal_pointer (&out), g_free);
+}
+END_TEST
+
+START_TEST(test_do_add_forward)
+{
+	/*************
+	 * Test forward for an email for a user
+	 * Domain to be forwarded is forward.example.com
+	 * User is happyforward
+	 * Forward destination happyforward@new.example.com
+	 */
+	int result;
+	uint64_t useridnr = 0;
+	char *username;
+	GList * fwds_add = NULL;
+
+	result = do_add("happyforward", "testpassf", "md5-hash", 0, 0, NULL, NULL);
+	ck_assert_int_eq(result, 0);
+	result = auth_user_exists("happyforward", &useridnr);
+	ck_assert_int_eq(result, 1);
+	username = auth_get_userid(useridnr);
+	ck_assert_str_eq(username, "happyforward");
+	g_free(username);
+
+	fwds_add = g_string_split(g_string_new("happyforward@new.example.com"), ",");
+	result = do_forwards(username, 0, fwds_add, NULL);
+	ck_assert_int_eq(result, 0);
+	result = auth_user_exists(username, &useridnr);
+	ck_assert_int_eq(result, 1);
+}
+END_TEST
 
 //int do_show(const char * const user);
 START_TEST(test_do_show)
@@ -250,7 +327,9 @@ Suite *dbmail_common_suite(void)
 	tcase_add_test(tc_user, test_do_delete);
 	tcase_add_test(tc_user, test_dm_match);
 	tcase_add_test(tc_user, test_dm_match_list);
-	
+	tcase_add_test(tc_user, test_do_add_alias);
+	tcase_add_test(tc_user, test_do_add_forward);
+
 	return s;
 }
 
