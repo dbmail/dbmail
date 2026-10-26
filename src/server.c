@@ -671,7 +671,7 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 	c = mempool_pop(pool, sizeof(client_sock));
 	c->pool = pool;
 	c->sock = csock;
-	len = sizeof(struct sockaddr);
+	len = sizeof(struct sockaddr_storage);
 	if (getpeername(c->sock, &c->caddr, &len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_INFO, "getpeername::error [%s]", strerror(serr));
@@ -681,7 +681,8 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 		event_add(ev, NULL);
 		return;
 	}
-
+	c->caddr_len = len;
+	len = sizeof(struct sockaddr_storage);
 	if (getsockname(c->sock, &c->saddr, &len) < 0) {
 		int serr = errno;
 		TRACE(TRACE_EMERG, "getsockname::error [%s]", strerror(serr));
@@ -691,8 +692,6 @@ static void _sock_cb(int sock, short UNUSED event, void *arg, gboolean ssl)
 		event_add(ev, NULL);
 		return; // fatal 
 	}
-
-	c->caddr_len = len;
 	c->saddr_len = len;
 	
 	if (ssl) c->ssl_state = -1; // defer tls setup

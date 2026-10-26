@@ -286,9 +286,9 @@ typedef struct  {
 	int sock;
 	SSL *ssl;                       /* SSL/TLS context for this client */
 	gboolean ssl_state;		/* SSL_accept done or not */
-	struct sockaddr caddr;
+	struct sockaddr_storage caddr;
 	socklen_t caddr_len;
-	struct sockaddr saddr;
+	struct sockaddr_storage saddr;
 	socklen_t saddr_len;
 	void (*cb_close) (void *);	/* termination callback */
 } client_sock;
